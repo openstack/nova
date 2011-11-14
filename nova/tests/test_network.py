@@ -889,40 +889,43 @@ class CommonNetworkTestCase(test.TestCase):
     def test_get_instance_uuids_by_ip_regex(self):
         manager = fake_network.FakeNetworkManager()
         _vifs = manager.db.virtual_interface_get_all(None)
+        fake_context = context.RequestContext('user', 'project')
 
         # Greedy get eveything
-        res = manager.get_instance_uuids_by_ip_filter(None, {'ip': '.*'})
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip': '.*'})
         self.assertEqual(len(res), len(_vifs))
 
         # Doesn't exist
-        res = manager.get_instance_uuids_by_ip_filter(None, {'ip': '10.0.0.1'})
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip': '10.0.0.1'})
         self.assertFalse(res)
 
         # Get instance 1
-        res = manager.get_instance_uuids_by_ip_filter(None,
-                                                    {'ip': '172.16.0.2'})
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip': '172.16.0.2'})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
 
         # Get instance 2
-        res = manager.get_instance_uuids_by_ip_filter(None,
-                                                    {'ip': '173.16.0.2'})
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip': '173.16.0.2'})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])
 
         # Get instance 0 and 1
-        res = manager.get_instance_uuids_by_ip_filter(None,
-                                                    {'ip': '172.16.0.*'})
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip': '172.16.0.*'})
         self.assertTrue(res)
         self.assertEqual(len(res), 2)
         self.assertEqual(res[0]['instance_id'], _vifs[0]['instance_id'])
         self.assertEqual(res[1]['instance_id'], _vifs[1]['instance_id'])
 
         # Get instance 1 and 2
-        res = manager.get_instance_uuids_by_ip_filter(None,
-                                                    {'ip': '17..16.0.2'})
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip': '17..16.0.2'})
         self.assertTrue(res)
         self.assertEqual(len(res), 2)
         self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
@@ -931,40 +934,45 @@ class CommonNetworkTestCase(test.TestCase):
     def test_get_instance_uuids_by_ipv6_regex(self):
         manager = fake_network.FakeNetworkManager()
         _vifs = manager.db.virtual_interface_get_all(None)
+        fake_context = context.RequestContext('user', 'project')
 
         # Greedy get eveything
-        res = manager.get_instance_uuids_by_ip_filter(None, {'ip6': '.*'})
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip6': '.*'})
         self.assertEqual(len(res), len(_vifs))
 
         # Doesn't exist
-        res = manager.get_instance_uuids_by_ip_filter(None,
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip6': '.*1034.*'})
         self.assertFalse(res)
 
         # Get instance 1
-        res = manager.get_instance_uuids_by_ip_filter(None,
-                                                    {'ip6': '2001:.*:2'})
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip6': '2001:.*2'})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
 
         # Get instance 2
-        ip6 = '2002:db8::dcad:beff:feef:2'
-        res = manager.get_instance_uuids_by_ip_filter(None, {'ip6': ip6})
+        ip6 = '2001:db8:69:1f:dead:beff:feff:ef03'
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip6': ip6})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])
 
         # Get instance 0 and 1
-        res = manager.get_instance_uuids_by_ip_filter(None, {'ip6': '2001:.*'})
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip6': '.*ef0[1,2]'})
         self.assertTrue(res)
         self.assertEqual(len(res), 2)
         self.assertEqual(res[0]['instance_id'], _vifs[0]['instance_id'])
         self.assertEqual(res[1]['instance_id'], _vifs[1]['instance_id'])
 
         # Get instance 1 and 2
-        ip6 = '200.:db8::dcad:beff:feef:2'
-        res = manager.get_instance_uuids_by_ip_filter(None, {'ip6': ip6})
+        ip6 = '2001:db8:69:1.:dead:beff:feff:ef0.'
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
+                                                      {'ip6': ip6})
         self.assertTrue(res)
         self.assertEqual(len(res), 2)
         self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
@@ -973,21 +981,22 @@ class CommonNetworkTestCase(test.TestCase):
     def test_get_instance_uuids_by_ip(self):
         manager = fake_network.FakeNetworkManager()
         _vifs = manager.db.virtual_interface_get_all(None)
+        fake_context = context.RequestContext('user', 'project')
 
         # No regex for you!
-        res = manager.get_instance_uuids_by_ip_filter(None,
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'fixed_ip': '.*'})
         self.assertFalse(res)
 
         # Doesn't exist
         ip = '10.0.0.1'
-        res = manager.get_instance_uuids_by_ip_filter(None,
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'fixed_ip': ip})
         self.assertFalse(res)
 
         # Get instance 1
         ip = '172.16.0.2'
-        res = manager.get_instance_uuids_by_ip_filter(None,
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'fixed_ip': ip})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
@@ -995,7 +1004,7 @@ class CommonNetworkTestCase(test.TestCase):
 
         # Get instance 2
         ip = '173.16.0.2'
-        res = manager.get_instance_uuids_by_ip_filter(None,
+        res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'fixed_ip': ip})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)

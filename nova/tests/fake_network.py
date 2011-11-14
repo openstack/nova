@@ -83,6 +83,9 @@ class FakeNetworkManager(network_manager.NetworkManager):
             fakenet['id'] = 999
             return fakenet
 
+        def network_get(self, context, network_id):
+            return {'cidr_v6': '2001:db8:69:%x::/64' % network_id}
+
         def network_get_all(self, context):
             raise exception.NoNetworksFound()
 
@@ -92,15 +95,18 @@ class FakeNetworkManager(network_manager.NetworkManager):
                       {'address': '173.16.1.2'}]
 
             vifs = [{'instance_id': 0,
-                     'fixed_ipv6': '2001:db8::dcad:beff:feef:1',
+                     'network_id': 1,
+                     'address': 'DC:AD:BE:FF:EF:01',
                      'fixed_ips': [{'address': '172.16.0.1',
                                     'floating_ips': [floats[0]]}]},
                     {'instance_id': 20,
-                     'fixed_ipv6': '2001:db8::dcad:beff:feef:2',
+                     'network_id': 21,
+                     'address': 'DC:AD:BE:FF:EF:02',
                      'fixed_ips': [{'address': '172.16.0.2',
                                     'floating_ips': [floats[1]]}]},
                     {'instance_id': 30,
-                     'fixed_ipv6': '2002:db8::dcad:beff:feef:2',
+                     'network_id': 31,
+                     'address': 'DC:AD:BE:FF:EF:03',
                      'fixed_ips': [{'address': '173.16.0.2',
                                     'floating_ips': [floats[2]]}]}]
             return vifs
@@ -236,6 +242,8 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     floating_ip_id = floating_ip_ids()
     fixed_ip_id = fixed_ip_ids()
 
+    networks = [fake_network(x) for x in xrange(num_networks)]
+
     def fixed_ips_fake(*args, **kwargs):
         return [next_fixed_ip(i, floating_ips_per_fixed_ip)
                 for i in xrange(num_networks) for j in xrange(ips_per_vif)]
@@ -246,8 +254,15 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     def instance_type_fake(*args, **kwargs):
         return flavor
 
+    def network_get_fake(context, network_id):
+        nets = [n for n in networks if n['id'] == network_id]
+        if not nets:
+            raise exception.NetworkNotFound(network_id=network_id)
+        return nets[0]
+
     stubs.Set(db, 'fixed_ip_get_by_instance', fixed_ips_fake)
     stubs.Set(db, 'virtual_interface_get_by_instance', virtual_interfaces_fake)
     stubs.Set(db, 'instance_type_get', instance_type_fake)
+    stubs.Set(db, 'network_get', network_get_fake)
 
     return network.get_instance_nw_info(None, 0, 0, None)
