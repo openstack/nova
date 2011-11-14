@@ -26,12 +26,27 @@ try:
     import json
 except ImportError:
     import simplejson as json
+import logging
+import os
 import subprocess
 
 import XenAPIPlugin
 
 import pluginlib_nova as pluginlib
 pluginlib.configure_logging("xenstore")
+
+
+class XenstoreError(pluginlib.PluginError):
+    """Errors that occur when calling xenstore-* through subprocesses"""
+
+    def __init__(self, cmd, return_code, stderr, stdout):
+        msg = "cmd: %s; returncode: %d; stderr: %s; stdout: %s"
+        msg = msg % (cmd, return_code, stderr, stdout)
+        self.cmd = cmd
+        self.return_code = return_code
+        self.stderr = stderr
+        self.stdout = stdout
+        pluginlib.PluginError.__init__(self, msg)
 
 
 def jsonify(fnc):
@@ -48,6 +63,21 @@ def jsonify(fnc):
     return wrapper
 
 
+def _record_exists(arg_dict):
+    """Returns whether or not the given record exists. The record path
+    is determined from the given path and dom_id in the arg_dict."""
+    cmd = ["xenstore-exists", "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
+    try:
+        ret, result = _run_command(cmd)
+    except XenstoreError, e:
+        if e.stderr == '':
+            # if stderr was empty, this just means the path did not exist
+            return False
+        # otherwise there was a real problem
+        raise
+    return True
+
+
 @jsonify
 def read_record(self, arg_dict):
     """Returns the value stored at the given path for the given dom_id.
@@ -60,16 +90,9 @@ def read_record(self, arg_dict):
     try:
         ret, result = _run_command(cmd)
         return result.strip()
-    except pluginlib.PluginError, e:
+    except XenstoreError, e:
         if arg_dict.get("ignore_missing_path", False):
-            cmd = ["xenstore-exists",
-                   "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
-            ret, result = _run_command(cmd)
-            # If the path exists, the cmd should return "0"
-            if ret != 0:
-                # No such path, so ignore the error and return the
-                # string 'None', since None can't be marshalled
-                # over RPC.
+            if not _record_exists(arg_dict):
                 return "None"
         # Either we shouldn't ignore path errors, or another
         # error was hit. Re-raise.
@@ -102,11 +125,9 @@ def list_records(self, arg_dict):
     cmd = ["xenstore-ls", dirpath.rstrip("/")]
     try:
         ret, recs = _run_command(cmd)
-    except pluginlib.PluginError, e:
-        if "No such file or directory" in "%s" % e:
-            # Path doesn't exist.
+    except XenstoreError, e:
+        if not _record_exists(arg_dict):
             return {}
-        return str(e)
         raise
     base_path = arg_dict["path"]
     paths = _paths_from_ls(recs)
@@ -173,14 +194,14 @@ def _run_command(cmd):
     returns anything in stderr, a PluginError is raised with that information.
     Otherwise, a tuple of (return code, stdout data) is returned.
     """
+    logging.info(' '.join(cmd))
     pipe = subprocess.PIPE
     proc = subprocess.Popen(cmd, stdin=pipe, stdout=pipe, stderr=pipe,
             close_fds=True)
-    ret = proc.wait()
-    err = proc.stderr.read()
-    if err:
-        raise pluginlib.PluginError(err)
-    return (ret, proc.stdout.read())
+    out, err = proc.communicate()
+    if proc.returncode is not os.EX_OK:
+        raise XenstoreError(cmd, proc.returncode, err, out)
+    return proc.returncode, out
 
 
 if __name__ == "__main__":
