@@ -26,6 +26,7 @@ stepping stone.
 
 """
 
+import copy
 import optparse
 import os
 import socket
@@ -94,6 +95,12 @@ class FlagValues(object):
         values = extra = None
 
         #
+        # This horrendous hack is needed because optparse only
+        # shallow copies its defaults dict before parsing
+        #
+        defaults = copy.deepcopy(self._parser.defaults)
+
+        #
         # This horrendous hack allows us to stop optparse
         # exiting when it encounters an unknown option
         #
@@ -110,8 +117,11 @@ class FlagValues(object):
                     break
 
                 args.remove(unknown)
+                self._parser.defaults = defaults
+                defaults = copy.deepcopy(defaults)
         finally:
             self._parser.error = error_catcher.orig_error
+            self._parser.defaults = defaults
 
         values = self._apply_multistring_defaults(values)
 

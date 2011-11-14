@@ -85,6 +85,10 @@ class FlagsTestCase(test.TestCase):
 
         self.assertEqual(self.FLAGS.multi, ['foo', 'bar'])
 
+        # Re-parse to test multistring isn't append multiple times
+        self.FLAGS(argv + ['--unknown1', '--unknown2'])
+        self.assertEqual(self.FLAGS.multi, ['foo', 'bar'])
+
     def test_define_list(self):
         flags.DEFINE_list('list', ['foo'], 'desc', flag_values=self.FLAGS)
 
@@ -180,11 +184,14 @@ class FlagsTestCase(test.TestCase):
         flags.DEFINE_integer('int', 1, 'desc', flag_values=self.FLAGS)
         flags.DEFINE_bool('false', False, 'desc', flag_values=self.FLAGS)
         flags.DEFINE_bool('true', True, 'desc', flag_values=self.FLAGS)
+        flags.DEFINE_multistring('multi', ['blaa'], 'desc',
+                                 flag_values=self.FLAGS)
 
         (fd, path) = tempfile.mkstemp(prefix='nova', suffix='.flags')
 
         try:
             os.write(fd, '--string=foo\n--int=2\n--false\n--notrue\n')
+            os.write(fd, '--multi=foo\n--multi=bar\n')
             os.close(fd)
 
             self.FLAGS(['flags_test', '--flagfile=' + path])
@@ -193,6 +200,11 @@ class FlagsTestCase(test.TestCase):
             self.assertEqual(self.FLAGS.int, 2)
             self.assertEqual(self.FLAGS.false, True)
             self.assertEqual(self.FLAGS.true, False)
+            self.assertEqual(self.FLAGS.multi, ['foo', 'bar'])
+
+            # Re-parse to test multistring isn't append multiple times
+            self.FLAGS(['flags_test', '--flagfile=' + path])
+            self.assertEqual(self.FLAGS.multi, ['foo', 'bar'])
         finally:
             os.remove(path)
 
