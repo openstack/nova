@@ -19,7 +19,6 @@
 
 import copy
 import datetime
-import random
 
 from nova import exception
 from nova import flags
@@ -110,8 +109,9 @@ class _FakeImageService(object):
                  'is_public': True,
                  'container_format': 'ami',
                  'disk_format': 'ami',
-                 'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel}}
+                 'properties': {'kernel_id':
+                                    '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                                'ramdisk_id': None}}
 
         self.create(None, image1)
         self.create(None, image2)
@@ -121,7 +121,8 @@ class _FakeImageService(object):
         self._imagedata = {}
         super(_FakeImageService, self).__init__()
 
-    def index(self, context, filters=None, marker=None, limit=None):
+    #TODO(bcwaldon): implement optional kwargs such as limit, sort_dir
+    def index(self, context, **kwargs):
         """Returns list of images."""
         retval = []
         for img in self.images.values():
@@ -129,7 +130,8 @@ class _FakeImageService(object):
                                                   if k in ['id', 'name']])]
         return retval
 
-    def detail(self, context, filters=None, marker=None, limit=None):
+    #TODO(bcwaldon): implement optional kwargs such as limit, sort_dir
+    def detail(self, context, **kwargs):
         """Return list of detailed image information."""
         return copy.deepcopy(self.images.values())
 
