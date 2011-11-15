@@ -426,7 +426,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
         self.assertTrue(payload['launched_at'])
-        self.assertEquals(payload['image_ref'], '1')
+        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_terminate_usage_notification(self):
@@ -455,7 +456,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
-        self.assertEquals(payload['image_ref'], '1')
+        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        self.assertEquals(payload['image_ref_url'], image_ref_url)
 
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
@@ -582,7 +584,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
-        self.assertEquals(payload['image_ref'], '1')
+        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(context, instance_id)
 
     def test_resize_instance(self):
