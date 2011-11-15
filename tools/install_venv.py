@@ -110,6 +110,9 @@ class Fedora(Distro):
     def yum_install(self, pkg, **kwargs):
         run_command(['sudo', 'yum', 'install', '-y', pkg], **kwargs)
 
+    def apply_patch(self, originalfile, patchfile):
+        run_command(['patch', originalfile, patchfile])
+
     def install_virtualenv(self):
         if self.check_cmd('virtualenv'):
             return
@@ -143,9 +146,9 @@ class Fedora(Distro):
             self.yum_install('patch')
 
         # Apply the eventlet patch
-        run_command(['patch',
-        '.nova-venv/lib/python2.6/site-packages/eventlet/green/subprocess.py',
-        'contrib/redhat-eventlet.patch'])
+        self.apply_patch(os.path.join(VENV, 'lib', PY_VERSION, 'site-packages',
+                                      'eventlet/green/subprocess.py'),
+                         'contrib/redhat-eventlet.patch')
 
 
 def get_distro():
