@@ -54,14 +54,33 @@ class SignerTestCase(test.TestCase):
                                 'PUT',
                                 '/johnsmith/photos/puppy.jpg'))
 
-    def test_generate_using_version_2(self):
+    def test_generate_HmacSHA256(self):
         self.assertEquals('clXalhbLZXxEuI32OoX+OeXsN6Mr2q4jzGyIDAr4RZg=',
                           self.signer.generate(
                                 {'SignatureMethod': 'HmacSHA256',
                                  'SignatureVersion': '2'},
                                 'GET', 'server', '/foo'))
 
-    def test_generate_force_HmacSHA1(self):
+    def test_generate_HmacSHA1(self):
+        self.assertEquals('uJTByiDIcgB65STrS5i2egQgd+U=',
+                          self.signer.generate({'SignatureVersion': '2',
+                                           'SignatureMethod': 'HmacSHA1'},
+                                           'GET', 'server', '/foo'))
+
+    def test_generate_invalid_signature_method_defined(self):
+        self.assertRaises(exception.Error,
+                          self.signer.generate,
+                          {'SignatureVersion': '2',
+                           'SignatureMethod': 'invalid_method'},
+                          'GET', 'server', '/foo')
+
+    def test_generate_no_signature_method_defined(self):
+        self.assertRaises(exception.Error,
+                          self.signer.generate,
+                          {'SignatureVersion': '2'},
+                          'GET', 'server', '/foo')
+
+    def test_generate_HmacSHA256_missing_hashlib_sha256(self):
         # Stub out haslib.sha256
         import hashlib
         self.stubs.Set(hashlib, 'sha256', None)
@@ -69,20 +88,24 @@ class SignerTestCase(test.TestCase):
         # Create Signer again now that hashlib.sha256 is None
         self.signer = signer.Signer(
                         'uV3F3YluFJax1cknvbcGwgjvx4QpvB+leU8dUj2o')
-        self.assertEquals('uJTByiDIcgB65STrS5i2egQgd+U=',
-                          self.signer.generate({'SignatureVersion': '2'},
-                                               'GET', 'server', '/foo'))
+        self.assertRaises(exception.Error,
+                          self.signer.generate,
+                          {'SignatureVersion': '2',
+                           'SignatureMethod': 'HmacSHA256'},
+                          'GET', 'server', '/foo')
 
     def test_generate_with_unicode_param(self):
         self.assertEquals('clXalhbLZXxEuI32OoX+OeXsN6Mr2q4jzGyIDAr4RZg=',
-                          self.signer.generate({'SignatureVersion': u'2'},
-                                               'GET', 'server', '/foo'))
+                          self.signer.generate({'SignatureVersion': u'2',
+                                            'SignatureMethod': 'HmacSHA256'},
+                                            'GET', 'server', '/foo'))
 
     def test_generate_with_non_string_or_unicode_param(self):
         self.assertEquals('99IAgCkhTR2aMTgRobnzKGuNxVFSdb7vlQRvnj3Urqk=',
                           self.signer.generate(
                               {'AnotherParam': ClassWithStrRepr(),
-                               'SignatureVersion': '2'},
+                               'SignatureVersion': '2',
+                               'SignatureMethod': 'HmacSHA256'},
                               'GET', 'server', '/foo'))
 
     def test_generate_unknown_version(self):

@@ -53,8 +53,8 @@ import boto
 # NOTE(vish): for old boto
 import boto.utils
 
+from nova import exception
 from nova import log as logging
-from nova.exception import Error
 
 
 LOG = logging.getLogger('nova.signer')
@@ -81,8 +81,7 @@ class Signer(object):
     def generate(self, params, verb, server_string, path):
         """Generate auth string according to what SignatureVersion is given.
 
-        The signature method defaults to SHA256 if available, or falls back to
-        SHA1 if not.
+        The signature method must be SHA1 or SHA256.
 
         """
         if params['SignatureVersion'] == '0':
@@ -91,7 +90,7 @@ class Signer(object):
             return self._calc_signature_1(params)
         if params['SignatureVersion'] == '2':
             return self._calc_signature_2(params, verb, server_string, path)
-        raise Error('Unknown Signature Version: %s' %
+        raise exception.Error('Unknown Signature Version: %s' %
                     params['SignatureVersion'])
 
     @staticmethod
@@ -132,12 +131,20 @@ class Signer(object):
         """Generate AWS signature version 2 string."""
         LOG.debug('using _calc_signature_2')
         string_to_sign = '%s\n%s\n%s\n' % (verb, server_string, path)
-        if self.hmac_256:
+
+        if 'SignatureMethod' not in params:
+            raise exception.Error('No SignatureMethod specified')
+
+        if params['SignatureMethod'] == 'HmacSHA256':
+            if not self.hmac_256:
+                raise exception.Error('SHA256 not supported on this server')
             current_hmac = self.hmac_256
-            params['SignatureMethod'] = 'HmacSHA256'
-        else:
+        elif params['SignatureMethod'] == 'HmacSHA1':
             current_hmac = self.hmac
-            params['SignatureMethod'] = 'HmacSHA1'
+        else:
+            raise exception.Error('SignatureMethod %s not supported'
+                                  % params['SignatureMethod'])
+
         keys = params.keys()
         keys.sort()
         pairs = []
@@ -157,5 +164,6 @@ class Signer(object):
 
 
 if __name__ == '__main__':
-    print Signer('foo').generate({'SignatureVersion': '2'}, 'get', 'server',
-                                  '/foo')
+    print Signer('foo').generate({'SignatureVersion': '2',
+                                  'SignatureMethod': 'HmacSHA256'},
+                                  'get', 'server', '/foo')
