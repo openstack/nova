@@ -1187,7 +1187,10 @@ class ServersControllerTest(test.TestCase):
         body = dict(server=inst_dict)
 
         def server_update(context, id, params):
-            filtered_dict = dict(display_name='server_test')
+            filtered_dict = {
+                'display_name': 'server_test',
+                'hostname': 'server-test',
+            }
             self.assertEqual(params, filtered_dict)
             return filtered_dict
 

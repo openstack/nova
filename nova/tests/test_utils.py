@@ -282,6 +282,30 @@ class GenericUtilsTestCase(test.TestCase):
         result = utils.parse_server_string('www.exa:mple.com:8443')
         self.assertEqual(('', ''), result)
 
+    def test_hostname_unicode_sanitization(self):
+        hostname = u"\u7684.test.example.com"
+        self.assertEqual("test.example.com",
+                         utils.sanitize_hostname(hostname))
+
+    def test_hostname_sanitize_periods(self):
+        hostname = "....test.example.com..."
+        self.assertEqual("test.example.com",
+                         utils.sanitize_hostname(hostname))
+
+    def test_hostname_sanitize_dashes(self):
+        hostname = "----test.example.com---"
+        self.assertEqual("test.example.com",
+                         utils.sanitize_hostname(hostname))
+
+    def test_hostname_sanitize_characters(self):
+        hostname = "(#@&$!(@*--#&91)(__=+--test-host.example!!.com-0+"
+        self.assertEqual("91----test-host.example.com-0",
+                         utils.sanitize_hostname(hostname))
+
+    def test_hostname_translate(self):
+        hostname = "<}\x1fh\x10e\x08l\x02l\x05o\x12!{>"
+        self.assertEqual("hello", utils.sanitize_hostname(hostname))
+
     def test_bool_from_str(self):
         self.assertTrue(utils.bool_from_str('1'))
         self.assertTrue(utils.bool_from_str('2'))

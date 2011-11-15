@@ -1061,3 +1061,16 @@ def total_seconds(td):
     else:
         return ((td.days * 86400 + td.seconds) * 10 ** 6 +
                 td.microseconds) / 10.0 ** 6
+
+
+def sanitize_hostname(hostname):
+    """Return a hostname which conforms to RFC-952 and RFC-1123 specs."""
+    if isinstance(hostname, unicode):
+        hostname = hostname.encode('latin-1', 'ignore')
+
+    hostname = re.sub('[ _]', '-', hostname)
+    hostname = re.sub('[^\w.-]+', '', hostname)
+    hostname = hostname.lower()
+    hostname = hostname.strip('.-')
+
+    return hostname
