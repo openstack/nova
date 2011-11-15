@@ -74,7 +74,11 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(self.FLAGS.float, 6.66)
 
     def test_define_multistring(self):
-        flags.DEFINE_multistring('multi', [], 'desc', flag_values=self.FLAGS)
+        flags.DEFINE_multistring('multi', ['blaa'], 'desc',
+                                 flag_values=self.FLAGS)
+
+        self.assert_(self.FLAGS['multi'])
+        self.assertEqual(self.FLAGS.multi, ['blaa'])
 
         argv = ['flags_test', '--multi', 'foo', '--multi', 'bar']
         self.FLAGS(argv)

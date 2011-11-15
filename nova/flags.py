@@ -71,7 +71,19 @@ class FlagValues(object):
         self._parser = optparse.OptionParser()
         self._parser.disable_interspersed_args()
         self._extra_context = extra_context
+        self._multistring_defaults = {}
         self.Reset()
+
+    def _apply_multistring_defaults(self, values):
+        #
+        # This horrendous hack is to stop optparse appending
+        # values to the default value. See:
+        #   http://bugs.python.org/issue5088
+        #
+        for flag, default in self._multistring_defaults.items():
+            if not getattr(values, flag):
+                setattr(values, flag, default)
+        return values
 
     def _parse(self):
         if not self._values is None:
@@ -100,6 +112,8 @@ class FlagValues(object):
                 args.remove(unknown)
         finally:
             self._parser.error = error_catcher.orig_error
+
+        values = self._apply_multistring_defaults(values)
 
         (self._values, self._extra) = (values, extra)
 
@@ -190,7 +204,8 @@ class FlagValues(object):
                          action='callback', callback=parse_list)
 
     def define_multistring(self, name, default, help):
-        self._add_option(name, default, help, action='append')
+        self._add_option(name, [], help, action='append')
+        self._multistring_defaults[name] = default
 
 FLAGS = FlagValues()
 
