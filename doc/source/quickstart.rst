@@ -21,6 +21,11 @@ Nova Quickstart
 The quickest way to set up an OpenStack development environment for testing is
 to use `DevStack <http://devstack.org/>`_.
 
-To start over, drop the nova, glance, and keystone databases, delete the logs,
-delete the IP addresses and bridges created, and then recreate the databases
-and restart the services to get back to a clean state.
+Currently, there is no automated way to do a clean reset of DevStack. The
+beginnings of an external cleanup script can be found at `Ron Pedde's DevStack
+branch <https://github.com/rpedde/devstack/blob/master/clean.sh>`_, which
+deletes instances and cleans up security groups.
+
+To manually start over, drop the nova, glance, and keystone databases, delete
+the logs, delete the IP addresses and bridges created, and then recreate the
+databases and restart the services to get back to a clean state.
