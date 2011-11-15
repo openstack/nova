@@ -50,6 +50,8 @@ ami_manifest_xml = """<?xml version="1.0" ?>
                                 <device>sda3</device>
                         </mapping>
                 </block_device_mapping>
+                <kernel_id>aki-00000001</kernel_id>
+                <ramdisk_id>ari-00000001</ramdisk_id>
         </machine_configuration>
 </manifest>
 """
