@@ -762,17 +762,6 @@ class API(base.Base):
 
         :returns: None
         """
-        display_name = kwargs.get('display_name')
-        if display_name is None:
-            display_name = self._default_display_name(instance_id)
-
-        hostname = kwargs.get('hostname')
-        if hostname is None:
-            hostname = display_name
-
-        kwargs['display_name'] = display_name
-        kwargs['hostname'] = utils.sanitize_hostname(hostname)
-
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
 
