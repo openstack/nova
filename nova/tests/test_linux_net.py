@@ -15,17 +15,15 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from nova import context
+import mox
+
 from nova import db
-from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
 from nova import utils
-from nova.network import manager as network_manager
 from nova.network import linux_net
 
-import mox
 
 FLAGS = flags.FLAGS
 
@@ -345,6 +343,24 @@ class LinuxNetworkTestCase(test.TestCase):
         expected = ("10.0.0.1,fake_instance00.novalocal,192.168.0.100")
         actual = self.driver._host_dhcp(fixed_ips[0])
         self.assertEquals(actual, expected)
+
+    def test_linux_bridge_driver_plug(self):
+        """Makes sure plug doesn't drop FORWARD by default.
+
+        Ensures bug 890195 doesn't reappear."""
+
+        def fake_execute(*args, **kwargs):
+            return "", ""
+        self.stubs.Set(utils, 'execute', fake_execute)
+
+        def verify_add_rule(chain, rule):
+            self.assertEqual(chain, 'FORWARD')
+            self.assertIn('ACCEPT', rule)
+        self.stubs.Set(linux_net.iptables_manager.ipv4['filter'],
+                       'add_rule', verify_add_rule)
+        driver = linux_net.LinuxBridgeInterfaceDriver()
+        driver.plug({"bridge": "br100", "bridge_interface": "eth0"},
+                    "fakemac")
 
     def _test_initialize_gateway(self, existing, expected, routes=''):
         self.flags(fake_network=False)
