@@ -21,6 +21,7 @@ Tests For Scheduler
 
 import datetime
 import mox
+import stubout
 
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
@@ -38,8 +39,8 @@ from nova.scheduler import driver
 from nova.scheduler import manager
 from nova.scheduler.simple import SimpleScheduler
 from nova.compute import power_state
+from nova.compute import task_states
 from nova.compute import vm_states
-
 
 FLAGS = flags.FLAGS
 flags.DECLARE('max_cores', 'nova.scheduler.simple')
@@ -143,6 +144,10 @@ class SchedulerTestCase(test.TestCase):
         driver = 'nova.tests.scheduler.test_scheduler.TestDriver'
         self.flags(scheduler_driver=driver)
 
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        super(SchedulerTestCase, self).tearDown()
+
     def _create_compute_service(self):
         """Create compute-manager(ComputeNode and Service record)."""
         ctxt = context.get_admin_context()
@@ -205,6 +210,41 @@ class SchedulerTestCase(test.TestCase):
                 return False
         return True
 
+    def _assert_state(self, state_dict):
+        """assert the instance is in the state defined by state_dict"""
+        instances = db.instance_get_all(context.get_admin_context())
+        self.assertEqual(len(instances), 1)
+
+        if 'vm_state' in state_dict:
+            self.assertEqual(state_dict['vm_state'], instances[0]['vm_state'])
+        if 'task_state' in state_dict:
+            self.assertEqual(state_dict['task_state'],
+                             instances[0]['task_state'])
+        if 'power_state' in state_dict:
+            self.assertEqual(state_dict['power_state'],
+                             instances[0]['power_state'])
+
+    def test_no_valid_host_exception_on_start(self):
+        """check the vm goes to ERROR state if the scheduler fails.
+
+        If the scheduler driver cannot allocate a host for the VM during
+        start_instance, it will raise a NoValidHost exception. In this
+        scenario, we have to make sure that the VM state is set to ERROR.
+        """
+        def NoValidHost_raiser(context, topic, *args, **kwargs):
+            raise exception.NoValidHost(_("Test NoValidHost exception"))
+        scheduler = manager.SchedulerManager()
+        ins_ref = _create_instance(task_state=task_states.STARTING,
+                                   vm_state=vm_states.STOPPED)
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(TestDriver, 'schedule', NoValidHost_raiser)
+        self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
+        ctxt = context.get_admin_context()
+        scheduler.start_instance(ctxt, 'topic', instance_id=ins_ref['id'])
+        # assert that the instance goes to ERROR state
+        self._assert_state({'vm_state': vm_states.ERROR,
+                            'task_state': task_states.STARTING})
+
     def test_show_host_resources_no_project(self):
         """No instance are running on the given host."""
 
@@ -246,21 +286,6 @@ class SchedulerTestCase(test.TestCase):
         db.service_destroy(ctxt, s_ref['id'])
         db.instance_destroy(ctxt, i_ref1['id'])
         db.instance_destroy(ctxt, i_ref2['id'])
-
-    def test_exception_puts_instance_in_error_state(self):
-        """Test that an exception from the scheduler puts an instance
-        in the ERROR state."""
-
-        scheduler = manager.SchedulerManager()
-        ctxt = context.get_admin_context()
-        inst = _create_instance()
-        self.assertRaises(Exception, scheduler._schedule,
-                          'failing_method', ctxt, 'scheduler',
-                          instance_id=inst['uuid'])
-
-        # Refresh the instance
-        inst = db.instance_get(ctxt, inst['id'])
-        self.assertEqual(inst['vm_state'], vm_states.ERROR)
 
 
 class SimpleDriverTestCase(test.TestCase):

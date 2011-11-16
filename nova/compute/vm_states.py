@@ -38,3 +38,9 @@ MIGRATING = 'migrating'
 RESIZING = 'resizing'
 
 ERROR = 'error'
+
+
+def get_list():
+    """Returns a list of all the possible vm_states"""
+    return [ACTIVE, BUILDING, REBUILDING, PAUSED, SUSPENDED, RESCUED,
+            DELETED, STOPPED, SOFT_DELETE, MIGRATING, RESIZING, ERROR]
