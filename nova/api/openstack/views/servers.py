@@ -20,6 +20,9 @@ import hashlib
 import os
 
 from nova.api.openstack import common
+from nova.api.openstack.views import addresses as views_addresses
+from nova.api.openstack.views import flavors as views_flavors
+from nova.api.openstack.views import images as views_images
 from nova.compute import vm_states
 from nova import exception
 from nova import log as logging
@@ -29,168 +32,147 @@ from nova import utils
 LOG = logging.getLogger('nova.api.openstack.views.servers')
 
 
-class ViewBuilder(object):
-    """Model a server response as a python dictionary."""
+class ViewBuilder(common.ViewBuilder):
+    """Model a server API response as a python dictionary."""
 
-    def __init__(self, context, addresses_builder, flavor_builder,
-                 image_builder, base_url, project_id=""):
-        self.context = context
-        self.addresses_builder = addresses_builder
-        self.flavor_builder = flavor_builder
-        self.image_builder = image_builder
-        self.base_url = base_url
-        self.project_id = project_id
+    _collection_name = "servers"
 
-    def build(self, inst, is_detail=False, is_create=False):
-        """Return a dict that represenst a server."""
-        if inst.get('_is_precooked', False):
-            server = dict(server=inst)
-        else:
-            if is_detail:
-                server = self._build_detail(inst)
-            elif is_create:
-                server = self._build_create(inst)
+    _progress_statuses = (
+        "ACTIVE",
+        "BUILD",
+        "REBUILD",
+        "RESIZE",
+        "VERIFY_RESIZE",
+    )
+
+    def __init__(self):
+        """Initialize view builder."""
+        super(ViewBuilder, self).__init__()
+        self._address_builder = views_addresses.ViewBuilder()
+        self._flavor_builder = views_flavors.ViewBuilder()
+        self._image_builder = views_images.ViewBuilder()
+
+    def _skip_precooked(func):
+        def wrapped(self, request, instance):
+            if instance.get("_is_precooked"):
+                return dict(server=instance)
             else:
-                server = self._build_simple(inst)
+                return func(self, request, instance)
+        return wrapped
 
-            self._build_links(server['server'], inst)
-
-        return server
-
-    def _build_simple(self, inst):
-        """Return a simple model of a server."""
-        return dict(server=dict(id=inst['uuid'], name=inst['display_name']))
-
-    def _build_create(self, inst):
-        """Return data that should be returned from a server create."""
-        server = dict(server=dict(id=inst['uuid']))
-        self._build_links(server['server'], inst)
-        return server
-
-    def _build_detail(self, inst):
-        """Returns a detailed model of a server."""
-        vm_state = inst.get('vm_state', vm_states.BUILDING)
-        task_state = inst.get('task_state')
-
-        inst_dict = {
-            'id': inst['uuid'],
-            'name': inst['display_name'],
-            'user_id': inst.get('user_id', ''),
-            'tenant_id': inst.get('project_id', ''),
-            'status': common.status_from_state(vm_state, task_state)}
-
-        # Return the metadata as a dictionary
-        metadata = {}
-        for item in inst.get('metadata', []):
-            metadata[item['key']] = str(item['value'])
-        inst_dict['metadata'] = metadata
-
-        inst_dict['hostId'] = ''
-        if inst.get('host'):
-            inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
-
-        self._build_image(inst_dict, inst)
-        self._build_flavor(inst_dict, inst)
-        networks = common.get_networks_for_instance(self.context, inst)
-        self._build_addresses(inst_dict, networks)
-
-        inst_dict['created'] = utils.isotime(inst['created_at'])
-        inst_dict['updated'] = utils.isotime(inst['updated_at'])
-
-        status = inst_dict.get('status')
-        if status in ('ACTIVE', 'BUILD', 'REBUILD', 'RESIZE',
-                      'VERIFY_RESIZE'):
-            inst_dict['progress'] = inst['progress'] or 0
-
-        inst_dict['accessIPv4'] = inst.get('access_ip_v4') or ""
-        inst_dict['accessIPv6'] = inst.get('access_ip_v6') or ""
-        inst_dict['key_name'] = inst.get('key_name', '')
-        inst_dict['config_drive'] = inst.get('config_drive')
-
-        return dict(server=inst_dict)
-
-    def _build_addresses(self, response, networks):
-        """Return the addresses sub-resource of a server."""
-        response['addresses'] = self.addresses_builder.build(networks)
-
-    def _build_image(self, response, inst):
-        if inst.get("image_ref", None):
-            image_href = inst['image_ref']
-            image_id = str(common.get_id_from_href(image_href))
-            _bookmark = self.image_builder.generate_bookmark(image_id)
-            response['image'] = {
-                "id": image_id,
-                "links": [
-                    {
-                        "rel": "bookmark",
-                        "href": _bookmark,
-                    },
-                ]
-            }
-
-    def _build_flavor(self, response, inst):
-        if inst.get("instance_type", None):
-            flavor_id = inst["instance_type"]['flavorid']
-            flavor_ref = self.flavor_builder.generate_href(flavor_id)
-            flavor_bookmark = self.flavor_builder.generate_bookmark(flavor_id)
-            response["flavor"] = {
-                "id": str(common.get_id_from_href(flavor_ref)),
-                "links": [
-                    {
-                        "rel": "bookmark",
-                        "href": flavor_bookmark,
-                    },
-                ]
-            }
-
-    def _build_links(self, response, inst):
-        href = self.generate_href(inst["uuid"])
-        bookmark = self.generate_bookmark(inst["uuid"])
-
-        links = [
-            {
-                "rel": "self",
-                "href": href,
+    def create(self, request, instance):
+        """View that should be returned when an instance is created."""
+        return {
+            "server": {
+                "id": instance["uuid"],
+                "links": self._get_links(request, instance["uuid"]),
             },
-            {
+        }
+
+    @_skip_precooked
+    def basic(self, request, instance):
+        """Generic, non-detailed view of an instance."""
+        return {
+            "server": {
+                "id": instance["uuid"],
+                "name": instance["display_name"],
+                "links": self._get_links(request, instance["uuid"]),
+            },
+        }
+
+    @_skip_precooked
+    def show(self, request, instance):
+        """Detailed view of a single instance."""
+        server = {
+            "server": {
+                "id": instance["uuid"],
+                "name": instance["display_name"],
+                "status": self._get_vm_state(instance),
+                "tenant_id": instance.get("project_id") or "",
+                "user_id": instance.get("user_id") or "",
+                "metadata": self._get_metadata(instance),
+                "hostId": self._get_host_id(instance) or "",
+                "image": self._get_image(request, instance),
+                "flavor": self._get_flavor(request, instance),
+                "created": utils.isotime(instance["created_at"]),
+                "updated": utils.isotime(instance["updated_at"]),
+                "addresses": self._get_addresses(request, instance),
+                "accessIPv4": instance.get("access_ip_v4") or "",
+                "accessIPv6": instance.get("access_ip_v6") or "",
+                "key_name": instance.get("key_name") or "",
+                "config_drive": instance.get("config_drive"),
+                "links": self._get_links(request, instance["uuid"]),
+            },
+        }
+
+        if server["server"]["status"] in self._progress_statuses:
+            server["server"]["progress"] = instance.get("progress", 0)
+
+        return server
+
+    def index(self, request, instances):
+        """Show a list of servers without many details."""
+        list_func = self.basic
+        return self._list_view(list_func, request, instances)
+
+    def detail(self, request, instances):
+        """Detailed view of a list of instance."""
+        list_func = self.show
+        return self._list_view(list_func, request, instances)
+
+    def _list_view(self, func, request, servers):
+        """Provide a view for a list of servers."""
+        server_list = [func(request, server)["server"] for server in servers]
+        servers_links = self._get_collection_links(request, servers)
+        servers_dict = dict(servers=server_list)
+
+        if servers_links:
+            servers_dict["servers_links"] = servers_links
+
+        return servers_dict
+
+    @staticmethod
+    def _get_metadata(instance):
+        metadata = instance.get("metadata", [])
+        return dict((item['key'], str(item['value'])) for item in metadata)
+
+    @staticmethod
+    def _get_vm_state(instance):
+        return common.status_from_state(instance.get("vm_state"),
+                                        instance.get("task_state"))
+
+    @staticmethod
+    def _get_host_id(instance):
+        host = instance.get("host")
+        if host:
+            return hashlib.sha224(host).hexdigest()  # pylint: disable=E1101
+
+    def _get_addresses(self, request, instance):
+        context = request.environ["nova.context"]
+        networks = common.get_networks_for_instance(context, instance)
+        return self._address_builder.index(networks)["addresses"]
+
+    def _get_image(self, request, instance):
+        image_ref = instance["image_ref"]
+        image_id = str(common.get_id_from_href(image_ref))
+        bookmark = self._image_builder._get_bookmark_link(request, image_id)
+        return {
+            "id": image_id,
+            "links": [{
                 "rel": "bookmark",
                 "href": bookmark,
-            },
-        ]
+            }],
+        }
 
-        response["links"] = links
-
-    def build_list(self, server_objs, is_detail=False, **kwargs):
-        limit = kwargs.get('limit', None)
-        servers = []
-        servers_links = []
-
-        for server_obj in server_objs:
-            servers.append(self.build(server_obj, is_detail)['server'])
-
-        if (len(servers) and limit) and (limit == len(servers)):
-            next_link = self.generate_next_link(servers[-1]['id'],
-                                                kwargs, is_detail)
-            servers_links = [dict(rel='next', href=next_link)]
-
-        reval = dict(servers=servers)
-        if len(servers_links) > 0:
-            reval['servers_links'] = servers_links
-        return reval
-
-    def generate_next_link(self, server_id, params, is_detail=False):
-        """ Return an href string with proper limit and marker params"""
-        params['marker'] = server_id
-        return "%s?%s" % (
-            os.path.join(self.base_url, self.project_id, "servers"),
-            common.dict_to_query_str(params))
-
-    def generate_href(self, server_id):
-        """Create an url that refers to a specific server id."""
-        return os.path.join(self.base_url, self.project_id,
-                            "servers", str(server_id))
-
-    def generate_bookmark(self, server_id):
-        """Create an url that refers to a specific flavor id."""
-        return os.path.join(common.remove_version_from_href(self.base_url),
-            self.project_id, "servers", str(server_id))
+    def _get_flavor(self, request, instance):
+        flavor_id = instance["instance_type"]["flavorid"]
+        flavor_ref = self._flavor_builder._get_href_link(request, flavor_id)
+        flavor_bookmark = self._flavor_builder._get_bookmark_link(request,
+                                                                  flavor_id)
+        return {
+            "id": str(common.get_id_from_href(flavor_ref)),
+            "links": [{
+                "rel": "bookmark",
+                "href": flavor_bookmark,
+            }],
+        }

@@ -16,6 +16,7 @@
 #    under the License.
 
 import functools
+import os
 import re
 import urlparse
 
@@ -428,3 +429,56 @@ def check_snapshots_enabled(f):
             raise webob.exc.HTTPBadRequest(explanation=msg)
         return f(*args, **kwargs)
     return inner
+
+
+class ViewBuilder(object):
+    """Model API responses as dictionaries."""
+
+    _collection_name = None
+
+    def _get_links(self, request, identifier):
+        return [{
+            "rel": "self",
+            "href": self._get_href_link(request, identifier),
+        },
+        {
+            "rel": "bookmark",
+            "href": self._get_bookmark_link(request, identifier),
+        }]
+
+    def _get_next_link(self, request, identifier):
+        """Return href string with proper limit and marker params."""
+        params = request.params.copy()
+        params["marker"] = identifier
+        url = os.path.join(request.application_url,
+                           request.environ["nova.context"].project_id,
+                           self._collection_name)
+        return "%s?%s" % (url, dict_to_query_str(params))
+
+    def _get_href_link(self, request, identifier):
+        """Return an href string pointing to this object."""
+        return os.path.join(request.application_url,
+                            request.environ["nova.context"].project_id,
+                            self._collection_name,
+                            str(identifier))
+
+    def _get_bookmark_link(self, request, identifier):
+        """Create a URL that refers to a specific resource."""
+        base_url = remove_version_from_href(request.application_url)
+        return os.path.join(base_url,
+                            request.environ["nova.context"].project_id,
+                            self._collection_name,
+                            str(identifier))
+
+    def _get_collection_links(self, request, items):
+        """Retrieve 'next' link, if applicable."""
+        links = []
+        limit = int(request.params.get("limit", 0))
+        if limit and limit == len(items):
+            last_item = items[-1]
+            last_item_id = last_item.get("uuid", last_item["id"])
+            links.append({
+                "rel": "next",
+                "href": self._get_next_link(request, last_item_id),
+            })
+        return links

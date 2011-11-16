@@ -974,9 +974,10 @@ class ImagesControllerTest(test.TestCase):
         self.mox.VerifyAll()
 
     def test_generate_alternate_link(self):
-        view = images_view.ViewBuilder(1)
-        generated_url = view.generate_alternate(1)
-        actual_url = "%s//images/1" % utils.generate_glance_url()
+        view = images_view.ViewBuilder()
+        request = fakes.HTTPRequest.blank('/v1.1/fake/images/1')
+        generated_url = view._get_alternate_link(request, 1)
+        actual_url = "%s/fake/images/1" % utils.generate_glance_url()
         self.assertEqual(generated_url, actual_url)
 
     def test_delete_image(self):

@@ -57,10 +57,13 @@ class ConvertedException(exc.WSGIHTTPException):
         super(ConvertedException, self).__init__()
 
 
-class Controller(object):
+class Controller(wsgi.Controller):
     """ The Server API base controller class for the OpenStack API """
 
-    def __init__(self):
+    _view_builder_class = views_servers.ViewBuilder
+
+    def __init__(self, **kwargs):
+        super(Controller, self).__init__(**kwargs)
         self.compute_api = compute.API()
         self.network_api = network.API()
 
@@ -139,7 +142,10 @@ class Controller(object):
                                                  search_opts=search_opts)
 
         limited_list = self._limit_items(instance_list, req)
-        return self._build_list(req, limited_list, is_detail=is_detail)
+        if is_detail:
+            return self._view_builder.detail(req, limited_list)
+        else:
+            return self._view_builder.index(req, limited_list)
 
     def _get_server(self, context, instance_uuid):
         """Utility function for looking up an instance by uuid"""
@@ -291,13 +297,12 @@ class Controller(object):
         try:
             instance = self.compute_api.routing_get(
                 req.environ['nova.context'], id)
-            return self._build_view(req, instance, is_detail=True)
+            return self._view_builder.show(req, instance)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
     def create(self, req, body):
         """ Creates a new server for a given user """
-
         if not body:
             raise exc.HTTPUnprocessableEntity()
 
@@ -441,17 +446,13 @@ class Controller(object):
         if ret_resv_id:
             return {'reservation_id': resv_id}
 
-        # Instances is a list
-        instance = instances[0]
-        if not instance.get('_is_precooked', False):
-            instance['instance_type'] = inst_type
-            instance['image_ref'] = image_href
+        server = self._view_builder.create(req, instances[0])
 
-        server = self._build_view(req, instance, is_create=True)
-        if '_is_precooked' in server['server']:
+        if '_is_precooked' in server['server'].keys():
             del server['server']['_is_precooked']
         else:
             server['server']['adminPass'] = password
+
         return server
 
     def _delete(self, context, id):
@@ -497,13 +498,12 @@ class Controller(object):
             raise exc.HTTPNotFound()
 
         instance = self.compute_api.routing_get(ctxt, id)
-        return self._build_view(req, instance, is_detail=True)
+        return self._view_builder.show(req, instance)
 
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def action(self, req, id, body):
         """Multi-purpose method used to take actions on a server"""
-
         self.actions = {
             'changePassword': self._action_change_password,
             'reboot': self._action_reboot,
@@ -716,36 +716,6 @@ class Controller(object):
 
         return common.get_id_from_href(flavor_ref)
 
-    def _build_view(self, req, instance, is_detail=False, is_create=False):
-        context = req.environ['nova.context']
-        project_id = getattr(context, 'project_id', '')
-        base_url = req.application_url
-        flavor_builder = views_flavors.ViewBuilder(base_url, project_id)
-        image_builder = views_images.ViewBuilder(base_url, project_id)
-        addresses_builder = views_addresses.ViewBuilder()
-        builder = views_servers.ViewBuilder(context, addresses_builder,
-                flavor_builder, image_builder, base_url, project_id)
-        return builder.build(instance,
-                             is_detail=is_detail,
-                             is_create=is_create)
-
-    def _build_list(self, req, instances, is_detail=False):
-        params = req.GET.copy()
-        pagination_params = common.get_pagination_params(req)
-        # Update params with int() values from pagination params
-        for key, val in pagination_params.iteritems():
-            params[key] = val
-
-        context = req.environ['nova.context']
-        project_id = getattr(context, 'project_id', '')
-        base_url = req.application_url
-        flavor_builder = views_flavors.ViewBuilder(base_url, project_id)
-        image_builder = views_images.ViewBuilder(base_url, project_id)
-        addresses_builder = views_addresses.ViewBuilder()
-        builder = views_servers.ViewBuilder(context, addresses_builder,
-                flavor_builder, image_builder, base_url, project_id)
-        return builder.build_list(instances, is_detail=is_detail, **params)
-
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']
         if (not 'changePassword' in input_dict
@@ -824,7 +794,7 @@ class Controller(object):
             raise exc.HTTPNotFound(explanation=msg)
 
         instance = self._get_server(context, instance_id)
-        view = self._build_view(request, instance, is_detail=True)
+        view = self._view_builder.show(request, instance)
         view['server']['adminPass'] = password
 
         return view

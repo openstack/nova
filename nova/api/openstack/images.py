@@ -26,9 +26,9 @@ from nova import log
 from nova.api.openstack import common
 from nova.api.openstack import image_metadata
 from nova.api.openstack import servers
-from nova.api.openstack.views import images as images_view
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.api.openstack.views import images as views_images
 
 
 LOG = log.getLogger('nova.api.openstack.images')
@@ -45,16 +45,19 @@ SUPPORTED_FILTERS = {
 }
 
 
-class Controller(object):
+class Controller(wsgi.Controller):
     """Base controller for retrieving/displaying images."""
 
-    def __init__(self, image_service=None, compute_service=None):
+    _view_builder_class = views_images.ViewBuilder
+
+    def __init__(self, image_service=None, compute_service=None, **kwargs):
         """Initialize new `ImageController`.
 
         :param compute_service: `nova.compute.api:API`
         :param image_service: `nova.image.glance:GlancemageService`
 
         """
+        super(Controller, self).__init__(**kwargs)
         self._compute_service = compute_service or compute.API()
         self._image_service = image_service or \
                 nova.image.get_default_image_service()
@@ -88,7 +91,7 @@ class Controller(object):
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
 
-        return dict(image=self.get_builder(req).build(image, detail=True))
+        return self._view_builder.show(req, image)
 
     def delete(self, req, id):
         """Delete an image, if allowed.
@@ -103,12 +106,6 @@ class Controller(object):
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
         return webob.exc.HTTPNoContent()
-
-    def get_builder(self, req):
-        """Property to get the ViewBuilder class we need to use."""
-        base_url = req.application_url
-        project_id = getattr(req.environ['nova.context'], 'project_id', '')
-        return images_view.ViewBuilder(base_url, project_id)
 
     def index(self, req):
         """Return an index listing of images available to the request.
@@ -125,7 +122,7 @@ class Controller(object):
 
         images = self._image_service.index(context, filters=filters,
                                            **page_params)
-        return self.get_builder(req).build_list(images, **params)
+        return self._view_builder.index(req, images)
 
     def detail(self, req):
         """Return a detailed index listing of images available to the request.
@@ -142,7 +139,7 @@ class Controller(object):
         images = self._image_service.detail(context, filters=filters,
                                             **page_params)
 
-        return self.get_builder(req).build_list(images, detail=True, **params)
+        return self._view_builder.detail(req, images)
 
     def create(self, *args, **kwargs):
         raise webob.exc.HTTPMethodNotAllowed()

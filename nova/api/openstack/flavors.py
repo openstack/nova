@@ -18,7 +18,7 @@
 import webob
 from lxml import etree
 
-from nova.api.openstack import views
+from nova.api.openstack.views import flavors as flavors_view
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import instance_types
@@ -26,20 +26,31 @@ from nova import db
 from nova import exception
 
 
-class Controller(object):
+class Controller(wsgi.Controller):
     """Flavor controller for the OpenStack API."""
+
+    _view_builder_class = flavors_view.ViewBuilder
 
     def index(self, req):
         """Return all flavors in brief."""
-        items = self._get_flavors(req, is_detail=False)
-        return dict(flavors=items)
+        flavors = self._get_flavors(req)
+        return self._view_builder.index(req, flavors)
 
     def detail(self, req):
         """Return all flavors in detail."""
-        items = self._get_flavors(req, is_detail=True)
-        return dict(flavors=items)
+        flavors = self._get_flavors(req)
+        return self._view_builder.detail(req, flavors)
 
-    def _get_flavors(self, req, is_detail=True):
+    def show(self, req, id):
+        """Return data about the given flavor id."""
+        try:
+            flavor = instance_types.get_instance_type_by_flavor_id(id)
+        except exception.NotFound:
+            raise webob.exc.HTTPNotFound()
+
+        return self._view_builder.show(req, flavor)
+
+    def _get_flavors(self, req):
         """Helper function that returns a list of flavor dicts."""
         filters = {}
         if 'minRam' in req.params:
@@ -54,29 +65,7 @@ class Controller(object):
             except ValueError:
                 pass  # ignore bogus values per spec
 
-        ctxt = req.environ['nova.context']
-        inst_types = instance_types.get_all_types(filters=filters)
-        builder = self._get_view_builder(req)
-        items = [builder.build(inst_type, is_detail=is_detail)
-                 for inst_type in inst_types.values()]
-        return items
-
-    def show(self, req, id):
-        """Return data about the given flavor id."""
-        try:
-            ctxt = req.environ['nova.context']
-            flavor = instance_types.get_instance_type_by_flavor_id(id)
-        except exception.NotFound:
-            raise webob.exc.HTTPNotFound()
-
-        builder = self._get_view_builder(req)
-        values = builder.build(flavor, is_detail=True)
-        return dict(flavor=values)
-
-    def _get_view_builder(self, req):
-        base_url = req.application_url
-        project_id = getattr(req.environ['nova.context'], 'project_id', '')
-        return views.flavors.ViewBuilder(base_url, project_id)
+        return instance_types.get_all_types(filters=filters)
 
 
 def make_flavor(elem, detailed=False):
