@@ -109,11 +109,19 @@ class LibvirtVolumeTestCase(test.TestCase):
         super(LibvirtVolumeTestCase, self).setUp()
         self.stubs.Set(utils, 'execute', self.fake_execute)
 
+        class FakeLibvirtConnection(object):
+            def __init__(self, hyperv="QEMU"):
+                self.hyperv = hyperv
+
+            def get_hypervisor_type(self):
+                return self.hyperv
+        self.fake_conn = FakeLibvirtConnection("Xen")
+
     def test_libvirt_iscsi_driver(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)
         vol_driver = volume_driver.ISCSIDriver()
-        libvirt_driver = volume.LibvirtISCSIVolumeDriver('fake')
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1,
                'name': name,
@@ -133,7 +141,7 @@ class LibvirtVolumeTestCase(test.TestCase):
 
     def test_libvirt_sheepdog_driver(self):
         vol_driver = volume_driver.SheepdogDriver()
-        libvirt_driver = volume.LibvirtNetVolumeDriver('fake')
+        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1, 'name': name}
         address = '127.0.0.1'
@@ -148,7 +156,7 @@ class LibvirtVolumeTestCase(test.TestCase):
 
     def test_libvirt_rbd_driver(self):
         vol_driver = volume_driver.RBDDriver()
-        libvirt_driver = volume.LibvirtNetVolumeDriver('fake')
+        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         vol = {'id': 1, 'name': name}
         address = '127.0.0.1'

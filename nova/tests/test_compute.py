@@ -1981,6 +1981,47 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
 
+    def test_attach_volume_invalid(self):
+        self.assertRaises(exception.ApiError,
+                self.compute_api.attach_volume,
+                None,
+                None,
+                None,
+                '/dev/invalid')
+
+    def test_attach_volume(self):
+        instance_id = 1
+        volume_id = 1
+
+        for device in ('/dev/sda', '/dev/xvda'):
+            # creating mocks
+            self.mox.StubOutWithMock(self.compute_api.volume_api,
+                    'check_attach')
+            self.mox.StubOutWithMock(self.compute_api, 'get')
+            self.mox.StubOutWithMock(rpc, 'cast')
+
+            rpc.cast(
+                    mox.IgnoreArg(),
+                    mox.IgnoreArg(), {"method": "attach_volume",
+                        "args": {'volume_id': volume_id,
+                                 'instance_id': instance_id,
+                                 'mountpoint': device}})
+
+            self.compute_api.volume_api.check_attach(
+                    mox.IgnoreArg(),
+                    volume_id=volume_id).AndReturn(
+                            {'id': volume_id, 'status': 'available',
+                                'attach_status': 'detached'})
+
+            self.compute_api.get(
+                    mox.IgnoreArg(),
+                    mox.IgnoreArg()).AndReturn({'id': instance_id,
+                        'host': 'fake'})
+
+            self.mox.ReplayAll()
+            self.compute_api.attach_volume(None, None, volume_id, device)
+            self.mox.UnsetStubs()
+
     def test_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
         def vnc_rpc_call_wrapper(*args, **kwargs):
