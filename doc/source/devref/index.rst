@@ -36,6 +36,7 @@ Background Concepts for Nova
    :maxdepth: 3
 
    threading
+   il8n
    distributed_scheduler
    multinic
    zone
