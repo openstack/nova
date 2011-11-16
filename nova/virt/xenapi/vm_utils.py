@@ -359,8 +359,7 @@ class VMHelper(HelperBase):
         return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
     @classmethod
-    def upload_image(cls, context, session, instance, vdi_uuids, image_id,
-                     options=None):
+    def upload_image(cls, context, session, instance, vdi_uuids, image_id):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
@@ -369,26 +368,28 @@ class VMHelper(HelperBase):
         logging.debug(_("Asking xapi to upload %(vdi_uuids)s as"
                 " ID %(image_id)s") % locals())
 
-        os_type = instance.os_type or FLAGS.default_os_type
-
         glance_host, glance_port = glance.pick_glance_api_server()
+
+        properties = {}
+        properties['auto_disk_config'] = instance.auto_disk_config
+        properties['os_type'] = instance.os_type or FLAGS.default_os_type
+
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
                   'glance_host': glance_host,
                   'glance_port': glance_port,
                   'sr_path': cls.get_sr_path(session),
-                  'os_type': os_type,
                   'auth_token': getattr(context, 'auth_token', None),
-                  'options': options}
+                  'properties': properties}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
         session.wait_for_task(task, instance.id)
 
     @classmethod
-    def create_managed_disk(cls, session, vdi_ref):
-        """A 'managed disk' means that we'll resize the partition and fs to
-        match the size specified by instance_types.local_gb.
+    def auto_configure_disk(cls, session, vdi_ref):
+        """Partition and resize FS to match the size specified by
+        instance_types.local_gb.
         """
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
             dev_path = utils.make_dev_path(dev)
@@ -401,12 +402,12 @@ class VMHelper(HelperBase):
         """Determine whether we should resize the partition and the fs.
 
         This is a fail-safe to prevent accidentally destroying data on a disk
-        erroneously marked as managed_disk=True.
+        erroneously marked as auto_disk_config=True.
 
         The criteria for allowing resize are:
 
-            1. 'managed_disk' must be true for the instance (and image). (If
-                we've made it here, then managed_disk=True.)
+            1. 'auto_disk_config' must be true for the instance (and image).
+               (If we've made it here, then auto_disk_config=True.)
 
             2. The disk must have only one partition.
 
@@ -504,7 +505,7 @@ w
 
             # 4. Create VBD between instance VM and swap VDI
             volume_utils.VolumeHelper.create_vbd(
-                    session, vm_ref, vdi_ref, userdevice, bootable=False)
+                session, vm_ref, vdi_ref, userdevice, bootable=False)
         except:
             with utils.save_and_reraise_exception():
                 cls.destroy_vdi(session, vdi_ref)
@@ -1211,7 +1212,7 @@ def _wait_for_device(dev):
         time.sleep(1)
 
     raise volume_utils.StorageError(
-            _('Timeout waiting for device %s to be created') % dev)
+        _('Timeout waiting for device %s to be created') % dev)
 
 
 @contextlib.contextmanager

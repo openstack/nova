@@ -342,15 +342,12 @@ class VMOps(object):
             # set user device to next free value
             userdevice += 1
         else:
-            if instance.managed_disk:
-                LOG.debug(_("Managed disk set for instance %(instance_id)s,"
-                            " attempting to resize partition") % locals())
-                VMHelper.create_managed_disk(session=self._session,
+            if instance.auto_disk_config:
+                LOG.debug(_("Auto configuring disk for instance"
+                            " %(instance_id)s, attempting to"
+                            " resize partition...") % locals())
+                VMHelper.auto_configure_disk(session=self._session,
                                              vdi_ref=first_vdi_ref)
-            else:
-                LOG.debug(_("Managed disk NOT set for instance"
-                            " %(instance_id)s, skipping resize partition")
-                            % locals())
 
             VolumeHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                                     vdi_ref=first_vdi_ref,
@@ -590,16 +587,12 @@ class VMOps(object):
 
         """
         template_vm_ref = None
-        options = None
-        if instance['managed_disk']:
-            options = {'managed_disk': instance['managed_disk']}
         try:
             template_vm_ref, template_vdi_uuids =\
                     self._create_snapshot(instance)
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(context,
-                    self._session, instance, template_vdi_uuids, image_id,
-                    options)
+                    self._session, instance, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
                 self._destroy(instance, template_vm_ref,
