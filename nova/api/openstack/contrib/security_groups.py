@@ -387,8 +387,8 @@ class Security_groups(extensions.ExtensionDescriptor):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
-            self.compute_api.add_security_group(context, instance_id,
-                                                group_name)
+            instance = self.compute_api.get(context, instance_id)
+            self.compute_api.add_security_group(context, instance, group_name)
         except exception.SecurityGroupNotFound as exp:
             raise exc.HTTPNotFound(explanation=unicode(exp))
         except exception.InstanceNotFound as exp:
@@ -416,7 +416,8 @@ class Security_groups(extensions.ExtensionDescriptor):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
-            self.compute_api.remove_security_group(context, instance_id,
+            instance = self.compute_api.get(context, instance_id)
+            self.compute_api.remove_security_group(context, instance,
                                                    group_name)
         except exception.SecurityGroupNotFound as exp:
             raise exc.HTTPNotFound(explanation=unicode(exp))
