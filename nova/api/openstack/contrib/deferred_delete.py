@@ -42,7 +42,8 @@ class Deferred_delete(extensions.ExtensionDescriptor):
         """Restore a previously deleted instance."""
 
         context = req.environ["nova.context"]
-        self.compute_api.restore(context, instance_id)
+        instance = self.compute_api.get(context, instance_id)
+        self.compute_api.restore(context, instance)
         return webob.Response(status_int=202)
 
     def _force_delete(self, input_dict, req, instance_id):
