@@ -21,7 +21,7 @@
 import base64
 import webob
 
-from nova.api.ec2 import metadatarequesthandler
+from nova.api.metadata import handler
 from nova.db.sqlalchemy import api
 from nova import exception
 from nova import flags
@@ -86,7 +86,7 @@ class MetadataTestCase(test.TestCase):
         self.stubs.Set(api, 'instance_get', instance_get)
         self.stubs.Set(api, 'instance_get_all_by_filters', instance_get_list)
         self.stubs.Set(api, 'instance_get_floating_address', floating_get)
-        self.app = metadatarequesthandler.MetadataRequestHandler()
+        self.app = handler.MetadataRequestHandler()
         network_manager = fake_network.FakeNetworkManager()
         self.stubs.Set(self.app.cc.network_api,
                        'get_instance_uuids_by_ip_filter',

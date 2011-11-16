@@ -1,8 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
+# Copyright 2011 Openstack, LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -17,13 +15,11 @@
 #    under the License.
 
 """
-:mod:`nova.cloudpipe` -- VPN Server Management
-=====================================================
+:mod:`nova.api.metadata` -- Nova Metadata Server
+================================================
 
-.. automodule:: nova.cloudpipe
+.. automodule:: nova.api.metadata
    :platform: Unix
-   :synopsis: An OpenVPN server for every nova user.
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
+   :synopsis: Metadata Server for Nova
 .. moduleauthor:: Vishvananda Ishaya <vishvananda@gmail.com>
-.. moduleauthor:: Joshua McKenty <jmckenty@gmail.com>
 """

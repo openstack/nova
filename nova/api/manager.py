@@ -23,14 +23,14 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 
-class EC2Manager(manager.Manager):
-    """EC2 API manager.
+class MetadataManager(manager.Manager):
+    """Metadata Manager.
 
-    This class manages the EC2 API service initialization. Currently, it
+    This class manages the Metadata API service initialization. Currently, it
     just adds an iptables filter rule for the metadata service.
     """
     def __init__(self, *args, **kwargs):
-        super(EC2Manager, self).__init__(*args, **kwargs)
+        super(MetadataManager, self).__init__(*args, **kwargs)
         self.network_driver = utils.import_object(FLAGS.network_driver)
 
     def init_host(self):

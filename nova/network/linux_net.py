@@ -377,7 +377,8 @@ def metadata_forward():
                                           '-s 0.0.0.0/0 -d 169.254.169.254/32 '
                                           '-p tcp -m tcp --dport 80 -j DNAT '
                                           '--to-destination %s:%s' % \
-                                          (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
+                                          (FLAGS.metadata_host,
+                                           FLAGS.metadata_port))
     iptables_manager.apply()
 
 
@@ -387,8 +388,8 @@ def metadata_accept():
                                              '-s 0.0.0.0/0 -d %s '
                                              '-p tcp -m tcp --dport %s '
                                              '-j ACCEPT' % \
-                                             (FLAGS.ec2_dmz_host,
-                                              FLAGS.ec2_port))
+                                             (FLAGS.metadata_host,
+                                              FLAGS.metadata_port))
     iptables_manager.apply()
 
 
