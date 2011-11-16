@@ -77,8 +77,7 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(inst_type['vcpus'], 1)
         self.assertEqual(inst_type['local_gb'], 120)
         self.assertEqual(inst_type['swap'], 0)
-        self.assertEqual(inst_type['rxtx_quota'], 0)
-        self.assertEqual(inst_type['rxtx_cap'], 0)
+        self.assertEqual(inst_type['rxtx_factor'], 1)
 
         # make sure new type shows up in list
         new_list = instance_types.get_all_types()
@@ -124,11 +123,9 @@ class InstanceTypeTestCase(test.TestCase):
             (('Negative swap', 256, 1, 10, 'flavor1'), {'swap': -1}),
             (('Non-integer swap', 256, 1, 10, 'flavor1'), {'swap': -1}),
 
-            (('Negative rxtx_quota', 256, 1, 10, 'f1'), {'rxtx_quota': -1}),
-            (('Non-integer rxtx_quota', 256, 1, 10, 'f1'), {'rxtx_quota': -1}),
-
-            (('Negative rxtx_cap', 256, 1, 10, 'f1'), {'rxtx_cap': -1}),
-            (('Non-integer rxtx_cap', 256, 1, 10, 'f1'), {'rxtx_cap': 'a'}),
+            (('Negative rxtx_factor', 256, 1, 10, 'f1'), {'rxtx_factor': -1}),
+            (('Non-integer rxtx_factor', 256, 1, 10, 'f1'),
+                 {'rxtx_factor': "d"}),
         ]
 
         for (args, kwargs) in invalid_sigs:

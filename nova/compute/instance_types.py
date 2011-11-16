@@ -31,15 +31,14 @@ LOG = logging.getLogger('nova.instance_types')
 
 
 def create(name, memory, vcpus, local_gb, flavorid, swap=0,
-           rxtx_quota=0, rxtx_cap=0):
+           rxtx_factor=1):
     """Creates instance types."""
     kwargs = {
         'memory_mb': memory,
         'vcpus': vcpus,
         'local_gb': local_gb,
         'swap': swap,
-        'rxtx_quota': rxtx_quota,
-        'rxtx_cap': rxtx_cap,
+        'rxtx_factor': rxtx_factor,
     }
 
     # ensure some attributes are integers and greater than or equal to 0

@@ -698,6 +698,15 @@ class NetworkManager(manager.SchedulerDependentManager):
                                          network['project_id']),
                     'netmask': network['netmask_v6'],
                     'enabled': '1'}
+
+            def rxtx_cap(instance_type, network):
+                try:
+                    rxtx_factor = instance_type['rxtx_factor']
+                    rxtx_base = network['rxtx_base']
+                    return rxtx_factor * rxtx_base
+                except (KeyError, TypeError):
+                    return 0
+
             network_dict = {
                 'bridge': network['bridge'],
                 'id': network['id'],
@@ -720,7 +729,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 'broadcast': network['broadcast'],
                 'mac': vif['address'],
                 'vif_uuid': vif['uuid'],
-                'rxtx_cap': instance_type['rxtx_cap'],
+                'rxtx_cap': rxtx_cap(instance_type, network),
                 'dns': [],
                 'ips': [ip_dict(ip) for ip in network_IPs],
                 'should_create_bridge': self.SHOULD_CREATE_BRIDGE,

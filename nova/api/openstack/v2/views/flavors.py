@@ -42,8 +42,7 @@ class ViewBuilder(common.ViewBuilder):
                 "disk": flavor["local_gb"],
                 "vcpus": flavor.get("vcpus") or "",
                 "swap": flavor.get("swap") or "",
-                "rxtx_quota": flavor.get("rxtx_quota") or "",
-                "rxtx_cap": flavor.get("rxtx_cap") or "",
+                "rxtx_factor": flavor.get("rxtx_factor") or "",
                 "links": self._get_links(request, flavor["flavorid"]),
             },
         }

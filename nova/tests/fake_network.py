@@ -130,8 +130,7 @@ flavor = {'id': 0,
           'local_gb': 10,
           'flavor_id': 0,
           'swap': 0,
-          'rxtx_quota': 0,
-          'rxtx_cap': 3}
+          'rxtx_factor': 3}
 
 
 def fake_network(network_id, ipv6=None):
@@ -155,7 +154,8 @@ def fake_network(network_id, ipv6=None):
                     'vlan': None,
                     'host': None,
                     'project_id': 'fake_project',
-                    'vpn_public_address': '192.168.%d.2' % network_id}
+                    'vpn_public_address': '192.168.%d.2' % network_id,
+                    'rxtx_base': '%d' % network_id * 10}
     if ipv6:
         fake_network['cidr_v6'] = '2001:db8:0:%x::/64' % network_id
         fake_network['gateway_v6'] = '2001:db8:0:%x::1' % network_id

@@ -305,8 +305,7 @@ class InstanceTypes(BASE, NovaBase):
     local_gb = Column(Integer)
     flavorid = Column(String(255), unique=True)
     swap = Column(Integer, nullable=False, default=0)
-    rxtx_quota = Column(Integer, nullable=False, default=0)
-    rxtx_cap = Column(Integer, nullable=False, default=0)
+    rxtx_factor = Column(Float, nullable=False, default=1)
     vcpu_weight = Column(Integer, nullable=True)
 
     instances = relationship(Instance,
@@ -632,6 +631,8 @@ class Network(BASE, NovaBase):
     vpn_public_port = Column(Integer)
     vpn_private_address = Column(String(255))
     dhcp_start = Column(String(255))
+
+    rxtx_base = Column(Integer)
 
     project_id = Column(String(255))
     priority = Column(Integer)

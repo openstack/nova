@@ -164,6 +164,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'ips': 'DONTCARE',
                      'label': 'test%d' % i,
                      'mac': 'DE:AD:BE:EF:00:%02x' % i,
+                     'rxtx_cap': "%d" % i * 3,
                      'vif_uuid':
                         '00000000-0000-0000-0000-00000000000000%02d' % i,
                      'rxtx_cap': 3,

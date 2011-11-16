@@ -1436,6 +1436,7 @@ def instance_get_all_by_user(context, user_id):
 @require_admin_context
 def instance_get_all_by_host(context, host):
     session = get_session()
+    read_deleted = can_read_deleted(context)
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
@@ -1443,7 +1444,7 @@ def instance_get_all_by_host(context, host):
                    options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(host=host).\
-                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(deleted=read_deleted).\
                    all()
 
 
