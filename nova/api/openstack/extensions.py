@@ -133,12 +133,25 @@ class RequestExtensionController(object):
     def __init__(self, application):
         self.application = application
         self.handlers = []
+        self.pre_handlers = []
 
     def add_handler(self, handler):
         self.handlers.append(handler)
 
+    def add_pre_handler(self, pre_handler):
+        self.pre_handlers.append(pre_handler)
+
     def process(self, req, *args, **kwargs):
+        for pre_handler in self.pre_handlers:
+            pre_handler(req)
+
         res = req.get_response(self.application)
+
+        # Don't call extensions if the main application returned an
+        # unsuccessful status
+        successful = 200 <= res.status_int < 400
+        if not successful:
+            return res
 
         # Deserialize the response body, if any
         body = None
@@ -164,6 +177,9 @@ class RequestExtensionResource(wsgi.Resource):
 
     def add_handler(self, handler):
         self.controller.add_handler(handler)
+
+    def add_pre_handler(self, pre_handler):
+        self.controller.add_pre_handler(pre_handler)
 
 
 class ExtensionsResource(wsgi.Resource):
@@ -294,7 +310,10 @@ class ExtensionMiddleware(base_wsgi.Middleware):
         for request_ext in ext_mgr.get_request_extensions():
             LOG.debug(_('Extended request: %s'), request_ext.key)
             controller = req_controllers[request_ext.key]
-            controller.add_handler(request_ext.handler)
+            if request_ext.handler:
+                controller.add_handler(request_ext.handler)
+            if request_ext.pre_handler:
+                controller.add_pre_handler(request_ext.pre_handler)
 
         self._router = routes.middleware.RoutesMiddleware(self._dispatch,
                                                           mapper)
@@ -437,11 +456,12 @@ class RequestExtension(object):
     that is sent to core nova OpenStack API controllers.
 
     """
-    def __init__(self, method, url_route, handler):
+    def __init__(self, method, url_route, handler=None, pre_handler=None):
         self.url_route = url_route
         self.handler = handler
         self.conditions = dict(method=[method])
         self.key = "%s-%s" % (method, url_route)
+        self.pre_handler = pre_handler
 
 
 class ActionExtension(object):

@@ -307,8 +307,8 @@ def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
         os.link(source, link_name)
 
 
-def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type,
-                    auth_token, options):
+def _upload_tarball(staging_path, image_id, glance_host, glance_port,
+                    auth_token, properties):
     """
     Create a tarball of the image and then stream that into Glance
     using chunked-transfer-encoded HTTP.
@@ -352,11 +352,11 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type,
         'x-image-meta-is-public': 'False',
         'x-image-meta-status': 'queued',
         'x-image-meta-disk-format': 'vhd',
-        'x-image-meta-container-format': 'ovf',
-        'x-image-meta-property-os-type': os_type}
+        'x-image-meta-container-format': 'ovf'}
 
-    if options and options.get('managed_disk'):
-        headers['x-image-meta-property-managed-disk'] = options['managed_disk']
+    for key, value in properties.items():
+        header_key = "x-image-meta-property-%s" % key.replace('_', '-')
+        headers[header_key] = str(value)
 
     # If we have an auth_token, set an x-auth-token header
     if auth_token:
@@ -491,15 +491,14 @@ def upload_vhd(session, args):
     glance_host = params["glance_host"]
     glance_port = params["glance_port"]
     sr_path = params["sr_path"]
-    os_type = params["os_type"]
     auth_token = params["auth_token"]
-    options = params["options"]
+    properties = params["properties"]
 
     staging_path = _make_staging_area(sr_path)
     try:
         _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids)
         _upload_tarball(staging_path, image_id, glance_host, glance_port,
-                        os_type, auth_token, options)
+                        auth_token, properties)
     finally:
         _cleanup_staging_area(staging_path)
 

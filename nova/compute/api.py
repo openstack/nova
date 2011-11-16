@@ -163,7 +163,8 @@ class API(base.Base):
                injected_files, admin_password, zone_blob,
                reservation_id, access_ip_v4, access_ip_v6,
                requested_networks, config_drive,
-               block_device_mapping, create_instance_here=False):
+               block_device_mapping, auto_disk_config,
+               create_instance_here=False):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation."""
@@ -227,10 +228,14 @@ class API(base.Base):
         vm_mode = None
         if 'properties' in image and 'vm_mode' in image['properties']:
             vm_mode = image['properties']['vm_mode']
-        managed_disk = False
-        if 'properties' in image and 'managed_disk' in image['properties']:
-            managed_disk = utils.bool_from_str(
-                image['properties']['managed_disk'])
+
+        # If instance doesn't have auto_disk_config overriden by request, use
+        # whatever the image indicates
+        if auto_disk_config is None:
+            if ('properties' in image and
+                'auto_disk_config' in image['properties']):
+                auto_disk_config = utils.bool_from_str(
+                    image['properties']['auto_disk_config'])
 
         if kernel_id is None:
             kernel_id = image['properties'].get('kernel_id', None)
@@ -294,7 +299,7 @@ class API(base.Base):
             'architecture': architecture,
             'vm_mode': vm_mode,
             'root_device_name': root_device_name,
-            'managed_disk': managed_disk}
+            'auto_disk_config': auto_disk_config}
 
         LOG.debug(_("Going to run %s instances...") % num_instances)
 
@@ -526,7 +531,8 @@ class API(base.Base):
                injected_files=None, admin_password=None, zone_blob=None,
                reservation_id=None, block_device_mapping=None,
                access_ip_v4=None, access_ip_v6=None,
-               requested_networks=None, config_drive=None):
+               requested_networks=None, config_drive=None,
+               auto_disk_config=None):
         """
         Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
@@ -554,7 +560,7 @@ class API(base.Base):
                                injected_files, admin_password, zone_blob,
                                reservation_id, access_ip_v4, access_ip_v6,
                                requested_networks, config_drive,
-                               block_device_mapping,
+                               block_device_mapping, auto_disk_config,
                                create_instance_here=create_instance_here)
 
         if create_instance_here or instances is None:

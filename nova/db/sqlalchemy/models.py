@@ -255,7 +255,7 @@ class Instance(BASE, NovaBase):
     access_ip_v4 = Column(String(255))
     access_ip_v6 = Column(String(255))
 
-    managed_disk = Column(Boolean())
+    auto_disk_config = Column(Boolean())
     progress = Column(Integer)
 
 

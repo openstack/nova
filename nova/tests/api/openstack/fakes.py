@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
 import webob
 import webob.dec
 import webob.request
@@ -35,6 +37,9 @@ from nova.api.openstack import urlmap
 from nova.api.openstack import versions
 from nova.api.openstack import wsgi as os_wsgi
 from nova.auth.manager import User, Project
+from nova.compute import instance_types
+from nova.compute import vm_states
+from nova.db.sqlalchemy import models
 import nova.image.fake
 from nova.tests.glance import stubs as glance_stubs
 
@@ -447,3 +452,114 @@ class FakeRateLimiter(object):
     @webob.dec.wsgify
     def __call__(self, req):
         return self.application
+
+
+FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+
+
+def create_fixed_ips(project_id, publics, privates, publics_are_floating):
+    if publics is None:
+        publics = []
+    if privates is None:
+        privates = []
+
+    fixed_ips = []
+    private_vif = dict(address='aa:bb:cc:dd:ee:ff')
+    private_net = dict(label='private', project_id=project_id, cidr_v6=None)
+
+    for private in privates:
+        entry = dict(address=private, network=private_net,
+                virtual_interface=private_vif, floating_ips=[])
+        if publics_are_floating:
+            for public in publics:
+                entry['floating_ips'].append(dict(address=public))
+            # Only add them once
+            publics = []
+        fixed_ips.append(entry)
+
+    if not publics_are_floating:
+        public_vif = dict(address='ff:ee:dd:cc:bb:aa')
+        public_net = dict(label='public', project_id=project_id,
+                cidr_v6='b33f::/64')
+        for public in publics:
+            entry = dict(address=public, network=public_net,
+                    virtual_interface=public_vif, floating_ips=[])
+            fixed_ips.append(entry)
+    return fixed_ips
+
+
+def stub_instance(id, user_id='fake', project_id='fake', host=None,
+                  vm_state=None, task_state=None,
+                  reservation_id="", uuid=FAKE_UUID, image_ref="10",
+                  flavor_id="1", name=None, key_name='',
+                  access_ipv4=None, access_ipv6=None, progress=0,
+                  auto_disk_config=False, public_ips=None, private_ips=None,
+                  public_ips_are_floating=False, display_name=None,
+                  include_fake_metadata=True,
+                  power_state=None):
+
+    if include_fake_metadata:
+        metadata = [models.InstanceMetadata(key='seq', value=id)]
+    else:
+        metadata = []
+
+    inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
+
+    if host is not None:
+        host = str(host)
+
+    if key_name:
+        key_data = 'FAKE'
+    else:
+        key_data = ''
+
+    fixed_ips = create_fixed_ips(project_id, public_ips, private_ips,
+                                 public_ips_are_floating)
+
+    # ReservationID isn't sent back, hack it in there.
+    server_name = name or "server%s" % id
+    if reservation_id != "":
+        server_name = "reservation_%s" % (reservation_id, )
+
+    instance = {
+        "id": int(id),
+        "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
+        "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
+        "admin_pass": "",
+        "user_id": user_id,
+        "project_id": project_id,
+        "image_ref": image_ref,
+        "kernel_id": "",
+        "ramdisk_id": "",
+        "launch_index": 0,
+        "key_name": key_name,
+        "key_data": key_data,
+        "vm_state": vm_state or vm_states.BUILDING,
+        "task_state": task_state,
+        "power_state": power_state,
+        "memory_mb": 0,
+        "vcpus": 0,
+        "local_gb": 0,
+        "hostname": "",
+        "host": host,
+        "instance_type": dict(inst_type),
+        "user_data": "",
+        "reservation_id": reservation_id,
+        "mac_address": "",
+        "scheduled_at": utils.utcnow(),
+        "launched_at": utils.utcnow(),
+        "terminated_at": utils.utcnow(),
+        "availability_zone": "",
+        "display_name": display_name or server_name,
+        "display_description": "",
+        "locked": False,
+        "metadata": metadata,
+        "access_ip_v4": access_ipv4,
+        "access_ip_v6": access_ipv6,
+        "uuid": uuid,
+        "progress": progress,
+        "auto_disk_config": auto_disk_config,
+        "name": "instance-%s" % id,
+        "fixed_ips": fixed_ips}
+
+    return instance

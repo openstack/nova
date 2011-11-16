@@ -1124,9 +1124,9 @@ class HostStateTestCase(test.TestCase):
         self.assertEquals(stats['host_memory_free_computed'], 40)
 
 
-class XenAPIManagedDiskTestCase(test.TestCase):
+class XenAPIAutoDiskConfigTestCase(test.TestCase):
     def setUp(self):
-        super(XenAPIManagedDiskTestCase, self).setUp()
+        super(XenAPIAutoDiskConfigTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.flags(target_host='127.0.0.1',
                    xenapi_connection_url='test_url',
@@ -1181,15 +1181,17 @@ class XenAPIManagedDiskTestCase(test.TestCase):
 
         self.assertEqual(marker["partition_called"], called)
 
-    def test_instance_not_managed(self):
-        """Should not partition unless instance is marked as managed_disk"""
-        self.instance_values['managed_disk'] = False
+    def test_instance_not_auto_disk_config(self):
+        """Should not partition unless instance is marked as
+        auto_disk_config.
+        """
+        self.instance_values['auto_disk_config'] = False
         self.assertIsPartitionCalled(False)
 
     @stub_vm_utils_with_vdi_attached_here
-    def test_instance_managed_doesnt_pass_fail_safes(self):
+    def test_instance_auto_disk_config_doesnt_pass_fail_safes(self):
         """Should not partition unless fail safes pass"""
-        self.instance_values['managed_disk'] = True
+        self.instance_values['auto_disk_config'] = True
 
         @classmethod
         def fake_resize_partition_allowed(cls, dev_path, partition_path):
@@ -1201,11 +1203,11 @@ class XenAPIManagedDiskTestCase(test.TestCase):
         self.assertIsPartitionCalled(False)
 
     @stub_vm_utils_with_vdi_attached_here
-    def test_instance_managed_passes_fail_safes(self):
-        """Should partition if instance is marked as managed_disk=True and
+    def test_instance_auto_disk_config_passes_fail_safes(self):
+        """Should partition if instance is marked as auto_disk_config=True and
         virt-layer specific fail-safe checks pass.
         """
-        self.instance_values['managed_disk'] = True
+        self.instance_values['auto_disk_config'] = True
 
         @classmethod
         def fake_resize_partition_allowed(cls, dev_path, partition_path):

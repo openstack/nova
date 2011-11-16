@@ -113,11 +113,45 @@ class _FakeImageService(object):
                                     '155d900f-4e14-4e4c-a73d-069cbf4541e6',
                                 'ramdisk_id': None}}
 
+        # NOTE(sirp): was image '6'
+        image6 = {'id': 'a440c04b-79fa-479c-bed1-0b816eaec379',
+                 'name': 'fakeimage6',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
+                 'deleted_at': None,
+                 'deleted': False,
+                 'status': 'active',
+                 'is_public': False,
+                 'container_format': 'ova',
+                 'disk_format': 'vhd',
+                 'properties': {'kernel_id': FLAGS.null_kernel,
+                                'ramdisk_id': FLAGS.null_kernel,
+                                'architecture': 'x86_64',
+                                'auto_disk_config': 'False'}}
+
+        # NOTE(sirp): was image '7'
+        image7 = {'id': '70a599e0-31e7-49b7-b260-868f441e862b',
+                 'name': 'fakeimage7',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
+                 'deleted_at': None,
+                 'deleted': False,
+                 'status': 'active',
+                 'is_public': False,
+                 'container_format': 'ova',
+                 'disk_format': 'vhd',
+                 'properties': {'kernel_id': FLAGS.null_kernel,
+                                'ramdisk_id': FLAGS.null_kernel,
+                                'architecture': 'x86_64',
+                                'auto_disk_config': 'True'}}
+
         self.create(None, image1)
         self.create(None, image2)
         self.create(None, image3)
         self.create(None, image4)
         self.create(None, image5)
+        self.create(None, image6)
+        self.create(None, image7)
         self._imagedata = {}
         super(_FakeImageService, self).__init__()
 
