@@ -30,7 +30,18 @@ from nova.scheduler import driver
 class ChanceScheduler(driver.Scheduler):
     """Implements Scheduler as a random node selector."""
 
-    def _schedule(self, context, topic, **kwargs):
+    def _filter_hosts(self, request_spec, hosts):
+        """Filter a list of hosts based on request_spec."""
+
+        # Filter out excluded host
+        if (request_spec and 'original_host' in request_spec and
+            request_spec.get('avoid_original_host', True)):
+            hosts = [host for host in hosts
+                     if host != request_spec['original_host']]
+
+        return hosts
+
+    def _schedule(self, context, topic, request_spec, **kwargs):
         """Picks a host that is up at random."""
 
         elevated = context.elevated()
@@ -38,12 +49,18 @@ class ChanceScheduler(driver.Scheduler):
         if not hosts:
             msg = _("Is the appropriate service running?")
             raise exception.NoValidHost(reason=msg)
+
+        hosts = self._filter_hosts(request_spec, hosts)
+        if not hosts:
+            msg = _("Could not find another compute")
+            raise exception.NoValidHost(reason=msg)
+
         return hosts[int(random.random() * len(hosts))]
 
     def schedule(self, context, topic, method, *_args, **kwargs):
         """Picks a host that is up at random."""
 
-        host = self._schedule(context, topic, **kwargs)
+        host = self._schedule(context, topic, None, **kwargs)
         driver.cast_to_host(context, topic, host, method, **kwargs)
 
     def schedule_run_instance(self, context, request_spec, *_args, **kwargs):
@@ -52,10 +69,15 @@ class ChanceScheduler(driver.Scheduler):
         num_instances = request_spec.get('num_instances', 1)
         instances = []
         for num in xrange(num_instances):
-            host = self._schedule(context, 'compute', **kwargs)
+            host = self._schedule(context, 'compute', request_spec, **kwargs)
             instance = self.create_instance_db_entry(elevated, request_spec)
             driver.cast_to_compute_host(context, host,
                     'run_instance', instance_id=instance['id'], **kwargs)
             instances.append(driver.encode_instance(instance))
 
         return instances
+
+    def schedule_prep_resize(self, context, request_spec, *args, **kwargs):
+        """Select a target for resize."""
+        host = self._schedule(context, 'compute', request_spec, **kwargs)
+        driver.cast_to_host(context, 'compute', host, 'prep_resize', **kwargs)
