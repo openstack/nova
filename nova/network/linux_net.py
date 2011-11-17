@@ -283,10 +283,10 @@ class IptablesManager(object):
         self.ipv4['nat'].add_rule('nova-postrouting-bottom', '-j $snat',
                                   wrap=False)
 
-        # And then we add a floating-snat chain and jump to first thing in
+        # And then we add a float-snat chain and jump to first thing in
         # the snat chain.
-        self.ipv4['nat'].add_chain('floating-snat')
-        self.ipv4['nat'].add_rule('snat', '-j $floating-snat')
+        self.ipv4['nat'].add_chain('float-snat')
+        self.ipv4['nat'].add_rule('snat', '-j $float-snat')
 
     @utils.synchronized('iptables', external=True)
     def apply(self):
@@ -459,7 +459,7 @@ def remove_floating_forward(floating_ip, fixed_ip):
 def floating_forward_rules(floating_ip, fixed_ip):
     return [('PREROUTING', '-d %s -j DNAT --to %s' % (floating_ip, fixed_ip)),
             ('OUTPUT', '-d %s -j DNAT --to %s' % (floating_ip, fixed_ip)),
-            ('floating-snat',
+            ('float-snat',
              '-s %s -j SNAT --to %s' % (fixed_ip, floating_ip))]
 
 
