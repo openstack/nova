@@ -120,7 +120,7 @@ class BaseTestCase(test.TestCase):
         self.stubs.Set(rpc, 'call', rpc_call_wrapper)
         self.stubs.Set(rpc, 'cast', rpc_cast_wrapper)
 
-    def _create_instance(self, params=None):
+    def _create_fake_instance(self, params=None):
         """Create a test instance"""
         if not params:
             params = {}
@@ -135,10 +135,14 @@ class BaseTestCase(test.TestCase):
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst.update(params)
-        return db.instance_create(self.context, inst)['id']
+        return db.instance_create(self.context, inst)
+
+    def _create_instance(self, params=None):
+        """Return a test instance id"""
+        return self._create_fake_instance(params)['id']
 
     def _create_instance_type(self, params=None):
-        """Create a test instance"""
+        """Create a test instance type"""
         if not params:
             params = {}
 
@@ -243,11 +247,13 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_pause(self):
-        """Ensure instance can be paused"""
-        instance_id = self._create_instance()
+        """Ensure instance can be paused and unpaused"""
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
-        self.compute.pause_instance(self.context, instance_id)
-        self.compute.unpause_instance(self.context, instance_id)
+        self.compute.pause_instance(self.context, instance_uuid)
+        self.compute.unpause_instance(self.context, instance_uuid)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_suspend(self):
@@ -1159,33 +1165,34 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_pause(self):
         """Ensure instance can be paused"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
         self.compute.run_instance(self.context, instance_id)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['task_state'], None)
+        self.assertEqual(instance['task_state'], None)
 
-        self.compute_api.pause(self.context, inst_ref)
+        self.compute_api.pause(self.context, instance)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['task_state'], task_states.PAUSING)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertEqual(instance['task_state'], task_states.PAUSING)
 
         db.instance_destroy(self.context, instance_id)
 
     def test_unpause(self):
         """Ensure instance can be unpaused"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['task_state'], None)
+        self.assertEqual(instance['task_state'], None)
 
-        self.compute.pause_instance(self.context, instance_id)
+        self.compute.pause_instance(self.context, instance_uuid)
 
-        self.compute_api.unpause(self.context, inst_ref)
+        self.compute_api.unpause(self.context, instance)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['task_state'], task_states.UNPAUSING)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.UNPAUSING)
 
         db.instance_destroy(self.context, instance_id)
 

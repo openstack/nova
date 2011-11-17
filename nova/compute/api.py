@@ -1337,21 +1337,23 @@ class API(base.Base):
     def pause(self, context, instance):
         """Pause the given instance."""
         instance_id = instance["id"]
+        instance_uuid = instance["uuid"]
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.PAUSING)
-        self._cast_compute_message('pause_instance', context, instance_id)
+        self._cast_compute_message('pause_instance', context, instance_uuid)
 
     @scheduler_api.reroute_compute("unpause")
     def unpause(self, context, instance):
         """Unpause the given instance."""
         instance_id = instance["id"]
+        instance_uuid = instance["uuid"]
         self.update(context,
                     instance_id,
                     vm_state=vm_states.PAUSED,
                     task_state=task_states.UNPAUSING)
-        self._cast_compute_message('unpause_instance', context, instance_id)
+        self._cast_compute_message('unpause_instance', context, instance_uuid)
 
     def _call_compute_message_for_host(self, action, context, host, params):
         """Call method deliberately designed to make host/service only calls"""
