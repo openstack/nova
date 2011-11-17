@@ -715,13 +715,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def snapshot_instance(self, context, instance_id, image_id,
+    def snapshot_instance(self, context, instance_uuid, image_id,
                           image_type='snapshot', backup_type=None,
                           rotation=None):
         """Snapshot an instance on this host.
 
         :param context: security context
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance_uuid: nova.db.sqlalchemy.models.Instance.Uuid
         :param image_id: glance.db.sqlalchemy.models.Image.Id
         :param image_type: snapshot | backup
         :param backup_type: daily | weekly
@@ -736,33 +736,32 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise Exception(_('Image type not recognized %s') % image_type)
 
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_id,
+                              instance_ref['id'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=task_state)
 
-        LOG.audit(_('instance %s: snapshotting'), instance_id,
+        LOG.audit(_('instance %s: snapshotting'), instance_uuid,
                   context=context)
 
         if instance_ref['power_state'] != power_state.RUNNING:
             state = instance_ref['power_state']
             running = power_state.RUNNING
             LOG.warn(_('trying to snapshot a non-running '
-                       'instance: %(instance_id)s (state: %(state)s '
+                       'instance: %(instance_uuid)s (state: %(state)s '
                        'expected: %(running)s)') % locals())
 
         self.driver.snapshot(context, instance_ref, image_id)
-        self._instance_update(context, instance_id, task_state=None)
+        self._instance_update(context, instance_ref['id'], task_state=None)
 
         if image_type == 'snapshot' and rotation:
             raise exception.ImageRotationNotAllowed()
 
         elif image_type == 'backup' and rotation:
-            instance_uuid = instance_ref['uuid']
             self.rotate_backups(context, instance_uuid, backup_type, rotation)
 
         elif image_type == 'backup':

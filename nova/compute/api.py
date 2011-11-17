@@ -1053,7 +1053,10 @@ class API(base.Base):
             instance = self.get(context, instance_id)
             host = instance['host']
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        params['instance_id'] = instance_id
+        if utils.is_uuid_like(instance_id):
+            params['instance_uuid'] = instance_id
+        else:
+            params['instance_id'] = instance_id
         kwargs = {'method': method, 'args': params}
         rpc.cast(context, queue, kwargs)
 
@@ -1072,7 +1075,10 @@ class API(base.Base):
             instance = self.get(context, instance_id)
             host = instance['host']
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        params['instance_id'] = instance_id
+        if utils.is_uuid_like(instance_id):
+            params['instance_uuid'] = instance_id
+        else:
+            params['instance_id'] = instance_id
         kwargs = {'method': method, 'args': params}
         return rpc.call(context, queue, kwargs)
 
@@ -1136,15 +1142,15 @@ class API(base.Base):
 
         """
         task_state = instance["task_state"]
-        instance_id = instance['id']
+        instance_uuid = instance['uuid']
 
         if task_state == task_states.IMAGE_BACKUP:
-            raise exception.InstanceBackingUp(instance_id=instance_id)
+            raise exception.InstanceBackingUp(instance_uuid=instance_uuid)
 
         if task_state == task_states.IMAGE_SNAPSHOT:
-            raise exception.InstanceSnapshotting(instance_id=instance_id)
+            raise exception.InstanceSnapshotting(instance_uuid=instance_uuid)
 
-        properties = {'instance_uuid': instance['uuid'],
+        properties = {'instance_uuid': instance_uuid,
                       'user_id': str(context.user_id),
                       'image_state': 'creating',
                       'image_type': image_type,
@@ -1155,7 +1161,7 @@ class API(base.Base):
         recv_meta = self.image_service.create(context, sent_meta)
         params = {'image_id': recv_meta['id'], 'image_type': image_type,
                   'backup_type': backup_type, 'rotation': rotation}
-        self._cast_compute_message('snapshot_instance', context, instance_id,
+        self._cast_compute_message('snapshot_instance', context, instance_uuid,
                                    params=params)
         return recv_meta
 
