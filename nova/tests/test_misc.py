@@ -16,6 +16,7 @@
 
 import commands
 import errno
+import glob
 import os
 import select
 
@@ -86,6 +87,51 @@ class ProjectTestCase(test.TestCase):
 
         self.assertTrue(len(missing) == 0,
                         '%r not listed in Authors' % missing)
+
+    def test_all_new_migrations_have_downgrade(self):
+        # NOTE(sirp): These migrations are old enough so that a downgrade
+        # isn't a hard requirement. Would be nice to have, in these cases,
+        # though, too.
+        EXEMPT = """
+        002_bexar.py
+        003_add_label_to_networks.py
+        004_add_zone_tables.py
+        005_add_instance_metadata.py
+        006_add_provider_data_to_volumes.py
+        007_add_ipv6_to_fixed_ips.py
+        009_add_instance_migrations.py
+        011_live_migration.py
+        012_add_ipv6_flatmanager.py
+        015_add_auto_assign_to_floating_ips.py
+        020_add_snapshot_id_to_volumes.py
+        026_add_agent_table.py
+        027_add_provider_firewall_rules.py
+        """
+
+        exempt = [e.strip() for e in EXEMPT.splitlines() if e.strip()]
+
+        topdir = os.path.normpath(os.path.dirname(__file__) + '/../../')
+        py_glob = os.path.join(topdir, "nova", "db", "sqlalchemy",
+                               "migrate_repo", "versions", "*.py")
+        missing_downgrade = []
+        for path in glob.iglob(py_glob):
+            has_upgrade = False
+            has_downgrade = False
+            with open(path, "r") as f:
+                for line in f:
+                    if 'def upgrade(' in line:
+                        has_upgrade = True
+                    if 'def downgrade(' in line:
+                        has_downgrade = True
+
+                if has_upgrade and not has_downgrade:
+                    fname = os.path.basename(path)
+                    if fname not in exempt:
+                        missing_downgrade.append(fname)
+
+        helpful_msg = (_("The following migrations are missing a downgrade:"
+                         "\n\t%s") % '\n\t'.join(sorted(missing_downgrade)))
+        self.assert_(not missing_downgrade, helpful_msg)
 
 
 class LockTestCase(test.TestCase):

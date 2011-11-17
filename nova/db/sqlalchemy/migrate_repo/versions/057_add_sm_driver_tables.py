@@ -96,3 +96,12 @@ def upgrade(migrate_engine):
             table.create()
         except Exception:
             logging.info(repr(table))
+
+
+def downgrade(migrate_engine):
+    meta.bind = migrate_engine
+    for table in (flavors, backend, sm_vol):
+        try:
+            table.drop()
+        except Exception:
+            logging.info(repr(table))
