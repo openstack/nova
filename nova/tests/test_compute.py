@@ -521,18 +521,20 @@ class ComputeTestCase(BaseTestCase):
 
     def test_lock(self):
         """ensure locked instance cannot be changed"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
 
         non_admin_context = context.RequestContext(None, None, False, False)
 
         # decorator should return False (fail) with locked nonadmin context
-        self.compute.lock_instance(self.context, instance_id)
+        self.compute.lock_instance(self.context, instance_uuid)
         ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
         self.assertEqual(ret_val, False)
 
         # decorator should return None (success) with unlocked nonadmin context
-        self.compute.unlock_instance(self.context, instance_id)
+        self.compute.unlock_instance(self.context, instance_uuid)
         ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
         self.assertEqual(ret_val, None)
 
@@ -2103,22 +2105,19 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.reset_network(self.context, instance)
 
     def test_lock(self):
-        instance_id = self._create_instance()
-        instance = self.compute_api.get(self.context, instance_id)
+        instance = self._create_fake_instance()
         self.compute_api.lock(self.context, instance)
         self.compute_api.delete(self.context, instance)
 
     def test_unlock(self):
-        instance_id = self._create_instance()
-        instance = self.compute_api.get(self.context, instance_id)
+        instance = self._create_fake_instance()
         self.compute_api.unlock(self.context, instance)
         self.compute_api.delete(self.context, instance)
 
     def test_get_lock(self):
-        instance_id = self._create_instance()
-        instance = self.compute_api.get(self.context, instance_id)
+        instance = self._create_fake_instance()
         self.assertFalse(self.compute_api.get_lock(self.context, instance))
-        db.instance_update(self.context, instance_id, {'locked': True})
+        db.instance_update(self.context, instance['id'], {'locked': True})
         self.assertTrue(self.compute_api.get_lock(self.context, instance))
 
     def test_add_remove_security_group(self):
