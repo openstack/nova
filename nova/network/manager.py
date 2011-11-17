@@ -250,7 +250,10 @@ class FloatingIP(object):
         LOG.debug(_("floating IP deallocation for instance |%s|"), instance_id,
                                                                context=context)
 
-        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        try:
+            fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        except exception.FixedIpNotFoundForInstance:
+            fixed_ips = []
         # add to kwargs so we can pass to super to save a db lookup there
         kwargs['fixed_ips'] = fixed_ips
         for fixed_ip in fixed_ips:
