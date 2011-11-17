@@ -1256,34 +1256,34 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def suspend_instance(self, context, instance_id):
+    def suspend_instance(self, context, instance_uuid):
         """Suspend the given instance."""
-        LOG.audit(_('instance %s: suspending'), instance_id, context=context)
+        LOG.audit(_('instance %s: suspending'), instance_uuid, context=context)
         context = context.elevated()
 
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         self.driver.suspend(instance_ref)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_id,
+                              instance_ref['id'],
                               power_state=current_power_state,
                               vm_state=vm_states.SUSPENDED,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
-    def resume_instance(self, context, instance_id):
+    def resume_instance(self, context, instance_uuid):
         """Resume the given suspended instance."""
-        LOG.audit(_('instance %s: resuming'), instance_id, context=context)
+        LOG.audit(_('instance %s: resuming'), instance_uuid, context=context)
         context = context.elevated()
 
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         self.driver.resume(instance_ref)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_id,
+                              instance_ref['id'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
