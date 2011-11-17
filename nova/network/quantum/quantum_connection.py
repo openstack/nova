@@ -60,6 +60,10 @@ class QuantumClientConnection(object):
         resdict = self.client.create_network(data, tenant=tenant_id)
         return resdict["network"]["id"]
 
+    def get_network_name(self, tenant_id, network_id):
+        net = self.client.show_network_details(network_id, tenant=tenant_id)
+        return net["network"]["name"]
+
     def delete_network(self, tenant_id, net_id):
         """Deletes Quantum network with specified UUID."""
         self.client.delete_network(net_id, tenant=tenant_id)

@@ -61,6 +61,9 @@ class FakeQuantumClientConnection(object):
         except KeyError:
             return False
 
+    def get_network_name(self, tenant_id, net_id):
+        return self.nets[net_id]['net-name']
+
     def _confirm_not_attached(self, interface_id):
         for n in self.nets.values():
             for p in n['ports'].values():
