@@ -679,9 +679,6 @@ class Controller(wsgi.Controller):
         except exception.CannotResizeToSameSize:
             msg = _("Resize requires a change in size.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.CannotResizeToSmallerSize:
-            msg = _("Resizing to a smaller size is not supported.")
-            raise exc.HTTPBadRequest(explanation=msg)
 
         return webob.Response(status_int=202)
 

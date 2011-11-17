@@ -1069,6 +1069,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         migration_ref = self.db.migration_get(context, migration_id)
         instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
+        instance_type_ref = self.db.instance_type_get(context,
+                migration_ref.new_instance_type_id)
 
         self.db.migration_update(context,
                                  migration_id,
@@ -1076,7 +1078,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             disk_info = self.driver.migrate_disk_and_power_off(
-                    context, instance_ref, migration_ref['dest_host'])
+                    context, instance_ref, migration_ref['dest_host'],
+                    instance_type_ref)
         except exception.MigrationError, error:
             LOG.error(_('%s. Setting instance vm_state to ERROR') % (error,))
             self._instance_update(context,
