@@ -87,7 +87,7 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_index(self):
         req = webob.Request.blank(
-                    '/v1.1/123/os-simple-tenant-usage?start=%s&end=%s' %
+                    '/v2/123/os-simple-tenant-usage?start=%s&end=%s' %
                     (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
@@ -113,7 +113,7 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_detailed_index(self):
         req = webob.Request.blank(
-                    '/v1.1/123/os-simple-tenant-usage?'
+                    '/v2/123/os-simple-tenant-usage?'
                     'detailed=1&start=%s&end=%s' %
                     (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
@@ -131,7 +131,7 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_index_fails_for_nonadmin(self):
         req = webob.Request.blank(
-                    '/v1.1/123/os-simple-tenant-usage?'
+                    '/v2/123/os-simple-tenant-usage?'
                     'detailed=1&start=%s&end=%s' %
                     (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
@@ -142,7 +142,7 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_show(self):
         req = webob.Request.blank(
-                  '/v1.1/faketenant_0/os-simple-tenant-usage/'
+                  '/v2/faketenant_0/os-simple-tenant-usage/'
                   'faketenant_0?start=%s&end=%s' %
                   (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
@@ -161,7 +161,7 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_show_cant_view_other_tenant(self):
         req = webob.Request.blank(
-                  '/v1.1/faketenant_1/os-simple-tenant-usage/'
+                  '/v2/faketenant_1/os-simple-tenant-usage/'
                   'faketenant_0?start=%s&end=%s' %
                   (START.isoformat(), STOP.isoformat()))
         req.method = "GET"

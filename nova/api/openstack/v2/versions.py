@@ -18,8 +18,6 @@
 from datetime import datetime
 
 from lxml import etree
-import webob
-import webob.dec
 
 from nova.api.openstack.v2.views import versions as views_versions
 from nova.api.openstack import wsgi
@@ -27,8 +25,8 @@ from nova.api.openstack import xmlutil
 
 
 VERSIONS = {
-    "v1.1": {
-        "id": "v1.1",
+    "v2.0": {
+        "id": "v2.0",
         "status": "CURRENT",
         "updated": "2011-01-21T11:33:21Z",
         "links": [
@@ -48,14 +46,14 @@ VERSIONS = {
         "media-types": [
             {
                 "base": "application/xml",
-                "type": "application/vnd.openstack.compute+xml;version=1.1",
+                "type": "application/vnd.openstack.compute+xml;version=2",
             },
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute+json;version=1.1",
+                "type": "application/vnd.openstack.compute+json;version=2",
             }
         ],
-    },
+    }
 }
 
 
@@ -94,10 +92,10 @@ class Versions(wsgi.Resource):
             return builder.build_choices(VERSIONS, request)
 
 
-class VersionV11(object):
+class VersionV2(object):
     def show(self, req):
         builder = views_versions.get_view_builder(req)
-        return builder.build_version(VERSIONS['v1.1'])
+        return builder.build_version(VERSIONS['v2.0'])
 
 
 class VersionsRequestDeserializer(wsgi.RequestDeserializer):
@@ -257,5 +255,5 @@ def create_resource():
 
     deserializer = wsgi.RequestDeserializer()
 
-    return wsgi.Resource(VersionV11(), serializer=serializer,
+    return wsgi.Resource(VersionV2(), serializer=serializer,
                          deserializer=deserializer)

@@ -197,6 +197,12 @@ class PaginationParamsTest(test.TestCase):
 
 class MiscFunctionsTest(test.TestCase):
 
+    def test_remove_major_version_from_href(self):
+        fixture = 'http://www.testsite.com/v1/images'
+        expected = 'http://www.testsite.com/images'
+        actual = common.remove_version_from_href(fixture)
+        self.assertEqual(actual, expected)
+
     def test_remove_version_from_href(self):
         fixture = 'http://www.testsite.com/v1.1/images'
         expected = 'http://www.testsite.com/images'
@@ -289,7 +295,7 @@ class MiscFunctionsTest(test.TestCase):
 
     def test_get_version_from_href_default(self):
         fixture = 'http://www.testsite.com/images'
-        expected = '1.0'
+        expected = '2'
         actual = common.get_version_from_href(fixture)
         self.assertEqual(actual, expected)
 

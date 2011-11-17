@@ -17,12 +17,9 @@
 import json
 
 from lxml import etree
-import stubout
-import webob
 
 from nova.api.openstack.v2 import zones
 from nova.api.openstack import xmlutil
-from nova import context
 from nova import crypto
 import nova.db
 from nova import flags
@@ -112,7 +109,7 @@ class ZonesTest(test.TestCase):
     def test_get_zone_list_scheduler(self):
         self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/zones')
+        req = fakes.HTTPRequest.blank('/v2/fake/zones')
         res_dict = self.controller.index(req)
 
         self.assertEqual(len(res_dict['zones']), 2)
@@ -121,13 +118,13 @@ class ZonesTest(test.TestCase):
         self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler_empty)
         self.stubs.Set(nova.db, 'zone_get_all', zone_get_all_db)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/zones')
+        req = fakes.HTTPRequest.blank('/v2/fake/zones')
         res_dict = self.controller.index(req)
 
         self.assertEqual(len(res_dict['zones']), 2)
 
     def test_get_zone_by_id(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/1')
+        req = fakes.HTTPRequest.blank('/v2/fake/zones/1')
         res_dict = self.controller.show(req, 1)
 
         self.assertEqual(res_dict['zone']['id'], 1)
@@ -135,14 +132,14 @@ class ZonesTest(test.TestCase):
         self.assertFalse('password' in res_dict['zone'])
 
     def test_zone_delete(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/1')
+        req = fakes.HTTPRequest.blank('/v2/fake/zones/1')
         self.controller.delete(req, 1)
 
     def test_zone_create(self):
         body = dict(zone=dict(api_url='http://example.com', username='fred',
                         password='fubar'))
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/zones')
+        req = fakes.HTTPRequest.blank('/v2/fake/zones')
         res_dict = self.controller.create(req, body)
 
         self.assertEqual(res_dict['zone']['id'], 1)
@@ -152,7 +149,7 @@ class ZonesTest(test.TestCase):
     def test_zone_update(self):
         body = dict(zone=dict(username='zeb', password='sneaky'))
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/1')
+        req = fakes.HTTPRequest.blank('/v2/fake/zones/1')
         res_dict = self.controller.update(req, 1, body)
 
         self.assertEqual(res_dict['zone']['id'], 1)
@@ -164,7 +161,7 @@ class ZonesTest(test.TestCase):
         self.flags(zone_name='darksecret', zone_capabilities=caps)
         self.stubs.Set(api, '_call_scheduler', zone_capabilities)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/info')
+        req = fakes.HTTPRequest.blank('/v2/fake/zones/info')
         res_dict = self.controller.info(req)
 
         self.assertEqual(res_dict['zone']['name'], 'darksecret')
@@ -180,7 +177,7 @@ class ZonesTest(test.TestCase):
         # Once to a string and again as an HTTP POST Body
         body = json.dumps({})
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/zones/select')
+        req = fakes.HTTPRequest.blank('/v2/fake/zones/select')
         res_dict = self.controller.select(req, body)
 
         self.assertTrue('weights' in res_dict)

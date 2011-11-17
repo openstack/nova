@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from lxml import etree
 import webob
 
@@ -26,7 +24,6 @@ import nova.compute.instance_types
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import wsgi
 
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -100,12 +97,12 @@ class FlavorsTest(test.TestCase):
         self.stubs.Set(nova.compute.instance_types,
                        "get_instance_type_by_flavor_id",
                        return_instance_type_not_found)
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors/asdf')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/asdf')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, req, 'asdf')
 
     def test_get_flavor_by_id(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors/1')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/1')
         flavor = self.controller.show(req, '1')
         expected = {
             "flavor": {
@@ -120,7 +117,7 @@ class FlavorsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/flavors/1",
+                        "href": "http://localhost/v2/fake/flavors/1",
                     },
                     {
                         "rel": "bookmark",
@@ -132,7 +129,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_list(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors')
         flavor = self.controller.index(req)
         expected = {
             "flavors": [
@@ -142,7 +139,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/1",
+                            "href": "http://localhost/v2/fake/flavors/1",
                         },
                         {
                             "rel": "bookmark",
@@ -156,7 +153,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/2",
+                            "href": "http://localhost/v2/fake/flavors/2",
                         },
                         {
                             "rel": "bookmark",
@@ -169,7 +166,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_list_detail(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors/detail')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail')
         flavor = self.controller.detail(req)
         expected = {
             "flavors": [
@@ -185,7 +182,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/1",
+                            "href": "http://localhost/v2/fake/flavors/1",
                         },
                         {
                             "rel": "bookmark",
@@ -205,7 +202,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/2",
+                            "href": "http://localhost/v2/fake/flavors/2",
                         },
                         {
                             "rel": "bookmark",
@@ -221,14 +218,14 @@ class FlavorsTest(test.TestCase):
         self.stubs.Set(nova.compute.instance_types, "get_all_types",
                        empty_instance_type_get_all)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors')
         flavors = self.controller.index(req)
         expected = {'flavors': []}
         self.assertEqual(flavors, expected)
 
     def test_get_flavor_list_filter_min_ram(self):
         """Flavor lists may be filtered by minRam"""
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors?minRam=512')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors?minRam=512')
         flavor = self.controller.index(req)
         expected = {
             "flavors": [
@@ -238,7 +235,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/2",
+                            "href": "http://localhost/v2/fake/flavors/2",
                         },
                         {
                             "rel": "bookmark",
@@ -252,7 +249,7 @@ class FlavorsTest(test.TestCase):
 
     def test_get_flavor_list_filter_min_disk(self):
         """Flavor lists may be filtered by minRam"""
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors?minDisk=20')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors?minDisk=20')
         flavor = self.controller.index(req)
         expected = {
             "flavors": [
@@ -262,7 +259,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/2",
+                            "href": "http://localhost/v2/fake/flavors/2",
                         },
                         {
                             "rel": "bookmark",
@@ -278,7 +275,7 @@ class FlavorsTest(test.TestCase):
         """Tests that filtering work on flavor details and that minRam and
         minDisk filters can be combined
         """
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors/detail'
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail'
                                       '?minRam=256&minDisk=20')
         flavor = self.controller.detail(req)
         expected = {
@@ -295,7 +292,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/2",
+                            "href": "http://localhost/v2/fake/flavors/2",
                         },
                         {
                             "rel": "bookmark",
@@ -309,7 +306,7 @@ class FlavorsTest(test.TestCase):
 
     def test_get_flavor_list_detail_bogus_min_ram(self):
         """Tests that bogus minRam filtering values are ignored"""
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors/detail?minRam=16GB')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail?minRam=16GB')
         flavor = self.controller.detail(req)
         expected = {
             "flavors": [
@@ -325,7 +322,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/1",
+                            "href": "http://localhost/v2/fake/flavors/1",
                         },
                         {
                             "rel": "bookmark",
@@ -345,7 +342,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/2",
+                            "href": "http://localhost/v2/fake/flavors/2",
                         },
                         {
                             "rel": "bookmark",
@@ -359,7 +356,7 @@ class FlavorsTest(test.TestCase):
 
     def test_get_flavor_list_detail_bogus_min_disk(self):
         """Tests that bogus minDisk filtering values are ignored"""
-        req = fakes.HTTPRequest.blank('/v1.1/fake/flavors/detail?minDisk=16GB')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail?minDisk=16GB')
         flavor = self.controller.detail(req)
         expected = {
             "flavors": [
@@ -375,7 +372,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/1",
+                            "href": "http://localhost/v2/fake/flavors/1",
                         },
                         {
                             "rel": "bookmark",
@@ -395,7 +392,7 @@ class FlavorsTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/2",
+                            "href": "http://localhost/v2/fake/flavors/2",
                         },
                         {
                             "rel": "bookmark",
@@ -426,7 +423,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/flavors/12",
+                        "href": "http://localhost/v2/fake/flavors/12",
                     },
                     {
                         "rel": "bookmark",
@@ -457,7 +454,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/flavors/12",
+                        "href": "http://localhost/v2/fake/flavors/12",
                     },
                     {
                         "rel": "bookmark",
@@ -498,7 +495,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/flavors/12",
+                        "href": "http://localhost/v2/fake/flavors/12",
                     },
                     {
                         "rel": "bookmark",
@@ -540,7 +537,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/23",
+                            "href": "http://localhost/v2/fake/flavors/23",
                         },
                         {
                             "rel": "bookmark",
@@ -560,7 +557,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/13",
+                            "href": "http://localhost/v2/fake/flavors/13",
                         },
                         {
                             "rel": "bookmark",
@@ -606,7 +603,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/23",
+                            "href": "http://localhost/v2/fake/flavors/23",
                         },
                         {
                             "rel": "bookmark",
@@ -626,7 +623,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/v1.1/fake/flavors/13",
+                            "href": "http://localhost/v2/fake/flavors/13",
                         },
                         {
                             "rel": "bookmark",

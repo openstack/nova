@@ -56,7 +56,7 @@ class AccountsTest(test.TestCase):
         fakemgr.create_project('test2', superuser)
 
     def test_get_account(self):
-        req = webob.Request.blank('/v1.1/fake/accounts/test1')
+        req = webob.Request.blank('/v2/fake/accounts/test1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -66,7 +66,7 @@ class AccountsTest(test.TestCase):
         self.assertEqual(res_dict['account']['manager'], 'id1')
 
     def test_get_account_xml(self):
-        req = webob.Request.blank('/v1.1/fake/accounts/test1.xml')
+        req = webob.Request.blank('/v2/fake/accounts/test1.xml')
         res = req.get_response(fakes.wsgi_app())
         res_tree = etree.fromstring(res.body)
 
@@ -77,7 +77,7 @@ class AccountsTest(test.TestCase):
         self.assertEqual('id1', res_tree.get('manager'))
 
     def test_account_delete(self):
-        req = webob.Request.blank('/v1.1/fake/accounts/test1')
+        req = webob.Request.blank('/v2/fake/accounts/test1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertTrue('test1' not in fakes.FakeAuthManager.projects)
@@ -86,7 +86,7 @@ class AccountsTest(test.TestCase):
     def test_account_create(self):
         body = dict(account=dict(description='test account',
                                  manager='id1'))
-        req = webob.Request.blank('/v1.1/fake/accounts/newacct')
+        req = webob.Request.blank('/v2/fake/accounts/newacct')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)
@@ -106,7 +106,7 @@ class AccountsTest(test.TestCase):
     def test_account_create_xml(self):
         body = dict(account=dict(description='test account',
                                  manager='id1'))
-        req = webob.Request.blank('/v1.1/fake/accounts/newacct.xml')
+        req = webob.Request.blank('/v2/fake/accounts/newacct.xml')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)
@@ -127,7 +127,7 @@ class AccountsTest(test.TestCase):
     def test_account_update(self):
         body = dict(account=dict(description='test account',
                                  manager='id2'))
-        req = webob.Request.blank('/v1.1/fake/accounts/test1')
+        req = webob.Request.blank('/v2/fake/accounts/test1')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)
@@ -145,7 +145,7 @@ class AccountsTest(test.TestCase):
     def test_account_update_xml(self):
         body = dict(account=dict(description='test account',
                                  manager='id2'))
-        req = webob.Request.blank('/v1.1/fake/accounts/test1.xml')
+        req = webob.Request.blank('/v2/fake/accounts/test1.xml')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)

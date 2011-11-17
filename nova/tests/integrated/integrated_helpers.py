@@ -83,7 +83,7 @@ class _IntegratedTestBase(test.TestCase):
     def _start_api_service(self):
         osapi = service.WSGIService("osapi")
         osapi.start()
-        self.auth_url = 'http://%s:%s/v1.1' % (osapi.host, osapi.port)
+        self.auth_url = 'http://%s:%s/v2' % (osapi.host, osapi.port)
         LOG.warn(self.auth_url)
 
     def _get_flags(self):

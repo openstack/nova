@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 import webob
 
 from nova.api.openstack.v2.contrib.quotas import QuotaSetsController
@@ -77,7 +76,7 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(qs['injected_file_content_bytes'], 10240)
 
     def test_quotas_defaults(self):
-        uri = '/v1.1/fake_tenant/os-quota-sets/fake_tenant/defaults'
+        uri = '/v2/fake_tenant/os-quota-sets/fake_tenant/defaults'
 
         req = fakes.HTTPRequest.blank(uri)
         res_dict = self.controller.defaults(req, 'fake_tenant')
@@ -97,14 +96,14 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(res_dict, expected)
 
     def test_quotas_show_as_admin(self):
-        req = fakes.HTTPRequest.blank('/v1.1/1234/os-quota-sets/1234',
+        req = fakes.HTTPRequest.blank('/v2/1234/os-quota-sets/1234',
                                       use_admin_context=True)
         res_dict = self.controller.show(req, 1234)
 
         self.assertEqual(res_dict, quota_set('1234'))
 
     def test_quotas_show_as_unauthorized_user(self):
-        req = fakes.HTTPRequest.blank('/v1.1/1234/os-quota-sets/1234')
+        req = fakes.HTTPRequest.blank('/v2/1234/os-quota-sets/1234')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
                           req, 1234)
 
@@ -115,7 +114,7 @@ class QuotaSetsTest(test.TestCase):
                               'metadata_items': 128, 'injected_files': 5,
                               'injected_file_content_bytes': 10240}}
 
-        req = fakes.HTTPRequest.blank('/v1.1/1234/os-quota-sets/update_me',
+        req = fakes.HTTPRequest.blank('/v2/1234/os-quota-sets/update_me',
                                       use_admin_context=True)
         res_dict = self.controller.update(req, 'update_me', body)
 
@@ -128,6 +127,6 @@ class QuotaSetsTest(test.TestCase):
                               'metadata_items': 128, 'injected_files': 5,
                               'injected_file_content_bytes': 10240}}
 
-        req = fakes.HTTPRequest.blank('/v1.1/1234/os-quota-sets/update_me')
+        req = fakes.HTTPRequest.blank('/v2/1234/os-quota-sets/update_me')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
                           req, 'update_me', body)

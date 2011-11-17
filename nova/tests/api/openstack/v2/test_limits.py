@@ -20,7 +20,6 @@ Tests dealing with HTTP rate-limiting.
 import httplib
 import json
 import StringIO
-import time
 import unittest
 from xml.dom import minidom
 

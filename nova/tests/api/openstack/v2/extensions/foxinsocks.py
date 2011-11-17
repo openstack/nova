@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 import webob.exc
 
 from nova.api.openstack.v2 import extensions
@@ -65,7 +64,7 @@ class Foxinsocks(object):
             return res
 
         req_ext1 = extensions.RequestExtension('GET',
-                                     '/v1.1/:(project_id)/flavors/:(id)',
+                                     '/v2/:(project_id)/flavors/:(id)',
                                      _goose_handler)
         request_exts.append(req_ext1)
 
@@ -76,7 +75,7 @@ class Foxinsocks(object):
             return res
 
         req_ext2 = extensions.RequestExtension('GET',
-                                     '/v1.1/:(project_id)/flavors/:(id)',
+                                     '/v2/:(project_id)/flavors/:(id)',
                                      _bands_handler)
         request_exts.append(req_ext2)
         return request_exts
