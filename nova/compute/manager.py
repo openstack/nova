@@ -95,35 +95,28 @@ def publisher_id(host=None):
     return notifier.publisher_id("compute", host)
 
 
+def checks_instance_lock_uuid(function):
+    """Decorator to prevent action against locked instances for non-admins."""
+    # TODO(ironcamel): Once the instance_id -> instance_uuid switch is
+    # complete, rename this function to checks_instance_lock and delete the
+    # existing checks_instance_lock. And also inline _decorated_function().
+    @functools.wraps(function)
+    def decorated_function(self, context, instance_uuid, *args, **kwargs):
+        result = self._decorated_function(context, instance_uuid, function,
+                                          *args, **kwargs)
+        if result == False:
+            return False
+    return decorated_function
+
+
 def checks_instance_lock(function):
     """Decorator to prevent action against locked instances for non-admins."""
     @functools.wraps(function)
     def decorated_function(self, context, instance_id, *args, **kwargs):
-        #TODO(anyone): this being called instance_id is forcing a slightly
-        # confusing convention of pushing instance_uuids
-        # through an "instance_id" key in the queue args dict when
-        # casting through the compute API
-        LOG.info(_("check_instance_lock: decorating: |%s|"), function,
-                 context=context)
-        LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|"
-                " |%(instance_id)s|") % locals(), context=context)
-        locked = self.get_lock(context, instance_id)
-        admin = context.is_admin
-        LOG.info(_("check_instance_lock: locked: |%s|"), locked,
-                 context=context)
-        LOG.info(_("check_instance_lock: admin: |%s|"), admin,
-                 context=context)
-
-        # if admin or unlocked call function otherwise log error
-        if admin or not locked:
-            LOG.info(_("check_instance_lock: executing: |%s|"), function,
-                     context=context)
-            function(self, context, instance_id, *args, **kwargs)
-        else:
-            LOG.error(_("check_instance_lock: not executing |%s|"),
-                      function, context=context)
+        result = self._decorated_function(context, instance_id, function,
+                                          *args, **kwargs)
+        if result == False:
             return False
-
     return decorated_function
 
 
@@ -199,6 +192,29 @@ class ComputeManager(manager.SchedulerDependentManager):
             return self.driver.get_info(instance['name'])["state"]
         except exception.NotFound:
             return power_state.FAILED
+
+    def _decorated_function(self, context, instance_id, function,
+                            *args, **kwargs):
+        LOG.info(_("check_instance_lock: decorating: |%s|"), function,
+                 context=context)
+        LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|"
+                " |%(instance_id)s|") % locals(), context=context)
+        locked = self.get_lock(context, instance_id)
+        admin = context.is_admin
+        LOG.info(_("check_instance_lock: locked: |%s|"), locked,
+                 context=context)
+        LOG.info(_("check_instance_lock: admin: |%s|"), admin,
+                 context=context)
+
+        # if admin or unlocked call function otherwise log error
+        if admin or not locked:
+            LOG.info(_("check_instance_lock: executing: |%s|"), function,
+                     context=context)
+            function(self, context, instance_id, *args, **kwargs)
+        else:
+            LOG.error(_("check_instance_lock: not executing |%s|"),
+                      function, context=context)
+            return False
 
     def get_console_topic(self, context, **kwargs):
         """Retrieves the console host for a project on this host.
@@ -519,6 +535,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Shutdown an instance on this host."""
         context = context.elevated()
         instance = self.db.instance_get(context, instance_id)
+        instance_uuid = instance['uuid']
         LOG.audit(_("%(action_str)s instance %(instance_id)s") %
                   {'action_str': action_str, 'instance_id': instance_id},
                   context=context)
@@ -530,7 +547,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         for bdm in self._get_instance_volume_bdms(context, instance_id):
             volume_id = bdm['volume_id']
             try:
-                self._detach_volume(context, instance_id, volume_id)
+                self._detach_volume(context, instance_uuid, volume_id)
             except exception.DiskNotFound as exc:
                 LOG.warn(_("Ignoring DiskNotFound: %s") % exc)
 
@@ -1377,13 +1394,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         volume_api.attach(context, volume_id, instance_id, mountpoint)
         return connection_info
 
-    @checks_instance_lock
-    def attach_volume(self, context, instance_id, volume_id, mountpoint):
+    @checks_instance_lock_uuid
+    def attach_volume(self, context, instance_uuid, volume_id, mountpoint):
         """Attach a volume to an instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_("instance %(instance_id)s: attaching volume %(volume_id)s"
-                " to %(mountpoint)s") % locals(), context=context)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        instance_id = instance_ref['id']
+        LOG.audit(
+            _("instance %(instance_uuid)s: attaching volume %(volume_id)s"
+              " to %(mountpoint)s") % locals(), context=context)
         volume_api = volume.API()
         address = FLAGS.my_ip
         connection_info = volume_api.initialize_connection(context,
@@ -1398,7 +1417,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
             #             ecxception below.
-            LOG.exception(_("instance %(instance_id)s: attach failed"
+            LOG.exception(_("instance %(instance_uuid)s: attach failed"
                     " %(mountpoint)s, removing") % locals(), context=context)
             volume_api.terminate_connection(context, volume_id, address)
             raise exc
@@ -1418,13 +1437,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         return True
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def _detach_volume(self, context, instance_id, volume_id,
+    @checks_instance_lock_uuid
+    def _detach_volume(self, context, instance_uuid, volume_id,
                        destroy_bdm=False, mark_detached=True,
                        force_detach=False):
         """Detach a volume from an instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        instance_id = instance_ref['id']
         bdms = self.db.block_device_mapping_get_all_by_instance(
                 context, instance_id)
         for item in bdms:
@@ -1456,9 +1476,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance_id, volume_id)
         return True
 
-    def detach_volume(self, context, instance_id, volume_id):
+    def detach_volume(self, context, instance_uuid, volume_id):
         """Detach a volume from an instance."""
-        return self._detach_volume(context, instance_id, volume_id, True)
+        return self._detach_volume(context, instance_uuid, volume_id, True)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def remove_volume_connection(self, context, instance_id, volume_id):
@@ -1467,7 +1487,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         #             detached, or delete the bdm, just remove the
         #             connection from this host.
         try:
-            self._detach_volume(context, instance_id, volume_id,
+            instance_ref = self.db.instance_get(context, instance_id)
+            self._detach_volume(context, instance_ref['uuid'], volume_id,
                                 False, False, True)
         except exception.NotFound:
             pass

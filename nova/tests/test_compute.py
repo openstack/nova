@@ -2061,6 +2061,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_attach_volume(self):
         instance_id = 1
+        instance_uuid = utils.gen_uuid()
         volume_id = 1
 
         for device in ('/dev/sda', '/dev/xvda'):
@@ -2074,7 +2075,7 @@ class ComputeAPITestCase(BaseTestCase):
                     mox.IgnoreArg(),
                     mox.IgnoreArg(), {"method": "attach_volume",
                         "args": {'volume_id': volume_id,
-                                 'instance_id': instance_id,
+                                 'instance_uuid': instance_uuid,
                                  'mountpoint': device}})
 
             self.compute_api.volume_api.check_attach(
@@ -2085,7 +2086,9 @@ class ComputeAPITestCase(BaseTestCase):
 
             self.compute_api.get(
                     mox.IgnoreArg(),
-                    mox.IgnoreArg()).AndReturn({'id': instance_id,
+                    mox.IgnoreArg()).AndReturn({
+                        'id': instance_id,
+                        'uuid': instance_uuid,
                         'host': 'fake'})
 
             self.mox.ReplayAll()

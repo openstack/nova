@@ -1540,7 +1540,7 @@ class API(base.Base):
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "attach_volume",
                   "args": {"volume_id": volume_id,
-                           "instance_id": instance['id'],
+                           "instance_uuid": instance['uuid'],
                            "mountpoint": device}})
 
     def detach_volume(self, context, volume_id):
@@ -1553,7 +1553,7 @@ class API(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "detach_volume",
-                  "args": {"instance_id": instance['id'],
+                  "args": {"instance_uuid": instance['uuid'],
                            "volume_id": volume_id}})
         return instance
 
