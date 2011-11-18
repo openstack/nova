@@ -1289,20 +1289,20 @@ class ComputeManager(manager.SchedulerDependentManager):
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def lock_instance(self, context, instance_id):
+    def lock_instance(self, context, instance_uuid):
         """Lock the given instance."""
         context = context.elevated()
 
-        LOG.debug(_('instance %s: locking'), instance_id, context=context)
-        self.db.instance_update(context, instance_id, {'locked': True})
+        LOG.debug(_('instance %s: locking'), instance_uuid, context=context)
+        self.db.instance_update(context, instance_uuid, {'locked': True})
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def unlock_instance(self, context, instance_id):
+    def unlock_instance(self, context, instance_uuid):
         """Unlock the given instance."""
         context = context.elevated()
 
-        LOG.debug(_('instance %s: unlocking'), instance_id, context=context)
-        self.db.instance_update(context, instance_id, {'locked': False})
+        LOG.debug(_('instance %s: unlocking'), instance_uuid, context=context)
+        self.db.instance_update(context, instance_uuid, {'locked': False})
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def get_lock(self, context, instance_id):
