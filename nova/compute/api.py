@@ -447,10 +447,11 @@ class API(base.Base):
         instance = dict(launch_index=num, **base_options)
         instance = self.db.instance_create(context, instance)
         instance_id = instance['id']
+        instance_uuid = instance['uuid']
 
         for security_group_id in security_groups:
             self.db.instance_add_security_group(elevated,
-                                                instance_id,
+                                                instance_uuid,
                                                 security_group_id)
 
         # BlockDeviceMapping table
@@ -677,7 +678,7 @@ class API(base.Base):
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
 
     def _is_security_group_associated_with_server(self, security_group,
-                                                instance_id):
+                                                  instance_uuid):
         """Check if the security group is already associated
            with the instance. If Yes, return True.
         """
@@ -689,10 +690,9 @@ class API(base.Base):
         if not instances:
             return False
 
-        inst_id = None
-        for inst_id in (instance['id'] for instance in instances \
-                        if instance_id == instance['id']):
-            return True
+        for inst in instances:
+            if (instance_uuid == inst['uuid']):
+                return True
 
         return False
 
@@ -703,20 +703,21 @@ class API(base.Base):
                 security_group_name)
 
         instance_id = instance['id']
+        instance_uuid = instance['uuid']
 
         #check if the security group is associated with the server
         if self._is_security_group_associated_with_server(security_group,
-                                                          instance_id):
+                                                          instance_uuid):
             raise exception.SecurityGroupExistsForInstance(
                                         security_group_id=security_group['id'],
-                                        instance_id=instance_id)
+                                        instance_id=instance_uuid)
 
         #check if the instance is in running state
         if instance['power_state'] != power_state.RUNNING:
-            raise exception.InstanceNotRunning(instance_id=instance_id)
+            raise exception.InstanceNotRunning(instance_id=instance_uuid)
 
         self.db.instance_add_security_group(context.elevated(),
-                                            instance_id,
+                                            instance_uuid,
                                             security_group['id'])
         host = instance['host']
         rpc.cast(context,
@@ -731,20 +732,21 @@ class API(base.Base):
                 security_group_name)
 
         instance_id = instance['id']
+        instance_uuid = instance['uuid']
 
         #check if the security group is associated with the server
         if not self._is_security_group_associated_with_server(security_group,
-                                                              instance_id):
+                                                              instance_uuid):
             raise exception.SecurityGroupNotExistsForInstance(
                                     security_group_id=security_group['id'],
-                                    instance_id=instance_id)
+                                    instance_id=instance_uuid)
 
         #check if the instance is in running state
         if instance['power_state'] != power_state.RUNNING:
-            raise exception.InstanceNotRunning(instance_id=instance_id)
+            raise exception.InstanceNotRunning(instance_id=instance_uuid)
 
         self.db.instance_remove_security_group(context.elevated(),
-                                               instance_id,
+                                               instance_uuid,
                                                security_group['id'])
         host = instance['host']
         rpc.cast(context,

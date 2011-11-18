@@ -22,6 +22,7 @@ import webob
 from nova.api.openstack.v2.contrib import security_groups
 import nova.db
 from nova import exception
+from nova import utils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -86,12 +87,13 @@ def return_server_by_uuid(context, server_uuid):
 
 
 def return_non_running_server(context, server_id):
-    return {'id': server_id, 'power_state': 0x02,
+    return {'id': server_id, 'power_state': 0x02, 'uuid': FAKE_UUID,
             'host': "localhost", 'name': 'asdf'}
 
 
 def return_security_group_by_name(context, project_id, group_name):
-    return {'id': 1, 'name': group_name, "instances": [{'id': 1}]}
+    return {'id': 1, 'name': group_name,
+            "instances": [{'id': 1, 'uuid': FAKE_UUID}]}
 
 
 def return_security_group_without_instances(context, project_id, group_name):

@@ -1320,9 +1320,9 @@ class IptablesFirewallTestCase(test.TestCase):
                                        'to_port': 81,
                                        'group_id': src_secgroup['id']})
 
-        db.instance_add_security_group(admin_ctxt, instance_ref['id'],
+        db.instance_add_security_group(admin_ctxt, instance_ref['uuid'],
                                        secgroup['id'])
-        db.instance_add_security_group(admin_ctxt, src_instance_ref['id'],
+        db.instance_add_security_group(admin_ctxt, src_instance_ref['uuid'],
                                        src_secgroup['id'])
         instance_ref = db.instance_get(admin_ctxt, instance_ref['id'])
         src_instance_ref = db.instance_get(admin_ctxt, src_instance_ref['id'])
@@ -1664,6 +1664,7 @@ class NWFilterTestCase(test.TestCase):
 
         instance_ref = self._create_instance()
         inst_id = instance_ref['id']
+        inst_uuid = instance_ref['uuid']
 
         def _ensure_all_called(mac):
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
@@ -1679,7 +1680,7 @@ class NWFilterTestCase(test.TestCase):
 
         self.security_group = self.setup_and_return_security_group()
 
-        db.instance_add_security_group(self.context, inst_id,
+        db.instance_add_security_group(self.context, inst_uuid,
                                        self.security_group.id)
         instance = db.instance_get(self.context, inst_id)
 
@@ -1713,10 +1714,11 @@ class NWFilterTestCase(test.TestCase):
 
         instance_ref = self._create_instance()
         inst_id = instance_ref['id']
+        inst_uuid = instance_ref['uuid']
 
         self.security_group = self.setup_and_return_security_group()
 
-        db.instance_add_security_group(self.context, inst_id,
+        db.instance_add_security_group(self.context, inst_uuid,
                                        self.security_group.id)
 
         instance = db.instance_get(self.context, inst_id)
