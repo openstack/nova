@@ -21,6 +21,10 @@ from nova import log as logging
 meta = MetaData()
 
 # Table definition
+volumes = Table('volumes', meta,
+        Column('id', Integer(), primary_key=True, nullable=False)
+)
+
 export_devices = Table('export_devices', meta,
         Column('created_at', DateTime(timezone=False)),
         Column('updated_at', DateTime(timezone=False)),
