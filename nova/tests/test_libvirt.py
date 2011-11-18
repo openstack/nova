@@ -357,6 +357,10 @@ class LibvirtConnTestCase(test.TestCase):
         instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
 
+    def test_xml_disk_prefix(self):
+        instance_data = dict(self.test_instance)
+        self._check_xml_and_disk_prefix(instance_data)
+
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_in_ami_format(self):
         self.flags(image_service='nova.image.fake.FakeImageService')
@@ -556,6 +560,40 @@ class LibvirtConnTestCase(test.TestCase):
 
         target = tree.find('./devices/filesystem/source').get('dir')
         self.assertTrue(len(target) > 0)
+
+    def _check_xml_and_disk_prefix(self, instance):
+        user_context = context.RequestContext(self.user_id,
+                                              self.project_id)
+        instance_ref = db.instance_create(user_context, instance)
+
+        type_disk_map = {
+            'qemu': [
+               (lambda t: t.find('.').get('type'), 'qemu'),
+               (lambda t: t.find('./devices/disk/target').get('dev'), 'vda')],
+            'xen': [
+               (lambda t: t.find('.').get('type'), 'xen'),
+               (lambda t: t.find('./devices/disk/target').get('dev'), 'sda')],
+            'kvm': [
+               (lambda t: t.find('.').get('type'), 'kvm'),
+               (lambda t: t.find('./devices/disk/target').get('dev'), 'vda')],
+            'uml': [
+               (lambda t: t.find('.').get('type'), 'uml'),
+               (lambda t: t.find('./devices/disk/target').get('dev'), 'ubda')]
+            }
+
+        for (libvirt_type, checks) in type_disk_map.iteritems():
+            self.flags(libvirt_type=libvirt_type)
+            conn = connection.LibvirtConnection(True)
+
+            network_info = _fake_network_info(self.stubs, 1)
+            xml = conn.to_xml(instance_ref, network_info)
+            tree = xml_to_tree(xml)
+
+            for i, (check, expected_result) in enumerate(checks):
+                self.assertEqual(check(tree),
+                                 expected_result,
+                                 '%s != %s failed check %d' %
+                                 (check(tree), expected_result, i))
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
