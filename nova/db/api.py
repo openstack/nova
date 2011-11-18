@@ -352,6 +352,11 @@ def fixed_ip_create(context, values):
     return IMPL.fixed_ip_create(context, values)
 
 
+def fixed_ip_bulk_create(context, ips):
+    """Create a lot of fixed ips from the values dictionary."""
+    return IMPL.fixed_ip_bulk_create(context, ips)
+
+
 def fixed_ip_disassociate(context, address):
     """Disassociate a fixed ip from an instance by address."""
     return IMPL.fixed_ip_disassociate(context, address)
