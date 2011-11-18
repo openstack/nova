@@ -91,12 +91,15 @@ def read_record(self, arg_dict):
         ret, result = _run_command(cmd)
         return result.strip()
     except XenstoreError, e:
-        if arg_dict.get("ignore_missing_path", False):
-            if not _record_exists(arg_dict):
-                return "None"
-        # Either we shouldn't ignore path errors, or another
-        # error was hit. Re-raise.
-        raise
+        if not arg_dict.get("ignore_missing_path", False):
+            raise
+        if not _record_exists(arg_dict):
+            return "None"
+        # Just try again in case the agent write won the race against
+        # the record_exists check. If this fails again, it will likely raise
+        # an equally meaningful XenstoreError as the one we just caught
+        ret, result = _run_command(cmd)
+        return result.strip()
 
 
 @jsonify
@@ -128,7 +131,10 @@ def list_records(self, arg_dict):
     except XenstoreError, e:
         if not _record_exists(arg_dict):
             return {}
-        raise
+        # Just try again in case the path was created in between
+        # the "ls" and the existence check. If this fails again, it will
+        # likely raise an equally meaningful XenstoreError
+        ret, recs = _run_command(cmd)
     base_path = arg_dict["path"]
     paths = _paths_from_ls(recs)
     ret = {}
