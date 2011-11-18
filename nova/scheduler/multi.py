@@ -38,6 +38,7 @@ flags.DEFINE_string('volume_scheduler_driver',
 # A mapping of methods to topics so we can figure out which driver to use.
 _METHOD_MAP = {'run_instance': 'compute',
                'start_instance': 'compute',
+               'prep_resize': 'compute',
                'create_volume': 'volume',
                'create_volumes': 'volume'}
 

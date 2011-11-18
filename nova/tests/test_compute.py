@@ -1448,6 +1448,43 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.resize(context, instance, None)
         self.compute.terminate_instance(context, instance_id)
 
+    def test_resize_request_spec(self):
+        def _fake_cast(context, args):
+            request_spec = args['args']['request_spec']
+            self.assertEqual(request_spec['original_host'], 'host2')
+            self.assertEqual(request_spec['avoid_original_host'], True)
+
+        self.stubs.Set(self.compute_api, '_cast_scheduler_message',
+                       _fake_cast)
+
+        context = self.context.elevated()
+        instance_id = self._create_instance(dict(host='host2'))
+        instance = db.instance_get(context, instance_id)
+        self.compute.run_instance(self.context, instance_id)
+        try:
+            self.compute_api.resize(context, instance, None)
+        finally:
+            self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_request_spec_noavoid(self):
+        def _fake_cast(context, args):
+            request_spec = args['args']['request_spec']
+            self.assertEqual(request_spec['original_host'], 'host2')
+            self.assertEqual(request_spec['avoid_original_host'], False)
+
+        self.stubs.Set(self.compute_api, '_cast_scheduler_message',
+                       _fake_cast)
+        self.flags(allow_resize_to_same_host=True)
+
+        context = self.context.elevated()
+        instance_id = self._create_instance(dict(host='host2'))
+        instance = db.instance_get(context, instance_id)
+        self.compute.run_instance(self.context, instance_id)
+        try:
+            self.compute_api.resize(context, instance, None)
+        finally:
+            self.compute.terminate_instance(context, instance_id)
+
     def test_get_all_by_name_regexp(self):
         """Test searching instances by name (display_name)"""
         c = context.get_admin_context()

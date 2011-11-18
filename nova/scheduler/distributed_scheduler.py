@@ -124,6 +124,34 @@ class DistributedScheduler(driver.Scheduler):
 
         return instances
 
+    def schedule_prep_resize(self, context, request_spec, *args, **kwargs):
+        """Select a target for resize.
+
+        Selects a target host for the instance, post-resize, and casts
+        the prep_resize operation to it.
+        """
+
+        # We need the new instance type ID...
+        instance_type_id = kwargs['instance_type_id']
+
+        elevated = context.elevated()
+        LOG.debug(_("Attempting to determine target host for resize to "
+                    "instance type %(instance_type_id)s") % locals())
+
+        # Convert it to an actual instance type
+        instance_type = db.instance_type_get(elevated, instance_type_id)
+
+        # Now let's grab a possibility
+        hosts = self._schedule(elevated, 'compute', request_spec,
+                               *args, **kwargs)
+        if not hosts:
+            raise exception.NoValidHost(reason=_(""))
+        host = hosts.pop(0)
+
+        # Forward off to the host
+        driver.cast_to_host(context, 'compute', host.host, 'prep_resize',
+                            **kwargs)
+
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
@@ -307,12 +335,13 @@ class DistributedScheduler(driver.Scheduler):
                                         ram_requirement_mb)
 
         # Next, tack on the host weights from the child zones
-        json_spec = json.dumps(request_spec)
-        all_zones = self._zone_get_all(elevated)
-        child_results = self._call_zone_method(elevated, "select",
-                specs=json_spec, zones=all_zones)
-        selected_hosts.extend(self._adjust_child_weights(
-                                                child_results, all_zones))
+        if not request_spec.get('local_zone', False):
+            json_spec = json.dumps(request_spec)
+            all_zones = self._zone_get_all(elevated)
+            child_results = self._call_zone_method(elevated, "select",
+                    specs=json_spec, zones=all_zones)
+            selected_hosts.extend(self._adjust_child_weights(
+                                                    child_results, all_zones))
         selected_hosts.sort(key=operator.attrgetter('weight'))
         return selected_hosts[:num_instances]
 
@@ -359,6 +388,12 @@ class DistributedScheduler(driver.Scheduler):
         """Filter the full host list. hosts = [(host, HostInfo()), ...].
         This method returns a subset of hosts, in the same format."""
         selected_filters = self._choose_host_filters()
+
+        # Filter out original host
+        if ('original_host' in request_spec and
+            request_spec.get('avoid_original_host', True)):
+            hosts = [(h, hi) for h, hi in hosts
+                     if h != request_spec['original_host']]
 
         # TODO(sandy): We're only using InstanceType-based specs
         # currently. Later we'll need to snoop for more detailed

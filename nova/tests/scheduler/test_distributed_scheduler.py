@@ -82,6 +82,10 @@ def fake_zone_get_all(context):
     ]
 
 
+def fake_filter_hosts(topic, request_info, unfiltered_hosts, options):
+            return unfiltered_hosts
+
+
 class DistributedSchedulerTestCase(test.TestCase):
     """Test case for Distributed Scheduler."""
 
@@ -205,15 +209,10 @@ class DistributedSchedulerTestCase(test.TestCase):
                           "compute", {})
 
     def test_schedule_happy_day(self):
-        """_schedule() has no branching logic beyond basic input parameter
-        checking. Just make sure there's nothing glaringly wrong by doing
-        a happy day pass through."""
+        """Make sure there's nothing glaringly wrong with _schedule()
+        by doing a happy day pass through."""
 
         self.next_weight = 1.0
-
-        def _fake_filter_hosts(topic, request_info, unfiltered_hosts,
-                                                                options):
-            return unfiltered_hosts
 
         def _fake_weighted_sum(functions, hosts, options):
             self.next_weight += 2.0
@@ -224,7 +223,7 @@ class DistributedSchedulerTestCase(test.TestCase):
         sched = ds_fakes.FakeDistributedScheduler()
         fake_context = context.RequestContext('user', 'project')
         sched.zone_manager = ds_fakes.FakeZoneManager()
-        self.stubs.Set(sched, '_filter_hosts', _fake_filter_hosts)
+        self.stubs.Set(sched, '_filter_hosts', fake_filter_hosts)
         self.stubs.Set(least_cost, 'weighted_sum', _fake_weighted_sum)
         self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
         self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
@@ -242,6 +241,37 @@ class DistributedSchedulerTestCase(test.TestCase):
             else:
                 self.assertTrue(weighted_host.host != None)
                 self.assertTrue(weighted_host.zone == None)
+
+    def test_schedule_local_zone(self):
+        """Test to make sure _schedule makes no call out to zones if
+        local_zone in the request spec is True."""
+
+        self.next_weight = 1.0
+
+        def _fake_weighted_sum(functions, hosts, options):
+            self.next_weight += 2.0
+            host, hostinfo = hosts[0]
+            return least_cost.WeightedHost(self.next_weight, host=host,
+                                           hostinfo=hostinfo)
+
+        sched = ds_fakes.FakeDistributedScheduler()
+        fake_context = context.RequestContext('user', 'project')
+        sched.zone_manager = ds_fakes.FakeZoneManager()
+        self.stubs.Set(sched, '_filter_hosts', fake_filter_hosts)
+        self.stubs.Set(least_cost, 'weighted_sum', _fake_weighted_sum)
+        self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
+        self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
+
+        instance_type = dict(memory_mb=512, local_gb=512)
+        request_spec = dict(num_instances=10, instance_type=instance_type,
+                            local_zone=True)
+        weighted_hosts = sched._schedule(fake_context, 'compute',
+                                         request_spec)
+        self.assertEquals(len(weighted_hosts), 10)
+        for weighted_host in weighted_hosts:
+            # There should be no remote hosts
+            self.assertTrue(weighted_host.host != None)
+            self.assertTrue(weighted_host.zone == None)
 
     def test_decrypt_blob(self):
         """Test that the decrypt method works."""
@@ -269,3 +299,42 @@ class DistributedSchedulerTestCase(test.TestCase):
         self.assertEquals(weight, 1.0)
         hostinfo = zone_manager.HostInfo('host', free_ram_mb=1000)
         self.assertEquals(1000, fn(hostinfo))
+
+    def test_filter_hosts_avoid(self):
+        """Test to make sure _filter_hosts() filters original hosts if
+        avoid_original_host is True."""
+
+        def _fake_choose_host_filters():
+            return []
+
+        sched = ds_fakes.FakeDistributedScheduler()
+        fake_context = context.RequestContext('user', 'project')
+        self.stubs.Set(sched, '_choose_host_filters',
+                       _fake_choose_host_filters)
+
+        hosts = [('host1', '1info'), ('host2', '2info'), ('host3', '3info')]
+        request_spec = dict(original_host='host2',
+                            avoid_original_host=True)
+
+        filtered = sched._filter_hosts('compute', request_spec, hosts, {})
+        self.assertEqual(filtered,
+                         [('host1', '1info'), ('host3', '3info')])
+
+    def test_filter_hosts_no_avoid(self):
+        """Test to make sure _filter_hosts() does not filter original
+        hosts if avoid_original_host is False."""
+
+        def _fake_choose_host_filters():
+            return []
+
+        sched = ds_fakes.FakeDistributedScheduler()
+        fake_context = context.RequestContext('user', 'project')
+        self.stubs.Set(sched, '_choose_host_filters',
+                       _fake_choose_host_filters)
+
+        hosts = [('host1', '1info'), ('host2', '2info'), ('host3', '3info')]
+        request_spec = dict(original_host='host2',
+                            avoid_original_host=False)
+
+        filtered = sched._filter_hosts('compute', request_spec, hosts, {})
+        self.assertEqual(filtered, hosts)

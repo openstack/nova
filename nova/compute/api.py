@@ -1294,12 +1294,22 @@ class API(base.Base):
                     vm_state=vm_states.RESIZING,
                     task_state=task_states.RESIZE_PREP)
 
+        request_spec = {
+            'instance_type': new_instance_type,
+            'filter': None,
+            'num_instances': 1,
+            'original_host': instance['host'],
+            'avoid_original_host': not FLAGS.allow_resize_to_same_host,
+            'local_zone': True,
+            }
+
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
                               "instance_id": instance['uuid'],
                               "update_db": False,
-                              "instance_type_id": new_instance_type['id']}})
+                              "instance_type_id": new_instance_type['id'],
+                              "request_spec": request_spec}})
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance, network_id):
