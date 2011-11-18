@@ -103,12 +103,12 @@ class AuthMiddleware(base_wsgi.Middleware):
         path_parts = req.path.split('/')
         # TODO(wwolf): this v1.1 check will be temporary as
         # keystone should be taking this over at some point
-        if len(path_parts) > 1 and path_parts[1] == 'v1.1':
+        if len(path_parts) > 1 and path_parts[1] in ('v1.1', 'v2'):
             project_id = path_parts[2]
             # Check that the project for project_id exists, and that user
             # is authorized to use it
             try:
-                project = self.auth.get_project(project_id)
+                self.auth.get_project(project_id)
             except exception.ProjectNotFound:
                 return wsgi.Fault(webob.exc.HTTPUnauthorized())
             if project_id not in [p.id for p in projects]:
@@ -153,7 +153,7 @@ class AuthMiddleware(base_wsgi.Middleware):
         path_info = req.path_info
         if len(path_info) > 1:
             msg = _("Authentication requests must be made against a version "
-                    "root (e.g. /v1.0 or /v1.1).")
+                    "root (e.g. /v2).")
             LOG.warn(msg)
             return wsgi.Fault(webob.exc.HTTPUnauthorized(explanation=msg))
 
@@ -243,7 +243,7 @@ class AuthMiddleware(base_wsgi.Middleware):
             os_url = req.url
             token_dict['server_management_url'] = os_url.strip('/')
             version = common.get_version_from_href(os_url)
-            if version == '1.1':
+            if version in ('1.1', '2'):
                 token_dict['server_management_url'] += '/' + project_id
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id

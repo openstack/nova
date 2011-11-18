@@ -16,17 +16,14 @@
 #    under the License.
 
 import json
-import os.path
 
 import webob
 from lxml import etree
 
 from nova.api.openstack import v2
 from nova.api.openstack.v2 import extensions
-from nova.api.openstack.v2 import flavors
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import context
 from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -404,15 +401,15 @@ class RequestExtensionTest(ExtensionTestCase):
             return res
 
         req_ext = extensions.RequestExtension('GET',
-                                                '/v1.1/123/flavors/:(id)',
+                                                '/v2/123/flavors/:(id)',
                                                 _req_handler)
 
         manager = StubExtensionManager(None, None, req_ext)
         app = fakes.wsgi_app(serialization=base_wsgi.Middleware)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/v1.1/123/flavors/1?chewing=bluegoo")
-        request.environ['api.version'] = '1.1'
+        request = webob.Request.blank("/v2/123/flavors/1?chewing=bluegoo")
+        request.environ['api.version'] = '2'
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
@@ -423,11 +420,12 @@ class RequestExtensionTest(ExtensionTestCase):
         app = fakes.wsgi_app(serialization=base_wsgi.Middleware)
         ext_midware = extensions.ExtensionMiddleware(app)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/v1.1/123/flavors/1?chewing=newblue")
-        request.environ['api.version'] = '1.1'
+        request = webob.Request.blank("/v2/123/flavors/1?chewing=newblue")
+        request.environ['api.version'] = '2'
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
+        print response_data
         self.assertEqual('newblue', response_data['flavor']['googoose'])
         self.assertEqual("Pig Bands!", response_data['big_bands'])
 

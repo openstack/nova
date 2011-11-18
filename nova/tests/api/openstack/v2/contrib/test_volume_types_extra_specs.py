@@ -17,13 +17,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-import os.path
-
-import stubout
 import webob
 
-from nova.api.openstack.v2 import extensions
 from nova.api.openstack.v2.contrib import volumetypes
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -62,7 +57,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
     def setUp(self):
         super(VolumeTypesExtraSpecsTest, self).setUp()
         fakes.stub_out_key_pair_funcs(self.stubs)
-        self.api_path = '/v1.1/123/os-volume-types/1/extra_specs'
+        self.api_path = '/v2/123/os-volume-types/1/extra_specs'
         self.controller = volumetypes.VolumeTypeExtraSpecsController()
 
     def test_index(self):

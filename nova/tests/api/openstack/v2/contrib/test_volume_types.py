@@ -13,18 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
-import stubout
 import webob
 
 from nova.api.openstack.v2.contrib import volumetypes
 from nova import exception
-from nova import context
 from nova import test
 from nova import log as logging
 from nova.volume import volume_types
 from nova.tests.api.openstack import fakes
+
 
 LOG = logging.getLogger('nova.tests.api.openstack.v2.contrib.'
                         'test_volume_types')
@@ -88,7 +85,7 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'get_all_types',
                        return_volume_types_get_all_types)
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/os-volume-types')
+        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types')
         res_dict = self.controller.index(req)
 
         self.assertEqual(3, len(res_dict))
@@ -100,7 +97,7 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'get_all_types',
                        return_empty_volume_types_get_all_types)
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/os-volume-types')
+        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types')
         res_dict = self.controller.index(req)
 
         self.assertEqual(0, len(res_dict))
@@ -109,7 +106,7 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'get_volume_type',
                        return_volume_types_get_volume_type)
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/os-volume-types/1')
+        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types/1')
         res_dict = self.controller.show(req, 1)
 
         self.assertEqual(1, len(res_dict))
@@ -119,7 +116,7 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'get_volume_type',
                        return_volume_types_get_volume_type)
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/os-volume-types/777')
+        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types/777')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
                           req, '777')
 
@@ -129,7 +126,7 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'destroy',
                        return_volume_types_destroy)
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/os-volume-types/1')
+        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types/1')
         self.controller.delete(req, 1)
 
     def test_volume_types_delete_not_found(self):
@@ -138,7 +135,7 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'destroy',
                        return_volume_types_destroy)
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/os-volume-types/777')
+        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types/777')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, '777')
 
@@ -150,7 +147,7 @@ class VolumeTypesApiTest(test.TestCase):
 
         body = {"volume_type": {"name": "vol_type_1",
                                 "extra_specs": {"key1": "value1"}}}
-        req = fakes.HTTPRequest.blank('/v1.1/123/os-volume-types')
+        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types')
         res_dict = self.controller.create(req, body)
 
         self.assertEqual(1, len(res_dict))
@@ -162,6 +159,6 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'get_volume_type_by_name',
                        return_volume_types_get_by_name)
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/os-volume-types')
+        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types')
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, '')

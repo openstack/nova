@@ -39,7 +39,7 @@ class ExtendedStatusTest(test.TestCase):
     def setUp(self):
         super(ExtendedStatusTest, self).setUp()
         self.uuid = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
-        self.url = '/v1.1/openstack/servers/%s' % self.uuid
+        self.url = '/v2/openstack/servers/%s' % self.uuid
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'routing_get', fake_compute_get)
 

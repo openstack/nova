@@ -74,7 +74,7 @@ class BootFromVolumeTest(test.TestCase):
                 ))
         global _block_device_mapping_seen
         _block_device_mapping_seen = None
-        req = webob.Request.blank('/v1.1/fake/os-volumes_boot')
+        req = webob.Request.blank('/v2/fake/os-volumes_boot')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'

@@ -222,7 +222,7 @@ class ServersControllerTest(test.TestCase):
 
         So, counterintuitively, we call `get` twice on the `show` command.
         """
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
 
@@ -232,7 +232,7 @@ class ServersControllerTest(test.TestCase):
         flavor_bookmark = "http://localhost/fake/flavors/1"
 
         uuid = FAKE_UUID
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % uuid)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
         res_dict = self.controller.show(req, uuid)
         expected_server = {
             "server": {
@@ -275,7 +275,7 @@ class ServersControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/servers/%s" % uuid,
+                        "href": "http://localhost/v2/fake/servers/%s" % uuid,
                     },
                     {
                         "rel": "bookmark",
@@ -296,7 +296,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
         uuid = FAKE_UUID
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % uuid)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
         res_dict = self.controller.show(req, uuid)
         expected_server = {
             "server": {
@@ -339,7 +339,7 @@ class ServersControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/servers/%s" % uuid,
+                        "href": "http://localhost/v2/fake/servers/%s" % uuid,
                     },
                     {
                         "rel": "bookmark",
@@ -363,7 +363,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
         uuid = FAKE_UUID
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % uuid)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
         res_dict = self.controller.show(req, uuid)
         expected_server = {
             "server": {
@@ -406,7 +406,7 @@ class ServersControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/servers/%s" % uuid,
+                        "href": "http://localhost/v2/fake/servers/%s" % uuid,
                     },
                     {
                         "rel": "bookmark",
@@ -427,7 +427,7 @@ class ServersControllerTest(test.TestCase):
 
         self.stubs.Set(nova.db, 'instance_get_by_uuid', fake_instance_get)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
@@ -442,7 +442,7 @@ class ServersControllerTest(test.TestCase):
 
         self.stubs.Set(nova.db, 'instance_get_by_uuid', fake_instance_get)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
@@ -456,7 +456,7 @@ class ServersControllerTest(test.TestCase):
                 public_ips=publics, private_ips=privates)
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
@@ -483,7 +483,7 @@ class ServersControllerTest(test.TestCase):
                 public_ips=publics, private_ips=privates)
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
@@ -510,7 +510,7 @@ class ServersControllerTest(test.TestCase):
                 public_ips=publics, private_ips=privates)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s/ips' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/ips' % FAKE_UUID)
         res_dict = self.ips_controller.index(req, FAKE_UUID)
 
         expected = {
@@ -537,7 +537,7 @@ class ServersControllerTest(test.TestCase):
                 public_ips_are_floating=True)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s/ips' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/ips' % FAKE_UUID)
         res_dict = self.ips_controller.index(req, FAKE_UUID)
 
         expected = {
@@ -561,7 +561,7 @@ class ServersControllerTest(test.TestCase):
                 public_ips=publics, private_ips=privates)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
-        url = '/v1.1/fake/servers/%s/ips/public' % FAKE_UUID
+        url = '/v2/fake/servers/%s/ips/public' % FAKE_UUID
         req = fakes.HTTPRequest.blank(url)
         res_dict = self.ips_controller.show(req, FAKE_UUID, 'public')
 
@@ -576,7 +576,7 @@ class ServersControllerTest(test.TestCase):
         self.assertDictMatch(res_dict, expected)
 
     def test_get_server_addresses_nonexistant_network(self):
-        url = '/v1.1/fake/servers/%s/ips/network_0' % FAKE_UUID
+        url = '/v2/fake/servers/%s/ips/network_0' % FAKE_UUID
         req = fakes.HTTPRequest.blank(url)
         self.assertRaises(webob.exc.HTTPNotFound, self.ips_controller.show,
                           req, FAKE_UUID, 'network_0')
@@ -588,7 +588,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get_by_uuid', fake_instance_get)
 
         server_id = str(utils.gen_uuid())
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s/ips' % server_id)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/ips' % server_id)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.ips_controller.index, req, server_id)
 
@@ -598,7 +598,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.scheduler.api, 'call_zone_method',
                        return_servers_from_child_zones)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?reservation_id=foo')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?reservation_id=foo')
         res_dict = self.controller.index(req)
 
         i = 0
@@ -616,7 +616,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.scheduler.api, 'call_zone_method',
                        return_servers_from_child_zones_empty)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/detail?'
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?'
                                       'reservation_id=foo')
         res_dict = self.controller.detail(req)
 
@@ -634,7 +634,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.scheduler.api, 'call_zone_method',
                        return_servers_from_child_zones)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/detail?'
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?'
                                       'reservation_id=foo')
         res_dict = self.controller.detail(req)
 
@@ -647,7 +647,7 @@ class ServersControllerTest(test.TestCase):
                 i += 1
 
     def test_get_server_list(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         res_dict = self.controller.index(req)
 
         self.assertEqual(len(res_dict['servers']), 5)
@@ -659,7 +659,7 @@ class ServersControllerTest(test.TestCase):
             expected_links = [
                 {
                     "rel": "self",
-                    "href": "http://localhost/v1.1/fake/servers/%s" % s['id'],
+                    "href": "http://localhost/v2/fake/servers/%s" % s['id'],
                 },
                 {
                     "rel": "bookmark",
@@ -670,7 +670,7 @@ class ServersControllerTest(test.TestCase):
             self.assertEqual(s['links'], expected_links)
 
     def test_get_servers_with_limit(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?limit=3')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=3')
         res_dict = self.controller.index(req)
 
         servers = res_dict['servers']
@@ -680,18 +680,18 @@ class ServersControllerTest(test.TestCase):
         servers_links = res_dict['servers_links']
         self.assertEqual(servers_links[0]['rel'], 'next')
         href_parts = urlparse.urlparse(servers_links[0]['href'])
-        self.assertEqual('/v1.1/fake/servers', href_parts.path)
+        self.assertEqual('/v2/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         expected_params = {'limit': ['3'], 'marker': [get_fake_uuid(2)]}
         self.assertDictMatch(expected_params, params)
 
     def test_get_servers_with_limit_bad_value(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?limit=aaa')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=aaa')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
 
     def test_get_server_details_with_limit(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/detail?limit=3')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?limit=3')
         res = self.controller.detail(req)
 
         servers = res['servers']
@@ -702,18 +702,18 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(servers_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(servers_links[0]['href'])
-        self.assertEqual('/v1.1/fake/servers', href_parts.path)
+        self.assertEqual('/v2/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         expected = {'limit': ['3'], 'marker': [get_fake_uuid(2)]}
         self.assertDictMatch(expected, params)
 
     def test_get_server_details_with_limit_bad_value(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/detail?limit=aaa')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?limit=aaa')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.detail, req)
 
     def test_get_server_details_with_limit_and_other_params(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/detail'
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail'
                                       '?limit=3&blah=2:t')
         res = self.controller.detail(req)
 
@@ -725,36 +725,36 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(servers_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(servers_links[0]['href'])
-        self.assertEqual('/v1.1/fake/servers', href_parts.path)
+        self.assertEqual('/v2/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
 
         self.assertDictMatch({'limit': ['3'], 'blah': ['2:t'],
                               'marker': [get_fake_uuid(2)]}, params)
 
     def test_get_servers_with_too_big_limit(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?limit=30')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=30')
         res_dict = self.controller.index(req)
         self.assertTrue('servers_links' not in res_dict)
 
     def test_get_servers_with_bad_limit(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?limit=asdf')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=asdf')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
 
     def test_get_servers_with_marker(self):
-        url = '/v1.1/fake/servers?marker=%s' % get_fake_uuid(2)
+        url = '/v2/fake/servers?marker=%s' % get_fake_uuid(2)
         req = fakes.HTTPRequest.blank(url)
         servers = self.controller.index(req)['servers']
         self.assertEqual([s['name'] for s in servers], ["server3", "server4"])
 
     def test_get_servers_with_limit_and_marker(self):
-        url = '/v1.1/fake/servers?limit=2&marker=%s' % get_fake_uuid(1)
+        url = '/v2/fake/servers?limit=2&marker=%s' % get_fake_uuid(1)
         req = fakes.HTTPRequest.blank(url)
         servers = self.controller.index(req)['servers']
         self.assertEqual([s['name'] for s in servers], ['server2', 'server3'])
 
     def test_get_servers_with_bad_marker(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?limit=2&marker=asdf')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=2&marker=asdf')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
 
@@ -766,7 +766,7 @@ class ServersControllerTest(test.TestCase):
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?unknownoption=whee')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?unknownoption=whee')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 1)
@@ -784,7 +784,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?image=12345')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?image=12345')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 1)
@@ -801,7 +801,7 @@ class ServersControllerTest(test.TestCase):
                        fake_get_all)
         self.flags(allow_admin_api=True)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?tenant_id=fake',
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?tenant_id=fake',
                                       use_admin_context=True)
         res = self.controller.index(req)
 
@@ -820,7 +820,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?flavor=12345')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?flavor=12345')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 1)
@@ -838,7 +838,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?status=active')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?status=active')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 1)
@@ -847,7 +847,7 @@ class ServersControllerTest(test.TestCase):
     def test_get_servers_invalid_status(self):
         """Test getting servers by invalid status"""
         self.flags(allow_admin_api=False)
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?status=unknown')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?status=unknown')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
 
     def test_get_servers_allows_name(self):
@@ -862,7 +862,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
         self.flags(allow_admin_api=False)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?name=whee.*')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?name=whee.*')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 1)
@@ -882,7 +882,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         params = 'changes-since=2011-01-24T17:08:01Z'
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?%s' % params)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?%s' % params)
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 1)
@@ -890,7 +890,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_get_servers_allows_changes_since_bad_value(self):
         params = 'changes-since=asdf'
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?%s' % params)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?%s' % params)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
 
     def test_get_servers_unknown_or_admin_options1(self):
@@ -917,7 +917,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?%s' % query_str,
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?%s' % query_str,
                                       use_admin_context=True)
         res = self.controller.index(req)
 
@@ -949,7 +949,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?%s' % query_str)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?%s' % query_str)
         res = self.controller.index(req)
 
         servers = res['servers']
@@ -979,7 +979,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?%s' % query_str,
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?%s' % query_str,
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
 
@@ -1002,7 +1002,7 @@ class ServersControllerTest(test.TestCase):
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?ip=10\..*',
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?ip=10\..*',
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
 
@@ -1025,7 +1025,7 @@ class ServersControllerTest(test.TestCase):
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers?ip6=ffff.*',
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?ip6=ffff.*',
                                       use_admin_context=True)
         servers = self.controller.index(req)['servers']
 
@@ -1033,7 +1033,7 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(servers[0]['id'], server_uuid)
 
     def test_update_server_no_body(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
 
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
@@ -1044,7 +1044,7 @@ class ServersControllerTest(test.TestCase):
                 return_server_with_attributes(name='server_test',
                                               access_ipv4='0.0.0.0',
                                               access_ipv6='beef::0123'))
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/123/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {
@@ -1063,7 +1063,7 @@ class ServersControllerTest(test.TestCase):
     def test_update_server_name(self):
         self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(name='server_test'))
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {'name': 'server_test'}}
@@ -1076,7 +1076,7 @@ class ServersControllerTest(test.TestCase):
     def test_update_server_access_ipv4(self):
         self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(access_ipv4='0.0.0.0'))
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/123/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {'accessIPv4': '0.0.0.0'}}
@@ -1089,7 +1089,7 @@ class ServersControllerTest(test.TestCase):
     def test_update_server_access_ipv6(self):
         self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(access_ipv6='beef::0123'))
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/123/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {'accessIPv6': 'beef::0123'}}
@@ -1114,7 +1114,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(name='server_test'))
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = "application/json"
         req.body = json.dumps(body)
@@ -1142,7 +1142,7 @@ class ServersControllerTest(test.TestCase):
                 },
             ],
         }
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/detail')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
         res_dict = self.controller.detail(req)
 
         for i, s in enumerate(res_dict['servers']):
@@ -1170,7 +1170,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get_all_by_filters',
             return_servers_with_host)
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/detail')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
         res_dict = self.controller.detail(req)
 
         server_list = res_dict['servers']
@@ -1184,7 +1184,7 @@ class ServersControllerTest(test.TestCase):
             self.assertEqual(s['name'], 'server%d' % i)
 
     def test_delete_server_instance(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'DELETE'
 
         self.server_delete_called = False
@@ -1213,7 +1213,7 @@ class ServerStatusTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_server)
         self.stubs.Set(nova.db, 'instance_get', new_server)
 
-        request = fakes.HTTPRequest.blank('/v1.1/fake/servers/%s' % FAKE_UUID)
+        request = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         return self.controller.show(request, FAKE_UUID)
 
     def test_active(self):
@@ -1354,7 +1354,7 @@ class ServersControllerCreateTest(test.TestCase):
             name='server_test', imageRef=image_uuid, flavorRef=2,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1381,7 +1381,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1409,7 +1409,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1437,7 +1437,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1463,7 +1463,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers',
+        req = fakes.HTTPRequest.blank('/v2/123/servers',
                                       use_admin_context=True)
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -1478,9 +1478,9 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_instance()
 
     def test_create_instance_with_access_ip(self):
-        # proper local hrefs must start with 'http://localhost/v1.1/'
+        # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v1.1/fake/images/%s' % image_uuid
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
         flavor_ref = 'http://localhost/fake/flavors/3'
         access_ipv4 = '1.2.3.4'
         access_ipv6 = 'fead::1234'
@@ -1522,7 +1522,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1533,9 +1533,9 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance(self):
-        # proper local hrefs must start with 'http://localhost/v1.1/'
+        # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v1.1/images/%s' % image_uuid
+        image_href = 'http://localhost/v2/images/%s' % image_uuid
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
             'server': {
@@ -1555,7 +1555,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1566,12 +1566,12 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_invalid_key_name(self):
-        image_href = 'http://localhost/v1.1/images/2'
+        image_href = 'http://localhost/v2/images/2'
         flavor_ref = 'http://localhost/flavors/3'
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             key_name='nonexistentkey'))
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1585,7 +1585,7 @@ class ServersControllerCreateTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             key_name='key'))
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1595,13 +1595,13 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(12, len(res["server"]["adminPass"]))
 
     def test_create_instance_invalid_flavor_href(self):
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/asdf'
+        image_href = 'http://localhost/v2/images/2'
+        flavor_ref = 'http://localhost/v2/flavors/asdf'
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1610,13 +1610,13 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, req, body)
 
     def test_create_instance_invalid_flavor_id_int(self):
-        image_href = 'http://localhost/v1.1/123/images/2'
+        image_href = 'http://localhost/v2/123/images/2'
         flavor_ref = -1
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1625,13 +1625,13 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, req, body)
 
     def test_create_instance_bad_flavor_href(self):
-        image_href = 'http://localhost/v1.1/images/2'
-        flavor_ref = 'http://localhost/v1.1/flavors/17'
+        image_href = 'http://localhost/v2/images/2'
+        flavor_ref = 'http://localhost/v2/flavors/17'
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1642,7 +1642,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_config_drive(self):
         self.config_drive = True
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        flavor_ref = 'http://localhost/v2/123/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1657,7 +1657,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1669,7 +1669,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_config_drive_as_id(self):
         self.config_drive = 2
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        flavor_ref = 'http://localhost/v2/123/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1684,7 +1684,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1696,7 +1696,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_bad_config_drive(self):
         self.config_drive = "asdf"
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        flavor_ref = 'http://localhost/v2/123/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1711,7 +1711,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1721,7 +1721,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_without_config_drive(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v1.1/123/flavors/3'
+        flavor_ref = 'http://localhost/v2/123/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1736,7 +1736,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/123/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1747,12 +1747,12 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_bad_href(self):
         image_href = 'asdf'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        flavor_ref = 'http://localhost/v2/flavors/3'
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1762,7 +1762,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_local_href(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v1.1/flavors/3'
+        flavor_ref = 'http://localhost/v2/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
@@ -1771,7 +1771,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1791,7 +1791,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
@@ -1810,7 +1810,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
@@ -1819,7 +1819,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, req, body)
 
     def test_create_instance_malformed_entity(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         body = {'server': 'string'}
         req.body = json.dumps(body)
@@ -1837,7 +1837,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_minimal_request(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         imageRef="1"
         flavorRef="2"/>"""
@@ -1853,7 +1853,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_access_ipv4(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         imageRef="1"
         flavorRef="2"
@@ -1871,7 +1871,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_access_ipv6(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         imageRef="1"
         flavorRef="2"
@@ -1889,7 +1889,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_access_ip(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         imageRef="1"
         flavorRef="2"
@@ -1909,7 +1909,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_admin_pass(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         imageRef="1"
         flavorRef="2"
@@ -1927,15 +1927,15 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_image_link(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
-        imageRef="http://localhost:8774/v1.1/images/2"
+        imageRef="http://localhost:8774/v2/images/2"
         flavorRef="3"/>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {
             "server": {
                 "name": "new-server-test",
-                "imageRef": "http://localhost:8774/v1.1/images/2",
+                "imageRef": "http://localhost:8774/v2/images/2",
                 "flavorRef": "3",
             },
         }
@@ -1943,23 +1943,23 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_flavor_link(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         imageRef="1"
-        flavorRef="http://localhost:8774/v1.1/flavors/3"/>"""
+        flavorRef="http://localhost:8774/v2/flavors/3"/>"""
         request = self.deserializer.deserialize(serial_request, 'create')
         expected = {
             "server": {
                 "name": "new-server-test",
                 "imageRef": "1",
-                "flavorRef": "http://localhost:8774/v1.1/flavors/3",
+                "flavorRef": "http://localhost:8774/v2/flavors/3",
             },
         }
         self.assertEquals(request['body'], expected)
 
     def test_empty_metadata_personality(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         imageRef="1"
         flavorRef="2">
@@ -1980,7 +1980,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_multiple_metadata_items(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         imageRef="1"
         flavorRef="2">
@@ -2002,7 +2002,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_multiple_personality_files(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         imageRef="1"
         flavorRef="2">
@@ -2029,7 +2029,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         image_bookmark_link = "http://servers.api.openstack.org/1234/" + \
                               "images/52415800-8b69-11e0-9b19-734f6f006e54"
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
         imageRef="%s"
         flavorRef="52415800-8b69-11e0-9b19-734f1195ff37"
         name="new-server-test">
@@ -2060,7 +2060,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_request_with_empty_networks(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks/>
 </server>"""
@@ -2075,7 +2075,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_request_with_one_network(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks>
        <network uuid="1" fixed_ip="10.0.1.12"/>
@@ -2092,7 +2092,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_request_with_two_networks(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks>
        <network uuid="1" fixed_ip="10.0.1.12"/>
@@ -2111,7 +2111,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_request_with_second_network_node_ignored(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks>
        <network uuid="1" fixed_ip="10.0.1.12"/>
@@ -2131,7 +2131,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_request_with_one_network_missing_id(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks>
        <network fixed_ip="10.0.1.12"/>
@@ -2148,7 +2148,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_request_with_one_network_missing_fixed_ip(self):
         serial_request = """
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
+<server xmlns="http://docs.openstack.org/compute/api/v2"
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks>
        <network uuid="1"/>
@@ -2165,7 +2165,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_request_with_one_network_empty_id(self):
         serial_request = """
-    <server xmlns="http://docs.openstack.org/compute/api/v1.1"
+    <server xmlns="http://docs.openstack.org/compute/api/v2"
      name="new-server-test" imageRef="1" flavorRef="1">
         <networks>
            <network uuid="" fixed_ip="10.0.1.12"/>
@@ -2182,7 +2182,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_request_with_one_network_empty_fixed_ip(self):
         serial_request = """
-    <server xmlns="http://docs.openstack.org/compute/api/v1.1"
+    <server xmlns="http://docs.openstack.org/compute/api/v2"
      name="new-server-test" imageRef="1" flavorRef="1">
         <networks>
            <network uuid="1" fixed_ip=""/>
@@ -2199,7 +2199,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def test_request_with_networks_duplicate_ids(self):
         serial_request = """
-    <server xmlns="http://docs.openstack.org/compute/api/v1.1"
+    <server xmlns="http://docs.openstack.org/compute/api/v2"
      name="new-server-test" imageRef="1" flavorRef="1">
         <networks>
            <network uuid="1" fixed_ip="10.0.1.12"/>
@@ -2298,10 +2298,10 @@ class ServersViewBuilderTest(test.TestCase):
 
         self.uuid = self.instance['uuid']
         self.view_builder = nova.api.openstack.v2.views.servers.ViewBuilder()
-        self.request = fakes.HTTPRequest.blank("/v1.1")
+        self.request = fakes.HTTPRequest.blank("/v2")
 
     def test_build_server(self):
-        self_link = "http://localhost/v1.1/fake/servers/%s" % self.uuid
+        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
         bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
         expected_server = {
             "server": {
@@ -2331,7 +2331,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/servers/%s" %
+                        "href": "http://localhost/v2/fake/servers/%s" %
                                 self.uuid,
                     },
                     {
@@ -2348,7 +2348,7 @@ class ServersViewBuilderTest(test.TestCase):
     def test_build_server_detail(self):
         image_bookmark = "http://localhost/fake/images/5"
         flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v1.1/fake/servers/%s" % self.uuid
+        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
         bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
         expected_server = {
             "server": {
@@ -2415,7 +2415,7 @@ class ServersViewBuilderTest(test.TestCase):
         self.instance['progress'] = 100
         image_bookmark = "http://localhost/fake/images/5"
         flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v1.1/fake/servers/%s" % self.uuid
+        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
         bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
         expected_server = {
             "server": {
@@ -2482,7 +2482,7 @@ class ServersViewBuilderTest(test.TestCase):
 
         image_bookmark = "http://localhost/fake/images/5"
         flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v1.1/fake/servers/%s" % self.uuid
+        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
         bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
         expected_server = {
             "server": {
@@ -2549,7 +2549,7 @@ class ServersViewBuilderTest(test.TestCase):
 
         image_bookmark = "http://localhost/fake/images/5"
         flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v1.1/fake/servers/%s" % self.uuid
+        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
         bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
         expected_server = {
             "server": {
@@ -2619,7 +2619,7 @@ class ServersViewBuilderTest(test.TestCase):
 
         image_bookmark = "http://localhost/fake/images/5"
         flavor_bookmark = "http://localhost/fake/flavors/1"
-        self_link = "http://localhost/v1.1/fake/servers/%s" % self.uuid
+        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
         bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
         expected_server = {
             "server": {
@@ -2687,8 +2687,8 @@ class ServersViewBuilderTest(test.TestCase):
 class ServerXMLSerializationTest(test.TestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
-    SERVER_HREF = 'http://localhost/v1.1/servers/%s' % FAKE_UUID
-    SERVER_NEXT = 'http://localhost/v1.1/servers?limit=%s&marker=%s'
+    SERVER_HREF = 'http://localhost/v2/servers/%s' % FAKE_UUID
+    SERVER_NEXT = 'http://localhost/v2/servers?limit=%s&marker=%s'
     SERVER_BOOKMARK = 'http://localhost/servers/%s' % FAKE_UUID
     IMAGE_BOOKMARK = 'http://localhost/images/5'
     FLAVOR_BOOKMARK = 'http://localhost/flavors/1'
@@ -2854,11 +2854,6 @@ class ServerXMLSerializationTest(test.TestCase):
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
 
-        expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_image_bookmark = self.IMAGE_BOOKMARK
-        expected_flavor_bookmark = self.FLAVOR_BOOKMARK
-        expected_now = self.TIMESTAMP
         server_dict = fixture['server']
 
         for key in ['name', 'id', 'created', 'accessIPv4',
@@ -2990,11 +2985,6 @@ class ServerXMLSerializationTest(test.TestCase):
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
 
-        expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_image_bookmark = self.IMAGE_BOOKMARK
-        expected_flavor_bookmark = self.FLAVOR_BOOKMARK
-        expected_now = self.TIMESTAMP
         server_dict = fixture['server']
 
         for key in ['name', 'id', 'created', 'accessIPv4',
@@ -3052,9 +3042,9 @@ class ServerXMLSerializationTest(test.TestCase):
 
         uuid1 = get_fake_uuid(1)
         uuid2 = get_fake_uuid(2)
-        expected_server_href = 'http://localhost/v1.1/servers/%s' % uuid1
+        expected_server_href = 'http://localhost/v2/servers/%s' % uuid1
         expected_server_bookmark = 'http://localhost/servers/%s' % uuid1
-        expected_server_href_2 = 'http://localhost/v1.1/servers/%s' % uuid2
+        expected_server_href_2 = 'http://localhost/v2/servers/%s' % uuid2
         expected_server_bookmark_2 = 'http://localhost/servers/%s' % uuid2
         fixture = {"servers": [
             {
@@ -3109,10 +3099,10 @@ class ServerXMLSerializationTest(test.TestCase):
 
         uuid1 = get_fake_uuid(1)
         uuid2 = get_fake_uuid(2)
-        expected_server_href = 'http://localhost/v1.1/servers/%s' % uuid1
+        expected_server_href = 'http://localhost/v2/servers/%s' % uuid1
         expected_server_next = self.SERVER_NEXT % (2, 2)
         expected_server_bookmark = 'http://localhost/servers/%s' % uuid1
-        expected_server_href_2 = 'http://localhost/v1.1/servers/%s' % uuid2
+        expected_server_href_2 = 'http://localhost/v2/servers/%s' % uuid2
         expected_server_bookmark_2 = 'http://localhost/servers/%s' % uuid2
         fixture = {"servers": [
             {
@@ -3178,14 +3168,13 @@ class ServerXMLSerializationTest(test.TestCase):
         serializer = servers.ServerXMLSerializer()
 
         uuid1 = get_fake_uuid(1)
-        expected_server_href = 'http://localhost/v1.1/servers/%s' % uuid1
+        expected_server_href = 'http://localhost/v2/servers/%s' % uuid1
         expected_server_bookmark = 'http://localhost/servers/%s' % uuid1
         expected_image_bookmark = self.IMAGE_BOOKMARK
         expected_flavor_bookmark = self.FLAVOR_BOOKMARK
-        expected_now = self.TIMESTAMP
 
         uuid2 = get_fake_uuid(2)
-        expected_server_href_2 = 'http://localhost/v1.1/servers/%s' % uuid2
+        expected_server_href_2 = 'http://localhost/v2/servers/%s' % uuid2
         expected_server_bookmark_2 = 'http://localhost/servers/%s' % uuid2
         fixture = {"servers": [
             {
@@ -3438,11 +3427,6 @@ class ServerXMLSerializationTest(test.TestCase):
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
 
-        expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_image_bookmark = self.IMAGE_BOOKMARK
-        expected_flavor_bookmark = self.FLAVOR_BOOKMARK
-        expected_now = self.TIMESTAMP
         server_dict = fixture['server']
 
         for key in ['name', 'id', 'created', 'accessIPv4',
@@ -3573,11 +3557,6 @@ class ServerXMLSerializationTest(test.TestCase):
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
 
-        expected_server_href = self.SERVER_HREF
-        expected_server_bookmark = self.SERVER_BOOKMARK
-        expected_image_bookmark = self.IMAGE_BOOKMARK
-        expected_flavor_bookmark = self.FLAVOR_BOOKMARK
-        expected_now = self.TIMESTAMP
         server_dict = fixture['server']
 
         for key in ['name', 'id', 'created', 'accessIPv4',

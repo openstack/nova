@@ -97,7 +97,7 @@ def wsgi_app(inner_app_v2=None, fake_auth=True, fake_auth_context=None,
               limits.RateLimitingMiddleware(
                   serialization(
                       extensions.ExtensionMiddleware(inner_app_v2)))))
-        Auth = auth
+
     mapper = urlmap.URLMap()
     mapper['/v2'] = api_v2
     mapper['/v1.1'] = api_v2
@@ -250,7 +250,7 @@ def _make_image_fixtures():
 
     # Snapshot for User 1
     uuid = 'aa640691-d1a7-4a67-9d3c-d35ee6b3cc74'
-    server_ref = 'http://localhost/v1.1/servers/' + uuid
+    server_ref = 'http://localhost/v2/servers/' + uuid
     snapshot_properties = {'instance_ref': server_ref, 'user_id': 'fake'}
     for status in ('queued', 'saving', 'active', 'killed',
                    'deleted', 'pending_delete'):
@@ -311,7 +311,7 @@ class HTTPRequest(webob.Request):
 
     @classmethod
     def blank(cls, *args, **kwargs):
-        kwargs['base_url'] = 'http://localhost/v1.1'
+        kwargs['base_url'] = 'http://localhost/v2'
         use_admin_context = kwargs.pop('use_admin_context', False)
         out = webob.Request.blank(*args, **kwargs)
         out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',

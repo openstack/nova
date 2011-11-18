@@ -43,7 +43,7 @@ class ServerVirtualInterfaceTest(test.TestCase):
         super(ServerVirtualInterfaceTest, self).tearDown()
 
     def test_get_virtual_interfaces_list(self):
-        url = '/v1.1/123/servers/abcd/os-virtual-interfaces'
+        url = '/v2/123/servers/abcd/os-virtual-interfaces'
         req = webob.Request.blank(url)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)

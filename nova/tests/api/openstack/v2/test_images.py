@@ -64,14 +64,14 @@ class ImagesControllerTest(test.TestCase):
         super(ImagesControllerTest, self).tearDown()
 
     def test_get_image(self):
-        fake_req = fakes.HTTPRequest.blank('/v1.1/fake/images/123')
+        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
         actual_image = self.controller.show(fake_req, '124')
 
-        href = "http://localhost/v1.1/fake/images/124"
+        href = "http://localhost/v2/fake/images/124"
         bookmark = "http://localhost/fake/images/124"
         alternate = "%s/fake/images/124" % utils.generate_glance_url()
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v1.1/servers/" + server_uuid
+        server_href = "http://localhost/v2/servers/" + server_uuid
         server_bookmark = "http://localhost/servers/" + server_uuid
 
         expected_image = {
@@ -118,12 +118,12 @@ class ImagesControllerTest(test.TestCase):
         self.assertDictMatch(expected_image, actual_image)
 
     def test_get_image_404(self):
-        fake_req = fakes.HTTPRequest.blank('/v1.1/fake/images/unknown')
+        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/unknown')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, fake_req, 'unknown')
 
     def test_get_image_index(self):
-        fake_req = fakes.HTTPRequest.blank('/v1.1/fake/images')
+        fake_req = fakes.HTTPRequest.blank('/v2/fake/images')
         response_list = self.controller.index(fake_req)['images']
 
         expected_images = [
@@ -133,7 +133,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/123",
+                        "href": "http://localhost/v2/fake/images/123",
                     },
                     {
                         "rel": "bookmark",
@@ -153,7 +153,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/124",
+                        "href": "http://localhost/v2/fake/images/124",
                     },
                     {
                         "rel": "bookmark",
@@ -173,7 +173,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/125",
+                        "href": "http://localhost/v2/fake/images/125",
                     },
                     {
                         "rel": "bookmark",
@@ -193,7 +193,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/126",
+                        "href": "http://localhost/v2/fake/images/126",
                     },
                     {
                         "rel": "bookmark",
@@ -213,7 +213,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/127",
+                        "href": "http://localhost/v2/fake/images/127",
                     },
                     {
                         "rel": "bookmark",
@@ -233,7 +233,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/128",
+                        "href": "http://localhost/v2/fake/images/128",
                     },
                     {
                         "rel": "bookmark",
@@ -253,7 +253,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/129",
+                        "href": "http://localhost/v2/fake/images/129",
                     },
                     {
                         "rel": "bookmark",
@@ -273,7 +273,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/130",
+                        "href": "http://localhost/v2/fake/images/130",
                     },
                     {
                         "rel": "bookmark",
@@ -292,7 +292,7 @@ class ImagesControllerTest(test.TestCase):
         self.assertDictListMatch(response_list, expected_images)
 
     def test_get_image_index_with_limit(self):
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images?limit=3')
+        request = fakes.HTTPRequest.blank('/v2/fake/images?limit=3')
         response = self.controller.index(request)
         response_list = response["images"]
         response_links = response["images_links"]
@@ -306,7 +306,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/123",
+                        "href": "http://localhost/v2/fake/images/123",
                     },
                     {
                         "rel": "bookmark",
@@ -325,7 +325,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/124",
+                        "href": "http://localhost/v2/fake/images/124",
                     },
                     {
                         "rel": "bookmark",
@@ -344,7 +344,7 @@ class ImagesControllerTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v1.1/fake/images/125",
+                        "href": "http://localhost/v2/fake/images/125",
                     },
                     {
                         "rel": "bookmark",
@@ -363,19 +363,19 @@ class ImagesControllerTest(test.TestCase):
         self.assertEqual(response_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/v1.1/fake/images', href_parts.path)
+        self.assertEqual('/v2/fake/images', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch({'limit': ['3'], 'marker': ['125']}, params)
 
     def test_get_image_index_with_limit_and_extra_params(self):
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images?limit=3&extra=bo')
+        request = fakes.HTTPRequest.blank('/v2/fake/images?limit=3&extra=bo')
         response = self.controller.index(request)
         response_links = response["images_links"]
 
         self.assertEqual(response_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/v1.1/fake/images', href_parts.path)
+        self.assertEqual('/v2/fake/images', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertDictMatch(
             {'limit': ['3'], 'marker': ['125'], 'extra': ['bo']},
@@ -386,19 +386,19 @@ class ImagesControllerTest(test.TestCase):
         Make sure we don't get images_links if limit is set
         and the number of images returned is < limit
         """
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images?limit=30')
+        request = fakes.HTTPRequest.blank('/v2/fake/images?limit=30')
         response = self.controller.index(request)
 
         self.assertEqual(response.keys(), ['images'])
         self.assertEqual(len(response['images']), 8)
 
     def test_get_image_details(self):
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail')
+        request = fakes.HTTPRequest.blank('/v2/fake/images/detail')
         response = self.controller.detail(request)
         response_list = response["images"]
 
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v1.1/servers/" + server_uuid
+        server_href = "http://localhost/v2/servers/" + server_uuid
         server_bookmark = "http://localhost/servers/" + server_uuid
         alternate = "%s/fake/images/%s"
 
@@ -414,7 +414,7 @@ class ImagesControllerTest(test.TestCase):
             'minRam': 128,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/123",
+                "href": "http://localhost/v2/fake/images/123",
             },
             {
                 "rel": "bookmark",
@@ -452,7 +452,7 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/124",
+                "href": "http://localhost/v2/fake/images/124",
             },
             {
                 "rel": "bookmark",
@@ -490,7 +490,7 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/125",
+                "href": "http://localhost/v2/fake/images/125",
             },
             {
                 "rel": "bookmark",
@@ -528,7 +528,7 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/126",
+                "href": "http://localhost/v2/fake/images/126",
             },
             {
                 "rel": "bookmark",
@@ -566,7 +566,7 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/127",
+                "href": "http://localhost/v2/fake/images/127",
             },
             {
                 "rel": "bookmark",
@@ -604,7 +604,7 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/128",
+                "href": "http://localhost/v2/fake/images/128",
             },
             {
                 "rel": "bookmark",
@@ -642,7 +642,7 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/129",
+                "href": "http://localhost/v2/fake/images/129",
             },
             {
                 "rel": "bookmark",
@@ -666,7 +666,7 @@ class ImagesControllerTest(test.TestCase):
             'minRam': 0,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/130",
+                "href": "http://localhost/v2/fake/images/130",
             },
             {
                 "rel": "bookmark",
@@ -683,13 +683,13 @@ class ImagesControllerTest(test.TestCase):
         self.assertDictListMatch(expected, response_list)
 
     def test_get_image_details_with_limit(self):
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail?limit=2')
+        request = fakes.HTTPRequest.blank('/v2/fake/images/detail?limit=2')
         response = self.controller.detail(request)
         response_list = response["images"]
         response_links = response["images_links"]
 
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v1.1/servers/" + server_uuid
+        server_href = "http://localhost/v2/servers/" + server_uuid
         server_bookmark = "http://localhost/servers/" + server_uuid
         alternate = "%s/fake/images/%s"
 
@@ -705,7 +705,7 @@ class ImagesControllerTest(test.TestCase):
             'minRam': 128,
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/123",
+                "href": "http://localhost/v2/fake/images/123",
             },
             {
                 "rel": "bookmark",
@@ -743,7 +743,7 @@ class ImagesControllerTest(test.TestCase):
             },
             "links": [{
                 "rel": "self",
-                "href": "http://localhost/v1.1/fake/images/124",
+                "href": "http://localhost/v2/fake/images/124",
             },
             {
                 "rel": "bookmark",
@@ -759,7 +759,7 @@ class ImagesControllerTest(test.TestCase):
         self.assertDictListMatch(expected, response_list)
 
         href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/v1.1/fake/images', href_parts.path)
+        self.assertEqual('/v2/fake/images', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
 
         self.assertDictMatch({'limit': ['2'], 'marker': ['124']}, params)
@@ -767,7 +767,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'name': 'testname'}
-        request = fakes.HTTPRequest.blank('/v1.1/images?name=testname')
+        request = fakes.HTTPRequest.blank('/v2/images?name=testname')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -778,7 +778,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_filter_with_min_ram(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'min_ram': '0'}
-        request = fakes.HTTPRequest.blank('/v1.1/images?minRam=0')
+        request = fakes.HTTPRequest.blank('/v2/images?minRam=0')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -789,7 +789,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_filter_with_min_disk(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'min_disk': '7'}
-        request = fakes.HTTPRequest.blank('/v1.1/images?minDisk=7')
+        request = fakes.HTTPRequest.blank('/v2/images?minDisk=7')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -800,7 +800,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_filter_with_status(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'status': 'ACTIVE'}
-        request = fakes.HTTPRequest.blank('/v1.1/images?status=ACTIVE')
+        request = fakes.HTTPRequest.blank('/v2/images?status=ACTIVE')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -811,7 +811,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_filter_with_property(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'property-test': '3'}
-        request = fakes.HTTPRequest.blank('/v1.1/images?property-test=3')
+        request = fakes.HTTPRequest.blank('/v2/images?property-test=3')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -824,7 +824,7 @@ class ImagesControllerTest(test.TestCase):
         uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
         ref = 'http://localhost:8774/servers/' + uuid
         filters = {'property-instance_ref': ref}
-        request = fakes.HTTPRequest.blank('/v1.1/images?server=' + ref)
+        request = fakes.HTTPRequest.blank('/v2/images?server=' + ref)
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -835,7 +835,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_filter_changes_since(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'changes-since': '2011-01-24T17:08Z'}
-        request = fakes.HTTPRequest.blank('/v1.1/images?changes-since='
+        request = fakes.HTTPRequest.blank('/v2/images?changes-since='
                                           '2011-01-24T17:08Z')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
@@ -847,7 +847,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_filter_with_type(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'property-image_type': 'BASE'}
-        request = fakes.HTTPRequest.blank('/v1.1/images?type=BASE')
+        request = fakes.HTTPRequest.blank('/v2/images?type=BASE')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -858,7 +858,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_filter_not_supported(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'status': 'ACTIVE'}
-        request = fakes.HTTPRequest.blank('/v1.1/images?status=ACTIVE&'
+        request = fakes.HTTPRequest.blank('/v2/images?status=ACTIVE&'
                                           'UNSUPPORTEDFILTER=testname')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
@@ -870,7 +870,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_no_filters(self):
         image_service = self.mox.CreateMockAnything()
         filters = {}
-        request = fakes.HTTPRequest.blank('/v1.1/images')
+        request = fakes.HTTPRequest.blank('/v2/images')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -881,7 +881,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_detail_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'name': 'testname'}
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail'
+        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
                                           '?name=testname')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
@@ -893,7 +893,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_detail_filter_with_status(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'status': 'ACTIVE'}
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail'
+        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
                                           '?status=ACTIVE')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
@@ -905,7 +905,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_detail_filter_with_property(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'property-test': '3'}
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail'
+        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
                                           '?property-test=3')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
@@ -918,7 +918,7 @@ class ImagesControllerTest(test.TestCase):
         image_service = self.mox.CreateMockAnything()
         uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
         ref = 'http://localhost:8774/servers/' + uuid
-        url = '/v1.1/fake/images/detail?server=' + ref
+        url = '/v2/fake/images/detail?server=' + ref
         filters = {'property-instance_ref': ref}
         request = fakes.HTTPRequest.blank(url)
         context = request.environ['nova.context']
@@ -931,7 +931,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_detail_filter_changes_since(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'changes-since': '2011-01-24T17:08Z'}
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail'
+        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
                                           '?changes-since=2011-01-24T17:08Z')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
@@ -943,7 +943,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_detail_filter_with_type(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'property-image_type': 'BASE'}
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail?type=BASE')
+        request = fakes.HTTPRequest.blank('/v2/fake/images/detail?type=BASE')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -954,7 +954,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_detail_filter_not_supported(self):
         image_service = self.mox.CreateMockAnything()
         filters = {'status': 'ACTIVE'}
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail?status='
+        request = fakes.HTTPRequest.blank('/v2/fake/images/detail?status='
                                           'ACTIVE&UNSUPPORTEDFILTER=testname')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
@@ -966,7 +966,7 @@ class ImagesControllerTest(test.TestCase):
     def test_image_detail_no_filters(self):
         image_service = self.mox.CreateMockAnything()
         filters = {}
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/detail')
+        request = fakes.HTTPRequest.blank('/v2/fake/images/detail')
         context = request.environ['nova.context']
         image_service.detail(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
@@ -976,19 +976,19 @@ class ImagesControllerTest(test.TestCase):
 
     def test_generate_alternate_link(self):
         view = images_view.ViewBuilder()
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/1')
+        request = fakes.HTTPRequest.blank('/v2/fake/images/1')
         generated_url = view._get_alternate_link(request, 1)
         actual_url = "%s/fake/images/1" % utils.generate_glance_url()
         self.assertEqual(generated_url, actual_url)
 
     def test_delete_image(self):
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/124')
+        request = fakes.HTTPRequest.blank('/v2/fake/images/124')
         request.method = 'DELETE'
         response = self.controller.delete(request, '124')
         self.assertEqual(response.status_int, 204)
 
     def test_delete_image_not_found(self):
-        request = fakes.HTTPRequest.blank('/v1.1/fake/images/300')
+        request = fakes.HTTPRequest.blank('/v2/fake/images/300')
         request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, request, '300')
@@ -998,10 +998,10 @@ class ImageXMLSerializationTest(test.TestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
     SERVER_UUID = 'aa640691-d1a7-4a67-9d3c-d35ee6b3cc74'
-    SERVER_HREF = 'http://localhost/v1.1/servers/' + SERVER_UUID
+    SERVER_HREF = 'http://localhost/v2/servers/' + SERVER_UUID
     SERVER_BOOKMARK = 'http://localhost/servers/' + SERVER_UUID
-    IMAGE_HREF = 'http://localhost/v1.1/fake/images/%s'
-    IMAGE_NEXT = 'http://localhost/v1.1/fake/images?limit=%s&marker=%s'
+    IMAGE_HREF = 'http://localhost/v2/fake/images/%s'
+    IMAGE_NEXT = 'http://localhost/v2/fake/images?limit=%s&marker=%s'
     IMAGE_BOOKMARK = 'http://localhost/fake/images/%s'
 
     def test_xml_declaration(self):

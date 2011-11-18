@@ -15,7 +15,6 @@
 
 import base64
 import datetime
-import json
 
 import stubout
 import webob
@@ -28,7 +27,6 @@ import nova.db
 from nova import exception
 from nova import flags
 from nova import test
-from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
 from nova import utils
 
@@ -167,7 +165,7 @@ class ServerActionsControllerTest(test.TestCase):
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
         self.flags(allow_instance_snapshots=True)
         self.uuid = FAKE_UUID
-        self.url = '/v1.1/fake/servers/%s/action' % self.uuid
+        self.url = '/v2/fake/servers/%s/action' % self.uuid
 
         self.controller = servers.Controller()
 
@@ -493,9 +491,9 @@ class ServerActionsControllerTest(test.TestCase):
         response = self.controller.action(req, FAKE_UUID, body)
 
         location = response.headers['Location']
-        self.assertEqual('http://localhost/v1.1/fake/images/123', location)
+        self.assertEqual('http://localhost/v2/fake/images/123', location)
         server_location = self.snapshot.extra_props_last_call['instance_ref']
-        expected_server_location = 'http://localhost/v1.1/servers/' + self.uuid
+        expected_server_location = 'http://localhost/v2/servers/' + self.uuid
         self.assertEqual(expected_server_location, server_location)
 
     def test_create_image_snapshots_disabled(self):
@@ -524,7 +522,7 @@ class ServerActionsControllerTest(test.TestCase):
         response = self.controller.action(req, FAKE_UUID, body)
 
         location = response.headers['Location']
-        self.assertEqual('http://localhost/v1.1/fake/images/123', location)
+        self.assertEqual('http://localhost/v2/fake/images/123', location)
 
     def test_create_image_with_too_much_metadata(self):
         body = {
@@ -592,7 +590,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.assertTrue(response.headers['Location'])
         server_location = self.backup.extra_props_last_call['instance_ref']
-        expected_server_location = 'http://localhost/v1.1/servers/' + self.uuid
+        expected_server_location = 'http://localhost/v2/servers/' + self.uuid
         self.assertEqual(expected_server_location, server_location)
 
     def test_create_backup_admin_api_off(self):

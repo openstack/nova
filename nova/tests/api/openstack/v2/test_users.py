@@ -13,10 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from lxml import etree
-import webob
 
 from nova import test
 from nova import utils
@@ -59,13 +56,13 @@ class UsersTest(test.TestCase):
         self.controller = users.Controller()
 
     def test_get_user_list(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/users')
+        req = fakes.HTTPRequest.blank('/v2/fake/users')
         res_dict = self.controller.index(req)
 
         self.assertEqual(len(res_dict['users']), 2)
 
     def test_get_user_by_id(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/users/id2')
+        req = fakes.HTTPRequest.blank('/v2/fake/users/id2')
         res_dict = self.controller.show(req, 'id2')
 
         self.assertEqual(res_dict['user']['id'], 'id2')
@@ -74,8 +71,8 @@ class UsersTest(test.TestCase):
         self.assertEqual(res_dict['user']['admin'], True)
 
     def test_user_delete(self):
-        req = fakes.HTTPRequest.blank('/v1.1/fake/users/id1')
-        res_dict = self.controller.delete(req, 'id1')
+        req = fakes.HTTPRequest.blank('/v2/fake/users/id1')
+        self.controller.delete(req, 'id1')
 
         self.assertTrue('id1' not in [u.id for u in
                         fakes.FakeAuthManager.auth_data])
@@ -86,7 +83,7 @@ class UsersTest(test.TestCase):
                               access='acc3',
                               secret=secret,
                               admin=True))
-        req = fakes.HTTPRequest.blank('/v1.1/fake/users')
+        req = fakes.HTTPRequest.blank('/v2/fake/users')
         res_dict = self.controller.create(req, body)
 
         # NOTE(justinsb): This is a questionable assertion in general
@@ -107,7 +104,7 @@ class UsersTest(test.TestCase):
                               access='acc2',
                               secret=new_secret))
 
-        req = fakes.HTTPRequest.blank('/v1.1/fake/users/id2')
+        req = fakes.HTTPRequest.blank('/v2/fake/users/id2')
         res_dict = self.controller.update(req, 'id2', body)
 
         self.assertEqual(res_dict['user']['id'], 'id2')

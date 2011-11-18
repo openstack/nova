@@ -53,7 +53,7 @@ class FakeInstanceDB(object):
     def return_server_by_uuid(self, context, uuid):
         if uuid not in self.ids_by_uuid:
             self._add_server(uuid=uuid)
-        return dict(self.instances_by_id[ids_by_uuid[uuid]])
+        return dict(self.instances_by_id[self.ids_by_uuid[uuid]])
 
     def _add_server(self, id=None, uuid=None):
         if id is None:
@@ -136,7 +136,7 @@ class ConsolesControllerTest(test.TestCase):
         self.stubs.Set(db, 'instance_get_by_uuid',
                        self.instance_db.return_server_by_uuid)
         self.uuid = str(utils.gen_uuid())
-        self.url = '/v1.1/fake/servers/%s/consoles' % self.uuid
+        self.url = '/v2/fake/servers/%s/consoles' % self.uuid
         self.controller = consoles.Controller()
 
     def test_create_console(self):
