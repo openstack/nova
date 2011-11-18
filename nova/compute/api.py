@@ -1386,21 +1386,23 @@ class API(base.Base):
     def suspend(self, context, instance):
         """Suspend the given instance."""
         instance_id = instance["id"]
+        instance_uuid = instance["uuid"]
         self.update(context,
                     instance_id,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.SUSPENDING)
-        self._cast_compute_message('suspend_instance', context, instance_id)
+        self._cast_compute_message('suspend_instance', context, instance_uuid)
 
     @scheduler_api.reroute_compute("resume")
     def resume(self, context, instance):
         """Resume the given instance."""
         instance_id = instance["id"]
+        instance_uuid = instance["uuid"]
         self.update(context,
                     instance_id,
                     vm_state=vm_states.SUSPENDED,
                     task_state=task_states.RESUMING)
-        self._cast_compute_message('resume_instance', context, instance_id)
+        self._cast_compute_message('resume_instance', context, instance_uuid)
 
     @scheduler_api.reroute_compute("rescue")
     def rescue(self, context, instance, rescue_password=None):

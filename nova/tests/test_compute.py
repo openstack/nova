@@ -257,11 +257,13 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_suspend(self):
-        """ensure instance can be suspended"""
-        instance_id = self._create_instance()
+        """ensure instance can be suspended and resumed"""
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
-        self.compute.suspend_instance(self.context, instance_id)
-        self.compute.resume_instance(self.context, instance_id)
+        self.compute.suspend_instance(self.context, instance_uuid)
+        self.compute.resume_instance(self.context, instance_uuid)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_reboot_soft(self):
@@ -1135,31 +1137,32 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_suspend(self):
         """Ensure instance can be suspended"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['task_state'], None)
+        self.assertEqual(instance['task_state'], None)
 
-        self.compute_api.suspend(self.context, inst_ref)
+        self.compute_api.suspend(self.context, instance)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['task_state'], task_states.SUSPENDING)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.SUSPENDING)
 
         db.instance_destroy(self.context, instance_id)
 
     def test_resume(self):
         """Ensure instance can be resumed"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
         self.compute.run_instance(self.context, instance_id)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['task_state'], None)
+        self.assertEqual(instance['task_state'], None)
 
-        self.compute_api.resume(self.context, inst_ref)
+        self.compute_api.resume(self.context, instance)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['task_state'], task_states.RESUMING)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertEqual(instance['task_state'], task_states.RESUMING)
 
         db.instance_destroy(self.context, instance_id)
 
