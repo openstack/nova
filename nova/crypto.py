@@ -223,8 +223,7 @@ def generate_x509_cert(user_id, project_id, bits=1024):
 
 def _ensure_project_folder(project_id):
     if not os.path.exists(ca_path(project_id)):
-        geninter_sh_path = os.path.join(os.path.dirname(__file__),
-                                        'CA',
+        geninter_sh_path = os.path.join(FLAGS.ca_path,
                                         'geninter.sh')
         start = os.getcwd()
         os.chdir(ca_folder())
@@ -238,8 +237,7 @@ def generate_vpn_files(project_id):
     csr_fn = os.path.join(project_folder, 'server.csr')
     crt_fn = os.path.join(project_folder, 'server.crt')
 
-    genvpn_sh_path = os.path.join(os.path.dirname(__file__),
-                                  'CA',
+    genvpn_sh_path = os.path.join(FLAGS.ca_path,
                                   'genvpn.sh')
     if os.path.exists(crt_fn):
         return
