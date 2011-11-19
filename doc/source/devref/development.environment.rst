@@ -18,79 +18,119 @@
 Setting Up a Development Environment
 ====================================
 
-This page describes how to setup a working Python development environment that can be used in developing on OpenStack on Ubuntu or Mac OSX. These instructions assume you're already familiar with git. Refer to http://wiki.openstack.org/GettingTheCode for additional information.
+This page describes how to setup a working Python development environment that
+can be used in developing on OpenStack on Ubuntu, Fedora or Mac OS X. These
+instructions assume you're already familiar with git. Refer to 
+http://wiki.openstack.org/GettingTheCode for additional information.
+
+Virtual environments
+--------------------
+
+Nova development uses `virtualenv <http://pypi.python.org/pypi/virtualenv>`_
+to track and manage Python dependencies while in development and testing. This
+allows you to install all of the Python package dependencies in a virtual
+environment or `virtualenv` (a special subdirectory of your nova directory),
+instead of installing the packages at the system level.
+
+Virtualenv is useful for running the unit tests, but is not typically used
+for full integration testing or production usage.
 
 Linux Systems
 -------------
 
-Note: This section is tested for Nova on Ubuntu 10.10-64. Feel free to add notes and change according to your experiences or operating system.
+Note: This section is tested for Nova on Ubuntu (10.10-64) and
+Fedora-based (RHEL 6.1) distributions. Feel free to add notes and change
+according to your experiences or operating system.
 
-Bring down the Nova source with git, then:
-::
-  cd <your_src_dir>/nova
-  sudo apt-get install python-dev swig libssl-dev python-pip
-  sudo easy_install nose
-  pip install virtualenv
-  python tools/install_venv.py
+Install the prerequisite packages.
 
-If all goes well, you should get a message something like this:
-::
-  Nova development environment setup is complete.
+On Ubuntu::
 
-Nova development uses virtualenv to track and manage Python dependencies while in development and testing. Virtual env gives you an independent Python environment.
+  sudo apt-get install python-dev swig libssl-dev python-pip git-core
 
-To activate the Nova virtualenv for the extent of your current shell session
- you can run::
- 
-     $ source .nova-venv/bin/activate 
+On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
- Or, if you prefer, you can run commands in the virtualenv on a case by case
- basis by running::
+  sudo yum install python-devel swig openssl-devel python-pip git
 
-     $ tools/with_venv.sh <your command>
+Mac OS X Systems
+----------------
 
- Also, make test will automatically use the virtualenv.
+Install swig, which is needed to build the M2Crypto Python package. If you are
+using the `homebrew <http://mxcl.github.com/homebrew/>`_, package manager,
+install swig by doing::
 
-If you don't want to create a virtualenv every time you branch you can reuse a single virtualenv for all branches.
+    brew install swig
 
- #. If you don't have a nova/ directory containing trunk/ and other branches, do so now.
- #. Go into nova/trunk and install a virtualenv.
- #. Move it up a level: mv nova/trunk/.nova-venv nova/.nova-venv.
- #. Symlink the ../nova/.nova-venv directory from your branch:: 
- 
-    ~/openstack/nova/my_branch$ ln -s ../.nova-venv .nova-venv
-
-This works with run_tests.sh and nosetests -w nova/tests/api
-
-MacOSX Systems
---------------
-
-First, install Virtual Env, which creates an isolated "standalone" Python environment.::
+Install virtualenv::
 
     sudo easy_install virtualenv
 
+Check the version of OpenSSL you have installed::
 
-Here's how to setup the code initially::
+    openssl version
+
+If you have installed OpenSSL 1.0.0a, which can happen when installing a
+MacPorts package for OpenSSL, you will see an error when running
+``nova.tests.auth_unittest.AuthTestCase.test_209_can_generate_x509``.
+
+The stock version of OpenSSL that ships with Mac OS X 10.6 (OpenSSL 0.9.8l)
+or Mac OS X 10.7 (OpenSSL 0.9.8r) works fine with nova.
+
+
+Getting the code
+----------------
+Grab the code from GitHub::
 
     git clone https://github.com/openstack/nova.git
     cd nova
-    python tools/install_venv.py
-    source .nova_venv/bin/activate
-    pip install pep8 # submitting patch so that Nova has pep8 and pylint in PIP requirements file
-    pip install pylint
 
-If you have installed OpenSSL 1.0.0a on MacOS, which can happen when installing a MacPorts package for OpenSSL, you will see an error when running nova.tests.auth_unittest.AuthTestCase.test_209_can_generate_x509. The version that functions correctly is OpenSSL 0.9.8l 5, installed with MacOS 10.6 as a base element. 
 
-Here's how to get the latest code::
+Running unit tests
+------------------
+The unit tests will run by default inside a virtualenv in the ``.nova-venv``
+directory. Run the unit tests by doing::
 
-  cd nova
-  git pull # get the latest stuff...
-  source .nova_venv/bin/activate
-  ./run_tests.sh
+    ./run_tests.sh
 
-Then you can do cleaning work or hack hack hack with a branched named cleaning.  
+The first time you run them, you will be asked if you want to create a virtual
+environment (hit "y")::
+
+    No virtual environment found...create one? (Y/n)
+
+
+Manually installing and using the virtualenv
+--------------------------------------------
+
+You can manually install the virtual environment instead of having
+``run_tests.sh`` do it for you::
+
+  python tools/install_venv.py
+
+This will install all of the Python packages listed in the
+``tools/pip-requires`` file into your virtualenv. There will also be some
+additional packages (pip, distribute, greenlet, M2Crypto) that are installed
+by the ``tools/install_venv.py`` file into the virutalenv.
+
+If all goes well, you should get a message something like this::
+
+  Nova development environment setup is complete.
+
+To activate the Nova virtualenv for the extent of your current shell session
+you can run::
+
+     $ source .nova-venv/bin/activate
+
+Or, if you prefer, you can run commands in the virtualenv on a case by case
+basis by running::
+
+     $ tools/with_venv.sh <your command>
 
 Contributing Your Work
 ----------------------
 
-Once your work is complete you may wish to contribute it to the project.  Add your name and email address to the `Authors` file, and also to the `.mailmap` file if you use multiple email addresses. Your contributions can not be merged into trunk unless you are listed in the Authors file. Nova uses the Gerrit code review system. For information on how to submit your branch to Gerrit, see http://wiki.openstack.org/GerritWorkflow 
+Once your work is complete you may wish to contribute it to the project.  Add
+your name and email address to the `Authors` file, and also to the `.mailmap`
+file if you use multiple email addresses. Your contributions can not be merged
+into trunk unless you are listed in the Authors file. Nova uses the Gerrit
+code review system. For information on how to submit your branch to Gerrit,
+see http://wiki.openstack.org/GerritWorkflow
