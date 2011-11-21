@@ -70,6 +70,7 @@ flags.DEFINE_list('default_log_levels',
 flags.DEFINE_bool('use_syslog', False, 'output to syslog')
 flags.DEFINE_bool('publish_errors', False, 'publish error events')
 flags.DEFINE_string('logfile', None, 'output to named file')
+flags.DEFINE_bool('use_stderr', True, 'log to standard error')
 
 
 # A list of things we want to replicate from logging.
@@ -243,7 +244,7 @@ class NovaRootLogger(NovaLogger):
     def __init__(self, name, level=NOTSET):
         self.logpath = None
         self.filelog = None
-        self.streamlog = StreamHandler()
+        self.streamlog = None
         self.syslog = None
         NovaLogger.__init__(self, name, level)
 
@@ -258,7 +259,6 @@ class NovaRootLogger(NovaLogger):
             self.addHandler(self.syslog)
         logpath = _get_log_file_path()
         if logpath:
-            self.removeHandler(self.streamlog)
             if logpath != self.logpath:
                 self.removeHandler(self.filelog)
                 self.filelog = WatchedFileHandler(logpath)
@@ -271,6 +271,11 @@ class NovaRootLogger(NovaLogger):
                     os.chmod(self.logpath, mode)
         else:
             self.removeHandler(self.filelog)
+        if self.streamlog:
+            self.removeHandler(self.streamlog)
+            self.streamlog = None
+        if FLAGS.use_stderr:
+            self.streamlog = StreamHandler()
             self.addHandler(self.streamlog)
         if FLAGS.publish_errors:
             self.addHandler(PublishErrorsHandler(ERROR))
