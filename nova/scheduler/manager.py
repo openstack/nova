@@ -23,6 +23,7 @@ Scheduler Service
 
 import functools
 
+from nova.compute import vm_states
 from nova import db
 from nova import flags
 from nova import log as logging
@@ -97,7 +98,19 @@ class SchedulerManager(manager.Manager):
             args = (context, topic, method) + args
 
         # Scheduler methods are responsible for casting.
-        return real_meth(*args, **kwargs)
+        try:
+            return real_meth(*args, **kwargs)
+        except Exception as e:
+            # If this affects a particular instance, move that
+            # instance to the ERROR state
+            if 'instance_id' in kwargs:
+                instance_id = kwargs['instance_id']
+                LOG.warning(_("Failed to %(driver_method)s: %(e)s.  "
+                              "Putting instance %(instance_id)s into "
+                              "ERROR state.") % locals())
+                db.instance_update(context, kwargs['instance_id'],
+                                   dict(vm_state=vm_states.ERROR))
+            raise
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
     #                    Based on bexar design summit discussion,

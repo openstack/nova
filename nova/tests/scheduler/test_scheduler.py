@@ -132,6 +132,9 @@ class TestDriver(driver.Scheduler):
         method = 'named_method'
         driver.cast_to_host(context, topic, host, method, num=num)
 
+    def schedule_failing_method(self, context, instance_id):
+        raise exception.NoValidHost(reason="")
+
 
 class SchedulerTestCase(test.TestCase):
     """Test case for scheduler"""
@@ -243,6 +246,21 @@ class SchedulerTestCase(test.TestCase):
         db.service_destroy(ctxt, s_ref['id'])
         db.instance_destroy(ctxt, i_ref1['id'])
         db.instance_destroy(ctxt, i_ref2['id'])
+
+    def test_exception_puts_instance_in_error_state(self):
+        """Test that an exception from the scheduler puts an instance
+        in the ERROR state."""
+
+        scheduler = manager.SchedulerManager()
+        ctxt = context.get_admin_context()
+        inst = _create_instance()
+        self.assertRaises(Exception, scheduler._schedule,
+                          'failing_method', ctxt, 'scheduler',
+                          instance_id=inst['uuid'])
+
+        # Refresh the instance
+        inst = db.instance_get(ctxt, inst['id'])
+        self.assertEqual(inst['vm_state'], vm_states.ERROR)
 
 
 class SimpleDriverTestCase(test.TestCase):
