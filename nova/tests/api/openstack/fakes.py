@@ -168,11 +168,10 @@ class stub_out_compute_api_snapshot(object):
         self.extra_props_last_call = None
         stubs.Set(nova.compute.API, 'snapshot', self.snapshot)
 
-    def snapshot(self, context, instance_id, name, extra_properties=None):
+    def snapshot(self, context, instance, name, extra_properties=None):
         self.extra_props_last_call = extra_properties
-        props = dict(instance_id=instance_id, instance_ref=instance_id)
-        props.update(extra_properties or {})
-        return dict(id='123', status='ACTIVE', name=name, properties=props)
+        return dict(id='123', status='ACTIVE', name=name,
+                    properties=extra_properties)
 
 
 class stub_out_compute_api_backup(object):
@@ -182,11 +181,11 @@ class stub_out_compute_api_backup(object):
         self.extra_props_last_call = None
         stubs.Set(nova.compute.API, 'backup', self.backup)
 
-    def backup(self, context, instance_id, name, backup_type, rotation,
+    def backup(self, context, instance, name, backup_type, rotation,
                extra_properties=None):
         self.extra_props_last_call = extra_properties
-        props = dict(instance_id=instance_id, instance_ref=instance_id,
-                     backup_type=backup_type, rotation=rotation)
+        props = dict(backup_type=backup_type,
+                     rotation=rotation)
         props.update(extra_properties or {})
         return dict(id='123', status='ACTIVE', name=name, properties=props)
 

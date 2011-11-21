@@ -197,11 +197,11 @@ class InstanceBusy(NovaException):
 
 
 class InstanceSnapshotting(InstanceBusy):
-    message = _("Instance %(instance_id)s is currently snapshotting.")
+    message = _("Instance %(instance_uuid)s is currently snapshotting.")
 
 
 class InstanceBackingUp(InstanceBusy):
-    message = _("Instance %(instance_id)s is currently being backed up.")
+    message = _("Instance %(instance_uuid)s is currently being backed up.")
 
 
 class Invalid(NovaException):

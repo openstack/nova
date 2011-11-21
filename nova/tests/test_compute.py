@@ -335,10 +335,12 @@ class ComputeTestCase(BaseTestCase):
 
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         name = "myfakesnapshot"
         self.compute.run_instance(self.context, instance_id)
-        self.compute.snapshot_instance(self.context, instance_id, name)
+        self.compute.snapshot_instance(self.context, instance_uuid, name)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_console_output(self):
@@ -1321,21 +1323,20 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_snapshot(self):
         """Can't backup an instance which is already being backed up."""
-        instance_id = self._create_instance()
-        instance = self.compute_api.get(self.context, instance_id)
+        instance = self._create_fake_instance()
         self.compute_api.snapshot(self.context, instance, None, None)
-        db.instance_destroy(self.context, instance_id)
+        db.instance_destroy(self.context, instance['id'])
 
     def test_backup(self):
         """Can't backup an instance which is already being backed up."""
-        instance_id = self._create_instance()
-        instance = self.compute_api.get(self.context, instance_id)
+        instance = self._create_fake_instance()
         self.compute_api.backup(self.context, instance, None, None, None)
-        db.instance_destroy(self.context, instance_id)
+        db.instance_destroy(self.context, instance['id'])
 
     def test_backup_conflict(self):
         """Can't backup an instance which is already being backed up."""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
         instance_values = {'task_state': task_states.IMAGE_BACKUP}
         db.instance_update(self.context, instance_id, instance_values)
         instance = self.compute_api.get(self.context, instance_id)
@@ -1352,7 +1353,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_snapshot_conflict(self):
         """Can't snapshot an instance which is already being snapshotted."""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
         instance_values = {'task_state': task_states.IMAGE_SNAPSHOT}
         db.instance_update(self.context, instance_id, instance_values)
         instance = self.compute_api.get(self.context, instance_id)
