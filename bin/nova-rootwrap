@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright (c) 2011 Openstack, LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+"""Root wrapper for Nova
+
+   Uses modules in nova.rootwrap containing filters for commands
+   that nova is allowed to run as another user.
+
+   To switch to using this, you should:
+   * Set "--root_helper=sudo nova-rootwrap" in nova.conf
+   * Allow nova to run nova-rootwrap as root in nova_sudoers:
+     nova ALL = (root) NOPASSWD: /usr/bin/nova-rootwrap
+     (all other commands can be removed from this file)
+
+   To make allowed commands node-specific, your packaging should only
+   install nova/rootwrap/{compute,network,volume}.py respectively on
+   compute, network and volume nodes (i.e. nova-api nodes should not
+   have any of those files installed).
+"""
+
+import os
+import subprocess
+import sys
+
+
+RC_UNAUTHORIZED = 99
+RC_NOCOMMAND = 98
+
+if __name__ == '__main__':
+    # Split arguments, require at least a command
+    execname = sys.argv.pop(0)
+    if len(sys.argv) == 0:
+        print "%s: %s" % (execname, "No command specified")
+        sys.exit(RC_NOCOMMAND)
+
+    userargs = sys.argv[:]
+
+    # Add ../ to sys.path to allow running from branch
+    possible_topdir = os.path.normpath(os.path.join(os.path.abspath(execname),
+                                                    os.pardir, os.pardir))
+    if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
+        sys.path.insert(0, possible_topdir)
+
+    from nova.rootwrap import wrapper
+
+    # Execute command if it matches any of the loaded filters
+    filters = wrapper.load_filters()
+    filtermatch = wrapper.match_filter(filters, userargs)
+    if filtermatch:
+        obj = subprocess.Popen(filtermatch.get_command(userargs),
+                               stdin=sys.stdin,
+                               stdout=sys.stdout,
+                               stderr=sys.stderr)
+        sys.exit(obj.returncode)
+
+    print "Unauthorized command: %s" % ' '.join(userargs)
+    sys.exit(RC_UNAUTHORIZED)
