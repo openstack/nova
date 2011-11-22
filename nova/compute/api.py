@@ -851,7 +851,6 @@ class API(base.Base):
     @scheduler_api.reroute_compute("stop")
     def stop(self, context, instance):
         """Stop an instance."""
-        instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         LOG.debug(_("Going to try to stop %s"), instance_uuid)
 
@@ -868,12 +867,11 @@ class API(base.Base):
         host = instance['host']
         if host:
             self._cast_compute_message('stop_instance', context,
-                    instance_id, host)
+                    instance_uuid, host)
 
     def start(self, context, instance):
         """Start an instance."""
         vm_state = instance["vm_state"]
-        instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         LOG.debug(_("Going to try to start %s"), instance_uuid)
 
@@ -894,7 +892,7 @@ class API(base.Base):
                  FLAGS.scheduler_topic,
                  {"method": "start_instance",
                   "args": {"topic": FLAGS.compute_topic,
-                           "instance_id": instance_id}})
+                           "instance_uuid": instance_uuid}})
 
     def get_active_by_window(self, context, begin, end=None, project_id=None):
         """Get instances that were continuously active over a window."""

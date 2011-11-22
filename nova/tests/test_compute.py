@@ -233,17 +233,21 @@ class ComputeTestCase(BaseTestCase):
 
     def test_stop(self):
         """Ensure instance can be stopped"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
-        self.compute.stop_instance(self.context, instance_id)
+        self.compute.stop_instance(self.context, instance_uuid)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_start(self):
         """Ensure instance can be started"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
-        self.compute.stop_instance(self.context, instance_id)
-        self.compute.start_instance(self.context, instance_id)
+        self.compute.stop_instance(self.context, instance_uuid)
+        self.compute.start_instance(self.context, instance_uuid)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_rescue(self):
