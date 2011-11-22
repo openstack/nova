@@ -26,7 +26,7 @@ from eventlet import greenthread
 from nova import log as logging
 
 
-LOG = logging.getLogger("nova.fakerabbit")
+LOG = logging.getLogger("nova.testing.fake.rabbit")
 
 
 EXCHANGES = {}

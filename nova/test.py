@@ -35,12 +35,12 @@ import nova.image.fake
 import shutil
 import stubout
 
-from nova import fakerabbit
 from nova import flags
 from nova import log
 from nova import rpc
 from nova import utils
 from nova import service
+from nova.testing.fake import rabbit
 from nova.virt import fake
 
 
@@ -142,7 +142,7 @@ class TestCase(unittest.TestCase):
         finally:
             # Clean out fake_rabbit's queue if we used it
             if FLAGS.fake_rabbit:
-                fakerabbit.reset_all()
+                rabbit.reset_all()
 
             if FLAGS.connection_type == 'fake':
                 if hasattr(fake.FakeConnection, '_instance'):

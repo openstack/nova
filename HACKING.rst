@@ -1,9 +1,9 @@
 Nova Style Commandments
 =======================
 
-Step 1: Read http://www.python.org/dev/peps/pep-0008/
-Step 2: Read http://www.python.org/dev/peps/pep-0008/ again
-Step 3: Read on
+- Step 1: Read http://www.python.org/dev/peps/pep-0008/
+- Step 2: Read http://www.python.org/dev/peps/pep-0008/ again
+- Step 3: Read on
 
 
 General
@@ -23,7 +23,8 @@ Imports
 - Order your imports by the full module path
 - Organize your imports according to the following template
 
-::
+Example::
+
   # vim: tabstop=4 shiftwidth=4 softtabstop=4
   {{stdlib imports in human alphabetical order}}
   \n
@@ -37,7 +38,8 @@ Imports
 
 Human Alphabetical Order Examples
 ---------------------------------
-::
+Example::
+
   import httplib
   import logging
   import random
@@ -58,6 +60,8 @@ Human Alphabetical Order Examples
 
 Docstrings
 ----------
+Example::
+
   """A one line docstring looks like this and ends in a period."""
 
 
@@ -87,34 +91,34 @@ Docstrings
 
 Dictionaries/Lists
 ------------------
-  If a dictionary (dict) or list object is longer than 80 characters, its
-  items should be split with newlines. Embedded iterables should have their
-  items indented. Additionally, the last item in the dictionary should have
-  a trailing comma. This increases readability and simplifies future diffs.
+If a dictionary (dict) or list object is longer than 80 characters, its items
+should be split with newlines. Embedded iterables should have their items
+indented. Additionally, the last item in the dictionary should have a trailing
+comma. This increases readability and simplifies future diffs.
 
-  Example:
+Example::
 
-    my_dictionary = {
-        "image": {
-            "name": "Just a Snapshot",
-            "size": 2749573,
-            "properties": {
-                 "user_id": 12,
-                 "arch": "x86_64",
-            },
-            "things": [
-                "thing_one",
-                "thing_two",
-            ],
-            "status": "ACTIVE",
-        },
-    }
-  
+  my_dictionary = {
+      "image": {
+          "name": "Just a Snapshot",
+          "size": 2749573,
+          "properties": {
+               "user_id": 12,
+               "arch": "x86_64",
+          },
+          "things": [
+              "thing_one",
+              "thing_two",
+          ],
+          "status": "ACTIVE",
+      },
+  }
+
 
 Calling Methods
 ---------------
-  Calls to methods 80 characters or longer should format each argument with 
-  newlines. This is not a requirement, but a guideline.
+Calls to methods 80 characters or longer should format each argument with
+newlines. This is not a requirement, but a guideline::
 
     unnecessarily_long_function_name('string one',
                                      'string two',
@@ -122,7 +126,7 @@ Calling Methods
                                      kwarg2=['a', 'b', 'c'])
 
 
-  Rather than constructing parameters inline, it is better to break things up:
+Rather than constructing parameters inline, it is better to break things up::
 
     list_of_strings = [
         'what_a_long_string',
@@ -134,7 +138,7 @@ Calling Methods
         'two': 2,
         'twenty four': 24,
     }
-        
+
     object_one.call_a_method('string three',
                              'string four',
                              kwarg1=list_of_strings,
@@ -143,23 +147,38 @@ Calling Methods
 
 Internationalization (i18n) Strings
 -----------------------------------
-  In order to support multiple languages, we have a mechanism to support
-  automatic translations of exception and log strings.
+In order to support multiple languages, we have a mechanism to support
+automatic translations of exception and log strings.
 
-  Example:
+Example::
+
     msg = _("An error occurred")
     raise HTTPBadRequest(explanation=msg)
-  
-  If you have a variable to place within the string, first internationalize
-  the template string then do the replacement.
 
-  Example:
+If you have a variable to place within the string, first internationalize the
+template string then do the replacement.
+
+Example::
+
     msg = _("Missing parameter: %s") % ("flavor",)
     LOG.error(msg)
- 
-  If you have multiple variables to place in the string, use keyword
-  parameters. This helps our translators reorder parameters when needed.
 
-  Example:
+If you have multiple variables to place in the string, use keyword parameters.
+This helps our translators reorder parameters when needed.
+
+Example::
+
     msg = _("The server with id %(s_id)s has no key %(m_key)s")
     LOG.error(msg % {"s_id": "1234", "m_key": "imageId"})
+
+
+Creating Unit Tests
+-------------------
+For every new feature, unit tests should be created that both test and
+(implicitly) document the usage of said feature. If submitting a patch for a
+bug that had no unit test, a new passing unit test should be added. If a
+submitted bug fix does have a unit test, be sure to add a new one that fails
+without the patch and passes with the patch.
+
+For more information on creating unit tests and utilizing the testing
+infrastructure in OpenStack Nova, please read nova/testing/README.rst.
