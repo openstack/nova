@@ -15,7 +15,11 @@
 #    under the License.
 
 from xml.etree.ElementTree import fromstring as xml_to_tree
-from xml.etree.ElementTree import ParseError
+try:
+    from xml.etree.ElementTree import ParseError
+except ImportError:
+    from xml.parsers.expat import ExpatError as ParseError
+
 import uuid
 
 # Allow passing None to the various connect methods
