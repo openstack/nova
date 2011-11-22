@@ -41,17 +41,18 @@
 """Unittest runner for Nova.
 
 To run all tests
-    python run_tests.py
-
-To run a single test:
-    python run_tests.py test_compute:ComputeTestCase.test_run_terminate
+    python nova/testing/runner.py
 
 To run a single test module:
-    python run_tests.py test_compute
+    python nova/testing/runner.py test_compute
 
     or
 
-    python run_tests.py api.test_wsgi
+    python nova/testing/runner.py api.test_wsgi
+
+To run a single test:
+    python nova/testing/runner.py \
+        test_compute:ComputeTestCase.test_run_terminate
 
 """
 
@@ -335,7 +336,7 @@ class NovaTestRunner(core.TextTestRunner):
         return result_
 
 
-if __name__ == '__main__':
+def run():
     logging.setup()
     # If any argument looks like a test name but doesn't have "nova.tests" in
     # front of it, automatically add that so we don't have to type as much
@@ -361,3 +362,7 @@ if __name__ == '__main__':
                             config=c,
                             show_elapsed=show_elapsed)
     sys.exit(not core.run(config=c, testRunner=runner, argv=argv))
+
+
+if __name__ == '__main__':
+    run()
