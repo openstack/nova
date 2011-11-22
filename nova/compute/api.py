@@ -478,7 +478,7 @@ class API(base.Base):
         updates['vm_state'] = vm_states.BUILDING
         updates['task_state'] = task_states.SCHEDULING
 
-        instance = self.update(context, instance_id, **updates)
+        instance = self.update(context, instance, **updates)
         return instance
 
     def _default_display_name(self, instance_id):
@@ -753,18 +753,18 @@ class API(base.Base):
               "args": {"security_group_id": security_group['id']}})
 
     @scheduler_api.reroute_compute("update")
-    def update(self, context, instance_id, **kwargs):
+    def update(self, context, instance, **kwargs):
         """Updates the instance in the datastore.
 
         :param context: The security context
-        :param instance_id: ID of the instance to update
+        :param instance: The instance to update
         :param kwargs: All additional keyword args are treated
                        as data fields of the instance to be
                        updated
 
         :returns: None
         """
-        rv = self.db.instance_update(context, instance_id, kwargs)
+        rv = self.db.instance_update(context, instance["id"], kwargs)
         return dict(rv.iteritems())
 
     def _get_instance(self, context, instance_id, action_str):
@@ -791,7 +791,7 @@ class API(base.Base):
         host = instance['host']
         if host:
             self.update(context,
-                        instance["id"],
+                        instance,
                         vm_state=vm_states.SOFT_DELETE,
                         task_state=task_states.POWERING_OFF,
                         deleted_at=utils.utcnow())
@@ -807,7 +807,7 @@ class API(base.Base):
         host = instance['host']
         if host:
             self.update(context,
-                        instance['id'],
+                        instance,
                         task_state=task_states.DELETING,
                         progress=0)
 
@@ -835,7 +835,7 @@ class API(base.Base):
             return
 
         self.update(context,
-                    instance_id,
+                    instance,
                     vm_state=vm_states.ACTIVE,
                     task_state=None,
                     deleted_at=None)
@@ -843,7 +843,7 @@ class API(base.Base):
         host = instance['host']
         if host:
             self.update(context,
-                        instance_id,
+                        instance,
                         task_state=task_states.POWERING_ON)
             self._cast_compute_message('power_on_instance', context,
                                        instance_id, host)
@@ -867,7 +867,7 @@ class API(base.Base):
             return
 
         self.update(context,
-                    instance_id,
+                    instance,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.STOPPING,
                     terminated_at=utils.utcnow(),
@@ -890,7 +890,7 @@ class API(base.Base):
             return
 
         self.update(context,
-                    instance_id,
+                    instance,
                     vm_state=vm_states.STOPPED,
                     task_state=task_states.STARTING)
 
@@ -1171,7 +1171,7 @@ class API(base.Base):
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
         self.update(context,
-                    instance['id'],
+                    instance,
                     vm_state=vm_states.ACTIVE,
                     task_state=state)
         self._cast_compute_message('reboot_instance', context, instance['id'],
@@ -1194,7 +1194,7 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, metadata)
 
         self.update(context,
-                    instance["id"],
+                    instance,
                     metadata=metadata,
                     display_name=name,
                     image_ref=image_href,
@@ -1223,7 +1223,7 @@ class API(base.Base):
                     instance_id=instance['id'], status='finished')
 
         self.update(context,
-                    instance['id'],
+                    instance,
                     vm_state=vm_states.ACTIVE,
                     task_state=None)
 
@@ -1247,7 +1247,7 @@ class API(base.Base):
                     instance_id=instance['id'], status='finished')
 
         self.update(context,
-                    instance['id'],
+                    instance,
                     vm_state=vm_states.ACTIVE,
                     task_state=None)
 
@@ -1296,7 +1296,7 @@ class API(base.Base):
             raise exception.CannotResizeToSameSize()
 
         self.update(context,
-                    instance['id'],
+                    instance,
                     vm_state=vm_states.RESIZING,
                     task_state=task_states.RESIZE_PREP)
 
@@ -1355,7 +1355,7 @@ class API(base.Base):
         instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         self.update(context,
-                    instance_id,
+                    instance,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.PAUSING)
         self._cast_compute_message('pause_instance', context, instance_uuid)
@@ -1366,7 +1366,7 @@ class API(base.Base):
         instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         self.update(context,
-                    instance_id,
+                    instance,
                     vm_state=vm_states.PAUSED,
                     task_state=task_states.UNPAUSING)
         self._cast_compute_message('unpause_instance', context, instance_uuid)
@@ -1404,7 +1404,7 @@ class API(base.Base):
         instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         self.update(context,
-                    instance_id,
+                    instance,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.SUSPENDING)
         self._cast_compute_message('suspend_instance', context, instance_uuid)
@@ -1415,7 +1415,7 @@ class API(base.Base):
         instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         self.update(context,
-                    instance_id,
+                    instance,
                     vm_state=vm_states.SUSPENDED,
                     task_state=task_states.RESUMING)
         self._cast_compute_message('resume_instance', context, instance_uuid)
@@ -1425,7 +1425,7 @@ class API(base.Base):
         """Rescue the given instance."""
         instance_id = instance['uuid']
         self.update(context,
-                    instance_id,
+                    instance,
                     vm_state=vm_states.ACTIVE,
                     task_state=task_states.RESCUING)
 
@@ -1440,7 +1440,7 @@ class API(base.Base):
         """Unrescue the given instance."""
         instance_id = instance['uuid']
         self.update(context,
-                    instance_id,
+                    instance,
                     vm_state=vm_states.RESCUED,
                     task_state=task_states.UNRESCUING)
         self._cast_compute_message('unrescue_instance', context, instance_id)
@@ -1448,11 +1448,9 @@ class API(base.Base):
     @scheduler_api.reroute_compute("set_admin_password")
     def set_admin_password(self, context, instance, password=None):
         """Set the root/admin password for the given instance."""
-        #NOTE(bcwaldon): we need to use the integer id here since manager uses
-        # db.instance_get, not db.instance_get_by_uuid
         instance_id = instance['id']
         self.update(context,
-                    instance_id,
+                    instance,
                     task_state=task_states.UPDATING_PASSWORD)
 
         host = self._find_host(context, instance_id)

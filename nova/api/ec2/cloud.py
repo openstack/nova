@@ -1354,8 +1354,8 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             instance_id = ec2utils.ec2_id_to_id(instance_id)
-            self.compute_api.update(context, instance_id=instance_id,
-                                    **changes)
+            instance = self.compute_api.get(context, instance_id)
+            self.compute_api.update(context, instance, **changes)
         return True
 
     def _get_image(self, context, ec2_id):
