@@ -1307,23 +1307,19 @@ class API(base.Base):
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance, network_id):
         """Add fixed_ip from specified network to given instance."""
-        #NOTE(bcwaldon): We need to use the integer id since the
-        # network manager doesn't support uuids
-        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self._cast_compute_message('add_fixed_ip_to_instance',
                                    context,
-                                   instance_id,
+                                   instance_uuid,
                                    params=dict(network_id=network_id))
 
     @scheduler_api.reroute_compute("remove_fixed_ip")
     def remove_fixed_ip(self, context, instance, address):
         """Remove fixed_ip from specified network to given instance."""
-        #NOTE(bcwaldon): We need to use the integer id since the
-        # network manager doesn't support uuids
-        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self._cast_compute_message('remove_fixed_ip_from_instance',
                                    context,
-                                   instance_id,
+                                   instance_uuid,
                                    params=dict(address=address))
 
     #TODO(tr3buchet): how to run this in the correct zone?

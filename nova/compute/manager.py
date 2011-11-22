@@ -1182,15 +1182,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                 {'status': 'finished', })
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def add_fixed_ip_to_instance(self, context, instance_id, network_id):
+    @checks_instance_lock_uuid
+    def add_fixed_ip_to_instance(self, context, instance_uuid, network_id):
         """Calls network_api to add new fixed_ip to instance
         then injects the new network info and resets instance networking.
 
         """
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        instance_id = instance_ref['id']
         self.network_api.add_fixed_ip_to_instance(context, instance_id,
                                                   self.host, network_id)
-        instance_ref = self.db.instance_get(context, instance_id)
         usage = utils.usage_from_instance(instance_ref)
         notifier.notify('compute.%s' % self.host,
                         'compute.instance.create_ip',
@@ -1200,15 +1201,16 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.reset_network(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def remove_fixed_ip_from_instance(self, context, instance_id, address):
+    @checks_instance_lock_uuid
+    def remove_fixed_ip_from_instance(self, context, instance_uuid, address):
         """Calls network_api to remove existing fixed_ip from instance
         by injecting the altered network info and resetting
         instance networking.
         """
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        instance_id = instance_ref['id']
         self.network_api.remove_fixed_ip_from_instance(context, instance_id,
                                                        address)
-        instance_ref = self.db.instance_get(context, instance_id)
         usage = utils.usage_from_instance(instance_ref)
         notifier.notify('compute.%s' % self.host,
                         'compute.instance.delete_ip',

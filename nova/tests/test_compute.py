@@ -422,12 +422,12 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        'reset_network', dummy)
 
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
-        self.compute.add_fixed_ip_to_instance(self.context,
-                                              instance_id,
-                                              1)
+        self.compute.add_fixed_ip_to_instance(self.context, instance_uuid, 1)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
         self.compute.terminate_instance(self.context, instance_id)
@@ -443,12 +443,14 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        'reset_network', dummy)
 
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
         self.compute.remove_fixed_ip_from_instance(self.context,
-                                              instance_id,
-                                              1)
+                                                   instance_uuid,
+                                                   1)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
         self.compute.terminate_instance(self.context, instance_id)
