@@ -41,9 +41,9 @@ import greenlet
 
 from nova import context
 from nova import exception
-from nova import fake
 from nova import flags
 from nova.rpc.common import RemoteError, LOG
+from nova.testing import fake
 
 # Needed for tests
 eventlet.monkey_patch()

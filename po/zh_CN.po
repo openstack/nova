@@ -663,32 +663,32 @@ msgstr "无效的后台：%s"
 msgid "backend %s"
 msgstr "后台 %s"
 
-#: ../nova/fake/rabbit.py:49
+#: ../nova/testing/fake/rabbit.py:49
 #, python-format
 msgid "(%(nm)s) publish (key: %(routing_key)s) %(message)s"
 msgstr ""
 
-#: ../nova/fake/rabbit.py:54
+#: ../nova/testing/fake/rabbit.py:54
 #, python-format
 msgid "Publishing to route %s"
 msgstr "发布并路由到 %s"
 
-#: ../nova/fake/rabbit.py:84
+#: ../nova/testing/fake/rabbit.py:84
 #, python-format
 msgid "Declaring queue %s"
 msgstr "正在声明队列 %s"
 
-#: ../nova/fake/rabbit.py:90
+#: ../nova/testing/fake/rabbit.py:90
 #, python-format
 msgid "Declaring exchange %s"
 msgstr "正在声明交换(exchange) %s"
 
-#: ../nova/fake/rabbit.py:96
+#: ../nova/testing/fake/rabbit.py:96
 #, python-format
 msgid "Binding %(queue)s to %(exchange)s with key %(routing_key)s"
 msgstr ""
 
-#: ../nova/fake/rabbit.py:121
+#: ../nova/testing/fake/rabbit.py:121
 #, python-format
 msgid "Getting from %(queue)s: %(message)s"
 msgstr ""
