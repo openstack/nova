@@ -1186,7 +1186,7 @@ class VMOps(object):
 
         for instance in instances:
             LOG.info(_("Automatically hard rebooting %d"), instance.id)
-            self.compute_api.reboot(ctxt, instance.id, "HARD")
+            self.compute_api.reboot(ctxt, instance, "HARD")
 
     def poll_rescued_instances(self, timeout):
         """Look for expirable rescued instances.
