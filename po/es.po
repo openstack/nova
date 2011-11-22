@@ -684,32 +684,32 @@ msgstr "backend inválido: %s"
 msgid "backend %s"
 msgstr "backend %s"
 
-#: ../nova/fakerabbit.py:49
+#: ../nova/fake/rabbit.py:49
 #, python-format
 msgid "(%(nm)s) publish (key: %(routing_key)s) %(message)s"
 msgstr "(%(nm)s) publica (key: %(routing_key)s) %(message)s"
 
-#: ../nova/fakerabbit.py:54
+#: ../nova/fake/rabbit.py:54
 #, python-format
 msgid "Publishing to route %s"
 msgstr "Publicando la ruta %s"
 
-#: ../nova/fakerabbit.py:84
+#: ../nova/fake/rabbit.py:84
 #, python-format
 msgid "Declaring queue %s"
 msgstr "Declarando cola %s"
 
-#: ../nova/fakerabbit.py:90
+#: ../nova/fake/rabbit.py:90
 #, python-format
 msgid "Declaring exchange %s"
 msgstr "Declarando intercambio %s"
 
-#: ../nova/fakerabbit.py:96
+#: ../nova/fake/rabbit.py:96
 #, python-format
 msgid "Binding %(queue)s to %(exchange)s with key %(routing_key)s"
 msgstr "Enlazando %(queue)s a %(exchange)s con la llave %(routing_key)s"
 
-#: ../nova/fakerabbit.py:121
+#: ../nova/fake/rabbit.py:121
 #, python-format
 msgid "Getting from %(queue)s: %(message)s"
 msgstr "Obtendiendo desde %(queue)s: %(message)s"

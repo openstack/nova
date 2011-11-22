@@ -667,32 +667,32 @@ msgstr "不正なバックエンドです: %s"
 msgid "backend %s"
 msgstr "バックエンドは %s です。"
 
-#: ../nova/fakerabbit.py:49
+#: ../nova/fake/rabbit.py:49
 #, python-format
 msgid "(%(nm)s) publish (key: %(routing_key)s) %(message)s"
 msgstr "(%(nm)s) 公開 (キー: %(routing_key)s) %(message)s"
 
-#: ../nova/fakerabbit.py:54
+#: ../nova/fake/rabbit.py:54
 #, python-format
 msgid "Publishing to route %s"
 msgstr "ルート %s へパブリッシュ"
 
-#: ../nova/fakerabbit.py:84
+#: ../nova/fake/rabbit.py:84
 #, python-format
 msgid "Declaring queue %s"
 msgstr "queue %s の宣言"
 
-#: ../nova/fakerabbit.py:90
+#: ../nova/fake/rabbit.py:90
 #, python-format
 msgid "Declaring exchange %s"
 msgstr "exchange %s の宣言"
 
-#: ../nova/fakerabbit.py:96
+#: ../nova/fake/rabbit.py:96
 #, python-format
 msgid "Binding %(queue)s to %(exchange)s with key %(routing_key)s"
 msgstr "キー %(routing_key)s 付きで %(exchange)s に %(queue)s をバインドしています"
 
-#: ../nova/fakerabbit.py:121
+#: ../nova/fake/rabbit.py:121
 #, python-format
 msgid "Getting from %(queue)s: %(message)s"
 msgstr "%(queue)s から取得しています: %(message)s"
