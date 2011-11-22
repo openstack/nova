@@ -276,7 +276,7 @@ class ExtensionMiddleware(base_wsgi.Middleware):
         mapper = nova.api.openstack.v2.ProjectMapper()
 
         serializer = wsgi.ResponseSerializer(
-            {'application/xml': ExtensionsXMLSerializer()})
+            {'application/xml': wsgi.XMLDictSerializer()})
         # extended resources
         for resource in ext_mgr.get_resources():
             LOG.debug(_('Extended resource: %s'),
@@ -371,8 +371,11 @@ class ExtensionManager(object):
     def get_resources(self):
         """Returns a list of ResourceExtension objects."""
         resources = []
+        serializer = wsgi.ResponseSerializer(
+            {'application/xml': ExtensionsXMLSerializer()})
         resources.append(ResourceExtension('extensions',
-                                            ExtensionsResource(self)))
+                                           ExtensionsResource(self),
+                                           serializer=serializer))
         for ext in self.extensions.values():
             try:
                 resources.extend(ext.get_resources())
