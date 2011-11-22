@@ -491,12 +491,15 @@ class Controller(wsgi.Controller):
                     body['server']['auto_disk_config'])
             update_dict['auto_disk_config'] = auto_disk_config
 
+        instance = self.compute_api.routing_get(ctxt, id)
+
         try:
-            self.compute_api.update(ctxt, id, **update_dict)
+            self.compute_api.update(ctxt, instance, **update_dict)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        instance = self.compute_api.routing_get(ctxt, id)
+        instance.update(update_dict)
+
         return self._view_builder.show(req, instance)
 
     @exception.novaclient_converter
