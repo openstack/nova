@@ -53,7 +53,7 @@ flags.DEFINE_integer('find_host_timeout', 30,
 
 def _is_able_to_shutdown(instance):
     vm_state = instance["vm_state"]
-    instance_id = instance["id"]
+    instance_uuid = instance["uuid"]
 
     valid_shutdown_states = [
         vm_states.ACTIVE,
@@ -63,7 +63,7 @@ def _is_able_to_shutdown(instance):
     ]
 
     if vm_state not in valid_shutdown_states:
-        LOG.warn(_("Instance %(instance_id)s cannot be shutdown from "
+        LOG.warn(_("Instance %(instance_uuid)s cannot be shutdown from "
                    "its current state: %(vm_state)s.") % locals())
         return False
 
@@ -72,11 +72,10 @@ def _is_able_to_shutdown(instance):
 
 def _is_queued_delete(instance):
     vm_state = instance["vm_state"]
-    task_state = instance["task_state"]
-    instance_id = instance["id"]
+    instance_uuid = instance["uuid"]
 
     if vm_state != vm_states.SOFT_DELETE:
-        LOG.warn(_("Instance %(instance_id)s is not in a 'soft delete' "
+        LOG.warn(_("Instance %(instance_uuid)s is not in a 'soft delete' "
                    "state. It is currently %(vm_state)s. Action aborted.") %
                  locals())
         return False
@@ -767,20 +766,12 @@ class API(base.Base):
         rv = self.db.instance_update(context, instance["id"], kwargs)
         return dict(rv.iteritems())
 
-    def _get_instance(self, context, instance_id, action_str):
-        try:
-            return self.get(context, instance_id)
-        except exception.NotFound:
-            LOG.warning(_("Instance %(instance_id)s was not found during "
-                          "%(action_str)s") %
-                        {'instance_id': instance_id, 'action_str': action_str})
-            raise
-
     @scheduler_api.reroute_compute("soft_delete")
     def soft_delete(self, context, instance):
         """Terminate an instance."""
         instance_id = instance["id"]
-        LOG.debug(_("Going to try to soft delete %s"), instance_id)
+        instance_uuid = instance["uuid"]
+        LOG.debug(_("Going to try to soft delete %s"), instance_uuid)
 
         if not _is_able_to_shutdown(instance):
             return
@@ -800,7 +791,7 @@ class API(base.Base):
                                        instance_id, host)
         else:
             LOG.warning(_("No host for instance %s, deleting immediately"),
-                        instance["id"])
+                        instance["uuid"])
             self.db.instance_destroy(context, instance_id)
 
     def _delete(self, context, instance):
@@ -861,7 +852,8 @@ class API(base.Base):
     def stop(self, context, instance):
         """Stop an instance."""
         instance_id = instance["id"]
-        LOG.debug(_("Going to try to stop %s"), instance_id)
+        instance_uuid = instance["uuid"]
+        LOG.debug(_("Going to try to stop %s"), instance_uuid)
 
         if not _is_able_to_shutdown(instance):
             return
@@ -882,10 +874,11 @@ class API(base.Base):
         """Start an instance."""
         vm_state = instance["vm_state"]
         instance_id = instance["id"]
-        LOG.debug(_("Going to try to start %s"), instance_id)
+        instance_uuid = instance["uuid"]
+        LOG.debug(_("Going to try to start %s"), instance_uuid)
 
         if vm_state != vm_states.STOPPED:
-            LOG.warning(_("Instance %(instance_id)s is not "
+            LOG.warning(_("Instance %(instance_uuid)s is not "
                           "stopped. (%(vm_state)s)") % locals())
             return
 
@@ -1086,16 +1079,16 @@ class API(base.Base):
         """Generic handler for RPC calls to the scheduler."""
         rpc.cast(context, FLAGS.scheduler_topic, args)
 
-    def _find_host(self, context, instance_id):
+    def _find_host(self, context, instance_uuid):
         """Find the host associated with an instance."""
         for attempts in xrange(FLAGS.find_host_timeout):
-            instance = self.get(context, instance_id)
+            instance = self.get(context, instance_uuid)
             host = instance["host"]
             if host:
                 return host
             time.sleep(1)
         raise exception.Error(_("Unable to find host for Instance %s")
-                                % instance_id)
+                                % instance_uuid)
 
     @scheduler_api.reroute_compute("backup")
     def backup(self, context, instance, name, backup_type, rotation,
@@ -1220,7 +1213,7 @@ class API(base.Base):
                 instance['uuid'], 'finished')
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(
-                    instance_id=instance['id'], status='finished')
+                    instance_id=instance['uuid'], status='finished')
 
         self.update(context,
                     instance,
@@ -1244,7 +1237,7 @@ class API(base.Base):
                 instance['uuid'], 'finished')
         if not migration_ref:
             raise exception.MigrationNotFoundByStatus(
-                    instance_id=instance['id'], status='finished')
+                    instance_id=instance['uuid'], status='finished')
 
         self.update(context,
                     instance,
@@ -1423,7 +1416,7 @@ class API(base.Base):
     @scheduler_api.reroute_compute("rescue")
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
-        instance_id = instance['uuid']
+        instance_id = instance['id']
         self.update(context,
                     instance,
                     vm_state=vm_states.ACTIVE,
@@ -1438,7 +1431,7 @@ class API(base.Base):
     @scheduler_api.reroute_compute("unrescue")
     def unrescue(self, context, instance):
         """Unrescue the given instance."""
-        instance_id = instance['uuid']
+        instance_id = instance['id']
         self.update(context,
                     instance,
                     vm_state=vm_states.RESCUED,
@@ -1453,7 +1446,7 @@ class API(base.Base):
                     instance,
                     task_state=task_states.UPDATING_PASSWORD)
 
-        host = self._find_host(context, instance_id)
+        host = self._find_host(context, instance['uuid'])
 
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
