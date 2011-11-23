@@ -82,7 +82,7 @@ LOG = logging.getLogger('nova.auth.manager')
 if FLAGS.memcached_servers:
     import memcache
 else:
-    from nova import fakememcache as memcache
+    from nova.testing.fake import memcache
 
 
 class AuthBase(object):

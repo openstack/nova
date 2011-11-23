@@ -44,10 +44,10 @@ The :mod:`nova.auth.fakeldap` Module
     :show-inheritance:
     
 
-The :mod:`nova.fakerabbit` Module
+The :mod:`nova.testing.fake.rabbit` Module
 ---------------------------------
 
-.. automodule:: nova.fakerabbit
+.. automodule:: nova.testing.fake.rabbit
     :noindex:
     :members:
     :undoc-members:

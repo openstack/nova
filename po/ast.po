@@ -652,32 +652,32 @@ msgstr ""
 msgid "backend %s"
 msgstr ""
 
-#: ../nova/fakerabbit.py:49
+#: ../nova/testing/fake/rabbit.py:49
 #, python-format
 msgid "(%(nm)s) publish (key: %(routing_key)s) %(message)s"
 msgstr ""
 
-#: ../nova/fakerabbit.py:54
+#: ../nova/testing/fake/rabbit.py:54
 #, python-format
 msgid "Publishing to route %s"
 msgstr ""
 
-#: ../nova/fakerabbit.py:84
+#: ../nova/testing/fake/rabbit.py:84
 #, python-format
 msgid "Declaring queue %s"
 msgstr ""
 
-#: ../nova/fakerabbit.py:90
+#: ../nova/testing/fake/rabbit.py:90
 #, python-format
 msgid "Declaring exchange %s"
 msgstr ""
 
-#: ../nova/fakerabbit.py:96
+#: ../nova/testing/fake/rabbit.py:96
 #, python-format
 msgid "Binding %(queue)s to %(exchange)s with key %(routing_key)s"
 msgstr ""
 
-#: ../nova/fakerabbit.py:121
+#: ../nova/testing/fake/rabbit.py:121
 #, python-format
 msgid "Getting from %(queue)s: %(message)s"
 msgstr ""
