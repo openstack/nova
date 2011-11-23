@@ -625,26 +625,26 @@ class ComputeManager(manager.SchedulerDependentManager):
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def power_off_instance(self, context, instance_id):
+    @checks_instance_lock_uuid
+    def power_off_instance(self, context, instance_uuid):
         """Power off an instance on this host."""
-        instance = self.db.instance_get(context, instance_id)
+        instance = self.db.instance_get_by_uuid(context, instance_uuid)
         self.driver.power_off(instance)
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               power_state=current_power_state,
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def power_on_instance(self, context, instance_id):
+    @checks_instance_lock_uuid
+    def power_on_instance(self, context, instance_uuid):
         """Power on an instance on this host."""
-        instance = self.db.instance_get(context, instance_id)
+        instance = self.db.instance_get_by_uuid(context, instance_uuid)
         self.driver.power_on(instance)
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               power_state=current_power_state,
                               task_state=None)
 

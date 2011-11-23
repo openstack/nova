@@ -277,6 +277,44 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['unrescued'])
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_power_on(self):
+        """Ensure instance can be powered on"""
+
+        called = {'power_on': False}
+
+        def fake_driver_power_on(self, instance):
+            called['power_on'] = True
+
+        self.stubs.Set(nova.virt.driver.ComputeDriver, 'power_on',
+                       fake_driver_power_on)
+
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.power_on_instance(self.context, instance_uuid)
+        self.assertTrue(called['power_on'])
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_power_off(self):
+        """Ensure instance can be powered off"""
+
+        called = {'power_off': False}
+
+        def fake_driver_power_off(self, instance):
+            called['power_off'] = True
+
+        self.stubs.Set(nova.virt.driver.ComputeDriver, 'power_off',
+                       fake_driver_power_off)
+
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.power_off_instance(self.context, instance_uuid)
+        self.assertTrue(called['power_off'])
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_pause(self):
         """Ensure instance can be paused and unpaused"""
         instance = self._create_fake_instance()
@@ -2266,10 +2304,24 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.delete(self.context, instance)
 
     def test_get_actions(self):
+
+        expected = [{'id': 1,
+                    'instance_id': 5,
+                    'action': 'rebuild',
+                    'error': '',
+                    }]
+
+        def fake_get_actions(context, instance):
+            return expected
+
+        self.stubs.Set(nova.db, 'instance_get_actions',
+                       fake_get_actions)
+
+        instance = self._create_fake_instance()
         context = self.context.elevated()
-        instance_id = self._create_instance()
-        instance = self.compute_api.get(self.context, instance_id)
-        self.compute_api.get_actions(context, instance)
+        actual = self.compute_api.get_actions(context, instance)
+        self.assertEqual(expected, actual)
+
         self.compute_api.delete(self.context, instance)
 
     def test_inject_file(self):

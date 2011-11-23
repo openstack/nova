@@ -771,7 +771,6 @@ class API(base.Base):
     @scheduler_api.reroute_compute("soft_delete")
     def soft_delete(self, context, instance):
         """Terminate an instance."""
-        instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         LOG.debug(_("Going to try to soft delete %s"), instance_uuid)
 
@@ -790,7 +789,7 @@ class API(base.Base):
                         deleted_at=utils.utcnow())
 
             self._cast_compute_message('power_off_instance', context,
-                                       instance_id, host)
+                                       instance_uuid, host)
         else:
             LOG.warning(_("No host for instance %s, deleting immediately"),
                         instance["uuid"])
@@ -822,7 +821,6 @@ class API(base.Base):
     @scheduler_api.reroute_compute("restore")
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
-        instance_id = instance['id']
 
         if not _is_queued_delete(instance):
             return
@@ -839,7 +837,7 @@ class API(base.Base):
                         instance,
                         task_state=task_states.POWERING_ON)
             self._cast_compute_message('power_on_instance', context,
-                                       instance_id, host)
+                                       instance['uuid'], host)
 
     @scheduler_api.reroute_compute("force_delete")
     def force_delete(self, context, instance):
