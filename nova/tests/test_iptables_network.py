@@ -84,7 +84,6 @@ class IptablesManagerTestCase(test.TestCase):
         table = self.manager.ipv4['filter']
         table.add_rule('FORWARD', '-s 1.2.3.4/5 -j DROP')
         new_lines = self.manager._modify_rules(current_lines, table)
-    	print ' *** ', new_lines
         self.assertTrue('-A runner.py-FORWARD '
                         '-s 1.2.3.4/5 -j DROP' in new_lines)
 
