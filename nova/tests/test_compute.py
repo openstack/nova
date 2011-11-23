@@ -246,6 +246,33 @@ class ComputeTestCase(BaseTestCase):
         self.compute.start_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_rescue(self):
+        """Ensure instance can be rescued and unrescued"""
+
+        called = {'rescued': False,
+                  'unrescued': False}
+
+        def fake_rescue(self, context, instance_ref, network_info):
+            called['rescued'] = True
+
+        self.stubs.Set(nova.virt.fake.FakeConnection, 'rescue', fake_rescue)
+
+        def fake_unrescue(self, instance_ref, network_info):
+            called['unrescued'] = True
+
+        self.stubs.Set(nova.virt.fake.FakeConnection, 'unrescue',
+                       fake_unrescue)
+
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.rescue_instance(self.context, instance_uuid)
+        self.assertTrue(called['rescued'])
+        self.compute.unrescue_instance(self.context, instance_uuid)
+        self.assertTrue(called['unrescued'])
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_pause(self):
         """Ensure instance can be paused and unpaused"""
         instance = self._create_fake_instance()
@@ -1297,27 +1324,29 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_rescue_unrescue(self):
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
-        self.assertEqual(inst_ref['task_state'], None)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(instance['task_state'], None)
 
-        self.compute_api.rescue(self.context, inst_ref)
+        self.compute_api.rescue(self.context, instance)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
-        self.assertEqual(inst_ref['task_state'], task_states.RESCUING)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(instance['task_state'], task_states.RESCUING)
 
         params = {'vm_state': vm_states.RESCUED, 'task_state': None}
-        db.instance_update(self.context, instance_id, params)
+        db.instance_update(self.context, instance_uuid, params)
 
-        self.compute_api.unrescue(self.context, inst_ref)
+        self.compute_api.unrescue(self.context, instance)
 
-        inst_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(inst_ref['vm_state'], vm_states.RESCUED)
-        self.assertEqual(inst_ref['task_state'], task_states.UNRESCUING)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['vm_state'], vm_states.RESCUED)
+        self.assertEqual(instance['task_state'], task_states.UNRESCUING)
 
         self.compute.terminate_instance(self.context, instance_id)
 
