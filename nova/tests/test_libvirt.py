@@ -1844,14 +1844,17 @@ disk size: 4.4M''', ''))
         libvirt_utils.run_ajaxterm(shell_cmd, token, port)
 
     def test_get_fs_info(self):
-        stdout, stderr = utils.execute('df', '-B1', '/tmp')
+        # Use a 1024-byte block size (df -k) because OS X does not support
+        # the -B flag
+        blocksize = 1024
+        stdout, stderr = utils.execute('df', '-k', '/tmp')
         info_line = ' '.join(stdout.split('\n')[1:])
         _dev, total, used, free, _percentage, _mntpnt = info_line.split()
 
         fs_info = libvirt_utils.get_fs_info('/tmp')
-        self.assertEquals(int(total), fs_info['total'])
-        self.assertEquals(int(free), fs_info['free'])
-        self.assertEquals(int(used), fs_info['used'])
+        self.assertEquals(int(total) * blocksize, fs_info['total'])
+        self.assertEquals(int(free) * blocksize, fs_info['free'])
+        self.assertEquals(int(used) * blocksize, fs_info['used'])
 
     def test_fetch_image(self):
         self.mox.StubOutWithMock(images, 'fetch')
