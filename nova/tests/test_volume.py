@@ -294,6 +294,34 @@ class DriverTestCase(test.TestCase):
             self.volume.delete_volume(self.context, volume_id)
 
 
+class VolumeDriverTestCase(DriverTestCase):
+    """Test case for VolumeDriver"""
+    driver_name = "nova.volume.driver.VolumeDriver"
+
+    def setUp(self):
+        super(VolumeDriverTestCase, self).setUp()
+
+    def tearDown(self):
+        super(VolumeDriverTestCase, self).tearDown()
+
+    def test_delete_busy_volume(self):
+        """Test deleting a busy volume."""
+        self.stubs.Set(self.volume.driver, '_volume_not_present',
+                       lambda x: False)
+        self.stubs.Set(self.volume.driver, '_delete_volume',
+                       lambda x, y: False)
+        # Want DriverTestCase._fake_execute to return 'o' so that
+        # volume.driver.delete_volume() raises the VolumeIsBusy exception.
+        self.output = 'o'
+        self.assertRaises(exception.VolumeIsBusy,
+                          self.volume.driver.delete_volume,
+                          {'name': 'test1', 'size': 1024})
+        # when DriverTestCase._fake_execute returns something other than
+        # 'o' volume.driver.delete_volume() does not raise an exception.
+        self.output = 'x'
+        self.volume.driver.delete_volume({'name': 'test1', 'size': 1024})
+
+
 class ISCSITestCase(DriverTestCase):
     """Test Case for ISCSIDriver"""
     driver_name = "nova.volume.driver.ISCSIDriver"

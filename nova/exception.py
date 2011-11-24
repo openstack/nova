@@ -396,7 +396,7 @@ class SnapshotNotFound(NotFound):
     message = _("Snapshot %(snapshot_id)s could not be found.")
 
 
-class VolumeIsBusy(Error):
+class VolumeIsBusy(NovaException):
     message = _("deleting volume %(volume_name)s that has snapshot")
 
 
