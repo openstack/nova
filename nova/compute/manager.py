@@ -831,8 +831,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 image_service.delete(context, image_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def set_admin_password(self, context, instance_id, new_pass=None):
+    @checks_instance_lock_uuid
+    def set_admin_password(self, context, instance_uuid, new_pass=None):
         """Set the root/admin password for an instance on this host.
 
         This is generally only called by API password resets after an
@@ -848,7 +848,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         max_tries = 10
 
         for i in xrange(max_tries):
-            instance_ref = self.db.instance_get(context, instance_id)
+            instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
             instance_id = instance_ref["id"]
             instance_state = instance_ref["power_state"]
             expected_state = power_state.RUNNING

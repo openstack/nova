@@ -300,7 +300,9 @@ class ComputeTestCase(BaseTestCase):
 
     def test_set_admin_password(self):
         """Ensure instance can have its admin password set"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
         db.instance_update(self.context, instance_id,
                            {'task_state': task_states.UPDATING_PASSWORD})
@@ -309,7 +311,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
         self.assertEqual(inst_ref['task_state'], task_states.UPDATING_PASSWORD)
 
-        self.compute.set_admin_password(self.context, instance_id)
+        self.compute.set_admin_password(self.context, instance_uuid)
 
         inst_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)

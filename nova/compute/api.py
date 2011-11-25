@@ -1441,7 +1441,7 @@ class API(base.Base):
     @scheduler_api.reroute_compute("set_admin_password")
     def set_admin_password(self, context, instance, password=None):
         """Set the root/admin password for the given instance."""
-        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self.update(context,
                     instance,
                     task_state=task_states.UPDATING_PASSWORD)
@@ -1450,8 +1450,10 @@ class API(base.Base):
 
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "set_admin_password",
-                  "args": {"instance_id": instance_id, "new_pass": password}})
+                 {
+                    "method": "set_admin_password",
+                    "args": {
+                        "instance_uuid": instance_uuid, "new_pass": password}})
 
     @scheduler_api.reroute_compute("inject_file")
     def inject_file(self, context, instance, path, file_contents):
