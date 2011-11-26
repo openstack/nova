@@ -19,9 +19,17 @@ Setting Up a Development Environment
 ====================================
 
 This page describes how to setup a working Python development environment that
-can be used in developing on OpenStack on Ubuntu, Fedora or Mac OS X. These
-instructions assume you're already familiar with git. Refer to 
+can be used in developing nova on Ubuntu, Fedora or Mac OS X. These
+instructions assume you're already familiar with git. Refer to
 http://wiki.openstack.org/GettingTheCode for additional information.
+
+Following these instructions will allow you to run the nova unit tests. If you
+want to be able to run nova (i.e., launch VM instances), you will also need to
+install libvirt and at least one of the `supported
+hypervisors`<http://wiki.openstack.org/HypervisorSupportMatrix>_. Running
+nova is currently only supported on Linux, although you can run
+the unit tests on Mac OS X. See :doc:`quickstart` for how to get a working
+version of OpenStack Compute running as quickly as possible.
 
 Virtual environments
 --------------------
@@ -51,6 +59,7 @@ On Ubuntu::
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
   sudo yum install python-devel swig openssl-devel python-pip git
+
 
 Mac OS X Systems
 ----------------
@@ -97,6 +106,9 @@ environment (hit "y")::
 
     No virtual environment found...create one? (Y/n)
 
+See :doc:`unit_tests` for more details.
+
+.. _virtualenv:
 
 Manually installing and using the virtualenv
 --------------------------------------------
