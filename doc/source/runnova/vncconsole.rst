@@ -46,8 +46,14 @@ is properly installed.
 
 By default, nova-vncproxy binds 0.0.0.0:6080.  This can be configured with:
 
-* --vncproxy_port=[port]
-* --vncproxy_host=[host]
+* :option:`--vncproxy_port=[port]`
+* :option:`--vncproxy_host=[host]`
+
+It also binds a separate Flash socket policy listener on 0.0.0.0:843.  This
+can be configured with:
+
+* :option:`--vncproxy_flash_socket_policy_port=[port]`
+* :option:`--vncproxy_flash_socket_policy_host=[host]`
 
 
 Enabling VNC Consoles in Nova
@@ -55,10 +61,10 @@ Enabling VNC Consoles in Nova
 At the moment, VNC support is supported only when using libvirt.  To enable VNC
 Console, configure the following flags:
 
-* --vnc_console_proxy_url=http://[proxy_host]:[proxy_port] - proxy_port
-  defaults to 6080.  This url must point to nova-vncproxy
-* --vnc_enabled=[True|False] - defaults to True. If this flag is not set your
-  instances will launch without vnc support.
+* :option:`--vnc_console_proxy_url=http://[proxy_host]:[proxy_port]` -
+  proxy_port defaults to 6080.  This url must point to nova-vncproxy
+* :option:`--vnc_enabled=[True|False]` - defaults to True. If this flag is
+  not set your instances will launch without vnc support.
 
 
 Getting an instance's VNC Console
@@ -66,7 +72,7 @@ Getting an instance's VNC Console
 You can access an instance's VNC Console url in the following methods:
 
 * Using the direct api:
-  eg: 'stack --user=admin --project=admin compute get_vnc_console instance_id=1'
+  eg: '``stack --user=admin --project=admin compute get_vnc_console instance_id=1``'
 * Support for Dashboard, and the Openstack API will be forthcoming
 
 
