@@ -1588,11 +1588,12 @@ def instance_update(context, instance_id, values):
         return instance_ref
 
 
-def instance_add_security_group(context, instance_id, security_group_id):
+def instance_add_security_group(context, instance_uuid, security_group_id):
     """Associate the given security group with the given instance"""
     session = get_session()
     with session.begin():
-        instance_ref = instance_get(context, instance_id, session=session)
+        instance_ref = instance_get_by_uuid(context, instance_uuid,
+                                            session=session)
         security_group_ref = security_group_get(context,
                                                 security_group_id,
                                                 session=session)
@@ -1601,12 +1602,13 @@ def instance_add_security_group(context, instance_id, security_group_id):
 
 
 @require_context
-def instance_remove_security_group(context, instance_id, security_group_id):
+def instance_remove_security_group(context, instance_uuid, security_group_id):
     """Disassociate the given security group from the given instance"""
     session = get_session()
-
+    instance_ref = instance_get_by_uuid(context, instance_uuid,
+                                        session=session)
     session.query(models.SecurityGroupInstanceAssociation).\
-                filter_by(instance_id=instance_id).\
+                filter_by(instance_id=instance_ref['id']).\
                 filter_by(security_group_id=security_group_id).\
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
