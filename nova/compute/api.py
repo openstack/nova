@@ -793,7 +793,7 @@ class API(base.Base):
         else:
             LOG.warning(_("No host for instance %s, deleting immediately"),
                         instance["uuid"])
-            self.db.instance_destroy(context, instance_id)
+            self.db.instance_destroy(context, instance['id'])
 
     def _delete(self, context, instance):
         host = instance['host']
@@ -804,14 +804,14 @@ class API(base.Base):
                         progress=0)
 
             self._cast_compute_message('terminate_instance', context,
-                                       instance['id'], host)
+                                       instance['uuid'], host)
         else:
             self.db.instance_destroy(context, instance['id'])
 
     @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance):
         """Terminate an instance."""
-        LOG.debug(_("Going to try to terminate %s"), instance["id"])
+        LOG.debug(_("Going to try to terminate %s"), instance["uuid"])
 
         if not _is_able_to_shutdown(instance):
             return

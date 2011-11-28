@@ -33,7 +33,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
-from nova.db.sqlalchemy import models
 from nova import exception
 from nova import flags
 from nova.image import fake as fake_image
@@ -199,15 +198,15 @@ class ComputeTestCase(BaseTestCase):
 
     def test_run_terminate(self):
         """Make sure it is possible to  run and terminate instance"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
 
-        self.compute.run_instance(self.context, instance_id)
+        self.compute.run_instance(self.context, instance['id'])
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("After terminating instances: %s"), instances)
@@ -215,21 +214,21 @@ class ComputeTestCase(BaseTestCase):
 
     def test_run_terminate_timestamps(self):
         """Make sure timestamps are set for launched and destroyed"""
-        instance_id = self._create_instance()
-        instance_ref = db.instance_get(self.context, instance_id)
-        self.assertEqual(instance_ref['launched_at'], None)
-        self.assertEqual(instance_ref['deleted_at'], None)
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        self.assertEqual(instance['launched_at'], None)
+        self.assertEqual(instance['deleted_at'], None)
         launch = utils.utcnow()
         self.compute.run_instance(self.context, instance_id)
-        instance_ref = db.instance_get(self.context, instance_id)
-        self.assert_(instance_ref['launched_at'] > launch)
-        self.assertEqual(instance_ref['deleted_at'], None)
+        instance = db.instance_get(self.context, instance_id)
+        self.assert_(instance['launched_at'] > launch)
+        self.assertEqual(instance['deleted_at'], None)
         terminate = utils.utcnow()
-        self.compute.terminate_instance(self.context, instance_id)
-        self.context = self.context.elevated(True)
-        instance_ref = db.instance_get(self.context, instance_id)
-        self.assert_(instance_ref['launched_at'] < terminate)
-        self.assert_(instance_ref['deleted_at'] > terminate)
+        self.compute.terminate_instance(self.context, instance['uuid'])
+        context = self.context.elevated(True)
+        instance = db.instance_get(context, instance_id)
+        self.assert_(instance['launched_at'] < terminate)
+        self.assert_(instance['deleted_at'] > terminate)
 
     def test_stop(self):
         """Ensure instance can be stopped"""
@@ -238,7 +237,7 @@ class ComputeTestCase(BaseTestCase):
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_id)
         self.compute.stop_instance(self.context, instance_uuid)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_start(self):
         """Ensure instance can be started"""
@@ -248,7 +247,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.stop_instance(self.context, instance_uuid)
         self.compute.start_instance(self.context, instance_uuid)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_rescue(self):
         """Ensure instance can be rescued and unrescued"""
@@ -275,7 +274,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['rescued'])
         self.compute.unrescue_instance(self.context, instance_uuid)
         self.assertTrue(called['unrescued'])
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_power_on(self):
         """Ensure instance can be powered on"""
@@ -294,7 +293,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.power_on_instance(self.context, instance_uuid)
         self.assertTrue(called['power_on'])
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_power_off(self):
         """Ensure instance can be powered off"""
@@ -313,7 +312,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.power_off_instance(self.context, instance_uuid)
         self.assertTrue(called['power_off'])
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_pause(self):
         """Ensure instance can be paused and unpaused"""
@@ -323,7 +322,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.pause_instance(self.context, instance_uuid)
         self.compute.unpause_instance(self.context, instance_uuid)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_suspend(self):
         """ensure instance can be suspended and resumed"""
@@ -333,17 +332,16 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.suspend_instance(self.context, instance_uuid)
         self.compute.resume_instance(self.context, instance_uuid)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_rebuild(self):
         """Ensure instance can be rebuilt"""
         instance = self._create_fake_instance()
-        instance_id = instance['id']
         instance_uuid = instance['uuid']
 
-        self.compute.run_instance(self.context, instance_id)
+        self.compute.run_instance(self.context, instance['id'])
         self.compute.rebuild_instance(self.context, instance_uuid)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_reboot_soft(self):
         """Ensure instance can be soft rebooted"""
@@ -362,7 +360,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
         self.assertEqual(inst_ref['task_state'], None)
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
     def test_reboot_hard(self):
         """Ensure instance can be hard rebooted"""
@@ -381,7 +379,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
         self.assertEqual(inst_ref['task_state'], None)
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
     def test_set_admin_password(self):
         """Ensure instance can have its admin password set"""
@@ -402,7 +400,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
         self.assertEqual(inst_ref['task_state'], None)
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
     def test_inject_file(self):
         """Ensure we can write a file to an instance"""
@@ -421,7 +419,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.inject_file(self.context, instance['uuid'], "/tmp/test",
                 "File Contents")
         self.assertTrue(called['inject'])
-        self.compute.terminate_instance(self.context, instance['id'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_inject_network_info(self):
         """Ensure we can inject network info"""
@@ -439,7 +437,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.inject_network_info(self.context, instance_uuid)
         self.assertTrue(called['inject'])
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_reset_network(self):
         """Ensure we can reset networking on an instance"""
@@ -457,7 +455,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.reset_network(self.context, instance_uuid)
         self.assertTrue(called['reset'])
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_agent_update(self):
         """Ensure instance can have its agent updated"""
@@ -476,7 +474,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.agent_update(self.context, instance['uuid'],
                                   'http://fake/url/', 'fakehash')
         self.assertTrue(called['agent_update'])
-        self.compute.terminate_instance(self.context, instance['id'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
@@ -486,7 +484,7 @@ class ComputeTestCase(BaseTestCase):
         name = "myfakesnapshot"
         self.compute.run_instance(self.context, instance_id)
         self.compute.snapshot_instance(self.context, instance_uuid, name)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_console_output(self):
         """Make sure we can get console output from instance"""
@@ -496,7 +494,7 @@ class ComputeTestCase(BaseTestCase):
         console = self.compute.get_console_output(self.context,
                                                   instance['uuid'])
         self.assert_(console)
-        self.compute.terminate_instance(self.context, instance['id'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_ajax_console(self):
         """Make sure we can get console output from instance"""
@@ -506,7 +504,7 @@ class ComputeTestCase(BaseTestCase):
         console = self.compute.get_ajax_console(self.context,
                                                 instance['uuid'])
         self.assert_(set(['token', 'host', 'port']).issubset(console.keys()))
-        self.compute.terminate_instance(self.context, instance['id'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
@@ -515,7 +513,7 @@ class ComputeTestCase(BaseTestCase):
 
         console = self.compute.get_vnc_console(self.context, instance['uuid'])
         self.assert_(console)
-        self.compute.terminate_instance(self.context, instance['id'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_diagnostics(self):
         """Make sure we can get diagnostics for an instance."""
@@ -525,7 +523,7 @@ class ComputeTestCase(BaseTestCase):
         diagnostics = self.compute.get_diagnostics(self.context,
                                                    instance['uuid'])
         self.assertEqual(diagnostics, 'FAKE_DIAGNOSTICS')
-        self.compute.terminate_instance(self.context, instance['id'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_add_fixed_ip_usage_notification(self):
         def dummy(*args, **kwargs):
@@ -539,14 +537,13 @@ class ComputeTestCase(BaseTestCase):
                        'reset_network', dummy)
 
         instance = self._create_fake_instance()
-        instance_id = instance['id']
         instance_uuid = instance['uuid']
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
         self.compute.add_fixed_ip_to_instance(self.context, instance_uuid, 1)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_remove_fixed_ip_usage_notification(self):
         def dummy(*args, **kwargs):
@@ -560,7 +557,6 @@ class ComputeTestCase(BaseTestCase):
                        'reset_network', dummy)
 
         instance = self._create_fake_instance()
-        instance_id = instance['id']
         instance_uuid = instance['uuid']
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
@@ -569,7 +565,7 @@ class ComputeTestCase(BaseTestCase):
                                                    1)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_run_instance_usage_notification(self):
         """Ensure run instance generates apropriate usage notification"""
@@ -594,7 +590,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(payload['launched_at'])
         image_ref_url = "%s/images/1" % utils.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
     def test_terminate_usage_notification(self):
         """Ensure terminate_instance generates apropriate usage notification"""
@@ -602,7 +598,7 @@ class ComputeTestCase(BaseTestCase):
         inst_ref = db.instance_get(self.context, instance_id)
         self.compute.run_instance(self.context, instance_id)
         test_notifier.NOTIFICATIONS = []
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -627,13 +623,14 @@ class ComputeTestCase(BaseTestCase):
 
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
         self.compute.run_instance(self.context, instance_id)
         self.assertRaises(exception.Error,
                           self.compute.run_instance,
                           self.context,
                           instance_id)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_instance_set_to_error_on_uncaught_exception(self):
         """Test that instance is set to error state when exception is raised"""
@@ -656,14 +653,15 @@ class ComputeTestCase(BaseTestCase):
                           self.context,
                           instance_id)
 
-        instances = db.instance_get_all(context.get_admin_context())
-        self.assertEqual(vm_states.ERROR, instances[0]['vm_state'])
+        instance = db.instance_get(context.get_admin_context(), instance_id)
+        self.assertEqual(vm_states.ERROR, instance['vm_state'])
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_network_is_deallocated_on_spawn_failure(self):
         """When a spawn fails the network must be deallocated"""
         instance_id = self._create_instance()
+        instance = db.instance_get(self.context, instance_id)
 
         self.mox.StubOutWithMock(self.compute, "_setup_block_device_mapping")
         self.compute._setup_block_device_mapping(mox.IgnoreArg(),
@@ -677,7 +675,7 @@ class ComputeTestCase(BaseTestCase):
                           self.context,
                           instance_id)
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_lock(self):
         """ensure locked instance cannot be changed"""
@@ -700,7 +698,7 @@ class ComputeTestCase(BaseTestCase):
                                                instance_uuid)
         self.assertEqual(ret_val, None)
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_finish_resize(self):
         """Contrived test to ensure finish_resize doesn't raise anything"""
@@ -724,7 +722,7 @@ class ComputeTestCase(BaseTestCase):
             # fail to actually error out so we don't obscure anything
             self.fail()
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_ref['uuid'])
 
     def test_resize_instance_notification(self):
         """Ensure notifications on instance migrate/resize"""
@@ -737,8 +735,9 @@ class ComputeTestCase(BaseTestCase):
 
         db.instance_update(self.context, instance_id, {'host': 'foo'})
         self.compute.prep_resize(context, inst_ref['uuid'], 1)
-        migration_ref = db.migration_get_by_instance_and_status(context,
-                inst_ref['uuid'], 'pre-migrating')
+        db.migration_get_by_instance_and_status(context,
+                                                inst_ref['uuid'],
+                                                'pre-migrating')
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -756,7 +755,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('launched_at' in payload)
         image_ref_url = "%s/images/1" % utils.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, inst_ref['uuid'])
 
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
@@ -772,7 +771,7 @@ class ComputeTestCase(BaseTestCase):
                 inst_ref['uuid'], 'pre-migrating')
         self.compute.resize_instance(context, inst_ref['uuid'],
                 migration_ref['id'])
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, inst_ref['uuid'])
 
     def test_finish_revert_resize(self):
         """Ensure that the flavor is reverted to the original on revert"""
@@ -825,7 +824,7 @@ class ComputeTestCase(BaseTestCase):
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
 
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, inst_ref['uuid'])
 
     def test_get_by_flavor_id(self):
         type = instance_types.get_instance_type_by_flavor_id(1)
@@ -839,7 +838,7 @@ class ComputeTestCase(BaseTestCase):
         inst_ref = db.instance_get(self.context, instance_id)
         self.assertRaises(exception.Error, self.compute.prep_resize,
                 self.context, inst_ref['uuid'], 1)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
     def test_resize_instance_handles_migration_error(self):
         """Ensure vm_state is ERROR when MigrationError occurs"""
@@ -863,7 +862,7 @@ class ComputeTestCase(BaseTestCase):
                                      migration_ref['id'])
         inst_ref = db.instance_get(context, instance_id)
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, inst_ref['uuid'])
 
     def _setup_other_managers(self):
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
@@ -1224,10 +1223,12 @@ class ComputeAPITestCase(BaseTestCase):
             db.instance_destroy(self.context, ref[0]['id'])
 
     def test_start(self):
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+
         self.compute.run_instance(self.context, instance_id)
 
-        self.compute.stop_instance(self.context, instance_id)
+        self.compute.stop_instance(self.context, instance['uuid'])
 
         instance = db.instance_get(self.context, instance_id)
         self.assertEqual(instance['task_state'], None)
@@ -1455,7 +1456,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
         self.assertEqual(inst_ref['task_state'], task_states.UPDATING_PASSWORD)
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
     def test_rescue_unrescue(self):
         instance = self._create_fake_instance()
@@ -1482,7 +1483,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(instance['vm_state'], vm_states.RESCUED)
         self.assertEqual(instance['task_state'], task_states.UNRESCUING)
 
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_snapshot(self):
         """Can't backup an instance which is already being backed up."""
@@ -1544,7 +1545,7 @@ class ComputeAPITestCase(BaseTestCase):
                  'status': 'finished'})
 
         self.compute_api.confirm_resize(context, instance)
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_revert_through_api(self):
         """Ensure invalid flavors raise"""
@@ -1561,7 +1562,7 @@ class ComputeAPITestCase(BaseTestCase):
                  'status': 'finished'})
 
         self.compute_api.revert_resize(context, instance)
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_invalid_flavor_fails(self):
         """Ensure invalid flavors raise"""
@@ -1573,7 +1574,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.NotFound, self.compute_api.resize,
                 context, instance, 200)
 
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_down_fails(self):
         """Ensure resizing down raises and fails"""
@@ -1589,7 +1590,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.CannotResizeToSmallerSize,
                           self.compute_api.resize, context, instance, 1)
 
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_same_size_fails(self):
         """Ensure invalid flavors raise"""
@@ -1602,7 +1603,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.CannotResizeToSameSize,
                           self.compute_api.resize, context, instance, 1)
 
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, instance['uuid'])
 
     def test_migrate(self):
         context = self.context.elevated()
@@ -1611,7 +1612,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_id)
         # Migrate simply calls resize() without a flavor_id.
         self.compute_api.resize(context, instance, None)
-        self.compute.terminate_instance(context, instance_id)
+        self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_request_spec(self):
         def _fake_cast(context, args):
@@ -1629,7 +1630,7 @@ class ComputeAPITestCase(BaseTestCase):
         try:
             self.compute_api.resize(context, instance, None)
         finally:
-            self.compute.terminate_instance(context, instance_id)
+            self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_request_spec_noavoid(self):
         def _fake_cast(context, args):
@@ -1648,7 +1649,7 @@ class ComputeAPITestCase(BaseTestCase):
         try:
             self.compute_api.resize(context, instance, None)
         finally:
-            self.compute.terminate_instance(context, instance_id)
+            self.compute.terminate_instance(context, instance['uuid'])
 
     def test_get_all_by_name_regexp(self):
         """Test searching instances by name (display_name)"""
@@ -2104,7 +2105,8 @@ class ComputeAPITestCase(BaseTestCase):
         for bdm in db.block_device_mapping_get_all_by_instance(
             self.context, instance_id):
             db.block_device_mapping_destroy(self.context, bdm['id'])
-        self.compute.terminate_instance(self.context, instance_id)
+        instance = db.instance_get(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_volume_size(self):
         local_size = 2

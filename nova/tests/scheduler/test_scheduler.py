@@ -111,7 +111,7 @@ def _fake_cast_to_volume_host(context, host, method, **kwargs):
 def _fake_create_instance_db_entry(simple_self, context, request_spec):
     instance = _create_instance_from_spec(request_spec)
     global instance_ids
-    instance_ids.append(instance['id'])
+    instance_ids.append((instance['id'], instance['uuid']))
     return instance
 
 
@@ -311,7 +311,7 @@ class SimpleDriverTestCase(test.TestCase):
                                    'compute',
                                    FLAGS.compute_manager)
         compute1.start()
-        instance_id = _create_instance()['id']
+        _create_instance()
         ctxt = context.RequestContext('fake', 'fake', False)
         global instance_ids
         instance_ids = []
@@ -380,8 +380,9 @@ class SimpleDriverTestCase(test.TestCase):
 
         global instance_ids
         instance_ids = []
-        instance_ids.append(_create_instance()['id'])
-        compute1.run_instance(self.context, instance_ids[0])
+        instance = _create_instance()
+        instance_ids.append((instance['id'], instance['uuid']))
+        compute1.run_instance(self.context, instance_ids[0][0])
 
         self.stubs.Set(SimpleScheduler,
                 'create_instance_db_entry', _fake_create_instance_db_entry)
@@ -399,8 +400,8 @@ class SimpleDriverTestCase(test.TestCase):
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0].get('_is_precooked', False), False)
 
-        compute1.terminate_instance(self.context, instance_ids[0])
-        compute2.terminate_instance(self.context, instance_ids[1])
+        compute1.terminate_instance(self.context, instance_ids[0][1])
+        compute2.terminate_instance(self.context, instance_ids[1][1])
         compute1.kill()
         compute2.kill()
 
@@ -419,8 +420,9 @@ class SimpleDriverTestCase(test.TestCase):
 
         global instance_ids
         instance_ids = []
-        instance_ids.append(_create_instance()['id'])
-        compute1.run_instance(self.context, instance_ids[0])
+        instance = _create_instance()
+        instance_ids.append((instance['id'], instance['uuid']))
+        compute1.run_instance(self.context, instance_ids[0][0])
 
         self.stubs.Set(SimpleScheduler,
                 'create_instance_db_entry', _fake_create_instance_db_entry)
@@ -430,13 +432,12 @@ class SimpleDriverTestCase(test.TestCase):
                 'cast_to_compute_host', _fake_cast_to_compute_host)
 
         request_spec = _create_request_spec(availability_zone='nova:host1')
-        instances = self.scheduler.driver.schedule_run_instance(
-                self.context, request_spec)
+        self.scheduler.driver.schedule_run_instance(self.context, request_spec)
         self.assertEqual(_picked_host, 'host1')
         self.assertEqual(len(instance_ids), 2)
 
-        compute1.terminate_instance(self.context, instance_ids[0])
-        compute1.terminate_instance(self.context, instance_ids[1])
+        compute1.terminate_instance(self.context, instance_ids[0][1])
+        compute1.terminate_instance(self.context, instance_ids[1][1])
         compute1.kill()
         compute2.kill()
 
@@ -487,11 +488,10 @@ class SimpleDriverTestCase(test.TestCase):
                 'cast_to_compute_host', _fake_cast_to_compute_host)
 
         request_spec = _create_request_spec(availability_zone='nova:host1')
-        instances = self.scheduler.driver.schedule_run_instance(
-                self.context, request_spec)
+        self.scheduler.driver.schedule_run_instance(self.context, request_spec)
         self.assertEqual(_picked_host, 'host1')
         self.assertEqual(len(instance_ids), 1)
-        compute1.terminate_instance(self.context, instance_ids[0])
+        compute1.terminate_instance(self.context, instance_ids[0][1])
         compute1.kill()
 
     def test_specific_zone_gets_instance_no_queue(self):
@@ -511,8 +511,9 @@ class SimpleDriverTestCase(test.TestCase):
 
         global instance_ids
         instance_ids = []
-        instance_ids.append(_create_instance()['id'])
-        compute1.run_instance(self.context, instance_ids[0])
+        instance = _create_instance()
+        instance_ids.append((instance['id'], instance['uuid']))
+        compute1.run_instance(self.context, instance_ids[0][0])
 
         self.stubs.Set(SimpleScheduler,
                 'create_instance_db_entry', _fake_create_instance_db_entry)
@@ -522,13 +523,12 @@ class SimpleDriverTestCase(test.TestCase):
                 'cast_to_compute_host', _fake_cast_to_compute_host)
 
         request_spec = _create_request_spec(availability_zone='zone1')
-        instances = self.scheduler.driver.schedule_run_instance(
-                self.context, request_spec)
+        self.scheduler.driver.schedule_run_instance(self.context, request_spec)
         self.assertEqual(_picked_host, 'host1')
         self.assertEqual(len(instance_ids), 2)
 
-        compute1.terminate_instance(self.context, instance_ids[0])
-        compute1.terminate_instance(self.context, instance_ids[1])
+        compute1.terminate_instance(self.context, instance_ids[0][1])
+        compute1.terminate_instance(self.context, instance_ids[1][1])
         compute1.kill()
         compute2.kill()
 
@@ -581,21 +581,21 @@ class SimpleDriverTestCase(test.TestCase):
         instance_ids1 = []
         instance_ids2 = []
         for index in xrange(FLAGS.max_cores):
-            instance_id = _create_instance()['id']
-            compute1.run_instance(self.context, instance_id)
-            instance_ids1.append(instance_id)
-            instance_id = _create_instance()['id']
-            compute2.run_instance(self.context, instance_id)
-            instance_ids2.append(instance_id)
+            instance = _create_instance()
+            compute1.run_instance(self.context, instance['id'])
+            instance_ids1.append((instance['id'], instance['uuid']))
+            instance = _create_instance()
+            compute2.run_instance(self.context, instance['id'])
+            instance_ids2.append((instance['id'], instance['uuid']))
         request_spec = _create_request_spec()
         self.assertRaises(exception.NoValidHost,
                           self.scheduler.driver.schedule_run_instance,
                           self.context,
                           request_spec)
-        for instance_id in instance_ids1:
-            compute1.terminate_instance(self.context, instance_id)
-        for instance_id in instance_ids2:
-            compute2.terminate_instance(self.context, instance_id)
+        for (_, instance_uuid) in instance_ids1:
+            compute1.terminate_instance(self.context, instance_uuid)
+        for (_, instance_uuid) in instance_ids2:
+            compute2.terminate_instance(self.context, instance_uuid)
         compute1.kill()
         compute2.kill()
 
@@ -655,8 +655,9 @@ class SimpleDriverTestCase(test.TestCase):
 
         global instance_ids
         instance_ids = []
-        instance_ids.append(_create_instance()['id'])
-        compute1.run_instance(self.context, instance_ids[0])
+        instance = _create_instance()
+        instance_ids.append((instance['id'], instance['uuid']))
+        compute1.run_instance(self.context, instance_ids[0][0])
 
         self.stubs.Set(SimpleScheduler,
                 'create_instance_db_entry', _fake_create_instance_db_entry)
@@ -666,13 +667,12 @@ class SimpleDriverTestCase(test.TestCase):
                 'cast_to_compute_host', _fake_cast_to_compute_host)
 
         request_spec = _create_request_spec()
-        instances = self.scheduler.driver.schedule_run_instance(
-                self.context, request_spec)
+        self.scheduler.driver.schedule_run_instance(self.context, request_spec)
         self.assertEqual(_picked_host, 'host2')
         self.assertEqual(len(instance_ids), 2)
 
-        compute1.terminate_instance(self.context, instance_ids[0])
-        compute2.terminate_instance(self.context, instance_ids[1])
+        compute1.terminate_instance(self.context, instance_ids[0][1])
+        compute2.terminate_instance(self.context, instance_ids[1][1])
         compute1.kill()
         compute2.kill()
 
@@ -683,8 +683,9 @@ class SimpleDriverTestCase(test.TestCase):
 
         global instance_ids
         instance_ids = []
-        instance_ids.append(_create_instance()['id'])
-        compute1.run_instance(self.context, instance_ids[0])
+        instance = _create_instance()
+        instance_ids.append((instance['id'], instance['uuid']))
+        compute1.run_instance(self.context, instance_ids[0][0])
 
         self.stubs.Set(SimpleScheduler,
                 'create_instance_db_entry', _fake_create_instance_db_entry)
@@ -694,13 +695,12 @@ class SimpleDriverTestCase(test.TestCase):
                 'cast_to_compute_host', _fake_cast_to_compute_host)
 
         request_spec = _create_request_spec(availability_zone='nova:host1')
-        instances = self.scheduler.driver.schedule_run_instance(
-                self.context, request_spec)
+        self.scheduler.driver.schedule_run_instance(self.context, request_spec)
         self.assertEqual(_picked_host, 'host1')
         self.assertEqual(len(instance_ids), 2)
 
-        compute1.terminate_instance(self.context, instance_ids[0])
-        compute1.terminate_instance(self.context, instance_ids[1])
+        compute1.terminate_instance(self.context, instance_ids[0][1])
+        compute1.terminate_instance(self.context, instance_ids[1][1])
         compute1.kill()
         compute2.kill()
 
@@ -733,11 +733,10 @@ class SimpleDriverTestCase(test.TestCase):
                 'cast_to_compute_host', _fake_cast_to_compute_host)
 
         request_spec = _create_request_spec(availability_zone='nova:host1')
-        instances = self.scheduler.driver.schedule_run_instance(
-                self.context, request_spec)
+        self.scheduler.driver.schedule_run_instance(self.context, request_spec)
         self.assertEqual(_picked_host, 'host1')
         self.assertEqual(len(instance_ids), 1)
-        compute1.terminate_instance(self.context, instance_ids[0])
+        compute1.terminate_instance(self.context, instance_ids[0][1])
         compute1.kill()
 
     def test_too_many_cores(self):
@@ -747,12 +746,12 @@ class SimpleDriverTestCase(test.TestCase):
         instance_ids1 = []
         instance_ids2 = []
         for index in xrange(FLAGS.max_cores):
-            instance_id = _create_instance()['id']
-            compute1.run_instance(self.context, instance_id)
-            instance_ids1.append(instance_id)
-            instance_id = _create_instance()['id']
-            compute2.run_instance(self.context, instance_id)
-            instance_ids2.append(instance_id)
+            instance = _create_instance()
+            compute1.run_instance(self.context, instance['id'])
+            instance_ids1.append((instance['id'], instance['uuid']))
+            instance = _create_instance()
+            compute2.run_instance(self.context, instance['id'])
+            instance_ids2.append((instance['id'], instance['uuid']))
 
         def _create_instance_db_entry(simple_self, context, request_spec):
             self.fail(_("Shouldn't try to create DB entry when at "
@@ -771,10 +770,10 @@ class SimpleDriverTestCase(test.TestCase):
                           self.scheduler.driver.schedule_run_instance,
                           self.context,
                           request_spec)
-        for instance_id in instance_ids1:
-            compute1.terminate_instance(self.context, instance_id)
-        for instance_id in instance_ids2:
-            compute2.terminate_instance(self.context, instance_id)
+        for (_, instance_uuid) in instance_ids1:
+            compute1.terminate_instance(self.context, instance_uuid)
+        for (_, instance_uuid) in instance_ids2:
+            compute2.terminate_instance(self.context, instance_uuid)
         compute1.kill()
         compute2.kill()
 

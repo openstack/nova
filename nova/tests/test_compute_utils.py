@@ -93,4 +93,4 @@ class UsageInfoTestCase(test.TestCase):
                             msg="Key %s not in payload" % attr)
         image_ref_url = "%s/images/1" % utils.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['uuid'])

@@ -33,7 +33,6 @@ terminating it.
 
 """
 
-import contextlib
 import datetime
 import functools
 import os
@@ -540,16 +539,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         #              I think start will fail due to the files still
         self._run_instance(context, instance_uuid)
 
-    def _shutdown_instance(self, context, instance_uuid, action_str, cleanup):
+    def _shutdown_instance(self, context, instance, action_str, cleanup):
         """Shutdown an instance on this host."""
         context = context.elevated()
-        if utils.is_uuid_like(instance_uuid):
-            instance = self.db.instance_get_by_uuid(context, instance_uuid)
-            instance_id = instance['id']
-        else:
-            instance_id = instance_uuid
-            instance = self.db.instance_get(context, instance_id)
-            instance_uuid = instance['uuid']
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         LOG.audit(_("%(action_str)s instance %(instance_uuid)s") %
                   {'action_str': action_str, 'instance_uuid': instance_uuid},
                   context=context)
@@ -583,11 +577,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 volume_api.delete(context, bdm['volume_id'])
             # NOTE(vish): bdms will be deleted on instance destroy
 
-    def _delete_instance(self, context, instance_id):
+    def _delete_instance(self, context, instance):
         """Delete an instance on this host."""
-        self._shutdown_instance(context, instance_id, 'Terminating', True)
+        instance_id = instance['id']
+        self._shutdown_instance(context, instance, 'Terminating', True)
         self._cleanup_volumes(context, instance_id)
-        instance = self.db.instance_get(context.elevated(), instance_id)
         self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.DELETED,
@@ -602,13 +596,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                         notifier.INFO, usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def terminate_instance(self, context, instance_id):
+    @checks_instance_lock_uuid
+    def terminate_instance(self, context, instance_uuid):
         """Terminate an instance on this host."""
-        #generate usage info.
-        instance = self.db.instance_get(context.elevated(), instance_id)
+        elevated = context.elevated()
+        instance = self.db.instance_get_by_uuid(elevated, instance_uuid)
         notify_usage_exists(instance, current_period=True)
-        self._delete_instance(context, instance_id)
+        self._delete_instance(context, instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock_uuid
@@ -618,7 +612,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         #              I think start will fail due to the files still
         #              existing.  I don't really know what the purpose of
         #              stop and start are when compared to pause and unpause
-        self._shutdown_instance(context, instance_uuid, 'Stopping', False)
+        instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        self._shutdown_instance(context, instance, 'Stopping', False)
         self._instance_update(context,
                               instance_uuid,
                               vm_state=vm_states.STOPPED,
@@ -1984,4 +1979,4 @@ class ComputeManager(manager.SchedulerDependentManager):
             if instance['vm_state'] == vm_states.SOFT_DELETE and \
                (curtime - instance['deleted_at']) >= queue_time:
                 LOG.info('Deleting %s' % instance['name'])
-                self._delete_instance(context, instance['id'])
+                self._delete_instance(context, instance)
