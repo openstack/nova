@@ -118,11 +118,11 @@ def do_request(controller, method, params=None):
     req = urllib2.Request(url, data, headers)
     try:
         resp = urllib2.urlopen(req)
-    except urllib2.URLError, e:
-        print 'Failed to connect to %s: %s' % (url, e.reason)
-        sys.exit(1)
     except urllib2.HTTPError, e:
         print e.read()
+        sys.exit(1)
+    except urllib2.URLError, e:
+        print 'Failed to connect to %s: %s' % (url, e.reason)
         sys.exit(1)
     return json.loads(resp.read())
 
