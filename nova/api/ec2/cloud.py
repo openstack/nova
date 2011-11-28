@@ -1153,7 +1153,7 @@ class CloudController(object):
                 floating_ip = ip_info['floating_ips'][0]
             if ip_info['fixed_ip6s']:
                 i['dnsNameV6'] = ip_info['fixed_ip6s'][0]
-            i['privateDnsName'] = fixed_ip
+            i['privateDnsName'] = instance['hostname']
             i['privateIpAddress'] = fixed_ip
             i['publicDnsName'] = floating_ip
             i['ipAddress'] = floating_ip or fixed_ip
