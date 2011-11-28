@@ -32,6 +32,7 @@ from nova.compute import instance_types
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.db
+from nova.db.sqlalchemy.models import InstanceActions
 from nova.db.sqlalchemy.models import InstanceMetadata
 from nova import flags
 import nova.image.fake
@@ -153,6 +154,19 @@ def fake_compute_api(cls, req, id):
     return True
 
 
+_fake_compute_actions = [
+    dict(
+        created_at=str(datetime.datetime(2010, 11, 11, 11, 0, 0)),
+        action='Fake Action',
+        error='Fake Error',
+        )
+    ]
+
+
+def fake_compute_actions(_1, _2, _3):
+    return [InstanceActions(**a) for a in _fake_compute_actions]
+
+
 def find_host(self, context, instance_id):
     return "nova"
 
@@ -192,7 +206,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get_floating_address',
                        instance_addresses)
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
-        self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
+        self.stubs.Set(nova.compute.API, "get_actions", fake_compute_actions)
 
         self.config_drive = None
 
@@ -1153,6 +1167,23 @@ class ServersControllerTest(test.TestCase):
             self.assertEqual(s['flavor'], expected_flavor)
             self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], str(i))
+
+    def test_server_actions(self):
+        req = fakes.HTTPRequest.blank(
+            "/v2/fake/servers/%s/actions" % FAKE_UUID)
+        res_dict = self.controller.actions(req, FAKE_UUID)
+        self.assertEqual(res_dict, {'actions': _fake_compute_actions})
+
+    def test_server_actions_after_reboot(self):
+        """
+        Bug #897091 was this failure mode -- the /actions call failed if
+        /action had been called first.
+        """
+        body = dict(reboot=dict(type="HARD"))
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/servers/%s/action' % FAKE_UUID)
+        self.controller.action(req, FAKE_UUID, body)
+        self.test_server_actions()
 
     def test_get_all_server_details_with_host(self):
         '''
