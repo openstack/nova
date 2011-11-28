@@ -180,7 +180,7 @@ class RPCAllocateFixedIP(object):
         perform network lookup on the far side of rpc.
         """
         network = self.db.network_get(context, network_id)
-        self.allocate_fixed_ip(context, instance_id, network, **kwargs)
+        return self.allocate_fixed_ip(context, instance_id, network, **kwargs)
 
 
 class FloatingIP(object):

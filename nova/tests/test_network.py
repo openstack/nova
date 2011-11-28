@@ -1001,6 +1001,39 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])
 
 
+class TestRPCFixedManager(network_manager.RPCAllocateFixedIP,
+        network_manager.NetworkManager):
+    """Dummy manager that implements RPCAllocateFixedIP"""
+
+
+class RPCAllocateTestCase(test.TestCase):
+    """Tests nova.network.manager.RPCAllocateFixedIP"""
+    def setUp(self):
+        super(RPCAllocateTestCase, self).setUp()
+        self.rpc_fixed = TestRPCFixedManager()
+        self.context = context.RequestContext('fake', 'fake')
+
+    def test_rpc_allocate(self):
+        """Test to verify bug 855030 doesn't resurface.
+
+        Mekes sure _rpc_allocate_fixed_ip returns a value so the call
+        returns properly and the greenpool completes."""
+        address = '10.10.10.10'
+
+        def fake_allocate(*args, **kwargs):
+            return address
+
+        def fake_network_get(*args, **kwargs):
+            return {}
+
+        self.stubs.Set(self.rpc_fixed, 'allocate_fixed_ip', fake_allocate)
+        self.stubs.Set(self.rpc_fixed.db, 'network_get', fake_network_get)
+        rval = self.rpc_fixed._rpc_allocate_fixed_ip(self.context,
+                                                     'fake_instance',
+                                                     'fake_network')
+        self.assertEqual(rval, address)
+
+
 class TestFloatingIPManager(network_manager.FloatingIP,
         network_manager.NetworkManager):
     """Dummy manager that implements FloatingIP"""
