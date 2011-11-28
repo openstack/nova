@@ -51,8 +51,10 @@ A fake XenAPI SDK.
 """
 
 
+import json
 import random
 import uuid
+from xml.sax.saxutils import escape
 
 from pprint import pformat
 
@@ -316,6 +318,21 @@ def check_for_session_leaks():
                               _db_content['session'])
 
 
+def as_value(s):
+    """Helper function for simulating XenAPI plugin responses.  It
+    escapes and wraps the given argument."""
+    return '<value>%s</value>' % escape(s)
+
+
+def as_json(*args, **kwargs):
+    """Helper function for simulating XenAPI plugin responses for those
+    that are returning JSON.  If this function is given plain arguments,
+    then these are rendered as a JSON list.  If it's given keyword
+    arguments then these are rendered as a JSON dict."""
+    arg = args or kwargs
+    return json.dumps(arg)
+
+
 class Failure(Exception):
     def __init__(self, details):
         self.details = details
@@ -435,8 +452,20 @@ class SessionBase(object):
         #Always return 12GB available
         return 12 * 1024 * 1024 * 1024
 
-    def host_call_plugin(self, *args):
-        return 'herp'
+    def host_call_plugin(self, _1, _2, plugin, method, _5):
+        if (plugin, method) == ('agent', 'version'):
+            return as_json(returncode='0', message='1.0')
+        elif (plugin, method) == ('glance', 'copy_kernel_vdi'):
+            return ''
+        elif (plugin, method) == ('glance', 'upload_vhd'):
+            return ''
+        elif (plugin, method) == ('migration', 'move_vhds_into_sr'):
+            return ''
+        elif (plugin, method) == ('migration', 'transfer_vhd'):
+            return ''
+        else:
+            raise Exception('No simulation in host_call_plugin for %s,%s' %
+                            (plugin, method))
 
     def VDI_resize_online(self, *args):
         return 'derp'
@@ -624,7 +653,10 @@ class SessionBase(object):
         task = _db_content['task'][task_ref]
         func = name[len('Async.'):]
         try:
-            task['result'] = self.xenapi_request(func, params[1:])
+            result = self.xenapi_request(func, params[1:])
+            if result:
+                result = as_value(result)
+            task['result'] = result
             task['status'] = 'success'
         except Failure, exc:
             task['error_info'] = exc.details
