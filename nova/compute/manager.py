@@ -152,6 +152,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _instance_update(self, context, instance_id, **kwargs):
         """Update an instance in the database using kwargs as value."""
+        if utils.is_uuid_like(instance_id):
+            instance = self.db.instance_get_by_uuid(context, instance_id)
+            instance_id = instance['id']
         return self.db.instance_update(context, instance_id, kwargs)
 
     def init_host(self):
@@ -329,7 +332,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return (swap, ephemerals, block_device_mapping)
 
-    def _run_instance(self, context, instance_id, **kwargs):
+    def _run_instance(self, context, instance_uuid, **kwargs):
         """Launch a new instance with specified options."""
         def _check_image_size(image_meta):
             """Ensure image is smaller than the maximum size allowed by the
@@ -425,12 +428,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                 if network_info is not None:
                     _deallocate_network()
 
-        def _error_message(instance_id, message):
-            return _("Instance '%(instance_id)s' "
+        def _error_message(instance_uuid, message):
+            return _("Instance '%(instance_uuid)s' "
                      "failed %(message)s.") % locals()
 
         context = context.elevated()
-        instance = self.db.instance_get(context, instance_id)
+        if utils.is_uuid_like(instance_uuid):
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+            instance_id = instance['id']
+        else:
+            instance_id = instance_uuid
+            instance = self.db.instance_get(context, instance_id)
+            instance_uuid = instance['uuid']
 
         requested_networks = kwargs.get('requested_networks', None)
 
@@ -441,7 +450,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         _check_image_size(image_meta)
 
-        LOG.audit(_("instance %s: starting..."), instance_id,
+        LOG.audit(_("instance %s: starting..."), instance_uuid,
                   context=context)
         updates = {}
         updates['host'] = self.host
@@ -460,27 +469,27 @@ class ComputeManager(manager.SchedulerDependentManager):
                 network_info = _make_network_info()
 
             self._instance_update(context,
-                                  instance_id,
+                                  instance_uuid,
                                   vm_state=vm_states.BUILDING,
                                   task_state=task_states.BLOCK_DEVICE_MAPPING)
-            with utils.logging_error(_error_message(instance_id,
+            with utils.logging_error(_error_message(instance_uuid,
                                                     "block device setup")):
                 block_device_info = _make_block_device_info()
 
             self._instance_update(context,
-                                  instance_id,
+                                  instance_uuid,
                                   vm_state=vm_states.BUILDING,
                                   task_state=task_states.SPAWNING)
 
             # TODO(vish) check to make sure the availability zone matches
-            with utils.logging_error(_error_message(instance_id,
+            with utils.logging_error(_error_message(instance_uuid,
                                                     "failed to spawn")):
                 self.driver.spawn(context, instance, image_meta,
                                   network_info, block_device_info)
 
             current_power_state = self._get_power_state(context, instance)
             instance = self._instance_update(context,
-                                             instance_id,
+                                             instance_uuid,
                                              power_state=current_power_state,
                                              vm_state=vm_states.ACTIVE,
                                              task_state=None,
@@ -522,22 +531,27 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._run_instance(context, instance_id, **kwargs)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def start_instance(self, context, instance_id):
+    @checks_instance_lock_uuid
+    def start_instance(self, context, instance_uuid):
         """Starting an instance on this host."""
         # TODO(yamahata): injected_files isn't supported.
         #                 Anyway OSAPI doesn't support stop/start yet
         # FIXME(vish): I've kept the files during stop instance, but
         #              I think start will fail due to the files still
-        self._run_instance(context, instance_id)
+        self._run_instance(context, instance_uuid)
 
-    def _shutdown_instance(self, context, instance_id, action_str, cleanup):
+    def _shutdown_instance(self, context, instance_uuid, action_str, cleanup):
         """Shutdown an instance on this host."""
         context = context.elevated()
-        instance = self.db.instance_get(context, instance_id)
-        instance_uuid = instance['uuid']
-        LOG.audit(_("%(action_str)s instance %(instance_id)s") %
-                  {'action_str': action_str, 'instance_id': instance_id},
+        if utils.is_uuid_like(instance_uuid):
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+            instance_id = instance['id']
+        else:
+            instance_id = instance_uuid
+            instance = self.db.instance_get(context, instance_id)
+            instance_uuid = instance['uuid']
+        LOG.audit(_("%(action_str)s instance %(instance_uuid)s") %
+                  {'action_str': action_str, 'instance_uuid': instance_uuid},
                   context=context)
 
         network_info = self._get_instance_nw_info(context, instance)
@@ -554,7 +568,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if instance['power_state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error(_('trying to destroy already destroyed'
-                                    ' instance: %s') % instance_id)
+                                    ' instance: %s') % instance_uuid)
         block_device_info = self._get_instance_volume_block_device_info(
             context, instance_id)
         self.driver.destroy(instance, network_info, block_device_info, cleanup)
@@ -597,16 +611,16 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._delete_instance(context, instance_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def stop_instance(self, context, instance_id):
+    @checks_instance_lock_uuid
+    def stop_instance(self, context, instance_uuid):
         """Stopping an instance on this host."""
         # FIXME(vish): I've kept the files during stop instance, but
         #              I think start will fail due to the files still
         #              existing.  I don't really know what the purpose of
         #              stop and start are when compared to pause and unpause
-        self._shutdown_instance(context, instance_id, 'Stopping', False)
+        self._shutdown_instance(context, instance_uuid, 'Stopping', False)
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               vm_state=vm_states.STOPPED,
                               task_state=None)
 
