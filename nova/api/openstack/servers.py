@@ -207,7 +207,7 @@ class Controller(object):
     def action(self, req, id, body):
         """Multi-purpose method used to take actions on a server"""
 
-        self.actions = {
+        _actions = {
             'changePassword': self._action_change_password,
             'reboot': self._action_reboot,
             'resize': self._action_resize,
@@ -221,11 +221,11 @@ class Controller(object):
             admin_actions = {
                 'createBackup': self._action_create_backup,
             }
-            self.actions.update(admin_actions)
+            _actions.update(admin_actions)
 
         for key in body:
-            if key in self.actions:
-                return self.actions[key](body, req, id)
+            if key in _actions:
+                return _actions[key](body, req, id)
             else:
                 msg = _("There is no such server action: %s") % (key,)
                 raise exc.HTTPBadRequest(explanation=msg)

@@ -42,6 +42,7 @@ from nova.compute import vm_states
 import nova.db.api
 import nova.scheduler.api
 from nova.db.sqlalchemy.models import Instance
+from nova.db.sqlalchemy.models import InstanceActions
 from nova.db.sqlalchemy.models import InstanceMetadata
 import nova.image.fake
 import nova.rpc
@@ -229,6 +230,19 @@ def fake_compute_api(cls, req, id):
     return True
 
 
+_fake_compute_actions = [
+    dict(
+        created_at=str(datetime.datetime(2010, 11, 11, 11, 0, 0)),
+        action='Fake Action',
+        error='Fake Error',
+        )
+    ]
+
+
+def fake_compute_actions(_1, _2, _3):
+    return [InstanceActions(**a) for a in _fake_compute_actions]
+
+
 def find_host(self, context, instance_id):
     return "nova"
 
@@ -272,7 +286,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'suspend', fake_compute_api)
         self.stubs.Set(nova.compute.API, 'resume', fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
-        self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
+        self.stubs.Set(nova.compute.API, "get_actions", fake_compute_actions)
 
         self.webreq = common.webob_factory('/v1.0/servers')
         self.config_drive = None
@@ -2416,6 +2430,25 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['flavor'], expected_flavor)
             self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], str(i))
+
+    def test_server_actions(self):
+        req = webob.Request.blank('/v1.1/fake/servers/%s/actions' % FAKE_UUID)
+        req.method = "GET"
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict, {'actions': _fake_compute_actions})
+
+    def test_server_actions_after_reboot(self):
+        """
+        Bug #897091 was this failure mode -- the /actions call failed if
+        /action had been called first.
+        """
+        req = webob.Request.blank('/v1.1/fake/servers/%s/action' % FAKE_UUID)
+        req.method = 'POST'
+        req.body = json.dumps(dict(reboot=dict(type="HARD")))
+        req.headers["content-type"] = "application/json"
+        req.get_response(fakes.wsgi_app())
+        self.test_server_actions()
 
     def test_get_all_server_details_with_host(self):
         '''
