@@ -166,14 +166,14 @@ class InstanceTests(base.UserSmokeTestCase):
         if not self.wait_for_running(self.data['instance']):
             self.fail('instance failed to start')
         self.data['instance'].update()
-        ip = self.data['instance'].private_dns_name
+        ip = self.data['instance'].private_ip_address
         self.failIf(ip == '0.0.0.0')
         if FLAGS.use_ipv6:
             ipv6 = self.data['instance'].dns_name_v6
             self.failIf(ipv6 is None)
 
     def test_004_can_ping_private_ip(self):
-        if not self.wait_for_ping(self.data['instance'].private_dns_name):
+        if not self.wait_for_ping(self.data['instance'].private_ip_address):
             self.fail('could not ping instance')
 
         if FLAGS.use_ipv6:
@@ -182,7 +182,7 @@ class InstanceTests(base.UserSmokeTestCase):
                 self.fail('could not ping instance v6')
 
     def test_005_can_ssh_to_private_ip(self):
-        if not self.wait_for_ssh(self.data['instance'].private_dns_name,
+        if not self.wait_for_ssh(self.data['instance'].private_ip_address,
                                  TEST_KEY):
             self.fail('could not ssh to instance')
 
@@ -210,9 +210,9 @@ class VolumeTests(base.UserSmokeTestCase):
         if not self.wait_for_running(self.data['instance']):
             self.fail('instance failed to start')
         self.data['instance'].update()
-        if not self.wait_for_ping(self.data['instance'].private_dns_name):
+        if not self.wait_for_ping(self.data['instance'].private_ip_address):
             self.fail('could not ping instance')
-        if not self.wait_for_ssh(self.data['instance'].private_dns_name,
+        if not self.wait_for_ssh(self.data['instance'].private_ip_address,
                                  TEST_KEY):
             self.fail('could not ssh to instance')
 
@@ -253,7 +253,7 @@ class VolumeTests(base.UserSmokeTestCase):
         time.sleep(5)
 
     def test_003_can_mount_volume(self):
-        ip = self.data['instance'].private_dns_name
+        ip = self.data['instance'].private_ip_address
         conn = self.connect_ssh(ip, TEST_KEY)
         # NOTE(vish): this will create an dev for images that don't have
         #             udev rules
@@ -273,7 +273,7 @@ class VolumeTests(base.UserSmokeTestCase):
             self.fail('Unable to mount: %s %s' % (out, stderr.read()))
 
     def test_004_can_write_to_volume(self):
-        ip = self.data['instance'].private_dns_name
+        ip = self.data['instance'].private_ip_address
         conn = self.connect_ssh(ip, TEST_KEY)
         # FIXME(devcamcar): This doesn't fail if the volume hasn't been mounted
         stdin, stdout, stderr = conn.exec_command(
@@ -284,7 +284,7 @@ class VolumeTests(base.UserSmokeTestCase):
             self.fail('Unable to write to mount: %s' % (err))
 
     def test_005_volume_is_correct_size(self):
-        ip = self.data['instance'].private_dns_name
+        ip = self.data['instance'].private_ip_address
         conn = self.connect_ssh(ip, TEST_KEY)
         stdin, stdout, stderr = conn.exec_command(
             "cat /sys/class/block/%s/size" % self.device.rpartition('/')[2])
@@ -297,7 +297,7 @@ class VolumeTests(base.UserSmokeTestCase):
                           (out, stderr.read(), expected_size))
 
     def test_006_me_can_umount_volume(self):
-        ip = self.data['instance'].private_dns_name
+        ip = self.data['instance'].private_ip_address
         conn = self.connect_ssh(ip, TEST_KEY)
         stdin, stdout, stderr = conn.exec_command('umount /mnt/vol')
         err = stderr.read()

@@ -554,11 +554,13 @@ class CloudTestCase(test.TestCase):
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
                                                   'host': 'host1',
+                                                  'hostname': 'server-1234',
                                                   'vm_state': 'active'})
         inst2 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
                                                   'host': 'host2',
+                                                  'hostname': 'server-4321',
                                                   'vm_state': 'active'})
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'availability_zone': 'zone1',
@@ -583,7 +585,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['publicDnsName'], '1.2.3.4')
         self.assertEqual(instance['ipAddress'], '1.2.3.4')
         self.assertEqual(instance['dnsName'], '1.2.3.4')
-        self.assertEqual(instance['privateDnsName'], '192.168.0.3')
+        self.assertEqual(instance['privateDnsName'], 'server-4321')
         self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
         self.assertEqual(instance['dnsNameV6'],
                 'fe80:b33f::a8bb:ccff:fedd:eeff')
@@ -603,6 +605,7 @@ class CloudTestCase(test.TestCase):
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
+                                                  'hostname': 'server-1234',
                                                   'vm_state': 'active'})
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'topic': "compute"})
@@ -615,7 +618,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['publicDnsName'], '1.2.3.4')
         self.assertEqual(instance['ipAddress'], '1.2.3.4')
         self.assertEqual(instance['dnsName'], '1.2.3.4')
-        self.assertEqual(instance['privateDnsName'], '192.168.0.3')
+        self.assertEqual(instance['privateDnsName'], 'server-1234')
         self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
         self.assertNotIn('dnsNameV6', instance)
         db.instance_destroy(self.context, inst1['id'])

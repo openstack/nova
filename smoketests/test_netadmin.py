@@ -52,9 +52,9 @@ class AddressTests(base.UserSmokeTestCase):
         if not self.wait_for_running(self.data['instance']):
             self.fail('instance failed to start')
         self.data['instance'].update()
-        if not self.wait_for_ping(self.data['instance'].private_dns_name):
+        if not self.wait_for_ping(self.data['instance'].private_ip_address):
             self.fail('could not ping instance')
-        if not self.wait_for_ssh(self.data['instance'].private_dns_name,
+        if not self.wait_for_ssh(self.data['instance'].private_ip_address,
                                  TEST_KEY):
             self.fail('could not ssh to instance')
 
