@@ -191,7 +191,7 @@ class FakeConnection(driver.ComputeDriver):
                 'cpu_time': 0}
 
     def get_diagnostics(self, instance_name):
-        return {}
+        return 'FAKE_DIAGNOSTICS'
 
     def get_all_bw_usage(self, start_time, stop_time=None):
         """Return bandwidth usage info for each interface on each
