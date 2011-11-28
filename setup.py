@@ -40,34 +40,9 @@ except ImportError:
 
 gettext.install('nova', unicode=1)
 
-from nova.utils import parse_mailmap, str_dict_replace
 from nova import version
 
-if os.path.isdir('.bzr'):
-    with open("nova/vcsversion.py", 'w') as version_file:
-        vcs_cmd = subprocess.Popen(["bzr", "version-info", "--python"],
-                                   stdout=subprocess.PIPE)
-        vcsversion = vcs_cmd.communicate()[0]
-        version_file.write(vcsversion)
-
-
-class local_sdist(sdist):
-    """Customized sdist hook - builds the ChangeLog file from VC first"""
-
-    def run(self):
-        if os.path.isdir('.bzr'):
-            # We're in a bzr branch
-            env = os.environ.copy()
-            env['BZR_PLUGIN_PATH'] = os.path.abspath('./bzrplugins')
-            log_cmd = subprocess.Popen(["bzr", "log", "--novalog"],
-                                       stdout=subprocess.PIPE, env=env)
-            changelog = log_cmd.communicate()[0]
-            mailmap = parse_mailmap()
-            with open("ChangeLog", "w") as changelog_file:
-                changelog_file.write(str_dict_replace(changelog, mailmap))
-        sdist.run(self)
-nova_cmdclass = {'sdist': local_sdist}
-
+nova_cmdclass = {}
 
 try:
     from sphinx.setup_command import BuildDoc
