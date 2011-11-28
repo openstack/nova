@@ -81,6 +81,14 @@ def find_data_files(destdir, srcdir):
     package_data += [(destdir, files)]
     return package_data
 
+
+def load_required_packages():
+    with file('tools/pip-requires', 'r') as f:
+        return [line.strip() for line in f]
+
+
+required_packages = load_required_packages()
+
 setup(name='nova',
       version=version.canonical_version_string(),
       description='cloud computing fabric controller',
@@ -92,6 +100,7 @@ setup(name='nova',
       include_package_data=True,
       test_suite='nose.collector',
       data_files=find_data_files('share/nova', 'tools'),
+      install_requires=required_packages,
       scripts=['bin/nova-ajax-console-proxy',
                'bin/nova-api',
                'bin/nova-api-ec2',
