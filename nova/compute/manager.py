@@ -925,17 +925,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.agent_update(instance_ref, url, md5hash)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def rescue_instance(self, context, instance_id, **kwargs):
+    @checks_instance_lock_uuid
+    def rescue_instance(self, context, instance_uuid, **kwargs):
         """
         Rescue an instance on this host.
         :param rescue_password: password to set on rescue instance
         """
 
-        LOG.audit(_('instance %s: rescuing'), instance_id, context=context)
+        LOG.audit(_('instance %s: rescuing'), instance_uuid, context=context)
         context = context.elevated()
 
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         instance_ref.admin_pass = kwargs.get('rescue_password',
                 utils.generate_password(FLAGS.password_length))
         network_info = self._get_instance_nw_info(context, instance_ref)
@@ -944,26 +944,26 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               vm_state=vm_states.RESCUED,
                               task_state=None,
                               power_state=current_power_state)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def unrescue_instance(self, context, instance_id):
+    @checks_instance_lock_uuid
+    def unrescue_instance(self, context, instance_uuid):
         """Rescue an instance on this host."""
-        LOG.audit(_('instance %s: unrescuing'), instance_id, context=context)
+        LOG.audit(_('instance %s: unrescuing'), instance_uuid, context=context)
         context = context.elevated()
 
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         network_info = self._get_instance_nw_info(context, instance_ref)
 
         self.driver.unrescue(instance_ref, network_info)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               vm_state=vm_states.ACTIVE,
                               task_state=None,
                               power_state=current_power_state)

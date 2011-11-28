@@ -1416,7 +1416,6 @@ class API(base.Base):
     @scheduler_api.reroute_compute("rescue")
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
-        instance_id = instance['id']
         self.update(context,
                     instance,
                     vm_state=vm_states.ACTIVE,
@@ -1425,18 +1424,19 @@ class API(base.Base):
         rescue_params = {
             "rescue_password": rescue_password
         }
-        self._cast_compute_message('rescue_instance', context, instance_id,
-                                    params=rescue_params)
+        self._cast_compute_message('rescue_instance', context,
+                                   instance['uuid'],
+                                   params=rescue_params)
 
     @scheduler_api.reroute_compute("unrescue")
     def unrescue(self, context, instance):
         """Unrescue the given instance."""
-        instance_id = instance['id']
         self.update(context,
                     instance,
                     vm_state=vm_states.RESCUED,
                     task_state=task_states.UNRESCUING)
-        self._cast_compute_message('unrescue_instance', context, instance_id)
+        self._cast_compute_message('unrescue_instance', context,
+                                   instance['uuid'])
 
     @scheduler_api.reroute_compute("set_admin_password")
     def set_admin_password(self, context, instance, password=None):
