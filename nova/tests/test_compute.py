@@ -354,6 +354,42 @@ class ComputeTestCase(BaseTestCase):
                 "File Contents")
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_inject_network_info(self):
+        """Ensure we can inject network info"""
+        called = {'inject': False}
+
+        def fake_driver_inject_network(self, instance, network_info):
+            called['inject'] = True
+
+        self.stubs.Set(nova.virt.fake.FakeConnection, 'inject_network_info',
+                       fake_driver_inject_network)
+
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.inject_network_info(self.context, instance_uuid)
+        self.assertTrue(called['inject'])
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_reset_network(self):
+        """Ensure we can reset networking on an instance"""
+        called = {'reset': False}
+
+        def fake_driver_reset_network(self, instance):
+            called['reset'] = True
+
+        self.stubs.Set(nova.virt.fake.FakeConnection, 'reset_network',
+                       fake_driver_reset_network)
+
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.reset_network(self.context, instance_uuid)
+        self.assertTrue(called['reset'])
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_agent_update(self):
         """Ensure instance can have its agent updated"""
         instance_id = self._create_instance()
@@ -2177,16 +2213,16 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.attach_volume(self.context, instance, 1, '/dev/vdb')
 
     def test_inject_network_info(self):
-        instance_id = self._create_instance()
-        self.compute.run_instance(self.context, instance_id)
-        instance = self.compute_api.get(self.context, instance_id)
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['id'])
+        instance = self.compute_api.get(self.context, instance['uuid'])
         self.compute_api.inject_network_info(self.context, instance)
         self.compute_api.delete(self.context, instance)
 
     def test_reset_network(self):
-        instance_id = self._create_instance()
-        self.compute.run_instance(self.context, instance_id)
-        instance = self.compute_api.get(self.context, instance_id)
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['id'])
+        instance = self.compute_api.get(self.context, instance['uuid'])
         self.compute_api.reset_network(self.context, instance)
 
     def test_lock(self):

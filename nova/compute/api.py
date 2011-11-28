@@ -1509,13 +1509,12 @@ class API(base.Base):
 
     def reset_network(self, context, instance):
         """Reset networking on the instance."""
-        instance_id = instance['id']
-        self._cast_compute_message('reset_network', context, instance_id)
+        self._cast_compute_message('reset_network', context, instance['uuid'])
 
     def inject_network_info(self, context, instance):
         """Inject network info for the instance."""
-        instance_id = instance['id']
-        self._cast_compute_message('inject_network_info', context, instance_id)
+        self._cast_compute_message('inject_network_info', context,
+                                   instance['uuid'])
 
     def attach_volume(self, context, instance, volume_id, device):
         """Attach an existing volume to an existing instance."""

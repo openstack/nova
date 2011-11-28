@@ -1196,8 +1196,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                         'compute.instance.create_ip',
                         notifier.INFO, usage)
 
-        self.inject_network_info(context, instance_id)
-        self.reset_network(context, instance_id)
+        self.inject_network_info(context, instance_ref['uuid'])
+        self.reset_network(context, instance_ref['uuid'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1214,11 +1214,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                         'compute.instance.delete_ip',
                         notifier.INFO, usage)
 
-        self.inject_network_info(context, instance_id)
-        self.reset_network(context, instance_id)
+        self.inject_network_info(context, instance_ref['uuid'])
+        self.reset_network(context, instance_ref['uuid'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
+    @checks_instance_lock_uuid
     def pause_instance(self, context, instance_uuid):
         """Pause an instance on this host."""
         LOG.audit(_('instance %s: pausing'), instance_uuid, context=context)
@@ -1235,7 +1235,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
+    @checks_instance_lock_uuid
     def unpause_instance(self, context, instance_uuid):
         """Unpause a paused instance on this host."""
         LOG.audit(_('instance %s: unpausing'), instance_uuid, context=context)
@@ -1333,20 +1333,20 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance_ref = self.db.instance_get(context, instance_id)
         return instance_ref['locked']
 
-    @checks_instance_lock
-    def reset_network(self, context, instance_id):
+    @checks_instance_lock_uuid
+    def reset_network(self, context, instance_uuid):
         """Reset networking on the given instance."""
-        instance = self.db.instance_get(context, instance_id)
-        LOG.debug(_('instance %s: reset network'), instance_id,
+        instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        LOG.debug(_('instance %s: reset network'), instance_uuid,
                                                    context=context)
         self.driver.reset_network(instance)
 
-    @checks_instance_lock
-    def inject_network_info(self, context, instance_id):
+    @checks_instance_lock_uuid
+    def inject_network_info(self, context, instance_uuid):
         """Inject network info for the given instance."""
-        LOG.debug(_('instance %s: inject network info'), instance_id,
+        LOG.debug(_('instance %s: inject network info'), instance_uuid,
                                                          context=context)
-        instance = self.db.instance_get(context, instance_id)
+        instance = self.db.instance_get_by_uuid(context, instance_uuid)
         network_info = self._get_instance_nw_info(context, instance)
         LOG.debug(_("network_info to inject: |%s|"), network_info)
 
