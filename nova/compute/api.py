@@ -1053,8 +1053,7 @@ class API(base.Base):
         kwargs = {'method': method, 'args': params}
         rpc.cast(context, queue, kwargs)
 
-    def _call_compute_message(self, method, context, instance_id, host=None,
-                              params=None):
+    def _call_compute_message(self, method, context, instance, params=None):
         """Generic handler for RPC calls to compute.
 
         :param params: Optional dictionary of arguments to be passed to the
@@ -1064,14 +1063,9 @@ class API(base.Base):
         """
         if not params:
             params = {}
-        if not host:
-            instance = self.get(context, instance_id)
-            host = instance['host']
+        host = instance['host']
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        if utils.is_uuid_like(instance_id):
-            params['instance_uuid'] = instance_id
-        else:
-            params['instance_id'] = instance_id
+        params['instance_uuid'] = instance['uuid']
         kwargs = {'method': method, 'args': params}
         return rpc.call(context, queue, kwargs)
 
@@ -1385,7 +1379,7 @@ class API(base.Base):
         """Retrieve diagnostics for the given instance."""
         return self._call_compute_message("get_diagnostics",
                                           context,
-                                          instance['id'])
+                                          instance)
 
     def get_actions(self, context, instance):
         """Retrieve actions for the given instance."""
@@ -1467,7 +1461,7 @@ class API(base.Base):
         """Get a url to an AJAX Console."""
         output = self._call_compute_message('get_ajax_console',
                                             context,
-                                            instance['id'])
+                                            instance)
         rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
                  {'method': 'authorize_ajax_console',
                   'args': {'token': output['token'], 'host': output['host'],
@@ -1479,7 +1473,7 @@ class API(base.Base):
         """Get a url to a VNC Console."""
         output = self._call_compute_message('get_vnc_console',
                                             context,
-                                            instance['id'])
+                                            instance)
         rpc.call(context, '%s' % FLAGS.vncproxy_topic,
                  {'method': 'authorize_vnc_console',
                   'args': {'token': output['token'],
@@ -1495,10 +1489,9 @@ class API(base.Base):
 
     def get_console_output(self, context, instance):
         """Get console output for an an instance."""
-        instance_id = instance['id']
         return self._call_compute_message('get_console_output',
                                           context,
-                                          instance_id)
+                                          instance)
 
     def lock(self, context, instance):
         """Lock the given instance."""

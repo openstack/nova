@@ -1262,11 +1262,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.set_host_enabled(host, enabled)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def get_diagnostics(self, context, instance_id):
+    def get_diagnostics(self, context, instance_uuid):
         """Retrieve diagnostics for an instance on this host."""
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         if instance_ref["power_state"] == power_state.RUNNING:
-            LOG.audit(_("instance %s: retrieving diagnostics"), instance_id,
+            LOG.audit(_("instance %s: retrieving diagnostics"), instance_uuid,
                       context=context)
             return self.driver.get_diagnostics(instance_ref)
 
@@ -1353,29 +1353,29 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.inject_network_info(instance, network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def get_console_output(self, context, instance_id):
+    def get_console_output(self, context, instance_uuid):
         """Send the console output for the given instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_("Get console output for instance %s"), instance_id,
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        LOG.audit(_("Get console output for instance %s"), instance_uuid,
                   context=context)
         output = self.driver.get_console_output(instance_ref)
         return output.decode('utf-8', 'replace').encode('ascii', 'replace')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def get_ajax_console(self, context, instance_id):
+    def get_ajax_console(self, context, instance_uuid):
         """Return connection information for an ajax console."""
         context = context.elevated()
-        LOG.debug(_("instance %s: getting ajax console"), instance_id)
-        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.debug(_("instance %s: getting ajax console"), instance_uuid)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         return self.driver.get_ajax_console(instance_ref)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def get_vnc_console(self, context, instance_id):
+    def get_vnc_console(self, context, instance_uuid):
         """Return connection information for a vnc console."""
         context = context.elevated()
-        LOG.debug(_("instance %s: getting vnc console"), instance_id)
-        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.debug(_("instance %s: getting vnc console"), instance_uuid)
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         return self.driver.get_vnc_console(instance_ref)
 
     def _attach_volume_boot(self, context, instance_id, volume_id, mountpoint):

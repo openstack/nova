@@ -374,33 +374,42 @@ class ComputeTestCase(BaseTestCase):
 
     def test_console_output(self):
         """Make sure we can get console output from instance"""
-        instance_id = self._create_instance()
-        self.compute.run_instance(self.context, instance_id)
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['id'])
 
         console = self.compute.get_console_output(self.context,
-                                                        instance_id)
+                                                  instance['uuid'])
         self.assert_(console)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['id'])
 
     def test_ajax_console(self):
         """Make sure we can get console output from instance"""
-        instance_id = self._create_instance()
-        self.compute.run_instance(self.context, instance_id)
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['id'])
 
         console = self.compute.get_ajax_console(self.context,
-                                                instance_id)
+                                                instance['uuid'])
         self.assert_(set(['token', 'host', 'port']).issubset(console.keys()))
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['id'])
 
     def test_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
-        instance_id = self._create_instance()
-        self.compute.run_instance(self.context, instance_id)
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['id'])
 
-        console = self.compute.get_vnc_console(self.context,
-                                               instance_id)
+        console = self.compute.get_vnc_console(self.context, instance['uuid'])
         self.assert_(console)
-        self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance['id'])
+
+    def test_diagnostics(self):
+        """Make sure we can get diagnostics for an instance."""
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['id'])
+
+        diagnostics = self.compute.get_diagnostics(self.context,
+                                                   instance['uuid'])
+        self.assertEqual(diagnostics, 'FAKE_DIAGNOSTICS')
+        self.compute.terminate_instance(self.context, instance['id'])
 
     def test_add_fixed_ip_usage_notification(self):
         def dummy(*args, **kwargs):
