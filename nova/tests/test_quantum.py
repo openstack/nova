@@ -261,11 +261,14 @@ class QuantumNovaIPAMTestCase(QuantumNovaTestCase):
         def func(arg1, arg2):
             pass
 
+        def func2(arg1, arg2, arg3):
+            pass
+
         def func1(arg1):
             pass
 
         self.net_man.driver.update_dhcp_hostfile_with_text = func
-        self.net_man.driver.restart_dhcp = func
+        self.net_man.driver.restart_dhcp = func2
         self.net_man.driver.kill_dhcp = func1
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
@@ -320,8 +323,11 @@ class QuantumNovaIPAMTestCase(QuantumNovaTestCase):
         def func1(arg1):
             pass
 
+        def func2(arg1, arg2, arg3):
+            pass
+
         self.net_man.driver.update_dhcp_hostfile_with_text = func
-        self.net_man.driver.restart_dhcp = func
+        self.net_man.driver.restart_dhcp = func2
         self.net_man.driver.kill_dhcp = func1
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
