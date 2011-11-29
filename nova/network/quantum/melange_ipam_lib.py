@@ -113,6 +113,23 @@ class QuantumMelangeIPAMLib(object):
         network = db.network_get_by_uuid(admin_context, net_id)
         db.network_delete_safe(context, network['id'])
 
+    def get_networks_by_tenant(self, context, tenant_id):
+        nets = []
+        admin_context = context.get_admin_context()
+        blocks = self.m_conn.get_blocks(tenant_id)
+        for ip_block in blocks['ip_blocks']:
+            network_id = ip_block['network_id']
+            network = db.network_get_by_uuid(admin_context, network_id)
+            nets.append(network)
+        return nets
+
+    def get_global_networks(self, context):
+        return self.get_networks_by_tenant(context,
+            FLAGS.quantum_default_tenant_id)
+
+    def get_project_networks(self, context, project_id):
+        return self.get_networks_by_tenant(context, project_id)
+
     def get_project_and_global_net_ids(self, context, project_id):
         """Fetches all networks associated with this project, or
            that are "global" (i.e., have no project set).
@@ -128,13 +145,10 @@ class QuantumMelangeIPAMLib(object):
         # Decorate with priority
         priority_nets = []
         for tenant_id in (project_id, FLAGS.quantum_default_tenant_id):
-            blocks = self.m_conn.get_blocks(tenant_id)
-            for ip_block in blocks['ip_blocks']:
-                network_id = ip_block['network_id']
-                network = db.network_get_by_uuid(admin_context, network_id)
-                if network:
-                    priority = network['priority']
-                    priority_nets.append((priority, network_id, tenant_id))
+            nets = self.get_networks_by_tenant(tenant_id)
+            for network in nets:
+                priority = network['priority']
+                priority_nets.append((priority, network_id, tenant_id))
 
         # Sort by priority
         priority_nets.sort()

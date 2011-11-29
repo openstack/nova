@@ -393,23 +393,25 @@ def metadata_accept():
     iptables_manager.apply()
 
 
-def init_host():
+def init_host(ip_range=None):
     """Basic networking setup goes here."""
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
+    if not ip_range:
+        ip_range = FLAGS.fixed_range
     iptables_manager.ipv4['nat'].add_rule('snat',
                                           '-s %s -j SNAT --to-source %s' % \
-                                           (FLAGS.fixed_range,
+                                           (ip_range,
                                             FLAGS.routing_source_ip))
 
     iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
                                           '-s %s -d %s -j ACCEPT' % \
-                                          (FLAGS.fixed_range, FLAGS.dmz_cidr))
+                                          (ip_range, FLAGS.dmz_cidr))
 
     iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
                                           '-s %(range)s -d %(range)s '
                                           '-j ACCEPT' % \
-                                          {'range': FLAGS.fixed_range})
+                                          {'range': ip_range})
     iptables_manager.apply()
 
 
@@ -1039,6 +1041,16 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                 _execute('ovs-ofctl', 'add-flow', bridge,
                     "udp,tp_dst=67,dl_dst=%s,priority=2,actions=normal" %
                     mac_address)
+                # .. and make sure iptbles won't forward it as well.
+                iptables_manager.ipv4['filter'].add_rule('FORWARD',
+                        '--in-interface %s -j DROP' % bridge)
+                iptables_manager.ipv4['filter'].add_rule('FORWARD',
+                        '--out-interface %s -j DROP' % bridge)
+            else:
+                iptables_manager.ipv4['filter'].add_rule('FORWARD',
+                        '--in-interface %s -j ACCEPT' % bridge)
+                iptables_manager.ipv4['filter'].add_rule('FORWARD',
+                        '--out-interface %s -j ACCEPT' % bridge)
 
         return dev
 

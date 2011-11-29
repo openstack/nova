@@ -19,6 +19,7 @@ import time
 
 from netaddr import IPNetwork, IPAddress
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -55,10 +56,8 @@ class QuantumManager(manager.FlatManager):
        For IP Address management, QuantumManager can be configured to
        use either Nova's local DB or the Melange IPAM service.
 
-       Currently, the QuantumManager does NOT support any of the 'gateway'
-       functionality implemented by the Nova VlanManager, including:
+       Currently, the QuantumManager does NOT support:
             * floating IPs
-            * NAT gateway
 
        Support for these capabilities are targted for future releases.
     """
@@ -79,11 +78,30 @@ class QuantumManager(manager.FlatManager):
         self.ipam = utils.import_object(ipam_lib).get_ipam_lib(self)
 
         super(QuantumManager, self).__init__(*args, **kwargs)
+
+        # Initialize forwarding rules for anything specified in
+        # FLAGS.fixed_range()
         self.driver.init_host()
-        # TODO(bgh): We'll need to enable these when we implement the full L3
-        # functionalities
-        # self.driver.ensure_metadata_ip()
-        # self.driver.metadata_forward()
+        # Set up all the forwarding rules for any network that has a
+        # gateway set.
+        networks = self.get_all_networks()
+        for net in networks:
+            LOG.debug("Initializing network: %s (cidr: %s, gw: %s)" % (
+                net['label'], net['cidr'], net['gateway']))
+            if net['gateway']:
+                self.driver.init_host(net['cidr'])
+        self.driver.ensure_metadata_ip()
+        self.driver.metadata_forward()
+
+    def get_all_networks(self):
+        networks = []
+        admin_context = context.get_admin_context()
+        networks.extend(self.ipam.get_global_networks(admin_context))
+        projects = db.project_get_all(admin_context)
+        for p in projects:
+            networks.extend(self.ipam.get_project_networks(admin_context,
+                project_id))
+        return networks
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway, gateway_v6, bridge,
