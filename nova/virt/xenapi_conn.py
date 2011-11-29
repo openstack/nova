@@ -297,9 +297,9 @@ class XenAPIConnection(driver.ComputeDriver):
     def plug_vifs(self, instance_ref, network_info):
         self._vmops.plug_vifs(instance_ref, network_info)
 
-    def get_info(self, instance_id):
+    def get_info(self, instance_name):
         """Return data about VM instance"""
-        return self._vmops.get_info(instance_id)
+        return self._vmops.get_info(instance_name)
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""
