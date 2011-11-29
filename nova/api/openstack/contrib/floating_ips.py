@@ -77,13 +77,10 @@ class FloatingIPController(object):
         return _translate_floating_ip_view(floating_ip)
 
     def index(self, req):
+        """Return a list of floating ips allocated to a project."""
         context = req.environ['nova.context']
 
-        try:
-            # FIXME(ja) - why does self.network_api.list_floating_ips raise?
-            floating_ips = self.network_api.list_floating_ips(context)
-        except exception.FloatingIpNotFoundForProject:
-            floating_ips = []
+        floating_ips = self.network_api.list_floating_ips(context)
 
         return _translate_floating_ips_view(floating_ips)
 
