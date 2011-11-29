@@ -16,20 +16,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Unit Tests for remote procedure calls using queue
+Unit Tests for remote procedure call interfaces
 """
 
-from nova import context
 from nova import log as logging
 from nova import rpc
-from nova.tests import test_rpc_common
+from nova.tests.rpc import common
 
 
 LOG = logging.getLogger('nova.tests.rpc')
 
 
-class RpcTestCase(test_rpc_common._BaseRpcTestCase):
+class RpcTestCase(common._BaseRpcTestCase):
     def setUp(self):
+        self.flags(rpc_backend='nova.tests.rpc.fake')
         self.rpc = rpc
         super(RpcTestCase, self).setUp()
 

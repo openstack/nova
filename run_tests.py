@@ -64,6 +64,7 @@ import time
 
 gettext.install('nova', unicode=1)
 
+import eventlet
 from nose import config
 from nose import core
 from nose import result
@@ -336,6 +337,7 @@ class NovaTestRunner(core.TextTestRunner):
 
 
 if __name__ == '__main__':
+    eventlet.monkey_patch()
     logging.setup()
     # If any argument looks like a test name but doesn't have "nova.tests" in
     # front of it, automatically add that so we don't have to type as much

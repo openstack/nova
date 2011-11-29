@@ -16,30 +16,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Unit Tests for remote procedure calls using carrot
+Unit Tests for remote procedure calls using fake_impl
 """
 
-from nova import context
 from nova import log as logging
-from nova.rpc import impl_carrot
-from nova.tests import test_rpc_common
+from nova.rpc import impl_fake
+from nova.tests.rpc import common
 
 
 LOG = logging.getLogger('nova.tests.rpc')
 
 
-class RpcCarrotTestCase(test_rpc_common._BaseRpcTestCase):
+class RpcFakeTestCase(common._BaseRpcTestCase):
     def setUp(self):
-        self.rpc = impl_carrot
-        super(RpcCarrotTestCase, self).setUp()
+        self.rpc = impl_fake
+        super(RpcFakeTestCase, self).setUp()
 
     def tearDown(self):
-        super(RpcCarrotTestCase, self).tearDown()
-
-    def test_connectionpool_single(self):
-        """Test that ConnectionPool recycles a single connection."""
-        conn1 = self.rpc.ConnectionPool.get()
-        self.rpc.ConnectionPool.put(conn1)
-        conn2 = self.rpc.ConnectionPool.get()
-        self.rpc.ConnectionPool.put(conn2)
-        self.assertEqual(conn1, conn2)
+        super(RpcFakeTestCase, self).tearDown()

@@ -625,7 +625,7 @@ class ProxyCallback(object):
             else:
                 ctxt.reply(rval, None)
             # This final None tells multicall that it is done.
-            ctxt.reply(None, None)
+            ctxt.reply(ending=True)
         except Exception as e:
             LOG.exception('Exception during message handling')
             ctxt.reply(None, sys.exc_info())
@@ -668,9 +668,11 @@ class RpcContext(context.RequestContext):
         self.msg_id = msg_id
         super(RpcContext, self).__init__(*args, **kwargs)
 
-    def reply(self, *args, **kwargs):
+    def reply(self, reply=None, failure=None, ending=False):
         if self.msg_id:
-            msg_reply(self.msg_id, *args, **kwargs)
+            msg_reply(self.msg_id, reply, failure, ending)
+            if ending:
+                self.msg_id = None
 
 
 class MulticallWaiter(object):
@@ -679,8 +681,11 @@ class MulticallWaiter(object):
         self._iterator = connection.iterconsume()
         self._result = None
         self._done = False
+        self._got_ending = False
 
     def done(self):
+        if self._done:
+            return
         self._done = True
         self._iterator.close()
         self._iterator = None
@@ -690,6 +695,8 @@ class MulticallWaiter(object):
         """The consume() callback will call this.  Store the result."""
         if data['failure']:
             self._result = RemoteError(*data['failure'])
+        elif data.get('ending', False):
+            self._got_ending = True
         else:
             self._result = data['result']
 
@@ -699,13 +706,13 @@ class MulticallWaiter(object):
             raise StopIteration
         while True:
             self._iterator.next()
+            if self._got_ending:
+                self.done()
+                raise StopIteration
             result = self._result
             if isinstance(result, Exception):
                 self.done()
                 raise result
-            if result == None:
-                self.done()
-                raise StopIteration
             yield result
 
 
@@ -759,7 +766,7 @@ def fanout_cast(context, topic, msg):
         conn.fanout_send(topic, msg)
 
 
-def msg_reply(msg_id, reply=None, failure=None):
+def msg_reply(msg_id, reply=None, failure=None, ending=False):
     """Sends a reply or an error on the channel signified by msg_id.
 
     Failure should be a sys.exc_info() tuple.
@@ -779,4 +786,6 @@ def msg_reply(msg_id, reply=None, failure=None):
             msg = {'result': dict((k, repr(v))
                             for k, v in reply.__dict__.iteritems()),
                     'failure': failure}
+        if ending:
+            msg['ending'] = True
         conn.direct_send(msg_id, msg)

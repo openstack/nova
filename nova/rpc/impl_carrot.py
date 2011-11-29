@@ -266,14 +266,13 @@ class AdapterConsumer(Consumer):
             #             we just log the message and send an error string
             #             back to the caller
             LOG.warn(_('no method for message: %s') % message_data)
-            if msg_id:
-                msg_reply(msg_id,
-                          _('No method for message: %s') % message_data)
+            ctxt.reply(msg_id,
+                    _('No method for message: %s') % message_data)
             return
-        self.pool.spawn_n(self._process_data, msg_id, ctxt, method, args)
+        self.pool.spawn_n(self._process_data, ctxt, method, args)
 
     @exception.wrap_exception()
-    def _process_data(self, msg_id, ctxt, method, args):
+    def _process_data(self, ctxt, method, args):
         """Thread that magically looks for a method on the proxy
         object and calls it.
         """
@@ -283,23 +282,18 @@ class AdapterConsumer(Consumer):
         # NOTE(vish): magic is fun!
         try:
             rval = node_func(context=ctxt, **node_args)
-            if msg_id:
-                # Check if the result was a generator
-                if isinstance(rval, types.GeneratorType):
-                    for x in rval:
-                        msg_reply(msg_id, x, None)
-                else:
-                    msg_reply(msg_id, rval, None)
+            # Check if the result was a generator
+            if isinstance(rval, types.GeneratorType):
+                for x in rval:
+                    ctxt.reply(x, None)
+            else:
+                ctxt.reply(rval, None)
 
-                # This final None tells multicall that it is done.
-                msg_reply(msg_id, None, None)
-            elif isinstance(rval, types.GeneratorType):
-                # NOTE(vish): this iterates through the generator
-                list(rval)
+            # This final None tells multicall that it is done.
+            ctxt.reply(ending=True)
         except Exception as e:
             LOG.exception('Exception during message handling')
-            if msg_id:
-                msg_reply(msg_id, None, sys.exc_info())
+            ctxt.reply(None, sys.exc_info())
         return
 
 
@@ -447,7 +441,7 @@ class DirectPublisher(Publisher):
         super(DirectPublisher, self).__init__(connection=connection)
 
 
-def msg_reply(msg_id, reply=None, failure=None):
+def msg_reply(msg_id, reply=None, failure=None, ending=False):
     """Sends a reply or an error on the channel signified by msg_id.
 
     Failure should be a sys.exc_info() tuple.
@@ -463,12 +457,17 @@ def msg_reply(msg_id, reply=None, failure=None):
     with ConnectionPool.item() as conn:
         publisher = DirectPublisher(connection=conn, msg_id=msg_id)
         try:
-            publisher.send({'result': reply, 'failure': failure})
+            msg = {'result': reply, 'failure': failure}
+            if ending:
+                msg['ending'] = True
+            publisher.send(msg)
         except TypeError:
-            publisher.send(
-                    {'result': dict((k, repr(v))
-                                    for k, v in reply.__dict__.iteritems()),
-                     'failure': failure})
+            msg = {'result': dict((k, repr(v))
+                            for k, v in reply.__dict__.iteritems()),
+                    'failure': failure}
+            if ending:
+                msg['ending'] = True
+            publisher.send(msg)
 
         publisher.close()
 
@@ -508,8 +507,11 @@ class RpcContext(context.RequestContext):
         self.msg_id = msg_id
         super(RpcContext, self).__init__(*args, **kwargs)
 
-    def reply(self, *args, **kwargs):
-        msg_reply(self.msg_id, *args, **kwargs)
+    def reply(self, reply=None, failure=None, ending=False):
+        if self.msg_id:
+            msg_reply(self.msg_id, reply, failure, ending)
+            if ending:
+                self.msg_id = None
 
 
 def multicall(context, topic, msg):
@@ -537,8 +539,11 @@ class MulticallWaiter(object):
         self._consumer = consumer
         self._results = queue.Queue()
         self._closed = False
+        self._got_ending = False
 
     def close(self):
+        if self._closed:
+            return
         self._closed = True
         self._consumer.close()
         ConnectionPool.put(self._consumer.connection)
@@ -548,6 +553,8 @@ class MulticallWaiter(object):
         message.ack()
         if data['failure']:
             self._results.put(RemoteError(*data['failure']))
+        elif data.get('ending', False):
+            self._got_ending = True
         else:
             self._results.put(data['result'])
 
@@ -555,23 +562,22 @@ class MulticallWaiter(object):
         return self.wait()
 
     def wait(self):
-        while True:
-            rv = None
-            while rv is None and not self._closed:
-                try:
-                    rv = self._consumer.fetch(enable_callbacks=True)
-                except Exception:
-                    self.close()
-                    raise
+        while not self._closed:
+            try:
+                rv = self._consumer.fetch(enable_callbacks=True)
+            except Exception:
+                self.close()
+                raise
+            if rv is None:
                 time.sleep(0.01)
-
+                continue
+            if self._got_ending:
+                self.close()
+                raise StopIteration
             result = self._results.get()
             if isinstance(result, Exception):
                 self.close()
                 raise result
-            if result == None:
-                self.close()
-                raise StopIteration
             yield result
 
 

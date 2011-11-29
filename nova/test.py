@@ -34,7 +34,6 @@ import nose.plugins.skip
 import nova.image.fake
 import shutil
 import stubout
-from eventlet import greenthread
 
 from nova import fakerabbit
 from nova import flags
