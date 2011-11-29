@@ -132,16 +132,6 @@ def stubout_loopingcall_start(stubs):
     stubs.Set(utils.LoopingCall, 'start', fake_start)
 
 
-def stubout_loopingcall_delay(stubs):
-    def fake_start(self, interval, now=True):
-        self._running = True
-        eventlet.sleep(1)
-        self.f(*self.args, **self.kw)
-        # This would fail before parallel xenapi calls were fixed
-        assert self._running == False
-    stubs.Set(utils.LoopingCall, 'start', fake_start)
-
-
 def _make_fake_vdi():
     sr_ref = fake.get_all('SR')[0]
     vdi_ref = fake.create_vdi('', False, sr_ref, False)

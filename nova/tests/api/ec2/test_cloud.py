@@ -1537,7 +1537,6 @@ class CloudTestCase(test.TestCase):
         self.assertFalse(vol['deleted'])
         db.volume_destroy(self.context, vol1['id'])
 
-        greenthread.sleep(0.3)
         admin_ctxt = context.get_admin_context(read_deleted=True)
         vol = db.volume_get(admin_ctxt, vol2['id'])
         self.assertTrue(vol['deleted'])

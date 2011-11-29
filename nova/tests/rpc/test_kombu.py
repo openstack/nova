@@ -23,13 +23,13 @@ from nova import context
 from nova import log as logging
 from nova import test
 from nova.rpc import impl_kombu
-from nova.tests import test_rpc_common
+from nova.tests.rpc import common
 
 
 LOG = logging.getLogger('nova.tests.rpc')
 
 
-class RpcKombuTestCase(test_rpc_common._BaseRpcTestCase):
+class RpcKombuTestCase(common._BaseRpcTestCase):
     def setUp(self):
         self.rpc = impl_kombu
         super(RpcKombuTestCase, self).setUp()
