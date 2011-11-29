@@ -78,7 +78,7 @@ class SimpleScheduler(chance.ChanceScheduler):
             instance_ref = self.create_instance_db_entry(context,
                     request_spec)
             driver.cast_to_compute_host(context, host, 'run_instance',
-                    instance_id=instance_ref['id'], **_kwargs)
+                    instance_uuid=instance_ref['uuid'], **_kwargs)
             instances.append(driver.encode_instance(instance_ref))
         return instances
 

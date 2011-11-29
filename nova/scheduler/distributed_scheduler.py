@@ -172,7 +172,7 @@ class DistributedScheduler(driver.Scheduler):
         """Create the requested resource in this Zone."""
         instance = self.create_instance_db_entry(context, request_spec)
         driver.cast_to_compute_host(context, weighted_host.host,
-                'run_instance', instance_id=instance['id'], **kwargs)
+                'run_instance', instance_uuid=instance['uuid'], **kwargs)
         return driver.encode_instance(instance, local=True)
 
     def _make_weighted_host_from_blob(self, blob):

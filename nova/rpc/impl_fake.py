@@ -69,7 +69,7 @@ class Consumer(object):
             exc_info = sys.exc_info()
             raise rpc_common.RemoteError(exc_info[0].__name__,
                     str(exc_info[1]),
-                    traceback.format_exception(*exc_info))
+                    ''.join(traceback.format_exception(*exc_info)))
 
 
 class Connection(object):

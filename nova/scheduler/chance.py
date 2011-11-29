@@ -72,7 +72,7 @@ class ChanceScheduler(driver.Scheduler):
             host = self._schedule(context, 'compute', request_spec, **kwargs)
             instance = self.create_instance_db_entry(elevated, request_spec)
             driver.cast_to_compute_host(context, host,
-                    'run_instance', instance_id=instance['id'], **kwargs)
+                    'run_instance', instance_uuid=instance['uuid'], **kwargs)
             instances.append(driver.encode_instance(instance))
 
         return instances
