@@ -267,14 +267,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                                  instance)
         return network_info
 
-    def _setup_block_device_mapping(self, context, instance_id):
+    def _setup_block_device_mapping(self, context, instance):
         """setup volumes for block device mapping"""
         volume_api = volume.API()
         block_device_mapping = []
         swap = None
         ephemerals = []
         for bdm in self.db.block_device_mapping_get_all_by_instance(
-            context, instance_id):
+            context, instance['id']):
             LOG.debug(_("setting up bdm %s"), bdm)
 
             if bdm['no_device']:
@@ -320,7 +320,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if bdm['volume_id'] is not None:
                 volume_api.check_attach(context,
                                         volume_id=bdm['volume_id'])
-                cinfo = self._attach_volume_boot(context, instance_id,
+                cinfo = self._attach_volume_boot(context, instance,
                                                     bdm['volume_id'],
                                                     bdm['device_name'])
                 self.db.block_device_mapping_update(
@@ -405,7 +405,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         def _make_block_device_info():
             (swap, ephemerals,
              block_device_mapping) = self._setup_block_device_mapping(
-                context, instance_id)
+                context, instance)
             block_device_info = {
                 'root_device_name': instance['root_device_name'],
                 'swap': swap,
@@ -649,98 +649,98 @@ class ComputeManager(manager.SchedulerDependentManager):
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def rebuild_instance(self, context, instance_id, **kwargs):
+    @checks_instance_lock_uuid
+    def rebuild_instance(self, context, instance_uuid, **kwargs):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
         remakes the VM with given 'metadata' and 'personalities'.
 
         :param context: `nova.RequestContext` object
-        :param instance_id: Instance identifier (integer)
+        :param instance_uuid: Instance Identifier (UUID)
         :param injected_files: Files to inject
         :param new_pass: password to set on rebuilt instance
         """
         context = context.elevated()
 
-        instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_("Rebuilding instance %s"), instance_id, context=context)
+        LOG.audit(_("Rebuilding instance %s"), instance_uuid, context=context)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               power_state=current_power_state,
                               vm_state=vm_states.REBUILDING,
                               task_state=None)
 
-        network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.destroy(instance_ref, network_info)
+        network_info = self._get_instance_nw_info(context, instance)
+        self.driver.destroy(instance, network_info)
 
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               vm_state=vm_states.REBUILDING,
                               task_state=task_states.BLOCK_DEVICE_MAPPING)
 
-        instance_ref.injected_files = kwargs.get('injected_files', [])
+        instance.injected_files = kwargs.get('injected_files', [])
         network_info = self.network_api.get_instance_nw_info(context,
-                                                              instance_ref)
-        bd_mapping = self._setup_block_device_mapping(context, instance_id)
+                                                             instance)
+        bd_mapping = self._setup_block_device_mapping(context, instance)
 
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               vm_state=vm_states.REBUILDING,
                               task_state=task_states.SPAWNING)
         # pull in new password here since the original password isn't in the db
-        instance_ref.admin_pass = kwargs.get('new_pass',
+        instance.admin_pass = kwargs.get('new_pass',
                 utils.generate_password(FLAGS.password_length))
 
-        image_meta = _get_image_meta(context, instance_ref['image_ref'])
+        image_meta = _get_image_meta(context, instance['image_ref'])
 
-        self.driver.spawn(context, instance_ref, image_meta,
+        self.driver.spawn(context, instance, image_meta,
                           network_info, bd_mapping)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None,
                               launched_at=utils.utcnow())
 
-        usage_info = utils.usage_from_instance(instance_ref)
+        usage_info = utils.usage_from_instance(instance)
         notifier.notify('compute.%s' % self.host,
                             'compute.instance.rebuild',
                             notifier.INFO,
                             usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def reboot_instance(self, context, instance_id, reboot_type="SOFT"):
+    @checks_instance_lock_uuid
+    def reboot_instance(self, context, instance_uuid, reboot_type="SOFT"):
         """Reboot an instance on this host."""
-        LOG.audit(_("Rebooting instance %s"), instance_id, context=context)
+        LOG.audit(_("Rebooting instance %s"), instance_uuid, context=context)
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE)
 
-        if instance_ref['power_state'] != power_state.RUNNING:
-            state = instance_ref['power_state']
+        if instance['power_state'] != power_state.RUNNING:
+            state = instance['power_state']
             running = power_state.RUNNING
             LOG.warn(_('trying to reboot a non-running '
-                     'instance: %(instance_id)s (state: %(state)s '
+                     'instance: %(instance_uuid)s (state: %(state)s '
                      'expected: %(running)s)') % locals(),
                      context=context)
 
-        network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.reboot(instance_ref, network_info, reboot_type)
+        network_info = self._get_instance_nw_info(context, instance)
+        self.driver.reboot(instance, network_info, reboot_type)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
@@ -1394,10 +1394,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         return self.driver.get_vnc_console(instance_ref)
 
-    def _attach_volume_boot(self, context, instance_id, volume_id, mountpoint):
+    def _attach_volume_boot(self, context, instance, volume_id, mountpoint):
         """Attach a volume to an instance at boot time. So actual attach
         is done by instance creation"""
 
+        instance_id = instance['id']
         context = context.elevated()
         LOG.audit(_("instance %(instance_id)s: booting with "
                     "volume %(volume_id)s at %(mountpoint)s") %

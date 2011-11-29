@@ -1159,8 +1159,10 @@ class API(base.Base):
                     instance,
                     vm_state=vm_states.ACTIVE,
                     task_state=state)
-        self._cast_compute_message('reboot_instance', context, instance['id'],
-                params={'reboot_type': reboot_type})
+        self._cast_compute_message('reboot_instance',
+                                   context,
+                                   instance['uuid'],
+                                   params={'reboot_type': reboot_type})
 
     @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance, image_href, admin_password,
@@ -1194,7 +1196,7 @@ class API(base.Base):
 
         self._cast_compute_message('rebuild_instance',
                                    context,
-                                   instance["id"],
+                                   instance["uuid"],
                                    params=rebuild_params)
 
     @scheduler_api.reroute_compute("revert_resize")
