@@ -548,10 +548,6 @@ class FloatingIpNotFoundForAddress(FloatingIpNotFound):
     message = _("Floating ip not found for address %(address)s.")
 
 
-class FloatingIpNotFoundForProject(FloatingIpNotFound):
-    message = _("Floating ip not found for project %(project_id)s.")
-
-
 class FloatingIpNotFoundForHost(FloatingIpNotFound):
     message = _("Floating ip not found for host %(host)s.")
 
