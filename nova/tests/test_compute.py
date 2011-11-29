@@ -434,11 +434,22 @@ class ComputeTestCase(BaseTestCase):
 
     def test_agent_update(self):
         """Ensure instance can have its agent updated"""
-        instance_id = self._create_instance()
-        self.compute.run_instance(self.context, instance_id)
-        self.compute.agent_update(self.context, instance_id,
-                'http://127.0.0.1/agent', '00112233445566778899aabbccddeeff')
-        self.compute.terminate_instance(self.context, instance_id)
+        called = {'agent_update': False}
+
+        def fake_driver_agent_update(self2, instance, url, md5hash):
+            called['agent_update'] = True
+            self.assertEqual(url, 'http://fake/url/')
+            self.assertEqual(md5hash, 'fakehash')
+
+        self.stubs.Set(nova.virt.fake.FakeConnection, 'agent_update',
+                       fake_driver_agent_update)
+
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['id'])
+        self.compute.agent_update(self.context, instance['uuid'],
+                                  'http://fake/url/', 'fakehash')
+        self.assertTrue(called['agent_update'])
+        self.compute.terminate_instance(self.context, instance['id'])
 
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
