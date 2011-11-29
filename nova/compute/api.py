@@ -1448,10 +1448,9 @@ class API(base.Base):
     @scheduler_api.reroute_compute("inject_file")
     def inject_file(self, context, instance, path, file_contents):
         """Write a file to the given instance."""
-        instance_id = instance['id']
         params = {'path': path, 'file_contents': file_contents}
         self._cast_compute_message('inject_file', context,
-                                   instance_id, params=params)
+                                   instance['uuid'], params=params)
 
     def get_ajax_console(self, context, instance):
         """Get a url to an AJAX Console."""

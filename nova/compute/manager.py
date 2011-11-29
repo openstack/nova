@@ -903,17 +903,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                     continue
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    def inject_file(self, context, instance_id, path, file_contents):
+    @checks_instance_lock_uuid
+    def inject_file(self, context, instance_uuid, path, file_contents):
         """Write a file to the specified path in an instance on this host."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
-        instance_id = instance_ref['id']
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         instance_state = instance_ref['power_state']
         expected_state = power_state.RUNNING
         if instance_state != expected_state:
             LOG.warn(_('trying to inject a file into a non-running '
-                    'instance: %(instance_id)s (state: %(instance_state)s '
+                    'instance: %(instance_uuid)s (state: %(instance_state)s '
                     'expected: %(expected_state)s)') % locals())
         nm = instance_ref['name']
         msg = _('instance %(nm)s: injecting file to %(path)s') % locals()

@@ -406,11 +406,22 @@ class ComputeTestCase(BaseTestCase):
 
     def test_inject_file(self):
         """Ensure we can write a file to an instance"""
-        instance_id = self._create_instance()
-        self.compute.run_instance(self.context, instance_id)
-        self.compute.inject_file(self.context, instance_id, "/tmp/test",
+        called = {'inject': False}
+
+        def fake_driver_inject_file(self2, instance, path, contents):
+            self.assertEqual(path, "/tmp/test")
+            self.assertEqual(contents, "File Contents")
+            called['inject'] = True
+
+        self.stubs.Set(nova.virt.fake.FakeConnection, 'inject_file',
+                       fake_driver_inject_file)
+
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['id'])
+        self.compute.inject_file(self.context, instance['uuid'], "/tmp/test",
                 "File Contents")
-        self.compute.terminate_instance(self.context, instance_id)
+        self.assertTrue(called['inject'])
+        self.compute.terminate_instance(self.context, instance['id'])
 
     def test_inject_network_info(self):
         """Ensure we can inject network info"""
