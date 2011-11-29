@@ -28,7 +28,7 @@ def process_todo_nodes(app, doctree, fromdocname):
     for i in xrange(5):
         lists.append(nodes.bullet_list("", nodes.Text('','')))
         lists[i].remove(lists[i][0]) 
-        lists[i].set_class('todo_list')
+        lists[i]['classes'].append('todo_list')
 
     for node in doctree.traverse(todolist):
         if not app.config['todo_include_todos']:
@@ -57,14 +57,14 @@ def process_todo_nodes(app, doctree, fromdocname):
 
             newnode.append(innernode)
             para += newnode
-            para.set_class('todo_link')
+            para['classes'].append('todo_link')
 
             todo_entry = todo_info['todo']
                 
             env.resolve_references(todo_entry, todo_info['docname'], app.builder)
 
             item = nodes.list_item('', para)
-            todo_entry[1].set_class('details')
+            todo_entry[1]['classes'].append('details')
 
             comment = todo_entry[1]
         
@@ -75,8 +75,8 @@ def process_todo_nodes(app, doctree, fromdocname):
                 if (priority < 0): priority = 1
                 if (priority > 5): priority = 5
 
-            item.set_class('todo_p' + str(priority))
-            todo_entry.set_class('todo_p' + str(priority))
+            item['classes'].append('todo_p' + str(priority))
+            todo_entry['classes'].append('todo_p' + str(priority))
 
             item.append(comment)
 
