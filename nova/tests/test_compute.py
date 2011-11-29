@@ -335,15 +335,28 @@ class ComputeTestCase(BaseTestCase):
         self.compute.resume_instance(self.context, instance_uuid)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_rebuild(self):
+        """Ensure instance can be rebuilt"""
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.rebuild_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_reboot_soft(self):
         """Ensure instance can be soft rebooted"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+
         self.compute.run_instance(self.context, instance_id)
         db.instance_update(self.context, instance_id,
                            {'task_state': task_states.REBOOTING})
 
         reboot_type = "SOFT"
-        self.compute.reboot_instance(self.context, instance_id, reboot_type)
+        self.compute.reboot_instance(self.context, instance_uuid, reboot_type)
 
         inst_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
@@ -353,13 +366,16 @@ class ComputeTestCase(BaseTestCase):
 
     def test_reboot_hard(self):
         """Ensure instance can be hard rebooted"""
-        instance_id = self._create_instance()
+        instance = self._create_fake_instance()
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+
         self.compute.run_instance(self.context, instance_id)
         db.instance_update(self.context, instance_id,
                            {'task_state': task_states.REBOOTING_HARD})
 
         reboot_type = "HARD"
-        self.compute.reboot_instance(self.context, instance_id, reboot_type)
+        self.compute.reboot_instance(self.context, instance_uuid, reboot_type)
 
         inst_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
@@ -663,12 +679,14 @@ class ComputeTestCase(BaseTestCase):
 
         # decorator should return False (fail) with locked nonadmin context
         self.compute.lock_instance(self.context, instance_uuid)
-        ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
+        ret_val = self.compute.reboot_instance(non_admin_context,
+                                               instance_uuid)
         self.assertEqual(ret_val, False)
 
         # decorator should return None (success) with unlocked nonadmin context
         self.compute.unlock_instance(self.context, instance_uuid)
-        ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
+        ret_val = self.compute.reboot_instance(non_admin_context,
+                                               instance_uuid)
         self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_id)
@@ -1351,7 +1369,8 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance_id)
 
     def test_rebuild(self):
-        instance_id = self._create_instance()
+        inst_ref = self._create_fake_instance()
+        instance_id = inst_ref['id']
         self.compute.run_instance(self.context, instance_id)
 
         instance = db.instance_get(self.context, instance_id)
@@ -1368,7 +1387,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_reboot_soft(self):
         """Ensure instance can be soft rebooted"""
-        instance_id = self._create_instance()
+        inst_ref = self._create_fake_instance()
+        instance_id = inst_ref['id']
         self.compute.run_instance(self.context, instance_id)
 
         inst_ref = db.instance_get(self.context, instance_id)
@@ -1384,7 +1404,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_reboot_hard(self):
         """Ensure instance can be hard rebooted"""
-        instance_id = self._create_instance()
+        inst_ref = self._create_fake_instance()
+        instance_id = inst_ref['id']
         self.compute.run_instance(self.context, instance_id)
 
         inst_ref = db.instance_get(self.context, instance_id)
