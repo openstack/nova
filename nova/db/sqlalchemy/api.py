@@ -1568,21 +1568,24 @@ def instance_get_all_hung_in_rebooting(context, reboot_window, session=None):
 @require_context
 def instance_update(context, instance_id, values):
     session = get_session()
+
+    if utils.is_uuid_like(instance_id):
+        instance_ref = instance_get_by_uuid(context, instance_id,
+                                            session=session)
+    else:
+        instance_ref = instance_get(context, instance_id, session=session)
+
     metadata = values.get('metadata')
     if metadata is not None:
         instance_metadata_update(context,
-                                 instance_id,
+                                 instance_ref['id'],
                                  values.pop('metadata'),
                                  delete=True)
     with session.begin():
-        if utils.is_uuid_like(instance_id):
-            instance_ref = instance_get_by_uuid(context, instance_id,
-                                                session=session)
-        else:
-            instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
         instance_ref.save(session=session)
-        return instance_ref
+
+    return instance_ref
 
 
 def instance_add_security_group(context, instance_uuid, security_group_id):
