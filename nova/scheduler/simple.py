@@ -34,6 +34,8 @@ flags.DEFINE_integer("max_gigabytes", 10000,
                      "maximum number of volume gigabytes to allow per host")
 flags.DEFINE_integer("max_networks", 1000,
                      "maximum number of networks to allow per host")
+flags.DEFINE_string('default_schedule_zone', None,
+                    'zone to use when user doesnt specify one')
 
 
 class SimpleScheduler(chance.ChanceScheduler):
@@ -45,7 +47,7 @@ class SimpleScheduler(chance.ChanceScheduler):
 
         availability_zone = instance_opts.get('availability_zone')
 
-        zone, host = None, None
+        zone, host = FLAGS.default_schedule_zone, None
         if availability_zone:
             zone, _x, host = availability_zone.partition(':')
 
