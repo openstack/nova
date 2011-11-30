@@ -1024,6 +1024,31 @@ class LibvirtConnTestCase(test.TestCase):
         ip = conn.get_host_ip_addr()
         self.assertEquals(ip, FLAGS.my_ip)
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
+    def test_broken_connection(self):
+        for (error, domain) in (
+                (libvirt.VIR_ERR_SYSTEM_ERROR, libvirt.VIR_FROM_REMOTE),
+                (libvirt.VIR_ERR_SYSTEM_ERROR, libvirt.VIR_FROM_RPC)):
+
+            conn = connection.LibvirtConnection(False)
+
+            self.mox.StubOutWithMock(conn, "_wrapped_conn")
+            self.mox.StubOutWithMock(conn._wrapped_conn, "getCapabilities")
+            self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
+            self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_domain")
+
+            conn._wrapped_conn.getCapabilities().AndRaise(
+                    libvirt.libvirtError("fake failure"))
+
+            libvirt.libvirtError.get_error_code().AndReturn(error)
+            libvirt.libvirtError.get_error_domain().AndReturn(domain)
+
+            self.mox.ReplayAll()
+
+            self.assertFalse(conn._test_connection())
+
+            self.mox.UnsetStubs()
+
     def test_volume_in_mapping(self):
         conn = connection.LibvirtConnection(False)
         swap = {'device_name': '/dev/sdb',
