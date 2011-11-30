@@ -946,8 +946,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref.admin_pass = kwargs.get('rescue_password',
                 utils.generate_password(FLAGS.password_length))
         network_info = self._get_instance_nw_info(context, instance_ref)
+        image_meta = _get_image_meta(context, instance_ref['image_ref'])
 
-        self.driver.rescue(context, instance_ref, network_info)
+        self.driver.rescue(context, instance_ref, network_info, image_meta)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,

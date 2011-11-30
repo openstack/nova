@@ -255,7 +255,7 @@ class ComputeTestCase(BaseTestCase):
         called = {'rescued': False,
                   'unrescued': False}
 
-        def fake_rescue(self, context, instance_ref, network_info):
+        def fake_rescue(self, context, instance_ref, network_info, image_meta):
             called['rescued'] = True
 
         self.stubs.Set(nova.virt.fake.FakeConnection, 'rescue', fake_rescue)

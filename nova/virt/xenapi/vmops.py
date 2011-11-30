@@ -220,9 +220,9 @@ class VMOps(object):
             self._handle_spawn_error(vdis, spawn_error)
             raise spawn_error
 
-    def spawn_rescue(self, context, instance, network_info):
+    def spawn_rescue(self, context, instance, image_meta, network_info):
         """Spawn a rescue instance."""
-        self.spawn(context, instance, network_info)
+        self.spawn(context, instance, image_meta, network_info)
 
     def _create_vm(self, context, instance, vdis, network_info, image_meta):
         """Create VM instance."""
@@ -1098,7 +1098,7 @@ class VMOps(object):
                                          vm_ref, False, True)
         self._session.wait_for_task(task, instance.id)
 
-    def rescue(self, context, instance, network_info):
+    def rescue(self, context, instance, network_info, image_meta):
         """Rescue the specified instance.
 
             - shutdown the instance VM.
@@ -1116,7 +1116,7 @@ class VMOps(object):
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
         instance._rescue = True
-        self.spawn_rescue(context, instance, network_info)
+        self.spawn_rescue(context, instance, image_meta, network_info)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
         rescue_vbd_ref = self._find_rescue_vbd_ref(vm_ref, rescue_vm_ref)
 
