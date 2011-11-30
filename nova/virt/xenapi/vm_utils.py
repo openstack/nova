@@ -40,7 +40,7 @@ from nova import log as logging
 from nova import utils
 from nova.compute import instance_types
 from nova.compute import power_state
-from nova.virt import disk
+from nova.virt.disk import api as disk
 from nova.virt.xenapi import HelperBase
 from nova.virt.xenapi import volume_utils
 

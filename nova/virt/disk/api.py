@@ -28,13 +28,13 @@ Includes injection of SSH PGP keys into authorized_keys file.
 import json
 import os
 import tempfile
-import time
 
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-
+from nova.virt.disk import loop
+from nova.virt.disk import nbd
 
 LOG = logging.getLogger('nova.compute.disk')
 FLAGS = flags.FLAGS
@@ -43,10 +43,9 @@ flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
 flags.DEFINE_string('injected_network_template',
                     utils.abspath('virt/interfaces.template'),
                     'Template file for injected network')
-flags.DEFINE_integer('timeout_nbd', 10,
-                     'time to wait for a NBD device coming up')
-flags.DEFINE_integer('max_nbd_devices', 16,
-                     'maximum number of possible nbd devices')
+flags.DEFINE_list('img_handlers', ['loop', 'nbd'],
+                    'Order of methods used to mount disk images')
+
 
 # NOTE(yamahata): DEFINE_list() doesn't work because the command may
 #                 include ','. For example,
@@ -101,8 +100,89 @@ def extend(image, size):
     utils.execute('resize2fs', image, check_exit_code=False)
 
 
+class _DiskImage(object):
+    """Provide operations on a disk image file."""
+
+    def __init__(self, image, partition=None, use_cow=False,
+                 disable_auto_fsck=False, mount_dir=None):
+        # These passed to each mounter
+        self.image = image
+        self.partition = partition
+        self.disable_auto_fsck = disable_auto_fsck
+        self.mount_dir = mount_dir
+
+        # Internal
+        self._mkdir = False
+        self._mounter = None
+        self._errors = []
+
+        # As a performance tweak, don't bother trying to
+        # directly loopback mount a cow image.
+        self.handlers = FLAGS.img_handlers[:]
+        if use_cow:
+            self.handlers.remove('loop')
+
+    @property
+    def errors(self):
+        """Return the collated errors from all operations."""
+        return '\n--\n'.join([''] + self._errors)
+
+    @staticmethod
+    def _handler_class(mode):
+        """Look up the appropriate class to use based on MODE."""
+        for cls in (loop.Mount, nbd.Mount):
+            if cls.mode == mode:
+                return cls
+        raise exception.Error(_("unknown disk image handler: %s" % mode))
+
+    def mount(self):
+        """Mount a disk image, using the object attributes.
+
+        The first supported means provided by the mount classes is used.
+
+        True, or False is returned and the 'errors' attribute
+        contains any diagnostics.
+        """
+        if self._mounter:
+            raise exception.Error(_('image already mounted'))
+
+        if not self.mount_dir:
+            self.mount_dir = tempfile.mkdtemp()
+            self._mkdir = True
+
+        try:
+            for h in self.handlers:
+                mounter_cls = self._handler_class(h)
+                mounter = mounter_cls(image=self.image,
+                                      partition=self.partition,
+                                      disable_auto_fsck=self.disable_auto_fsck,
+                                      mount_dir=self.mount_dir)
+                if mounter.do_mount():
+                    self._mounter = mounter
+                    break
+                else:
+                    LOG.debug(mounter.error)
+                    self._errors.append(mounter.error)
+        finally:
+            if not self._mounter:
+                self.umount()  # rmdir
+
+        return bool(self._mounter)
+
+    def umount(self):
+        """Unmount a disk image from the file system."""
+        try:
+            if self._mounter:
+                self._mounter.do_umount()
+        finally:
+            if self._mkdir:
+                os.rmdir(self.mount_dir)
+
+
+# Public module functions
+
 def inject_data(image, key=None, net=None, metadata=None,
-                partition=None, nbd=False, tune2fs=True):
+                partition=None, use_cow=False, disable_auto_fsck=True):
     """Injects a ssh key and optionally net data into a disk image.
 
     it will mount the image as a fully partitioned disk and attempt to inject
@@ -111,57 +191,19 @@ def inject_data(image, key=None, net=None, metadata=None,
     If partition is not specified it mounts the image as a single partition.
 
     """
-    device = _link_device(image, nbd)
-    try:
-        if not partition is None:
-            # create partition
-            out, err = utils.execute('kpartx', '-a', device, run_as_root=True)
-            if err:
-                raise exception.Error(_('Failed to load partition: %s') % err)
-            mapped_device = '/dev/mapper/%sp%s' % (device.split('/')[-1],
-                                                   partition)
-        else:
-            mapped_device = device
-
+    img = _DiskImage(image=image, partition=partition, use_cow=use_cow,
+                     disable_auto_fsck=disable_auto_fsck)
+    if img.mount():
         try:
-            # We can only loopback mount raw images. If the device isn't there,
-            # it's normally because it's a .vmdk or a .vdi etc
-            if not os.path.exists(mapped_device):
-                raise exception.Error('Mapped device was not found (we can'
-                                      ' only inject raw disk images): %s' %
-                                      mapped_device)
-
-            if tune2fs:
-                # Configure ext2fs so that it doesn't auto-check every N boots
-                out, err = utils.execute('tune2fs', '-c', 0, '-i', 0,
-                                         mapped_device, run_as_root=True)
-            tmpdir = tempfile.mkdtemp()
-            try:
-                # mount loopback to dir
-                out, err = utils.execute('mount', mapped_device, tmpdir,
-                                         run_as_root=True)
-                if err:
-                    raise exception.Error(_('Failed to mount filesystem: %s')
-                                          % err)
-
-                try:
-                    inject_data_into_fs(tmpdir, key, net, metadata,
-                                        utils.execute)
-                finally:
-                    # unmount device
-                    utils.execute('umount', mapped_device, run_as_root=True)
-            finally:
-                # remove temporary directory
-                utils.execute('rmdir', tmpdir)
+            inject_data_into_fs(img.mount_dir, key, net, metadata,
+                                utils.execute)
         finally:
-            if not partition is None:
-                # remove partitions
-                utils.execute('kpartx', '-d', device, run_as_root=True)
-    finally:
-        _unlink_device(device, nbd)
+            img.umount()
+    else:
+        raise exception.Error(img.errors)
 
 
-def setup_container(image, container_dir=None, nbd=False):
+def setup_container(image, container_dir=None, use_cow=False):
     """Setup the LXC container.
 
     It will mount the loopback image to the container directory in order
@@ -170,84 +212,28 @@ def setup_container(image, container_dir=None, nbd=False):
     LXC does not support qcow2 images yet.
     """
     try:
-        device = _link_device(image, nbd)
-        utils.execute('mount', device, container_dir, run_as_root=True)
+        img = _DiskImage(image=image, use_cow=use_cow, mount_dir=container_dir)
+        if img.mount():
+            return img
+        else:
+            raise exception.Error(img.errors)
     except Exception, exn:
         LOG.exception(_('Failed to mount filesystem: %s'), exn)
-        _unlink_device(device, nbd)
 
 
-def destroy_container(target, instance, nbd=False):
+def destroy_container(img):
     """Destroy the container once it terminates.
 
-    It will umount the container that is mounted, try to find the loopback
-    device associated with the container and delete it.
+    It will umount the container that is mounted,
+    and delete any  linked devices.
 
     LXC does not support qcow2 images yet.
     """
-    out, err = utils.execute('mount', run_as_root=True)
-    for loop in out.splitlines():
-        if instance['name'] in loop:
-            device = loop.split()[0]
-
     try:
-        container_dir = '%s/rootfs' % target
-        utils.execute('umount', container_dir, run_as_root=True)
-        _unlink_device(device, nbd)
+        if img:
+            img.umount()
     except Exception, exn:
         LOG.exception(_('Failed to remove container: %s'), exn)
-
-
-def _link_device(image, nbd):
-    """Link image to device using loopback or nbd"""
-
-    if nbd:
-        device = _allocate_device()
-        utils.execute('qemu-nbd', '-c', device, image, run_as_root=True)
-        # NOTE(vish): this forks into another process, so give it a chance
-        #             to set up before continuuing
-        for i in xrange(FLAGS.timeout_nbd):
-            if os.path.exists("/sys/block/%s/pid" % os.path.basename(device)):
-                return device
-            time.sleep(1)
-        raise exception.Error(_('nbd device %s did not show up') % device)
-    else:
-        out, err = utils.execute('losetup', '--find', '--show', image,
-                                 run_as_root=True)
-        if err:
-            raise exception.Error(_('Could not attach image to loopback: %s')
-                                  % err)
-        return out.strip()
-
-
-def _unlink_device(device, nbd):
-    """Unlink image from device using loopback or nbd"""
-    if nbd:
-        utils.execute('qemu-nbd', '-d', device, run_as_root=True)
-        _free_device(device)
-    else:
-        utils.execute('losetup', '--detach', device, run_as_root=True)
-
-
-_DEVICES = ['/dev/nbd%s' % i for i in xrange(FLAGS.max_nbd_devices)]
-
-
-def _allocate_device():
-    # NOTE(vish): This assumes no other processes are allocating nbd devices.
-    #             It may race cause a race condition if multiple
-    #             workers are running on a given machine.
-
-    while True:
-        if not _DEVICES:
-            raise exception.Error(_('No free nbd devices'))
-        device = _DEVICES.pop()
-        if not os.path.exists("/sys/block/%s/pid" % os.path.basename(device)):
-            break
-    return device
-
-
-def _free_device(device):
-    _DEVICES.append(device)
 
 
 def inject_data_into_fs(fs, key, net, metadata, execute):

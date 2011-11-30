@@ -63,7 +63,7 @@ from nova import flags
 import nova.image
 from nova import log as logging
 from nova import utils
-from nova.virt import disk
+from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import images
 from nova.virt.libvirt import utils as libvirt_utils
@@ -181,6 +181,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         self._host_state = None
         self._wrapped_conn = None
+        self.container = None
         self.read_only = read_only
 
         fw_class = utils.import_class(FLAGS.firewall_driver)
@@ -404,7 +405,7 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.info(_('instance %(instance_name)s: deleting instance files'
                 ' %(target)s') % locals())
         if FLAGS.libvirt_type == 'lxc':
-            disk.destroy_container(target, instance, nbd=FLAGS.use_cow_images)
+            disk.destroy_container(self.container)
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -1037,11 +1038,11 @@ class LibvirtConnection(driver.ComputeDriver):
             if config_drive:  # Should be True or None by now.
                 injection_path = basepath('disk.config')
                 img_id = 'config-drive'
-                tune2fs = False
+                disable_auto_fsck = False
             else:
                 injection_path = basepath('disk')
                 img_id = inst.image_ref
-                tune2fs = True
+                disable_auto_fsck = True
 
             for injection in ('metadata', 'key', 'net'):
                 if locals()[injection]:
@@ -1051,8 +1052,8 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 disk.inject_data(injection_path, key, net, metadata,
                                  partition=target_partition,
-                                 nbd=FLAGS.use_cow_images,
-                                 tune2fs=tune2fs)
+                                 use_cow=FLAGS.use_cow_images,
+                                 disable_auto_fsck=disable_auto_fsck)
 
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
@@ -1060,9 +1061,9 @@ class LibvirtConnection(driver.ComputeDriver):
                         ' data into image %(img_id)s (%(e)s)') % locals())
 
         if FLAGS.libvirt_type == 'lxc':
-            disk.setup_container(basepath('disk'),
-                                container_dir=container_dir,
-                                nbd=FLAGS.use_cow_images)
+            self.container = disk.setup_container(basepath('disk'),
+                                                  container_dir=container_dir,
+                                                  use_cow=FLAGS.use_cow_images)
 
         if FLAGS.libvirt_type == 'uml':
             libvirt_utils.chown(basepath('disk'), 'root')

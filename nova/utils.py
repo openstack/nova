@@ -238,6 +238,36 @@ def execute(*cmd, **kwargs):
             greenthread.sleep(0)
 
 
+def trycmd(*args, **kwargs):
+    """
+    A wrapper around execute() to more easily handle warnings and errors.
+
+    Returns an (out, err) tuple of strings containing the output of
+    the command's stdout and stderr.  If 'err' is not empty then the
+    command can be considered to have failed.
+
+    :discard_warnings   True | False. Defaults to False. If set to True,
+                        then for succeeding commands, stderr is cleared
+
+    """
+    discard_warnings = kwargs.pop('discard_warnings', False)
+
+    try:
+        out, err = execute(*args, **kwargs)
+        failed = False
+    except exception.ProcessExecutionError, exn:
+        out, err = '', str(exn)
+        LOG.debug(err)
+        failed = True
+
+    if not failed and discard_warnings and err:
+        # Handle commands that output to stderr but otherwise succeed
+        LOG.debug(err)
+        err = ''
+
+    return out, err
+
+
 def ssh_execute(ssh, cmd, process_input=None,
                 addl_env=None, check_exit_code=True):
     LOG.debug(_('Running cmd (SSH): %s'), ' '.join(cmd))
