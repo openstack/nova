@@ -33,6 +33,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.virt.disk import guestfs
 from nova.virt.disk import loop
 from nova.virt.disk import nbd
 
@@ -43,7 +44,7 @@ flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
 flags.DEFINE_string('injected_network_template',
                     utils.abspath('virt/interfaces.template'),
                     'Template file for injected network')
-flags.DEFINE_list('img_handlers', ['loop', 'nbd'],
+flags.DEFINE_list('img_handlers', ['loop', 'nbd', 'guestfs'],
                     'Order of methods used to mount disk images')
 
 
@@ -130,7 +131,7 @@ class _DiskImage(object):
     @staticmethod
     def _handler_class(mode):
         """Look up the appropriate class to use based on MODE."""
-        for cls in (loop.Mount, nbd.Mount):
+        for cls in (loop.Mount, nbd.Mount, guestfs.Mount):
             if cls.mode == mode:
                 return cls
         raise exception.Error(_("unknown disk image handler: %s" % mode))
