@@ -11,3 +11,4 @@ nova.egg-info
 .nova-venv
 *.sqlite
 *.log
+po/*.pot
