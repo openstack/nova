@@ -256,7 +256,6 @@ class Requestify(wsgi.Middleware):
         api_request = apirequest.APIRequest(self.controller, action,
                                             req.params['Version'], args)
         req.environ['ec2.request'] = api_request
-        req.environ['ec2.action_args'] = args
         return self.application
 
 
@@ -345,9 +344,8 @@ class Executor(wsgi.Application):
 
     """Execute an EC2 API request.
 
-    Executes 'ec2.action' upon 'ec2.controller', passing 'nova.context' and
-    'ec2.action_args' (all variables in WSGI environ.)  Returns an XML
-    response, or a 400 upon failure.
+    Executes 'ec2.request', passing 'nova.context' (both variables in WSGI
+    environ.)  Returns an XML response, or a 400 upon failure.
     """
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
