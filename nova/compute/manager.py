@@ -683,8 +683,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'instance: %(instance_id)s (state: %(state)s '
                        'expected: %(running)s)') % locals())
 
-        self.driver.snapshot(context, instance_ref, image_id)
-        self._instance_update(context, instance_id, task_state=None)
+        try:
+            self.driver.snapshot(context, instance_ref, image_id)
+        finally:
+            self._instance_update(context, instance_id, task_state=None)
 
         if image_type == 'snapshot' and rotation:
             raise exception.ImageRotationNotAllowed()

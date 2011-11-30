@@ -387,6 +387,34 @@ class ComputeTestCase(test.TestCase):
 
         db.instance_destroy(self.context, instance_id)
 
+    def test_snapshot_fails(self):
+        """Ensure task_state is set to None if snapshot fails"""
+        def fake_snapshot(*args, **kwargs):
+            raise Exception("I don't want to create a snapshot")
+
+        self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
+
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.assertRaises(Exception, self.compute.snapshot_instance,
+                          self.context, instance_id, "failing_snapshot")
+        self._assert_state({'task_state': None})
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def _assert_state(self, state_dict):
+        """Assert state of VM is equal to state passed as parameter"""
+        instances = db.instance_get_all(context.get_admin_context())
+        self.assertEqual(len(instances), 1)
+
+        if 'vm_state' in state_dict:
+            self.assertEqual(state_dict['vm_state'], instances[0]['vm_state'])
+        if 'task_state' in state_dict:
+            self.assertEqual(state_dict['task_state'],
+                             instances[0]['task_state'])
+        if 'power_state' in state_dict:
+            self.assertEqual(state_dict['power_state'],
+                             instances[0]['power_state'])
+
     def test_console_output(self):
         """Make sure we can get console output from instance"""
         instance_id = self._create_instance()
