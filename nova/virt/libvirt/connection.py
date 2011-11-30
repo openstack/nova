@@ -203,7 +203,8 @@ class LibvirtConnection(driver.ComputeDriver):
             return True
         except libvirt.libvirtError as e:
             if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
-               e.get_error_domain() == libvirt.VIR_FROM_REMOTE:
+               e.get_error_domain() in (libvirt.VIR_FROM_REMOTE,
+                       libvirt.VIR_FROM_RPC):
                 LOG.debug(_('Connection to libvirt broke'))
                 return False
             raise
