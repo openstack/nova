@@ -38,7 +38,7 @@ There are two main tools that a system administrator will find useful to manage 
    nova.manage
    euca2ools
 
-The nova-manage command may only be run by users with admin priviledges.  Commands for euca2ools can be used by all users, though specific commands may be restricted by Role Based Access Control.  You can read more about creating and managing users in :doc:`managing.users`
+The nova-manage command may only be run by users with admin privileges.  Commands for euca2ools can be used by all users, though specific commands may be restricted by Role Based Access Control.  You can read more about creating and managing users in :doc:`managing.users`
 
 User and Resource Management
 ----------------------------
