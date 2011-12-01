@@ -39,6 +39,7 @@ include nova/tests/bundle/1mb.part.0
 include nova/tests/bundle/1mb.part.1
 include nova/tests/public_key/*
 include nova/tests/db/nova.austin.sqlite
+include nova/tests/image/*.tar.gz
 include plugins/xenapi/README
 include plugins/xenapi/etc/xapi.d/plugins/objectstore
 include plugins/xenapi/etc/xapi.d/plugins/pluginlib_nova.py
