@@ -259,6 +259,8 @@ class Service(object):
     def report_state(self):
         """Update the state of this service in the datastore."""
         ctxt = context.get_admin_context()
+        zone = FLAGS.node_availability_zone
+        state_catalog = {}
         try:
             try:
                 service_ref = db.service_get(ctxt, self.service_id)
@@ -268,9 +270,12 @@ class Service(object):
                 self._create_service_ref(ctxt)
                 service_ref = db.service_get(ctxt, self.service_id)
 
+            state_catalog['report_count'] = service_ref['report_count'] + 1
+            if zone != service_ref['availability_zone']:
+                state_catalog['availability_zone'] = zone
+
             db.service_update(ctxt,
-                             self.service_id,
-                             {'report_count': service_ref['report_count'] + 1})
+                             self.service_id, state_catalog)
 
             # TODO(termie): make this pattern be more elegant.
             if getattr(self, 'model_disconnected', False):
