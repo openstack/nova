@@ -557,7 +557,13 @@ class NetworkManager(manager.SchedulerDependentManager):
             if vif['instance_id'] is None:
                 continue
 
-            fixed_ipv6 = vif.get('fixed_ipv6')
+            network = self.db.network_get(context, vif['network_id'])
+            fixed_ipv6 = None
+            if network['cidr_v6'] is not None:
+                fixed_ipv6 = ipv6.to_global(network['cidr_v6'],
+                                            vif['address'],
+                                            context.project_id)
+
             if fixed_ipv6 and ipv6_filter.match(fixed_ipv6):
                 # NOTE(jkoelker) Will need to update for the UUID flip
                 results.append({'instance_id': vif['instance_id'],
@@ -675,7 +681,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         # a vif has an address, instance_id, and network_id
         # it is also joined to the instance and network given by those IDs
         for vif in vifs:
-            network = vif['network']
+            network = self.db.network_get(context, vif['network_id'])
 
             if network is None:
                 continue
