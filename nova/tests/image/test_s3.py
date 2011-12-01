@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
 from nova import context
 import nova.db.api
 from nova import exception
@@ -130,3 +132,11 @@ class TestS3ImageService(test.TestCase):
             {'device_name': '/dev/sdb0',
              'no_device': True}]
         self.assertEqual(block_device_mapping, expected_bdm)
+
+    def test_s3_malicious_tarballs(self):
+        self.assertRaises(exception.Error,
+            self.image_service._test_for_malicious_tarball,
+            "/unused", os.path.join(os.path.dirname(__file__), 'abs.tar.gz'))
+        self.assertRaises(exception.Error,
+            self.image_service._test_for_malicious_tarball,
+            "/unused", os.path.join(os.path.dirname(__file__), 'rel.tar.gz'))

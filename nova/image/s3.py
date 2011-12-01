@@ -155,7 +155,7 @@ class S3ImageService(object):
     @staticmethod
     def _download_file(bucket, filename, local_dir):
         key = bucket.get_key(filename)
-        local_filename = os.path.join(local_dir, filename)
+        local_filename = os.path.join(local_dir, os.path.basename(filename))
         key.get_contents_to_filename(local_filename)
         return local_filename
 
@@ -388,7 +388,18 @@ class S3ImageService(object):
                                      'err': err})
 
     @staticmethod
+    def _test_for_malicious_tarball(path, filename):
+        """Raises exception if extracting tarball would escape extract path"""
+        tar_file = tarfile.open(filename, 'r|gz')
+        for n in tar_file.getnames():
+            if not os.path.abspath(os.path.join(path, n)).startswith(path):
+                tar_file.close()
+                raise exception.Error(_('Unsafe filenames in image'))
+        tar_file.close()
+
+    @staticmethod
     def _untarzip_image(path, filename):
+        S3ImageService._test_for_malicious_tarball(path, filename)
         tar_file = tarfile.open(filename, 'r|gz')
         tar_file.extractall(path)
         image_file = tar_file.getnames()[0]
