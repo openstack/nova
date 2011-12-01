@@ -1246,7 +1246,7 @@ class API(base.Base):
 
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
-        self.db.instance_update(context, instance['id'],
+        self.db.instance_update(context, instance['uuid'],
                 {'host': migration_ref['dest_compute'], })
 
     @scheduler_api.reroute_compute("resize")
@@ -1299,7 +1299,7 @@ class API(base.Base):
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
-                              "instance_id": instance['uuid'],
+                              "instance_uuid": instance['uuid'],
                               "update_db": False,
                               "instance_type_id": new_instance_type['id'],
                               "request_spec": request_spec}})

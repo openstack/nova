@@ -680,6 +680,13 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance['uuid'])
 
+    def test_get_lock(self):
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+        self.assertFalse(self.compute.get_lock(self.context, instance_uuid))
+        db.instance_update(self.context, instance_uuid, {'locked': True})
+        self.assertTrue(self.compute.get_lock(self.context, instance_uuid))
+
     def test_lock(self):
         """ensure locked instance cannot be changed"""
         instance = self._create_fake_instance()
@@ -2346,7 +2353,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_get_lock(self):
         instance = self._create_fake_instance()
         self.assertFalse(self.compute_api.get_lock(self.context, instance))
-        db.instance_update(self.context, instance['id'], {'locked': True})
+        db.instance_update(self.context, instance['uuid'], {'locked': True})
         self.assertTrue(self.compute_api.get_lock(self.context, instance))
 
     def test_add_remove_security_group(self):
