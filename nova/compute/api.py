@@ -905,12 +905,9 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
-        # NOTE(sirp): id used to be exclusively integer IDs; now we're
-        # accepting both UUIDs and integer IDs. The handling of this
-        # is done in db/sqlalchemy/api/instance_get
+        # NOTE(ameade): we still need to support integer ids for ec2
         if utils.is_uuid_like(instance_id):
-            uuid = instance_id
-            instance = self.db.instance_get_by_uuid(context, uuid)
+            instance = self.db.instance_get_by_uuid(context, instance_id)
         else:
             instance = self.db.instance_get(context, instance_id)
 
@@ -1029,7 +1026,7 @@ class API(base.Base):
 
         return self.db.instance_get_all_by_filters(context, filters)
 
-    def _cast_compute_message(self, method, context, instance_id, host=None,
+    def _cast_compute_message(self, method, context, instance_uuid, host=None,
                               params=None):
         """Generic handler for RPC casts to compute.
 
@@ -1041,13 +1038,15 @@ class API(base.Base):
         if not params:
             params = {}
         if not host:
-            instance = self.get(context, instance_id)
+            instance = self.get(context, instance_uuid)
             host = instance['host']
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        if utils.is_uuid_like(instance_id):
-            params['instance_uuid'] = instance_id
+        #TODO (ameade): this check should be removed after everything
+        #in compute manager expects uuids instead of ids
+        if utils.is_uuid_like(instance_uuid):
+            params['instance_uuid'] = instance_uuid
         else:
-            params['instance_id'] = instance_id
+            params['instance_id'] = instance_uuid
         kwargs = {'method': method, 'args': params}
         rpc.cast(context, queue, kwargs)
 
