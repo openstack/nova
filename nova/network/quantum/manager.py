@@ -304,7 +304,7 @@ class QuantumManager(manager.FlatManager):
             hosts = self.get_dhcp_hosts_text(context,
                 subnet['network_id'], project_id)
             self.driver.update_dhcp_hostfile_with_text(dev, hosts)
-            self.driver.restart_dhcp(dev, network_ref)
+            self.driver.restart_dhcp(context, dev, network_ref)
 
     def add_virtual_interface(self, context, instance_id, network_id):
         # If we're not using melange, use the default means...
@@ -497,7 +497,7 @@ class QuantumManager(manager.FlatManager):
             self.driver.update_dhcp_hostfile_with_text(dev, hosts)
             # Restart dnsmasq
             self.driver.kill_dhcp(dev)
-            self.driver.restart_dhcp(dev, network_ref)
+            self.driver.restart_dhcp(context, dev, network_ref)
 
             # TODO(bgh): if this is the last instance for the network
             # then we should actually just kill the dhcp server.
