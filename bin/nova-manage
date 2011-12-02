@@ -1812,15 +1812,15 @@ class ImageCommands(object):
                                'architecture': architecture,
                                'image_location': 'local'}}
         if kernel_id:
-            meta['properties']['kernel_id'] = int(kernel_id)
+            meta['properties']['kernel_id'] = kernel_id
         if ramdisk_id:
-            meta['properties']['ramdisk_id'] = int(ramdisk_id)
+            meta['properties']['ramdisk_id'] = ramdisk_id
         elevated = context.get_admin_context()
         try:
             with open(path) as ifile:
                 image = self.image_service.create(elevated, meta, ifile)
             new = image['id']
-            print _("Image registered to %(new)s (%(new)08x).") % locals()
+            print _("Image registered to %(new)s (%(path)s).") % locals()
             return new
         except Exception as exc:
             print _("Failed to register %(path)s: %(exc)s") % locals()
