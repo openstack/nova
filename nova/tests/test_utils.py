@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import __builtin__
+import mox
 import datetime
 import os
 import tempfile
@@ -329,6 +331,33 @@ class GenericUtilsTestCase(test.TestCase):
         generated_url = utils.generate_glance_url()
         actual_url = "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)
         self.assertEqual(generated_url, actual_url)
+
+    def test_read_cached_file(self):
+        self.mox.StubOutWithMock(os.path, "getmtime")
+        os.path.getmtime(mox.IgnoreArg()).AndReturn(1)
+        self.mox.ReplayAll()
+
+        cache_data = {"data": 1123, "mtime": 1}
+        data = utils.read_cached_file("/this/is/a/fake", cache_data)
+        self.assertEqual(cache_data["data"], data)
+
+    def test_read_modified_cached_file(self):
+        self.mox.StubOutWithMock(os.path, "getmtime")
+        self.mox.StubOutWithMock(__builtin__, 'open')
+
+        os.path.getmtime(mox.IgnoreArg()).AndReturn(2)
+
+        fake_contents = "lorem ipsum"
+        fake_file = self.mox.CreateMockAnything()
+        fake_file.read().AndReturn(fake_contents)
+        __builtin__.open(mox.IgnoreArg()).AndReturn(fake_file)
+
+        self.mox.ReplayAll()
+        cache_data = {"data": 1123, "mtime": 1}
+        data = utils.read_cached_file("/this/is/a/fake", cache_data)
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+        self.assertEqual(data, fake_contents)
 
 
 class IsUUIDLikeTestCase(test.TestCase):
