@@ -131,6 +131,20 @@ Reusing an existing database may cause tests to fail if the schema has
 changed. If any files in the ``nova/db/sqlalchemy`` have changed, it's a good
 idea to recreate the test database.
 
+Gotchas
+-------
+
+**Running Tests from Shared Folders**
+
+If you are running the unit tests from a shared folder, you may see tests start
+to fail or stop completely as a result of Python lockfile issues [#f4]_. You
+can get around this by manually setting or updating the following line in
+``nova/tests/fake_flags.py``::
+
+    FLAGS['lock_path'].SetDefault('/tmp')
+
+Note that you may use any location (not just ``/tmp``!) as long as it is not
+a shared folder.
 
 .. rubric:: Footnotes
 
@@ -141,3 +155,5 @@ idea to recreate the test database.
 
 .. [#f3] There is an effort underway to use a fake DB implementation for the
    unit tests. See https://lists.launchpad.net/openstack/msg05604.html
+
+.. [#f4] See Vish's comment in this bug report: https://bugs.launchpad.net/nova/+bug/882933
