@@ -317,8 +317,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        network_info, block_device_info,
                                        injected_files, admin_pass)
             except:
-                self._deallocate_network(context, instance)
-                raise
+                with utils.save_and_reraise_exception():
+                    self._deallocate_network(context, instance)
             self._notify_about_instance_usage(instance)
         except exception.InstanceNotFound:
             LOG.exception(_("Instance %s not found.") % instance_uuid)
