@@ -35,7 +35,7 @@ configure_logging('migration')
 def move_vhds_into_sr(session, args):
     """Moves the VHDs from their copied location to the SR"""
     params = pickle.loads(exists(args, 'params'))
-    instance_id = params['instance_id']
+    instance_uuid = params['instance_uuid']
 
     old_base_copy_uuid = params['old_base_copy_uuid']
     old_cow_uuid = params['old_cow_uuid']
@@ -48,12 +48,12 @@ def move_vhds_into_sr(session, args):
 
     # Discover the copied VHDs locally, and then set up paths to copy
     # them to under the SR
-    source_image_path = "/images/instance%d" % instance_id
+    source_image_path = "/images/instance%s" % instance_uuid
     source_base_copy_path = "%s/%s.vhd" % (source_image_path,
             old_base_copy_uuid)
     source_cow_path = "%s/%s.vhd" % (source_image_path, old_cow_uuid)
 
-    temp_vhd_path = "%s/instance%d/" % (sr_temp_path, instance_id)
+    temp_vhd_path = "%s/instance%s/" % (sr_temp_path, instance_uuid)
     new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid)
     new_cow_path = "%s/%s.vhd" % (temp_vhd_path, new_cow_uuid)
 
@@ -89,14 +89,14 @@ def move_vhds_into_sr(session, args):
 def transfer_vhd(session, args):
     """Rsyncs a VHD to an adjacent host"""
     params = pickle.loads(exists(args, 'params'))
-    instance_id = params['instance_id']
+    instance_uuid = params['instance_uuid']
     host = params['host']
     vdi_uuid = params['vdi_uuid']
     sr_path = params['sr_path']
     vhd_path = "%s.vhd" % vdi_uuid
 
     source_path = "%s/%s" % (sr_path, vhd_path)
-    dest_path = '%s:/images/instance%d/' % (host, instance_id)
+    dest_path = '%s:/images/instance%s/' % (host, instance_uuid)
 
     logging.debug("Preparing to transmit %s to %s" % (source_path,
             dest_path))
