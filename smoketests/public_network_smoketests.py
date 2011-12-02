@@ -81,7 +81,7 @@ class InstanceTestsFromPublic(base.UserSmokeTestCase):
             time.sleep(1)
         else:
             self.fail('instance failed to start')
-        ip = reservations[0].instances[0].private_dns_name
+        ip = reservations[0].instances[0].private_ip_address
         self.failIf(ip == '0.0.0.0')
         self.data['private_ip'] = ip
         if FLAGS.use_ipv6:
@@ -124,7 +124,7 @@ class InstanceTestsFromPublic(base.UserSmokeTestCase):
             time.sleep(1)
         else:
             self.fail('instance failed to start')
-        ip = reservations[0].instances[0].private_dns_name
+        ip = reservations[0].instances[0].private_ip_address
         self.failIf(ip == '0.0.0.0')
         self.data['private_ip'] = ip
         if FLAGS.use_ipv6:
