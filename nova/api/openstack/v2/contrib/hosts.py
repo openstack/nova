@@ -16,8 +16,12 @@
 """The hosts admin extension."""
 
 import webob.exc
+from xml.dom import minidom
+from xml.parsers import expat
 
 from nova.api.openstack import common
+from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova.api.openstack.v2 import extensions
 from nova import compute
 from nova import exception
@@ -116,6 +120,64 @@ class HostController(object):
         return self._host_power_action(req, host=id, action="reboot")
 
 
+class HostIndexTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        def shimmer(obj, do_raise=False):
+            # A bare list is passed in; we need to wrap it in a dict
+            return dict(hosts=obj)
+
+        root = xmlutil.TemplateElement('hosts', selector=shimmer)
+        elem = xmlutil.SubTemplateElement(root, 'host', selector='hosts')
+        elem.set('host_name')
+        elem.set('service')
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class HostUpdateTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('host')
+        root.set('host')
+        root.set('status')
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class HostActionTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('host')
+        root.set('host')
+        root.set('power_action')
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class HostSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return HostIndexTemplate()
+
+    def update(self):
+        return HostUpdateTemplate()
+
+    def default(self):
+        return HostActionTemplate()
+
+
+class HostDeserializer(wsgi.XMLDeserializer):
+    def update(self, string):
+        try:
+            node = minidom.parseString(string)
+        except expat.ExpatError:
+            msg = _("cannot understand XML")
+            raise exception.MalformedRequestBody(reason=msg)
+
+        updates = {}
+        for child in node.childNodes[0].childNodes:
+            updates[child.tagName] = self.extract_text(child)
+
+        return dict(body=updates)
+
+
 class Hosts(extensions.ExtensionDescriptor):
     """Host administration"""
 
@@ -125,8 +187,20 @@ class Hosts(extensions.ExtensionDescriptor):
     updated = "2011-06-29T00:00:00+00:00"
 
     def get_resources(self):
+        body_serializers = {
+            'application/xml': HostSerializer(),
+            }
+        body_deserializers = {
+            'application/xml': HostDeserializer(),
+            }
+
+        serializer = wsgi.ResponseSerializer(body_serializers)
+        deserializer = wsgi.RequestDeserializer(body_deserializers)
+
         resources = [extensions.ResourceExtension('os-hosts',
-                HostController(), collection_actions={'update': 'PUT'},
+                HostController(),
+                serializer=serializer, deserializer=deserializer,
+                collection_actions={'update': 'PUT'},
                 member_actions={"startup": "GET", "shutdown": "GET",
                         "reboot": "GET"})]
         return resources

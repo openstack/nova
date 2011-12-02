@@ -16,8 +16,10 @@
 #    under the License.
 
 import webob
+from lxml import etree
 
-from nova.api.openstack.v2.contrib.quotas import QuotaSetsController
+from nova.api.openstack import wsgi
+from nova.api.openstack.v2.contrib import quotas
 from nova import context
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -39,7 +41,7 @@ class QuotaSetsTest(test.TestCase):
 
     def setUp(self):
         super(QuotaSetsTest, self).setUp()
-        self.controller = QuotaSetsController()
+        self.controller = quotas.QuotaSetsController()
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.user_context = context.RequestContext(self.user_id,
@@ -60,7 +62,7 @@ class QuotaSetsTest(test.TestCase):
             'injected_files': 5,
             'injected_file_content_bytes': 10240}
 
-        quota_set = QuotaSetsController()._format_quota_set('1234',
+        quota_set = quotas.QuotaSetsController()._format_quota_set('1234',
                                                             raw_quota_set)
         qs = quota_set['quota_set']
 
@@ -130,3 +132,62 @@ class QuotaSetsTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/1234/os-quota-sets/update_me')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
                           req, 'update_me', body)
+
+
+class QuotaXMLSerializerTest(test.TestCase):
+    def setUp(self):
+        super(QuotaXMLSerializerTest, self).setUp()
+        self.serializer = quotas.QuotaSerializer()
+        self.deserializer = wsgi.XMLDeserializer()
+
+    def test_serializer(self):
+        exemplar = dict(quota_set=dict(
+                id='project_id',
+                metadata_items=10,
+                injected_file_content_bytes=20,
+                volumes=30,
+                gigabytes=40,
+                ram=50,
+                floating_ips=60,
+                instances=70,
+                injected_files=80,
+                cores=90))
+        text = self.serializer.serialize(exemplar)
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('quota_set', tree.tag)
+        self.assertEqual('project_id', tree.get('id'))
+        self.assertEqual(len(exemplar['quota_set']) - 1, len(tree))
+        for child in tree:
+            self.assertTrue(child.tag in exemplar['quota_set'])
+            self.assertEqual(int(child.text), exemplar['quota_set'][child.tag])
+
+    def test_deserializer(self):
+        exemplar = dict(quota_set=dict(
+                metadata_items='10',
+                injected_file_content_bytes='20',
+                volumes='30',
+                gigabytes='40',
+                ram='50',
+                floating_ips='60',
+                instances='70',
+                injected_files='80',
+                cores='90'))
+        intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
+                  '<quota_set>'
+                  '<metadata_items>10</metadata_items>'
+                  '<injected_file_content_bytes>20'
+                  '</injected_file_content_bytes>'
+                  '<volumes>30</volumes>'
+                  '<gigabytes>40</gigabytes>'
+                  '<ram>50</ram>'
+                  '<floating_ips>60</floating_ips>'
+                  '<instances>70</instances>'
+                  '<injected_files>80</injected_files>'
+                  '<cores>90</cores>'
+                  '</quota_set>')
+
+        result = self.deserializer.deserialize(intext)['body']
+        self.assertEqual(result, exemplar)

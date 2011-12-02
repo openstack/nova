@@ -134,7 +134,8 @@ class ConstantSelector(object):
 class TemplateElement(object):
     """Represent an element in the template."""
 
-    def __init__(self, tag, attrib=None, selector=None, **extra):
+    def __init__(self, tag, attrib=None, selector=None, subselector=None,
+                 **extra):
         """Initialize an element.
 
         Initializes an element in the template.  Keyword arguments
@@ -146,6 +147,12 @@ class TemplateElement(object):
         :param selector: An optional callable taking an object and
                          optional boolean do_raise indicator and
                          returning the object bound to the element.
+        :param subselector: An optional callable taking an object and
+                            optional boolean do_raise indicator and
+                            returning the object bound to the element.
+                            This is used to further refine the datum
+                            object returned by selector in the event
+                            that it is a list of objects.
         """
 
         # Convert selector into a Selector
@@ -154,8 +161,13 @@ class TemplateElement(object):
         elif not callable(selector):
             selector = Selector(selector)
 
+        # Convert subselector into a Selector
+        if subselector is not None and not callable(subselector):
+            subselector = Selector(subselector)
+
         self.tag = tag
         self.selector = selector
+        self.subselector = subselector
         self.attrib = {}
         self._text = None
         self._children = []
@@ -404,6 +416,8 @@ class TemplateElement(object):
         # Render all the elements
         elems = []
         for datum in data:
+            if self.subselector is not None:
+                datum = self.subselector(datum)
             elems.append((self._render(parent, datum, patches, nsmap), datum))
 
         # Return all the elements rendered, as well as the
@@ -465,7 +479,7 @@ class TemplateElement(object):
 
         # If there are no children, return it as a closed tag
         if len(self) == 0:
-            return '<%s/>' % ' '.join(contents)
+            return '<%s/>' % ' '.join([str(i) for i in contents])
 
         # OK, recurse to our children
         children = [c.tree() for c in self]
@@ -475,7 +489,8 @@ class TemplateElement(object):
                 (' '.join(contents), ''.join(children), self.tag))
 
 
-def SubTemplateElement(parent, tag, attrib=None, selector=None, **extra):
+def SubTemplateElement(parent, tag, attrib=None, selector=None,
+                       subselector=None, **extra):
     """Create a template element as a child of another.
 
     Corresponds to the etree.SubElement interface.  Parameters are as
@@ -487,7 +502,8 @@ def SubTemplateElement(parent, tag, attrib=None, selector=None, **extra):
     attrib.update(extra)
 
     # Get a TemplateElement
-    elem = TemplateElement(tag, attrib=attrib, selector=selector)
+    elem = TemplateElement(tag, attrib=attrib, selector=selector,
+                           subselector=subselector)
 
     # Append the parent safely
     if parent is not None:
@@ -893,3 +909,37 @@ def make_links(parent, selector=None):
 
     # Just for completeness...
     return elem
+
+
+def make_flat_dict(name, selector=None, subselector=None, ns=None):
+    """
+    Utility for simple XML templates that traditionally used
+    XMLDictSerializer with no metadata.  Returns a template element
+    where the top-level element has the given tag name, and where
+    sub-elements have tag names derived from the object's keys and
+    text derived from the object's values.  This only works for flat
+    dictionary objects, not dictionaries containing nested lists or
+    dictionaries.
+    """
+
+    # Set up the names we need...
+    if ns is None:
+        elemname = name
+        tagname = Selector(0)
+    else:
+        elemname = '{%s}%s' % (ns, name)
+        tagname = lambda obj, do_raise=False: '{%s}%s' % (ns, obj[0])
+
+    if selector is None:
+        selector = name
+
+    # Build the root element
+    root = TemplateElement(elemname, selector=selector,
+                           subselector=subselector)
+
+    # Build an element to represent all the keys and values
+    elem = SubTemplateElement(root, tagname, selector=get_items)
+    elem.text = 1
+
+    # Return the template
+    return root

@@ -100,6 +100,24 @@ class ExtensionDescriptor(object):
         request_exts = []
         return request_exts
 
+    @classmethod
+    def nsmap(cls):
+        """Synthesize a namespace map from extension."""
+
+        # Start with a base nsmap
+        nsmap = ext_nsmap.copy()
+
+        # Add the namespace for the extension
+        nsmap[cls.alias] = cls.namespace
+
+        return nsmap
+
+    @classmethod
+    def xmlname(cls, name):
+        """Synthesize element and attribute names."""
+
+        return '{%s}%s' % (cls.namespace, name)
+
 
 class ActionExtensionController(object):
     def __init__(self, application):
@@ -545,7 +563,7 @@ def admin_only(fnc):
 
 
 def wrap_errors(fn):
-    """"Ensure errors are not passed along."""
+    """Ensure errors are not passed along."""
     def wrapped(*args):
         try:
             return fn(*args)

@@ -17,10 +17,17 @@
 
 import webob
 
+from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova.api.openstack.v2 import extensions
 from nova import db
 from nova import exception
 from nova import quota
+
+
+quota_resources = ['metadata_items', 'injected_file_content_bytes',
+        'volumes', 'gigabytes', 'ram', 'floating_ips', 'instances',
+        'injected_files', 'cores']
 
 
 class QuotaSetsController(object):
@@ -28,19 +35,12 @@ class QuotaSetsController(object):
     def _format_quota_set(self, project_id, quota_set):
         """Convert the quota object to a result dict"""
 
-        return {'quota_set': {
-            'id': str(project_id),
-            'metadata_items': quota_set['metadata_items'],
-            'injected_file_content_bytes':
-             quota_set['injected_file_content_bytes'],
-            'volumes': quota_set['volumes'],
-            'gigabytes': quota_set['gigabytes'],
-            'ram': quota_set['ram'],
-            'floating_ips': quota_set['floating_ips'],
-            'instances': quota_set['instances'],
-            'injected_files': quota_set['injected_files'],
-            'cores': quota_set['cores'],
-        }}
+        result = dict(id=str(project_id))
+
+        for resource in quota_resources:
+            result[resource] = quota_set[resource]
+
+        return dict(quota_set=result)
 
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -54,11 +54,8 @@ class QuotaSetsController(object):
     def update(self, req, id, body):
         context = req.environ['nova.context']
         project_id = id
-        resources = ['metadata_items', 'injected_file_content_bytes',
-                'volumes', 'gigabytes', 'ram', 'floating_ips', 'instances',
-                'injected_files', 'cores']
         for key in body['quota_set'].keys():
-            if key in resources:
+            if key in quota_resources:
                 value = int(body['quota_set'][key])
                 try:
                     db.quota_update(context, project_id, key, value)
@@ -72,6 +69,23 @@ class QuotaSetsController(object):
         return self._format_quota_set(id, quota._get_default_quotas())
 
 
+class QuotaTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('quota_set', selector='quota_set')
+        root.set('id')
+
+        for resource in quota_resources:
+            elem = xmlutil.SubTemplateElement(root, resource)
+            elem.text = resource
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class QuotaSerializer(xmlutil.XMLTemplateSerializer):
+    def default(self):
+        return QuotaTemplate()
+
+
 class Quotas(extensions.ExtensionDescriptor):
     """Quotas management support"""
 
@@ -83,8 +97,15 @@ class Quotas(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
+        body_serializers = {
+            'application/xml': QuotaSerializer(),
+            }
+
+        serializer = wsgi.ResponseSerializer(body_serializers)
+
         res = extensions.ResourceExtension('os-quota-sets',
                                             QuotaSetsController(),
+                                            serializer=serializer,
                                             member_actions={'defaults': 'GET'})
         resources.append(res)
 

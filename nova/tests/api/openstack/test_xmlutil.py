@@ -165,6 +165,27 @@ class TemplateElementTest(test.TestCase):
 
         self.assertEqual(elem.selector, sel)
 
+    def test_element_subselector_none(self):
+        # Create a template element with no subselector
+        elem = xmlutil.TemplateElement('test')
+
+        self.assertEqual(elem.subselector, None)
+
+    def test_element_subselector_string(self):
+        # Create a template element with a string subselector
+        elem = xmlutil.TemplateElement('test', subselector='test')
+
+        self.assertEqual(len(elem.subselector.chain), 1)
+        self.assertEqual(elem.subselector.chain[0], 'test')
+
+    def test_element_subselector(self):
+        sel = xmlutil.Selector('a', 'b')
+
+        # Create a template element with an explicit subselector
+        elem = xmlutil.TemplateElement('test', subselector=sel)
+
+        self.assertEqual(elem.subselector, sel)
+
     def test_element_append_child(self):
         # Create an element
         elem = xmlutil.TemplateElement('test')
@@ -760,4 +781,13 @@ class XMLTemplateSerializerTest(test.TestCase):
                         '<a>(3,4)</a></servers>')
         result = self.tmpl_serializer.serialize(self.data_multi, 'test')
         result = result.replace('\n', '').replace(' ', '')
+        self.assertEqual(result, expected_xml)
+
+
+class MiscellaneousXMLUtilTests(test.TestCase):
+    def test_make_flat_dict(self):
+        expected_xml = ('<wrapper><a>foo</a><b>bar</b></wrapper>')
+        root = xmlutil.make_flat_dict('wrapper')
+        tmpl = xmlutil.MasterTemplate(root, 1)
+        result = tmpl.serialize(dict(wrapper=dict(a='foo', b='bar')))
         self.assertEqual(result, expected_xml)

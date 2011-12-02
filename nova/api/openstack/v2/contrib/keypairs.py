@@ -24,6 +24,8 @@ import tempfile
 import webob
 from webob import exc
 
+from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova.api.openstack.v2 import extensions
 from nova import crypto
 from nova import db
@@ -117,6 +119,29 @@ class KeypairController(object):
         return {'keypairs': rval}
 
 
+class KeypairTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        return xmlutil.MasterTemplate(xmlutil.make_flat_dict('keypair'), 1)
+
+
+class KeypairsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('keypairs')
+        elem = xmlutil.make_flat_dict('keypair', selector='keypairs',
+                                      subselector='keypair')
+        root.append(elem)
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class KeypairsSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return KeypairsTemplate()
+
+    def default(self):
+        return KeypairTemplate()
+
+
 class Keypairs(extensions.ExtensionDescriptor):
     """Keypair Support"""
 
@@ -128,9 +153,15 @@ class Keypairs(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
+        body_serializers = {
+            'application/xml': KeypairsSerializer(),
+            }
+        serializer = wsgi.ResponseSerializer(body_serializers)
+
         res = extensions.ResourceExtension(
                 'os-keypairs',
-                KeypairController())
+                KeypairController(),
+                serializer=serializer)
 
         resources.append(res)
         return resources
