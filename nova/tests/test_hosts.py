@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from lxml import etree
 import webob.exc
 
 from nova import context
@@ -120,3 +121,52 @@ class HostTestCase(test.TestCase):
     def test_bad_host(self):
         self.assertRaises(exception.HostNotFound, self.controller.update,
                 self.req, "bogus_host_name", body={"status": "disable"})
+
+
+class HostSerializerTest(test.TestCase):
+    def setUp(self):
+        super(HostSerializerTest, self).setUp()
+        self.serializer = os_hosts.HostSerializer()
+        self.deserializer = os_hosts.HostDeserializer()
+
+    def test_index_serializer(self):
+        text = self.serializer.serialize(HOST_LIST, 'index')
+
+        tree = etree.fromstring(text)
+
+        self.assertEqual('hosts', tree.tag)
+        self.assertEqual(len(HOST_LIST), len(tree))
+        for i in range(len(HOST_LIST)):
+            self.assertEqual('host', tree[i].tag)
+            self.assertEqual(HOST_LIST[i]['host_name'],
+                             tree[i].get('host_name'))
+            self.assertEqual(HOST_LIST[i]['service'],
+                             tree[i].get('service'))
+
+    def test_update_serializer(self):
+        exemplar = dict(host='host_c1', status='enabled')
+        text = self.serializer.serialize(exemplar, 'update')
+
+        tree = etree.fromstring(text)
+
+        self.assertEqual('host', tree.tag)
+        for key, value in exemplar.items():
+            self.assertEqual(value, tree.get(key))
+
+    def test_action_serializer(self):
+        exemplar = dict(host='host_c1', power_action='reboot')
+        text = self.serializer.serialize(exemplar)
+
+        tree = etree.fromstring(text)
+
+        self.assertEqual('host', tree.tag)
+        for key, value in exemplar.items():
+            self.assertEqual(value, tree.get(key))
+
+    def test_update_deserializer(self):
+        exemplar = dict(status='enabled', foo='bar')
+        intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
+                  '<updates><status>enabled</status><foo>bar</foo></updates>')
+        result = self.deserializer.deserialize(intext, action='update')
+
+        self.assertEqual(dict(body=exemplar), result)

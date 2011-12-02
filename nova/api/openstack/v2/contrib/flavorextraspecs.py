@@ -19,6 +19,8 @@
 
 from webob import exc
 
+from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova.api.openstack.v2 import extensions
 from nova import db
 from nova import exception
@@ -95,6 +97,16 @@ class FlavorExtraSpecsController(object):
         raise error
 
 
+class ExtraSpecsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        return xmlutil.MasterTemplate(xmlutil.make_flat_dict('extra_specs'), 1)
+
+
+class ExtraSpecsSerializer(xmlutil.XMLTemplateSerializer):
+    def default(self):
+        return ExtraSpecsTemplate()
+
+
 class Flavorextraspecs(extensions.ExtensionDescriptor):
     """Instance type (flavor) extra specs"""
 
@@ -105,9 +117,17 @@ class Flavorextraspecs(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         resources = []
+
+        body_serializers = {
+            'application/xml': ExtraSpecsSerializer(),
+            }
+
+        serializer = wsgi.ResponseSerializer(body_serializers)
+
         res = extensions.ResourceExtension(
                 'os-extra_specs',
                 FlavorExtraSpecsController(),
+                serializer=serializer,
                 parent=dict(member_name='flavor', collection_name='flavors'))
 
         resources.append(res)
