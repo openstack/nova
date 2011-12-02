@@ -29,10 +29,8 @@ from sqlalchemy.schema import ForeignKeyConstraint
 
 from nova.db.sqlalchemy.session import get_session
 
-from nova import auth
 from nova import exception
 from nova import flags
-from nova import ipv6
 from nova import utils
 
 
