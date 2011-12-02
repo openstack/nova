@@ -26,6 +26,10 @@ Jenkins performs tasks such as:
     Run `pylint <http://www.logilab.org/project/pylint>`_ on the nova code and
     report violations.
 
+`nova-tarball`_
+    Do ``python setup.py sdist`` to create a tarball of the nova code and upload
+    it to http://nova.openstack.org/tarballs
+
 .. _Jenkins: http://jenkins-ci.org
 .. _Launchpad: http://launchpad.net
 .. _gate-nova-merge: https://jenkins.openstack.org/view/Nova/job/gate-nova-merge
@@ -33,4 +37,5 @@ Jenkins performs tasks such as:
 .. _gate-nova-unittests: https://jenkins.openstack.org/view/Nova/job/gate-nova-unittests
 .. _nova-coverage: https://jenkins.openstack.org/view/Nova/job/nova-coverage
 .. _nova-docs: https://jenkins.openstack.org/view/Nova/job/nova-docs
-.. _nova-pylint: https://jenkins.openstack.org/job/nova-pylint/
+.. _nova-pylint: https://jenkins.openstack.org/job/nova-pylint
+.. _nova-tarball: https://jenkins.openstack.org/job/nova-tarball
