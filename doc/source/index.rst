@@ -64,6 +64,14 @@ Developer Docs
    devref/index
    community
 
+API Extensions
+==============
+
+.. toctree::
+   :maxdepth: 1
+
+    api_ext/index
+
 Outstanding Documentation Tasks
 ===============================
 
