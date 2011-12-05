@@ -87,4 +87,5 @@ Advanced Topics
 
    flags
    monitoring
+   vncconsole
 

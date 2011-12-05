@@ -39,6 +39,10 @@ flags.DEFINE_integer('vncproxy_port', 6080,
                      'Port that the VNC proxy should bind to')
 flags.DEFINE_string('vncproxy_host', '0.0.0.0',
                      'Address that the VNC proxy should bind to')
+flags.DEFINE_integer('vncproxy_flash_socket_policy_port', 843,
+                     'Port that the socket policy listener should bind to')
+flags.DEFINE_string('vncproxy_flash_socket_policy_host', '0.0.0.0',
+                     'Address that the socket policy listener should bind to')
 flags.DEFINE_integer('vnc_token_ttl', 300,
                      'How many seconds before deleting tokens')
 flags.DEFINE_string('vncproxy_manager', 'nova.vnc.auth.VNCProxyAuthManager',
@@ -77,8 +81,8 @@ def get_wsgi_server():
                               host=FLAGS.vncproxy_host,
                               port=FLAGS.vncproxy_port)
     wsgi_server.start_tcp(handle_flash_socket_policy,
-                          843,
-                          host=FLAGS.vncproxy_host)
+                          host=FLAGS.vncproxy_flash_socket_policy_host,
+                          port=FLAGS.vncproxy_flash_socket_policy_port)
     return wsgi_server
 
 
