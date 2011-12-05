@@ -440,7 +440,8 @@ DEFINE_string('image_service', 'nova.image.glance.GlanceImageService',
               'The service to use for retrieving and searching for images.')
 
 DEFINE_string('host', socket.gethostname(),
-              'name of this node')
+              'Name of this node.  This can be an opaque identifier.  It is '
+              'not necessarily a hostname, FQDN, or IP address.')
 
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
