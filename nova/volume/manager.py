@@ -260,7 +260,7 @@ class VolumeManager(manager.SchedulerDependentManager):
         driver_volume_type: a string to identify the type of volume.  This
                            can be used by the calling code to determine the
                            strategy for connecting to the volume. This could
-                           be 'iscsi', 'rdb', 'sheepdog', etc.
+                           be 'iscsi', 'rbd', 'sheepdog', etc.
         data: this is the data that the calling code will use to connect
               to the volume. Keep in mind that this will be serialized to
               json in various places, so it should not contain any non-json

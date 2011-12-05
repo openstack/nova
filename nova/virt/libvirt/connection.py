@@ -139,7 +139,7 @@ flags.DEFINE_list('libvirt_volume_drivers',
                   ['iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
                    'local=nova.virt.libvirt.volume.LibvirtVolumeDriver',
                    'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
-                   'rdb=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
+                   'rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
                    'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver'],
                   'Libvirt handlers for remote volumes.')
 flags.DEFINE_string('default_local_format',
