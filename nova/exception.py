@@ -830,10 +830,6 @@ class CannotResizeToSameSize(NovaException):
     message = _("When resizing, instances must change size!")
 
 
-class CannotResizeToSmallerSize(NovaException):
-    message = _("Resizing to a smaller size is not supported.")
-
-
 class ImageTooLarge(NovaException):
     message = _("Image is larger than instance type allows")
 

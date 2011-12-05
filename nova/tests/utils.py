@@ -34,6 +34,21 @@ def get_test_image_info(context, instance_ref):
     return image_service.show(context, image_id)
 
 
+def get_test_instance_type(context=None):
+    if not context:
+        context = get_test_admin_context()
+
+    test_instance_type = {'name': 'kinda.big',
+                          'memory_mb': 2048,
+                          'vcpus': 4,
+                          'local_gb': 40,
+                          'swap': 1024}
+
+    instance_type_ref = nova.db.instance_type_create(context,
+            test_instance_type)
+    return instance_type_ref
+
+
 def get_test_instance(context=None):
     if not context:
         context = get_test_admin_context()

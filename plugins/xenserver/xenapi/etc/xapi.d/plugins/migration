@@ -37,49 +37,54 @@ def move_vhds_into_sr(session, args):
     params = pickle.loads(exists(args, 'params'))
     instance_uuid = params['instance_uuid']
 
-    old_base_copy_uuid = params['old_base_copy_uuid']
-    old_cow_uuid = params['old_cow_uuid']
-
-    new_base_copy_uuid = params['new_base_copy_uuid']
-    new_cow_uuid = params['new_cow_uuid']
-
     sr_path = params['sr_path']
-    sr_temp_path = "%s/tmp/" % sr_path
-
-    # Discover the copied VHDs locally, and then set up paths to copy
-    # them to under the SR
-    source_image_path = "/images/instance%s" % instance_uuid
-    source_base_copy_path = "%s/%s.vhd" % (source_image_path,
-            old_base_copy_uuid)
-    source_cow_path = "%s/%s.vhd" % (source_image_path, old_cow_uuid)
-
-    temp_vhd_path = "%s/instance%s/" % (sr_temp_path, instance_uuid)
-    new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid)
-    new_cow_path = "%s/%s.vhd" % (temp_vhd_path, new_cow_uuid)
+    sr_temp_path = "%s/tmp" % sr_path
+    temp_vhd_path = "%s/instance%s" % (sr_temp_path, instance_uuid)
 
     logging.debug('Creating temporary SR path %s' % temp_vhd_path)
     os.makedirs(temp_vhd_path)
 
-    logging.debug('Moving %s into %s' % (source_base_copy_path, temp_vhd_path))
+    # Discover the copied VHDs locally, and then set up paths to copy
+    # them to under the SR
+    source_image_path = "/images/instance%s" % instance_uuid
+
+    old_base_copy_uuid = params['old_base_copy_uuid']
+    new_base_copy_uuid = params['new_base_copy_uuid']
+    source_base_copy_path = "%s/%s.vhd" % (source_image_path,
+            old_base_copy_uuid)
+    new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid)
+
+    logging.debug('Moving base %s into %s' % (source_base_copy_path,
+                                              temp_vhd_path))
     shutil.move(source_base_copy_path, new_base_copy_path)
 
-    logging.debug('Moving %s into %s' % (source_cow_path, temp_vhd_path))
-    shutil.move(source_cow_path, new_cow_path)
+    if 'old_cow_uuid' in params:
+        old_cow_uuid = params['old_cow_uuid']
+        new_cow_uuid = params['new_cow_uuid']
 
-    logging.debug('Cleaning up %s' % source_image_path)
-    os.rmdir(source_image_path)
+        source_cow_path = "%s/%s.vhd" % (source_image_path, old_cow_uuid)
+        new_cow_path = "%s/%s.vhd" % (temp_vhd_path, new_cow_uuid)
 
-    # Link the COW to the base copy
-    logging.debug('Attaching COW to the base copy %s -> %s' %
-            (new_cow_path, new_base_copy_path))
-    subprocess.call(shlex.split('/usr/sbin/vhd-util modify -n %s -p %s' %
-            (new_cow_path, new_base_copy_path)))
+        logging.debug('Moving COW %s into %s' % (source_cow_path,
+                                                 temp_vhd_path))
+        shutil.move(source_cow_path, new_cow_path)
 
-    logging.debug('Moving VHDs into SR %s' % sr_path)
-    # NOTE(sirp): COW should be copied before base_copy to avoid snapwatchd
-    # GC'ing an unreferenced base copy VDI
-    shutil.move(new_cow_path, sr_path)
+        # Link the COW to the base copy
+        logging.debug('Attaching COW to the base %s -> %s' %
+                      (new_cow_path, new_base_copy_path))
+        subprocess.call(['/usr/sbin/vhd-util', 'modify',
+                         '-n', new_cow_path, '-p', new_base_copy_path])
+
+        # NOTE(sirp): COW should be copied before base_copy to avoid
+        # snapwatchd GC'ing an unreferenced base copy VDI
+        logging.debug('Moving COW %s to %s' % (new_cow_path, sr_path))
+        shutil.move(new_cow_path, sr_path)
+
+    logging.debug('Moving base %s to %s' % (new_base_copy_path, sr_path))
     shutil.move(new_base_copy_path, sr_path)
+
+    logging.debug('Cleaning up source path %s' % source_image_path)
+    os.rmdir(source_image_path)
 
     logging.debug('Cleaning up temporary SR path %s' % temp_vhd_path)
     os.rmdir(temp_vhd_path)
@@ -103,7 +108,7 @@ def transfer_vhd(session, args):
 
     ssh_cmd = '\"ssh -o StrictHostKeyChecking=no\"'
 
-    rsync_args = shlex.split('nohup /usr/bin/rsync -av --progress -e %s %s %s'
+    rsync_args = shlex.split('nohup /usr/bin/rsync -av -e %s %s %s'
             % (ssh_cmd, source_path, dest_path))
 
     logging.debug('rsync %s' % (' '.join(rsync_args, )))

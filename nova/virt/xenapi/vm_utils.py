@@ -387,19 +387,36 @@ class VMHelper(HelperBase):
         session.wait_for_task(task, instance.id)
 
     @classmethod
-    def auto_configure_disk(cls, session, vdi_ref):
-        """Partition and resize FS to match the size specified by
-        instance_types.local_gb.
-        """
-        with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
-            dev_path = utils.make_dev_path(dev)
-            partition_path = utils.make_dev_path(dev, partition=1)
-            if cls._resize_partition_allowed(dev_path, partition_path):
-                cls._resize_partition_and_fs(dev_path, partition_path)
+    def resize_disk(cls, session, vdi_ref, instance_type):
+        # Copy VDI over to something we can resize
+        # NOTE(jerdfelt): Would be nice to just set vdi_ref to read/write
+        sr_ref = safe_find_sr(session)
+        copy_ref = session.call_xenapi('VDI.copy', vdi_ref, sr_ref)
+        copy_uuid = session.call_xenapi('VDI.get_uuid', copy_ref)
+
+        try:
+            # Resize partition and filesystem down
+            cls.auto_configure_disk(session=session,
+                                    vdi_ref=copy_ref,
+                                    new_gb=instance_type['local_gb'])
+
+            # Create new VDI
+            new_ref = cls.fetch_blank_disk(session,
+                                           instance_type['id'])
+            new_uuid = session.call_xenapi('VDI.get_uuid', new_ref)
+
+            # Manually copy contents over
+            virtual_size = instance_type['local_gb'] * 1024 * 1024 * 1024
+            _copy_partition(session, copy_ref, new_ref, 1, virtual_size)
+
+            return new_ref, new_uuid
+        finally:
+            cls.destroy_vdi(session, copy_ref)
 
     @classmethod
-    def _resize_partition_allowed(cls, dev_path, partition_path):
-        """Determine whether we should resize the partition and the fs.
+    def auto_configure_disk(cls, session, vdi_ref, new_gb):
+        """Partition and resize FS to match the size specified by
+        instance_types.local_gb.
 
         This is a fail-safe to prevent accidentally destroying data on a disk
         erroneously marked as auto_disk_config=True.
@@ -413,52 +430,16 @@ class VMHelper(HelperBase):
 
             3. The file-system on the one partition must be ext3 or ext4.
         """
-        out, err = utils.execute("parted", "--script", "--machine",
-                                 partition_path, "print", run_as_root=True)
-        lines = [line for line in out.split('\n') if line]
-        partitions = lines[2:]
+        with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+            partitions = _get_partitions(dev)
 
-        num_partitions = len(partitions)
-        fs_type = partitions[0].split(':')[4]
-        LOG.debug(_("Found %(num_partitions)s partitions, the first with"
-                    " fs_type '%(fs_type)s'") % locals())
+            if len(partitions) != 1:
+                return
 
-        allowed_fs = fs_type in ('ext3', 'ext4')
-        return num_partitions == 1 and allowed_fs
-
-    @classmethod
-    def _resize_partition_and_fs(cls, dev_path, partition_path):
-        """Resize partition and fileystem.
-
-        This assumes we are dealing with a single primary partition and using
-        ext3 or ext4.
-        """
-        # 1. Delete and recreate partition to end of disk
-        root_helper = FLAGS.root_helper
-        cmd = """echo "d
-n
-p
-1
-
-
-w
-" | %(root_helper)s fdisk %(dev_path)s""" % locals()
-        utils.execute(cmd, run_as_root=False, shell=True)
-
-        # 2. Remove ext3 journal (making it ext2)
-        utils.execute("tune2fs", "-O ^has_journal", partition_path,
-                      run_as_root=True)
-
-        # 3. fsck the disk
-        # NOTE(sirp): using -p here to automatically repair filesystem, is
-        # this okay?
-        utils.execute("e2fsck", "-f", "-p", partition_path, run_as_root=True)
-
-        # 4. Resize the disk
-        utils.execute("resize2fs", partition_path, run_as_root=True)
-
-        # 5. Add back journal
-        utils.execute("tune2fs", "-j", partition_path, run_as_root=True)
+            num, start, old_sectors, ptype = partitions[0]
+            if ptype in ('ext3', 'ext4'):
+                new_sectors = new_gb * 1024 * 1024 * 1024 / SECTOR_SIZE
+                _resize_part_and_fs(dev, start, old_sectors, new_sectors)
 
     @classmethod
     def generate_swap(cls, session, instance, vm_ref, userdevice, swap_mb):
@@ -1317,6 +1298,27 @@ def _is_vdi_pv(dev):
     return False
 
 
+def _get_partitions(dev):
+    """Return partition information (num, size, type) for a device."""
+    dev_path = utils.make_dev_path(dev)
+    out, err = utils.execute('parted', '--script', '--machine',
+                             dev_path, 'unit s', 'print',
+                             run_as_root=True)
+    lines = [line for line in out.split('\n') if line]
+    partitions = []
+
+    LOG.debug(_("Partitions:"))
+    for line in lines[2:]:
+        num, start, end, size, ptype = line.split(':')[:5]
+        start = int(start.rstrip('s'))
+        end = int(end.rstrip('s'))
+        size = int(size.rstrip('s'))
+        LOG.debug(_("  %(num)s: %(ptype)s %(size)d sectors") % locals())
+        partitions.append((num, start, size, ptype))
+
+    return partitions
+
+
 def _stream_disk(dev, image_type, virtual_size, image_file):
     offset = 0
     if image_type == ImageType.DISK:
@@ -1351,6 +1353,68 @@ def _write_partition(virtual_size, dev):
             run_as_root=True)
 
     LOG.debug(_('Writing partition table %s done.'), dev_path)
+
+
+def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
+    """Resize partition and fileystem.
+
+    This assumes we are dealing with a single primary partition and using
+    ext3 or ext4.
+    """
+    size = new_sectors - start
+    end = new_sectors - 1
+
+    dev_path = utils.make_dev_path(dev)
+    partition_path = utils.make_dev_path(dev, partition=1)
+
+    # Remove ext3 journal (making it ext2)
+    utils.execute('tune2fs', '-O ^has_journal', partition_path,
+                  run_as_root=True)
+
+    # fsck the disk
+    # NOTE(sirp): using -p here to automatically repair filesystem, is
+    # this okay?
+    utils.execute('e2fsck', '-f', '-p', partition_path, run_as_root=True)
+
+    if new_sectors < old_sectors:
+        # Resizing down, resize filesystem before partition resize
+        utils.execute('resize2fs', partition_path, '%ds' % size,
+                      run_as_root=True)
+
+    utils.execute('parted', '--script', dev_path, 'rm', '1',
+                  run_as_root=True)
+    utils.execute('parted', '--script', dev_path, 'mkpart',
+                  'primary',
+                  '%ds' % start,
+                  '%ds' % end,
+                  run_as_root=True)
+
+    if new_sectors > old_sectors:
+        # Resizing up, resize filesystem after partition resize
+        utils.execute('resize2fs', partition_path, run_as_root=True)
+
+    # Add back journal
+    utils.execute('tune2fs', '-j', partition_path, run_as_root=True)
+
+
+def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
+    # Part of disk taken up by MBR
+    virtual_size -= MBR_SIZE_BYTES
+
+    with vdi_attached_here(session, src_ref, read_only=True) as src:
+        src_path = utils.make_dev_path(src, partition=partition)
+
+        with vdi_attached_here(session, dst_ref, read_only=False) as dst:
+            dst_path = utils.make_dev_path(dst, partition=partition)
+
+            _write_partition(virtual_size, dst)
+
+            num_blocks = virtual_size / SECTOR_SIZE
+            utils.execute('dd',
+                          'if=%s' % src_path,
+                          'of=%s' % dst_path,
+                          'count=%d' % num_blocks,
+                          run_as_root=True)
 
 
 def _mount_filesystem(dev_path, dir):

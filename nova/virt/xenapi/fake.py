@@ -467,6 +467,9 @@ class SessionBase(object):
             raise Exception('No simulation in host_call_plugin for %s,%s' %
                             (plugin, method))
 
+    def VDI_get_virtual_size(self, *args):
+        return 1 * 1024 * 1024 * 1024
+
     def VDI_resize_online(self, *args):
         return 'derp'
 

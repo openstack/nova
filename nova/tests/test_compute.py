@@ -1568,23 +1568,6 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute.terminate_instance(context, instance['uuid'])
 
-    def test_resize_down_fails(self):
-        """Ensure resizing down raises and fails"""
-        instance = self._create_fake_instance()
-        context = self.context.elevated()
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
-        self.compute.run_instance(self.context, instance['uuid'])
-
-        inst_type = instance_types.get_instance_type_by_name('m1.xlarge')
-        db.instance_update(self.context, instance['uuid'],
-                {'instance_type_id': inst_type['id']})
-
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
-        self.assertRaises(exception.CannotResizeToSmallerSize,
-                          self.compute_api.resize, context, instance, 1)
-
-        self.compute.terminate_instance(context, instance['uuid'])
-
     def test_resize_same_size_fails(self):
         """Ensure invalid flavors raise"""
         context = self.context.elevated()

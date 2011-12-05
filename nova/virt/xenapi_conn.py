@@ -245,10 +245,12 @@ class XenAPIConnection(driver.ComputeDriver):
         """Unpause paused VM instance"""
         self._vmops.unpause(instance)
 
-    def migrate_disk_and_power_off(self, context, instance, dest):
+    def migrate_disk_and_power_off(self, context, instance, dest,
+                                   instance_type):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
-        return self._vmops.migrate_disk_and_power_off(context, instance, dest)
+        return self._vmops.migrate_disk_and_power_off(context, instance,
+                                                      dest, instance_type)
 
     def suspend(self, instance):
         """suspend the specified instance"""
