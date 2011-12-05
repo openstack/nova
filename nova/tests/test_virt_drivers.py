@@ -145,7 +145,7 @@ class _VirtDriverTestCase(test.TestCase):
     @catch_notimplementederror
     def test_rescue(self):
         instance_ref, network_info = self._get_running_instance()
-        self.connection.rescue(self.ctxt, instance_ref, network_info)
+        self.connection.rescue(self.ctxt, instance_ref, network_info, None)
 
     @catch_notimplementederror
     def test_unrescue_unrescued_instance(self):
@@ -155,7 +155,7 @@ class _VirtDriverTestCase(test.TestCase):
     @catch_notimplementederror
     def test_unrescue_rescued_instance(self):
         instance_ref, network_info = self._get_running_instance()
-        self.connection.rescue(self.ctxt, instance_ref, network_info)
+        self.connection.rescue(self.ctxt, instance_ref, network_info, None)
         self.connection.unrescue(instance_ref, network_info)
 
     @catch_notimplementederror

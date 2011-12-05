@@ -1289,14 +1289,6 @@ class CloudController(object):
             block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context, resv_id)
 
-    def _do_instance(self, action, context, ec2_id):
-        instance_id = ec2utils.ec2_id_to_id(ec2_id)
-        action(context, instance_id=instance_id)
-
-    def _do_instances(self, action, context, instance_id):
-        for ec2_id in instance_id:
-            self._do_instance(action, context, ec2_id)
-
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified."""
@@ -1338,12 +1330,18 @@ class CloudController(object):
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        self._do_instance(self.compute_api.rescue, context, instance_id)
+        LOG.debug(_("Going to rescue instance %s") % instance_id)
+        _instance_id = ec2utils.ec2_id_to_id(instance_id)
+        instance = self.compute_api.get(context, _instance_id)
+        self.compute_api.rescue(context, instance)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        self._do_instance(self.compute_api.unrescue, context, instance_id)
+        LOG.debug(_("Going to unrescue instance %s") % instance_id)
+        _instance_id = ec2utils.ec2_id_to_id(instance_id)
+        instance = self.compute_api.get(context, _instance_id)
+        self.compute_api.unrescue(context, instance)
         return True
 
     def update_instance(self, context, instance_id, **kwargs):

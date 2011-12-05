@@ -595,7 +595,7 @@ class LibvirtConnection(driver.ComputeDriver):
         dom.create()
 
     @exception.wrap_exception()
-    def rescue(self, context, instance, network_info):
+    def rescue(self, context, instance, network_info, image_meta):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the

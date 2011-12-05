@@ -1379,6 +1379,35 @@ class CloudTestCase(test.TestCase):
         else:
             self.compute = self.start_service('compute')
 
+    def test_rescue_instances(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1, }
+        instance_id = self._run_instance(**kwargs)
+
+        result = self.cloud.stop_instances(self.context, [instance_id])
+        self.assertTrue(result)
+
+        result = self.cloud.rescue_instance(self.context, instance_id)
+        self.assertTrue(result)
+
+        result = self.cloud.terminate_instances(self.context, [instance_id])
+        self.assertTrue(result)
+        self._restart_compute_service()
+
+    def test_unrescue_instances(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1, }
+        instance_id = self._run_instance(**kwargs)
+
+        result = self.cloud.unrescue_instance(self.context, instance_id)
+        self.assertTrue(result)
+
+        result = self.cloud.terminate_instances(self.context, [instance_id])
+        self.assertTrue(result)
+        self._restart_compute_service()
+
     def test_stop_start_instance(self):
         """Makes sure stop/start instance works"""
         # enforce periodic tasks run in short time to avoid wait for 60s.
