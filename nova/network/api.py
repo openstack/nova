@@ -110,6 +110,7 @@ class API(base.Base):
         """
         args = kwargs
         args['instance_id'] = instance['id']
+        args['instance_uuid'] = instance['uuid']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
         args['instance_type_id'] = instance['instance_type_id']
@@ -153,6 +154,7 @@ class API(base.Base):
     def get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
         args = {'instance_id': instance['id'],
+                'instance_uuid': instance['uuid'],
                 'instance_type_id': instance['instance_type_id'],
                 'host': instance['host']}
         try:

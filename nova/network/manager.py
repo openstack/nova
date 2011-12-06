@@ -63,6 +63,7 @@ from nova import ipv6
 from nova import log as logging
 from nova import manager
 from nova.network import api as network_api
+from nova.network import model as network_model
 from nova import quota
 from nova import utils
 from nova import rpc
@@ -624,8 +625,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                 a non-vlan instance should connect to
         if requested_networks is not None and len(requested_networks) != 0:
             network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
-            networks = self.db.network_get_all_by_uuids(context,
-                                                    network_uuids)
+            networks = self.db.network_get_all_by_uuids(context, network_uuids)
         else:
             try:
                 networks = self.db.network_get_all(context)
@@ -641,6 +641,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         rpc.called by network_api
         """
         instance_id = kwargs.pop('instance_id')
+        instance_uuid = kwargs.pop('instance_uuid')
         host = kwargs.pop('host')
         project_id = kwargs.pop('project_id')
         type_id = kwargs.pop('instance_type_id')
@@ -656,7 +657,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         self._allocate_fixed_ips(admin_context, instance_id,
                                  host, networks, vpn=vpn,
                                  requested_networks=requested_networks)
-        return self.get_instance_nw_info(context, instance_id, type_id, host)
+        return self.get_instance_nw_info(context, instance_id, instance_uuid,
+                                         type_id, host)
 
     def deallocate_for_instance(self, context, **kwargs):
         """Handles deallocating various network resources for an instance.
@@ -679,7 +681,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         # deallocate vifs (mac addresses)
         self.db.virtual_interface_delete_by_instance(context, instance_id)
 
-    def get_instance_nw_info(self, context, instance_id,
+    def get_instance_nw_info(self, context, instance_id, instance_uuid,
                              instance_type_id, host):
         """Creates network info list for instance.
 
@@ -773,7 +775,149 @@ class NetworkManager(manager.SchedulerDependentManager):
                 info['dns'].append(network['dns2'])
 
             network_info.append((network_dict, info))
+
+        # update instance network cache and return network_info
+        nw_info = self.build_network_info_model(context, vifs, fixed_ips,
+                                                               instance_type)
+        self.db.instance_info_cache_update(context, instance_uuid,
+                                          {'network_info': nw_info.as_cache()})
+
+        # TODO(tr3buchet): return model
         return network_info
+
+    def build_network_info_model(self, context, vifs, fixed_ips,
+                                                 instance_type):
+        """Returns a NetworkInfo object containing all network information
+        for an instance"""
+        nw_info = network_model.NetworkInfo()
+        for vif in vifs:
+            network = self.db.network_get(context, vif['network_id'])
+            subnets = self._get_subnets_from_network(network)
+
+            # if rxtx_cap data are not set everywhere, set to none
+            try:
+                rxtx_cap = network['rxtx_base'] * instance_type['rxtx_factor']
+            except (TypeError, KeyError):
+                rxtx_cap = None
+
+            # determine which of the instance's fixed IPs are on this network
+            network_IPs = [fixed_ip['address'] for fixed_ip in fixed_ips if
+                           fixed_ip['network_id'] == network['id']]
+
+            # create model FixedIPs from these fixed_ips
+            network_IPs = [network_model.FixedIP(address=ip_address)
+                           for ip_address in network_IPs]
+
+            # get floating_ips for each fixed_ip
+            # add them to the fixed ip
+            for fixed_ip in network_IPs:
+                fipgbfa = self.db.floating_ip_get_by_fixed_address
+                floating_ips = fipgbfa(context, fixed_ip['address'])
+                floating_ips = [network_model.IP(address=ip['address'],
+                                                 type='floating')
+                                for ip in floating_ips]
+                for ip in floating_ips:
+                    fixed_ip.add_floating_ip(ip)
+
+            # at this point nova networks can only have 2 subnets,
+            # one for v4 and one for v6, all ips will belong to the v4 subnet
+            # and the v6 subnet contains a single calculated v6 address
+            for subnet in subnets:
+                if subnet['version'] == 4:
+                    # since subnet currently has no IPs, easily add them all
+                    subnet['ips'] = network_IPs
+                else:
+                    v6_addr = ipv6.to_global(subnet['cidr'], vif['address'],
+                                                         context.project_id)
+                    subnet.add_ip(network_model.FixedIP(address=v6_addr))
+
+            # convert network into a Network model object
+            network = network_model.Network(**self._get_network_dict(network))
+
+            # since network currently has no subnets, easily add them all
+            network['subnets'] = subnets
+
+            # create the vif model and add to network_info
+            vif_dict = {'id': vif['uuid'],
+                        'address': vif['address'],
+                        'network': network}
+            if rxtx_cap:
+                vif_dict['rxtx_cap'] = rxtx_cap
+
+            vif = network_model.VIF(**vif_dict)
+            nw_info.append(vif)
+
+        return nw_info
+
+    def _get_network_dict(self, network):
+        """Returns the dict representing necessary fields from network"""
+        network_dict = {'id': network['uuid'],
+                        'bridge': network['bridge'],
+                        'label': network['label']}
+
+        if network['injected']:
+            network_dict['injected'] = network['injected']
+        if network['vlan']:
+            network_dict['vlan'] = network['vlan']
+        if network['bridge_interface']:
+            network_dict['bridge_interface'] = network['bridge_interface']
+        if network['multi_host']:
+            network_dict['multi_host'] = network['multi_host']
+
+        return network_dict
+
+    def _get_subnets_from_network(self, network):
+        """Returns the 1 or 2 possible subnets for a nova network"""
+        subnets = []
+
+        # get dns information from network
+        dns = []
+        if network['dns1']:
+            dns.append(network_model.IP(address=network['dns1'], type='dns'))
+        if network['dns2']:
+            dns.append(network_model.IP(address=network['dns2'], type='dns'))
+
+        # if network contains v4 subnet
+        if network['cidr']:
+            subnet = network_model.Subnet(cidr=network['cidr'],
+                                          gateway=network_model.IP(
+                                              address=network['gateway'],
+                                              type='gateway'))
+            # if either dns address is v4, add it to subnet
+            for ip in dns:
+                if ip['version'] == 4:
+                    subnet.add_dns(ip)
+
+            # TODO(tr3buchet): add routes to subnet once it makes sense
+            # create default route from gateway
+            #route = network_model.Route(cidr=network['cidr'],
+            #                             gateway=network['gateway'])
+            #subnet.add_route(route)
+
+            # store subnet for return
+            subnets.append(subnet)
+
+        # if network contains a v6 subnet
+        if network['cidr_v6']:
+            subnet = network_model.Subnet(cidr=network['cidr_v6'],
+                                          gateway=network_model.IP(
+                                              address=network['gateway_v6'],
+                                              type='gateway'))
+            # if either dns address is v6, add it to subnet
+            for entry in dns:
+                if entry['version'] == 6:
+                    subnet.add_dns(entry)
+
+            # TODO(tr3buchet): add routes to subnet once it makes sense
+            # create default route from gateway
+            #route = network_model.Route(cidr=network['cidr_v6'],
+            #                             gateway=network['gateway_v6'])
+            #subnet.add_route(route)
+
+            # store subnet for return
+            subnets.append(subnet)
+
+        return subnets
 
     def _allocate_mac_addresses(self, context, instance_id, networks):
         """Generates mac addresses and creates vif rows in db for them."""

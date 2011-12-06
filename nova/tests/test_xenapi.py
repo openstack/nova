@@ -619,11 +619,12 @@ class XenAPIVMTestCase(test.TestCase):
             self.network.set_network_host(ctxt, network)
 
         self.network.allocate_for_instance(ctxt,
-                                           instance_id=2,
-                                           host=FLAGS.host,
-                                           vpn=None,
-                                           instance_type_id=1,
-                                           project_id=self.project_id)
+                          instance_id=2,
+                          instance_uuid="00000000-0000-0000-0000-000000000000",
+                          host=FLAGS.host,
+                          vpn=None,
+                          instance_type_id=1,
+                          project_id=self.project_id)
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK,

@@ -1093,6 +1093,10 @@ def instance_create(context, values):
     session = get_session()
     with session.begin():
         instance_ref.save(session=session)
+
+    # and creat the info_cache table entry for instance
+    instance_info_cache_create(context, {'instance_id': instance_ref['uuid']})
+
     return instance_ref
 
 
@@ -1133,8 +1137,7 @@ def instance_destroy(context, instance_id):
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
-        instance_info_cache_delete_by_instance_id(context, instance_id,
-                                                  session=session)
+        instance_info_cache_delete(context, instance_id, session=session)
 
 
 @require_context
@@ -1189,6 +1192,7 @@ def _build_instance_get(context, session=None):
             options(joinedload_all('fixed_ips.network')).\
             options(joinedload_all('fixed_ips.virtual_interface')).\
             options(joinedload_all('security_groups.rules')).\
+            options(joinedload('info_cache')).\
             options(joinedload('volumes')).\
             options(joinedload('metadata')).\
             options(joinedload('instance_type'))
@@ -1198,6 +1202,7 @@ def _build_instance_get(context, session=None):
 def instance_get_all(context):
     return model_query(context, models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('info_cache')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
@@ -1250,6 +1255,7 @@ def instance_get_all_by_filters(context, filters):
             options(joinedload_all('fixed_ips.floating_ips')).\
             options(joinedload_all('fixed_ips.network')).\
             options(joinedload_all('fixed_ips.virtual_interface')).\
+            options(joinedload('info_cache')).\
             options(joinedload('security_groups')).\
             options(joinedload('metadata')).\
             options(joinedload('instance_type')).\
@@ -1365,6 +1371,7 @@ def instance_get_active_by_window_joined(context, begin, end=None,
 def _instance_get_all_query(context, project_only=False):
     return model_query(context, models.Instance, project_only=project_only).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('info_cache')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
@@ -1563,7 +1570,6 @@ def instance_info_cache_create(context, values):
     :param values: = dict containing column values
     """
     info_cache = models.InstanceInfoCache()
-    info_cache['id'] = str(utils.gen_uuid())
     info_cache.update(values)
 
     session = get_session()
@@ -1576,7 +1582,7 @@ def instance_info_cache_create(context, values):
 def instance_info_cache_get(context, instance_id, session=None):
     """Gets an instance info cache from the table.
 
-    :param instance_id: = id of the info cache's instance
+    :param instance_id: = uuid of the info cache's instance
     :param session: = optional session object
     """
     session = session or get_session()
@@ -1592,7 +1598,7 @@ def instance_info_cache_update(context, instance_id, values,
                                session=None):
     """Update an instance info cache record in the table.
 
-    :param instance_id: = id of info cache's instance
+    :param instance_id: = uuid of info cache's instance
     :param values: = dict containing column values to update
     :param session: = optional session object
     """
@@ -1609,11 +1615,10 @@ def instance_info_cache_update(context, instance_id, values,
 
 
 @require_context
-def instance_info_cache_delete_by_instance_id(context, instance_id,
-                                              session=None):
+def instance_info_cache_delete(context, instance_id, session=None):
     """Deletes an existing instance_info_cache record
 
-    :param instance_id: = id of the instance tied to the cache record
+    :param instance_id: = uuid of the instance tied to the cache record
     :param session: = optional session object
     """
     values = {'deleted': True,
