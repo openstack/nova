@@ -1375,7 +1375,7 @@ class API(base.Base):
 
     def get_actions(self, context, instance):
         """Retrieve actions for the given instance."""
-        return self.db.instance_get_actions(context, instance['id'])
+        return self.db.instance_get_actions(context, instance['uuid'])
 
     @check_vm_state(state_checker.SUSPEND)
     @scheduler_api.reroute_compute(state_checker.SUSPEND)

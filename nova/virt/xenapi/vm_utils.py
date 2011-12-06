@@ -316,7 +316,7 @@ class VMHelper(HelperBase):
                 "%(vm_ref)s") % locals())
 
     @classmethod
-    def create_snapshot(cls, session, instance_id, vm_ref, label):
+    def create_snapshot(cls, session, instance, vm_ref, label):
         """Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
         Snapshot VHD"""
         LOG.debug(_("Snapshotting VM %(vm_ref)s with label '%(label)s'...")
@@ -328,7 +328,7 @@ class VMHelper(HelperBase):
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
-        template_vm_ref = session.wait_for_task(task, instance_id)
+        template_vm_ref = session.wait_for_task(task, instance['uuid'])
         template_vdi_rec = cls.get_vdi_for_vm_safely(session,
                 template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
@@ -336,8 +336,8 @@ class VMHelper(HelperBase):
         LOG.debug(_('Created snapshot %(template_vm_ref)s from'
                 ' VM %(vm_ref)s.') % locals())
 
-        parent_uuid = wait_for_vhd_coalesce(
-            session, instance_id, sr_ref, vm_vdi_ref, original_parent_uuid)
+        parent_uuid = _wait_for_vhd_coalesce(
+            session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
 
         #TODO(sirp): we need to assert only one parent, not parents two deep
         template_vdi_uuids = {'image': parent_uuid,
@@ -382,7 +382,7 @@ class VMHelper(HelperBase):
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
-        session.wait_for_task(task, instance.id)
+        session.wait_for_task(task, instance['uuid'])
 
     @classmethod
     def resize_disk(cls, session, vdi_ref, instance_type):
@@ -550,7 +550,7 @@ class VMHelper(HelperBase):
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
-        result = session.wait_for_task(task, instance_id)
+        result = session.wait_for_task(task, instance['uuid'])
         # 'download_vhd' will return a json encoded string containing
         # a list of dictionaries describing VDIs.  The dictionary will
         # contain 'vdi_type' and 'vdi_uuid' keys.  'vdi_type' can be
@@ -560,7 +560,7 @@ class VMHelper(HelperBase):
             LOG.debug(_("xapi 'download_vhd' returned VDI of "
                     "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'" % vdi))
 
-        cls.scan_sr(session, instance_id, sr_ref)
+        cls.scan_sr(session, instance, sr_ref)
 
         # Pull out the UUID of the first VDI (which is the os VDI)
         os_vdi_uuid = vdis[0]['vdi_uuid']
@@ -675,7 +675,7 @@ class VMHelper(HelperBase):
                 # Let the plugin copy the correct number of bytes.
                 args['image-size'] = str(vdi_size)
                 task = session.async_call_plugin('glance', fn, args)
-                filename = session.wait_for_task(task, instance_id)
+                filename = session.wait_for_task(task, instance['uuid'])
                 # Remove the VDI as it is not needed anymore.
                 session.call_xenapi("VDI.destroy", vdi_ref)
                 LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
@@ -909,12 +909,13 @@ class VMHelper(HelperBase):
         raise exception.CouldNotFetchMetrics()
 
     @classmethod
-    def scan_sr(cls, session, instance_id=None, sr_ref=None):
+    def scan_sr(cls, session, instance=None, sr_ref=None):
         """Scans the SR specified by sr_ref"""
         if sr_ref:
             LOG.debug(_("Re-scanning SR %s"), sr_ref)
             task = session.call_xenapi('Async.SR.scan', sr_ref)
-            session.wait_for_task(task, instance_id)
+            instance_uuid = instance['uuid'] if instance else None
+            session.wait_for_task(task, instance_uuid)
 
     @classmethod
     def scan_default_sr(cls, session):
@@ -1128,8 +1129,8 @@ def walk_vdi_chain(session, vdi_uuid):
             break
 
 
-def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
-                          original_parent_uuid):
+def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
+                           original_parent_uuid):
     """ Spin until the parent VHD is coalesced into its parent VHD
 
     Before coalesce:
@@ -1152,7 +1153,7 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                     " %(max_attempts)d), giving up...") % locals())
             raise exception.Error(msg)
 
-        VMHelper.scan_sr(session, instance_id, sr_ref)
+        VMHelper.scan_sr(session, instance, sr_ref)
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
             LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"

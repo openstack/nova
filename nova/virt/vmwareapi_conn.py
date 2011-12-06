@@ -348,20 +348,20 @@ class VMWareAPISession(object):
             self._create_session()
         return self.vim
 
-    def _wait_for_task(self, instance_id, task_ref):
+    def _wait_for_task(self, instance_uuid, task_ref):
         """
         Return a Deferred that will give the result of the given task.
         The task is polled until it completes.
         """
         done = event.Event()
-        loop = utils.LoopingCall(self._poll_task, instance_id, task_ref,
+        loop = utils.LoopingCall(self._poll_task, instance_uuid, task_ref,
                                       done)
         loop.start(FLAGS.vmwareapi_task_poll_interval, now=True)
         ret_val = done.wait()
         loop.stop()
         return ret_val
 
-    def _poll_task(self, instance_id, task_ref, done):
+    def _poll_task(self, instance_uuid, task_ref, done):
         """
         Poll the given task, and fires the given Deferred if we
         get a result.
@@ -371,7 +371,7 @@ class VMWareAPISession(object):
                             task_ref, "Task", "info")
             task_name = task_info.name
             action = dict(
-                instance_id=int(instance_id),
+                instance_uuid=instance_uuid,
                 action=task_name[0:255],
                 error=None)
             if task_info.state in ['queued', 'running']:

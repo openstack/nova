@@ -615,7 +615,7 @@ class VMOps(object):
         label = "%s-snapshot" % instance.name
         try:
             template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
-                self._session, instance.id, vm_ref, label)
+                    self._session, instance, vm_ref, label)
             return template_vm_ref, template_vdi_uuids
         except self.XenAPI.Failure, exc:
             logging.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
@@ -635,7 +635,7 @@ class VMOps(object):
             task = self._session.async_call_plugin('migration',
                                                    'transfer_vhd',
                                                    _params)
-            self._session.wait_for_task(task, instance_id)
+            self._session.wait_for_task(task, instance_uuid)
         except self.XenAPI.Failure:
             msg = _("Failed to transfer vhd to new host")
             raise exception.MigrationError(reason=msg)
@@ -797,7 +797,7 @@ class VMOps(object):
 
         task = self._session.async_call_plugin('migration',
                 'move_vhds_into_sr', {'params': pickle.dumps(params)})
-        self._session.wait_for_task(task, instance.id)
+        self._session.wait_for_task(task, instance['uuid'])
 
         # Now we rescan the SR so we find the VHDs
         VMHelper.scan_default_sr(self._session)
@@ -848,7 +848,7 @@ class VMOps(object):
         else:
             task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
 
-        self._session.wait_for_task(task, instance.id)
+        self._session.wait_for_task(task, instance['uuid'])
 
     def get_agent_version(self, instance):
         """Get the version of the agent running on the VM instance."""
@@ -989,7 +989,7 @@ class VMOps(object):
             else:
                 task = self._session.call_xenapi("Async.VM.clean_shutdown",
                                                  vm_ref)
-            self._session.wait_for_task(task, instance.id)
+            self._session.wait_for_task(task, instance['uuid'])
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
@@ -1021,7 +1021,7 @@ class VMOps(object):
         for vdi_ref in vdi_refs:
             try:
                 task = self._session.call_xenapi('Async.VDI.destroy', vdi_ref)
-                self._session.wait_for_task(task, instance.id)
+                self._session.wait_for_task(task, instance['uuid'])
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
@@ -1091,7 +1091,7 @@ class VMOps(object):
         instance_uuid = instance['uuid']
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm_ref)
-            self._session.wait_for_task(task, instance_id)
+            self._session.wait_for_task(task, instance_uuid)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
@@ -1147,26 +1147,26 @@ class VMOps(object):
         """Pause VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.pause', vm_ref)
-        self._session.wait_for_task(task, instance.id)
+        self._session.wait_for_task(task, instance['uuid'])
 
     def unpause(self, instance):
         """Unpause VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.unpause', vm_ref)
-        self._session.wait_for_task(task, instance.id)
+        self._session.wait_for_task(task, instance['uuid'])
 
     def suspend(self, instance):
         """Suspend the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.suspend', vm_ref)
-        self._session.wait_for_task(task, instance.id)
+        self._session.wait_for_task(task, instance['uuid'])
 
     def resume(self, instance):
         """Resume the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.resume',
                                          vm_ref, False, True)
-        self._session.wait_for_task(task, instance.id)
+        self._session.wait_for_task(task, instance['uuid'])
 
     def rescue(self, context, instance, network_info, image_meta):
         """Rescue the specified instance.
@@ -1402,7 +1402,7 @@ class VMOps(object):
             task = self._session.async_call_plugin("xenhost", method,
                     args=arg_dict)
                     #args={"params": arg_dict})
-            ret = self._session.wait_for_task(task, task_id)
+            ret = self._session.wait_for_task(task, str(task_id))
         except self.XenAPI.Failure as e:
             ret = e
             LOG.error(_("The call to %(method)s returned an error: %(e)s.")
@@ -1557,7 +1557,7 @@ class VMOps(object):
         args.update(addl_args or {})
         try:
             task = self._session.async_call_plugin(plugin, method, args)
-            ret = self._session.wait_for_task(task, instance_id)
+            ret = self._session.wait_for_task(task, instance_uuid)
         except self.XenAPI.Failure, e:
             ret = None
             err_msg = e.details[-1].splitlines()[-1]
