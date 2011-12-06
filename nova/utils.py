@@ -37,7 +37,6 @@ import time
 import types
 import uuid
 import pyclbr
-import netaddr
 from xml.sax import saxutils
 
 from eventlet import event
