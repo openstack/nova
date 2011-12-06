@@ -114,7 +114,7 @@ function run_pep8 {
   #     as well.
   ${wrapper} pep8 --repeat --show-pep8 --show-source \
     --ignore=E202,W602 \
-    --exclude=vcsversion.py ${srcfiles}
+    ${srcfiles}
 }
 
 NOSETESTS="python run_tests.py $noseopts $noseargs"
