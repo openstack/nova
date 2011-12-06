@@ -59,16 +59,6 @@ except:
     pass
 
 
-try:
-    from babel.messages import frontend as babel
-    nova_cmdclass['compile_catalog'] = babel.compile_catalog
-    nova_cmdclass['extract_messages'] = babel.extract_messages
-    nova_cmdclass['init_catalog'] = babel.init_catalog
-    nova_cmdclass['update_catalog'] = babel.update_catalog
-except:
-    pass
-
-
 def find_data_files(destdir, srcdir):
     package_data = []
     files = []
