@@ -1238,8 +1238,9 @@ class CloudController(object):
         LOG.audit(_("Associate address %(public_ip)s to"
                 " instance %(instance_id)s") % locals(), context=context)
         instance_id = ec2utils.ec2_id_to_id(instance_id)
+        instance = self.compute_api.get(context, instance_id)
         self.compute_api.associate_floating_ip(context,
-                                               instance_id=instance_id,
+                                               instance,
                                                address=public_ip)
         return {'associateResponse': ["Address associated."]}
 

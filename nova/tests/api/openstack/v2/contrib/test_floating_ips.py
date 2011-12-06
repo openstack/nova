@@ -16,7 +16,6 @@
 from lxml import etree
 import webob
 
-from nova.api.openstack import wsgi
 from nova.api.openstack.v2.contrib import floating_ips
 from nova import context
 from nova import db
@@ -24,6 +23,7 @@ from nova import network
 from nova import rpc
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova import utils
 
 
 def network_api_get_floating_ip(self, context, id):
@@ -84,6 +84,7 @@ def network_get_instance_nw_info(self, context, instance):
 def fake_instance_get(context, instance_id):
         return {
         "id": 1,
+        "uuid": utils.gen_uuid(),
         "name": 'fake',
         "user_id": 'fakeuser',
         "project_id": '123'}
