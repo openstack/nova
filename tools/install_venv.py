@@ -27,6 +27,7 @@ import optparse
 import os
 import subprocess
 import sys
+import platform
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -98,6 +99,17 @@ class Distro(object):
         pass
 
 
+class UbuntuOneiric(Distro):
+    """Oneiric specific installation steps"""
+
+    def install_m2crypto(self):
+        """
+        The pip installed version of m2crypto has problems on oneiric
+        """
+        run_command(['sudo', 'apt-get', 'install', '-y',
+            "python-m2crypto"])
+
+
 class Fedora(Distro):
     """This covers all Fedora-based distributions.
 
@@ -155,6 +167,8 @@ def get_distro():
     if os.path.exists('/etc/fedora-release') or \
        os.path.exists('/etc/redhat-release'):
         return Fedora()
+    elif platform.linux_distribution()[2] == 'oneiric':
+        return UbuntuOneiric()
     else:
         return Distro()
 
