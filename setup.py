@@ -40,34 +40,9 @@ except ImportError:
 
 gettext.install('nova', unicode=1)
 
-from nova.utils import parse_mailmap, str_dict_replace
 from nova import version
 
-if os.path.isdir('.bzr'):
-    with open("nova/vcsversion.py", 'w') as version_file:
-        vcs_cmd = subprocess.Popen(["bzr", "version-info", "--python"],
-                                   stdout=subprocess.PIPE)
-        vcsversion = vcs_cmd.communicate()[0]
-        version_file.write(vcsversion)
-
-
-class local_sdist(sdist):
-    """Customized sdist hook - builds the ChangeLog file from VC first"""
-
-    def run(self):
-        if os.path.isdir('.bzr'):
-            # We're in a bzr branch
-            env = os.environ.copy()
-            env['BZR_PLUGIN_PATH'] = os.path.abspath('./bzrplugins')
-            log_cmd = subprocess.Popen(["bzr", "log", "--novalog"],
-                                       stdout=subprocess.PIPE, env=env)
-            changelog = log_cmd.communicate()[0]
-            mailmap = parse_mailmap()
-            with open("ChangeLog", "w") as changelog_file:
-                changelog_file.write(str_dict_replace(changelog, mailmap))
-        sdist.run(self)
-nova_cmdclass = {'sdist': local_sdist}
-
+nova_cmdclass = {}
 
 try:
     from sphinx.setup_command import BuildDoc
@@ -106,6 +81,14 @@ def find_data_files(destdir, srcdir):
     package_data += [(destdir, files)]
     return package_data
 
+
+def load_required_packages():
+    with file('tools/pip-requires', 'r') as f:
+        return [line.strip() for line in f]
+
+
+required_packages = load_required_packages()
+
 setup(name='nova',
       version=version.canonical_version_string(),
       description='cloud computing fabric controller',
@@ -117,6 +100,7 @@ setup(name='nova',
       include_package_data=True,
       test_suite='nose.collector',
       data_files=find_data_files('share/nova', 'tools'),
+      install_requires=required_packages,
       scripts=['bin/nova-ajax-console-proxy',
                'bin/nova-api',
                'bin/nova-api-ec2',
