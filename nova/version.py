@@ -14,14 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-try:
-    from nova.vcsversion import version_info
-except ImportError:
-    version_info = {'branch_nick': u'LOCALBRANCH',
-                    'revision_id': 'LOCALREVISION',
-                    'revno': 0}
-
-
 NOVA_VERSION = ['2012', '1']
 YEAR, COUNT = NOVA_VERSION
 FINAL = False   # This becomes true at Release Candidate time
@@ -39,7 +31,7 @@ def version_string():
 
 
 def vcs_version_string():
-    return '%s:%s' % (version_info['branch_nick'], version_info['revision_id'])
+    return 'LOCALBRANCH:LOCALREVISION'
 
 
 def version_string_with_vcs():
