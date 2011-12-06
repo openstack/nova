@@ -970,7 +970,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.destroy(instance_ref, network_info)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
-                instance_ref['host'])
+                migration_ref['source_compute'])
         rpc.cast(context, topic,
                 {'method': 'finish_revert_resize',
                  'args': {'instance_uuid': instance_ref['uuid'],
