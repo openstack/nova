@@ -76,36 +76,21 @@ class APITest(test.TestCase):
 
         body = etree.XML(res.body)
 
-    def test_exceptions_are_converted_to_faults(self):
-
-        @webob.dec.wsgify
-        def succeed(req):
-            return 'Succeeded'
-
+    def test_exceptions_are_converted_to_faults_webob_exc(self):
         @webob.dec.wsgify
         def raise_webob_exc(req):
             raise webob.exc.HTTPNotFound(explanation='Raised a webob.exc')
 
-        @webob.dec.wsgify
-        def fail(req):
-            raise Exception("Threw an exception")
+        #api.application = raise_webob_exc
+        api = self._wsgi_app(raise_webob_exc)
+        resp = Request.blank('/').get_response(api)
+        self.assertEqual(resp.status_int, 404, resp.body)
 
+    def test_exceptions_are_converted_to_faults_api_fault(self):
         @webob.dec.wsgify
         def raise_api_fault(req):
             exc = webob.exc.HTTPNotFound(explanation='Raised a webob.exc')
             return wsgi.Fault(exc)
-
-        #api.application = succeed
-        api = self._wsgi_app(succeed)
-        resp = Request.blank('/').get_response(api)
-        self.assertFalse('cloudServersFault' in resp.body, resp.body)
-        self.assertEqual(resp.status_int, 200, resp.body)
-
-        #api.application = raise_webob_exc
-        api = self._wsgi_app(raise_webob_exc)
-        resp = Request.blank('/').get_response(api)
-        self.assertFalse('cloudServersFault' in resp.body, resp.body)
-        self.assertEqual(resp.status_int, 404, resp.body)
 
         #api.application = raise_api_fault
         api = self._wsgi_app(raise_api_fault)
@@ -113,14 +98,24 @@ class APITest(test.TestCase):
         self.assertTrue('itemNotFound' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 404, resp.body)
 
+    def test_exceptions_are_converted_to_faults_exception(self):
+        @webob.dec.wsgify
+        def fail(req):
+            raise Exception("Threw an exception")
+
         #api.application = fail
         api = self._wsgi_app(fail)
         resp = Request.blank('/').get_response(api)
-        self.assertTrue('{"cloudServersFault' in resp.body, resp.body)
+        self.assertTrue('{"computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
+
+    def test_exceptions_are_converted_to_faults_exception_xml(self):
+        @webob.dec.wsgify
+        def fail(req):
+            raise Exception("Threw an exception")
 
         #api.application = fail
         api = self._wsgi_app(fail)
         resp = Request.blank('/.xml').get_response(api)
-        self.assertTrue('<cloudServersFault' in resp.body, resp.body)
+        self.assertTrue('<computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
