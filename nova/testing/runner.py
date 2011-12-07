@@ -63,12 +63,15 @@ import unittest
 import sys
 import time
 
-gettext.install('nova', unicode=1)
-
 import eventlet
 from nose import config
 from nose import core
 from nose import result
+
+gettext.install('nova', unicode=1)
+reldir = os.path.join(os.path.dirname(__file__), '..', '..')
+absdir = os.path.abspath(reldir)
+sys.path.insert(0, absdir)
 
 from nova import log as logging
 
