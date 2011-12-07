@@ -100,7 +100,7 @@ class QuantumManager(manager.FlatManager):
         projects = db.project_get_all(admin_context)
         for p in projects:
             networks.extend(self.ipam.get_project_networks(admin_context,
-                project_id))
+                p['id']))
         return networks
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,

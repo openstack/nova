@@ -193,6 +193,12 @@ class QuantumNovaTestCase(test.TestCase):
     def setUp(self):
         super(QuantumNovaTestCase, self).setUp()
 
+        # Create an actual project -- with this we will touch more of
+        # the code in QuantumManager (related to fetching networks, etc)
+        for x in ['fake_project1', 'fake_project2']:
+            values = {'id': x, 'name': x}
+            project = db.project_create(context.get_admin_context(), values)
+
         self.net_man = quantum_manager.QuantumManager(
                 ipam_lib="nova.network.quantum.nova_ipam_lib",
                 q_conn=FakeQuantumClientConnection())
@@ -213,6 +219,11 @@ class QuantumNovaTestCase(test.TestCase):
         with session.begin():
             for fip_ref in result:
                 session.delete(fip_ref)
+
+    def tearDown(self):
+        # Clean up our projects
+        db.project_delete(context.get_admin_context(), 'fake_project1')
+        db.project_delete(context.get_admin_context(), 'fake_project2')
 
     def _create_network(self, n):
         ctx = context.RequestContext('user1', n['project_id'])
