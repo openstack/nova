@@ -1131,11 +1131,15 @@ class API(base.Base):
         if task_state == task_states.IMAGE_SNAPSHOT:
             raise exception.InstanceSnapshotting(instance_uuid=instance_uuid)
 
-        properties = {'instance_uuid': instance_uuid,
-                      'user_id': str(context.user_id),
-                      'image_state': 'creating',
-                      'image_type': image_type,
-                      'backup_type': backup_type}
+        properties = {
+            'instance_uuid': instance_uuid,
+            'user_id': str(context.user_id),
+            'image_type': image_type,
+        }
+
+        if image_type == 'backup':
+            properties['backup_type'] = backup_type
+
         properties.update(extra_properties or {})
         sent_meta = {'name': name, 'is_public': False,
                      'status': 'creating', 'properties': properties}

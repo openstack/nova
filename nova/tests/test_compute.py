@@ -1504,13 +1504,32 @@ class ComputeAPITestCase(BaseTestCase):
     def test_snapshot(self):
         """Can't backup an instance which is already being backed up."""
         instance = self._create_fake_instance()
-        self.compute_api.snapshot(self.context, instance, None, None)
+        image = self.compute_api.snapshot(self.context, instance, 'snap1',
+                                        {'extra_param': 'value1'})
+
+        self.assertEqual(image['name'], 'snap1')
+        properties = image['properties']
+        self.assertTrue('backup_type' not in properties)
+        self.assertEqual(properties['image_type'], 'snapshot')
+        self.assertEqual(properties['instance_uuid'], instance['uuid'])
+        self.assertEqual(properties['extra_param'], 'value1')
+
         db.instance_destroy(self.context, instance['id'])
 
     def test_backup(self):
         """Can't backup an instance which is already being backed up."""
         instance = self._create_fake_instance()
-        self.compute_api.backup(self.context, instance, None, None, None)
+        image = self.compute_api.backup(self.context, instance,
+                                        'backup1', 'DAILY', None,
+                                        {'extra_param': 'value1'})
+
+        self.assertEqual(image['name'], 'backup1')
+        properties = image['properties']
+        self.assertEqual(properties['backup_type'], 'DAILY')
+        self.assertEqual(properties['image_type'], 'backup')
+        self.assertEqual(properties['instance_uuid'], instance['uuid'])
+        self.assertEqual(properties['extra_param'], 'value1')
+
         db.instance_destroy(self.context, instance['id'])
 
     def test_backup_conflict(self):
