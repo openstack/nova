@@ -222,7 +222,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance['deleted_at'], None)
         terminate = utils.utcnow()
         self.compute.terminate_instance(self.context, instance['uuid'])
-        context = self.context.elevated(True)
+        context = self.context.elevated(read_deleted="only")
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assert_(instance['launched_at'] < terminate)
         self.assert_(instance['deleted_at'] > terminate)
@@ -674,7 +674,7 @@ class ComputeTestCase(BaseTestCase):
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
 
-        non_admin_context = context.RequestContext(None, None, False, False)
+        non_admin_context = context.RequestContext(None, None, is_admin=False)
 
         # decorator should return False (fail) with locked nonadmin context
         self.compute.lock_instance(self.context, instance_uuid)
@@ -1230,8 +1230,9 @@ class ComputeAPITestCase(BaseTestCase):
 
         try:
             db.security_group_destroy(self.context, group['id'])
-            group = db.security_group_get(context.get_admin_context(
-                                          read_deleted=True), group['id'])
+            admin_deleted_context = context.get_admin_context(
+                    read_deleted="only")
+            group = db.security_group_get(admin_deleted_context, group['id'])
             self.assert_(len(group.instances) == 0)
         finally:
             db.instance_destroy(self.context, ref[0]['id'])

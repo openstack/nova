@@ -40,7 +40,7 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def setUp(self):
         super(VMWareAPIVMTestCase, self).setUp()
-        self.context = context.RequestContext('fake', 'fake', False)
+        self.context = context.RequestContext('fake', 'fake', is_admin=False)
         self.flags(vmwareapi_host_ip='test_url',
                    vmwareapi_host_username='test_username',
                    vmwareapi_host_password='test_pass')

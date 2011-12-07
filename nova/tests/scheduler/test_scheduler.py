@@ -312,7 +312,7 @@ class SimpleDriverTestCase(test.TestCase):
                                    FLAGS.compute_manager)
         compute1.start()
         _create_instance()
-        ctxt = context.RequestContext('fake', 'fake', False)
+        ctxt = context.RequestContext('fake', 'fake', is_admin=False)
         global instance_uuids
         instance_uuids = []
         self.stubs.Set(SimpleScheduler,

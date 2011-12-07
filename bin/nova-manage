@@ -1379,7 +1379,7 @@ class VsaCommands(object):
                 raise
 
         is_admin = self.manager.is_admin(user_id)
-        ctxt = context.RequestContext(user_id, project_id, is_admin)
+        ctxt = context.RequestContext(user_id, project_id, is_admin=is_admin)
         if not is_admin and \
            not self.manager.is_project_member(user_id, project_id):
             msg = _("%(user_id)s must be an admin or a "

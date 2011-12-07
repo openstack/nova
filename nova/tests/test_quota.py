@@ -53,7 +53,7 @@ class QuotaTestCase(test.TestCase):
         self.project_id = 'admin'
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
-                                              True)
+                                              is_admin=True)
         orig_rpc_call = rpc.call
 
         def rpc_call_wrapper(context, topic, msg):

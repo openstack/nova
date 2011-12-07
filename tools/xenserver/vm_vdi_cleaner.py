@@ -129,8 +129,7 @@ def get_instance_id_from_name_label(name_label, template):
 
 def find_orphaned_instances(session, verbose=False):
     """Find and return a list of orphaned instances."""
-    ctxt = context.get_admin_context()
-    ctxt.read_deleted = True
+    ctxt = context.get_admin_context(read_deleted="only")
 
     orphaned_instances = []
 
