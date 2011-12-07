@@ -838,6 +838,7 @@ class ComputeTestCase(BaseTestCase):
         instance_type_ref = db.instance_type_get(context,
                 inst_ref['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
+        self.assertEqual(inst_ref['host'], migration_ref['source_compute'])
 
         self.compute.terminate_instance(context, inst_ref['uuid'])
 
