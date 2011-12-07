@@ -318,7 +318,7 @@ class ZoneManager(object):
         """Try to connect to each child zone and get update."""
         self.green_pool.imap(_poll_zone, self.zone_states.values())
 
-    def ping(self, context=None):
+    def ping(self, context):
         """Ping should be called periodically to update zone status."""
         diff = utils.utcnow() - self.last_zone_db_check
         if diff.seconds >= FLAGS.zone_db_check_interval:

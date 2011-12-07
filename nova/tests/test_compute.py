@@ -1054,8 +1054,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.test_remove_vm(instance_name)
 
         # Force the compute manager to do its periodic poll
-        error_list = self.compute.periodic_tasks(context.get_admin_context())
-        self.assertFalse(error_list)
+        ctxt = context.get_admin_context()
+        self.compute.periodic_tasks(ctxt, raise_on_error=True)
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("After force-killing instances: %s"), instances)

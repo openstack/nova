@@ -506,9 +506,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         for network in self.db.network_get_all_by_host(ctxt, self.host):
             self._setup_network(ctxt, network)
 
-    def periodic_tasks(self, context=None):
-        """Tasks to be run at a periodic interval."""
-        super(NetworkManager, self).periodic_tasks(context)
+    @manager.periodic_task
+    def _disassociate_stale_fixed_ips(self, context):
         if self.timeout_fixed_ips:
             now = utils.utcnow()
             timeout = FLAGS.fixed_ip_disassociate_timeout

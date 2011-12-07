@@ -54,7 +54,8 @@ class SchedulerManager(manager.Manager):
         """Converts all method calls to use the schedule method"""
         return functools.partial(self._schedule, key)
 
-    def periodic_tasks(self, context=None):
+    @manager.periodic_task
+    def _poll_child_zones(self, context):
         """Poll child zones periodically to get status."""
         self.zone_manager.ping(context)
 
