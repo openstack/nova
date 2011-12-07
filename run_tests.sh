@@ -117,7 +117,7 @@ function run_pep8 {
     ${srcfiles}
 }
 
-NOSETESTS="python run_tests.py $noseopts $noseargs"
+NOSETESTS="python nova/testing/runner.py $noseopts $noseargs"
 
 if [ $never_venv -eq 0 ]
 then

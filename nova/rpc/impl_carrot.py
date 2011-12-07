@@ -41,9 +41,9 @@ import greenlet
 
 from nova import context
 from nova import exception
-from nova import fakerabbit
 from nova import flags
 from nova.rpc.common import RemoteError, LOG
+from nova.testing import fake
 
 # Needed for tests
 eventlet.monkey_patch()
@@ -71,7 +71,7 @@ class Connection(carrot_connection.BrokerConnection):
                           virtual_host=FLAGS.rabbit_virtual_host)
 
             if FLAGS.fake_rabbit:
-                params['backend_cls'] = fakerabbit.Backend
+                params['backend_cls'] = fake.rabbit.Backend
 
             # NOTE(vish): magic is fun!
             # pylint: disable=W0142

@@ -29,7 +29,7 @@ Generating source/api/nova..db.sqlalchemy.api.rst
 Generating source/api/nova..db.sqlalchemy.models.rst
 Generating source/api/nova..db.sqlalchemy.session.rst
 Generating source/api/nova..exception.rst
-Generating source/api/nova..fakerabbit.rst
+Generating source/api/nova..fake.rabbit.rst
 Generating source/api/nova..flags.rst
 Generating source/api/nova..image.service.rst
 Generating source/api/nova..manager.rst

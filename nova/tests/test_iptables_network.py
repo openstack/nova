@@ -84,12 +84,12 @@ class IptablesManagerTestCase(test.TestCase):
         table = self.manager.ipv4['filter']
         table.add_rule('FORWARD', '-s 1.2.3.4/5 -j DROP')
         new_lines = self.manager._modify_rules(current_lines, table)
-        self.assertTrue('-A run_tests.py-FORWARD '
+        self.assertTrue('-A runner.py-FORWARD '
                         '-s 1.2.3.4/5 -j DROP' in new_lines)
 
         table.remove_rule('FORWARD', '-s 1.2.3.4/5 -j DROP')
         new_lines = self.manager._modify_rules(current_lines, table)
-        self.assertTrue('-A run_tests.py-FORWARD '
+        self.assertTrue('-A runner.py-FORWARD '
                         '-s 1.2.3.4/5 -j DROP' not in new_lines)
 
     def test_nat_rules(self):
@@ -123,7 +123,7 @@ class IptablesManagerTestCase(test.TestCase):
                         "nova-postouting-bottom: %s" % last_postrouting_line)
 
         for chain in ['POSTROUTING', 'PREROUTING', 'OUTPUT']:
-            self.assertTrue('-A %s -j run_tests.py-%s' \
+            self.assertTrue('-A %s -j runner.py-%s' \
                             % (chain, chain) in new_lines,
                             "Built-in chain %s not wrapped" % (chain,))
 
@@ -155,10 +155,10 @@ class IptablesManagerTestCase(test.TestCase):
                     break
 
         self.assertTrue('-A nova-filter-top '
-                        '-j run_tests.py-local' in new_lines,
+                        '-j runner.py-local' in new_lines,
                         "nova-filter-top does not jump to wrapped local chain")
 
         for chain in ['INPUT', 'OUTPUT', 'FORWARD']:
-            self.assertTrue('-A %s -j run_tests.py-%s' \
+            self.assertTrue('-A %s -j runner.py-%s' \
                             % (chain, chain) in new_lines,
                             "Built-in chain %s not wrapped" % (chain,))

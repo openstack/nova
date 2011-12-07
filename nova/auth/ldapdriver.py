@@ -72,7 +72,7 @@ LOG = logging.getLogger("nova.ldapdriver")
 if FLAGS.memcached_servers:
     import memcache
 else:
-    from nova import fakememcache as memcache
+    from nova.testing.fake import memcache
 
 
 # TODO(vish): make an abstract base class with the same public methods
