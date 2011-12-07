@@ -622,7 +622,7 @@ class HostState(object):
             return
         # Get the SR usage
         try:
-            sr_ref = vm_utils.safe_find_sr(self._session)
+            sr_ref = vm_utils.VMHelper.safe_find_sr(self._session)
         except exception.NotFound as e:
             # No SR configured
             LOG.error(_("Unable to get SR for this host: %s") % e)

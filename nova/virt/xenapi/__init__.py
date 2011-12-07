@@ -28,3 +28,28 @@ class HelperBase(object):
 
     def __init__(self):
         return
+
+    @classmethod
+    def get_rec(cls, session, record_type, ref):
+        try:
+            return session.call_xenapi('%s.get_record' % record_type, ref)
+        except cls.XenAPI.Failure, e:
+            if e.details[0] != 'HANDLE_INVALID':
+                raise
+
+        return None
+
+    @classmethod
+    def get_all_refs_and_recs(cls, session, record_type):
+        """Retrieve all refs and recs for a Xen record type.
+
+        Handles race-conditions where the record may be deleted between
+        the `get_all` call and the `get_record` call.
+        """
+
+        for ref in session.call_xenapi('%s.get_all' % record_type):
+            rec = cls.get_rec(session, record_type, ref)
+            # Check to make sure the record still exists. It may have
+            # been deleted between the get_all call and get_record call
+            if rec:
+                yield ref, rec

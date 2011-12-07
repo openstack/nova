@@ -1110,13 +1110,15 @@ class HostStateTestCase(test.TestCase):
     """Tests HostState, which holds metrics from XenServer that get
     reported back to the Schedulers."""
 
-    def _fake_safe_find_sr(self, session):
+    @classmethod
+    def _fake_safe_find_sr(cls, session):
         """None SR ref since we're ignoring it in FakeSR."""
         return None
 
     def test_host_state(self):
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(vm_utils, 'safe_find_sr', self._fake_safe_find_sr)
+        self.stubs.Set(vm_utils.VMHelper, 'safe_find_sr',
+                       self._fake_safe_find_sr)
         host_state = xenapi_conn.HostState(FakeSession())
         stats = host_state._stats
         self.assertEquals(stats['disk_total'], 10000)

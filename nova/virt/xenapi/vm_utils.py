@@ -353,7 +353,7 @@ class VMHelper(HelperBase):
         This is used when we're dealing with VHDs directly, either by taking
         snapshots or by restoring an image in the DISK_VHD format.
         """
-        sr_ref = safe_find_sr(session)
+        sr_ref = cls.safe_find_sr(session)
         sr_rec = session.call_xenapi("SR.get_record", sr_ref)
         sr_uuid = sr_rec["uuid"]
         return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
@@ -390,7 +390,7 @@ class VMHelper(HelperBase):
     def resize_disk(cls, session, vdi_ref, instance_type):
         # Copy VDI over to something we can resize
         # NOTE(jerdfelt): Would be nice to just set vdi_ref to read/write
-        sr_ref = safe_find_sr(session)
+        sr_ref = cls.safe_find_sr(session)
         copy_ref = session.call_xenapi('VDI.copy', vdi_ref, sr_ref)
         copy_uuid = session.call_xenapi('VDI.get_uuid', copy_ref)
 
@@ -455,7 +455,7 @@ class VMHelper(HelperBase):
             4. Create VBD between instance VM and swap VDI
         """
         # 1. Create VDI
-        sr_ref = safe_find_sr(session)
+        sr_ref = cls.safe_find_sr(session)
         name_label = instance.name + "-swap"
         ONE_MEG = 1024 * 1024
         virtual_size = swap_mb * ONE_MEG
@@ -503,7 +503,7 @@ class VMHelper(HelperBase):
         vdi_size = one_gig * req_size
 
         LOG.debug("ISO vm create: Looking for the SR")
-        sr_ref = safe_find_sr(session)
+        sr_ref = cls.safe_find_sr(session)
 
         vdi_ref = cls.create_vdi(session, sr_ref, 'blank HD', vdi_size, False)
         return vdi_ref
@@ -533,7 +533,7 @@ class VMHelper(HelperBase):
         instance_id = instance.id
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
                     % locals())
-        sr_ref = safe_find_sr(session)
+        sr_ref = cls.safe_find_sr(session)
 
         # NOTE(sirp): The Glance plugin runs under Python 2.4
         # which does not have the `uuid` module. To work around this,
@@ -634,10 +634,10 @@ class VMHelper(HelperBase):
         LOG.debug(_("Image Type: %s"), ImageType.to_string(image_type))
 
         if image_type == ImageType.DISK_ISO:
-            sr_ref = safe_find_iso_sr(session)
+            sr_ref = cls.safe_find_iso_sr(session)
             LOG.debug(_("ISO: Found sr possibly containing the ISO image"))
         else:
-            sr_ref = safe_find_sr(session)
+            sr_ref = cls.safe_find_sr(session)
 
         glance_client, image_id = glance.get_glance_client(context, image)
         glance_client.set_auth_token(getattr(context, 'auth_token', None))
@@ -787,12 +787,8 @@ class VMHelper(HelperBase):
 
     @classmethod
     def list_vms(cls, session):
-        vm_refs = session.call_xenapi("VM.get_all")
-        for vm_ref in vm_refs:
-            vm_rec = session.call_xenapi("VM.get_record", vm_ref)
-            if vm_rec["is_a_template"]:
-                continue
-            elif  vm_rec["is_control_domain"]:
+        for vm_ref, vm_rec in cls.get_all_refs_and_recs(session, 'VM'):
+            if vm_rec["is_a_template"] or vm_rec["is_control_domain"]:
                 continue
             else:
                 yield vm_ref, vm_rec
@@ -925,8 +921,75 @@ class VMHelper(HelperBase):
     @classmethod
     def scan_default_sr(cls, session):
         """Looks for the system default SR and triggers a re-scan"""
-        sr_ref = find_sr(session)
+        sr_ref = cls.find_sr(session)
         session.call_xenapi('SR.scan', sr_ref)
+
+    @classmethod
+    def safe_find_sr(cls, session):
+        """Same as find_sr except raises a NotFound exception if SR cannot be
+        determined
+        """
+        sr_ref = cls.find_sr(session)
+        if sr_ref is None:
+            raise exception.StorageRepositoryNotFound()
+        return sr_ref
+
+    @classmethod
+    def find_sr(cls, session):
+        """Return the storage repository to hold VM images"""
+        host = session.get_xenapi_host()
+
+        for sr_ref, sr_rec in cls.get_all_refs_and_recs(session, 'SR'):
+            if not ('i18n-key' in sr_rec['other_config'] and
+                    sr_rec['other_config']['i18n-key'] == 'local-storage'):
+                continue
+            for pbd_ref in sr_rec['PBDs']:
+                pbd_rec = cls.get_rec(session, 'PBD', pbd_ref)
+                if pbd_rec and pbd_rec['host'] == host:
+                    return sr_ref
+        return None
+
+    @classmethod
+    def safe_find_iso_sr(cls, session):
+        """Same as find_iso_sr except raises a NotFound exception if SR
+        cannot be determined
+        """
+        sr_ref = cls.find_iso_sr(session)
+        if sr_ref is None:
+            raise exception.NotFound(_('Cannot find SR of content-type ISO'))
+        return sr_ref
+
+    @classmethod
+    def find_iso_sr(cls, session):
+        """Return the storage repository to hold ISO images"""
+        host = session.get_xenapi_host()
+        for sr_ref, sr_rec in cls.get_all_refs_and_recs(session, 'SR'):
+            LOG.debug(_("ISO: looking at SR %(sr_rec)s") % locals())
+            if not sr_rec['content_type'] == 'iso':
+                LOG.debug(_("ISO: not iso content"))
+                continue
+            if not 'i18n-key' in sr_rec['other_config']:
+                LOG.debug(_("ISO: iso content_type, no 'i18n-key' key"))
+                continue
+            if not sr_rec['other_config']['i18n-key'] == 'local-storage-iso':
+                LOG.debug(_("ISO: iso content_type, i18n-key value not "
+                            "'local-storage-iso'"))
+                continue
+
+            LOG.debug(_("ISO: SR MATCHing our criteria"))
+            for pbd_ref in sr_rec['PBDs']:
+                LOG.debug(_("ISO: ISO, looking to see if it is host local"))
+                pbd_rec = cls.get_rec(session, 'PBD', pbd_ref)
+                if not pbd_rec:
+                    LOG.debug(_("ISO: PBD %(pbd_ref)s disappeared") % locals())
+                    continue
+                pbd_rec_host = pbd_rec['host']
+                LOG.debug(_("ISO: PBD matching, want %(pbd_rec)s, " +
+                            "have %(host)s") % locals())
+                if pbd_rec_host == host:
+                    LOG.debug(_("ISO: SR with local PBD"))
+                    return sr_ref
+        return None
 
 
 def get_rrd(host, vm_uuid):
@@ -1105,74 +1168,6 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
     loop.start(FLAGS.xenapi_vhd_coalesce_poll_interval, now=True)
     parent_uuid = loop.wait()
     return parent_uuid
-
-
-def safe_find_sr(session):
-    """Same as find_sr except raises a NotFound exception if SR cannot be
-    determined
-    """
-    sr_ref = find_sr(session)
-    if sr_ref is None:
-        raise exception.StorageRepositoryNotFound()
-    return sr_ref
-
-
-def find_sr(session):
-    """Return the storage repository to hold VM images"""
-    host = session.get_xenapi_host()
-    sr_refs = session.call_xenapi("SR.get_all")
-    for sr_ref in sr_refs:
-        sr_rec = session.call_xenapi("SR.get_record", sr_ref)
-        if not ('i18n-key' in sr_rec['other_config'] and
-                sr_rec['other_config']['i18n-key'] == 'local-storage'):
-            continue
-        for pbd_ref in sr_rec['PBDs']:
-            pbd_rec = session.call_xenapi("PBD.get_record", pbd_ref)
-            if pbd_rec['host'] == host:
-                return sr_ref
-    return None
-
-
-def safe_find_iso_sr(session):
-    """Same as find_iso_sr except raises a NotFound exception if SR cannot be
-    determined
-    """
-    sr_ref = find_iso_sr(session)
-    if sr_ref is None:
-        raise exception.NotFound(_('Cannot find SR of content-type ISO'))
-    return sr_ref
-
-
-def find_iso_sr(session):
-    """Return the storage repository to hold ISO images"""
-    host = session.get_xenapi_host()
-    sr_refs = session.call_xenapi("SR.get_all")
-    for sr_ref in sr_refs:
-        sr_rec = session.call_xenapi("SR.get_record", sr_ref)
-
-        LOG.debug(_("ISO: looking at SR %(sr_rec)s") % locals())
-        if not sr_rec['content_type'] == 'iso':
-            LOG.debug(_("ISO: not iso content"))
-            continue
-        if not 'i18n-key' in sr_rec['other_config']:
-            LOG.debug(_("ISO: iso content_type, no 'i18n-key' key"))
-            continue
-        if not sr_rec['other_config']['i18n-key'] == 'local-storage-iso':
-            LOG.debug(_("ISO: iso content_type, i18n-key value not "
-                        "'local-storage-iso'"))
-            continue
-
-        LOG.debug(_("ISO: SR MATCHing our criteria"))
-        for pbd_ref in sr_rec['PBDs']:
-            LOG.debug(_("ISO: ISO, looking to see if it is host local"))
-            pbd_rec = session.call_xenapi("PBD.get_record", pbd_ref)
-            pbd_rec_host = pbd_rec['host']
-            LOG.debug(_("ISO: PBD matching, want %(pbd_rec)s, have %(host)s") %
-                      locals())
-            if pbd_rec_host == host:
-                LOG.debug(_("ISO: SR with local PBD"))
-                return sr_ref
-    return None
 
 
 def remap_vbd_dev(dev):
