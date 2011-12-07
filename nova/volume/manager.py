@@ -279,21 +279,6 @@ class VolumeManager(manager.SchedulerDependentManager):
         for volume in instance_ref['volumes']:
             self.driver.check_for_export(context, volume['id'])
 
-    def periodic_tasks(self, context=None):
-        """Tasks to be run at a periodic interval."""
-
-        error_list = []
-        try:
-            self._report_driver_status()
-        except Exception as ex:
-            LOG.warning(_("Error during report_driver_status(): %s"),
-                        unicode(ex))
-            error_list.append(ex)
-
-        super(VolumeManager, self).periodic_tasks(context)
-
-        return error_list
-
     def _volume_stats_changed(self, stat1, stat2):
         if FLAGS.volume_force_update_capabilities:
             return True
@@ -304,7 +289,8 @@ class VolumeManager(manager.SchedulerDependentManager):
                 return True
         return False
 
-    def _report_driver_status(self):
+    @manager.periodic_task
+    def _report_driver_status(self, context):
         volume_stats = self.driver.get_volume_stats(refresh=True)
         if volume_stats:
             LOG.info(_("Checking volume capabilities"))

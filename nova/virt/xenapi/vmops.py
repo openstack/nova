@@ -100,28 +100,26 @@ class VMOps(object):
         """List VM instances."""
         # TODO(justinsb): Should we just always use the details method?
         #  Seems to be the same number of API calls..
-        vm_refs = []
-        for vm_ref in self._session.call_xenapi("VM.get_all"):
-            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-            if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
-                vm_refs.append(vm_rec["name_label"])
-        return vm_refs
+        name_labels = []
+        for vm_ref, vm_rec in VMHelper.list_vms(self._session):
+            name_labels.append(vm_rec["name_label"])
+
+        return name_labels
 
     def list_instances_detail(self):
         """List VM instances, returning InstanceInfo objects."""
-        instance_infos = []
-        for vm_ref in self._session.call_xenapi("VM.get_all"):
-            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-            if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
-                name = vm_rec["name_label"]
+        details = []
+        for vm_ref, vm_rec in VMHelper.list_vms(self._session):
+            name = vm_rec["name_label"]
 
-                # TODO(justinsb): This a roundabout way to map the state
-                openstack_format = VMHelper.compile_info(vm_rec)
-                state = openstack_format['state']
+            # TODO(justinsb): This a roundabout way to map the state
+            openstack_format = VMHelper.compile_info(vm_rec)
+            state = openstack_format['state']
 
-                instance_info = driver.InstanceInfo(name, state)
-                instance_infos.append(instance_info)
-        return instance_infos
+            instance_info = driver.InstanceInfo(name, state)
+            details.append(instance_info)
+
+        return details
 
     def confirm_migration(self, migration, instance, network_info):
         name_label = self._get_orig_vm_name_label(instance)

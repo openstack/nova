@@ -786,6 +786,18 @@ class VMHelper(HelperBase):
         session.call_xenapi("VM.set_name_label", vm_ref, name_label)
 
     @classmethod
+    def list_vms(cls, session):
+        vm_refs = session.call_xenapi("VM.get_all")
+        for vm_ref in vm_refs:
+            vm_rec = session.call_xenapi("VM.get_record", vm_ref)
+            if vm_rec["is_a_template"]:
+                continue
+            elif  vm_rec["is_control_domain"]:
+                continue
+            else:
+                yield vm_ref, vm_rec
+
+    @classmethod
     def lookup(cls, session, name_label):
         """Look the instance up and return it if available"""
         vm_refs = session.call_xenapi("VM.get_by_name_label", name_label)
