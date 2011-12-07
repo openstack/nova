@@ -1651,6 +1651,57 @@ class ComputeAPITestCase(BaseTestCase):
         finally:
             self.compute.terminate_instance(context, instance['uuid'])
 
+    def test_associate_floating_ip(self):
+        """Ensure we can associate a floating ip with an instance"""
+        called = {'associate': False}
+
+        def fake_associate_ip_network_api(self, ctxt, floating_address,
+                                          fixed_address):
+            called['associate'] = True
+
+        nw_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
+
+        def fake_get_nw_info(self, ctxt, instance):
+            return nw_info
+
+        self.stubs.Set(nova.network.API, 'associate_floating_ip',
+                       fake_associate_ip_network_api)
+
+        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+                       fake_get_nw_info)
+
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+        address = '0.1.2.3'
+
+        self.compute.run_instance(self.context, instance_uuid)
+        self.compute_api.associate_floating_ip(self.context,
+                                               instance,
+                                               address)
+        self.assertTrue(called['associate'])
+        self.compute.terminate_instance(self.context, instance_uuid)
+
+    def test_associate_floating_ip_no_fixed_ip(self):
+        """Should fail if instance has no fixed ip."""
+
+        def fake_get_nw_info(self, ctxt, instance):
+            return []
+
+        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+                       fake_get_nw_info)
+
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+        address = '0.1.2.3'
+
+        self.compute.run_instance(self.context, instance_uuid)
+        self.assertRaises(exception.ApiError,
+                          self.compute_api.associate_floating_ip,
+                          self.context,
+                          instance,
+                          address)
+        self.compute.terminate_instance(self.context, instance_uuid)
+
     def test_get(self):
         """Test get instance"""
         self.maxDiff = None

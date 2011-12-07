@@ -701,7 +701,6 @@ class API(base.Base):
                 context.project_id,
                 security_group_name)
 
-        instance_id = instance['id']
         instance_uuid = instance['uuid']
 
         #check if the security group is associated with the server
@@ -730,7 +729,6 @@ class API(base.Base):
                 context.project_id,
                 security_group_name)
 
-        instance_id = instance['id']
         instance_uuid = instance['uuid']
 
         #check if the security group is associated with the server
@@ -1015,7 +1013,6 @@ class API(base.Base):
         return instances
 
     def _get_instances_by_filters(self, context, filters):
-        ids = None
         if 'ip6' in filters or 'ip' in filters:
             res = self.network_api.get_instance_uuids_by_ip_filter(context,
                                                                    filters)
@@ -1332,7 +1329,6 @@ class API(base.Base):
     @scheduler_api.reroute_compute("pause")
     def pause(self, context, instance):
         """Pause the given instance."""
-        instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         self.update(context,
                     instance,
@@ -1343,7 +1339,6 @@ class API(base.Base):
     @scheduler_api.reroute_compute("unpause")
     def unpause(self, context, instance):
         """Unpause the given instance."""
-        instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         self.update(context,
                     instance,
@@ -1381,7 +1376,6 @@ class API(base.Base):
     @scheduler_api.reroute_compute("suspend")
     def suspend(self, context, instance):
         """Suspend the given instance."""
-        instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         self.update(context,
                     instance,
@@ -1392,7 +1386,6 @@ class API(base.Base):
     @scheduler_api.reroute_compute("resume")
     def resume(self, context, instance):
         """Resume the given instance."""
-        instance_id = instance["id"]
         instance_uuid = instance["uuid"]
         self.update(context,
                     instance,
@@ -1536,12 +1529,12 @@ class API(base.Base):
                            "volume_id": volume_id}})
         return instance
 
-    def associate_floating_ip(self, context, instance_id, address):
+    def associate_floating_ip(self, context, instance, address):
         """Makes calls to network_api to associate_floating_ip.
 
         :param address: is a string floating ip address
         """
-        instance = self.get(context, instance_id)
+        instance_uuid = instance['uuid']
 
         # TODO(tr3buchet): currently network_info doesn't contain floating IPs
         # in its info, if this changes, the next few lines will need to
@@ -1558,7 +1551,7 @@ class API(base.Base):
         # support specifying a particular fixed_ip if multiple exist.
         if not fixed_ip_addrs:
             msg = _("instance |%s| has no fixed_ips. "
-                    "unable to associate floating ip") % instance_id
+                    "unable to associate floating ip") % instance_uuid
             raise exception.ApiError(msg)
         if len(fixed_ip_addrs) > 1:
             LOG.warning(_("multiple fixed_ips exist, using the first: %s"),
