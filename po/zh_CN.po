@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-08-19 09:26+0000\n"
-"Last-Translator: zhangjunfeng <Unknown>\n"
+"PO-Revision-Date: 2011-11-26 04:59+0000\n"
+"Last-Translator: halfss <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-08-20 05:06+0000\n"
-"X-Generator: Launchpad (build 13697)\n"
+"X-Launchpad-Export-Date: 2011-11-27 05:36+0000\n"
+"X-Generator: Launchpad (build 14381)\n"
 
 #, python-format
 #~ msgid "Starting %s"
@@ -58,7 +58,7 @@ msgstr "未捕获异常"
 #: ../nova/volume/api.py:45
 #, python-format
 msgid "Quota exceeeded for %(pid)s, tried to create %(size)sG volume"
-msgstr ""
+msgstr "%(pid)s 超出配额，产生创建%(size)sG卷"
 
 #: ../nova/volume/api.py:47
 #, python-format
@@ -155,7 +155,7 @@ msgstr ""
 #: ../nova/virt/xenapi/volumeops.py:80
 #, python-format
 msgid "Unable to use SR %(sr_ref)s for instance %(instance_name)s"
-msgstr ""
+msgstr "不能为实例%(instance_name)s使用SR %(sr_ref)s"
 
 #: ../nova/virt/xenapi/volumeops.py:91
 #, python-format
@@ -203,7 +203,7 @@ msgstr "私钥文件名"
 
 #: ../nova/crypto.py:51
 msgid "Filename of root Certificate Revokation List"
-msgstr ""
+msgstr "已废除的根证书列表"
 
 #: ../nova/crypto.py:53
 msgid "Where we keep our keys"
@@ -256,7 +256,7 @@ msgstr ""
 #: ../nova/compute/manager.py:84
 #, python-format
 msgid "check_instance_lock: locked: |%s|"
-msgstr ""
+msgstr "check_instance_lock: 被鎖定: |%s|"
 
 #: ../nova/compute/manager.py:86
 #, python-format
@@ -266,7 +266,7 @@ msgstr ""
 #: ../nova/compute/manager.py:91
 #, python-format
 msgid "check_instance_lock: executing: |%s|"
-msgstr ""
+msgstr "check_instance_lock: 执行中: |%s|"
 
 #: ../nova/compute/manager.py:95
 #, python-format
@@ -351,32 +351,32 @@ msgstr ""
 #: ../nova/compute/manager.py:362
 #, python-format
 msgid "instance %(nm)s: injecting file to %(plain_path)s"
-msgstr ""
+msgstr "实例%(nm)s:正在注入文件到%(plain_path)s"
 
 #: ../nova/compute/manager.py:372
 #, python-format
 msgid "instance %s: rescuing"
-msgstr ""
+msgstr "实例%s：救援中..."
 
 #: ../nova/compute/manager.py:387
 #, python-format
 msgid "instance %s: unrescuing"
-msgstr ""
+msgstr "实例%s:取消救援"
 
 #: ../nova/compute/manager.py:406
 #, python-format
 msgid "instance %s: pausing"
-msgstr ""
+msgstr "实例 %s: 暂停"
 
 #: ../nova/compute/manager.py:423
 #, python-format
 msgid "instance %s: unpausing"
-msgstr ""
+msgstr "实例 %s: 取消暫停"
 
 #: ../nova/compute/manager.py:440
 #, python-format
 msgid "instance %s: retrieving diagnostics"
-msgstr ""
+msgstr "实例 %s: 取消检测"
 
 #: ../nova/compute/manager.py:453
 #, python-format
@@ -386,27 +386,27 @@ msgstr "虚拟机 %s：挂起"
 #: ../nova/compute/manager.py:472
 #, python-format
 msgid "instance %s: resuming"
-msgstr ""
+msgstr "实例 %s: 唤醒中。。。"
 
 #: ../nova/compute/manager.py:491
 #, python-format
 msgid "instance %s: locking"
-msgstr ""
+msgstr "实例%s:锁定中"
 
 #: ../nova/compute/manager.py:503
 #, python-format
 msgid "instance %s: unlocking"
-msgstr ""
+msgstr "实例%s:取消锁定"
 
 #: ../nova/compute/manager.py:513
 #, python-format
 msgid "instance %s: getting locked state"
-msgstr ""
+msgstr "实例%s：获取锁状态"
 
 #: ../nova/compute/manager.py:526
 #, python-format
 msgid "instance %s: reset network"
-msgstr ""
+msgstr "实例%s:重置网络"
 
 #: ../nova/compute/manager.py:535 ../nova/api/ec2/cloud.py:515
 #, python-format
@@ -422,7 +422,7 @@ msgstr "虚拟机　%s ：获取ajax控制台"
 #, python-format
 msgid ""
 "instance %(instance_id)s: attaching volume %(volume_id)s to %(mountpoint)s"
-msgstr ""
+msgstr "实例%(instance_id)s:尝试挂载卷%(volume_id)s到%(mountpoint)s"
 
 #. pylint: disable=W0702
 #. NOTE(vish): The inline callback eats the exception info so we
@@ -431,94 +431,94 @@ msgstr ""
 #: ../nova/compute/manager.py:569
 #, python-format
 msgid "instance %(instance_id)s: attach failed %(mountpoint)s, removing"
-msgstr ""
+msgstr "实例%(instance_id)s：挂载到%(mountpoint)s失败，移除中"
 
 #: ../nova/compute/manager.py:585
 #, python-format
 msgid ""
 "Detach volume %(volume_id)s from mountpoint %(mp)s on instance "
 "%(instance_id)s"
-msgstr ""
+msgstr "移除挂载在实例%(instance_id)s上的%(mp)s卷%(volume_id)s"
 
 #: ../nova/compute/manager.py:588
 #, python-format
 msgid "Detaching volume from unknown instance %s"
-msgstr ""
+msgstr "从未知实例%s中移除卷"
 
 #: ../nova/scheduler/simple.py:53
 #, python-format
 msgid "Host %s is not alive"
-msgstr ""
+msgstr "服务器%s已关机"
 
 #: ../nova/scheduler/simple.py:65
 msgid "All hosts have too many cores"
-msgstr ""
+msgstr "所有服务器拥有太多处理器"
 
 #: ../nova/scheduler/simple.py:87
 #, python-format
 msgid "Host %s not available"
-msgstr ""
+msgstr "连接不到服务器%s"
 
 #: ../nova/scheduler/simple.py:99
 msgid "All hosts have too many gigabytes"
-msgstr ""
+msgstr "所有服务器拥有太多硬盘空间"
 
 #: ../nova/scheduler/simple.py:119
 msgid "All hosts have too many networks"
-msgstr ""
+msgstr "所有服务器拥有太多网络"
 
 #: ../nova/volume/manager.py:85
 #, python-format
 msgid "Re-exporting %s volumes"
-msgstr ""
+msgstr "重新输出卷%s"
 
 #: ../nova/volume/manager.py:90
 #, python-format
 msgid "volume %s: skipping export"
-msgstr ""
+msgstr "跳过卷：%s"
 
 #: ../nova/volume/manager.py:96
 #, python-format
 msgid "volume %s: creating"
-msgstr ""
+msgstr "儲存量 %s: 在创造"
 
 #: ../nova/volume/manager.py:108
 #, python-format
 msgid "volume %(vol_name)s: creating lv of size %(vol_size)sG"
-msgstr ""
+msgstr "卷%(vol_name)s:创建大小为%(vol_size)s的逻辑卷"
 
 #: ../nova/volume/manager.py:112
 #, python-format
 msgid "volume %s: creating export"
-msgstr ""
+msgstr "卷%s：正在创建"
 
 #: ../nova/volume/manager.py:123
 #, python-format
 msgid "volume %s: created successfully"
-msgstr ""
+msgstr "卷%s：创建成功"
 
 #: ../nova/volume/manager.py:131
 msgid "Volume is still attached"
-msgstr ""
+msgstr "卷仍在挂载中"
 
 #: ../nova/volume/manager.py:133
 msgid "Volume is not local to this node"
-msgstr ""
+msgstr "卷不属于这个节点"
 
 #: ../nova/volume/manager.py:136
 #, python-format
 msgid "volume %s: removing export"
-msgstr ""
+msgstr "卷%s：移除中"
 
 #: ../nova/volume/manager.py:138
 #, python-format
 msgid "volume %s: deleting"
-msgstr ""
+msgstr "卷%s：删除中"
 
 #: ../nova/volume/manager.py:147
 #, python-format
 msgid "volume %s: deleted successfully"
-msgstr ""
+msgstr "卷%s：删除成功"
 
 #: ../nova/virt/xenapi/fake.py:74
 #, python-format

@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-03-25 07:14+0000\n"
-"Last-Translator: Hugo Kou <Unknown>\n"
+"PO-Revision-Date: 2011-10-21 09:12+0000\n"
+"Last-Translator: Tom Fifield <Unknown>\n"
 "Language-Team: Chinese (Traditional) <zh_TW@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-08-03 04:44+0000\n"
-"X-Generator: Launchpad (build 13573)\n"
+"X-Launchpad-Export-Date: 2011-10-22 05:25+0000\n"
+"X-Generator: Launchpad (build 14170)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
@@ -36,15 +36,20 @@ msgid ""
 "Stdout: %(stdout)r\n"
 "Stderr: %(stderr)r"
 msgstr ""
+"%(description)s\n"
+"命令: %(cmd)s\n"
+"退出代碼: %(exit_code)s\n"
+"標準輸出: %(stdout)r\n"
+"標準錯誤輸出: %(stderr)r"
 
 #: ../nova/exception.py:107
 msgid "DB exception wrapped"
-msgstr ""
+msgstr "數據庫異常已封裝"
 
 #. exc_type, exc_value, exc_traceback = sys.exc_info()
 #: ../nova/exception.py:120
 msgid "Uncaught exception"
-msgstr ""
+msgstr "未知錯誤"
 
 #: ../nova/volume/api.py:45
 #, python-format
@@ -118,12 +123,12 @@ msgstr ""
 #: ../nova/api/openstack/servers.py:314
 #, python-format
 msgid "compute.api::suspend %s"
-msgstr ""
+msgstr "compute.api::暫停 %s"
 
 #: ../nova/api/openstack/servers.py:325
 #, python-format
 msgid "compute.api::resume %s"
-msgstr ""
+msgstr "compute.api::繼續 %s"
 
 #: ../nova/virt/xenapi/volumeops.py:48 ../nova/virt/xenapi/volumeops.py:101
 #: ../nova/db/sqlalchemy/api.py:731 ../nova/virt/libvirt_conn.py:741
@@ -141,12 +146,12 @@ msgstr "掛載_Volume: %(instance_name)s, %(device_path)s, %(mountpoint)s"
 #: ../nova/virt/xenapi/volumeops.py:69
 #, python-format
 msgid "Unable to create VDI on SR %(sr_ref)s for instance %(instance_name)s"
-msgstr ""
+msgstr "無法替 instance實例 %(instance_name)s , 建立 VDI 在SR %(sr_ref)s"
 
 #: ../nova/virt/xenapi/volumeops.py:80
 #, python-format
 msgid "Unable to use SR %(sr_ref)s for instance %(instance_name)s"
-msgstr ""
+msgstr "無法替 instance實例 %(instance_name)s ,  使用SR %(sr_ref)s"
 
 #: ../nova/virt/xenapi/volumeops.py:91
 #, python-format
@@ -198,15 +203,15 @@ msgstr ""
 
 #: ../nova/crypto.py:53
 msgid "Where we keep our keys"
-msgstr ""
+msgstr "我們的keys留存於何處"
 
 #: ../nova/crypto.py:55
 msgid "Where we keep our root CA"
-msgstr ""
+msgstr "我們的根憑證留存於何處"
 
 #: ../nova/crypto.py:57
 msgid "Should we use a CA for each project?"
-msgstr ""
+msgstr "是否需要一個project 使用一個CA"
 
 #: ../nova/crypto.py:61
 #, python-format

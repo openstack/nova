@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-02-21 10:03-0500\n"
-"PO-Revision-Date: 2011-08-21 22:50+0000\n"
-"Last-Translator: Guido Davide Dall'Olio <Unknown>\n"
+"PO-Revision-Date: 2011-10-27 15:00+0000\n"
+"Last-Translator: DM74S <Unknown>\n"
 "Language-Team: Italian <it@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-08-23 05:21+0000\n"
-"X-Generator: Launchpad (build 13697)\n"
+"X-Launchpad-Export-Date: 2011-10-28 05:41+0000\n"
+"X-Generator: Launchpad (build 14197)\n"
 
 #: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
 #: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
@@ -321,7 +321,7 @@ msgstr ""
 #: ../nova/compute/manager.py:311
 #, python-format
 msgid "instance %s: snapshotting"
-msgstr ""
+msgstr "istanza %s: creazione snapshot in corso"
 
 #: ../nova/compute/manager.py:316
 #, python-format
@@ -340,7 +340,7 @@ msgstr ""
 #: ../nova/compute/manager.py:335
 #, python-format
 msgid "instance %s: setting admin password"
-msgstr ""
+msgstr "istanza %s: impostazione password di amministratore"
 
 #: ../nova/compute/manager.py:353
 #, python-format
@@ -367,37 +367,37 @@ msgstr ""
 #: ../nova/compute/manager.py:406
 #, python-format
 msgid "instance %s: pausing"
-msgstr ""
+msgstr "istanza %s: in pausa"
 
 #: ../nova/compute/manager.py:423
 #, python-format
 msgid "instance %s: unpausing"
-msgstr ""
+msgstr "istanza %s: fuori pausa"
 
 #: ../nova/compute/manager.py:440
 #, python-format
 msgid "instance %s: retrieving diagnostics"
-msgstr ""
+msgstr "istanza %s: ricezione diagnostiche"
 
 #: ../nova/compute/manager.py:453
 #, python-format
 msgid "instance %s: suspending"
-msgstr ""
+msgstr "istanza %s: sospensione in corso"
 
 #: ../nova/compute/manager.py:472
 #, python-format
 msgid "instance %s: resuming"
-msgstr ""
+msgstr "istanza %s: ripristino"
 
 #: ../nova/compute/manager.py:491
 #, python-format
 msgid "instance %s: locking"
-msgstr ""
+msgstr "istanza %s: bloccato"
 
 #: ../nova/compute/manager.py:503
 #, python-format
 msgid "instance %s: unlocking"
-msgstr ""
+msgstr "istanza %s: sbloccato"
 
 #: ../nova/compute/manager.py:513
 #, python-format
@@ -407,7 +407,7 @@ msgstr ""
 #: ../nova/compute/manager.py:526
 #, python-format
 msgid "instance %s: reset network"
-msgstr ""
+msgstr "istanza %s: ripristino rete"
 
 #: ../nova/compute/manager.py:535 ../nova/api/ec2/cloud.py:515
 #, python-format
@@ -481,7 +481,7 @@ msgstr ""
 #: ../nova/volume/manager.py:96
 #, python-format
 msgid "volume %s: creating"
-msgstr ""
+msgstr "volume %s: creazione in corso"
 
 #: ../nova/volume/manager.py:108
 #, python-format
@@ -491,7 +491,7 @@ msgstr ""
 #: ../nova/volume/manager.py:112
 #, python-format
 msgid "volume %s: creating export"
-msgstr ""
+msgstr "volume %s: creazione in corso per l'esportazione"
 
 #: ../nova/volume/manager.py:123
 #, python-format
@@ -500,7 +500,7 @@ msgstr "volume %s: creato con successo"
 
 #: ../nova/volume/manager.py:131
 msgid "Volume is still attached"
-msgstr ""
+msgstr "Volume ancora collegato"
 
 #: ../nova/volume/manager.py:133
 msgid "Volume is not local to this node"
