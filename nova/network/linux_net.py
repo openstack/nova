@@ -876,6 +876,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                           network['bridge_interface'],
                           network)
 
+        # NOTE(vish): applying here so we don't get a lock conflict
+        iptables_manager.apply()
         return network['bridge']
 
     def unplug(self, network):
@@ -946,14 +948,14 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
             # NOTE(vish): This will break if there is already an ip on the
             #             interface, so we move any ips to the bridge
-            gateway = None
+            old_gateway = None
             out, err = _execute('route', '-n', run_as_root=True)
             for line in out.split('\n'):
                 fields = line.split()
                 if fields and fields[0] == '0.0.0.0' and \
                                 fields[-1] == interface:
-                    gateway = fields[1]
-                    _execute('route', 'del', 'default', 'gw', gateway,
+                    old_gateway = fields[1]
+                    _execute('route', 'del', 'default', 'gw', old_gateway,
                              'dev', interface, check_exit_code=False,
                              run_as_root=True)
             out, err = _execute('ip', 'addr', 'show', 'dev', interface,
@@ -966,8 +968,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                                 run_as_root=True)
                     _execute(*_ip_bridge_cmd('add', params, bridge),
                                 run_as_root=True)
-            if gateway:
-                _execute('route', 'add', 'default', 'gw', gateway,
+            if old_gateway:
+                _execute('route', 'add', 'default', 'gw', old_gateway,
                             run_as_root=True)
 
             if (err and err != "device %s is already a member of a bridge;"
