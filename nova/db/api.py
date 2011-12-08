@@ -1756,3 +1756,16 @@ def sm_volume_get(context, volume_id):
 def sm_volume_get_all(context):
     """Get all child Zones."""
     return IMPL.sm_volume_get_all(context)
+
+
+####################
+
+
+def instance_fault_create(context, values):
+    """Create a new Instance Fault."""
+    return IMPL.instance_fault_create(context, values)
+
+
+def instance_fault_get_by_instance(context, instance_uuid):
+    """Get first instance fault with the given instance uuid."""
+    return IMPL.instance_fault_get_by_instance(context, instance_uuid)

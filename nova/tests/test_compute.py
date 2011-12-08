@@ -21,6 +21,7 @@ Tests For Compute
 """
 
 from copy import copy
+from webob import exc
 
 import mox
 
@@ -1062,6 +1063,60 @@ class ComputeTestCase(BaseTestCase):
         LOG.info(_("After force-killing instances: %s"), instances)
         self.assertEqual(len(instances), 1)
         self.assertEqual(power_state.NOSTATE, instances[0]['power_state'])
+
+    def test_add_instance_fault(self):
+        instance_uuid = str(utils.gen_uuid())
+
+        def fake_db_fault_create(ctxt, values):
+            expected = {
+                'code': 404,
+                'message': 'HTTPNotFound',
+                'details': 'Error Details',
+                'instance_uuid': instance_uuid,
+            }
+            self.assertEquals(expected, values)
+
+        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+
+        ctxt = context.get_admin_context()
+        self.compute.add_instance_fault(ctxt, instance_uuid, 404,
+                                        'HTTPNotFound', 'Error Details')
+
+    def test_add_instance_fault_error(self):
+        instance_uuid = str(utils.gen_uuid())
+
+        def fake_db_fault_create(ctxt, values):
+            expected = {
+                'code': 500,
+                'message': 'NotImplementedError',
+                'details': '',
+                'instance_uuid': instance_uuid,
+            }
+            self.assertEquals(expected, values)
+
+        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+
+        ctxt = context.get_admin_context()
+        self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
+                                                 NotImplementedError())
+
+    def test_add_instance_fault_http_exception(self):
+        instance_uuid = str(utils.gen_uuid())
+
+        def fake_db_fault_create(ctxt, values):
+            expected = {
+                'code': 404,
+                'message': 'HTTPNotFound',
+                'details': 'Error Details',
+                'instance_uuid': instance_uuid,
+            }
+            self.assertEquals(expected, values)
+
+        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
+
+        ctxt = context.get_admin_context()
+        self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
+                                        exc.HTTPNotFound("Error Details"))
 
 
 class ComputeAPITestCase(BaseTestCase):
