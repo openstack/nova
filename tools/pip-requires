@@ -10,10 +10,8 @@ eventlet
 kombu==1.0.4
 lockfile==0.8
 lxml==2.3
-python-novaclient==2.6.5
 python-daemon==1.5.5
 python-gflags==1.3
-redis==2.0.0
 routes==1.12.3
 WebOb==1.0.8
 wsgiref==0.1.2
@@ -32,3 +30,5 @@ coverage
 nosexcover
 paramiko
 feedparser
+
+-e git+https://review.openstack.org/p/openstack/python-novaclient.git#egg=python_novaclient-dev
