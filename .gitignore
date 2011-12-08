@@ -9,6 +9,7 @@ build/*
 build-stamp
 nova.egg-info
 .nova-venv
+.venv
 *.sqlite
 *.log
 po/*.pot

@@ -96,7 +96,7 @@ Grab the code from GitHub::
 
 Running unit tests
 ------------------
-The unit tests will run by default inside a virtualenv in the ``.nova-venv``
+The unit tests will run by default inside a virtualenv in the ``.venv``
 directory. Run the unit tests by doing::
 
     ./run_tests.sh
@@ -130,7 +130,7 @@ If all goes well, you should get a message something like this::
 To activate the Nova virtualenv for the extent of your current shell session
 you can run::
 
-     $ source .nova-venv/bin/activate
+     $ source .venv/bin/activate
 
 Or, if you prefer, you can run commands in the virtualenv on a case by case
 basis by running::
