@@ -4,7 +4,7 @@ pylint==0.19
 Cheetah==2.4.4
 amqplib==0.6.1
 anyjson==0.2.4
-boto==1.9b
+boto
 carrot==0.10.5
 eventlet
 kombu==1.0.4
@@ -27,7 +27,6 @@ netaddr
 sphinx
 glance
 xattr>=0.6.0
-nova-adminclient
 suds==0.4
 coverage
 nosexcover

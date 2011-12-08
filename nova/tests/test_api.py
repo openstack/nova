@@ -75,6 +75,8 @@ class FakeHttplibConnection(object):
         resp = "HTTP/1.0 %s" % resp
         self.sock = FakeHttplibSocket(resp)
         self.http_response = httplib.HTTPResponse(self.sock)
+        # NOTE(vish): boto is accessing private variables for some reason
+        self._HTTPConnection__response = self.http_response
         self.http_response.begin()
 
     def getresponse(self):
