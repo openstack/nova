@@ -79,6 +79,7 @@ class QuantumManager(manager.FlatManager):
 
         super(QuantumManager, self).__init__(*args, **kwargs)
 
+    def init_host(self):
         # Initialize forwarding rules for anything specified in
         # FLAGS.fixed_range()
         self.driver.init_host()
@@ -86,10 +87,10 @@ class QuantumManager(manager.FlatManager):
         # gateway set.
         networks = self.get_all_networks()
         for net in networks:
-            LOG.debug("Initializing network: %s (cidr: %s, gw: %s)" % (
-                net['label'], net['cidr'], net['gateway']))
             if net['gateway']:
-                self.driver.init_host(net['cidr'])
+                LOG.debug("Initializing NAT: %s (cidr: %s, gw: %s)" % (
+                    net['label'], net['cidr'], net['gateway']))
+                self.driver.add_snat_rule(net['cidr'])
         self.driver.ensure_metadata_ip()
         self.driver.metadata_forward()
 
@@ -134,6 +135,10 @@ class QuantumManager(manager.FlatManager):
         self.ipam.create_subnet(context, label, ipam_tenant_id, quantum_net_id,
             priority, cidr, gateway, gateway_v6,
             cidr_v6, dns1, dns2)
+
+        # Initialize forwarding if gateway is set
+        if gateway:
+            self.driver.add_snat_rule(cidr)
 
         return [{'uuid': quantum_net_id}]
 

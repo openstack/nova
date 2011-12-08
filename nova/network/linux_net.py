@@ -393,16 +393,22 @@ def metadata_accept():
     iptables_manager.apply()
 
 
+def add_snat_rule(ip_range):
+    iptables_manager.ipv4['nat'].add_rule('snat',
+                                          '-s %s -j SNAT --to-source %s' % \
+                                           (ip_range,
+                                            FLAGS.routing_source_ip))
+    iptables_manager.apply()
+
+
 def init_host(ip_range=None):
     """Basic networking setup goes here."""
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
     if not ip_range:
         ip_range = FLAGS.fixed_range
-    iptables_manager.ipv4['nat'].add_rule('snat',
-                                          '-s %s -j SNAT --to-source %s' % \
-                                           (ip_range,
-                                            FLAGS.routing_source_ip))
+
+    add_snat_rule(ip_range)
 
     iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
                                           '-s %s -d %s -j ACCEPT' % \
