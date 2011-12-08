@@ -319,8 +319,6 @@ class VMHelper(HelperBase):
     def create_snapshot(cls, session, instance_id, vm_ref, label):
         """Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
         Snapshot VHD"""
-        #TODO(sirp): Add quiesce and VSS locking support when Windows support
-        # is added
         LOG.debug(_("Snapshotting VM %(vm_ref)s with label '%(label)s'...")
                 % locals())
 
