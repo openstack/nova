@@ -52,7 +52,7 @@ class AdminApiTestCase(test.TestCase):
         self.project_id = 'admin'
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
-                                              True)
+                                              is_admin=True)
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,

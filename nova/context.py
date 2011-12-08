@@ -19,6 +19,7 @@
 
 """RequestContext: context for requests that persist through all of nova."""
 
+import copy
 import uuid
 
 from nova import local
@@ -32,9 +33,14 @@ class RequestContext(object):
 
     """
 
-    def __init__(self, user_id, project_id, is_admin=None, read_deleted=False,
+    def __init__(self, user_id, project_id, is_admin=None, read_deleted="no",
                  roles=None, remote_address=None, timestamp=None,
                  request_id=None, auth_token=None, strategy='noauth'):
+        """
+        :param read_deleted: 'no' indicates deleted records are hidden, 'yes'
+            indicates deleted records are visible, 'only' indicates that
+            *only* deleted records are visible.
+        """
         self.user_id = user_id
         self.project_id = project_id
         self.roles = roles or []
@@ -73,18 +79,17 @@ class RequestContext(object):
 
     def elevated(self, read_deleted=None):
         """Return a version of this context with admin flag set."""
-        rd = self.read_deleted if read_deleted is None else read_deleted
-        return RequestContext(user_id=self.user_id,
-                              project_id=self.project_id,
-                              is_admin=True,
-                              read_deleted=rd,
-                              roles=self.roles,
-                              remote_address=self.remote_address,
-                              timestamp=self.timestamp,
-                              request_id=self.request_id,
-                              auth_token=self.auth_token,
-                              strategy=self.strategy)
+        context = copy.copy(self)
+        context.is_admin = True
+
+        if read_deleted is not None:
+            context.read_deleted = read_deleted
+
+        return context
 
 
-def get_admin_context(read_deleted=False):
-    return RequestContext(None, None, True, read_deleted)
+def get_admin_context(read_deleted="no"):
+    return RequestContext(user_id=None,
+                          project_id=None,
+                          is_admin=True,
+                          read_deleted=read_deleted)
