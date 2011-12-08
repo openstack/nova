@@ -85,11 +85,10 @@ Here's how to get the latest code::
 
   cd nova
   bzr pull # get the latest stuff...
-  source .nova_venv/bin/activate
+  source .venv/bin/activate
   ./run_tests.sh
 
 Then you can do cleaning work or hack hack hack with a branched named cleaning.  
-
 Contributing Your Work
 ----------------------
 
