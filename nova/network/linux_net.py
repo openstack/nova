@@ -995,7 +995,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                         '--', '--may-exist', 'add-port', bridge, dev,
                         '--', 'set', 'Interface', dev, "type=internal",
                         '--', 'set', 'Interface', dev,
-                                "external-ids:iface-id=nova-%s" % dev,
+                                "external-ids:iface-id=%s" % dev,
                         '--', 'set', 'Interface', dev,
                                 "external-ids:iface-status=active",
                         '--', 'set', 'Interface', dev,
