@@ -1016,7 +1016,7 @@ class ConfigOpts(object):
 
         :raises: ConfigFilesNotFoundError, ConfigFileParseError
         """
-        self._cparser = ConfigParser.SafeConfigParser(allow_no_value=True)
+        self._cparser = ConfigParser.SafeConfigParser()
 
         try:
             read_ok = self._cparser.read(config_files)
