@@ -358,7 +358,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # glance.
 
             # TODO(jk0): Should size be required in the image service?
-            return
+            return image_meta
 
         instance_type_id = instance['instance_type_id']
         instance_type = instance_types.get_instance_type(instance_type_id)
@@ -368,7 +368,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # need to handle potential situations where local_gb is 0. This is
         # the default for m1.tiny.
         if allowed_size_gb == 0:
-            return
+            return image_meta
 
         allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 
