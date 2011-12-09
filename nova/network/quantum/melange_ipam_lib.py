@@ -127,8 +127,13 @@ class QuantumMelangeIPAMLib(object):
         return self.get_networks_by_tenant(context,
             FLAGS.quantum_default_tenant_id)
 
-    def get_project_networks(self, context, project_id):
-        return self.get_networks_by_tenant(context, project_id)
+    def get_project_networks(self, context):
+        try:
+            nets = db.network_get_all(context.elevated())
+        except exception.NoNetworksFound:
+            return []
+        # only return networks with a project_id set
+        return [net for net in nets if net['project_id']]
 
     def get_project_and_global_net_ids(self, context, project_id):
         """Fetches all networks associated with this project, or

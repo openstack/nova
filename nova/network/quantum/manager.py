@@ -97,10 +97,7 @@ class QuantumManager(manager.FlatManager):
         networks = []
         admin_context = context.get_admin_context()
         networks.extend(self.ipam.get_global_networks(admin_context))
-        projects = db.project_get_all(admin_context)
-        for p in projects:
-            networks.extend(self.ipam.get_project_networks(admin_context,
-                p['id']))
+        networks.extend(self.ipam.get_project_networks(admin_context))
         return networks
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
@@ -149,16 +146,6 @@ class QuantumManager(manager.FlatManager):
         """
         quantum_net_id = uuid
         project_id = context.project_id
-        # TODO(bgh): The project_id isn't getting populated here for some
-        # reason.. I'm not sure if it's an invalid assumption or just a bug.
-        # In order to get the right quantum_net_id we'll have to query all the
-        # project_ids for now.
-        if project_id is None:
-            projects = db.project_get_all(context)
-            for p in projects:
-                if self.q_conn.network_exists(p['id'], uuid):
-                    project_id = p['id']
-                    break
         if project_id is None:
             # If nothing was found we default to this
             project_id = FLAGS.quantum_default_tenant_id
