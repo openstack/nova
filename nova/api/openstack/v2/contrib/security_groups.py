@@ -24,6 +24,7 @@ import webob
 from nova.api.openstack import common
 from nova.api.openstack.v2 import extensions
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova import compute
 from nova import db
 from nova import exception
@@ -355,6 +356,85 @@ class SecurityGroupRulesController(SecurityGroupController):
         return webob.Response(status_int=202)
 
 
+def make_rule(elem):
+    elem.set('id')
+    elem.set('parent_group_id')
+
+    proto = xmlutil.SubTemplateElement(elem, 'ip_protocol')
+    proto.text = 'ip_protocol'
+
+    from_port = xmlutil.SubTemplateElement(elem, 'from_port')
+    from_port.text = 'from_port'
+
+    to_port = xmlutil.SubTemplateElement(elem, 'to_port')
+    to_port.text = 'to_port'
+
+    group = xmlutil.SubTemplateElement(elem, 'group', selector='group')
+    name = xmlutil.SubTemplateElement(group, 'name')
+    name.text = 'name'
+    tenant_id = xmlutil.SubTemplateElement(group, 'tenant_id')
+    tenant_id.text = 'tenant_id'
+
+    ip_range = xmlutil.SubTemplateElement(elem, 'ip_range',
+                                          selector='ip_range')
+    cidr = xmlutil.SubTemplateElement(ip_range, 'cidr')
+    cidr.text = 'cidr'
+
+
+def make_sg(elem):
+    elem.set('id')
+    elem.set('tenant_id')
+    elem.set('name')
+
+    desc = xmlutil.SubTemplateElement(elem, 'description')
+    desc.text = 'description'
+
+    rules = xmlutil.SubTemplateElement(elem, 'rules')
+    rule = xmlutil.SubTemplateElement(rules, 'rule', selector='rules')
+    make_rule(rule)
+
+
+sg_nsmap = {None: wsgi.XMLNS_V11}
+
+
+class SecurityGroupRuleTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('security_group_rule',
+                                       selector='security_group_rule')
+        make_rule(root)
+        return xmlutil.MasterTemplate(root, 1, nsmap=sg_nsmap)
+
+
+class SecurityGroupTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('security_group',
+                                       selector='security_group')
+        make_sg(root)
+        return xmlutil.MasterTemplate(root, 1, nsmap=sg_nsmap)
+
+
+class SecurityGroupsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('security_groups')
+        elem = xmlutil.SubTemplateElement(root, 'security_group',
+                                          selector='security_groups')
+        make_sg(elem)
+        return xmlutil.MasterTemplate(root, 1, nsmap=sg_nsmap)
+
+
+class SecurityGroupXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def index(self):
+        return SecurityGroupsTemplate()
+
+    def default(self):
+        return SecurityGroupTemplate()
+
+
+class SecurityGroupRulesXMLSerializer(xmlutil.XMLTemplateSerializer):
+    def default(self):
+        return SecurityGroupRuleTemplate()
+
+
 class Security_groups(extensions.ExtensionDescriptor):
     """Security group support"""
 
@@ -439,10 +519,8 @@ class Security_groups(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        metadata = _get_metadata()
         body_serializers = {
-            'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
-                                                      xmlns=wsgi.XMLNS_V11),
+            'application/xml': SecurityGroupXMLSerializer(),
         }
         serializer = wsgi.ResponseSerializer(body_serializers, None)
 
@@ -457,6 +535,11 @@ class Security_groups(extensions.ExtensionDescriptor):
                                 serializer=serializer)
 
         resources.append(res)
+
+        body_serializers = {
+            'application/xml': SecurityGroupRulesXMLSerializer(),
+        }
+        serializer = wsgi.ResponseSerializer(body_serializers, None)
 
         body_deserializers = {
             'application/xml': SecurityGroupRulesXMLDeserializer(),
@@ -538,14 +621,3 @@ class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
                 sg_rule['cidr'] = self.extract_text(cidr_node)
 
         return sg_rule
-
-
-def _get_metadata():
-    metadata = {
-        "attributes": {
-            "security_group": ["id", "tenant_id", "name"],
-            "rule": ["id", "parent_group_id"],
-            "security_group_rule": ["id", "parent_group_id"],
-        }
-    }
-    return metadata

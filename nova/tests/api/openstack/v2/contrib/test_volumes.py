@@ -16,9 +16,11 @@
 import datetime
 import json
 
+from lxml import etree
 import webob
 
 import nova
+from nova.api.openstack.v2.contrib import volumes
 from nova.compute import instance_types
 from nova import flags
 from nova import test
@@ -79,7 +81,7 @@ class BootFromVolumeTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.status_int, 202)
         server = json.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
@@ -87,3 +89,148 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual(_block_device_mapping_seen[0]['volume_id'], 1)
         self.assertEqual(_block_device_mapping_seen[0]['device_name'],
                 '/dev/vda')
+
+
+class VolumeSerializerTest(test.TestCase):
+    def _verify_volume_attachment(self, attach, tree):
+        for attr in ('id', 'volumeId', 'serverId', 'device'):
+            self.assertEqual(str(attach[attr]), tree.get(attr))
+
+    def _verify_volume(self, vol, tree):
+        self.assertEqual(tree.tag, 'volume')
+
+        for attr in ('id', 'status', 'size', 'availabilityZone', 'createdAt',
+                     'displayName', 'displayDescription', 'volumeType'):
+            self.assertEqual(str(vol[attr]), tree.get(attr))
+
+        for child in tree:
+            self.assertTrue(child.tag in ('attachments', 'metadata'))
+            if child.tag == 'attachments':
+                self.assertEqual(1, len(child))
+                self.assertEqual('attachment', child[0].tag)
+                self._verify_volume_attachment(vol['attachments'][0], child[0])
+            elif child.tag == 'metadata':
+                not_seen = set(vol['metadata'].keys())
+                for gr_child in child:
+                    self.assertTrue(gr_child.tag in not_seen)
+                    self.assertEqual(str(vol['metadata'][gr_child.tag]),
+                                     gr_child.text)
+                    not_seen.remove(gr_child.tag)
+                self.assertEqual(0, len(not_seen))
+
+    def test_attach_show_create_serializer(self):
+        serializer = volumes.VolumeAttachmentSerializer()
+        raw_attach = dict(
+            id='vol_id',
+            volumeId='vol_id',
+            serverId='instance_uuid',
+            device='/foo')
+        text = serializer.serialize(dict(volumeAttachment=raw_attach), 'show')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('volumeAttachment', tree.tag)
+        self._verify_volume_attachment(raw_attach, tree)
+
+    def test_attach_index_serializer(self):
+        serializer = volumes.VolumeAttachmentSerializer()
+        raw_attaches = [dict(
+                id='vol_id1',
+                volumeId='vol_id1',
+                serverId='instance1_uuid',
+                device='/foo1'),
+                        dict(
+                id='vol_id2',
+                volumeId='vol_id2',
+                serverId='instance2_uuid',
+                device='/foo2')]
+        text = serializer.serialize(dict(volumeAttachments=raw_attaches),
+                                    'index')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('volumeAttachments', tree.tag)
+        self.assertEqual(len(raw_attaches), len(tree))
+        for idx, child in enumerate(tree):
+            self.assertEqual('volumeAttachment', child.tag)
+            self._verify_volume_attachment(raw_attaches[idx], child)
+
+    def test_volume_show_create_serializer(self):
+        serializer = volumes.VolumeSerializer()
+        raw_volume = dict(
+            id='vol_id',
+            status='vol_status',
+            size=1024,
+            availabilityZone='vol_availability',
+            createdAt=datetime.datetime.now(),
+            attachments=[dict(
+                    id='vol_id',
+                    volumeId='vol_id',
+                    serverId='instance_uuid',
+                    device='/foo')],
+            displayName='vol_name',
+            displayDescription='vol_desc',
+            volumeType='vol_type',
+            metadata=dict(
+                foo='bar',
+                baz='quux',
+                ),
+            )
+        text = serializer.serialize(dict(volume=raw_volume), 'show')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self._verify_volume(raw_volume, tree)
+
+    def test_volume_index_detail_serializer(self):
+        serializer = volumes.VolumeSerializer()
+        raw_volumes = [dict(
+                id='vol1_id',
+                status='vol1_status',
+                size=1024,
+                availabilityZone='vol1_availability',
+                createdAt=datetime.datetime.now(),
+                attachments=[dict(
+                        id='vol1_id',
+                        volumeId='vol1_id',
+                        serverId='instance_uuid',
+                        device='/foo1')],
+                displayName='vol1_name',
+                displayDescription='vol1_desc',
+                volumeType='vol1_type',
+                metadata=dict(
+                    foo='vol1_foo',
+                    bar='vol1_bar',
+                    ),
+                ),
+                       dict(
+                id='vol2_id',
+                status='vol2_status',
+                size=1024,
+                availabilityZone='vol2_availability',
+                createdAt=datetime.datetime.now(),
+                attachments=[dict(
+                        id='vol2_id',
+                        volumeId='vol2_id',
+                        serverId='instance_uuid',
+                        device='/foo2')],
+                displayName='vol2_name',
+                displayDescription='vol2_desc',
+                volumeType='vol2_type',
+                metadata=dict(
+                    foo='vol2_foo',
+                    bar='vol2_bar',
+                    ),
+                )]
+        text = serializer.serialize(dict(volumes=raw_volumes), 'index')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('volumes', tree.tag)
+        self.assertEqual(len(raw_volumes), len(tree))
+        for idx, child in enumerate(tree):
+            self._verify_volume(raw_volumes[idx], child)

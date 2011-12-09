@@ -15,10 +15,11 @@
 
 import json
 
+from lxml import etree
 import webob
 
-from nova.api.openstack.v2.contrib.virtual_interfaces import \
-    ServerVirtualInterfaceController
+from nova.api.openstack.v2.contrib import virtual_interfaces
+from nova.api.openstack import wsgi
 from nova import network
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -35,7 +36,7 @@ class ServerVirtualInterfaceTest(test.TestCase):
 
     def setUp(self):
         super(ServerVirtualInterfaceTest, self).setUp()
-        self.controller = ServerVirtualInterfaceController()
+        self.controller = virtual_interfaces.ServerVirtualInterfaceController()
         self.stubs.Set(network.api.API, "get_vifs_by_instance",
                        get_vifs_by_instance)
 
@@ -54,3 +55,39 @@ class ServerVirtualInterfaceTest(test.TestCase):
                         {'id': '11111111-1111-1111-1111-11111111111111111',
                          'mac_address': '11-11-11-11-11-11'}]}
         self.assertEqual(res_dict, response)
+
+
+class ServerVirtualInterfaceSerializerTest(test.TestCase):
+    def setUp(self):
+        super(ServerVirtualInterfaceSerializerTest, self).setUp()
+        self.namespace = wsgi.XMLNS_V11
+        self.serializer = virtual_interfaces.VirtualInterfaceSerializer()
+
+    def _tag(self, elem):
+        tagname = elem.tag
+        self.assertEqual(tagname[0], '{')
+        tmp = tagname.partition('}')
+        namespace = tmp[0][1:]
+        self.assertEqual(namespace, self.namespace)
+        return tmp[2]
+
+    def test_serializer(self):
+        raw_vifs = [dict(
+                id='uuid1',
+                mac_address='aa:bb:cc:dd:ee:ff'),
+                    dict(
+                id='uuid2',
+                mac_address='bb:aa:dd:cc:ff:ee')]
+        vifs = dict(virtual_interfaces=raw_vifs)
+        text = self.serializer.serialize(vifs)
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('virtual_interfaces', self._tag(tree))
+        self.assertEqual(len(raw_vifs), len(tree))
+        for idx, child in enumerate(tree):
+            self.assertEqual('virtual_interface', self._tag(child))
+            self.assertEqual(raw_vifs[idx]['id'], child.get('id'))
+            self.assertEqual(raw_vifs[idx]['mac_address'],
+                             child.get('mac_address'))

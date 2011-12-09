@@ -17,8 +17,11 @@
 
 import datetime
 import json
+
+from lxml import etree
 import webob
 
+from nova.api.openstack.v2.contrib import simple_tenant_usage
 from nova.compute import api
 from nova import context
 from nova import flags
@@ -170,3 +173,168 @@ class SimpleTenantUsageTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app(
                                fake_auth_context=self.alt_user_context))
         self.assertEqual(res.status_int, 403)
+
+
+class SimpleTenantUsageSerializerTest(test.TestCase):
+    def setUp(self):
+        super(SimpleTenantUsageSerializerTest, self).setUp()
+        self.serializer = simple_tenant_usage.SimpleTenantUsageSerializer()
+
+    def _verify_server_usage(self, raw_usage, tree):
+        self.assertEqual('server_usage', tree.tag)
+
+        # Figure out what fields we expect
+        not_seen = set(raw_usage.keys())
+
+        for child in tree:
+            self.assertTrue(child.tag in not_seen)
+            not_seen.remove(child.tag)
+            self.assertEqual(str(raw_usage[child.tag]), child.text)
+
+        self.assertEqual(len(not_seen), 0)
+
+    def _verify_tenant_usage(self, raw_usage, tree):
+        self.assertEqual('tenant_usage', tree.tag)
+
+        # Figure out what fields we expect
+        not_seen = set(raw_usage.keys())
+
+        for child in tree:
+            self.assertTrue(child.tag in not_seen)
+            not_seen.remove(child.tag)
+            if child.tag == 'server_usages':
+                for idx, gr_child in enumerate(child):
+                    self._verify_server_usage(raw_usage['server_usages'][idx],
+                                              gr_child)
+            else:
+                self.assertEqual(str(raw_usage[child.tag]), child.text)
+
+        self.assertEqual(len(not_seen), 0)
+
+    def test_serializer_show(self):
+        today = datetime.datetime.now()
+        yesterday = today - datetime.timedelta(days=1)
+        raw_usage = dict(
+            tenant_id='tenant',
+            total_local_gb_usage=789,
+            total_vcpus_usage=456,
+            total_memory_mb_usage=123,
+            total_hours=24,
+            start=yesterday,
+            stop=today,
+            server_usages=[dict(
+                    name='test',
+                    hours=24,
+                    memory_mb=1024,
+                    local_gb=50,
+                    vcpus=1,
+                    tenant_id='tenant',
+                    flavor='m1.small',
+                    started_at=yesterday,
+                    ended_at=today,
+                    state='terminated',
+                    uptime=86400),
+                           dict(
+                    name='test2',
+                    hours=12,
+                    memory_mb=512,
+                    local_gb=25,
+                    vcpus=2,
+                    tenant_id='tenant',
+                    flavor='m1.tiny',
+                    started_at=yesterday,
+                    ended_at=today,
+                    state='terminated',
+                    uptime=43200),
+                           ],
+            )
+        tenant_usage = dict(tenant_usage=raw_usage)
+        text = self.serializer.serialize(tenant_usage, 'show')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self._verify_tenant_usage(raw_usage, tree)
+
+    def test_serializer_index(self):
+        today = datetime.datetime.now()
+        yesterday = today - datetime.timedelta(days=1)
+        raw_usages = [dict(
+                tenant_id='tenant1',
+                total_local_gb_usage=1024,
+                total_vcpus_usage=23,
+                total_memory_mb_usage=512,
+                total_hours=24,
+                start=yesterday,
+                stop=today,
+                server_usages=[dict(
+                        name='test1',
+                        hours=24,
+                        memory_mb=1024,
+                        local_gb=50,
+                        vcpus=2,
+                        tenant_id='tenant1',
+                        flavor='m1.small',
+                        started_at=yesterday,
+                        ended_at=today,
+                        state='terminated',
+                        uptime=86400),
+                               dict(
+                        name='test2',
+                        hours=42,
+                        memory_mb=4201,
+                        local_gb=25,
+                        vcpus=1,
+                        tenant_id='tenant1',
+                        flavor='m1.tiny',
+                        started_at=today,
+                        ended_at=yesterday,
+                        state='terminated',
+                        uptime=43200),
+                               ],
+                ),
+                      dict(
+                tenant_id='tenant2',
+                total_local_gb_usage=512,
+                total_vcpus_usage=32,
+                total_memory_mb_usage=1024,
+                total_hours=42,
+                start=today,
+                stop=yesterday,
+                server_usages=[dict(
+                        name='test3',
+                        hours=24,
+                        memory_mb=1024,
+                        local_gb=50,
+                        vcpus=2,
+                        tenant_id='tenant2',
+                        flavor='m1.small',
+                        started_at=yesterday,
+                        ended_at=today,
+                        state='terminated',
+                        uptime=86400),
+                               dict(
+                        name='test2',
+                        hours=42,
+                        memory_mb=4201,
+                        local_gb=25,
+                        vcpus=1,
+                        tenant_id='tenant4',
+                        flavor='m1.tiny',
+                        started_at=today,
+                        ended_at=yesterday,
+                        state='terminated',
+                        uptime=43200),
+                               ],
+                ),
+            ]
+        tenant_usages = dict(tenant_usages=raw_usages)
+        text = self.serializer.serialize(tenant_usages, 'index')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('tenant_usages', tree.tag)
+        self.assertEqual(len(raw_usages), len(tree))
+        for idx, child in enumerate(tree):
+            self._verify_tenant_usage(raw_usages[idx], child)

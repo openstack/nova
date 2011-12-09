@@ -18,6 +18,7 @@
 from nova.api.openstack import common
 from nova.api.openstack.v2 import extensions
 from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova import log as logging
 from nova import network
 
@@ -31,13 +32,6 @@ def _translate_vif_summary_view(_context, vif):
     d['id'] = vif['uuid']
     d['mac_address'] = vif['address']
     return d
-
-
-def _get_metadata():
-    metadata = {
-        "attributes": {
-                'virtual_interface': ["id", "mac_address"]}}
-    return metadata
 
 
 class ServerVirtualInterfaceController(object):
@@ -63,6 +57,24 @@ class ServerVirtualInterfaceController(object):
                            entity_maker=_translate_vif_summary_view)
 
 
+vif_nsmap = {None: wsgi.XMLNS_V11}
+
+
+class VirtualInterfaceTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('virtual_interfaces')
+        elem = xmlutil.SubTemplateElement(root, 'virtual_interface',
+                                          selector='virtual_interfaces')
+        elem.set('id')
+        elem.set('mac_address')
+        return xmlutil.MasterTemplate(root, 1, nsmap=vif_nsmap)
+
+
+class VirtualInterfaceSerializer(xmlutil.XMLTemplateSerializer):
+    def default(self):
+        return VirtualInterfaceTemplate()
+
+
 class Virtual_interfaces(extensions.ExtensionDescriptor):
     """Virtual interface support"""
 
@@ -74,10 +86,9 @@ class Virtual_interfaces(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        metadata = _get_metadata()
         body_serializers = {
-            'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
-                                                      xmlns=wsgi.XMLNS_V11)}
+            'application/xml': VirtualInterfaceSerializer()
+            }
         serializer = wsgi.ResponseSerializer(body_serializers, None)
         res = extensions.ResourceExtension(
             'os-virtual-interfaces',
