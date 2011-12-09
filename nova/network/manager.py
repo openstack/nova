@@ -466,6 +466,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         if not network_driver:
             network_driver = FLAGS.network_driver
         self.driver = utils.import_object(network_driver)
+        temp = utils.import_object(FLAGS.instance_dns_manager)
+        self.instance_dns_manager = temp
         self.network_api = network_api.API()
         self.compute_api = compute_api.API()
         super(NetworkManager, self).__init__(service_name='network',
@@ -822,6 +824,11 @@ class NetworkManager(manager.SchedulerDependentManager):
                       'virtual_interface_id': vif['id']}
             self.db.fixed_ip_update(context, address, values)
 
+        instance_ref = self.db.instance_get(context, instance_id)
+        name = instance_ref['display_name']
+        self.instance_dns_manager.create_entry(name, address,
+                                               "type", FLAGS.instance_dns_zone)
+
         self._setup_network(context, network)
         return address
 
@@ -835,6 +842,10 @@ class NetworkManager(manager.SchedulerDependentManager):
         instance_id = instance_ref['id']
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
+
+        for name in self.instance_dns_manager.get_entries_by_address(address):
+            self.instance_dns_manager.delete_entry(name)
+
         if FLAGS.force_dhcp_release:
             dev = self.driver.get_dev(fixed_ip_ref['network'])
             vif = self.db.virtual_interface_get_by_instance_and_network(

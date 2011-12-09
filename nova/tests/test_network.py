@@ -22,6 +22,7 @@ from nova import exception
 from nova import log as logging
 from nova import rpc
 from nova import test
+from nova import utils
 from nova.network import manager as network_manager
 from nova.tests import fake_network
 
@@ -133,9 +134,15 @@ class FlatNetworkTestCase(test.TestCase):
     def setUp(self):
         super(FlatNetworkTestCase, self).setUp()
         self.network = network_manager.FlatManager(host=HOST)
+        temp = utils.import_object('nova.network.minidns.MiniDNS')
+        self.network.instance_dns_manager = temp
         self.network.db = db
         self.context = context.RequestContext('testuser', 'testproject',
                                               is_admin=False)
+
+    def tearDown(self):
+        super(FlatNetworkTestCase, self).tearDown()
+        self.network.instance_dns_manager.delete_dns_file()
 
     def test_get_instance_nw_info(self):
         fake_get_instance_nw_info = fake_network.fake_get_instance_nw_info
@@ -272,6 +279,8 @@ class FlatNetworkTestCase(test.TestCase):
         db.instance_get(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
                                                              [{'id': 0}]})
+        db.instance_get(self.context,
+                        1).AndReturn({'display_name': HOST})
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
@@ -281,6 +290,59 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
                                               networks[0]['id'])
+
+    def test_mini_dns_driver(self):
+        driver = self.network.instance_dns_manager
+        driver.create_entry("hostone", "10.0.0.1", 0, "foozone")
+        driver.create_entry("hosttwo", "10.0.0.2", 0, "foozone")
+        driver.create_entry("hostthree", "10.0.0.3", 0, "foozone")
+        driver.create_entry("hostfour", "10.0.0.4", 0, "foozone")
+        driver.delete_entry("hosttwo", "foozone")
+        driver.rename_entry("10.0.0.3", "hostone", "foozone")
+        driver.modify_address("hostfour", "10.0.0.1", "foozone")
+        names = driver.get_entries_by_address("10.0.0.1", "foozone")
+        self.assertEqual(len(names), 2)
+        self.assertIn('hostone.foozone', names)
+        self.assertIn('hostfour.foozone', names)
+        addresses = driver.get_entries_by_name("hostone", "foozone")
+        self.assertEqual(len(addresses), 2)
+        self.assertIn('10.0.0.1', addresses)
+        self.assertIn('10.0.0.3', addresses)
+
+    def test_instance_dns(self):
+        fixedip = '192.168.0.101'
+        self.mox.StubOutWithMock(db, 'network_get')
+        self.mox.StubOutWithMock(db, 'network_update')
+        self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(db,
+                              'virtual_interface_get_by_instance_and_network')
+        self.mox.StubOutWithMock(db, 'fixed_ip_update')
+
+        db.fixed_ip_update(mox.IgnoreArg(),
+                           mox.IgnoreArg(),
+                           mox.IgnoreArg())
+        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+
+        db.instance_get(mox.IgnoreArg(),
+                        mox.IgnoreArg()).AndReturn({'security_groups':
+                                                             [{'id': 0}]})
+
+        db.instance_get(self.context,
+                        1).AndReturn({'display_name': HOST})
+        db.fixed_ip_associate_pool(mox.IgnoreArg(),
+                                   mox.IgnoreArg(),
+                                   mox.IgnoreArg()).AndReturn(fixedip)
+        db.network_get(mox.IgnoreArg(),
+                       mox.IgnoreArg()).AndReturn(networks[0])
+        db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self.network.add_fixed_ip_to_instance(self.context, 1, HOST,
+                                              networks[0]['id'])
+        addresses = self.network.instance_dns_manager.get_entries_by_name(HOST)
+        self.assertEqual(len(addresses), 1)
+        self.assertEqual(addresses[0], fixedip)
 
 
 class VlanNetworkTestCase(test.TestCase):

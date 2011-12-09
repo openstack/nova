@@ -397,6 +397,11 @@ DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
               'Manager for compute')
 DEFINE_string('console_manager', 'nova.console.manager.ConsoleProxyManager',
               'Manager for console proxy')
+DEFINE_string('instance_dns_manager',
+              'nova.network.instance_dns_driver.InstanceDNSManagerDriver',
+              'DNS Manager for instance IPs')
+DEFINE_string('instance_dns_zone', '',
+              'DNS Zone for instance IPs')
 DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
               'Manager for network')
 DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
