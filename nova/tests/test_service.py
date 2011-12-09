@@ -35,6 +35,10 @@ from nova.compute import manager as compute_manager
 
 flags.DEFINE_string("fake_manager", "nova.tests.test_service.FakeManager",
                     "Manager for testing")
+flags.DEFINE_string("test_service_listen", None,
+                    "Host to bind test service to")
+flags.DEFINE_integer("test_service_listen_port", 0,
+                     "Port number to bind test service to")
 
 
 class FakeManager(manager.Manager):

@@ -19,21 +19,20 @@
 
 """Command-line flag library.
 
-Emulates gflags by wrapping optparse.
+Emulates gflags by wrapping cfg.ConfigOpts.
 
-The idea is to move to optparse eventually, and this wrapper is a
+The idea is to move fully to cfg eventually, and this wrapper is a
 stepping stone.
 
 """
 
-import copy
-import optparse
 import os
 import socket
-import string
 import sys
 
 import gflags
+
+from nova.common import cfg
 
 
 class FlagValues(object):
@@ -69,76 +68,50 @@ class FlagValues(object):
             return filter(lambda i: i == a or i.startswith(a + "="), args)[0]
 
     def __init__(self):
-        self._parser = optparse.OptionParser()
-        self._parser.disable_interspersed_args()
-        self._multistring_defaults = {}
+        self._conf = cfg.ConfigOpts()
+        self._conf._oparser.disable_interspersed_args()
+        self._opts = {}
         self.Reset()
 
-    def _apply_multistring_defaults(self, values):
-        #
-        # This horrendous hack is to stop optparse appending
-        # values to the default value. See:
-        #   http://bugs.python.org/issue5088
-        #
-        for flag, default in self._multistring_defaults.items():
-            if not getattr(values, flag):
-                setattr(values, flag, default)
-        return values
-
     def _parse(self):
-        if not self._values is None:
+        if self._extra is not None:
             return
 
         args = gflags.FlagValues().ReadFlagsFromFiles(self._args)
 
-        values = extra = None
-
-        #
-        # This horrendous hack is needed because optparse only
-        # shallow copies its defaults dict before parsing
-        #
-        defaults = copy.deepcopy(self._parser.defaults)
+        extra = None
 
         #
         # This horrendous hack allows us to stop optparse
         # exiting when it encounters an unknown option
         #
-        error_catcher = self.ErrorCatcher(self._parser.error)
-        self._parser.error = error_catcher.catch
+        error_catcher = self.ErrorCatcher(self._conf._oparser.error)
+        self._conf._oparser.error = error_catcher.catch
         try:
             while True:
                 error_catcher.reset()
 
-                (values, extra) = self._parser.parse_args(args)
+                extra = self._conf(args)
 
                 unknown = error_catcher.get_unknown_arg(args)
                 if not unknown:
                     break
 
                 args.remove(unknown)
-                self._parser.defaults = defaults
-                defaults = copy.deepcopy(defaults)
         finally:
-            self._parser.error = error_catcher.orig_error
-            self._parser.defaults = defaults
+            self._conf._oparser.error = error_catcher.orig_error
 
-        values = self._apply_multistring_defaults(values)
-
-        (self._values, self._extra) = (values, extra)
+        self._extra = extra
 
     def __call__(self, argv):
+        self.Reset()
         self._args = argv[1:]
-        self._values = None
         self._parse()
         return [argv[0]] + self._extra
 
     def __getattr__(self, name):
         self._parse()
-        val = getattr(self._values, name)
-        if type(val) is str:
-            tmpl = string.Template(val)
-            return tmpl.substitute(vars(self._values))
-        return val
+        return getattr(self._conf, name)
 
     def get(self, name, default):
         value = getattr(self, name)
@@ -149,11 +122,10 @@ class FlagValues(object):
 
     def __contains__(self, name):
         self._parse()
-        return hasattr(self._values, name)
+        return hasattr(self._conf, name)
 
     def _update_default(self, name, default):
-        self._parser.set_default(name, default)
-        self._values = None
+        self._conf.set_default(name, default)
 
     def __iter__(self):
         return self.FlagValuesDict().iterkeys()
@@ -165,55 +137,51 @@ class FlagValues(object):
         return self.Flag(name, getattr(self, name), self._update_default)
 
     def Reset(self):
+        self._conf.reset()
         self._args = []
-        self._values = None
         self._extra = None
 
     def ParseNewFlags(self):
         pass
 
     def FlagValuesDict(self):
+        self._parse()
         ret = {}
-        for opt in self._parser.option_list:
-            if opt.dest:
-                ret[opt.dest] = getattr(self, opt.dest)
+        for opt in self._opts.values():
+            ret[opt.dest] = getattr(self, opt.dest)
         return ret
 
-    def _add_option(self, name, default, help, prefix='--', **kwargs):
-        prefixed_name = prefix + name
-        for opt in self._parser.option_list:
-            if prefixed_name == opt.get_opt_string():
-                return
-        self._parser.add_option(prefixed_name, dest=name,
-                                default=default, help=help, **kwargs)
-        self._values = None
+    def _add_option(self, opt):
+        if opt.dest in self._opts:
+            return
+
+        self._opts[opt.dest] = opt
+
+        try:
+            self._conf.register_cli_opts(self._opts.values())
+        except cfg.ArgsAlreadyParsedError:
+            self._conf.reset()
+            self._conf.register_cli_opts(self._opts.values())
+            self._extra = None
 
     def define_string(self, name, default, help):
-        self._add_option(name, default, help)
+        self._add_option(cfg.StrOpt(name, default=default, help=help))
 
     def define_integer(self, name, default, help):
-        self._add_option(name, default, help, type='int')
+        self._add_option(cfg.IntOpt(name, default=default, help=help))
 
     def define_float(self, name, default, help):
-        self._add_option(name, default, help, type='float')
+        self._add_option(cfg.FloatOpt(name, default=default, help=help))
 
     def define_bool(self, name, default, help):
-        #
-        # FIXME(markmc): this doesn't support --boolflag=true/false/t/f/1/0
-        #
-        self._add_option(name, default, help, action='store_true')
-        self._add_option(name, default, help,
-                         prefix="--no", action='store_false')
+        self._add_option(cfg.BoolOpt(name, default=default, help=help))
 
     def define_list(self, name, default, help):
-        def parse_list(option, opt, value, parser):
-            setattr(self._parser.values, name, value.split(','))
-        self._add_option(name, default, help, type='string',
-                         action='callback', callback=parse_list)
+        self._add_option(cfg.ListOpt(name, default=default, help=help))
 
     def define_multistring(self, name, default, help):
-        self._add_option(name, [], help, action='append')
-        self._multistring_defaults[name] = default
+        self._add_option(cfg.MultiStrOpt(name, default=default, help=help))
+
 
 FLAGS = FlagValues()
 
