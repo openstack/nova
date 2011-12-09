@@ -13,11 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import json
 
+from lxml import etree
 import stubout
 import webob
 
+from nova.api.openstack.v2.contrib import virtual_storage_arrays as vsa_ext
 from nova import context
 import nova.db
 from nova import exception
@@ -445,3 +448,265 @@ class VSADriveApiTest(VSAVolumeApiTest):
     def tearDown(self):
         self.stubs.UnsetAll()
         super(VSADriveApiTest, self).tearDown()
+
+
+class SerializerTestCommon(test.TestCase):
+    def setUp(self):
+        super(SerializerTestCommon, self).setUp()
+        self.serializer = self.serializer_class()
+
+    def _verify_attrs(self, obj, tree, attrs):
+        for attr in attrs:
+            self.assertEqual(str(obj[attr]), tree.get(attr))
+
+
+class VsaSerializerTest(SerializerTestCommon):
+    serializer_class = vsa_ext.VsaSerializer
+
+    def test_serialize_show_create(self):
+        exemplar = dict(
+            id='vsa_id',
+            name='vsa_name',
+            displayName='vsa_display_name',
+            displayDescription='vsa_display_desc',
+            createTime=datetime.datetime.now(),
+            status='active',
+            vcType='vsa_instance_type',
+            vcCount=24,
+            driveCount=48,
+            ipAddress='10.11.12.13')
+        text = self.serializer.serialize(dict(vsa=exemplar), 'show')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('vsa', tree.tag)
+        self._verify_attrs(exemplar, tree, exemplar.keys())
+
+    def test_serialize_index_detail(self):
+        exemplar = [dict(
+                id='vsa1_id',
+                name='vsa1_name',
+                displayName='vsa1_display_name',
+                displayDescription='vsa1_display_desc',
+                createTime=datetime.datetime.now(),
+                status='active',
+                vcType='vsa1_instance_type',
+                vcCount=24,
+                driveCount=48,
+                ipAddress='10.11.12.13'),
+                    dict(
+                id='vsa2_id',
+                name='vsa2_name',
+                displayName='vsa2_display_name',
+                displayDescription='vsa2_display_desc',
+                createTime=datetime.datetime.now(),
+                status='active',
+                vcType='vsa2_instance_type',
+                vcCount=42,
+                driveCount=84,
+                ipAddress='11.12.13.14')]
+        text = self.serializer.serialize(dict(vsaSet=exemplar), 'index')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('vsaSet', tree.tag)
+        self.assertEqual(len(exemplar), len(tree))
+        for idx, child in enumerate(tree):
+            self.assertEqual('vsa', child.tag)
+            self._verify_attrs(exemplar[idx], child, exemplar[idx].keys())
+
+
+class VsaVolumeSerializerTest(SerializerTestCommon):
+    serializer_class = vsa_ext.VsaVolumeSerializer
+    object = 'volume'
+    objects = 'volumes'
+
+    def _verify_voldrive(self, vol, tree):
+        self.assertEqual(self.object, tree.tag)
+
+        self._verify_attrs(vol, tree, ('id', 'status', 'size',
+                                       'availabilityZone', 'createdAt',
+                                       'displayName', 'displayDescription',
+                                       'volumeType', 'vsaId', 'name'))
+
+        for child in tree:
+            self.assertTrue(child.tag in ('attachments', 'metadata'))
+            if child.tag == 'attachments':
+                self.assertEqual(1, len(child))
+                self.assertEqual('attachment', child[0].tag)
+                self._verify_attrs(vol['attachments'][0], child[0],
+                                   ('id', 'volumeId', 'serverId', 'device'))
+            elif child.tag == 'metadata':
+                not_seen = set(vol['metadata'].keys())
+                for gr_child in child:
+                    self.assertTrue(gr_child.tag in not_seen)
+                    self.assertEqual(str(vol['metadata'][gr_child.tag]),
+                                     gr_child.text)
+                    not_seen.remove(gr_child.tag)
+                self.assertEqual(0, len(not_seen))
+
+    def test_show_create_serializer(self):
+        raw_volume = dict(
+            id='vol_id',
+            status='vol_status',
+            size=1024,
+            availabilityZone='vol_availability',
+            createdAt=datetime.datetime.now(),
+            attachments=[dict(
+                    id='vol_id',
+                    volumeId='vol_id',
+                    serverId='instance_uuid',
+                    device='/foo')],
+            displayName='vol_name',
+            displayDescription='vol_desc',
+            volumeType='vol_type',
+            metadata=dict(
+                foo='bar',
+                baz='quux',
+                ),
+            vsaId='vol_vsa_id',
+            name='vol_vsa_name',
+            )
+        text = self.serializer.serialize({self.object: raw_volume}, 'show')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self._verify_voldrive(raw_volume, tree)
+
+    def test_index_detail_serializer(self):
+        raw_volumes = [dict(
+                id='vol1_id',
+                status='vol1_status',
+                size=1024,
+                availabilityZone='vol1_availability',
+                createdAt=datetime.datetime.now(),
+                attachments=[dict(
+                        id='vol1_id',
+                        volumeId='vol1_id',
+                        serverId='instance_uuid',
+                        device='/foo1')],
+                displayName='vol1_name',
+                displayDescription='vol1_desc',
+                volumeType='vol1_type',
+                metadata=dict(
+                    foo='vol1_foo',
+                    bar='vol1_bar',
+                    ),
+                vsaId='vol1_vsa_id',
+                name='vol1_vsa_name',
+                ),
+                       dict(
+                id='vol2_id',
+                status='vol2_status',
+                size=1024,
+                availabilityZone='vol2_availability',
+                createdAt=datetime.datetime.now(),
+                attachments=[dict(
+                        id='vol2_id',
+                        volumeId='vol2_id',
+                        serverId='instance_uuid',
+                        device='/foo2')],
+                displayName='vol2_name',
+                displayDescription='vol2_desc',
+                volumeType='vol2_type',
+                metadata=dict(
+                    foo='vol2_foo',
+                    bar='vol2_bar',
+                    ),
+                vsaId='vol2_vsa_id',
+                name='vol2_vsa_name',
+                )]
+        text = self.serializer.serialize({self.objects: raw_volumes}, 'index')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual(self.objects, tree.tag)
+        self.assertEqual(len(raw_volumes), len(tree))
+        for idx, child in enumerate(tree):
+            self._verify_voldrive(raw_volumes[idx], child)
+
+
+class VsaDriveSerializerTest(VsaVolumeSerializerTest):
+    serializer_class = vsa_ext.VsaDriveSerializer
+    object = 'drive'
+    objects = 'drives'
+
+
+class VsaVPoolSerializerTest(SerializerTestCommon):
+    serializer_class = vsa_ext.VsaVPoolSerializer
+
+    def _verify_vpool(self, vpool, tree):
+        self._verify_attrs(vpool, tree, ('id', 'vsaId', 'name', 'displayName',
+                                         'displayDescription', 'driveCount',
+                                         'protection', 'stripeSize',
+                                         'stripeWidth', 'createTime',
+                                         'status'))
+
+        self.assertEqual(1, len(tree))
+        self.assertEqual('driveIds', tree[0].tag)
+        self.assertEqual(len(vpool['driveIds']), len(tree[0]))
+        for idx, gr_child in enumerate(tree[0]):
+            self.assertEqual('driveId', gr_child.tag)
+            self.assertEqual(str(vpool['driveIds'][idx]), gr_child.text)
+
+    def test_vpool_create_show_serializer(self):
+        exemplar = dict(
+            id='vpool_id',
+            vsaId='vpool_vsa_id',
+            name='vpool_vsa_name',
+            displayName='vpool_display_name',
+            displayDescription='vpool_display_desc',
+            driveCount=24,
+            driveIds=['drive1', 'drive2', 'drive3'],
+            protection='protected',
+            stripeSize=1024,
+            stripeWidth=2048,
+            createTime=datetime.datetime.now(),
+            status='available')
+        text = self.serializer.serialize(dict(vpool=exemplar), 'show')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self._verify_vpool(exemplar, tree)
+
+    def test_vpool_index_serializer(self):
+        exemplar = [dict(
+                id='vpool1_id',
+                vsaId='vpool1_vsa_id',
+                name='vpool1_vsa_name',
+                displayName='vpool1_display_name',
+                displayDescription='vpool1_display_desc',
+                driveCount=24,
+                driveIds=['drive1', 'drive2', 'drive3'],
+                protection='protected',
+                stripeSize=1024,
+                stripeWidth=2048,
+                createTime=datetime.datetime.now(),
+                status='available'),
+                    dict(
+                id='vpool2_id',
+                vsaId='vpool2_vsa_id',
+                name='vpool2_vsa_name',
+                displayName='vpool2_display_name',
+                displayDescription='vpool2_display_desc',
+                driveCount=42,
+                driveIds=['drive4', 'drive5', 'drive6'],
+                protection='protected',
+                stripeSize=512,
+                stripeWidth=256,
+                createTime=datetime.datetime.now(),
+                status='available')]
+        text = self.serializer.serialize(dict(vpools=exemplar), 'index')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('vpools', tree.tag)
+        self.assertEqual(len(exemplar), len(tree))
+        for idx, child in enumerate(tree):
+            self._verify_vpool(exemplar[idx], child)
