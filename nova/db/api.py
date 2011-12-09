@@ -649,6 +649,48 @@ def instance_get_id_to_uuid_mapping(context, ids):
 ###################
 
 
+def instance_info_cache_create(context, values):
+    """Create a new instance cache record in the table.
+
+    :param context: = request context object
+    :param values: = dict containing column values
+    """
+    return IMPL.instance_info_cache_create(context, values)
+
+
+def instance_info_cache_get(context, instance_id, session=None):
+    """Gets an instance info cache from the table.
+
+    :param instance_id: = id of the info cache's instance
+    :param session: = optional session object
+    """
+    return IMPL.instance_info_cache_get(context, instance_id, session=None)
+
+
+def instance_info_cache_update(context, instance_id, values,
+                               session=None):
+    """Update an instance info cache record in the table.
+
+    :param instance_id: = id of info cache's instance
+    :param values: = dict containing column values to update
+    """
+    return IMPL.instance_info_cache_update(context, instance_id, values,
+                                           session)
+
+
+def instance_info_cache_delete_by_instance_id(context, instance_id,
+                                              session=None):
+    """Deletes an existing instance_info_cache record
+
+    :param instance_id: = id of the instance tied to the cache record
+    """
+    return IMPL.instance_info_cache_delete_by_instance_id(context, instance_id,
+                                                          session)
+
+
+###################
+
+
 def key_pair_create(context, values):
     """Create a key_pair from the values dictionary."""
     return IMPL.key_pair_create(context, values)

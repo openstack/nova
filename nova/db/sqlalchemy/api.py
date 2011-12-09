@@ -1132,6 +1132,8 @@ def instance_destroy(context, instance_id):
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
+        instance_info_cache_delete_by_instance_id(context, instance_id,
+                                                  session=session)
 
 
 @require_context
@@ -1552,6 +1554,75 @@ def instance_get_id_to_uuid_mapping(context, ids):
     for instance in instances:
         mapping[instance['id']] = instance['uuid']
     return mapping
+
+
+###################
+
+
+@require_context
+def instance_info_cache_create(context, values):
+    """Create a new instance cache record in the table.
+
+    :param context: = request context object
+    :param values: = dict containing column values
+    """
+    info_cache = models.InstanceInfoCache()
+    info_cache['id'] = str(utils.gen_uuid())
+    info_cache.update(values)
+
+    session = get_session()
+    with session.begin():
+        info_cache.save(session=session)
+    return info_cache
+
+
+@require_context
+def instance_info_cache_get(context, instance_id, session=None):
+    """Gets an instance info cache from the table.
+
+    :param instance_id: = id of the info cache's instance
+    :param session: = optional session object
+    """
+    session = session or get_session()
+
+    info_cache = session.query(models.InstanceInfoCache).\
+                         filter_by(instance_id=instance_id).\
+                         first()
+    return info_cache
+
+
+@require_context
+def instance_info_cache_update(context, instance_id, values,
+                               session=None):
+    """Update an instance info cache record in the table.
+
+    :param instance_id: = id of info cache's instance
+    :param values: = dict containing column values to update
+    :param session: = optional session object
+    """
+    session = session or get_session()
+    info_cache = instance_info_cache_get(context, instance_id,
+                                         session=session)
+
+    values['updated_at'] = literal_column('updated_at')
+
+    if info_cache:
+        info_cache.update(values)
+        info_cache.save(session=session)
+    return info_cache
+
+
+@require_context
+def instance_info_cache_delete_by_instance_id(context, instance_id,
+                                              session=None):
+    """Deletes an existing instance_info_cache record
+
+    :param instance_id: = id of the instance tied to the cache record
+    :param session: = optional session object
+    """
+    values = {'deleted': True,
+              'deleted_at': utils.utcnow()}
+    instance_info_cache_update(context, instance_id, values, session)
 
 
 ###################
