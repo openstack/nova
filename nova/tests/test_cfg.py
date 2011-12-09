@@ -132,16 +132,16 @@ class CliOptsTestCase(BaseTestCase):
 
     def test_help(self):
         self.stubs.Set(sys, 'stdout', StringIO.StringIO())
-        self.assertRaisesRegexp(SystemExit, '0', self.conf, ['--help'])
-        self.assertIn('FOO BAR', sys.stdout.getvalue())
-        self.assertIn('--version', sys.stdout.getvalue())
-        self.assertIn('--help', sys.stdout.getvalue())
-        self.assertIn('--config-file=PATH', sys.stdout.getvalue())
+        self.assertRaises(SystemExit, self.conf, ['--help'])
+        self.assertTrue('FOO BAR' in sys.stdout.getvalue())
+        self.assertTrue('--version' in sys.stdout.getvalue())
+        self.assertTrue('--help' in sys.stdout.getvalue())
+        self.assertTrue('--config-file=PATH' in sys.stdout.getvalue())
 
     def test_version(self):
         self.stubs.Set(sys, 'stdout', StringIO.StringIO())
-        self.assertRaisesRegexp(SystemExit, '0', self.conf, ['--version'])
-        self.assertIn('1.0', sys.stdout.getvalue())
+        self.assertRaises(SystemExit, self.conf, ['--version'])
+        self.assertTrue('1.0' in sys.stdout.getvalue())
 
     def test_config_file(self):
         paths = self.create_tempfiles([('1.conf', '[DEFAULT]'),
@@ -337,8 +337,6 @@ class ConfigFileOptsTestCase(BaseTestCase):
         self.assertTrue(hasattr(self.conf, 'foo'))
         self.assertEquals(self.conf.foo, ['bar'])
 
-    @unittest.skip('FIXME(markmc): values spread across the CLI and multiple '
-                   'config files should be appended')
     def test_multistr_values_append(self):
         self.conf.register_cli_opt(ListOpt('foo'))
 
@@ -354,7 +352,10 @@ class ConfigFileOptsTestCase(BaseTestCase):
                    '--config-file', paths[1]])
 
         self.assertTrue(hasattr(self.conf, 'foo'))
-        self.assertEquals(self.conf.foo, ['bar', 'bar', 'bar'])
+
+        # FIXME(markmc): values spread across the CLI and multiple
+        #                config files should be appended
+        # self.assertEquals(self.conf.foo, ['bar', 'bar', 'bar'])
 
 
 class OptGroupsTestCase(BaseTestCase):
@@ -595,8 +596,7 @@ class SadPathTestCase(BaseTestCase):
     def test_unknown_attr(self):
         self.conf([])
         self.assertFalse(hasattr(self.conf, 'foo'))
-        self.assertRaisesRegexp(NoSuchOptError, 'foo',
-                                getattr, self.conf, 'foo')
+        self.assertRaises(NoSuchOptError, getattr, self.conf, 'foo')
 
     def test_unknown_group_attr(self):
         self.conf.register_group(OptGroup('blaa'))
@@ -605,8 +605,7 @@ class SadPathTestCase(BaseTestCase):
 
         self.assertTrue(hasattr(self.conf, 'blaa'))
         self.assertFalse(hasattr(self.conf.blaa, 'foo'))
-        self.assertRaisesRegexp(NoSuchOptError, 'blaa.*foo',
-                                getattr, self.conf.blaa, 'foo')
+        self.assertRaises(NoSuchOptError, getattr, self.conf.blaa, 'foo')
 
     def test_ok_duplicate(self):
         opt = StrOpt('foo')
@@ -620,26 +619,22 @@ class SadPathTestCase(BaseTestCase):
 
     def test_error_duplicate(self):
         self.conf.register_cli_opt(StrOpt('foo'))
-        self.assertRaisesRegexp(DuplicateOptError, 'foo',
-                                self.conf.register_cli_opt,
-                                StrOpt('foo'))
+        self.assertRaises(DuplicateOptError,
+                          self.conf.register_cli_opt, StrOpt('foo'))
 
     def test_error_duplicate_with_different_dest(self):
         self.conf.register_cli_opt(StrOpt('foo', dest='f'))
-        self.assertRaisesRegexp(DuplicateOptError, 'foo',
-                                self.conf.register_cli_opt,
-                                StrOpt('foo'))
+        self.assertRaises(DuplicateOptError,
+                          self.conf.register_cli_opt, StrOpt('foo'))
 
     def test_error_duplicate_short(self):
         self.conf.register_cli_opt(StrOpt('foo', short='f'))
         self.assertRaises(DuplicateOptError,
-                          self.conf.register_cli_opt,
-                          StrOpt('bar', short='f'))
+                          self.conf.register_cli_opt, StrOpt('bar', short='f'))
 
     def test_no_such_group(self):
-        self.assertRaisesRegexp(NoSuchGroupError, 'blaa',
-                                self.conf.register_cli_opt,
-                                StrOpt('foo'), group='blaa')
+        self.assertRaises(NoSuchGroupError, self.conf.register_cli_opt,
+                          StrOpt('foo'), group='blaa')
 
     def test_already_parsed(self):
         self.conf([])
@@ -650,20 +645,20 @@ class SadPathTestCase(BaseTestCase):
     def test_bad_cli_arg(self):
         self.stubs.Set(sys, 'stderr', StringIO.StringIO())
 
-        self.assertRaisesRegexp(SystemExit, '2', self.conf, ['--foo'])
+        self.assertRaises(SystemExit, self.conf, ['--foo'])
 
-        self.assertIn('error', sys.stderr.getvalue())
-        self.assertIn('--foo', sys.stderr.getvalue())
+        self.assertTrue('error' in sys.stderr.getvalue())
+        self.assertTrue('--foo' in sys.stderr.getvalue())
 
     def _do_test_bad_cli_value(self, opt_class):
         self.conf.register_cli_opt(opt_class('foo'))
 
         self.stubs.Set(sys, 'stderr', StringIO.StringIO())
 
-        self.assertRaisesRegexp(SystemExit, '2', self.conf, ['--foo', 'bar'])
+        self.assertRaises(SystemExit, self.conf, ['--foo', 'bar'])
 
-        self.assertIn('foo', sys.stderr.getvalue())
-        self.assertIn('bar', sys.stderr.getvalue())
+        self.assertTrue('foo' in sys.stderr.getvalue())
+        self.assertTrue('bar' in sys.stderr.getvalue())
 
     def test_bad_int_arg(self):
         self._do_test_bad_cli_value(IntOpt)
@@ -676,14 +671,14 @@ class SadPathTestCase(BaseTestCase):
         os.remove(paths[0])
         self.tempfiles.remove(paths[0])
 
-        self.assertRaisesRegexp(ConfigFilesNotFoundError, paths[0],
-                                self.conf, ['--config-file', paths[0]])
+        self.assertRaises(ConfigFilesNotFoundError,
+                          self.conf, ['--config-file', paths[0]])
 
     def test_conf_file_not_found(self):
         paths = self.create_tempfiles([('test.conf', 'foo')])
 
-        self.assertRaisesRegexp(ConfigFileParseError, paths[0],
-                                self.conf, ['--config-file', paths[0]])
+        self.assertRaises(ConfigFileParseError,
+                          self.conf, ['--config-file', paths[0]])
 
     def _do_test_conf_file_bad_value(self, opt_class):
         self.conf.register_opt(opt_class('foo'))
@@ -709,25 +704,21 @@ class SadPathTestCase(BaseTestCase):
 
     def test_set_default_unknown_attr(self):
         self.conf([])
-        self.assertRaisesRegexp(NoSuchOptError, 'foo',
-                                self.conf.set_default, 'foo', 'bar')
+        self.assertRaises(NoSuchOptError, self.conf.set_default, 'foo', 'bar')
 
     def test_set_default_unknown_group(self):
         self.conf([])
-        self.assertRaisesRegexp(NoSuchGroupError, 'blaa',
-                                self.conf.set_default,
-                                'foo', 'bar', group='blaa')
+        self.assertRaises(NoSuchGroupError,
+                          self.conf.set_default, 'foo', 'bar', group='blaa')
 
     def test_set_override_unknown_attr(self):
         self.conf([])
-        self.assertRaisesRegexp(NoSuchOptError, 'foo',
-                                self.conf.set_override, 'foo', 'bar')
+        self.assertRaises(NoSuchOptError, self.conf.set_override, 'foo', 'bar')
 
     def test_set_override_unknown_group(self):
         self.conf([])
-        self.assertRaisesRegexp(NoSuchGroupError, 'blaa',
-                                self.conf.set_override,
-                                'foo', 'bar', group='blaa')
+        self.assertRaises(NoSuchGroupError,
+                          self.conf.set_override, 'foo', 'bar', group='blaa')
 
 
 class OptDumpingTestCase(BaseTestCase):
@@ -782,9 +773,9 @@ class CommonOptsTestCase(BaseTestCase):
     def test_logging_opts(self):
         self.conf([])
 
-        self.assertIsNone(self.conf.log_config)
-        self.assertIsNone(self.conf.log_file)
-        self.assertIsNone(self.conf.log_dir)
+        self.assertTrue(self.conf.log_config is None)
+        self.assertTrue(self.conf.log_file is None)
+        self.assertTrue(self.conf.log_dir is None)
 
         self.assertEquals(self.conf.log_format,
                           CommonConfigOpts.DEFAULT_LOG_FORMAT)
