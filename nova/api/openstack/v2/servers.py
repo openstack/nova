@@ -165,8 +165,11 @@ class Controller(wsgi.Controller):
                     _("Personality file path too long"),
             "OnsetFileContentLimitExceeded":
                     _("Personality file content too long"),
-            "InstanceLimitExceeded":
-                    _("Instance quotas have been exceeded")}
+
+            # NOTE(bcwaldon): expose the message generated below in order
+            # to better explain how the quota was exceeded
+            "InstanceLimitExceeded": error.message,
+        }
 
         expl = code_mappings.get(error.code)
         if expl:
