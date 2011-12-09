@@ -16,10 +16,12 @@
 
 import unittest
 
+from lxml import etree
 import mox
 import webob
 
 from nova.api.openstack.v2.contrib import security_groups
+from nova.api.openstack import wsgi
 import nova.db
 from nova import exception
 from nova import utils
@@ -845,3 +847,167 @@ class TestSecurityGroupXMLDeserializer(unittest.TestCase):
             },
         }
         self.assertEquals(request['body'], expected)
+
+
+class TestSecurityGroupXMLSerializer(unittest.TestCase):
+    def setUp(self):
+        self.namespace = wsgi.XMLNS_V11
+        tmp = security_groups.SecurityGroupRulesXMLSerializer()
+        self.rule_serializer = tmp
+        self.group_serializer = security_groups.SecurityGroupXMLSerializer()
+
+    def _tag(self, elem):
+        tagname = elem.tag
+        self.assertEqual(tagname[0], '{')
+        tmp = tagname.partition('}')
+        namespace = tmp[0][1:]
+        self.assertEqual(namespace, self.namespace)
+        return tmp[2]
+
+    def _verify_security_group_rule(self, raw_rule, tree):
+        self.assertEqual(raw_rule['id'], tree.get('id'))
+        self.assertEqual(raw_rule['parent_group_id'],
+                         tree.get('parent_group_id'))
+
+        seen = set()
+        expected = set(['ip_protocol', 'from_port', 'to_port',
+                        'group', 'group/name', 'group/tenant_id',
+                        'ip_range', 'ip_range/cidr'])
+
+        for child in tree:
+            child_tag = self._tag(child)
+            self.assertTrue(child_tag in raw_rule)
+            seen.add(child_tag)
+            if child_tag in ('group', 'ip_range'):
+                for gr_child in child:
+                    gr_child_tag = self._tag(gr_child)
+                    self.assertTrue(gr_child_tag in raw_rule[child_tag])
+                    seen.add('%s/%s' % (child_tag, gr_child_tag))
+                    self.assertEqual(gr_child.text,
+                                     raw_rule[child_tag][gr_child_tag])
+            else:
+                self.assertEqual(child.text, raw_rule[child_tag])
+        self.assertEqual(seen, expected)
+
+    def _verify_security_group(self, raw_group, tree):
+        rules = raw_group['rules']
+        self.assertEqual('security_group', self._tag(tree))
+        self.assertEqual(raw_group['id'], tree.get('id'))
+        self.assertEqual(raw_group['tenant_id'], tree.get('tenant_id'))
+        self.assertEqual(raw_group['name'], tree.get('name'))
+        self.assertEqual(2, len(tree))
+        for child in tree:
+            child_tag = self._tag(child)
+            if child_tag == 'rules':
+                self.assertEqual(2, len(child))
+                for idx, gr_child in enumerate(child):
+                    self.assertEqual(self._tag(gr_child), 'rule')
+                    self._verify_security_group_rule(rules[idx], gr_child)
+            else:
+                self.assertEqual('description', child_tag)
+                self.assertEqual(raw_group['description'], child.text)
+
+    def test_rule_serializer(self):
+        raw_rule = dict(
+            id='123',
+            parent_group_id='456',
+            ip_protocol='tcp',
+            from_port='789',
+            to_port='987',
+            group=dict(name='group', tenant_id='tenant'),
+            ip_range=dict(cidr='10.0.0.0/8'))
+        rule = dict(security_group_rule=raw_rule)
+        text = self.rule_serializer.serialize(rule)
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('security_group_rule', self._tag(tree))
+        self._verify_security_group_rule(raw_rule, tree)
+
+    def test_group_serializer(self):
+        rules = [dict(
+                id='123',
+                parent_group_id='456',
+                ip_protocol='tcp',
+                from_port='789',
+                to_port='987',
+                group=dict(name='group1', tenant_id='tenant1'),
+                ip_range=dict(cidr='10.55.44.0/24')),
+                 dict(
+                id='654',
+                parent_group_id='321',
+                ip_protocol='udp',
+                from_port='234',
+                to_port='567',
+                group=dict(name='group2', tenant_id='tenant2'),
+                ip_range=dict(cidr='10.44.55.0/24'))]
+        raw_group = dict(
+            id='890',
+            description='description',
+            name='name',
+            tenant_id='tenant',
+            rules=rules)
+        sg_group = dict(security_group=raw_group)
+        text = self.group_serializer.serialize(sg_group)
+
+        print text
+        tree = etree.fromstring(text)
+
+        self._verify_security_group(raw_group, tree)
+
+    def test_groups_serializer(self):
+        rules = [dict(
+                id='123',
+                parent_group_id='1234',
+                ip_protocol='tcp',
+                from_port='12345',
+                to_port='123456',
+                group=dict(name='group1', tenant_id='tenant1'),
+                ip_range=dict(cidr='10.123.0.0/24')),
+                 dict(
+                id='234',
+                parent_group_id='2345',
+                ip_protocol='udp',
+                from_port='23456',
+                to_port='234567',
+                group=dict(name='group2', tenant_id='tenant2'),
+                ip_range=dict(cidr='10.234.0.0/24')),
+                 dict(
+                id='345',
+                parent_group_id='3456',
+                ip_protocol='tcp',
+                from_port='34567',
+                to_port='345678',
+                group=dict(name='group3', tenant_id='tenant3'),
+                ip_range=dict(cidr='10.345.0.0/24')),
+                 dict(
+                id='456',
+                parent_group_id='4567',
+                ip_protocol='udp',
+                from_port='45678',
+                to_port='456789',
+                group=dict(name='group4', tenant_id='tenant4'),
+                ip_range=dict(cidr='10.456.0.0/24'))]
+        groups = [dict(
+                id='567',
+                description='description1',
+                name='name1',
+                tenant_id='tenant1',
+                rules=rules[0:2]),
+                  dict(
+                id='678',
+                description='description2',
+                name='name2',
+                tenant_id='tenant2',
+                rules=rules[2:4])]
+        sg_groups = dict(security_groups=groups)
+        text = self.group_serializer.serialize(sg_groups, 'index')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('security_groups', self._tag(tree))
+        self.assertEqual(len(groups), len(tree))
+        for idx, child in enumerate(tree):
+            self._verify_security_group(groups[idx], child)

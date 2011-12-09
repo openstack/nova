@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from lxml import etree
 import webob
 
 from nova.api.openstack.v2.contrib import volumetypes
@@ -162,3 +163,47 @@ class VolumeTypesApiTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/123/os-volume-types')
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, '')
+
+
+class VolumeTypesSerializerTest(test.TestCase):
+    def setUp(self):
+        super(VolumeTypesSerializerTest, self).setUp()
+        self.serializer = volumetypes.VolumeTypesSerializer()
+
+    def _verify_volume_type(self, vtype, tree):
+        self.assertEqual('volume_type', tree.tag)
+        self.assertEqual(vtype['name'], tree.get('name'))
+        self.assertEqual(str(vtype['id']), tree.get('id'))
+        self.assertEqual(1, len(tree))
+        extra_specs = tree[0]
+        self.assertEqual('extra_specs', extra_specs.tag)
+        seen = set(vtype['extra_specs'].keys())
+        for child in extra_specs:
+            self.assertTrue(child.tag in seen)
+            self.assertEqual(vtype['extra_specs'][child.tag], child.text)
+            seen.remove(child.tag)
+        self.assertEqual(len(seen), 0)
+
+    def test_index_serializer(self):
+        # Just getting some input data
+        vtypes = return_volume_types_get_all_types(None)
+        text = self.serializer.serialize(vtypes, 'index')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('volume_types', tree.tag)
+        self.assertEqual(len(vtypes), len(tree))
+        for child in tree:
+            name = child.get('name')
+            self.assertTrue(name in vtypes)
+            self._verify_volume_type(vtypes[name], child)
+
+    def test_voltype_serializer(self):
+        vtype = stub_volume_type(1)
+        text = self.serializer.serialize(dict(volume_type=vtype))
+
+        print text
+        tree = etree.fromstring(text)
+
+        self._verify_volume_type(vtype, tree)

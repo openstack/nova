@@ -17,6 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from lxml import etree
 import webob
 
 from nova.api.openstack.v2.contrib import volumetypes
@@ -161,3 +162,38 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.api_path + '/bad')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 1, 'bad', body)
+
+
+class VolumeTypeExtraSpecsSerializerTest(test.TestCase):
+    def setUp(self):
+        super(VolumeTypeExtraSpecsSerializerTest, self).setUp()
+        self.serializer = volumetypes.VolumeTypeExtraSpecsSerializer()
+
+    def test_index_create_serializer(self):
+        # Just getting some input data
+        extra_specs = stub_volume_type_extra_specs()
+        text = self.serializer.serialize(dict(extra_specs=extra_specs),
+                                         'index')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('extra_specs', tree.tag)
+        self.assertEqual(len(extra_specs), len(tree))
+        seen = set(extra_specs.keys())
+        for child in tree:
+            self.assertTrue(child.tag in seen)
+            self.assertEqual(extra_specs[child.tag], child.text)
+            seen.remove(child.tag)
+        self.assertEqual(len(seen), 0)
+
+    def test_update_show_serializer(self):
+        exemplar = dict(key1='value1')
+        text = self.serializer.serialize(exemplar, 'update')
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('key1', tree.tag)
+        self.assertEqual('value1', tree.text)
+        self.assertEqual(0, len(tree))

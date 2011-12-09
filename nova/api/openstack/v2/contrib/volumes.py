@@ -21,6 +21,8 @@ import webob
 from nova.api.openstack import common
 from nova.api.openstack.v2 import extensions
 from nova.api.openstack.v2 import servers
+from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova import compute
 from nova import db
 from nova import exception
@@ -85,21 +87,6 @@ def _translate_volume_summary_view(context, vol):
 
 class VolumeController(object):
     """The Volumes API controller for the OpenStack API."""
-
-    _serialization_metadata = {
-        'application/xml': {
-            "attributes": {
-                "volume": [
-                    "id",
-                    "status",
-                    "size",
-                    "availabilityZone",
-                    "createdAt",
-                    "displayName",
-                    "displayDescription",
-                    "volumeType",
-                    "metadata",
-                    ]}}}
 
     def __init__(self):
         self.volume_api = volume.API()
@@ -180,6 +167,51 @@ class VolumeController(object):
         return {'volume': retval}
 
 
+def make_volume(elem):
+    elem.set('id')
+    elem.set('status')
+    elem.set('size')
+    elem.set('availabilityZone')
+    elem.set('createdAt')
+    elem.set('displayName')
+    elem.set('displayDescription')
+    elem.set('volumeType')
+
+    attachments = xmlutil.SubTemplateElement(elem, 'attachments')
+    attachment = xmlutil.SubTemplateElement(attachments, 'attachment',
+                                            selector='attachments')
+    make_attachment(attachment)
+
+    metadata = xmlutil.make_flat_dict('metadata')
+    elem.append(metadata)
+
+
+class VolumeTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('volume', selector='volume')
+        make_volume(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class VolumesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('volumes')
+        elem = xmlutil.SubTemplateElement(root, 'volume', selector='volumes')
+        make_volume(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class VolumeSerializer(xmlutil.XMLTemplateSerializer):
+    def default(self):
+        return VolumeTemplate()
+
+    def index(self):
+        return VolumesTemplate()
+
+    def detail(self):
+        return VolumesTemplate()
+
+
 def _translate_attachment_detail_view(_context, vol):
     """Maps keys for attachment details view."""
 
@@ -215,14 +247,6 @@ class VolumeAttachmentController(object):
     as the ID of the attachment (though this is not guaranteed externally)
 
     """
-
-    _serialization_metadata = {
-        'application/xml': {
-            'attributes': {
-                'volumeAttachment': ['id',
-                                     'serverId',
-                                     'volumeId',
-                                     'device']}}}
 
     def __init__(self):
         self.compute_api = compute.API()
@@ -331,6 +355,38 @@ class VolumeAttachmentController(object):
         return {'volumeAttachments': res}
 
 
+def make_attachment(elem):
+    elem.set('id')
+    elem.set('serverId')
+    elem.set('volumeId')
+    elem.set('device')
+
+
+class VolumeAttachmentTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('volumeAttachment',
+                                       selector='volumeAttachment')
+        make_attachment(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class VolumeAttachmentsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('volumeAttachments')
+        elem = xmlutil.SubTemplateElement(root, 'volumeAttachment',
+                                          selector='volumeAttachments')
+        make_attachment(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class VolumeAttachmentSerializer(xmlutil.XMLTemplateSerializer):
+    def default(self):
+        return VolumeAttachmentTemplate()
+
+    def index(self):
+        return VolumeAttachmentsTemplate()
+
+
 class BootFromVolumeController(servers.Controller):
     """The boot from volume API controller for the Openstack API."""
 
@@ -349,22 +405,48 @@ class Volumes(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
+        body_serializers = {
+            'application/xml': VolumeSerializer(),
+            }
+        serializer = wsgi.ResponseSerializer(body_serializers)
+
         # NOTE(justinsb): No way to provide singular name ('volume')
         # Does this matter?
         res = extensions.ResourceExtension('os-volumes',
                                         VolumeController(),
+                                        serializer=serializer,
                                         collection_actions={'detail': 'GET'})
         resources.append(res)
 
+        body_serializers = {
+            'application/xml': VolumeAttachmentSerializer(),
+            }
+        serializer = wsgi.ResponseSerializer(body_serializers)
+
         res = extensions.ResourceExtension('os-volume_attachments',
                                            VolumeAttachmentController(),
+                                           serializer=serializer,
                                            parent=dict(
                                                 member_name='server',
                                                 collection_name='servers'))
         resources.append(res)
 
+        headers_serializer = servers.HeadersSerializer()
+        body_serializers = {
+            'application/xml': servers.ServerXMLSerializer(),
+            }
+        serializer = wsgi.ResponseSerializer(body_serializers,
+                                             headers_serializer)
+
+        body_deserializers = {
+            'application/xml': servers.ServerXMLDeserializer(),
+            }
+        deserializer = wsgi.RequestDeserializer(body_deserializers)
+
         res = extensions.ResourceExtension('os-volumes_boot',
-                                           BootFromVolumeController())
+                                           BootFromVolumeController(),
+                                           serializer=serializer,
+                                           deserializer=deserializer)
         resources.append(res)
 
         return resources
