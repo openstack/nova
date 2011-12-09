@@ -719,6 +719,9 @@ def synchronized(name, external=False):
                         '"%(method)s"...' % {'lock': name,
                                              'method': f.__name__}))
             with sem:
+                LOG.debug(_('Got semaphore "%(lock)s" for method '
+                            '"%(method)s"...' % {'lock': name,
+                                                 'method': f.__name__}))
                 if external:
                     LOG.debug(_('Attempting to grab file lock "%(lock)s" for '
                                 'method "%(method)s"...' %
@@ -730,6 +733,10 @@ def synchronized(name, external=False):
                     lock = _NoopContextManager()
 
                 with lock:
+                    if external:
+                        LOG.debug(_('Got file lock "%(lock)s" for '
+                                    'method "%(method)s"...' %
+                                    {'lock': name, 'method': f.__name__}))
                     retval = f(*args, **kwargs)
 
             # If no-one else is waiting for it, delete it.
