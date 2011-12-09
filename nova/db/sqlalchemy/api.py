@@ -876,14 +876,11 @@ def fixed_ip_get_by_network_host(context, network_id, host):
 
 
 @require_context
-def fixed_ip_get_by_virtual_interface(context, vif_id):
+def fixed_ips_by_virtual_interface(context, vif_id):
     result = model_query(context, models.FixedIp, read_deleted="no").\
                  options(joinedload('floating_ips')).\
                  filter_by(virtual_interface_id=vif_id).\
                  all()
-
-    if not result:
-        raise exception.FixedIpNotFoundForVirtualInterface(vif_id=vif_id)
 
     return result
 
