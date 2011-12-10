@@ -37,7 +37,7 @@ class TestLoaderNothingExists(unittest.TestCase):
 
     def test_config_not_found(self):
         self.assertRaises(
-            nova.exception.PasteConfigNotFound,
+            nova.exception.ConfigNotFound,
             nova.wsgi.Loader,
         )
 

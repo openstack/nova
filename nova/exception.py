@@ -810,8 +810,8 @@ class MalformedRequestBody(NovaException):
     message = _("Malformed message body: %(reason)s")
 
 
-class PasteConfigNotFound(NotFound):
-    message = _("Could not find paste config at %(path)s")
+class ConfigNotFound(NotFound):
+    message = _("Could not find config at %(path)s")
 
 
 class PasteAppNotFound(NotFound):
