@@ -108,6 +108,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "FlavorExtraSpecs",
             "FlavorExtraData",
             "Floating_ips",
+            "Floating_ip_dns",
             "Fox In Socks",
             "Hosts",
             "Keypairs",

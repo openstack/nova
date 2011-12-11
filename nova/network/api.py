@@ -192,3 +192,42 @@ class API(base.Base):
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_instance_uuids_by_ip_filter',
                          'args': args})
+
+    def get_dns_zones(self, context):
+        """Returns a list of available dns zones.
+        These can be used to create DNS entries for floating ips.
+        """
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_dns_zones'})
+
+    def add_dns_entry(self, context, address, name, dns_type, zone):
+        """Create specified DNS entry for address"""
+        args = {'address': address,
+                'dns_name': name,
+                'dns_type': dns_type,
+                'dns_zone': zone}
+        return rpc.call(context, FLAGS.network_topic,
+                        {'method': 'add_dns_entry',
+                         'args': args})
+
+    def delete_dns_entry(self, context, name, zone):
+        """Delete the specified dns entry."""
+        args = {'dns_name': name, 'dns_zone': zone}
+        return rpc.call(context, FLAGS.network_topic,
+                        {'method': 'delete_dns_entry',
+                         'args': args})
+
+    def get_dns_entries_by_address(self, context, address, zone):
+        """Get entries for address and zone"""
+        args = {'address': address, 'dns_zone': zone}
+        return rpc.call(context, FLAGS.network_topic,
+                        {'method': 'get_dns_entries_by_address',
+                         'args': args})
+
+    def get_dns_entries_by_name(self, context, name, zone):
+        """Get entries for name and zone"""
+        args = {'name': name, 'dns_zone': zone}
+        return rpc.call(context, FLAGS.network_topic,
+                        {'method': 'get_dns_entries_by_name',
+                         'args': args})

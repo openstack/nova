@@ -440,6 +440,24 @@ class FloatingIP(object):
                                                                 fixed_address)
         return [floating_ip['address'] for floating_ip in floating_ips]
 
+    def get_dns_zones(self, context):
+        return self.floating_dns_manager.get_zones()
+
+    def add_dns_entry(self, context, address, dns_name, dns_type, dns_zone):
+        self.floating_dns_manager.create_entry(dns_name, address,
+                                               dns_type, dns_zone)
+
+    def delete_dns_entry(self, context, dns_name, dns_zone):
+        self.floating_dns_manager.delete_entry(dns_name, dns_zone)
+
+    def get_dns_entries_by_address(self, context, address, dns_zone):
+        return self.floating_dns_manager.get_entries_by_address(address,
+                                                                dns_zone)
+
+    def get_dns_entries_by_name(self, context, name, dns_zone):
+        return self.floating_dns_manager.get_entries_by_name(name,
+                                                             dns_zone)
+
 
 class NetworkManager(manager.SchedulerDependentManager):
     """Implements common network manager functionality.
@@ -468,6 +486,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.driver = utils.import_object(network_driver)
         temp = utils.import_object(FLAGS.instance_dns_manager)
         self.instance_dns_manager = temp
+        temp = utils.import_object(FLAGS.floating_ip_dns_manager)
+        self.floating_dns_manager = temp
         self.network_api = network_api.API()
         self.compute_api = compute_api.API()
         super(NetworkManager, self).__init__(service_name='network',
