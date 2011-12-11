@@ -81,7 +81,7 @@ class QuantumNovaIPAMLib(object):
         network = db.network_get_by_cidr(admin_context, cidr)
         if not network:
             raise Exception(_("No network with fixed_range = %s" %
-                              fixed_range))
+                              cidr))
         return network['uuid']
 
     def delete_subnets_by_net_id(self, context, net_id, project_id):

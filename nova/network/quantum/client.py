@@ -21,6 +21,8 @@ import json
 import socket
 import urllib
 
+from nova import utils
+
 
 # FIXME(danwent): All content in this file should be removed once the
 # packaging work for the quantum client libraries is complete.
@@ -37,7 +39,7 @@ class JSONSerializer(object):
             return json.dumps(data)
         except TypeError:
             pass
-        return json.dumps(to_primitive(data))
+        return json.dumps(utils.to_primitive(data))
 
     def deserialize(self, data, content_type):
         return json.loads(data)

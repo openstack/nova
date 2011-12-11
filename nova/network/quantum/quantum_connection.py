@@ -75,7 +75,7 @@ class QuantumClientConnection(object):
         try:
             self.client.show_network_details(net_id, tenant=tenant_id)
             return True
-        except client.QuantumNotFoundException:
+        except quantum_client.QuantumNotFoundException:
             # Not really an error.  Real errors will be propogated to caller
             return False
 
