@@ -19,6 +19,7 @@ import time
 
 from netaddr import IPNetwork, IPAddress
 
+from nova.compute import instance_types
 from nova import context
 from nova import db
 from nova import exception
@@ -94,6 +95,12 @@ class QuantumManager(manager.FlatManager):
         self.driver.ensure_metadata_ip()
         self.driver.metadata_forward()
 
+    def _get_nova_id(self, context):
+        # When creating the network we need to pass in an identifier for
+        # this zone.  Some Quantum plugins need this information in order
+        # to set up appropriate networking.
+        return FLAGS.node_availability_zone
+
     def get_all_networks(self):
         networks = []
         admin_context = context.get_admin_context()
@@ -121,14 +128,17 @@ class QuantumManager(manager.FlatManager):
                               " network is created per call"))
         q_tenant_id = kwargs["project_id"] or FLAGS.quantum_default_tenant_id
         quantum_net_id = uuid
+        # If a uuid was specified with the network it should have already been
+        # created in Quantum, so make sure.
         if quantum_net_id:
             if not self.q_conn.network_exists(q_tenant_id, quantum_net_id):
                     raise Exception(_("Unable to find existing quantum " \
                         " network for tenant '%(q_tenant_id)s' with "
                         "net-id '%(quantum_net_id)s'" % locals()))
         else:
-            # otherwise, create network from default quantum pool
-            quantum_net_id = self.q_conn.create_network(q_tenant_id, label)
+            nova_id = self._get_nova_id(context)
+            quantum_net_id = self.q_conn.create_network(q_tenant_id, label,
+                                                        nova_id=nova_id)
 
         ipam_tenant_id = kwargs.get("project_id", None)
         priority = kwargs.get("priority", 0)
@@ -267,9 +277,16 @@ class QuantumManager(manager.FlatManager):
                                                  network_ref['id'])
 
             # talk to Quantum API to create and attach port.
+            instance = db.instance_get(context, instance_id)
+            instance_type = instance_types.get_instance_type(instance_type_id)
+            rxtx_factor = instance_type['rxtx_factor']
+            nova_id = self._get_nova_id(context)
             q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
             self.q_conn.create_and_attach_port(q_tenant_id, quantum_net_id,
-                                               vif_rec['uuid'])
+                                               vif_rec['uuid'],
+                                               vm_id=instance['uuid'],
+                                               rxtx_factor=rxtx_factor,
+                                               nova_id=nova_id)
             # Tell melange to allocate an IP
             ip = self.ipam.allocate_fixed_ip(context, project_id,
                     quantum_net_id, vif_rec)
