@@ -123,3 +123,17 @@ class QuantumClientConnection(object):
             if attachment_id == port_get_resdict["attachment"]["id"]:
                 return port_id
         return None
+
+    def get_attached_ports(self, tenant_id, network_id):
+        rv = []
+        port_list = self.client.list_ports(network_id, tenant=tenant_id)
+        for p in port_list["ports"]:
+            port_id = p["id"]
+            port = self.client.show_port_attachment(network_id,
+                                port_id, tenant=tenant_id)
+            # Skip ports without an attachment
+            if "id" not in port["attachment"]:
+                continue
+            rv.append({'port-id': port_id, 'attachment':
+                       port["attachment"]["id"]})
+        return rv
