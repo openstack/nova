@@ -4024,3 +4024,22 @@ def sm_volume_get(context, volume_id):
 
 def sm_volume_get_all(context):
     return model_query(context, models.SMVolume, read_deleted="yes").all()
+
+
+################
+
+
+def instance_fault_create(context, values):
+    """Create a new Instance Fault."""
+    fault_ref = models.InstanceFault()
+    fault_ref.update(values)
+    fault_ref.save()
+    return fault_ref
+
+
+def instance_fault_get_by_instance(context, instance_uuid):
+    """Get first instance fault with the given instance uuid."""
+    return model_query(context, models.InstanceFault, read_deleted='no').\
+                filter_by(instance_uuid=instance_uuid).\
+                order_by(desc("created_at")).\
+                first()

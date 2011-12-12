@@ -24,6 +24,7 @@ from nova import test
 from nova import context
 from nova import db
 from nova import flags
+from nova import utils
 
 FLAGS = flags.FLAGS
 
@@ -192,3 +193,74 @@ class DbApiTestCase(test.TestCase):
         # Retrieve the metadata to ensure it was successfully updated
         instance_meta = db.instance_metadata_get(ctxt, instance.id)
         self.assertEqual('bar', instance_meta['host'])
+
+    def test_instance_fault_create(self):
+        """Ensure we can create an instance fault"""
+        ctxt = context.get_admin_context()
+        uuid = str(utils.gen_uuid())
+
+        # Create a fault
+        fault_values = {
+            'message': 'message',
+            'details': 'detail',
+            'instance_uuid': uuid,
+            'code': 404,
+        }
+        db.instance_fault_create(ctxt, fault_values)
+
+        # Retrieve the fault to ensure it was successfully added
+        instance_fault = db.instance_fault_get_by_instance(ctxt, uuid)
+        self.assertEqual(404, instance_fault['code'])
+
+    def test_instance_fault_get_by_instance(self):
+        """ ensure we can retrieve an instance fault by  instance UUID """
+        ctxt = context.get_admin_context()
+
+        # Create faults
+        uuid = str(utils.gen_uuid())
+        fault_values = {
+            'message': 'message',
+            'details': 'detail',
+            'instance_uuid': uuid,
+            'code': 404,
+        }
+        db.instance_fault_create(ctxt, fault_values)
+
+        uuid2 = str(utils.gen_uuid())
+        fault_values = {
+            'message': 'message',
+            'details': 'detail',
+            'instance_uuid': uuid2,
+            'code': 500,
+        }
+        db.instance_fault_create(ctxt, fault_values)
+
+        # Retrieve the fault to ensure it was successfully added
+        instance_fault = db.instance_fault_get_by_instance(ctxt, uuid2)
+        self.assertEqual(500, instance_fault['code'])
+
+    def test_instance_fault_get_by_instance_first_fault(self):
+        """Instance_fault_get_by_instance should return the latest fault """
+        ctxt = context.get_admin_context()
+
+        # Create faults
+        uuid = str(utils.gen_uuid())
+        fault_values = {
+            'message': 'message',
+            'details': 'detail',
+            'instance_uuid': uuid,
+            'code': 404,
+        }
+        db.instance_fault_create(ctxt, fault_values)
+
+        fault_values = {
+            'message': 'message',
+            'details': 'detail',
+            'instance_uuid': uuid,
+            'code': 500,
+        }
+        db.instance_fault_create(ctxt, fault_values)
+
+        # Retrieve the fault to ensure it was successfully added
+        instance_fault = db.instance_fault_get_by_instance(ctxt, uuid)
+        self.assertEqual(500, instance_fault['code'])
