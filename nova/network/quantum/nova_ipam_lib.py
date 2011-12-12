@@ -172,7 +172,7 @@ class QuantumNovaIPAMLib(object):
            the specified virtual interface, based on the fixed_ips table.
         """
         vif_rec = db.virtual_interface_get_by_uuid(context, vif_id)
-        fixed_ips = db.fixed_ip_get_by_virtual_interface(context,
+        fixed_ips = db.fixed_ips_by_virtual_interface(context,
                                                          vif_rec['id'])
         return [fixed_ip['address'] for fixed_ip in fixed_ips]
 
@@ -203,17 +203,16 @@ class QuantumNovaIPAMLib(object):
         """Deallocate all fixed IPs associated with the specified
            virtual interface.
         """
-        try:
-            admin_context = context.elevated()
-            fixed_ips = db.fixed_ip_get_by_virtual_interface(admin_context,
-                                                             vif_ref['id'])
-            for fixed_ip in fixed_ips:
-                db.fixed_ip_update(admin_context, fixed_ip['address'],
-                                   {'allocated': False,
-                                    'virtual_interface_id': None})
-        except exception.FixedIpNotFoundForInstance:
+        admin_context = context.elevated()
+        fixed_ips = db.fixed_ips_by_virtual_interface(admin_context,
+                                                         vif_ref['id'])
+        for fixed_ip in fixed_ips:
+            db.fixed_ip_update(admin_context, fixed_ip['address'],
+                               {'allocated': False,
+                                'virtual_interface_id': None})
+        if len(fixed_ips) == 0:
             LOG.error(_('No fixed IPs to deallocate for vif %s' %
-                            vif_ref['id']))
+                        vif_ref['id']))
 
     def get_allocated_ips(self, context, subnet_id, project_id):
         """Returns a list of (ip, vif_id) pairs"""

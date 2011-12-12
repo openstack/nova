@@ -416,9 +416,9 @@ def fixed_ip_get_by_network_host(context, network_id, host):
     return IMPL.fixed_ip_get_by_network_host(context, network_id, host)
 
 
-def fixed_ip_get_by_virtual_interface(context, vif_id):
+def fixed_ips_by_virtual_interface(context, vif_id):
     """Get fixed ips by virtual interface or raise if none exist."""
-    return IMPL.fixed_ip_get_by_virtual_interface(context, vif_id)
+    return IMPL.fixed_ips_by_virtual_interface(context, vif_id)
 
 
 def fixed_ip_get_network(context, address):
