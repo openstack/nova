@@ -113,9 +113,8 @@ class QuantumMelangeIPAMLib(object):
         network = db.network_get_by_uuid(admin_context, net_id)
         db.network_delete_safe(context, network['id'])
 
-    def get_networks_by_tenant(self, context, tenant_id):
+    def get_networks_by_tenant(self, admin_context, tenant_id):
         nets = []
-        admin_context = context.get_admin_context()
         blocks = self.m_conn.get_blocks(tenant_id)
         for ip_block in blocks['ip_blocks']:
             network_id = ip_block['network_id']
@@ -123,11 +122,11 @@ class QuantumMelangeIPAMLib(object):
             nets.append(network)
         return nets
 
-    def get_global_networks(self, context):
-        return self.get_networks_by_tenant(context,
+    def get_global_networks(self, admin_context):
+        return self.get_networks_by_tenant(admin_context,
             FLAGS.quantum_default_tenant_id)
 
-    def get_project_networks(self, context):
+    def get_project_networks(self, admin_context):
         try:
             nets = db.network_get_all(context.elevated())
         except exception.NoNetworksFound:
@@ -150,7 +149,7 @@ class QuantumMelangeIPAMLib(object):
         # Decorate with priority
         priority_nets = []
         for tenant_id in (project_id, FLAGS.quantum_default_tenant_id):
-            nets = self.get_networks_by_tenant(context, tenant_id)
+            nets = self.get_networks_by_tenant(admin_context, tenant_id)
             for network in nets:
                 priority = network['priority']
                 priority_nets.append((priority, network['uuid'], tenant_id))
