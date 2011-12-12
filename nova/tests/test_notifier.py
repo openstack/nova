@@ -16,6 +16,7 @@
 import stubout
 
 import nova
+import nova.notifier.no_op_notifier
 from nova import log
 import nova.notifier.api
 from nova.notifier.api import notify
@@ -26,6 +27,7 @@ class NotifierTestCase(test.TestCase):
     """Test case for notifications"""
     def setUp(self):
         super(NotifierTestCase, self).setUp()
+        self.flags(notification_driver='nova.notifier.no_op_notifier')
         self.stubs = stubout.StubOutForTesting()
 
     def tearDown(self):

@@ -22,6 +22,8 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import network
+from nova.network import model as network_model
 from nova.notifier import api as notifier_api
 from nova import utils
 
@@ -44,10 +46,26 @@ def notify_usage_exists(instance_ref, current_period=False):
     else:
         audit_start = begin
         audit_end = end
+
+    if (instance_ref.get('info_cache') and
+        instance_ref['info_cache'].get('network_info')):
+
+        cached_info = instance_ref['info_cache']['network_info']
+        nw_info = network_model.NetworkInfo.hydrate(cached_info)
+    else:
+        nw_info = network.API().get_instance_nw_info(admin_context,
+                                                         instance_ref)
+
     for b in db.bw_usage_get_by_instance(admin_context,
                                          instance_ref['id'],
                                          audit_start):
-        bw[b.network_label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
+        label = 'net-name-not-found-%s' % b['mac']
+        for vif in nw_info:
+            if vif['address'] == b['mac']:
+                label = vif['network']['label']
+                break
+
+        bw[label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
     usage_info = utils.usage_from_instance(instance_ref,
                           audit_period_beginning=str(audit_start),
                           audit_period_ending=str(audit_end),
