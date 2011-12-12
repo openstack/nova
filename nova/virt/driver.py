@@ -516,8 +516,12 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def plug_vifs(self, instance, network_info):
-        """Plugs in VIFs to networks."""
+        """Plug VIFs into networks."""
         # TODO(Vek): Need to pass context in for access to auth_token
+        raise NotImplementedError()
+
+    def unplug_vifs(self, instance, network_info):
+        """Unplug VIFs from networks."""
         raise NotImplementedError()
 
     def update_host_status(self):

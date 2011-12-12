@@ -516,3 +516,11 @@ class HyperVConnection(driver.ComputeDriver):
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         pass
+
+    def plug_vifs(self, instance, network_info):
+        """Plug VIFs into networks."""
+        pass
+
+    def unplug_vifs(self, instance, network_info):
+        """Unplug VIFs from networks."""
+        pass

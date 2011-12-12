@@ -1735,6 +1735,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         # must be deleted for preparing next block migration
         if block_migration:
             self.driver.destroy(instance_ref, network_info)
+        else:
+            # self.driver.destroy() usually performs  vif unplugging
+            # but we must do it explicitly here when block_migration
+            # is false, as the network devices at the source must be
+            # torn down
+            self.driver.unplug_vifs(instance_ref, network_info)
 
         LOG.info(_('Migrating %(i_name)s to %(dest)s finished successfully.')
                  % locals())

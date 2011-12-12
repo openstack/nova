@@ -201,8 +201,12 @@ class VMWareESXConnection(driver.ComputeDriver):
         pass
 
     def plug_vifs(self, instance, network_info):
-        """Plugs in VIFs to networks."""
+        """Plug VIFs into networks."""
         self._vmops.plug_vifs(instance, network_info)
+
+    def unplug_vifs(self, instance, network_info):
+        """Unplug VIFs from networks."""
+        self._vmops.unplug_vifs(instance, network_info)
 
 
 class VMWareAPISession(object):
