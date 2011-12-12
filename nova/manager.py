@@ -18,7 +18,7 @@
 
 """Base Manager class.
 
-Managers are responsible for a certain aspect of the sytem.  It is a logical
+Managers are responsible for a certain aspect of the system.  It is a logical
 grouping of code relating to a portion of the system.  In general other
 components should be using the manager to make changes to the components that
 it is responsible for.
@@ -47,7 +47,7 @@ level(FlatNetwork vs VlanNetwork), and different implementations at the driver
 level(LinuxNetDriver vs CiscoNetDriver).
 
 Managers will often provide methods for initial setup of a host or periodic
-tasksto a wrapping service.
+tasks to a wrapping service.
 
 This module provides Manager, a base class for managers.
 
@@ -55,7 +55,6 @@ This module provides Manager, a base class for managers.
 
 from nova import flags
 from nova import log as logging
-from nova import utils
 from nova.db import base
 from nova.scheduler import api
 
