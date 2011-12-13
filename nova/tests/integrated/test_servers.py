@@ -162,18 +162,14 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual('ACTIVE', found_server['status'])
 
         # Cannot restore unless instance is deleted
-        self.api.post_server_action(created_server_id, {'restore': {}})
-
-        # Check it's still active
-        found_server = self.api.get_server(created_server_id)
-        self.assertEqual('ACTIVE', found_server['status'])
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server_action, created_server_id,
+                          {'restore': {}})
 
         # Cannot forceDelete unless instance is deleted
-        self.api.post_server_action(created_server_id, {'forceDelete': {}})
-
-        # Check it's still active
-        found_server = self.api.get_server(created_server_id)
-        self.assertEqual('ACTIVE', found_server['status'])
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server_action, created_server_id,
+                          {'forceDelete': {}})
 
         # Delete the server
         self.api.delete_server(created_server_id)

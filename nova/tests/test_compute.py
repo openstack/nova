@@ -29,7 +29,6 @@ from nova import compute
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
-from nova.compute import state_checker
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -135,6 +134,7 @@ class BaseTestCase(test.TestCase):
             params = {}
 
         inst = {}
+        inst['vm_state'] = vm_states.ACTIVE
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
@@ -1243,108 +1243,6 @@ class ComputeAPITestCase(BaseTestCase):
             'properties': {'kernel_id': 1, 'ramdisk_id': 1},
         }
 
-    def test_check_vm_state_filtered_function(self):
-        """Test the check_vm_state mechanism for filtered functions.
-
-        Checks that the filtered_function is correctly filtered
-        in the right states only for the api_check_vm_states flag set to True.
-
-        Note that the filtered_function takes the same number of arguments
-        than the real functions that are decorated in the compute api.
-        """
-        @compute.api.check_vm_state('filtered_function')
-        def filtered_function(api, context, instance_ref):
-            LOG.debug("filtered_function executed")
-            return True
-
-        def filtered_assume_right_state(instance_ref):
-            self.flags(api_check_vm_states=True)
-            self.assertTrue(filtered_function(self.compute_api,
-                                              self.context, instance_ref))
-
-        def filtered_assume_wrong_state(instance_ref):
-            self.flags(api_check_vm_states=True)
-            self.assertRaises(exception.InstanceInvalidState,
-                              filtered_function, self.compute_api,
-                              self.context, instance_ref)
-            self.flags(api_check_vm_states=False)
-            self.assertTrue(filtered_function(self.compute_api,
-                                              self.context, instance_ref))
-
-        # check that the filtered_function is correctly filtered
-        self._execute_allowed_and_blocked('filtered_function',
-                            filtered_assume_right_state,
-                            filtered_assume_wrong_state)
-
-    def test_check_vm_state_non_filtered_function(self):
-        """Test the check_vm_state mechanism for non filtered functions.
-
-        Checks that if a function that is decorated with the check_vm_state
-        but it is not defined in any blocked dictionary, it will always
-        be executed
-        """
-        @compute.api.check_vm_state('non_filtered_function')
-        def non_filtered_function(api, context, instance_ref):
-            LOG.debug("non_filtered_function executed")
-            return True
-
-        def non_filtered_assume_executed(instance_ref):
-            self.flags(api_check_vm_states=True)
-            self.assertTrue(non_filtered_function(self.compute_api,
-                                                  self.context, instance_ref))
-
-        # check that the non_filtered_function is never filtered
-        self._execute_allowed_and_blocked('non_filtered_function',
-                            non_filtered_assume_executed,
-                            non_filtered_assume_executed)
-
-    def _execute_allowed_and_blocked(self, func_name, f_allowed, f_blocked):
-        """Execute f_allowed and f_blocked functions for all the scenarios.
-
-        Get an allowed vm_state, a blocked vm_state, an allowed task_state,
-        and a blocked task_state for the function defined by func_name to be
-        executed. Then it executes the function f_allowed or f_blocked
-        accordingly, passing as parameter a new instance id. Theses functions
-        have to run the func_name function and assert the expected result
-        """
-
-        # define blocked and allowed states
-        blocked_tsk = task_states.SCHEDULING
-        ok_task = task_states.NETWORKING
-        blocked_vm = vm_states.BUILDING
-        ok_vm = vm_states.RESCUED
-        blocked_comb = {'power_state': power_state.RUNNING,
-                         'vm_state': vm_states.ACTIVE, 'task_state': None}
-        ok_comb = {'power_state': power_state.RUNNING,
-                    'vm_state': vm_states.PAUSED, 'task_state': None}
-
-        # To guarantee a 100% test coverage we create fake lists.
-        fake_block_for_task_state = {'filtered_function': [blocked_tsk]}
-
-        fake_block_for_vm_state = {'filtered_function': [blocked_vm]}
-
-        fake_block_for_combination = {'filtered_function': [blocked_comb]}
-
-        self.stubs.Set(nova.compute.state_checker, 'block_for_task_state',
-                       fake_block_for_task_state)
-        self.stubs.Set(nova.compute.state_checker, 'block_for_vm_state',
-                       fake_block_for_vm_state)
-        self.stubs.Set(nova.compute.state_checker, 'block_for_combination',
-                       fake_block_for_combination)
-
-        i_ref = self._create_fake_instance(params={'task_state': blocked_tsk})
-        f_blocked(i_ref)
-        i_ref = self._create_fake_instance(params={'task_state': ok_task})
-        f_allowed(i_ref)
-        i_ref = self._create_fake_instance(params={'vm_state': blocked_vm})
-        f_blocked(i_ref)
-        i_ref = self._create_fake_instance(params={'vm_state': ok_vm})
-        f_allowed(i_ref)
-        i_ref = self._create_fake_instance(params=blocked_comb)
-        f_blocked(i_ref)
-        i_ref = self._create_fake_instance(params=ok_comb)
-        f_allowed(i_ref)
-
     def test_create_with_too_little_ram(self):
         """Test an instance type with too little memory"""
 
@@ -1646,6 +1544,10 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(instance['task_state'], None)
 
         self.compute.pause_instance(self.context, instance_uuid)
+        # set the state that the instance gets when pause finishes
+        db.instance_update(self.context, instance['uuid'],
+                           {'vm_state': vm_states.PAUSED})
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
 
         self.compute_api.unpause(self.context, instance)
 
@@ -1845,7 +1747,6 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance_uuid)
 
     def test_resize_confirm_through_api(self):
-        """Ensure invalid flavors raise"""
         instance = self._create_fake_instance()
         context = self.context.elevated()
         self.compute.run_instance(self.context, instance['uuid'])
@@ -1866,7 +1767,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_revert_through_api(self):
-        """Ensure invalid flavors raise"""
         instance = self._create_fake_instance()
         context = self.context.elevated()
         instance = db.instance_get_by_uuid(context, instance['uuid'])
@@ -1878,6 +1778,11 @@ class ComputeAPITestCase(BaseTestCase):
         migration_ref = db.migration_create(context,
                 {'instance_uuid': instance['uuid'],
                  'status': 'finished'})
+        # set the state that the instance gets when resize finishes
+        db.instance_update(self.context, instance['uuid'],
+                           {'task_state': task_states.RESIZE_VERIFY,
+                            'vm_state': vm_states.ACTIVE})
+        instance = db.instance_get_by_uuid(context, instance['uuid'])
 
         self.compute_api.revert_resize(context, instance)
         self.compute.terminate_instance(context, instance['uuid'])

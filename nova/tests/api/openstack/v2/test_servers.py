@@ -1225,11 +1225,13 @@ class ServersControllerTest(test.TestCase):
 
         self.server_delete_called = False
 
+        new_return_server = return_server_with_attributes(
+            vm_state=vm_states.ACTIVE)
+        self.stubs.Set(nova.db, 'instance_get', new_return_server)
+
         def instance_destroy_mock(context, id):
             self.server_delete_called = True
-
-        self.stubs.Set(nova.db, 'instance_destroy',
-            instance_destroy_mock)
+        self.stubs.Set(nova.db, 'instance_destroy', instance_destroy_mock)
 
         self.controller.delete(req, FAKE_UUID)
 

@@ -1401,6 +1401,9 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
+        result = self.cloud.rescue_instance(self.context, instance_id)
+        self.assertTrue(result)
+
         result = self.cloud.unrescue_instance(self.context, instance_id)
         self.assertTrue(result)
 

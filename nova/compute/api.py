@@ -19,6 +19,7 @@
 
 """Handles all requests relating to instances (guest vms)."""
 
+import functools
 import novaclient
 import re
 import time
@@ -35,7 +36,6 @@ from nova import utils
 from nova import volume
 from nova.compute import instance_types
 from nova.compute import power_state
-from nova.compute import state_checker
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.scheduler import api as scheduler_api
@@ -50,42 +50,40 @@ flags.DECLARE('enable_zone_routing', 'nova.scheduler.api')
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
 flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
-flags.DEFINE_boolean('api_check_vm_states', True,
-                     'Filter calls by vm state')
 
 
-def _is_queued_delete(instance):
-    vm_state = instance["vm_state"]
-    instance_uuid = instance["uuid"]
-
-    if vm_state != vm_states.SOFT_DELETE:
-        LOG.warn(_("Instance %(instance_uuid)s is not in a 'soft delete' "
-                   "state. It is currently %(vm_state)s. Action aborted.") %
-                 locals())
-        return False
-
-    return True
-
-
-class check_vm_state(object):
-    """Class to wrap API functions that are sensitive to the VM state.
+def check_instance_state(vm_state=None, task_state=None):
+    """Decorator to check VM and/or task state before entry to API functions.
 
     If the instance is in the wrong state, the wrapper will raise an exception.
-    It uses state_checker to decide if the call is allowed or not.
     """
 
-    def __init__(self, method_name):
-        self.method_name = method_name
+    if vm_state is not None and not isinstance(vm_state, set):
+        vm_state = set(vm_state)
+    if task_state is not None and not isinstance(task_state, set):
+        task_state = set(task_state)
 
-    def __call__(self, f):
-        def _state_checker_wrap(api, context, instance, *args, **kw):
-            if FLAGS.api_check_vm_states and \
-            state_checker.is_blocked(self.method_name, context, instance):
-                raise exception.InstanceInvalidState(\
-                    instance_uuid=instance['uuid'], method=self.method_name)
-            else:
-                return f(api, context, instance, *args, **kw)
-        return _state_checker_wrap
+    def outer(f):
+        @functools.wraps(f)
+        def inner(self, context, instance, *args, **kw):
+            if vm_state is not None and \
+               instance['vm_state'] not in vm_state:
+                raise exception.InstanceInvalidState(
+                    attr='vm_state',
+                    instance_uuid=instance['uuid'],
+                    state=instance['vm_state'],
+                    method=f.__name__)
+            if task_state is not None and \
+               instance['task_state'] not in task_state:
+                raise exception.InstanceInvalidState(
+                    attr='task_state',
+                    instance_uuid=instance['uuid'],
+                    state=instance['task_state'],
+                    method=f.__name__)
+
+            return f(self, context, instance, *args, **kw)
+        return inner
+    return outer
 
 
 class API(base.Base):
@@ -771,8 +769,8 @@ class API(base.Base):
         rv = self.db.instance_update(context, instance["id"], kwargs)
         return dict(rv.iteritems())
 
-    @check_vm_state(state_checker.SOFT_DELETE)
-    @scheduler_api.reroute_compute(state_checker.SOFT_DELETE)
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.ERROR])
+    @scheduler_api.reroute_compute("soft_delete")
     def soft_delete(self, context, instance):
         """Terminate an instance."""
         instance_uuid = instance["uuid"]
@@ -809,21 +807,22 @@ class API(base.Base):
         else:
             self.db.instance_destroy(context, instance['id'])
 
-    @check_vm_state(state_checker.DELETE)
-    @scheduler_api.reroute_compute(state_checker.DELETE)
+    # NOTE(jerdfelt): The API implies that only ACTIVE and ERROR are
+    # allowed but the EC2 API appears to allow from RESCUED and STOPPED
+    # too
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.ERROR,
+                                    vm_states.RESCUED, vm_states.STOPPED])
+    @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate %s"), instance["uuid"])
 
         self._delete(context, instance)
 
-    @check_vm_state(state_checker.RESTORE)
-    @scheduler_api.reroute_compute(state_checker.RESTORE)
+    @check_instance_state(vm_state=[vm_states.SOFT_DELETE])
+    @scheduler_api.reroute_compute("restore")
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
-        if not _is_queued_delete(instance):
-            return
-
         self.update(context,
                     instance,
                     vm_state=vm_states.ACTIVE,
@@ -838,18 +837,15 @@ class API(base.Base):
             self._cast_compute_message('power_on_instance', context,
                                        instance['uuid'], host)
 
-    @check_vm_state(state_checker.FORCE_DELETE)
-    @scheduler_api.reroute_compute(state_checker.FORCE_DELETE)
+    @check_instance_state(vm_state=[vm_states.SOFT_DELETE])
+    @scheduler_api.reroute_compute("force_delete")
     def force_delete(self, context, instance):
         """Force delete a previously deleted (but not reclaimed) instance."""
-
-        if not _is_queued_delete(instance):
-            return
-
         self._delete(context, instance)
 
-    @check_vm_state(state_checker.STOP)
-    @scheduler_api.reroute_compute(state_checker.STOP)
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED],
+                          task_state=[None, task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("stop")
     def stop(self, context, instance):
         """Stop an instance."""
         instance_uuid = instance["uuid"]
@@ -867,7 +863,7 @@ class API(base.Base):
             self._cast_compute_message('stop_instance', context,
                     instance_uuid, host)
 
-    @check_vm_state(state_checker.START)
+    @check_instance_state(vm_state=[vm_states.STOPPED])
     def start(self, context, instance):
         """Start an instance."""
         vm_state = instance["vm_state"]
@@ -1079,8 +1075,9 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_uuid)
 
-    @check_vm_state(state_checker.BACKUP)
-    @scheduler_api.reroute_compute(state_checker.BACKUP)
+    @check_instance_state(vm_state=[vm_states.ACTIVE],
+                          task_state=[None, task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("backup")
     def backup(self, context, instance, name, backup_type, rotation,
                extra_properties=None):
         """Backup the given instance
@@ -1097,8 +1094,9 @@ class API(base.Base):
                             extra_properties=extra_properties)
         return recv_meta
 
-    @check_vm_state(state_checker.SNAPSHOT)
-    @scheduler_api.reroute_compute(state_checker.SNAPSHOT)
+    @check_instance_state(vm_state=[vm_states.ACTIVE],
+                          task_state=[None, task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("snapshot")
     def snapshot(self, context, instance, name, extra_properties=None):
         """Snapshot the given instance.
 
@@ -1147,8 +1145,9 @@ class API(base.Base):
                                    params=params)
         return recv_meta
 
-    @check_vm_state(state_checker.REBOOT)
-    @scheduler_api.reroute_compute(state_checker.REBOOT)
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED],
+                          task_state=[None, task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("reboot")
     def reboot(self, context, instance, reboot_type):
         """Reboot the given instance."""
         state = {'SOFT': task_states.REBOOTING,
@@ -1162,8 +1161,9 @@ class API(base.Base):
                                    instance['uuid'],
                                    params={'reboot_type': reboot_type})
 
-    @check_vm_state(state_checker.REBUILD)
-    @scheduler_api.reroute_compute(state_checker.REBUILD)
+    @check_instance_state(vm_state=[vm_states.ACTIVE],
+                          task_state=[None, task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance, image_href, admin_password,
                 name=None, metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
@@ -1194,8 +1194,9 @@ class API(base.Base):
                                    instance["uuid"],
                                    params=rebuild_params)
 
-    @check_vm_state(state_checker.REVERT_RESIZE)
-    @scheduler_api.reroute_compute(state_checker.REVERT_RESIZE)
+    @check_instance_state(vm_state=[vm_states.ACTIVE],
+                          task_state=[task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("revert_resize")
     def revert_resize(self, context, instance):
         """Reverts a resize, deleting the 'new' instance in the process."""
         context = context.elevated()
@@ -1219,8 +1220,9 @@ class API(base.Base):
         self.db.migration_update(context, migration_ref['id'],
                                  {'status': 'reverted'})
 
-    @check_vm_state(state_checker.CONFIRM_RESIZE)
-    @scheduler_api.reroute_compute(state_checker.CONFIRM_RESIZE)
+    @check_instance_state(vm_state=[vm_states.ACTIVE],
+                          task_state=[task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("confirm_resize")
     def confirm_resize(self, context, instance):
         """Confirms a migration/resize and deletes the 'old' instance."""
         context = context.elevated()
@@ -1246,8 +1248,9 @@ class API(base.Base):
         self.db.instance_update(context, instance['uuid'],
                 {'host': migration_ref['dest_compute'], })
 
-    @check_vm_state(state_checker.RESIZE)
-    @scheduler_api.reroute_compute(state_checker.RESIZE)
+    @check_instance_state(vm_state=[vm_states.ACTIVE],
+                          task_state=[None])
+    @scheduler_api.reroute_compute("resize")
     def resize(self, context, instance, flavor_id=None):
         """Resize (ie, migrate) a running instance.
 
@@ -1328,8 +1331,9 @@ class API(base.Base):
         # didn't raise so this is the correct zone
         self.network_api.add_network_to_project(context, project_id)
 
-    @check_vm_state(state_checker.PAUSE)
-    @scheduler_api.reroute_compute(state_checker.PAUSE)
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED],
+                          task_state=[None, task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("pause")
     def pause(self, context, instance):
         """Pause the given instance."""
         instance_uuid = instance["uuid"]
@@ -1339,8 +1343,8 @@ class API(base.Base):
                     task_state=task_states.PAUSING)
         self._cast_compute_message('pause_instance', context, instance_uuid)
 
-    @check_vm_state(state_checker.UNPAUSE)
-    @scheduler_api.reroute_compute(state_checker.UNPAUSE)
+    @check_instance_state(vm_state=[vm_states.PAUSED])
+    @scheduler_api.reroute_compute("unpause")
     def unpause(self, context, instance):
         """Unpause the given instance."""
         instance_uuid = instance["uuid"]
@@ -1377,8 +1381,9 @@ class API(base.Base):
         """Retrieve actions for the given instance."""
         return self.db.instance_get_actions(context, instance['uuid'])
 
-    @check_vm_state(state_checker.SUSPEND)
-    @scheduler_api.reroute_compute(state_checker.SUSPEND)
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED],
+                          task_state=[None, task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("suspend")
     def suspend(self, context, instance):
         """Suspend the given instance."""
         instance_uuid = instance["uuid"]
@@ -1388,8 +1393,8 @@ class API(base.Base):
                     task_state=task_states.SUSPENDING)
         self._cast_compute_message('suspend_instance', context, instance_uuid)
 
-    @check_vm_state(state_checker.RESUME)
-    @scheduler_api.reroute_compute(state_checker.RESUME)
+    @check_instance_state(vm_state=[vm_states.SUSPENDED])
+    @scheduler_api.reroute_compute("resume")
     def resume(self, context, instance):
         """Resume the given instance."""
         instance_uuid = instance["uuid"]
@@ -1399,8 +1404,9 @@ class API(base.Base):
                     task_state=task_states.RESUMING)
         self._cast_compute_message('resume_instance', context, instance_uuid)
 
-    @check_vm_state(state_checker.RESCUE)
-    @scheduler_api.reroute_compute(state_checker.RESCUE)
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
+                          task_state=[None, task_states.RESIZE_VERIFY])
+    @scheduler_api.reroute_compute("rescue")
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
         self.update(context,
@@ -1415,8 +1421,8 @@ class API(base.Base):
                                    instance['uuid'],
                                    params=rescue_params)
 
-    @check_vm_state(state_checker.UNRESCUE)
-    @scheduler_api.reroute_compute(state_checker.UNRESCUE)
+    @check_instance_state(vm_state=[vm_states.RESCUED])
+    @scheduler_api.reroute_compute("unrescue")
     def unrescue(self, context, instance):
         """Unrescue the given instance."""
         self.update(context,

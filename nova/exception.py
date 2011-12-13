@@ -251,7 +251,7 @@ class InvalidParameterValue(Invalid):
 
 
 class InstanceInvalidState(Invalid):
-    message = _("Instance %(instance_uuid)s in state %(state)s. Cannot "
+    message = _("Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot "
                 "%(method)s while the instance is in this state.")
 
 
