@@ -1134,6 +1134,8 @@ class ComputeTestCase(BaseTestCase):
         rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
              "args": {'instance_id': i_ref['id'], 'block_migration': False}})
+        self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
+        self.compute.driver.unplug_vifs(i_ref, [])
 
         # start test
         self.mox.ReplayAll()

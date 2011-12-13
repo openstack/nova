@@ -94,7 +94,11 @@ class FakeConnection(driver.ComputeDriver):
         return info_list
 
     def plug_vifs(self, instance, network_info):
-        """Plugin VIFs into networks."""
+        """Plug VIFs into networks."""
+        pass
+
+    def unplug_vifs(self, instance, network_info):
+        """Unplug VIFs from networks."""
         pass
 
     def spawn(self, context, instance, image_meta,

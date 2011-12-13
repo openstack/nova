@@ -297,7 +297,12 @@ class XenAPIConnection(driver.ComputeDriver):
         self._vmops.inject_network_info(instance, network_info)
 
     def plug_vifs(self, instance_ref, network_info):
+        """Plug VIFs into networks."""
         self._vmops.plug_vifs(instance_ref, network_info)
+
+    def unplug_vifs(self, instance_ref, network_info):
+        """Unplug VIFs from networks."""
+        self._vmops.unplug_vifs(instance_ref, network_info)
 
     def get_info(self, instance_name):
         """Return data about VM instance"""
