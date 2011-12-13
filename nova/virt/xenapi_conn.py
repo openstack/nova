@@ -397,12 +397,12 @@ class XenAPIConnection(driver.ComputeDriver):
                'local_gb_used': used_disk_gb,
                'hypervisor_type': 'xen',
                'hypervisor_version': 0,
+               'service_id': service_ref['id'],
                'cpu_info': host_stats['host_cpu_info']['cpu_count']}
 
         compute_node_ref = service_ref['compute_node']
         if not compute_node_ref:
             LOG.info(_('Compute_service record created for %s ') % host)
-            dic['service_id'] = service_ref['id']
             db.compute_node_create(ctxt, dic)
         else:
             LOG.info(_('Compute_service record updated for %s ') % host)

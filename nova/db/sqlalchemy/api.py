@@ -44,6 +44,9 @@ from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
 
 FLAGS = flags.FLAGS
+flags.DECLARE('reserved_host_disk_mb', 'nova.scheduler.host_manager')
+flags.DECLARE('reserved_host_memory_mb', 'nova.scheduler.host_manager')
+
 LOG = logging.getLogger("nova.db.sqlalchemy")
 
 
@@ -388,6 +391,21 @@ def compute_node_get(context, compute_id, session=None):
 
 
 @require_admin_context
+def compute_node_get_by_service(context, service_id, session=None):
+    if not session:
+        session = get_session()
+
+    result = model_query(context, models.ComputeNode, session=session).\
+                     filter_by(service_id=service_id).\
+                     first()
+
+    if not result:
+        raise exception.ComputeHostNotFound(host="ServiceID=%s" % service_id)
+
+    return result
+
+
+@require_admin_context
 def compute_node_get_all(context, session=None):
     return model_query(context, models.ComputeNode, session=session).\
                     options(joinedload('service')).\
@@ -402,21 +420,153 @@ def compute_node_get_for_service(context, service_id):
                     first()
 
 
+def _get_host_utilization(context, host, ram_mb, disk_gb):
+    """Compute the current utilization of a given host."""
+    instances = instance_get_all_by_host(context, host)
+    vms = len(instances)
+    free_ram_mb = ram_mb - FLAGS.reserved_host_memory_mb
+    free_disk_gb = disk_gb - (FLAGS.reserved_host_disk_mb * 1024)
+
+    work = 0
+    for instance in instances:
+        free_ram_mb -= instance.memory_mb
+        free_disk_gb -= instance.local_gb
+        if instance.vm_state in [vm_states.BUILDING, vm_states.REBUILDING,
+                                 vm_states.MIGRATING, vm_states.RESIZING]:
+            work += 1
+    return dict(free_ram_mb=free_ram_mb,
+                free_disk_gb=free_disk_gb,
+                current_workload=work,
+                running_vms=vms)
+
+
+def _adjust_compute_node_values_for_utilization(context, values, session):
+    service_ref = service_get(context, values['service_id'], session=session)
+    host = service_ref['host']
+    ram_mb = values['memory_mb']
+    disk_gb = values['local_gb']
+    values.update(_get_host_utilization(context, host, ram_mb, disk_gb))
+
+
 @require_admin_context
-def compute_node_create(context, values):
-    compute_node_ref = models.ComputeNode()
-    compute_node_ref.update(values)
-    compute_node_ref.save()
+def compute_node_create(context, values, session=None):
+    """Creates a new ComputeNode and populates the capacity fields
+    with the most recent data."""
+    if not session:
+        session = get_session()
+
+    _adjust_compute_node_values_for_utilization(context, values, session)
+    with session.begin(subtransactions=True):
+        compute_node_ref = models.ComputeNode()
+        session.add(compute_node_ref)
+        compute_node_ref.update(values)
     return compute_node_ref
 
 
 @require_admin_context
 def compute_node_update(context, compute_id, values):
+    """Creates a new ComputeNode and populates the capacity fields
+    with the most recent data."""
     session = get_session()
-    with session.begin():
+    _adjust_compute_node_values_for_utilization(context, values, session)
+    with session.begin(subtransactions=True):
         compute_ref = compute_node_get(context, compute_id, session=session)
         compute_ref.update(values)
         compute_ref.save(session=session)
+
+
+# Note: these operations use with_lockmode() ... so this will only work
+# reliably with engines that support row-level locking
+# (postgres, mysql+innodb and above).
+
+def compute_node_get_by_host(context, host):
+    """Get all capacity entries for the given host."""
+    session = get_session()
+    with session.begin():
+        node = session.query(models.ComputeNode).\
+                             options(joinedload('service')).\
+                             filter(models.Service.host == host).\
+                             filter_by(deleted=False).\
+                             with_lockmode('update')
+        return node.first()
+
+
+def compute_node_capacity_find(context, minimum_ram_mb, minimum_disk_gb):
+    """Get all enabled hosts with enough ram and disk."""
+    session = get_session()
+    with session.begin():
+        return session.query(models.ComputeNode).\
+                  options(joinedload('service')).\
+                  filter(models.ComputeNode.free_ram_mb >= minimum_ram_mb).\
+                  filter(models.ComputeNode.free_disk_gb >= minimum_disk_gb).\
+                  filter(models.Service.disabled == False).\
+                  filter_by(deleted=False).\
+                  with_lockmode('update').all()
+
+
+def compute_node_utilization_update(context, host, free_ram_mb_delta=0,
+                          free_disk_gb_delta=0, work_delta=0, vm_delta=0):
+    """Update a specific ComputeNode entry by a series of deltas.
+    Do this as a single atomic action and lock the row for the
+    duration of the operation. Requires that ComputeNode record exist."""
+    session = get_session()
+    compute_node = None
+    with session.begin(subtransactions=True):
+        compute_node = session.query(models.ComputeNode).\
+                              options(joinedload('service')).\
+                              filter(models.Service.host == host).\
+                              filter_by(deleted=False).\
+                              with_lockmode('update').\
+                              first()
+        if compute_node is None:
+            raise exception.NotFound(_("No ComputeNode for %(host)s" %
+                                 locals()))
+
+        # This table thingy is how we get atomic UPDATE x = x + 1
+        # semantics.
+        table = models.ComputeNode.__table__
+        if free_ram_mb_delta != 0:
+            compute_node.free_ram_mb = table.c.free_ram_mb + free_ram_mb_delta
+        if free_disk_gb_delta != 0:
+            compute_node.free_disk_gb = table.c.free_disk_gb + \
+                                        free_disk_gb_delta
+        if work_delta != 0:
+            compute_node.current_workload = table.c.current_workload + \
+                                            work_delta
+        if vm_delta != 0:
+            compute_node.running_vms = table.c.running_vms + vm_delta
+    return compute_node
+
+
+def compute_node_utilization_set(context, host, free_ram_mb=None,
+                                 free_disk_gb=None, work=None, vms=None):
+    """Like compute_node_utilization_update() modify a specific host
+    entry. But this function will set the metrics absolutely
+    (vs. a delta update).
+    """
+    session = get_session()
+    compute_node = None
+    with session.begin(subtransactions=True):
+        compute_node = session.query(models.ComputeNode).\
+                              options(joinedload('service')).\
+                              filter(models.Service.host == host).\
+                              filter_by(deleted=False).\
+                              with_lockmode('update').\
+                              first()
+        if compute_node is None:
+            raise exception.NotFound(_("No ComputeNode for %(host)s" %
+                                 locals()))
+
+        if free_ram_mb != None:
+            compute_node.free_ram_mb = free_ram_mb
+        if free_disk_gb != None:
+            compute_node.free_disk_gb = free_disk_gb
+        if work != None:
+            compute_node.current_workload = work
+        if vms != None:
+            compute_node.running_vms = vms
+
+    return compute_node
 
 
 ###################

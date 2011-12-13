@@ -1564,12 +1564,12 @@ class LibvirtConnection(driver.ComputeDriver):
                'hypervisor_type': self.get_hypervisor_type(),
                'hypervisor_version': self.get_hypervisor_version(),
                'cpu_info': self.get_cpu_info(),
+               'service_id': service_ref['id'],
                'disk_available_least': self.get_disk_available_least()}
 
         compute_node_ref = service_ref['compute_node']
         if not compute_node_ref:
             LOG.info(_('Compute_service record created for %s ') % host)
-            dic['service_id'] = service_ref['id']
             db.compute_node_create(ctxt, dic)
         else:
             LOG.info(_('Compute_service record updated for %s ') % host)

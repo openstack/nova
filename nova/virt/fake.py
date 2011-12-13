@@ -264,12 +264,12 @@ class FakeConnection(driver.ComputeDriver):
                'local_gb_used': 0,
                'hypervisor_type': 'fake',
                'hypervisor_version': '1.0',
+               'service_id': service_ref['id'],
                'cpu_info': '?'}
 
         compute_node_ref = service_ref['compute_node']
         if not compute_node_ref:
             LOG.info(_('Compute_service record created for %s ') % host)
-            dic['service_id'] = service_ref['id']
             db.compute_node_create(ctxt, dic)
         else:
             LOG.info(_('Compute_service record updated for %s ') % host)
@@ -290,6 +290,13 @@ class FakeConnection(driver.ComputeDriver):
     def live_migration(self, context, instance_ref, dest,
                        post_method, recover_method, block_migration=False):
         """This method is supported only by libvirt."""
+        return
+
+    def finish_migration(self, context, migration, instance, disk_info,
+                         network_info, image_meta, resize_instance):
+        return
+
+    def confirm_migration(self, migration, instance, network_info):
         return
 
     def pre_live_migration(self, block_device_info):

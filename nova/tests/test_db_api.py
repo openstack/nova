@@ -22,8 +22,8 @@ import datetime
 
 from nova import test
 from nova import context
-from nova import exception
 from nova import db
+from nova import exception
 from nova import flags
 from nova import utils
 
@@ -545,3 +545,100 @@ class AggregateDBApiTestCase(test.TestCase):
 
         db.dnsdomain_unregister(ctxt, domain1)
         db.dnsdomain_unregister(ctxt, domain2)
+
+
+class CapacityTestCase(test.TestCase):
+    def setUp(self):
+        super(CapacityTestCase, self).setUp()
+
+        self.ctxt = context.get_admin_context()
+
+        service_dict = dict(host='host1', binary='binary1',
+                            topic='compute', report_count=1,
+                            disabled=False)
+        self.service = db.service_create(self.ctxt, service_dict)
+
+        self.compute_node_dict = dict(vcpus=2, memory_mb=1024, local_gb=2048,
+                                 vcpus_used=0, memory_mb_used=0,
+                                 local_gb_used=0, hypervisor_type="xen",
+                                 hypervisor_version=1, cpu_info="",
+                                 service_id=self.service.id)
+
+        self.flags(reserved_host_memory_mb=0)
+        self.flags(reserved_host_disk_mb=0)
+
+    def _create_helper(self, host):
+        self.compute_node_dict['host'] = host
+        return db.compute_node_create(self.ctxt, self.compute_node_dict)
+
+    def test_compute_node_create(self):
+        item = self._create_helper('host1')
+        self.assertEquals(item.free_ram_mb, 1024)
+        self.assertEquals(item.free_disk_gb, 2048)
+        self.assertEquals(item.running_vms, 0)
+        self.assertEquals(item.current_workload, 0)
+
+    def test_compute_node_create_with_reservations(self):
+        self.flags(reserved_host_memory_mb=256)
+        item = self._create_helper('host1')
+        self.assertEquals(item.free_ram_mb, 1024 - 256)
+
+    def test_compute_node_set(self):
+        item = self._create_helper('host1')
+
+        x = db.compute_node_utilization_set(self.ctxt, 'host1',
+                            free_ram_mb=2048, free_disk_gb=4096)
+        self.assertEquals(x.free_ram_mb, 2048)
+        self.assertEquals(x.free_disk_gb, 4096)
+        self.assertEquals(x.running_vms, 0)
+        self.assertEquals(x.current_workload, 0)
+
+        x = db.compute_node_utilization_set(self.ctxt, 'host1', work=3)
+        self.assertEquals(x.free_ram_mb, 2048)
+        self.assertEquals(x.free_disk_gb, 4096)
+        self.assertEquals(x.current_workload, 3)
+        self.assertEquals(x.running_vms, 0)
+
+        x = db.compute_node_utilization_set(self.ctxt, 'host1', vms=5)
+        self.assertEquals(x.free_ram_mb, 2048)
+        self.assertEquals(x.free_disk_gb, 4096)
+        self.assertEquals(x.current_workload, 3)
+        self.assertEquals(x.running_vms, 5)
+
+    def test_compute_node_utilization_update(self):
+        item = self._create_helper('host1')
+
+        x = db.compute_node_utilization_update(self.ctxt, 'host1',
+                                               free_ram_mb_delta=-24)
+        self.assertEquals(x.free_ram_mb, 1000)
+        self.assertEquals(x.free_disk_gb, 2048)
+        self.assertEquals(x.running_vms, 0)
+        self.assertEquals(x.current_workload, 0)
+
+        x = db.compute_node_utilization_update(self.ctxt, 'host1',
+                                               free_disk_gb_delta=-48)
+        self.assertEquals(x.free_ram_mb, 1000)
+        self.assertEquals(x.free_disk_gb, 2000)
+        self.assertEquals(x.running_vms, 0)
+        self.assertEquals(x.current_workload, 0)
+
+        x = db.compute_node_utilization_update(self.ctxt, 'host1',
+                                               work_delta=3)
+        self.assertEquals(x.free_ram_mb, 1000)
+        self.assertEquals(x.free_disk_gb, 2000)
+        self.assertEquals(x.current_workload, 3)
+        self.assertEquals(x.running_vms, 0)
+
+        x = db.compute_node_utilization_update(self.ctxt, 'host1',
+                                               work_delta=-1)
+        self.assertEquals(x.free_ram_mb, 1000)
+        self.assertEquals(x.free_disk_gb, 2000)
+        self.assertEquals(x.current_workload, 2)
+        self.assertEquals(x.running_vms, 0)
+
+        x = db.compute_node_utilization_update(self.ctxt, 'host1',
+                                               vm_delta=5)
+        self.assertEquals(x.free_ram_mb, 1000)
+        self.assertEquals(x.free_disk_gb, 2000)
+        self.assertEquals(x.current_workload, 2)
+        self.assertEquals(x.running_vms, 5)
