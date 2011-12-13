@@ -65,16 +65,21 @@ def main(command, vif_raw, net_type):
         data = json.loads(xsread)
         if data["label"] == "public":
             this_vif = "vif%s.0" % dom_id
+            phys_dev = "eth0"
         else:
             this_vif = "vif%s.1" % dom_id
+            phys_dev = "eth1"
 
         if vif == this_vif:
             vif_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get',
                                             'Interface', vif, 'ofport')
+            phys_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get',
+                                             'Interface', phys_dev, 'ofport')
 
             params = dict(VIF_NAME=vif,
                           MAC=data['mac'],
-                          OF_PORT=vif_ofport)
+                          OF_PORT=vif_ofport,
+                          PHYS_PORT=phys_ofport)
 
             ovs = OvsFlow(bridge, params)
 
@@ -97,16 +102,65 @@ def main(command, vif_raw, net_type):
 
 
 def apply_ovs_ipv4_flows(ovs, bridge, params):
-    # allow valid ARP outbound (both request / reply)
-    ovs.add("priority=3,in_port=%(OF_PORT)s,dl_src=%(MAC)s,arp,"
-            "arp_sha=%(MAC)s,nw_src=%(IPV4_ADDR)s,actions=normal")
+    # When ARP traffic arrives from a vif, push it to virtual port
+    # 9999 for further processing
+    ovs.add("priority=4,arp,in_port=%(OF_PORT)s,dl_src=%(MAC)s,"
+            "nw_src=%(IPV4_ADDR)s,arp_sha=%(MAC)s,actions=resubmit:9999")
+    ovs.add("priority=4,arp,in_port=%(OF_PORT)s,dl_src=%(MAC)s,"
+            "nw_src=0.0.0.0,arp_sha=%(MAC)s,actions=resubmit:9999")
 
-    ovs.add("priority=3,in_port=%(OF_PORT)s,dl_src=%(MAC)s,arp,"
-            "arp_sha=%(MAC)s,nw_src=0.0.0.0,actions=normal")
+    # When IP traffic arrives from a vif, push it to virtual port 9999
+    # for further processing
+    ovs.add("priority=4,ip,in_port=%(OF_PORT)s,dl_src=%(MAC)s,"
+            "nw_src=%(IPV4_ADDR)s,actions=resubmit:9999")
 
-    # allow valid IPv4 outbound
-    ovs.add("priority=3,in_port=%(OF_PORT)s,dl_src=%(MAC)s,ip,"
-            "nw_src=%(IPV4_ADDR)s,actions=normal")
+    # Drop IP bcast/mcast
+    ovs.add("priority=6,ip,in_port=%(OF_PORT)s,dl_dst=ff:ff:ff:ff:ff:ff,"
+            "actions=drop")
+    ovs.add("priority=5,ip,in_port=%(OF_PORT)s,nw_dst=224.0.0.0/4,"
+            "actions=drop")
+    ovs.add("priority=5,ip,in_port=%(OF_PORT)s,nw_dst=240.0.0.0/4,"
+            "actions=drop")
+
+    # Pass ARP requests coming from any VMs on the local HV (port
+    # 9999) or coming from external sources (PHYS_PORT) to the VM and
+    # physical NIC.  We output this to the physical NIC as well, since
+    # with instances of shared ip groups, the active host for the
+    # destination IP might be elsewhere...
+    ovs.add("priority=3,arp,in_port=9999,nw_dst=%(IPV4_ADDR)s,"
+            "actions=output:%(OF_PORT)s,output:%(PHYS_PORT)s")
+
+    # Pass ARP traffic originating from external sources the VM with
+    # the matching IP address
+    ovs.add("priority=3,arp,in_port=%(PHYS_PORT)s,nw_dst=%(IPV4_ADDR)s,"
+            "actions=output:%(OF_PORT)s")
+
+    # Pass ARP traffic from one VM (src mac already validated) to
+    # another VM on the same HV
+    ovs.add("priority=3,arp,in_port=9999,dl_dst=%(MAC)s,"
+            "actions=output:%(OF_PORT)s")
+
+    # Pass ARP replies coming from the external environment to the
+    # target VM
+    ovs.add("priority=3,arp,in_port=%(PHYS_PORT)s,dl_dst=%(MAC)s,"
+            "actions=output:%(OF_PORT)s")
+
+    # ALL IP traffic: Pass IP data coming from any VMs on the local HV
+    # (port 9999) or coming from external sources (PHYS_PORT) to the
+    # VM and physical NIC.  We output this to the physical NIC as
+    # well, since with instances of shared ip groups, the active host
+    # for the destination IP might be elsewhere...
+    ovs.add("priority=3,ip,in_port=9999,dl_dst=%(MAC)s,"
+            "nw_dst=%(IPV4_ADDR)s,actions=output:%(OF_PORT)s,"
+            "output:%(PHYS_PORT)s")
+
+    # Pass IP traffic from the external environment to the VM
+    ovs.add("priority=3,ip,in_port=%(PHYS_PORT)s,dl_dst=%(MAC)s,"
+            "nw_dst=%(IPV4_ADDR)s,actions=output:%(OF_PORT)s")
+
+    # Send any local traffic to the physical NIC's OVS port for
+    # physical network learning
+    ovs.add("priority=2,in_port=9999,actions=output:%(PHYS_PORT)s")
 
 
 def apply_ovs_ipv6_flows(ovs, bridge, params):
