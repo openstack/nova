@@ -4021,16 +4021,27 @@ def sm_volume_get_all(context):
 
 
 def instance_fault_create(context, values):
-    """Create a new Instance Fault."""
+    """Create a new InstanceFault."""
     fault_ref = models.InstanceFault()
     fault_ref.update(values)
     fault_ref.save()
-    return fault_ref
+    return dict(fault_ref.iteritems())
 
 
-def instance_fault_get_by_instance(context, instance_uuid):
-    """Get first instance fault with the given instance uuid."""
-    return model_query(context, models.InstanceFault, read_deleted='no').\
-                filter_by(instance_uuid=instance_uuid).\
-                order_by(desc("created_at")).\
-                first()
+def instance_fault_get_by_instance_uuids(context, instance_uuids):
+    """Get all instance faults for the provided instance_uuids."""
+    rows = model_query(context, models.InstanceFault, read_deleted='no').\
+                       filter(models.InstanceFault.instance_uuid.in_(
+                           instance_uuids)).\
+                       order_by(desc("created_at")).\
+                       all()
+
+    output = {}
+    for instance_uuid in instance_uuids:
+        output[instance_uuid] = []
+
+    for row in rows:
+        data = dict(row.iteritems())
+        output[row['instance_uuid']].append(data)
+
+    return output

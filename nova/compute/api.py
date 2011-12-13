@@ -1601,3 +1601,8 @@ class API(base.Base):
         self.db.instance_metadata_update(context, instance['id'],
                                          _metadata, True)
         return _metadata
+
+    def get_instance_faults(self, context, instances):
+        """Get all faults for a list of instance uuids."""
+        uuids = [instance['uuid'] for instance in instances]
+        return self.db.instance_fault_get_by_instance_uuids(context, uuids)
