@@ -104,6 +104,15 @@ class FakeQuantumClientConnection(object):
                         return port_id
         return None
 
+    def get_attached_ports(self, tenant_id, net_id):
+        ports = []
+        for nid, n in self.nets.items():
+            if nid == net_id and n['tenant-id'] == tenant_id:
+                for port_id, p in n['ports'].items():
+                    ports.append({'port-id': port_id,
+                            'attachment': p['attachment-id']})
+        return ports
+
     def get_networks(self, tenant_id):
         nets = []
         for nid, n in self.nets.items():
