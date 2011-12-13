@@ -1615,8 +1615,7 @@ class NWFilterTestCase(test.TestCase):
         inst['local_gb'] = '20'
         inst['flavorid'] = '1'
         inst['swap'] = '2048'
-        inst['rxtx_quota'] = 100
-        inst['rxtx_cap'] = 200
+        inst['rxtx_factor'] = 1
         inst.update(params)
         return db.instance_type_create(context, inst)['id']
 
