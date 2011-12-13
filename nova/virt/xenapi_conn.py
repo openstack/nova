@@ -513,7 +513,7 @@ class XenAPISession(object):
                                  session.xenapi.Async.host.call_plugin,
                                  self.get_xenapi_host(), plugin, fn, args)
 
-    def wait_for_task(self, task, id=None):
+    def wait_for_task(self, task, uuid=None):
         """Return the result of the given task. The task is polled
         until it completes."""
         done = event.Event()
@@ -530,9 +530,10 @@ class XenAPISession(object):
 
                 # Ensure action is never > 255
                 action = dict(action=name[:255], error=None)
-                log_instance_actions = FLAGS.xenapi_log_instance_actions and id
+                log_instance_actions = (FLAGS.xenapi_log_instance_actions and
+                                        uuid)
                 if log_instance_actions:
-                    action["instance_id"] = int(id)
+                    action["instance_uuid"] = uuid
 
                 if status == "pending":
                     return
@@ -613,10 +614,10 @@ class HostState(object):
         we can get host status information using xenapi.
         """
         LOG.debug(_("Updating host stats"))
-        # Make it something unlikely to match any actual instance ID
+        # Make it something unlikely to match any actual instance UUID
         task_id = random.randint(-80000, -70000)
         task = self._session.async_call_plugin("xenhost", "host_data", {})
-        task_result = self._session.wait_for_task(task, task_id)
+        task_result = self._session.wait_for_task(task, str(task_id))
         if not task_result:
             task_result = json.dumps("")
         try:

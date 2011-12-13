@@ -35,12 +35,11 @@ def stubout_instance_snapshot(stubs):
 
     stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
 
-    def fake_wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
-                              original_parent_uuid):
+    def fake_wait_for_vhd_coalesce(*args):
         #TODO(sirp): Should we actually fake out the data here
         return "fakeparent"
 
-    stubs.Set(vm_utils, 'wait_for_vhd_coalesce', fake_wait_for_vhd_coalesce)
+    stubs.Set(vm_utils, '_wait_for_vhd_coalesce', fake_wait_for_vhd_coalesce)
 
 
 def stubout_session(stubs, cls, product_version=None):

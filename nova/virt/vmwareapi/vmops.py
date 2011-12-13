@@ -196,7 +196,7 @@ class VMWareVMOps(object):
                                     self._session._get_vim(),
                                     "CreateVM_Task", vm_folder_mor,
                                     config=config_spec, pool=res_pool_mor)
-            self._session._wait_for_task(instance.id, vm_create_task)
+            self._session._wait_for_task(instance['uuid'], vm_create_task)
 
             LOG.debug(_("Created VM with the name %s on the ESX  host") %
                       instance.name)
@@ -243,7 +243,7 @@ class VMWareVMOps(object):
                 name=uploaded_vmdk_path,
                 datacenter=self._get_datacenter_name_and_ref()[0],
                 spec=vmdk_create_spec)
-            self._session._wait_for_task(instance.id, vmdk_create_task)
+            self._session._wait_for_task(instance['uuid'], vmdk_create_task)
             LOG.debug(_("Created Virtual Disk of size %(vmdk_file_size_in_kb)s"
                         " KB on the ESX host local store "
                         "%(data_store_name)s") %
@@ -264,7 +264,7 @@ class VMWareVMOps(object):
                         "DeleteDatastoreFile_Task",
                         service_content.fileManager,
                         name=flat_uploaded_vmdk_path)
-            self._session._wait_for_task(instance.id, vmdk_delete_task)
+            self._session._wait_for_task(instance['uuid'], vmdk_delete_task)
             LOG.debug(_("Deleted the file %(flat_uploaded_vmdk_path)s on the "
                         "ESX host local store %(data_store_name)s") %
                         {"flat_uploaded_vmdk_path": flat_uploaded_vmdk_path,
@@ -314,7 +314,7 @@ class VMWareVMOps(object):
                                self._session._get_vim(),
                                "ReconfigVM_Task", vm_ref,
                                spec=vmdk_attach_config_spec)
-            self._session._wait_for_task(instance.id, reconfig_task)
+            self._session._wait_for_task(instance['uuid'], reconfig_task)
             LOG.debug(_("Reconfigured VM instance %s to attach the image "
                       "disk") % instance.name)
 
@@ -327,7 +327,7 @@ class VMWareVMOps(object):
             power_on_task = self._session._call_method(
                                self._session._get_vim(),
                                "PowerOnVM_Task", vm_ref)
-            self._session._wait_for_task(instance.id, power_on_task)
+            self._session._wait_for_task(instance['uuid'], power_on_task)
             LOG.debug(_("Powered on the VM instance %s") % instance.name)
         _power_on_vm()
 
@@ -382,7 +382,7 @@ class VMWareVMOps(object):
                         description="Taking Snapshot of the VM",
                         memory=True,
                         quiesce=True)
-            self._session._wait_for_task(instance.id, snapshot_task)
+            self._session._wait_for_task(instance['uuid'], snapshot_task)
             LOG.debug(_("Created Snapshot of the VM instance %s ") %
                       instance.name)
 
@@ -438,7 +438,7 @@ class VMWareVMOps(object):
                 destDatacenter=dc_ref,
                 destSpec=copy_spec,
                 force=False)
-            self._session._wait_for_task(instance.id, copy_disk_task)
+            self._session._wait_for_task(instance['uuid'], copy_disk_task)
             LOG.debug(_("Copied disk data before snapshot of the VM "
                         "instance %s") % instance.name)
 
@@ -479,7 +479,7 @@ class VMWareVMOps(object):
                 service_content.virtualDiskManager,
                 name=dest_vmdk_file_location,
                 datacenter=dc_ref)
-            self._session._wait_for_task(instance.id, remove_disk_task)
+            self._session._wait_for_task(instance['uuid'], remove_disk_task)
             LOG.debug(_("Deleted temporary vmdk file %s")
                         % dest_vmdk_file_location)
 
@@ -527,7 +527,7 @@ class VMWareVMOps(object):
             LOG.debug(_("Doing hard reboot of VM %s") % instance.name)
             reset_task = self._session._call_method(self._session._get_vim(),
                                                     "ResetVM_Task", vm_ref)
-            self._session._wait_for_task(instance.id, reset_task)
+            self._session._wait_for_task(instance['uuid'], reset_task)
             LOG.debug(_("Did hard reboot of VM %s") % instance.name)
 
     def destroy(self, instance, network_info):
@@ -563,7 +563,7 @@ class VMWareVMOps(object):
                 poweroff_task = self._session._call_method(
                        self._session._get_vim(),
                        "PowerOffVM_Task", vm_ref)
-                self._session._wait_for_task(instance.id, poweroff_task)
+                self._session._wait_for_task(instance['uuid'], poweroff_task)
                 LOG.debug(_("Powered off the VM %s") % instance.name)
 
             # Un-register the VM
@@ -593,7 +593,7 @@ class VMWareVMOps(object):
                     "DeleteDatastoreFile_Task",
                     self._session._get_vim().get_service_content().fileManager,
                     name=dir_ds_compliant_path)
-                self._session._wait_for_task(instance.id, delete_task)
+                self._session._wait_for_task(instance['uuid'], delete_task)
                 LOG.debug(_("Deleted contents of the VM %(name)s from "
                             "datastore %(datastore_name)s") %
                            ({'name': instance.name,
@@ -628,7 +628,7 @@ class VMWareVMOps(object):
             LOG.debug(_("Suspending the VM %s ") % instance.name)
             suspend_task = self._session._call_method(self._session._get_vim(),
                     "SuspendVM_Task", vm_ref)
-            self._session._wait_for_task(instance.id, suspend_task)
+            self._session._wait_for_task(instance['uuid'], suspend_task)
             LOG.debug(_("Suspended the VM %s ") % instance.name)
         # Raise Exception if VM is poweredOff
         elif pwr_state == "poweredOff":
@@ -652,7 +652,7 @@ class VMWareVMOps(object):
             suspend_task = self._session._call_method(
                                         self._session._get_vim(),
                                        "PowerOnVM_Task", vm_ref)
-            self._session._wait_for_task(instance.id, suspend_task)
+            self._session._wait_for_task(instance['uuid'], suspend_task)
             LOG.debug(_("Resumed the VM %s ") % instance.name)
         else:
             reason = _("instance is not in a suspended state")
@@ -761,7 +761,7 @@ class VMWareVMOps(object):
         reconfig_task = self._session._call_method(self._session._get_vim(),
                            "ReconfigVM_Task", vm_ref,
                            spec=machine_id_change_spec)
-        self._session._wait_for_task(instance.id, reconfig_task)
+        self._session._wait_for_task(instance['uuid'], reconfig_task)
         LOG.debug(_("Reconfigured VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %
                   ({'name': instance.name,

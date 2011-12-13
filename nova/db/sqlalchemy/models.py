@@ -308,8 +308,7 @@ class InstanceActions(BASE, NovaBase):
     """Represents a guest VM's actions and results"""
     __tablename__ = "instance_actions"
     id = Column(Integer, primary_key=True)
-    instance_id = Column(Integer, ForeignKey('instances.id'))
-
+    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
     action = Column(String(255))
     error = Column(Text)
 
