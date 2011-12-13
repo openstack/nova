@@ -150,10 +150,10 @@ class QuantumMelangeIPAMLib(object):
         # Decorate with priority
         priority_nets = []
         for tenant_id in (project_id, FLAGS.quantum_default_tenant_id):
-            nets = self.get_networks_by_tenant(tenant_id)
+            nets = self.get_networks_by_tenant(context, tenant_id)
             for network in nets:
                 priority = network['priority']
-                priority_nets.append((priority, network_id, tenant_id))
+                priority_nets.append((priority, network['uuid'], tenant_id))
 
         # Sort by priority
         priority_nets.sort()
