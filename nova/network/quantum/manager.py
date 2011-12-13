@@ -514,8 +514,9 @@ class QuantumManager(manager.FlatManager):
             # Fill in some of the network fields that we would have
             # previously gotten from the network table (they'll be
             # passed to the linux_net functions).
-            network_ref['cidr'] = subnet['cidr']
-            n = IPNetwork(subnet['cidr'])
+            if subnet['cidr']:
+                network_ref['cidr'] = subnet['cidr']
+            n = IPNetwork(network_ref['cidr'])
             network_ref['dhcp_server'] = IPAddress(n.first + 1)
             network_ref['dhcp_start'] = IPAddress(n.first + 2)
             network_ref['broadcast'] = IPAddress(n.broadcast)
