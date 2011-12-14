@@ -252,7 +252,8 @@ class LibvirtConnection(driver.ComputeDriver):
             uri = FLAGS.libvirt_uri or 'qemu:///system'
         return uri
 
-    def _connect(self, uri, read_only):
+    @staticmethod
+    def _connect(uri, read_only):
         auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
                 'root',
                 None]
@@ -266,7 +267,8 @@ class LibvirtConnection(driver.ComputeDriver):
         return [self._conn.lookupByID(x).name()
                 for x in self._conn.listDomainsID()]
 
-    def _map_to_instance_info(self, domain):
+    @staticmethod
+    def _map_to_instance_info(domain):
         """Gets info from a virsh domain object into an InstanceInfo"""
 
         # domain.info() returns a list of:
@@ -416,7 +418,8 @@ class LibvirtConnection(driver.ComputeDriver):
                                         mount_device)
         virt_dom.attachDevice(xml)
 
-    def _get_disk_xml(self, xml, device):
+    @staticmethod
+    def _get_disk_xml(xml, device):
         """Returns the xml for the disk mounted at device"""
         try:
             doc = ElementTree.fromstring(xml)
@@ -754,7 +757,8 @@ class LibvirtConnection(driver.ComputeDriver):
         libvirt_utils.run_ajaxterm(ajaxterm_cmd, token, port)
         return {'token': token, 'host': host, 'port': port}
 
-    def get_host_ip_addr(self):
+    @staticmethod
+    def get_host_ip_addr():
         return FLAGS.my_ip
 
     @exception.wrap_exception()
@@ -809,14 +813,16 @@ class LibvirtConnection(driver.ComputeDriver):
             else:
                 libvirt_utils.copy_image(base, target)
 
-    def _fetch_image(self, context, target, image_id, user_id, project_id,
+    @staticmethod
+    def _fetch_image(context, target, image_id, user_id, project_id,
                      size=None):
         """Grab image and optionally attempt to resize it"""
         images.fetch_to_raw(context, image_id, target, user_id, project_id)
         if size:
             disk.extend(target, size)
 
-    def _create_local(self, target, local_size, unit='G', fs_format=None):
+    @staticmethod
+    def _create_local(target, local_size, unit='G', fs_format=None):
         """Create a blank image of specified size"""
 
         if not fs_format:
@@ -831,7 +837,8 @@ class LibvirtConnection(driver.ComputeDriver):
         self._create_local(target, local_size)
         disk.mkfs(os_type, fs_label, target)
 
-    def _create_swap(self, target, swap_mb):
+    @staticmethod
+    def _create_swap(target, swap_mb):
         """Create a swap file of specified size"""
         libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
         libvirt_utils.mkfs(target, 'swap')
@@ -1052,7 +1059,8 @@ class LibvirtConnection(driver.ComputeDriver):
         if FLAGS.libvirt_type == 'uml':
             libvirt_utils.chown(basepath('disk'), 'root')
 
-    def _volume_in_mapping(self, mount_device, block_device_info):
+    @staticmethod
+    def _volume_in_mapping(mount_device, block_device_info):
         block_device_list = [block_device.strip_dev(vol['mount_device'])
                              for vol in
                              driver.block_device_info_get_mapping(
@@ -1305,7 +1313,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return interfaces
 
-    def get_vcpu_total(self):
+    @staticmethod
+    def get_vcpu_total():
         """Get vcpu number of physical computer.
 
         :returns: the number of cpu core.
@@ -1321,7 +1330,8 @@ class LibvirtConnection(driver.ComputeDriver):
                        "This error can be safely ignored for now."))
             return 0
 
-    def get_memory_mb_total(self):
+    @staticmethod
+    def get_memory_mb_total():
         """Get the total memory size(MB) of physical computer.
 
         :returns: the total amount of memory(MB).
@@ -1336,7 +1346,8 @@ class LibvirtConnection(driver.ComputeDriver):
         # transforming kb to mb.
         return int(meminfo[idx + 1]) / 1024
 
-    def get_local_gb_total(self):
+    @staticmethod
+    def get_local_gb_total():
         """Get the total hdd size(GB) of physical computer.
 
         :returns:

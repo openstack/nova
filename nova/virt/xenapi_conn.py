@@ -339,7 +339,8 @@ class XenAPIConnection(driver.ComputeDriver):
         """Return link to instance's ajax console"""
         return self._vmops.get_ajax_console(instance)
 
-    def get_host_ip_addr(self):
+    @staticmethod
+    def get_host_ip_addr():
         xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
         return xs_url.netloc
 

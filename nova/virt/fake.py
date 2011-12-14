@@ -115,7 +115,8 @@ class FakeConnection(driver.ComputeDriver):
     def reboot(self, instance, network_info, reboot_type):
         pass
 
-    def get_host_ip_addr(self):
+    @staticmethod
+    def get_host_ip_addr():
         return '192.168.0.1'
 
     def resize(self, instance, flavor):
