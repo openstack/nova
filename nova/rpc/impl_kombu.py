@@ -682,6 +682,8 @@ class MulticallWaiter(object):
 
     def done(self):
         self._done = True
+        self._iterator.close()
+        self._iterator = None
         self._connection.close()
 
     def __call__(self, data):
