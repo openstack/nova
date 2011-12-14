@@ -436,6 +436,7 @@ class QuantumManager(manager.FlatManager):
             network_dict = {
                 'cidr': v4_subnet['cidr'],
                 'injected': True,
+                'bridge': net['bridge'],
                 'multi_host': False}
 
             q_tenant_id = project_id or FLAGS.quantum_default_tenant_id

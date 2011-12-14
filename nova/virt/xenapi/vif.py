@@ -41,7 +41,6 @@ class XenAPIBridgeDriver(VIFDriver):
         else:
             network_ref = NetworkHelper.find_network_with_bridge(
                                         xenapi_session, network['bridge'])
-        rxtx_cap = network_mapping.pop('rxtx_cap')
         vif_rec = {}
         vif_rec['device'] = str(device)
         vif_rec['network'] = network_ref
@@ -49,9 +48,13 @@ class XenAPIBridgeDriver(VIFDriver):
         vif_rec['MAC'] = network_mapping['mac']
         vif_rec['MTU'] = '1500'
         vif_rec['other_config'] = {}
-        vif_rec['qos_algorithm_type'] = "ratelimit" if rxtx_cap else ''
-        vif_rec['qos_algorithm_params'] = \
-                {"kbps": str(rxtx_cap * 1024)} if rxtx_cap else {}
+        if "rxtx_cap" in network_mapping:
+            vif_rec['qos_algorithm_type'] = "ratelimit"
+            vif_rec['qos_algorithm_params'] = \
+                {"kbps": str(network_mapping['rxtx_cap'] * 1024)}
+        else:
+            vif_rec['qos_algorithm_type'] = ""
+            vif_rec['qos_algorithm_params'] = {}
         return vif_rec
 
     def ensure_vlan_bridge(self, xenapi_session, network):
