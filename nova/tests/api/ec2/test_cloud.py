@@ -27,6 +27,8 @@ from M2Crypto import RSA
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
+from nova.api.ec2 import inst_state
+from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context
 from nova import crypto
@@ -596,6 +598,38 @@ class CloudTestCase(test.TestCase):
         db.instance_destroy(self.context, inst2['id'])
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
+
+    def test_describe_instance_state(self):
+        """Makes sure describe_instances for instanceState works."""
+
+        def test_instance_state(expected_code, expected_name,
+                                power_state_, vm_state_, values=None):
+            image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+            values = values or {}
+            values.update({'image_ref': image_uuid, 'instance_type_id': 1,
+                           'power_state': power_state_, 'vm_state': vm_state_})
+            inst = db.instance_create(self.context, values)
+
+            instance_id = ec2utils.id_to_ec2_id(inst['id'])
+            result = self.cloud.describe_instances(self.context,
+                                                 instance_id=[instance_id])
+            result = result['reservationSet'][0]
+            result = result['instancesSet'][0]['instanceState']
+
+            name = result['name']
+            code = result['code']
+            self.assertEqual(code, expected_code)
+            self.assertEqual(name, expected_name)
+
+            db.instance_destroy(self.context, inst['id'])
+
+        test_instance_state(inst_state.RUNNING_CODE, inst_state.RUNNING,
+                            power_state.RUNNING, vm_states.ACTIVE)
+        test_instance_state(inst_state.TERMINATED_CODE, inst_state.SHUTOFF,
+                            power_state.NOSTATE, vm_states.SHUTOFF)
+        test_instance_state(inst_state.STOPPED_CODE, inst_state.STOPPED,
+                            power_state.NOSTATE, vm_states.SHUTOFF,
+                            {'shutdown_terminate': False})
 
     def test_describe_instances_no_ipv6(self):
         """Makes sure describe_instances w/ no ipv6 works."""
@@ -1794,6 +1828,8 @@ class CloudTestCase(test.TestCase):
                 'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                 'ramdisk_id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                 'user_data': 'fake-user data',
+                'shutdown_terminate': False,
+                'disable_terminate': False,
                 }
         self.stubs.Set(self.cloud.compute_api, 'get', fake_get)
 
@@ -1822,8 +1858,6 @@ class CloudTestCase(test.TestCase):
                                      'attachTime': '13:56:24'}}]}
         expected_bdm['blockDeviceMapping'].sort()
         self.assertEqual(bdm, expected_bdm)
-        # NOTE(yamahata): this isn't supported
-        # get_attribute('disableApiTermination')
         groupSet = get_attribute('groupSet')
         groupSet['groupSet'].sort()
         expected_groupSet = {'instance_id': 'i-12345678',
@@ -1833,7 +1867,10 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(groupSet, expected_groupSet)
         self.assertEqual(get_attribute('instanceInitiatedShutdownBehavior'),
                          {'instance_id': 'i-12345678',
-                          'instanceInitiatedShutdownBehavior': 'stopped'})
+                          'instanceInitiatedShutdownBehavior': 'stop'})
+        self.assertEqual(get_attribute('disableApiTermination'),
+                         {'instance_id': 'i-12345678',
+                          'disableApiTermination': False})
         self.assertEqual(get_attribute('instanceType'),
                          {'instance_id': 'i-12345678',
                           'instanceType': 'fake_type'})
@@ -1851,3 +1888,72 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(get_attribute('userData'),
                          {'instance_id': 'i-12345678',
                           'userData': '}\xa9\x1e\xba\xc7\xabu\xabZ'})
+
+    def test_instance_initiated_shutdown_behavior(self):
+        def test_dia_iisb(expected_result, **kwargs):
+            """test describe_instance_attribute
+            attribute instance_initiated_shutdown_behavior"""
+            kwargs.update({'instance_type': FLAGS.default_instance_type,
+                           'max_count': 1})
+            instance_id = self._run_instance(**kwargs)
+
+            result = self.cloud.describe_instance_attribute(self.context,
+                            instance_id, 'instanceInitiatedShutdownBehavior')
+            self.assertEqual(result['instanceInitiatedShutdownBehavior'],
+                             expected_result)
+
+            result = self.cloud.terminate_instances(self.context,
+                                                    [instance_id])
+            self.assertTrue(result)
+            self._restart_compute_service()
+
+        test_dia_iisb('terminate', image_id='ami-1')
+
+        block_device_mapping = [{'device_name': '/dev/vdb',
+                                 'virtual_name': 'ephemeral0'}]
+        test_dia_iisb('stop', image_id='ami-2',
+                     block_device_mapping=block_device_mapping)
+
+        def fake_show(self, context, id_):
+            LOG.debug("id_ %s", id_)
+            print id_
+
+            prop = {}
+            if id_ == 'ami-3':
+                pass
+            elif id_ == 'ami-4':
+                prop = {'mappings': [{'device': 'sdb0',
+                                          'virtual': 'ephemeral0'}]}
+            elif id_ == 'ami-5':
+                prop = {'block_device_mapping':
+                        [{'device_name': '/dev/sdb0',
+                          'virtual_name': 'ephemeral0'}]}
+            elif id_ == 'ami-6':
+                prop = {'mappings': [{'device': 'sdb0',
+                                          'virtual': 'ephemeral0'}],
+                        'block_device_mapping':
+                        [{'device_name': '/dev/sdb0',
+                          'virtual_name': 'ephemeral0'}]}
+
+            prop_base = {'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                         'type': 'machine'}
+            prop_base.update(prop)
+
+            return {
+                'id': id_,
+                'properties': prop_base,
+                'container_format': 'ami',
+                'status': 'active'}
+
+        # NOTE(yamahata): create ami-3 ... ami-6
+        # ami-1 and ami-2 is already created by setUp()
+        for i in range(3, 7):
+            db.api.s3_image_create(self.context, 'ami-%d' % i)
+
+        self.stubs.UnsetAll()
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+
+        test_dia_iisb('terminate', image_id='ami-3')
+        test_dia_iisb('stop', image_id='ami-4')
+        test_dia_iisb('stop', image_id='ami-5')
+        test_dia_iisb('stop', image_id='ami-6')

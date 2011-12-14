@@ -32,8 +32,10 @@ import urllib
 
 from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
+from nova.api.ec2 import inst_state
 from nova import block_device
 from nova import compute
+from nova.compute import power_state
 from nova.compute import vm_states
 from nova import crypto
 from nova import db
@@ -79,26 +81,35 @@ def _gen_key(context, user_id, key_name):
 # EC2 API can return the following values as documented in the EC2 API
 # http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/
 #    ApiReference-ItemType-InstanceStateType.html
-# pending | running | shutting-down | terminated | stopping | stopped
+# pending 0 | running 16 | shutting-down 32 | terminated 48 | stopping 64 |
+# stopped 80
 _STATE_DESCRIPTION_MAP = {
-    None: 'pending',
-    vm_states.ACTIVE: 'running',
-    vm_states.BUILDING: 'pending',
-    vm_states.REBUILDING: 'pending',
-    vm_states.DELETED: 'terminated',
-    vm_states.SOFT_DELETE: 'terminated',
-    vm_states.STOPPED: 'stopped',
-    vm_states.MIGRATING: 'migrate',
-    vm_states.RESIZING: 'resize',
-    vm_states.PAUSED: 'pause',
-    vm_states.SUSPENDED: 'suspend',
-    vm_states.RESCUED: 'rescue',
+    None: inst_state.PENDING,
+    vm_states.ACTIVE: inst_state.RUNNING,
+    vm_states.BUILDING: inst_state.PENDING,
+    vm_states.REBUILDING: inst_state.PENDING,
+    vm_states.DELETED: inst_state.TERMINATED,
+    vm_states.SOFT_DELETE: inst_state.TERMINATED,
+    vm_states.STOPPED: inst_state.STOPPED,
+    vm_states.SHUTOFF: inst_state.SHUTOFF,
+    vm_states.MIGRATING: inst_state.MIGRATE,
+    vm_states.RESIZING: inst_state.RESIZE,
+    vm_states.PAUSED: inst_state.PAUSE,
+    vm_states.SUSPENDED: inst_state.SUSPEND,
+    vm_states.RESCUED: inst_state.RESCUE,
 }
 
 
-def state_description_from_vm_state(vm_state):
+def _state_description(vm_state, shutdown_terminate):
     """Map the vm state to the server status string"""
-    return _STATE_DESCRIPTION_MAP.get(vm_state, vm_state)
+    if (vm_state == vm_states.SHUTOFF and
+        not shutdown_terminate):
+            name = inst_state.STOPPED
+    else:
+        name = _STATE_DESCRIPTION_MAP.get(vm_state, vm_state)
+
+    return {'code': inst_state.name_to_code(name),
+            'name': name}
 
 
 def _parse_block_device_mapping(bdm):
@@ -987,21 +998,17 @@ class CloudController(object):
                                       tmp['rootDeviceName'], result)
 
         def _format_attr_disable_api_termination(instance, result):
-            _unsupported_attribute(instance, result)
+            result['disableApiTermination'] = instance['disable_terminate']
 
         def _format_attr_group_set(instance, result):
             CloudController._format_group_set(instance, result)
 
         def _format_attr_instance_initiated_shutdown_behavior(instance,
                                                                result):
-            vm_state = instance['vm_state']
-            state_to_value = {
-                vm_states.STOPPED: 'stopped',
-                vm_states.DELETED: 'terminated',
-            }
-            value = state_to_value.get(vm_state)
-            if value:
-                result['instanceInitiatedShutdownBehavior'] = value
+            if instance['shutdown_terminate']:
+                result['instanceInitiatedShutdownBehavior'] = 'terminate'
+            else:
+                result['instanceInitiatedShutdownBehavior'] = 'stop'
 
         def _format_attr_instance_type(instance, result):
             self._format_instance_type(instance, result)
@@ -1157,9 +1164,8 @@ class CloudController(object):
             i['imageId'] = ec2utils.image_ec2_id(image_id)
             self._format_kernel_id(context, instance, i, 'kernelId')
             self._format_ramdisk_id(context, instance, i, 'ramdiskId')
-            i['instanceState'] = {
-                'code': instance['power_state'],
-                'name': state_description_from_vm_state(instance['vm_state'])}
+            i['instanceState'] = _state_description(
+                instance['vm_state'], instance['shutdown_terminate'])
 
             fixed_ip = None
             floating_ip = None
@@ -1575,10 +1581,11 @@ class CloudController(object):
             vm_state = instance['vm_state']
 
             # if the instance is in subtle state, refuse to proceed.
-            if vm_state not in (vm_states.ACTIVE, vm_states.STOPPED):
+            if vm_state not in (vm_states.ACTIVE, vm_states.SHUTOFF,
+                                vm_states.STOPPED):
                 raise exception.InstanceNotRunning(instance_id=ec2_instance_id)
 
-            if vm_state == vm_states.ACTIVE:
+            if vm_state in (vm_states.ACTIVE, vm_states.SHUTOFF):
                 restart_instance = True
                 self.compute_api.stop(context, instance_id=instance_id)
 

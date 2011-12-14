@@ -162,8 +162,7 @@ class FakeConnection(driver.ComputeDriver):
     def resume(self, instance):
         pass
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                cleanup=True):
+    def destroy(self, instance, network_info, block_device_info=None):
         key = instance['name']
         if key in self.instances:
             del self.instances[key]

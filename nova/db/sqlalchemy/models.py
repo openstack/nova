@@ -257,6 +257,14 @@ class Instance(BASE, NovaBase):
     auto_disk_config = Column(Boolean())
     progress = Column(Integer)
 
+    # EC2 instance_initiated_shutdown_teminate
+    # True: -> 'terminate'
+    # False: -> 'stop'
+    shutdown_terminate = Column(Boolean(), default=True, nullable=False)
+
+    # EC2 disable_api_termination
+    disable_terminate = Column(Boolean(), default=False, nullable=False)
+
 
 class InstanceInfoCache(BASE, NovaBase):
     """
