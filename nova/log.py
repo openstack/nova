@@ -31,6 +31,7 @@ import cStringIO
 import inspect
 import json
 import logging
+import logging.config
 import logging.handlers
 import os
 import stat
@@ -45,12 +46,12 @@ from nova import version
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('logging_context_format_string',
-                    '%(asctime)s %(levelname)s %(name)s '
+                    '%(asctime)s %(server_name)s %(levelname)s %(name)s '
                     '[%(request_id)s %(user_id)s '
                     '%(project_id)s] %(message)s',
                     'format string to use for log messages with context')
 flags.DEFINE_string('logging_default_format_string',
-                    '%(asctime)s %(levelname)s %(name)s [-] '
+                    '%(asctime)s %(server_name)s %(levelname)s %(name)s [-] '
                     '%(message)s',
                     'format string to use for log messages without context')
 flags.DEFINE_string('logging_debug_format_suffix',
@@ -71,7 +72,10 @@ flags.DEFINE_bool('use_syslog', False, 'output to syslog')
 flags.DEFINE_bool('publish_errors', False, 'publish error events')
 flags.DEFINE_string('logfile', None, 'output to named file')
 flags.DEFINE_bool('use_stderr', True, 'log to standard error')
-
+flags.DEFINE_string('log-config', None, 'If this option is specified, the \
+logging configuration file specified is used and overrides any other logging \
+options specified. Please see the Python logging module documentation for \
+details on logging configuration files.')
 
 # A list of things we want to replicate from logging.
 # levels
@@ -160,12 +164,16 @@ class NovaLogger(logging.Logger):
             context = getattr(local.store, 'context', None)
         if context:
             extra.update(_dictify_context(context))
+        global _binary_name
+        extra['server_name'] = _binary_name
         extra.update({"nova_version": version.version_string_with_vcs()})
         return logging.Logger._log(self, level, msg, args, exc_info, extra)
 
     def addHandler(self, handler):
         """Each handler gets our custom formatter."""
-        handler.setFormatter(_formatter)
+        #add custom formatter only if log configuration file is not specified.
+        if not FLAGS.get('log-config', None):
+            handler.setFormatter(_formatter)
         return logging.Logger.addHandler(self, handler)
 
     def audit(self, msg, *args, **kwargs):
@@ -254,6 +262,17 @@ class NovaRootLogger(NovaLogger):
         if self.syslog:
             self.removeHandler(self.syslog)
             self.syslog = None
+
+        log_config = FLAGS.get('log-config', None)
+        if log_config:
+            #if log configuration file is provided, load the logging
+            # options from it (override any existing ones).
+            if os.path.exists(log_config):
+                logging.config.fileConfig(log_config)
+                return
+            else:
+                raise RuntimeError("Unable to locate specified logging "\
+                                   "config file: %s" % log_config)
         if FLAGS.use_syslog:
             self.syslog = SysLogHandler(address='/dev/log')
             self.addHandler(self.syslog)
@@ -308,6 +327,8 @@ def reset():
 def setup():
     """Setup nova logging."""
     if not isinstance(logging.root, NovaRootLogger):
+        global _binary_name
+        _binary_name = _get_binary_name()
         logging._acquireLock()
         for handler in logging.root.handlers:
             logging.root.removeHandler(handler)
