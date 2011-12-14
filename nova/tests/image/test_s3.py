@@ -18,6 +18,7 @@
 import os
 
 from nova import context
+from nova import exception
 from nova import test
 from nova.image import s3
 
