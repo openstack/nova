@@ -347,12 +347,12 @@ class LibvirtConnTestCase(test.TestCase):
 
         result = conn._prepare_xml_info(instance_ref,
                                         _fake_network_info(self.stubs, 1),
-                                        False)
+                                        None, False)
         self.assertTrue(len(result['nics']) == 1)
 
         result = conn._prepare_xml_info(instance_ref,
                                         _fake_network_info(self.stubs, 2),
-                                        False)
+                                        None, False)
         self.assertTrue(len(result['nics']) == 2)
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
@@ -393,6 +393,14 @@ class LibvirtConnTestCase(test.TestCase):
     def test_xml_disk_prefix(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_disk_prefix(instance_data)
+
+    def test_xml_disk_bus_virtio(self):
+        self._check_xml_and_disk_bus({"disk_format": "raw"},
+                                     "disk", "virtio")
+
+    def test_xml_disk_bus_ide(self):
+        self._check_xml_and_disk_bus({"disk_format": "iso"},
+                                     "cdrom", "ide")
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_in_ami_format(self):
@@ -555,7 +563,7 @@ class LibvirtConnTestCase(test.TestCase):
         network_info = _fake_network_info(self.stubs, 2)
         conn = connection.LibvirtConnection(True)
         instance_ref = db.instance_create(self.context, instance_data)
-        xml = conn.to_xml(instance_ref, network_info, False)
+        xml = conn.to_xml(instance_ref, network_info, None, False)
         tree = xml_to_tree(xml)
         interfaces = tree.findall("./devices/interface")
         self.assertEquals(len(interfaces), 2)
@@ -626,6 +634,19 @@ class LibvirtConnTestCase(test.TestCase):
                                  expected_result,
                                  '%s != %s failed check %d' %
                                  (check(tree), expected_result, i))
+
+    def _check_xml_and_disk_bus(self, image_meta, device_type, bus):
+        user_context = context.RequestContext(self.user_id, self.project_id)
+        instance_ref = db.instance_create(user_context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+
+        xml = connection.LibvirtConnection(True).to_xml(instance_ref,
+                                                        network_info,
+                                                        image_meta)
+        tree = xml_to_tree(xml)
+        self.assertEqual(tree.find('./devices/disk').get('device'),
+                         device_type)
+        self.assertEqual(tree.find('./devices/disk/target').get('bus'), bus)
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
@@ -708,7 +729,7 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEquals(conn.uri, expected_uri)
 
             network_info = _fake_network_info(self.stubs, 1)
-            xml = conn.to_xml(instance_ref, network_info, rescue)
+            xml = conn.to_xml(instance_ref, network_info, None, rescue)
             tree = xml_to_tree(xml)
             for i, (check, expected_result) in enumerate(checks):
                 self.assertEqual(check(tree),
