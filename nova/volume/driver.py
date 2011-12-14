@@ -781,9 +781,14 @@ class ZadaraBEDriver(ISCSIDriver):
 
         self._iscsiadm_update(iscsi_properties, "node.startup", "automatic")
 
-        mount_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" %
-                        (iscsi_properties['target_portal'],
-                         iscsi_properties['target_iqn']))
+        if FLAGS.iscsi_helper == 'tgtadm':
+            mount_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-1" %
+                            (iscsi_properties['target_portal'],
+                             iscsi_properties['target_iqn']))
+        else:
+            mount_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" %
+                            (iscsi_properties['target_portal'],
+                             iscsi_properties['target_iqn']))
 
         # The /dev/disk/by-path/... node is not always present immediately
         # TODO(justinsb): This retry-with-delay is a pattern, move to utils?
