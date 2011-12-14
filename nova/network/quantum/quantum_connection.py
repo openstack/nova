@@ -52,11 +52,13 @@ class QuantumClientConnection(object):
                                             format="json",
                                             logger=LOG)
 
-    def create_network(self, tenant_id, network_name):
+    def create_network(self, tenant_id, network_name, **kwargs):
         """Create network using specified name, return Quantum
            network UUID.
         """
         data = {'network': {'name': network_name}}
+        for kw in kwargs:
+            data['network'][kw] = kwargs[kw]
         resdict = self.client.create_network(data, tenant=tenant_id)
         return resdict["network"]["id"]
 
@@ -83,7 +85,8 @@ class QuantumClientConnection(object):
         """Retrieve all networks for this tenant"""
         return self.client.list_networks(tenant=tenant_id)
 
-    def create_and_attach_port(self, tenant_id, net_id, interface_id):
+    def create_and_attach_port(self, tenant_id, net_id, interface_id,
+                               **kwargs):
         """Creates a Quantum port on the specified network, sets
            status to ACTIVE to enable traffic, and attaches the
            vNIC with the specified interface-id.
@@ -91,6 +94,8 @@ class QuantumClientConnection(object):
         LOG.debug(_("Connecting interface %(interface_id)s to "
                     "net %(net_id)s for %(tenant_id)s" % locals()))
         port_data = {'port': {'state': 'ACTIVE'}}
+        for kw in kwargs:
+            port_data['port'][kw] = kwargs[kw]
         resdict = self.client.create_port(net_id, port_data, tenant=tenant_id)
         port_id = resdict["port"]["id"]
 
