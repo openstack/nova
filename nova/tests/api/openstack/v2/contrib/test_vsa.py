@@ -49,7 +49,7 @@ def _get_default_vsa_param():
         'image_name': None,
         'availability_zone': None,
         'storage': [],
-        'shared': False
+        'shared': False,
         }
 
 
@@ -240,6 +240,7 @@ def _get_default_volume_param():
         'display_description': 'Default vol description',
         'volume_type_id': 1,
         'volume_metadata': [],
+        'snapshot_id': None,
         }
 
 
@@ -256,6 +257,7 @@ def stub_volume_create(self, context, size, snapshot_id, name, description,
     vol['size'] = size
     vol['display_name'] = name
     vol['display_description'] = description
+    vol['snapshot_id'] = snapshot_id
     return vol
 
 
