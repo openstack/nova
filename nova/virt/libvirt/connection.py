@@ -184,7 +184,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def __init__(self, read_only):
         super(LibvirtConnection, self).__init__()
-        self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
         self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
@@ -241,7 +240,8 @@ class LibvirtConnection(driver.ComputeDriver):
                 return False
             raise
 
-    def get_uri(self):
+    @property
+    def libvirt_uri(self):
         if FLAGS.libvirt_type == 'uml':
             uri = FLAGS.libvirt_uri or 'uml:///system'
         elif FLAGS.libvirt_type == 'xen':
