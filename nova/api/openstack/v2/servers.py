@@ -16,28 +16,21 @@
 
 import base64
 import os
-import traceback
 
-from lxml import etree
 from webob import exc
 import webob
 from xml.dom import minidom
 
 from nova.api.openstack import common
 from nova.api.openstack.v2 import ips
-from nova.api.openstack.v2.views import addresses as views_addresses
-from nova.api.openstack.v2.views import flavors as views_flavors
-from nova.api.openstack.v2.views import images as views_images
 from nova.api.openstack.v2.views import servers as views_servers
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import instance_types
 from nova import network
-from nova import db
 from nova import exception
 from nova import flags
-from nova import image
 from nova import log as logging
 from nova.rpc import common as rpc_common
 from nova.scheduler import api as scheduler_api
@@ -92,6 +85,18 @@ class Controller(wsgi.Controller):
         """
         return None
 
+    def _add_instance_faults(self, ctxt, instances):
+        faults = self.compute_api.get_instance_faults(ctxt, instances)
+        if faults is not None:
+            for instance in instances:
+                faults_list = faults.get(instance['uuid'], [])
+                try:
+                    instance['fault'] = faults_list[0]
+                except IndexError:
+                    pass
+
+        return instances
+
     def _get_servers(self, req, is_detail):
         """Returns a list of servers, taking into account any search
         options specified.
@@ -142,6 +147,7 @@ class Controller(wsgi.Controller):
 
         limited_list = self._limit_items(instance_list, req)
         if is_detail:
+            self._add_instance_faults(context, limited_list)
             return self._view_builder.detail(req, limited_list)
         else:
             return self._view_builder.index(req, limited_list)
@@ -297,8 +303,9 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """ Returns server details by server id """
         try:
-            instance = self.compute_api.routing_get(
-                req.environ['nova.context'], id)
+            context = req.environ['nova.context']
+            instance = self.compute_api.routing_get(context, id)
+            self._add_instance_faults(context, [instance])
             return self._view_builder.show(req, instance)
         except exception.NotFound:
             raise exc.HTTPNotFound()
@@ -503,6 +510,7 @@ class Controller(wsgi.Controller):
 
         instance.update(update_dict)
 
+        self._add_instance_faults(ctxt, [instance])
         return self._view_builder.show(req, instance)
 
     @exception.novaclient_converter
@@ -796,6 +804,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
         instance = self._get_server(context, instance_id)
+        self._add_instance_faults(context, [instance])
         view = self._view_builder.show(request, instance)
         view['server']['adminPass'] = password
 
@@ -882,6 +891,16 @@ class SecurityGroupsTemplateElement(xmlutil.TemplateElement):
         return 'security_groups' in datum
 
 
+def make_fault(elem):
+    fault = xmlutil.SubTemplateElement(elem, 'fault', selector='fault')
+    fault.set('code')
+    fault.set('created')
+    msg = xmlutil.SubTemplateElement(fault, 'message')
+    msg.text = 'message'
+    det = xmlutil.SubTemplateElement(fault, 'details')
+    det.text = 'details'
+
+
 def make_server(elem, detailed=False):
     elem.set('name')
     elem.set('id')
@@ -906,6 +925,9 @@ def make_server(elem, detailed=False):
         flavor = xmlutil.SubTemplateElement(elem, 'flavor', selector='flavor')
         flavor.set('id')
         xmlutil.make_links(flavor, 'links')
+
+        # Attach fault node
+        make_fault(elem)
 
         # Attach metadata node
         elem.append(common.MetadataTemplate())

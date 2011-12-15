@@ -2447,6 +2447,158 @@ class ServersViewBuilderTest(test.TestCase):
         output = self.view_builder.show(self.request, self.instance)
         self.assertDictMatch(output, expected_server)
 
+    def test_build_server_detail_with_fault(self):
+        self.instance['vm_state'] = vm_states.ERROR
+        self.instance['fault'] = {
+            'code': 404,
+            'instance_uuid': self.uuid,
+            'message': "HTTPNotFound",
+            'details': "Stock details for test",
+            'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
+        }
+
+        image_bookmark = "http://localhost/fake/images/5"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
+        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
+        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
+        expected_server = {
+            "server": {
+                "id": self.uuid,
+                "user_id": "fake",
+                "tenant_id": "fake",
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "name": "test_server",
+                "status": "ERROR",
+                "accessIPv4": "",
+                "accessIPv6": "",
+                "hostId": '',
+                "key_name": '',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    'private': [
+                        {'version': 4, 'addr': '172.19.0.1'}
+                    ],
+                    'public': [
+                        {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
+                        {'version': 4, 'addr': '192.168.0.3'},
+                    ],
+                },
+                "metadata": {},
+                "config_drive": None,
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": self_link,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": bookmark_link,
+                    },
+                ],
+                "fault": {
+                    "code": 404,
+                    "created": "2010-10-10T12:00:00Z",
+                    "message": "HTTPNotFound",
+                    "details": "Stock details for test",
+                },
+            }
+        }
+
+        output = self.view_builder.show(self.request, self.instance)
+        self.assertDictMatch(output, expected_server)
+
+    def test_build_server_detail_with_fault_but_active(self):
+        self.instance['vm_state'] = vm_states.ACTIVE
+        self.instance['progress'] = 100
+        self.instance['fault'] = {
+            'code': 404,
+            'instance_uuid': self.uuid,
+            'message': "HTTPNotFound",
+            'details': "Stock details for test",
+            'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
+        }
+
+        image_bookmark = "http://localhost/fake/images/5"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
+        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
+        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
+        expected_server = {
+            "server": {
+                "id": self.uuid,
+                "user_id": "fake",
+                "tenant_id": "fake",
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": 100,
+                "name": "test_server",
+                "status": "ACTIVE",
+                "accessIPv4": "",
+                "accessIPv6": "",
+                "hostId": '',
+                "key_name": '',
+                "image": {
+                    "id": "5",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    'private': [
+                        {'version': 4, 'addr': '172.19.0.1'}
+                    ],
+                    'public': [
+                        {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
+                        {'version': 4, 'addr': '192.168.0.3'},
+                    ],
+                },
+                "metadata": {},
+                "config_drive": None,
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": self_link,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": bookmark_link,
+                    },
+                ],
+            }
+        }
+
+        output = self.view_builder.show(self.request, self.instance)
+        self.assertDictMatch(output, expected_server)
+
     def test_build_server_detail_active_status(self):
         #set the power state of the instance to running
         self.instance['vm_state'] = vm_states.ACTIVE
@@ -3457,6 +3609,12 @@ class ServerXMLSerializationTest(test.TestCase):
                         'rel': 'bookmark',
                     },
                 ],
+                "fault": {
+                    "code": 500,
+                    "created": self.TIMESTAMP,
+                    "message": "Error Message",
+                    "details": "Fault details",
+                }
             }
         }
 
@@ -3516,6 +3674,15 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
+
+        fault_root = root.find('{0}fault'.format(NS))
+        fault_dict = server_dict['fault']
+        self.assertEqual(fault_root.get("code"), str(fault_dict["code"]))
+        self.assertEqual(fault_root.get("created"), fault_dict["created"])
+        msg_elem = fault_root.find('{0}message'.format(NS))
+        self.assertEqual(msg_elem.text, fault_dict["message"])
+        det_elem = fault_root.find('{0}details'.format(NS))
+        self.assertEqual(det_elem.text, fault_dict["details"])
 
     def test_action(self):
         serializer = servers.ServerXMLSerializer()

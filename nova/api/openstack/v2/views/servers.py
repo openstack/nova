@@ -42,6 +42,10 @@ class ViewBuilder(common.ViewBuilder):
         "VERIFY_RESIZE",
     )
 
+    _fault_statuses = (
+        "ERROR",
+    )
+
     def __init__(self):
         """Initialize view builder."""
         super(ViewBuilder, self).__init__()
@@ -101,6 +105,9 @@ class ViewBuilder(common.ViewBuilder):
                 "links": self._get_links(request, instance["uuid"]),
             },
         }
+        _inst_fault = self._get_fault(request, instance)
+        if server["server"]["status"] in self._fault_statuses and _inst_fault:
+            server['server']['fault'] = _inst_fault
 
         if server["server"]["status"] in self._progress_statuses:
             server["server"]["progress"] = instance.get("progress", 0)
@@ -109,13 +116,11 @@ class ViewBuilder(common.ViewBuilder):
 
     def index(self, request, instances):
         """Show a list of servers without many details."""
-        list_func = self.basic
-        return self._list_view(list_func, request, instances)
+        return self._list_view(self.basic, request, instances)
 
     def detail(self, request, instances):
         """Detailed view of a list of instance."""
-        list_func = self.show
-        return self._list_view(list_func, request, instances)
+        return self._list_view(self.show, request, instances)
 
     def _list_view(self, func, request, servers):
         """Provide a view for a list of servers."""
@@ -172,4 +177,17 @@ class ViewBuilder(common.ViewBuilder):
                 "rel": "bookmark",
                 "href": flavor_bookmark,
             }],
+        }
+
+    def _get_fault(self, request, instance):
+        fault = instance.get("fault", None)
+
+        if not fault:
+            return None
+
+        return {
+            "code": fault["code"],
+            "created": utils.isotime(fault["created_at"]),
+            "message": fault["message"],
+            "details": fault["details"],
         }
