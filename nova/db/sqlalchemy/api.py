@@ -585,7 +585,6 @@ def floating_ip_set_auto_assigned(context, address):
         floating_ip_ref.save(session=session)
 
 
-@require_admin_context
 def _floating_ip_get_all(context):
     return model_query(context, models.FloatingIp, read_deleted="no").\
                options(joinedload_all('fixed_ip.instance'))
