@@ -74,7 +74,10 @@ class ChanceScheduler(driver.Scheduler):
             driver.cast_to_compute_host(context, host,
                     'run_instance', instance_uuid=instance['uuid'], **kwargs)
             instances.append(driver.encode_instance(instance))
-
+            # So if we loop around, create_instance_db_entry will actually
+            # create a new entry, instead of assume it's been created
+            # already
+            del request_spec['instance_properties']['uuid']
         return instances
 
     def schedule_prep_resize(self, context, request_spec, *args, **kwargs):

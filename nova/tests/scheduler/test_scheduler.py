@@ -113,6 +113,7 @@ def _fake_create_instance_db_entry(simple_self, context, request_spec):
     instance = _create_instance_from_spec(request_spec)
     global instance_uuids
     instance_uuids.append(instance['uuid'])
+    request_spec['instance_properties']['uuid'] = instance['uuid']
     return instance
 
 
@@ -236,14 +237,40 @@ class SchedulerTestCase(test.TestCase):
         scheduler = manager.SchedulerManager()
         ins_ref = _create_instance(task_state=task_states.STARTING,
                                    vm_state=vm_states.STOPPED)
-        self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(TestDriver, 'schedule', NoValidHost_raiser)
-        self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
         ctxt = context.get_admin_context()
         scheduler.start_instance(ctxt, 'topic', instance_id=ins_ref['id'])
         # assert that the instance goes to ERROR state
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': task_states.STARTING})
+
+    def test_no_valid_host_exception_on_run_with_id(self):
+        """check the vm goes to ERROR state if run_instance fails"""
+
+        def NoValidHost_raiser(context, topic, *args, **kwargs):
+            raise exception.NoValidHost(_("Test NoValidHost exception"))
+        scheduler = manager.SchedulerManager()
+        ins_ref = _create_instance(task_state=task_states.STARTING,
+                                   vm_state=vm_states.STOPPED)
+        self.stubs.Set(TestDriver, 'schedule', NoValidHost_raiser)
+        ctxt = context.get_admin_context()
+        request_spec = {'instance_properties': {'uuid': ins_ref['uuid']}}
+        scheduler.run_instance(ctxt, 'topic', request_spec=request_spec)
+        # assert that the instance goes to ERROR state
+        self._assert_state({'vm_state': vm_states.ERROR,
+                            'task_state': task_states.STARTING})
+
+    def test_no_valid_host_exception_on_run_without_id(self):
+        """check error handler doesn't raise if instance wasn't created"""
+
+        def NoValidHost_raiser(context, topic, *args, **kwargs):
+            raise exception.NoValidHost(_("Test NoValidHost exception"))
+        scheduler = manager.SchedulerManager()
+        self.stubs.Set(TestDriver, 'schedule', NoValidHost_raiser)
+        ctxt = context.get_admin_context()
+        request_spec = {'instance_properties': {}}
+        scheduler.run_instance(ctxt, 'topic', request_spec=request_spec)
+        # No error
 
     def test_show_host_resources_no_project(self):
         """No instance are running on the given host."""
