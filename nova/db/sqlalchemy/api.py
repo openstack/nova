@@ -378,6 +378,14 @@ def compute_node_get_all(context, session=None):
 
 
 @require_admin_context
+def compute_node_get_for_service(context, service_id):
+    return model_query(context, models.ComputeNode).\
+                    options(joinedload('service')).\
+                    filter_by(service_id=service_id).\
+                    first()
+
+
+@require_admin_context
 def compute_node_create(context, values):
     compute_node_ref = models.ComputeNode()
     compute_node_ref.update(values)

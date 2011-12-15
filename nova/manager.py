@@ -57,6 +57,7 @@ from nova import flags
 from nova import log as logging
 from nova.db import base
 from nova.scheduler import api
+from nova import version
 
 
 FLAGS = flags.FLAGS
@@ -165,6 +166,15 @@ class Manager(base.Base):
 
         """
         pass
+
+    def service_version(self, context):
+        return version.version_string()
+
+    def service_config(self, context):
+        config = {}
+        for key in FLAGS:
+            config[key] = FLAGS.get(key, None)
+        return config
 
 
 class SchedulerDependentManager(Manager):
