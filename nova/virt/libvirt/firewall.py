@@ -156,7 +156,8 @@ class NWFilterFirewall(FirewallDriver):
         return self._libvirt_get_connection()
     _conn = property(_get_connection)
 
-    def nova_dhcp_filter(self):
+    @staticmethod
+    def nova_dhcp_filter():
         """The standard allow-dhcp-server filter is an <ip> one, so it uses
            ebtables to allow traffic through. Without a corresponding rule in
            iptables, it'll get blocked anyway."""
@@ -178,7 +179,8 @@ class NWFilterFirewall(FirewallDriver):
                     </rule>
                   </filter>'''
 
-    def nova_ra_filter(self):
+    @staticmethod
+    def nova_ra_filter():
         return '''<filter name='nova-allow-ra-server' chain='root'>
                             <uuid>d707fa71-4fb5-4b27-9ab7-ba5ca19c8804</uuid>
                               <rule action='accept' direction='inout'
@@ -245,7 +247,8 @@ class NWFilterFirewall(FirewallDriver):
                  ''.join(["<filterref filter='%s'/>" % (f,) for f in filters]))
         return xml
 
-    def nova_base_ipv4_filter(self):
+    @staticmethod
+    def nova_base_ipv4_filter():
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
             for direction, action, priority in [('out', 'accept', 399),
@@ -257,7 +260,8 @@ class NWFilterFirewall(FirewallDriver):
         retval += '</filter>'
         return retval
 
-    def nova_base_ipv6_filter(self):
+    @staticmethod
+    def nova_base_ipv6_filter():
         retval = "<filter name='nova-base-ipv6' chain='ipv6'>"
         for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
             for direction, action, priority in [('out', 'accept', 399),
@@ -269,7 +273,8 @@ class NWFilterFirewall(FirewallDriver):
         retval += '</filter>'
         return retval
 
-    def nova_project_filter(self):
+    @staticmethod
+    def nova_project_filter():
         retval = "<filter name='nova-project' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
             retval += """<rule action='accept' direction='in' priority='200'>
@@ -278,7 +283,8 @@ class NWFilterFirewall(FirewallDriver):
         retval += '</filter>'
         return retval
 
-    def nova_project_filter_v6(self):
+    @staticmethod
+    def nova_project_filter_v6():
         retval = "<filter name='nova-project-v6' chain='ipv6'>"
         for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
             retval += """<rule action='accept' direction='inout'
@@ -408,7 +414,8 @@ class NWFilterFirewall(FirewallDriver):
         xml = self.provider_fw_to_nwfilter_xml()
         return self._define_filter(xml)
 
-    def security_group_to_nwfilter_xml(self, security_group_id):
+    @staticmethod
+    def security_group_to_nwfilter_xml(security_group_id):
         security_group = db.security_group_get(context.get_admin_context(),
                                                security_group_id)
         rule_xml = ""
@@ -446,7 +453,8 @@ class NWFilterFirewall(FirewallDriver):
             xml += "chain='ipv4'>%s</filter>" % rule_xml
         return xml
 
-    def provider_fw_to_nwfilter_xml(self):
+    @staticmethod
+    def provider_fw_to_nwfilter_xml():
         """Compose a filter of drop rules from specified cidrs."""
         rule_xml = ""
         v6protocol = {'tcp': 'tcp-ipv6', 'udp': 'udp-ipv6', 'icmp': 'icmpv6'}
@@ -483,7 +491,8 @@ class NWFilterFirewall(FirewallDriver):
             xml += "chain='ipv4'>%s</filter>" % rule_xml
         return xml
 
-    def _instance_filter_name(self, instance, nic_id=None):
+    @staticmethod
+    def _instance_filter_name(instance, nic_id=None):
         if not nic_id:
             return 'nova-instance-%s' % (instance['name'])
         return 'nova-instance-%s-%s' % (instance['name'], nic_id)
@@ -589,7 +598,8 @@ class IptablesFirewallDriver(FirewallDriver):
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].remove_chain(chain_name)
 
-    def instance_rules(self, instance, network_info):
+    @staticmethod
+    def instance_rules(instance, network_info):
         ctxt = context.get_admin_context()
 
         ipv4_rules = []
@@ -762,7 +772,8 @@ class IptablesFirewallDriver(FirewallDriver):
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule('provider', rule)
 
-    def _provider_rules(self):
+    @staticmethod
+    def _provider_rules():
         """Generate a list of rules from provider for IP4 & IP6."""
         ctxt = context.get_admin_context()
         ipv4_rules = []
@@ -811,8 +822,10 @@ class IptablesFirewallDriver(FirewallDriver):
             fw_rules += [' '.join(args)]
         return ipv4_rules, ipv6_rules
 
-    def _security_group_chain_name(self, security_group_id):
+    @staticmethod
+    def _security_group_chain_name(security_group_id):
         return 'nova-sg-%s' % (security_group_id,)
 
-    def _instance_chain_name(self, instance):
+    @staticmethod
+    def _instance_chain_name(instance):
         return 'inst-%s' % (instance['id'],)
