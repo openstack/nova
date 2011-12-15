@@ -12,8 +12,6 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-"""The rescue mode extension."""
-
 import traceback
 
 import webob
@@ -40,12 +38,12 @@ class Admin_actions(extensions.ExtensionDescriptor):
     alias = "os-admin-actions"
     namespace = "http://docs.openstack.org/ext/admin-actions/api/v1.1"
     updated = "2011-09-20T00:00:00+00:00"
+    admin_only = True
 
     def __init__(self, ext_mgr):
         super(Admin_actions, self).__init__(ext_mgr)
         self.compute_api = compute.API()
 
-    @extensions.admin_only
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def _pause(self, input_dict, req, id):
@@ -60,7 +58,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @extensions.admin_only
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def _unpause(self, input_dict, req, id):
@@ -75,7 +72,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @extensions.admin_only
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def _suspend(self, input_dict, req, id):
@@ -90,7 +86,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @extensions.admin_only
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def _resume(self, input_dict, req, id):
@@ -105,7 +100,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @extensions.admin_only
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def _migrate(self, input_dict, req, id):
@@ -117,7 +111,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
-    @extensions.admin_only
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def _reset_network(self, input_dict, req, id):
@@ -132,7 +125,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @extensions.admin_only
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def _inject_network_info(self, input_dict, req, id):
@@ -149,7 +141,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @extensions.admin_only
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def _lock(self, input_dict, req, id):
@@ -166,7 +157,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @extensions.admin_only
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def _unlock(self, input_dict, req, id):
@@ -185,6 +175,7 @@ class Admin_actions(extensions.ExtensionDescriptor):
 
     def get_actions(self):
         actions = [
+            #TODO(bcwaldon): These actions should be prefixed with 'os-'
             extensions.ActionExtension("servers", "pause", self._pause),
             extensions.ActionExtension("servers", "unpause", self._unpause),
             extensions.ActionExtension("servers", "suspend", self._suspend),

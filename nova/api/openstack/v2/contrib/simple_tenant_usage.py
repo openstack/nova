@@ -19,14 +19,11 @@ from datetime import datetime
 import urlparse
 
 import webob
-from webob import exc
 
 from nova.api.openstack.v2 import extensions
-from nova.api.openstack.v2 import views
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import api
-from nova.db.sqlalchemy.session import get_session
 from nova import exception
 from nova import flags
 
@@ -181,7 +178,7 @@ class SimpleTenantUsageController(object):
         """Retrive tenant_usage for all tenants"""
         context = req.environ['nova.context']
 
-        if not context.is_admin and FLAGS.allow_admin_api:
+        if not context.is_admin:
             return webob.Response(status_int=403)
 
         (period_start, period_stop, detailed) = self._get_datetime_range(req)
@@ -196,7 +193,7 @@ class SimpleTenantUsageController(object):
         tenant_id = id
         context = req.environ['nova.context']
 
-        if not context.is_admin and FLAGS.allow_admin_api:
+        if not context.is_admin:
             if tenant_id != context.project_id:
                 return webob.Response(status_int=403)
 
@@ -261,6 +258,7 @@ class Simple_tenant_usage(extensions.ExtensionDescriptor):
     alias = "os-simple-tenant-usage"
     namespace = "http://docs.openstack.org/ext/os-simple-tenant-usage/api/v1.1"
     updated = "2011-08-19T00:00:00+00:00"
+    admin_only = True
 
     def get_resources(self):
         resources = []

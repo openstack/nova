@@ -16,19 +16,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import functools
-import imp
-import inspect
-import os
-import sys
-
-from lxml import etree
 import routes
 import webob.dec
 import webob.exc
 
 import nova.api.openstack.v2
-from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
@@ -67,6 +59,10 @@ class ExtensionDescriptor(object):
     # The timestamp when the extension was last updated, e.g.,
     # '2011-01-22T13:25:27-06:00'
     updated = None
+
+    # This attribute causes the extension to load only when
+    # the admin api is enabled
+    admin_only = False
 
     def __init__(self, ext_mgr):
         """Register extension with the extension manager."""
@@ -426,9 +422,15 @@ class ExtensionManager(object):
                       ' '.join(extension.__doc__.strip().split()))
             LOG.debug(_('Ext namespace: %s'), extension.namespace)
             LOG.debug(_('Ext updated: %s'), extension.updated)
+            LOG.debug(_('Ext admin_only: %s'), extension.admin_only)
         except AttributeError as ex:
             LOG.exception(_("Exception loading extension: %s"), unicode(ex))
             return False
+
+        # Don't load admin api extensions if the admin api isn't enabled
+        if not FLAGS.allow_admin_api and extension.admin_only:
+            return False
+
         return True
 
     def load_extension(self, ext_factory):
@@ -443,6 +445,7 @@ class ExtensionManager(object):
         LOG.debug(_("Loading extension %s"), ext_factory)
 
         # Load the factory
+
         factory = utils.import_class(ext_factory)
 
         # Call it
@@ -452,7 +455,9 @@ class ExtensionManager(object):
     def _load_extensions(self):
         """Load extensions specified on the command line."""
 
-        for ext_factory in FLAGS.osapi_extension:
+        extensions = list(FLAGS.osapi_extension)
+
+        for ext_factory in extensions:
             try:
                 self.load_extension(ext_factory)
             except Exception as exc:
@@ -540,16 +545,6 @@ class ExtensionsXMLSerializer(xmlutil.XMLTemplateSerializer):
 
     def show(self):
         return ExtensionTemplate()
-
-
-def admin_only(fnc):
-    @functools.wraps(fnc)
-    def _wrapped(self, *args, **kwargs):
-        if FLAGS.allow_admin_api:
-            return fnc(self, *args, **kwargs)
-        raise webob.exc.HTTPNotFound()
-    _wrapped.func_name = fnc.func_name
-    return _wrapped
 
 
 def wrap_errors(fn):

@@ -20,6 +20,7 @@ import webob
 from nova import compute
 from nova import flags
 from nova import test
+from nova import utils
 from nova.tests.api.openstack import fakes
 
 
@@ -60,28 +61,19 @@ class AdminActionsTest(test.TestCase):
 
     def setUp(self):
         super(AdminActionsTest, self).setUp()
-        self.flags(allow_admin_api=True)
         self.stubs.Set(compute.API, 'get', fake_compute_api_get)
+        self.UUID = utils.gen_uuid()
+        self.flags(allow_admin_api=True)
         for _method in self._methods:
             self.stubs.Set(compute.API, _method, fake_compute_api)
 
-    def test_admin_api_enabled(self):
+    def test_admin_api_actions(self):
+        self.maxDiff = None
         app = fakes.wsgi_app()
         for _action in self._actions:
-            req = webob.Request.blank('/v2/fake/servers/abcd/action')
+            req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
             req.method = 'POST'
             req.body = json.dumps({_action: None})
             req.content_type = 'application/json'
             res = req.get_response(app)
             self.assertEqual(res.status_int, 202)
-
-    def test_admin_api_disabled(self):
-        FLAGS.allow_admin_api = False
-        app = fakes.wsgi_app()
-        for _action in self._actions:
-            req = webob.Request.blank('/v2/fake/servers/abcd/action')
-            req.method = 'POST'
-            req.body = json.dumps({_action: None})
-            req.content_type = 'application/json'
-            res = req.get_response(app)
-            self.assertEqual(res.status_int, 404)
