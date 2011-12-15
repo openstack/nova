@@ -50,8 +50,6 @@ flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
 flags.DEFINE_string('routing_source_ip', '$my_ip',
                     'Public IP of network host')
-flags.DEFINE_string('input_chain', 'INPUT',
-                    'chain to add nova_input to')
 flags.DEFINE_integer('dhcp_lease_time', 120,
                      'Lifetime of a DHCP lease')
 flags.DEFINE_string('dns_server', None,
