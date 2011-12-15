@@ -44,10 +44,6 @@ from nova import utils
 from nova.network import linux_net
 
 FLAGS = flags.FLAGS
-flags.DECLARE('auth_driver', 'nova.auth.manager')
-flags.DECLARE('network_size', 'nova.network.manager')
-flags.DECLARE('num_networks', 'nova.network.manager')
-flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
 
 LOG = logging.getLogger('nova.dhcpbridge')
 
