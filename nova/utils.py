@@ -157,8 +157,8 @@ def execute(*cmd, **kwargs):
 
     :cmd                Passed to subprocess.Popen.
     :process_input      Send to opened process.
-    :check_exit_code    Single int or list of allowed exit codes. Defaults
-                        to [0].  Raise exception.ProcessExecutionError
+    :check_exit_code    Single bool, int, or list of allowed exit codes.
+                        Defaults to [0].  Raise exception.ProcessExecutionError
                         unless program exits with one of these code.
     :delay_on_retry     True | False. Defaults to True. If set to True, wait a
                         short amount of time before retrying.
@@ -173,8 +173,12 @@ def execute(*cmd, **kwargs):
 
     process_input = kwargs.pop('process_input', None)
     check_exit_code = kwargs.pop('check_exit_code', [0])
-    if type(check_exit_code) == types.IntType:
+    ignore_exit_code = False
+    if type(check_exit_code) == int:
         check_exit_code = [check_exit_code]
+    elif type(check_exit_code) == bool:
+        ignore_exit_code = not check_exit_code
+        check_exit_code = [0]
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
     run_as_root = kwargs.pop('run_as_root', False)
@@ -208,7 +212,8 @@ def execute(*cmd, **kwargs):
             _returncode = obj.returncode  # pylint: disable=E1101
             if _returncode:
                 LOG.debug(_('Result was %s') % _returncode)
-                if _returncode not in check_exit_code:
+                if ignore_exit_code == False \
+                    and _returncode not in check_exit_code:
                     (stdout, stderr) = result
                     raise exception.ProcessExecutionError(
                             exit_code=_returncode,
