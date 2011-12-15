@@ -39,7 +39,7 @@ def _translate_floating_ip_view(floating_ip):
     except (TypeError, KeyError):
         result['fixed_ip'] = None
     try:
-        result['instance_id'] = floating_ip['fixed_ip']['instance_id']
+        result['instance_id'] = floating_ip['fixed_ip']['instance']['uuid']
     except (TypeError, KeyError):
         result['instance_id'] = None
     return {'floating_ip': result}
