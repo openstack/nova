@@ -555,7 +555,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(libvirt_type='lxc')
         conn = connection.LibvirtConnection(True)
 
-        self.assertEquals(conn.libvirt_uri, 'lxc:///')
+        self.assertEquals(conn.uri, 'lxc:///')
 
         network_info = _fake_network_info(self.stubs, 1)
         xml = conn.to_xml(instance_ref, network_info)
@@ -686,7 +686,7 @@ class LibvirtConnTestCase(test.TestCase):
             self.flags(libvirt_type=libvirt_type)
             conn = connection.LibvirtConnection(True)
 
-            self.assertEquals(conn.libvirt_uri, expected_uri)
+            self.assertEquals(conn.uri, expected_uri)
 
             network_info = _fake_network_info(self.stubs, 1)
             xml = conn.to_xml(instance_ref, network_info, rescue)
@@ -714,7 +714,7 @@ class LibvirtConnTestCase(test.TestCase):
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             self.flags(libvirt_type=libvirt_type)
             conn = connection.LibvirtConnection(True)
-            self.assertEquals(conn.libvirt_uri, testuri)
+            self.assertEquals(conn.uri, testuri)
         db.instance_destroy(user_context, instance_ref['id'])
 
     def test_update_available_resource_works_correctly(self):

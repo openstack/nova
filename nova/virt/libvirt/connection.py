@@ -222,8 +222,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
-            LOG.debug(_('Connecting to libvirt: %s'), self.libvirt_uri)
-            self._wrapped_conn = self._connect(self.libvirt_uri,
+            LOG.debug(_('Connecting to libvirt: %s'), self.uri)
+            self._wrapped_conn = self._connect(self.uri,
                                                self.read_only)
         return self._wrapped_conn
     _conn = property(_get_connection)
@@ -241,7 +241,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise
 
     @property
-    def libvirt_uri(self):
+    def uri(self):
         if FLAGS.libvirt_type == 'uml':
             uri = FLAGS.libvirt_uri or 'uml:///system'
         elif FLAGS.libvirt_type == 'xen':
