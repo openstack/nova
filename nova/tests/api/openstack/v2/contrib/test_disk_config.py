@@ -60,7 +60,6 @@ class DiskConfigTestCase(test.TestCase):
                 if id_ == instance['id']:
                     return instance
 
-        self.stubs.Set(nova.db.api, 'instance_get', fake_instance_get)
         self.stubs.Set(nova.db, 'instance_get', fake_instance_get)
 
         def fake_instance_get_by_uuid(context, uuid):
@@ -75,7 +74,7 @@ class DiskConfigTestCase(test.TestCase):
             return FAKE_INSTANCES
 
         self.stubs.Set(nova.db, 'instance_get_all', fake_instance_get_all)
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_filters',
+        self.stubs.Set(nova.db, 'instance_get_all_by_filters',
                        fake_instance_get_all)
 
         def fake_instance_create(context, inst_, session=None):
@@ -91,21 +90,26 @@ class DiskConfigTestCase(test.TestCase):
             inst['progress'] = 0
             inst['name'] = 'instance-1'  # this is a property
 
-            def fake_instance_get_for_create(context, id_, session=None):
+            def fake_instance_get_for_create(context, id_, *args, **kwargs):
                 return inst
 
             self.stubs.Set(nova.db, 'instance_get',
                           fake_instance_get_for_create)
-            self.stubs.Set(nova.db.api, 'instance_get',
+            self.stubs.Set(nova.db, 'instance_update',
                           fake_instance_get_for_create)
-            self.stubs.Set(nova.db.sqlalchemy.api, 'instance_get',
-                          fake_instance_get_for_create)
+
+            def fake_instance_get_all_for_create(context, *args, **kwargs):
+                return [inst]
+            self.stubs.Set(nova.db, 'instance_get_all',
+                           fake_instance_get_all_for_create)
+            self.stubs.Set(nova.db, 'instance_get_all_by_filters',
+                           fake_instance_get_all_for_create)
 
             def fake_instance_add_security_group(context, instance_id,
                                                  security_group_id):
                 pass
 
-            self.stubs.Set(nova.db.sqlalchemy.api,
+            self.stubs.Set(nova.db,
                            'instance_add_security_group',
                            fake_instance_add_security_group)
 
