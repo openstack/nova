@@ -23,6 +23,7 @@ from webob import exc
 from nova.api.openstack.v2 import extensions
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova import db
 from nova import log as logging
 from nova import utils
 
@@ -118,10 +119,20 @@ class Disk_config(extensions.ExtensionDescriptor):
             singular='server', singular_template=ServerDiskConfigTemplate(),
             plural='servers', plural_template=ServersDiskConfigTemplate())
 
+        # Filter out any servers that already have the key set (most likely
+        # from a remote zone)
+        servers = filter(lambda s: self.API_DISK_CONFIG not in s, servers)
+
+        # Get DB information for servers
+        uuids = [server['id'] for server in servers]
+        db_servers = db.instance_get_all_by_filters(context, {'uuid': uuids})
+        db_servers = dict([(s['uuid'], s) for s in db_servers])
+
         for server in servers:
-            db_server = self.compute_api.routing_get(context, server['id'])
-            value = db_server[self.INTERNAL_DISK_CONFIG]
-            server[self.API_DISK_CONFIG] = disk_config_to_api(value)
+            db_server = db_servers.get(server['id'])
+            if db_server:
+                value = db_server[self.INTERNAL_DISK_CONFIG]
+                server[self.API_DISK_CONFIG] = disk_config_to_api(value)
 
         return res
 
