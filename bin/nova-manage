@@ -96,13 +96,12 @@ from nova.db import migration
 from nova.volume import volume_types
 
 FLAGS = flags.FLAGS
-flags.DECLARE('fixed_range', 'nova.network.manager')
+flags.DECLARE('flat_network_bridge', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
+flags.DECLARE('multi_host', 'nova.network.manager')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
-flags.DECLARE('fixed_range_v6', 'nova.network.manager')
-flags.DECLARE('gateway_v6', 'nova.network.manager')
 flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
