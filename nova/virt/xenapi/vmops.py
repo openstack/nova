@@ -29,6 +29,7 @@ import sys
 import time
 import uuid
 
+from eventlet import greenthread
 import M2Crypto
 
 from nova.compute import api as compute
@@ -55,6 +56,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('agent_version_timeout', 300,
                      'number of seconds to wait for agent to be fully '
                      'operational')
+flags.DEFINE_integer('xenapi_running_timeout', 60,
+                     'number of seconds to wait for instance to go to '
+                     'running state')
 flags.DEFINE_string('xenapi_vif_driver',
                     'nova.virt.xenapi.vif.XenAPIBridgeDriver',
                     'The XenAPI VIF driver using XenServer Network APIs.')
@@ -383,6 +387,42 @@ class VMOps(object):
                     bootable=False)
             userdevice += 1
 
+    def _configure_instance(self, ctx, instance, vm_ref):
+        # Inject files, if necessary
+        injected_files = instance.injected_files
+        if injected_files:
+            # Check if this is a JSON-encoded string and convert if needed.
+            if isinstance(injected_files, basestring):
+                try:
+                    injected_files = json.loads(injected_files)
+                except ValueError:
+                    LOG.exception(
+                        _("Invalid value for injected_files: '%s'")
+                            % injected_files)
+                    injected_files = []
+            # Inject any files, if specified
+            for path, contents in instance.injected_files:
+                LOG.debug(_("Injecting file path: '%s'") % path)
+                self.inject_file(instance, path, contents)
+
+        # Set admin password, if necessary
+        admin_password = instance.admin_pass
+        if admin_password:
+            LOG.debug(_("Setting admin password"))
+            self.set_admin_password(instance, admin_password)
+
+        # Reset network config
+        LOG.debug(_("Resetting network"))
+        self.reset_network(instance, vm_ref)
+
+        # Set VCPU weight
+        inst_type = db.instance_type_get(ctx, instance.instance_type_id)
+        vcpu_weight = inst_type["vcpu_weight"]
+        if str(vcpu_weight) != "None":
+            LOG.debug(_("Setting VCPU weight"))
+            self._session.call_xenapi("VM.add_to_VCPUs_params", vm_ref,
+                    "weight", vcpu_weight)
+
     def _spawn(self, instance, vm_ref):
         """Spawn a new instance."""
         LOG.debug(_('Starting VM %s...'), vm_ref)
@@ -404,83 +444,32 @@ class VMOps(object):
                         'os': instance.os_type,
                         'architecture': instance.architecture})
 
-        def _check_agent_version():
-            LOG.debug(_("Querying agent version"))
+        # Wait for boot to finish
+        LOG.debug(_('Instance %s: waiting for running'), instance_name)
+        expiration = time.time() + FLAGS.xenapi_running_timeout
+        while time.time() < expiration:
+            state = self.get_info(instance_name)['state']
+            if state == power_state.RUNNING:
+                break
 
-            version = self.get_agent_version(instance)
-            if not version:
-                return
+            greenthread.sleep(0.5)
 
+        LOG.debug(_('Instance %s: running'), instance_name)
+
+        # Update agent, if necessary
+        # This also waits until the agent starts
+        LOG.debug(_("Querying agent version"))
+        version = self.get_agent_version(instance)
+        if version:
             LOG.info(_('Instance agent version: %s') % version)
-            if not agent_build:
-                return
 
-            if cmp_version(version, agent_build['version']) < 0:
-                LOG.info(_('Updating Agent to %s') % agent_build['version'])
-                self.agent_update(instance, agent_build['url'],
-                              agent_build['md5hash'])
+        if version and agent_build and \
+           cmp_version(version, agent_build['version']) < 0:
+            LOG.info(_('Updating Agent to %s') % agent_build['version'])
+            self.agent_update(instance, agent_build['url'],
+                          agent_build['md5hash'])
 
-        def _inject_files():
-            injected_files = instance.injected_files
-            if injected_files:
-                # Check if this is a JSON-encoded string and convert if needed.
-                if isinstance(injected_files, basestring):
-                    try:
-                        injected_files = json.loads(injected_files)
-                    except ValueError:
-                        LOG.exception(
-                            _("Invalid value for injected_files: '%s'")
-                                % injected_files)
-                        injected_files = []
-                # Inject any files, if specified
-                for path, contents in instance.injected_files:
-                    LOG.debug(_("Injecting file path: '%s'") % path)
-                    self.inject_file(instance, path, contents)
-
-        def _set_admin_password():
-            admin_password = instance.admin_pass
-            if admin_password:
-                LOG.debug(_("Setting admin password"))
-                self.set_admin_password(instance, admin_password)
-
-        def _reset_network():
-            LOG.debug(_("Resetting network"))
-            self.reset_network(instance, vm_ref)
-
-        def _set_vcpu_weight():
-            inst_type = db.instance_type_get(ctx, instance.instance_type_id)
-            vcpu_weight = inst_type["vcpu_weight"]
-            if str(vcpu_weight) != "None":
-                LOG.debug(_("Setting VCPU weight"))
-                self._session.call_xenapi("VM.add_to_VCPUs_params", vm_ref,
-                        "weight", vcpu_weight)
-
-        # NOTE(armando): Do we really need to do this in virt?
-        # NOTE(tr3buchet): not sure but wherever we do it, we need to call
-        #                  reset_network afterwards
-        timer = utils.LoopingCall(f=None)
-
-        def _wait_for_boot():
-            try:
-                state = self.get_info(instance_name)['state']
-                if state == power_state.RUNNING:
-                    LOG.debug(_('Instance %s: booted'), instance_name)
-                    timer.stop()
-                    _check_agent_version()
-                    _inject_files()
-                    _set_admin_password()
-                    _reset_network()
-                    _set_vcpu_weight()
-                    return True
-            except Exception, exc:
-                LOG.warn(exc)
-                LOG.exception(_('Instance %s: failed to boot'), instance_name)
-                timer.stop()
-                return False
-
-        timer.f = _wait_for_boot
-
-        return timer.start(interval=0.5, now=True)
+        self._configure_instance(ctx, instance, vm_ref)
 
     def _handle_spawn_error(self, vdis, spawn_error):
         # Extract resource list from spawn_error.

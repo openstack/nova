@@ -188,7 +188,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         self.stubs.UnsetAll()
 
 
-def reset_network(*args):
+def configure_instance(*args):
     pass
 
 
@@ -214,7 +214,8 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stubout_stream_disk(self.stubs)
         stubs.stubout_is_vdi_pv(self.stubs)
-        self.stubs.Set(vmops.VMOps, 'reset_network', reset_network)
+        self.stubs.Set(vmops.VMOps, '_configure_instance',
+                configure_instance)
         self.stubs.Set(vmops.VMOps, '_find_rescue_vbd_ref',
                 _find_rescue_vbd_ref)
         stubs.stub_out_vm_methods(self.stubs)
