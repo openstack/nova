@@ -26,6 +26,7 @@ import webob.exc
 
 from nova.api.openstack.v2 import accounts
 from nova.api.openstack.v2 import consoles
+from nova.api.openstack.v2 import extensions
 from nova.api.openstack.v2 import flavors
 from nova.api.openstack.v2 import images
 from nova.api.openstack.v2 import image_metadata
@@ -101,10 +102,35 @@ class APIRouter(base_wsgi.Router):
         return cls()
 
     def __init__(self, ext_mgr=None):
+        if ext_mgr is None:
+            ext_mgr = extensions.ExtensionManager()
+
         self.server_members = {}
         mapper = ProjectMapper()
         self._setup_routes(mapper)
+        self._setup_ext_routes(mapper, ext_mgr)
         super(APIRouter, self).__init__(mapper)
+
+    def _setup_ext_routes(self, mapper, ext_mgr):
+        serializer = wsgi.ResponseSerializer(
+            {'application/xml': wsgi.XMLDictSerializer()})
+        for resource in ext_mgr.get_resources():
+            LOG.debug(_('Extended resource: %s'),
+                      resource.collection)
+            if resource.serializer is None:
+                resource.serializer = serializer
+
+            kargs = dict(
+                controller=wsgi.Resource(
+                    resource.controller, resource.deserializer,
+                    resource.serializer),
+                collection=resource.collection_actions,
+                member=resource.member_actions)
+
+            if resource.parent:
+                kargs['parent_resource'] = resource.parent
+
+            mapper.resource(resource.collection, resource.collection, **kargs)
 
     def _setup_routes(self, mapper):
         server_members = self.server_members

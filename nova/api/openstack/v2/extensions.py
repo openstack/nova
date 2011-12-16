@@ -293,27 +293,6 @@ class ExtensionMiddleware(base_wsgi.Middleware):
 
         mapper = nova.api.openstack.v2.ProjectMapper()
 
-        serializer = wsgi.ResponseSerializer(
-            {'application/xml': wsgi.XMLDictSerializer()})
-        # extended resources
-        for resource in ext_mgr.get_resources():
-            LOG.debug(_('Extended resource: %s'),
-                        resource.collection)
-            if resource.serializer is None:
-                resource.serializer = serializer
-
-            kargs = dict(
-                controller=wsgi.Resource(
-                    resource.controller, resource.deserializer,
-                    resource.serializer),
-                collection=resource.collection_actions,
-                member=resource.member_actions)
-
-            if resource.parent:
-                kargs['parent_resource'] = resource.parent
-
-            mapper.resource(resource.collection, resource.collection, **kargs)
-
         # extended actions
         action_resources = self._action_ext_resources(application, ext_mgr,
                                                         mapper)
@@ -368,11 +347,22 @@ class ExtensionManager(object):
 
     """
 
-    def __init__(self):
-        LOG.audit(_('Initializing extension manager.'))
+    _ext_mgr = None
 
-        self.extensions = {}
-        self._load_extensions()
+    @classmethod
+    def reset(cls):
+        cls._ext_mgr = None
+
+    def __new__(cls):
+        if cls._ext_mgr is None:
+            LOG.audit(_('Initializing extension manager.'))
+
+            cls._ext_mgr = super(ExtensionManager, cls).__new__(cls)
+
+            cls._ext_mgr.extensions = {}
+            cls._ext_mgr._load_extensions()
+
+        return cls._ext_mgr
 
     def register(self, ext):
         # Do nothing if the extension doesn't check out
