@@ -310,7 +310,7 @@ class API(base.Base):
                     context, instance_type, image, base_options,
                     security_group, block_device_mapping)
             # Tells scheduler we created the instance already.
-            base_options['id'] = instance['id']
+            base_options['uuid'] = instance['uuid']
             rpc_method = rpc.cast
         else:
             # We need to wait for the scheduler to create the instance

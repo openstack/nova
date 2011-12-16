@@ -173,7 +173,12 @@ class DistributedScheduler(driver.Scheduler):
         instance = self.create_instance_db_entry(context, request_spec)
         driver.cast_to_compute_host(context, weighted_host.host,
                 'run_instance', instance_uuid=instance['uuid'], **kwargs)
-        return driver.encode_instance(instance, local=True)
+        inst = driver.encode_instance(instance, local=True)
+        # So if another instance is created, create_instance_db_entry will
+        # actually create a new entry, instead of assume it's been created
+        # already
+        del request_spec['instance_properties']['uuid']
+        return inst
 
     def _make_weighted_host_from_blob(self, blob):
         """Returns the decrypted blob as a WeightedHost object
