@@ -169,6 +169,9 @@ def execute(*cmd, **kwargs):
 
     :raises exception.Error on receiving unknown arguments
     :raises exception.ProcessExecutionError
+
+    :returns a tuple, (stdout, stderr) from the spawned process, or None if
+             the command fails.
     """
 
     process_input = kwargs.pop('process_input', None)
