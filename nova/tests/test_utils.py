@@ -77,13 +77,14 @@ exit 1
     def test_unknown_kwargs_raises_error(self):
         self.assertRaises(exception.Error,
                           utils.execute,
-                          '/bin/true', this_is_not_a_valid_kwarg=True)
+                          '/usr/bin/env', 'true',
+                          this_is_not_a_valid_kwarg=True)
 
     def test_check_exit_code_boolean(self):
-        utils.execute('/bin/false', check_exit_code=False)
+        utils.execute('/usr/bin/env', 'false', check_exit_code=False)
         self.assertRaises(exception.ProcessExecutionError,
                           utils.execute,
-                          '/bin/false', check_exit_code=True)
+                          '/usr/bin/env', 'false', check_exit_code=True)
 
     def test_no_retry_on_success(self):
         fd, tmpfilename = tempfile.mkstemp()
