@@ -17,6 +17,7 @@
 
 import os
 
+from nova.api.openstack.v2 import extensions
 from nova import flags
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
@@ -28,6 +29,8 @@ LOG = logging.getLogger('nova.tests.integrated')
 
 class ExtensionsTest(integrated_helpers._IntegratedTestBase):
     def _get_flags(self):
+        extensions.ExtensionManager.reset()
+
         f = super(ExtensionsTest, self)._get_flags()
         f['osapi_extension'] = FLAGS.osapi_extension[:]
         f['osapi_extension'].append('nova.tests.api.openstack.v2.extensions.'

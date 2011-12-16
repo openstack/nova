@@ -89,6 +89,7 @@ class ExtensionTestCase(test.TestCase):
         ext_list.append('nova.tests.api.openstack.v2.extensions.'
                         'foxinsocks.Foxinsocks')
         self.flags(osapi_extension=ext_list)
+        extensions.ExtensionManager.reset()
 
 
 class ExtensionControllerTest(ExtensionTestCase):
@@ -227,7 +228,7 @@ class ResourceExtensionTest(ExtensionTestCase):
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
-        app = v2.APIRouter()
+        app = v2.APIRouter(manager)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/blah")
@@ -238,7 +239,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
-        app = v2.APIRouter()
+        app = v2.APIRouter(manager)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/123/tweedles")
@@ -250,7 +251,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
-        app = v2.APIRouter()
+        app = v2.APIRouter(manager)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/123/tweedles")
@@ -262,7 +263,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
-        app = v2.APIRouter()
+        app = v2.APIRouter(manager)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/123/tweedles")
@@ -283,7 +284,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
-        app = v2.APIRouter()
+        app = v2.APIRouter(manager)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/123/tweedles/1")
