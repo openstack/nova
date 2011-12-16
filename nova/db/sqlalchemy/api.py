@@ -947,7 +947,7 @@ def virtual_interface_update(context, vif_id, values):
 def _virtual_interface_query(context, session=None):
     return model_query(context, models.VirtualInterface, session=session,
                        read_deleted="yes").\
-                      options(joinedload('fixed_ips'))
+                       options(joinedload_all('fixed_ips.floating_ips'))
 
 
 @require_context
