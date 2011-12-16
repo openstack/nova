@@ -1484,7 +1484,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         bdm = self._get_instance_volume_bdm(context, instance_id, volume_id)
         self._detach_volume(context, instance_ref['name'], bdm)
         self.volume_api.terminate_connection(context, volume_id, FLAGS.my_ip)
-        self.volume_api.detach(context, volume_id)
+        self.volume_api.detach(context.elevated(), volume_id)
         self.db.block_device_mapping_destroy_by_instance_and_volume(
             context, instance_id, volume_id)
         return True
