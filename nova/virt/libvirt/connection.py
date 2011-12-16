@@ -185,8 +185,6 @@ class LibvirtConnection(driver.ComputeDriver):
     def __init__(self, read_only):
         super(LibvirtConnection, self).__init__()
 
-        self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
-        self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._host_state = None
         self._wrapped_conn = None
         self.read_only = read_only
@@ -219,6 +217,22 @@ class LibvirtConnection(driver.ComputeDriver):
     def init_host(self, host):
         # NOTE(nsokolov): moved instance restarting to ComputeManager
         pass
+
+    @property
+    def libvirt_xml(self):
+        if not hasattr(self, '_libvirt_xml_cache_info'):
+            self._libvirt_xml_cache_info = {}
+
+        return utils.read_cached_file(FLAGS.libvirt_xml_template,
+                self._libvirt_xml_cache_info)
+
+    @property
+    def cpuinfo_xml(self):
+        if not hasattr(self, '_cpuinfo_xml_cache_info'):
+            self._cpuinfo_xml_cache_info = {}
+
+        return utils.read_cached_file(FLAGS.cpuinfo_xml_template,
+                self._cpuinfo_xml_cache_info)
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():

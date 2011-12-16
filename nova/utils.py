@@ -1110,3 +1110,17 @@ def sanitize_hostname(hostname):
     hostname = hostname.strip('.-')
 
     return hostname
+
+
+def read_cached_file(filename, cache_info):
+    """Return the contents of a file. If the file hasn't changed since the
+    last invocation, a cached version will be returned.
+    """
+    mtime = os.path.getmtime(filename)
+    if cache_info and mtime == cache_info.get('mtime', None):
+        return cache_info['data']
+
+    data = open(filename).read()
+    cache_info['data'] = data
+    cache_info['mtime'] = mtime
+    return data
