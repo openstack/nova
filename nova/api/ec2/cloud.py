@@ -813,13 +813,18 @@ class CloudController(object):
                 "output": base64.b64encode(output)}
 
     def get_ajax_console(self, context, instance_id, **kwargs):
+        """Web based ajax terminal for vm.
+
+        This is an extension to the normal ec2_api"""
         ec2_id = instance_id[0]
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
         instance = self.compute_api.get(context, instance_id)
         return self.compute_api.get_ajax_console(context, instance)
 
     def get_vnc_console(self, context, instance_id, **kwargs):
-        """Returns vnc browser url.  Used by OS dashboard."""
+        """Returns vnc browser url.
+
+        This is an extension to the normal ec2_api"""
         ec2_id = instance_id
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
         instance = self.compute_api.get(context, instance_id)
@@ -1346,6 +1351,7 @@ class CloudController(object):
         return True
 
     def update_instance(self, context, instance_id, **kwargs):
+        """This is an extension to the normal ec2_api"""
         updatable_fields = ['display_name', 'display_description']
         changes = {}
         for field in updatable_fields:
