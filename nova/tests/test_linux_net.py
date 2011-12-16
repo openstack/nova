@@ -15,6 +15,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import os
+
 import mox
 
 from nova import db
@@ -198,8 +200,12 @@ class LinuxNetworkTestCase(test.TestCase):
 
     def test_update_dhcp_for_nw00(self):
         self.flags(use_single_default_gateway=True)
+
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
+        self.mox.StubOutWithMock(self.driver, 'write_to_file')
+        self.mox.StubOutWithMock(self.driver, 'ensure_path')
+        self.mox.StubOutWithMock(os, 'chmod')
 
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
                                             mox.IgnoreArg())\
@@ -216,6 +222,18 @@ class LinuxNetworkTestCase(test.TestCase):
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
                                              mox.IgnoreArg())\
                                              .AndReturn([vifs[2], vifs[3]])
+        self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
+        self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
+        os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
+
         self.mox.ReplayAll()
 
         self.driver.update_dhcp(None, "eth0", networks[0])
@@ -224,6 +242,9 @@ class LinuxNetworkTestCase(test.TestCase):
         self.flags(use_single_default_gateway=True)
         self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
         self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
+        self.mox.StubOutWithMock(self.driver, 'write_to_file')
+        self.mox.StubOutWithMock(self.driver, 'ensure_path')
+        self.mox.StubOutWithMock(os, 'chmod')
 
         db.network_get_associated_fixed_ips(mox.IgnoreArg(),
                                             mox.IgnoreArg())\
@@ -240,6 +261,18 @@ class LinuxNetworkTestCase(test.TestCase):
         db.virtual_interface_get_by_instance(mox.IgnoreArg(),
                                              mox.IgnoreArg())\
                                              .AndReturn([vifs[2], vifs[3]])
+        self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
+        self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        self.driver.ensure_path(mox.IgnoreArg())
+        os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
+        os.chmod(mox.IgnoreArg(), mox.IgnoreArg())
+
         self.mox.ReplayAll()
 
         self.driver.update_dhcp(None, "eth0", networks[0])
