@@ -1868,7 +1868,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         nw_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
 
-        def fake_get_nw_info(self, ctxt, instance):
+        def fake_get_nw_info(cls, ctxt, instance):
+            self.assertTrue(ctxt.is_admin)
             return nw_info
 
         self.stubs.Set(nova.network.API, 'associate_floating_ip',

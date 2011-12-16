@@ -1555,7 +1555,7 @@ class API(base.Base):
         # accommodate the info containing floating as well as fixed ip
         # addresses
         fixed_ip_addrs = []
-        for info in self.network_api.get_instance_nw_info(context,
+        for info in self.network_api.get_instance_nw_info(context.elevated(),
                                                           instance):
             ips = info[1]['ips']
             fixed_ip_addrs.extend([ip_dict['ip'] for ip_dict in ips])
