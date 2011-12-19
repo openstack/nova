@@ -13,14 +13,14 @@
 #    under the License.
 
 
-class InstanceDNSManagerDriver(object):
-    """ Defines the instance DNS interface.  Does nothing. """
+class DNSDriver(object):
+    """ Defines the DNS manager interface.  Does nothing. """
 
     def __init__(self):
         pass
 
     def get_zones(self):
-        pass
+        return []
 
     def create_entry(self, _name, _address, _type, _dnszone):
         pass
