@@ -29,6 +29,7 @@ from xml.etree import ElementTree
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import utils
 from nova.utils import ssh_execute
 from nova.volume.driver import ISCSIDriver
 
@@ -48,6 +49,12 @@ flags.DEFINE_string('san_clustername', '',
                     'Cluster name to use for creating volumes')
 flags.DEFINE_integer('san_ssh_port', 22,
                     'SSH port to use with SAN')
+flags.DEFINE_boolean('san_is_local', 'false',
+                     'Execute commands locally instead of over SSH; '
+                     'use if the volume service is running on the SAN device')
+flags.DEFINE_string('san_zfs_volume_base',
+                    'rpool/',
+                    'The ZFS path under which to create zvols for volumes.')
 
 
 class SanISCSIDriver(ISCSIDriver):
@@ -57,6 +64,10 @@ class SanISCSIDriver(ISCSIDriver):
     probably won't run on it, so we need to access is over SSH or another
     remote protocol.
     """
+
+    def __init__(self):
+        super(SanISCSIDriver, self).__init__()
+        self.run_local = FLAGS.san_is_local
 
     def _build_iscsi_target_name(self, volume):
         return "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
@@ -81,6 +92,14 @@ class SanISCSIDriver(ISCSIDriver):
         else:
             raise exception.Error(_("Specify san_password or san_privatekey"))
         return ssh
+
+    def _execute(self, *cmd, **kwargs):
+        if self.run_local:
+            return utils.execute(*cmd, **kwargs)
+        else:
+            check_exit_code = kwargs.pop('check_exit_code', None)
+            command = ' '.join(*cmd)
+            return self._run_ssh(command, check_exit_code)
 
     def _run_ssh(self, command, check_exit_code=True):
         #TODO(justinsb): SSH connection caching (?)
@@ -107,9 +126,12 @@ class SanISCSIDriver(ISCSIDriver):
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
-        if not (FLAGS.san_password or FLAGS.san_privatekey):
-            raise exception.Error(_("Specify san_password or san_privatekey"))
+        if not self.run_local:
+            if not (FLAGS.san_password or FLAGS.san_privatekey):
+                raise exception.Error(_('Specify san_password or '
+                                        'san_privatekey'))
 
+        # The san_ip must always be set, because we use it for the target
         if not (FLAGS.san_ip):
             raise exception.Error(_("san_ip must be set"))
 
@@ -165,9 +187,16 @@ class SolarisISCSIDriver(SanISCSIDriver):
     Also make sure you can login using san_login & san_password/san_privatekey
     """
 
+    def _execute(self, *cmd, **kwargs):
+        new_cmd = ['pfexec']
+        new_cmd.extend(*cmd)
+        return super(SolarisISCSIDriver, self)._execute(self,
+                                                        *new_cmd,
+                                                        **kwargs)
+
     def _view_exists(self, luid):
-        cmd = "pfexec /usr/sbin/stmfadm list-view -l %s" % (luid)
-        (out, _err) = self._run_ssh(cmd,
+        (out, _err) = self._execute('/usr/sbin/stmfadm',
+                                    'list-view', '-l', luid,
                                     check_exit_code=False)
         if "no views found" in out:
             return False
@@ -179,7 +208,7 @@ class SolarisISCSIDriver(SanISCSIDriver):
 
     def _get_target_groups(self):
         """Gets list of target groups from host."""
-        (out, _err) = self._run_ssh("pfexec /usr/sbin/stmfadm list-tg")
+        (out, _err) = self._execute('/usr/sbin/stmfadm', 'list-tg')
         matches = _get_prefixed_values(out, 'Target group: ')
         LOG.debug("target_groups=%s" % matches)
         return matches
@@ -188,8 +217,8 @@ class SolarisISCSIDriver(SanISCSIDriver):
         return target_group_name not in self._get_target_groups()
 
     def _get_target_group_members(self, target_group_name):
-        (out, _err) = self._run_ssh("pfexec /usr/sbin/stmfadm list-tg -v %s" %
-                                    (target_group_name))
+        (out, _err) = self._execute('/usr/sbin/stmfadm',
+                                    'list-tg', '-v', target_group_name)
         matches = _get_prefixed_values(out, 'Member: ')
         LOG.debug("members of %s=%s" % (target_group_name, matches))
         return matches
@@ -199,19 +228,28 @@ class SolarisISCSIDriver(SanISCSIDriver):
             self._get_target_group_members(target_group_name))
 
     def _get_iscsi_targets(self):
-        cmd = ("pfexec /usr/sbin/itadm list-target | "
-               "awk '{print $1}' | grep -v ^TARGET")
-        (out, _err) = self._run_ssh(cmd)
+        (out, _err) = self._execute('/usr/sbin/itadm', 'list-target')
         matches = _collect_lines(out)
-        LOG.debug("_get_iscsi_targets=%s" % (matches))
-        return matches
+
+        # Skip header
+        if len(matches) != 0:
+            assert 'TARGET NAME' in matches[0]
+            matches = matches[1:]
+
+        targets = []
+        for line in matches:
+            items = line.split()
+            assert len(items) == 3
+            targets.append(items[0])
+
+        LOG.debug("_get_iscsi_targets=%s" % (targets))
+        return targets
 
     def _iscsi_target_exists(self, iscsi_target_name):
         return iscsi_target_name in self._get_iscsi_targets()
 
     def _build_zfs_poolname(self, volume):
-        #TODO(justinsb): rpool should be configurable
-        zfs_poolname = 'rpool/%s' % (volume['name'])
+        zfs_poolname = '%s%s' % (FLAGS.san_zfs_volume_base, volume['name'])
         return zfs_poolname
 
     def create_volume(self, volume):
@@ -223,24 +261,44 @@ class SolarisISCSIDriver(SanISCSIDriver):
 
         zfs_poolname = self._build_zfs_poolname(volume)
 
-        thin_provision_arg = '-s' if FLAGS.san_thin_provision else ''
         # Create a zfs volume
-        self._run_ssh("pfexec /usr/sbin/zfs create %s -V %s %s" %
-                      (thin_provision_arg,
-                       sizestr,
-                       zfs_poolname))
+        cmd = ['/usr/sbin/zfs', 'create']
+        if FLAGS.san_thin_provision:
+            cmd.append('-s')
+        cmd.extend(['-V', sizestr])
+        cmd.append(zfs_poolname)
+        self._execute(*cmd)
 
     def _get_luid(self, volume):
         zfs_poolname = self._build_zfs_poolname(volume)
+        zvol_name = '/dev/zvol/rdsk/%s' % zfs_poolname
 
-        cmd = ("pfexec /usr/sbin/sbdadm list-lu | "
-               "grep -w %s | awk '{print $1}'" %
-               (zfs_poolname))
+        (out, _err) = self._execute('/usr/sbin/sbdadm', 'list-lu')
 
-        (stdout, _stderr) = self._run_ssh(cmd)
+        lines = _collect_lines(out)
 
-        luid = stdout.strip()
-        return luid
+        # Strip headers
+        if len(lines) >= 1:
+            if lines[0] == '':
+                lines = lines[1:]
+
+        if len(lines) >= 4:
+            assert 'Found' in lines[0]
+            assert '' == lines[1]
+            assert 'GUID' in lines[2]
+            assert '------------------' in lines[3]
+
+            lines = lines[4:]
+
+        for line in lines:
+            items = line.split()
+            assert len(items) == 3
+            if items[2] == zvol_name:
+                luid = items[0].strip()
+                return luid
+
+        raise Exception(_('LUID not found for %(zfs_poolname)s. '
+                          'Output=%(out)s') % locals())
 
     def _is_lu_created(self, volume):
         luid = self._get_luid(volume)
@@ -249,8 +307,7 @@ class SolarisISCSIDriver(SanISCSIDriver):
     def delete_volume(self, volume):
         """Deletes a volume."""
         zfs_poolname = self._build_zfs_poolname(volume)
-        self._run_ssh("pfexec /usr/sbin/zfs destroy %s" %
-                      (zfs_poolname))
+        self._execute('/usr/sbin/zfs', 'destroy', zfs_poolname)
 
     def local_path(self, volume):
         # TODO(justinsb): Is this needed here?
@@ -274,9 +331,8 @@ class SolarisISCSIDriver(SanISCSIDriver):
         zfs_poolname = self._build_zfs_poolname(volume)
 
         if force_create or not self._is_lu_created(volume):
-            cmd = ("pfexec /usr/sbin/sbdadm create-lu /dev/zvol/rdsk/%s" %
-                   (zfs_poolname))
-            self._run_ssh(cmd)
+            zvol_name = '/dev/zvol/rdsk/%s' % zfs_poolname
+            self._execute('/usr/sbin/sbdadm', 'create-lu', zvol_name)
 
         luid = self._get_luid(volume)
         iscsi_name = self._build_iscsi_target_name(volume)
@@ -284,21 +340,21 @@ class SolarisISCSIDriver(SanISCSIDriver):
 
         # Create a iSCSI target, mapped to just this volume
         if force_create or not self._target_group_exists(target_group_name):
-            self._run_ssh("pfexec /usr/sbin/stmfadm create-tg %s" %
-                          (target_group_name))
+            self._execute('/usr/sbin/stmfadm', 'create-tg', target_group_name)
 
         # Yes, we add the initiatior before we create it!
         # Otherwise, it complains that the target is already active
         if force_create or not self._is_target_group_member(target_group_name,
                                                             iscsi_name):
-            self._run_ssh("pfexec /usr/sbin/stmfadm add-tg-member -g %s %s" %
-                          (target_group_name, iscsi_name))
+            self._execute('/usr/sbin/stmfadm',
+                          'add-tg-member', '-g', target_group_name, iscsi_name)
+
         if force_create or not self._iscsi_target_exists(iscsi_name):
-            self._run_ssh("pfexec /usr/sbin/itadm create-target -n %s" %
-                          (iscsi_name))
+            self._execute('/usr/sbin/itadm', 'create-target', '-n', iscsi_name)
+
         if force_create or not self._view_exists(luid):
-            self._run_ssh("pfexec /usr/sbin/stmfadm add-view -t %s %s" %
-                          (target_group_name, luid))
+            self._execute('/usr/sbin/stmfadm',
+                          'add-view', '-t', target_group_name, luid)
 
         #TODO(justinsb): Is this always 1? Does it matter?
         iscsi_portal_interface = '1'
@@ -320,24 +376,19 @@ class SolarisISCSIDriver(SanISCSIDriver):
         target_group_name = 'tg-%s' % volume['name']
 
         if self._view_exists(luid):
-            self._run_ssh("pfexec /usr/sbin/stmfadm remove-view -l %s -a" %
-                          (luid))
+            self._execute('/usr/sbin/stmfadm', 'remove-view', '-l', luid, '-a')
 
         if self._iscsi_target_exists(iscsi_name):
-            self._run_ssh("pfexec /usr/sbin/stmfadm offline-target %s" %
-                          (iscsi_name))
-            self._run_ssh("pfexec /usr/sbin/itadm delete-target %s" %
-                          (iscsi_name))
+            self._execute('/usr/sbin/stmfadm', 'offline-target', iscsi_name)
+            self._execute('/usr/sbin/itadm', 'delete-target', iscsi_name)
 
         # We don't delete the tg-member; we delete the whole tg!
 
         if self._target_group_exists(target_group_name):
-            self._run_ssh("pfexec /usr/sbin/stmfadm delete-tg %s" %
-                          (target_group_name))
+            self._execute('/usr/sbin/stmfadm', 'delete-tg', target_group_name)
 
         if self._is_lu_created(volume):
-            self._run_ssh("pfexec /usr/sbin/sbdadm delete-lu %s" %
-                          (luid))
+            self._execute('/usr/sbin/sbdadm', 'delete-lu', luid)
 
 
 class HpSanISCSIDriver(SanISCSIDriver):
