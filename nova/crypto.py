@@ -116,7 +116,7 @@ def generate_key_pair(bits=1024):
     tmpdir = tempfile.mkdtemp()
     keyfile = os.path.join(tmpdir, 'temp')
     utils.execute('ssh-keygen', '-q', '-b', bits, '-N', '',
-                  '-f', keyfile)
+                  '-t', 'rsa', '-f', keyfile)
     fingerprint = generate_fingerprint('%s.pub' % (keyfile))
     private_key = open(keyfile).read()
     public_key = open(keyfile + '.pub').read()
