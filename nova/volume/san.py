@@ -264,10 +264,10 @@ class SolarisISCSIDriver(SanISCSIDriver):
         # It then runs ~5 SSH commands for each volume,
         # most of which fetch the same info each time
         # This makes initial start stupid-slow
-        self._do_export(volume, force_create=False)
+        return self._do_export(volume, force_create=False)
 
     def create_export(self, context, volume):
-        self._do_export(volume, force_create=True)
+        return self._do_export(volume, force_create=True)
 
     def _do_export(self, volume, force_create):
         # Create a Logical Unit (LU) backed by the zfs volume
