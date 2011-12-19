@@ -378,6 +378,13 @@ class IsUUIDLikeTestCase(test.TestCase):
         val = 'foo-fooo'
         self.assertUUIDLike(val, False)
 
+    def test_non_uuid_string_passed2(self):
+        val = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+        self.assertUUIDLike(val, False)
+
+    def test_gen_valid_uuid(self):
+        self.assertUUIDLike(str(utils.gen_uuid()), True)
+
 
 class ToPrimitiveTestCase(test.TestCase):
     def test_list(self):
