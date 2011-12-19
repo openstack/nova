@@ -24,6 +24,7 @@ import datetime
 from webob import exc
 
 import mox
+import webob.exc
 
 import nova
 from nova import compute
@@ -1693,12 +1694,135 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_snapshot(self):
-        """Can't backup an instance which is already being backed up."""
+        """Ensure a snapshot of an instance can be created"""
         instance = self._create_fake_instance()
         image = self.compute_api.snapshot(self.context, instance, 'snap1',
                                         {'extra_param': 'value1'})
 
         self.assertEqual(image['name'], 'snap1')
+        properties = image['properties']
+        self.assertTrue('backup_type' not in properties)
+        self.assertEqual(properties['image_type'], 'snapshot')
+        self.assertEqual(properties['instance_uuid'], instance['uuid'])
+        self.assertEqual(properties['extra_param'], 'value1')
+
+        db.instance_destroy(self.context, instance['id'])
+
+    def test_snapshot_minram_mindisk_VHD(self):
+        """Ensure a snapshots min_ram and min_disk are correct.
+
+        A snapshot of a non-shrinkable VHD should have min_ram
+        and min_disk set to that of the original instances flavor.
+        """
+
+        def fake_show(*args):
+            img = copy(self.fake_image)
+            img['disk_format'] = 'vhd'
+            return img
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        instance = self._create_fake_instance()
+        inst_params = {'local_gb': 2, 'memory_mb': 256}
+        instance['instance_type'].update(inst_params)
+
+        image = self.compute_api.snapshot(self.context, instance, 'snap1',
+                                        {'extra_param': 'value1'})
+
+        self.assertEqual(image['name'], 'snap1')
+        self.assertEqual(image['min_ram'], 256)
+        self.assertEqual(image['min_disk'], 2)
+        properties = image['properties']
+        self.assertTrue('backup_type' not in properties)
+        self.assertEqual(properties['image_type'], 'snapshot')
+        self.assertEqual(properties['instance_uuid'], instance['uuid'])
+        self.assertEqual(properties['extra_param'], 'value1')
+
+        db.instance_destroy(self.context, instance['id'])
+
+    def test_snapshot_minram_mindisk(self):
+        """Ensure a snapshots min_ram and min_disk are correct.
+
+        A snapshot of an instance should have min_ram and min_disk
+        set to that of the instances original image unless that
+        image had a disk format of vhd.
+        """
+
+        def fake_show(*args):
+            img = copy(self.fake_image)
+            img['disk_format'] = 'raw'
+            img['min_ram'] = 512
+            img['min_disk'] = 1
+            return img
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        instance = self._create_fake_instance()
+
+        image = self.compute_api.snapshot(self.context, instance, 'snap1',
+                                        {'extra_param': 'value1'})
+
+        self.assertEqual(image['name'], 'snap1')
+        self.assertEqual(image['min_ram'], 512)
+        self.assertEqual(image['min_disk'], 1)
+        properties = image['properties']
+        self.assertTrue('backup_type' not in properties)
+        self.assertEqual(properties['image_type'], 'snapshot')
+        self.assertEqual(properties['instance_uuid'], instance['uuid'])
+        self.assertEqual(properties['extra_param'], 'value1')
+
+        db.instance_destroy(self.context, instance['id'])
+
+    def test_snapshot_minram_mindisk_img_missing_minram(self):
+        """Ensure a snapshots min_ram and min_disk are correct.
+
+        Do not show an attribute that the orig img did not have.
+        """
+
+        def fake_show(*args):
+            img = copy(self.fake_image)
+            img['disk_format'] = 'raw'
+            img['min_disk'] = 1
+            return img
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        instance = self._create_fake_instance()
+
+        image = self.compute_api.snapshot(self.context, instance, 'snap1',
+                                        {'extra_param': 'value1'})
+
+        self.assertEqual(image['name'], 'snap1')
+        self.assertFalse('min_ram' in image)
+        self.assertEqual(image['min_disk'], 1)
+        properties = image['properties']
+        self.assertTrue('backup_type' not in properties)
+        self.assertEqual(properties['image_type'], 'snapshot')
+        self.assertEqual(properties['instance_uuid'], instance['uuid'])
+        self.assertEqual(properties['extra_param'], 'value1')
+
+        db.instance_destroy(self.context, instance['id'])
+
+    def test_snapshot_minram_mindisk_no_image(self):
+        """Ensure a snapshots min_ram and min_disk are correct.
+
+        A snapshots min_ram and min_disk should be set to default if
+        an instances original image cannot be found.
+        """
+
+        def fake_show(*args):
+            raise webob.exc.HTTPNotFound()
+
+        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+
+        instance = self._create_fake_instance()
+
+        image = self.compute_api.snapshot(self.context, instance, 'snap1',
+                                        {'extra_param': 'value1'})
+
+        self.assertEqual(image['name'], 'snap1')
+
+        # min_ram and min_disk are not returned when set to default
+        self.assertFalse('min_ram' in image)
+        self.assertFalse('min_disk' in image)
+
         properties = image['properties']
         self.assertTrue('backup_type' not in properties)
         self.assertEqual(properties['image_type'], 'snapshot')

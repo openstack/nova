@@ -24,6 +24,8 @@ import novaclient
 import re
 import time
 
+import webob.exc
+
 from nova import block_device
 from nova import exception
 from nova import flags
@@ -1138,12 +1140,40 @@ class API(base.Base):
         properties.update(extra_properties or {})
         sent_meta = {'name': name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
+
+        if image_type == 'snapshot':
+            min_ram, min_disk = self._get_minram_mindisk_params(context,
+                                                                instance)
+            if min_ram is not None:
+                sent_meta['min_ram'] = min_ram
+            if min_disk is not None:
+                sent_meta['min_disk'] = min_disk
+
         recv_meta = self.image_service.create(context, sent_meta)
         params = {'image_id': recv_meta['id'], 'image_type': image_type,
                   'backup_type': backup_type, 'rotation': rotation}
         self._cast_compute_message('snapshot_instance', context, instance_uuid,
                                    params=params)
         return recv_meta
+
+    def _get_minram_mindisk_params(self, context, instance):
+        try:
+            #try to get source image of the instance
+            orig_image = self.image_service.show(context,
+                                                 instance['image_ref'])
+        except webob.exc.HTTPNotFound:
+            return None, None
+
+        #disk format of vhd is non-shrinkable
+        if orig_image.get('disk_format') == 'vhd':
+            min_ram = instance['instance_type']['memory_mb']
+            min_disk = instance['instance_type']['local_gb']
+        else:
+            #set new image values to the original image values
+            min_ram = orig_image.get('min_ram')
+            min_disk = orig_image.get('min_disk')
+
+        return min_ram, min_disk
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED],
                           task_state=[None, task_states.RESIZE_VERIFY])
