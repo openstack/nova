@@ -1600,7 +1600,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.rebuild(self.context, instance, image_ref, password)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.REBUILDING)
+        self.assertEqual(instance['vm_state'], vm_states.REBUILDING)
 
         db.instance_destroy(self.context, instance_uuid)
 

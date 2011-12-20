@@ -1210,8 +1210,8 @@ class API(base.Base):
                     metadata=metadata,
                     display_name=name,
                     image_ref=image_href,
-                    vm_state=vm_states.ACTIVE,
-                    task_state=task_states.REBUILDING,
+                    vm_state=vm_states.REBUILDING,
+                    task_state=None,
                     progress=0)
 
         rebuild_params = {
