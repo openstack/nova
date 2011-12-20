@@ -42,10 +42,20 @@ class Console_output(extensions.ExtensionDescriptor):
     def get_console_output(self, input_dict, req, server_id):
         """Get text console output."""
         context = req.environ['nova.context']
-        length = input_dict['os-getConsoleOutput'].get('length')
+
+        try:
+            instance = self.compute_api.routing_get(context, server_id)
+        except exception.NotFound:
+            raise webob.exc.HTTPNotFound(_('Instance not found'))
+
+        try:
+            length = input_dict['os-getConsoleOutput'].get('length')
+        except (TypeError, KeyError):
+            raise webob.exc.HTTPBadRequest(_('Malformed request body'))
+
         try:
             return self.compute_api.get_console_output(context,
-                                                       server_id,
+                                                       instance,
                                                        length)
         except exception.ApiError, e:
             raise webob.exc.HTTPBadRequest(explanation=e.message)
