@@ -172,7 +172,7 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
         sup.disconnect_volume(connection_info, mount_device)
         iscsi_properties = connection_info['data']
         self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
-        self._run_iscsiadm(iscsi_properties, ("--logout"),
+        self._run_iscsiadm(iscsi_properties, ("--logout",),
                            check_exit_code=[0, 255])
         self._run_iscsiadm(iscsi_properties, ('--op', 'delete'),
                            check_exit_code=[0, 255])

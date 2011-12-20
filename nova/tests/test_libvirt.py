@@ -104,14 +104,15 @@ class FakeVirtDomain(object):
 
 class LibvirtVolumeTestCase(test.TestCase):
 
-    @staticmethod
-    def fake_execute(*cmd, **kwargs):
-        LOG.debug("FAKE EXECUTE: %s" % ' '.join(cmd))
-        return None, None
-
     def setUp(self):
         super(LibvirtVolumeTestCase, self).setUp()
-        self.stubs.Set(utils, 'execute', self.fake_execute)
+        self.executes = []
+
+        def fake_execute(*cmd, **kwargs):
+            self.executes.append(cmd)
+            return None, None
+
+        self.stubs.Set(utils, 'execute', fake_execute)
 
         class FakeLibvirtConnection(object):
             def __init__(self, hyperv="QEMU"):
@@ -126,22 +127,38 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.stubs.Set(os.path, 'exists', lambda x: True)
         vol_driver = volume_driver.ISCSIDriver()
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        location = '10.0.2.15:3260'
         name = 'volume-00000001'
+        iqn = 'iqn.2010-10.org.openstack:%s' % name
         vol = {'id': 1,
                'name': name,
                'provider_auth': None,
-               'provider_location': '10.0.2.15:3260,fake '
-                        'iqn.2010-10.org.openstack:volume-00000001'}
+               'provider_location': '%s,fake %s' % (location, iqn)}
         address = '127.0.0.1'
-        connection_info = vol_driver.initialize_connection(vol, address)
+        connection_info = vol_driver.initialize_connection(vol, '127.0.0.1')
         mount_device = "vde"
         xml = libvirt_driver.connect_volume(connection_info, mount_device)
         tree = xml_to_tree(xml)
-        dev_str = '/dev/disk/by-path/ip-10.0.2.15:3260-iscsi-iqn.' \
-                  '2010-10.org.openstack:%s-lun-0' % name
+        dev_str = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-0' % (location, iqn)
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./source').get('dev'), dev_str)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
+        connection_info = vol_driver.terminate_connection(vol, '127.0.0.1')
+        expected_commands = [('iscsiadm', '-m', 'node', '-T', iqn,
+                              '-p', location),
+                             ('iscsiadm', '-m', 'node', '-T', iqn,
+                              '-p', location, '--login'),
+                             ('iscsiadm', '-m', 'node', '-T', iqn,
+                              '-p', location, '--op', 'update',
+                              '-n', 'node.startup', '-v', 'automatic'),
+                             ('iscsiadm', '-m', 'node', '-T', iqn,
+                              '-p', location, '--op', 'update',
+                              '-n', 'node.startup', '-v', 'manual'),
+                             ('iscsiadm', '-m', 'node', '-T', iqn,
+                              '-p', location, '--logout'),
+                             ('iscsiadm', '-m', 'node', '-T', iqn,
+                              '-p', location, '--op', 'delete')]
+        self.assertEqual(self.executes, expected_commands)
 
     def test_libvirt_sheepdog_driver(self):
         vol_driver = volume_driver.SheepdogDriver()
@@ -157,6 +174,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.assertEqual(tree.find('./source').get('protocol'), 'sheepdog')
         self.assertEqual(tree.find('./source').get('name'), name)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
+        connection_info = vol_driver.terminate_connection(vol, '127.0.0.1')
 
     def test_libvirt_rbd_driver(self):
         vol_driver = volume_driver.RBDDriver()
@@ -173,6 +191,7 @@ class LibvirtVolumeTestCase(test.TestCase):
         rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
         libvirt_driver.disconnect_volume(connection_info, mount_device)
+        connection_info = vol_driver.terminate_connection(vol, '127.0.0.1')
 
 
 class CacheConcurrencyTestCase(test.TestCase):
