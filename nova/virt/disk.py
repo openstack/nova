@@ -42,8 +42,6 @@ LOG = logging.getLogger('nova.compute.disk')
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
                      'minimum size in bytes of root partition')
-flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
-                     'block_size to use for dd')
 flags.DEFINE_string('injected_network_template',
                     utils.abspath('virt/interfaces.template'),
                     'Template file for injected network')
