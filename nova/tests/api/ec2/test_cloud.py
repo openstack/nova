@@ -21,7 +21,6 @@ import copy
 import functools
 import os
 
-from eventlet import greenthread
 from M2Crypto import BIO
 from M2Crypto import RSA
 
@@ -1128,7 +1127,7 @@ class CloudTestCase(test.TestCase):
         output = self.cloud.get_console_output(context=self.context,
                                                instance_id=[instance_id])
         self.assertEquals(base64.b64decode(output['output']),
-                'FAKE CONSOLE?OUTPUT')
+                'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         rv = self.cloud.terminate_instances(self.context, [instance_id])

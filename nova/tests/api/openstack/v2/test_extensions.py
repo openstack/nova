@@ -98,6 +98,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         super(ExtensionControllerTest, self).setUp()
         self.ext_list = [
             "AdminActions",
+            "Console_output",
             "Createserverext",
             "DeferredDelete",
             "DiskConfig",

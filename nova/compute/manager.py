@@ -1377,14 +1377,29 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.inject_network_info(instance, network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def get_console_output(self, context, instance_uuid):
+    def get_console_output(self, context, instance_uuid, tail_length=None):
         """Send the console output for the given instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         LOG.audit(_("Get console output for instance %s"), instance_uuid,
                   context=context)
         output = self.driver.get_console_output(instance_ref)
+
+        if tail_length is not None:
+            output = self._tail_log(output, tail_length)
+
         return output.decode('utf-8', 'replace').encode('ascii', 'replace')
+
+    def _tail_log(self, log, length):
+        try:
+            length = int(length)
+        except ValueError:
+            length = 0
+
+        if length == 0:
+            return ''
+        else:
+            return '\n'.join(log.split('\n')[-int(length):])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def get_ajax_console(self, context, instance_uuid):
