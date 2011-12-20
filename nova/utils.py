@@ -919,9 +919,11 @@ def is_uuid_like(val):
 
         aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
     """
-    if not isinstance(val, basestring):
+    try:
+        uuid.UUID(val)
+        return True
+    except (TypeError, ValueError, AttributeError):
         return False
-    return (len(val) == 36) and (val.count('-') == 4)
 
 
 def bool_from_str(val):
