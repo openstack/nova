@@ -876,13 +876,25 @@ class Controller(wsgi.Controller):
 
 class HeadersSerializer(wsgi.ResponseHeadersSerializer):
 
+    def _add_server_location(self, response, data):
+        link = filter(lambda l: l['rel'] == 'self', data['server']['links'])
+        if link:
+            response.headers['Location'] = link[0]['href']
+
     def create(self, response, data):
+        if 'server' in data:
+            self._add_server_location(response, data)
         response.status_int = 202
 
     def delete(self, response, data):
         response.status_int = 204
 
     def action(self, response, data):
+        # FIXME(jerdfelt): This is kind of a hack. Unfortunately the original
+        # action requested isn't available to us, so we need to look at the
+        # response to see if it looks like a rebuild response.
+        if data.get('server', {}).get('status') == 'REBUILD':
+            self._add_server_location(response, data)
         response.status_int = 202
 
 

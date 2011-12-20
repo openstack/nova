@@ -3813,3 +3813,42 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
+
+
+class ServerHeadersSerializationTest(test.TestCase):
+    def test_create_location(self):
+        selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
+        bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
+
+        serializer = servers.HeadersSerializer()
+        response = webob.Response()
+        server = {
+            'links': [{
+                'rel': 'self',
+                'href': selfhref,
+            }, {
+                'rel': 'bookmark',
+                'href': bookhref,
+            }],
+        }
+        serializer.create(response, {'server': server})
+        self.assertEqual(response.headers['Location'], selfhref)
+
+    def test_rebuild_location(self):
+        selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
+        bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
+
+        serializer = servers.HeadersSerializer()
+        response = webob.Response()
+        server = {
+            'status': 'REBUILD',
+            'links': [{
+                'rel': 'self',
+                'href': selfhref,
+            }, {
+                'rel': 'bookmark',
+                'href': bookhref,
+            }],
+        }
+        serializer.action(response, {'server': server})
+        self.assertEqual(response.headers['Location'], selfhref)
