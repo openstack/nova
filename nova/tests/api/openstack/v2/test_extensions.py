@@ -96,6 +96,7 @@ class ExtensionControllerTest(ExtensionTestCase):
 
     def setUp(self):
         super(ExtensionControllerTest, self).setUp()
+        self.flags(allow_admin_api=True)
         self.ext_list = [
             "AdminActions",
             "Console_output",
@@ -307,6 +308,19 @@ class InvalidExtension(object):
     alias = "THIRD"
 
 
+class AdminExtension(extensions.ExtensionDescriptor):
+    """Admin-only extension"""
+
+    name = "Admin Ext"
+    alias = "ADMIN"
+    namespace = "http://www.example.com/"
+    updated = "2011-01-22T13:25:27-06:00"
+    admin_only = True
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+
 class ExtensionManagerTest(ExtensionTestCase):
 
     response_body = "Try to say this Mr. Knox, sir..."
@@ -329,6 +343,24 @@ class ExtensionManagerTest(ExtensionTestCase):
         ext_mgr.register(InvalidExtension())
         self.assertTrue('FOXNSOX' in ext_mgr.extensions)
         self.assertTrue('THIRD' not in ext_mgr.extensions)
+
+    def test_admin_extensions(self):
+        self.flags(allow_admin_api=True)
+        app = v2.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app)
+        ext_mgr = ext_midware.ext_mgr
+        ext_mgr.register(AdminExtension())
+        self.assertTrue('FOXNSOX' in ext_mgr.extensions)
+        self.assertTrue('ADMIN' in ext_mgr.extensions)
+
+    def test_admin_extensions_no_admin_api(self):
+        self.flags(allow_admin_api=False)
+        app = v2.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app)
+        ext_mgr = ext_midware.ext_mgr
+        ext_mgr.register(AdminExtension())
+        self.assertTrue('FOXNSOX' in ext_mgr.extensions)
+        self.assertTrue('ADMIN' not in ext_mgr.extensions)
 
 
 class ActionExtensionTest(ExtensionTestCase):

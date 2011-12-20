@@ -41,6 +41,7 @@ class ExtendedStatusTest(test.TestCase):
         self.uuid = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
         self.url = '/v2/openstack/servers/%s' % self.uuid
         fakes.stub_out_nw_api(self.stubs)
+        self.flags(allow_admin_api=True)
         self.stubs.Set(compute.api.API, 'routing_get', fake_compute_get)
 
     def _make_request(self):
@@ -54,8 +55,7 @@ class ExtendedStatusTest(test.TestCase):
         self.assertEqual(server.get('OS-EXT-STS:power_state'), power_state)
         self.assertEqual(server.get('OS-EXT-STS:task_state'), task_state)
 
-    def test_extended_status_with_admin(self):
-        self.flags(allow_admin_api=True)
+    def test_extended_status(self):
         res = self._make_request()
         body = json.loads(res.body)
 
@@ -65,19 +65,7 @@ class ExtendedStatusTest(test.TestCase):
                                 power_state='empowered',
                                 task_state='kayaking')
 
-    def test_extended_status_no_admin(self):
-        self.flags(allow_admin_api=False)
-        res = self._make_request()
-        body = json.loads(res.body)
-
-        self.assertEqual(res.status_int, 200)
-        self.assertServerStates(body['server'],
-                                vm_state=None,
-                                power_state=None,
-                                task_state=None)
-
     def test_extended_status_no_instance_fails(self):
-        self.flags(allow_admin_api=True)
 
         def fake_compute_get(*args, **kwargs):
             raise exception.InstanceNotFound()

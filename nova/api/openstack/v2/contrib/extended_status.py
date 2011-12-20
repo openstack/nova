@@ -14,9 +14,6 @@
 
 """The Extended Status Admin API extension."""
 
-import traceback
-
-import webob
 from webob import exc
 
 from nova.api.openstack.v2 import extensions
@@ -38,6 +35,7 @@ class Extended_status(extensions.ExtensionDescriptor):
     alias = "OS-EXT-STS"
     namespace = "http://docs.openstack.org/ext/extended_status/api/v1.1"
     updated = "2011-11-03T00:00:00+00:00"
+    admin_only = True
 
     def get_request_extensions(self):
         request_extensions = []
@@ -69,6 +67,8 @@ class Extended_status(extensions.ExtensionDescriptor):
                     explanation = _("Server not found.")
                     raise exc.HTTPNotFound(explanation=explanation)
 
+                #TODO(bcwaldon): these attributes should be prefixed with
+                # something specific to this extension
                 for state in ['task_state', 'vm_state', 'power_state']:
                     key = "%s:%s" % (Extended_status.alias, state)
                     server[key] = inst_ref[state]
@@ -87,11 +87,10 @@ class Extended_status(extensions.ExtensionDescriptor):
                 _get_and_extend_all(context, body)
             return res
 
-        if FLAGS.allow_admin_api:
-            req_ext = extensions.RequestExtension('GET',
-                                    '/:(project_id)/servers/:(id)',
-                                    _extended_status_handler)
-            request_extensions.append(req_ext)
+        req_ext = extensions.RequestExtension('GET',
+                                '/:(project_id)/servers/:(id)',
+                                _extended_status_handler)
+        request_extensions.append(req_ext)
 
         return request_extensions
 

@@ -26,7 +26,7 @@ class FoxInSocksController(object):
         return "Try to say this Mr. Knox, sir..."
 
 
-class Foxinsocks(object):
+class Foxinsocks(extensions.ExtensionDescriptor):
     """The Fox In Socks Extension"""
 
     name = "Fox In Socks"

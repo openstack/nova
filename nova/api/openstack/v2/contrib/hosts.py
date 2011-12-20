@@ -19,7 +19,6 @@ import webob.exc
 from xml.dom import minidom
 from xml.parsers import expat
 
-from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.api.openstack.v2 import extensions
@@ -107,15 +106,12 @@ class HostController(object):
             raise webob.exc.HTTPBadRequest(explanation=e.msg)
         return {"host": host, "power_action": result}
 
-    @extensions.admin_only
     def startup(self, req, id):
         return self._host_power_action(req, host=id, action="startup")
 
-    @extensions.admin_only
     def shutdown(self, req, id):
         return self._host_power_action(req, host=id, action="shutdown")
 
-    @extensions.admin_only
     def reboot(self, req, id):
         return self._host_power_action(req, host=id, action="reboot")
 
@@ -179,12 +175,13 @@ class HostDeserializer(wsgi.XMLDeserializer):
 
 
 class Hosts(extensions.ExtensionDescriptor):
-    """Host administration"""
+    """Admin-only host administration"""
 
     name = "Hosts"
     alias = "os-hosts"
     namespace = "http://docs.openstack.org/ext/hosts/api/v1.1"
     updated = "2011-06-29T00:00:00+00:00"
+    admin_only = True
 
     def get_resources(self):
         body_serializers = {
