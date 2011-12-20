@@ -24,7 +24,7 @@ from nova.tests.api.openstack import fakes
 
 
 def fake_get_console_output(self, _context, _instance, tail_length):
-    fixture = [str(i) for i in range(10)]
+    fixture = [str(i) for i in range(5)]
 
     if tail_length is None:
         pass
@@ -60,7 +60,9 @@ class ConsoleOutputExtensionTest(test.TestCase):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
+        output = json.loads(res.body)
         self.assertEqual(res.status_int, 200)
+        self.assertEqual(output, {'output': '0\n1\n2\n3\n4'})
 
     def test_get_console_output_with_tail(self):
         body = {'os-getConsoleOutput': {'length': 3}}
@@ -69,7 +71,9 @@ class ConsoleOutputExtensionTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
+        output = json.loads(res.body)
         self.assertEqual(res.status_int, 200)
+        self.assertEqual(output, {'output': '2\n3\n4'})
 
     def test_get_text_console_no_instance(self):
         self.stubs.Set(compute.API, 'get', fake_get_not_found)

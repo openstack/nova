@@ -54,13 +54,15 @@ class Console_output(extensions.ExtensionDescriptor):
             raise webob.exc.HTTPBadRequest(_('Malformed request body'))
 
         try:
-            return self.compute_api.get_console_output(context,
-                                                       instance,
-                                                       length)
+            output = self.compute_api.get_console_output(context,
+                                                         instance,
+                                                         length)
         except exception.ApiError, e:
             raise webob.exc.HTTPBadRequest(explanation=e.message)
         except exception.NotAuthorized, e:
             raise webob.exc.HTTPUnauthorized()
+
+        return {'output': output}
 
     def get_actions(self):
         """Return the actions the extension adds, as required by contract."""
