@@ -751,6 +751,23 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stubout_get_this_vm_uuid(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
 
+    def test_resize_xenserver_6(self):
+        instance = db.instance_create(self.context, self.values)
+        called = {'resize': False}
+
+        def fake_vdi_resize(*args, **kwargs):
+            called['resize'] = True
+
+        self.stubs.Set(stubs.FakeSessionForMigrationTests,
+                       "VDI_resize", fake_vdi_resize)
+        stubs.stubout_session(self.stubs,
+                              stubs.FakeSessionForMigrationTests,
+                              product_version=(6, 0, 0))
+        stubs.stubout_loopingcall_start(self.stubs)
+        conn = xenapi_conn.get_connection(False)
+        conn._vmops.resize_instance(instance, '')
+        self.assertEqual(called['resize'], True)
+
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.values)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
