@@ -32,6 +32,7 @@ from nova import log as logging
 from nova.compute import vm_states
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
+from sqlalchemy import and_
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
@@ -774,16 +775,25 @@ def fixed_ip_disassociate(context, address):
 @require_admin_context
 def fixed_ip_disassociate_all_by_timeout(context, host, time):
     session = get_session()
-    inner_q = model_query(context, models.Network.id, session=session,
-                          read_deleted="yes").\
-                      filter_by(host=host).\
+    # NOTE(vish): only update fixed ips that "belong" to this
+    #             host; i.e. the network host or the instance
+    #             host matches. Inner queries necessary because
+    #             join with update doesn't work.
+    host_filter = or_(and_(models.Instance.host == host,
+                           models.Network.multi_host == True),
+                      models.Network.host == host)
+    subq = model_query(context, models.FixedIp.id, session=session,
+                       read_deleted="yes").\
+                      filter(models.FixedIp.updated_at < time).\
+                      filter(models.FixedIp.instance_id != None).\
+                      filter(models.FixedIp.allocated == False).\
+                      join(models.FixedIp.instance).\
+                      join(models.FixedIp.network).\
+                      filter(host_filter).\
                       subquery()
     result = model_query(context, models.FixedIp, session=session,
                          read_deleted="yes").\
-                     filter(models.FixedIp.network_id.in_(inner_q)).\
-                     filter(models.FixedIp.updated_at < time).\
-                     filter(models.FixedIp.instance_id != None).\
-                     filter_by(allocated=False).\
+                     filter(models.FixedIp.id.in_(subq)).\
                      update({'instance_id': None,
                              'leased': False,
                              'updated_at': utils.utcnow()},
@@ -826,7 +836,6 @@ def fixed_ip_get_all_by_instance_host(context, host=None):
     result = model_query(context, models.FixedIp, read_deleted="yes").\
                      options(joinedload('floating_ips')).\
                      join(models.FixedIp.instance).\
-                     filter_by(state=1).\
                      filter_by(host=host).\
                      all()
 
