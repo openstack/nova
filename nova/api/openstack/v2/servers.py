@@ -184,18 +184,6 @@ class Controller(wsgi.Controller):
         # if the original error is okay, just reraise it
         raise error
 
-    def _deserialize_create(self, request):
-        """
-        Deserialize a create request
-
-        Overrides normal behavior in the case of xml content
-        """
-        if request.content_type == "application/xml":
-            deserializer = ServerXMLDeserializer()
-            return deserializer.deserialize(request.body)
-        else:
-            return self._deserialize(request.body, request.get_content_type())
-
     def _validate_server_name(self, value):
         if not isinstance(value, basestring):
             msg = _("Server name is not a string or unicode")
@@ -232,21 +220,6 @@ class Controller(wsgi.Controller):
                 raise exc.HTTPBadRequest(explanation=expl)
             injected_files.append((path, contents))
         return injected_files
-
-    def _get_server_admin_password_old_style(self, server):
-        """ Determine the admin password for a server on creation """
-        return utils.generate_password(FLAGS.password_length)
-
-    def _get_server_admin_password_new_style(self, server):
-        """ Determine the admin password for a server on creation """
-        password = server.get('adminPass')
-
-        if password is None:
-            return utils.generate_password(FLAGS.password_length)
-        if not isinstance(password, basestring) or password == '':
-            msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(explanation=msg)
-        return password
 
     def _get_requested_networks(self, requested_networks):
         """
@@ -861,12 +834,16 @@ class Controller(wsgi.Controller):
         resp.headers['Location'] = image_ref
         return resp
 
-    def get_default_xmlns(self, req):
-        return common.XML_NS_V11
-
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
-        return self._get_server_admin_password_new_style(server)
+        password = server.get('adminPass')
+
+        if password is None:
+            return utils.generate_password(FLAGS.password_length)
+        if not isinstance(password, basestring) or password == '':
+            msg = _("Invalid adminPass")
+            raise exc.HTTPBadRequest(explanation=msg)
+        return password
 
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin"""
