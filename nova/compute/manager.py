@@ -121,6 +121,25 @@ def checks_instance_lock(function):
     return decorated_function
 
 
+def wrap_instance_fault(function):
+    """Wraps a method to catch exceptions related to instances.
+
+    This decorator wraps a method to catch any exceptions having to do with
+    an instance that may get thrown. It then logs an instance fault in the db.
+    """
+    @functools.wraps(function)
+    def decorated_function(self, context, instance_uuid, *args, **kwargs):
+        try:
+            return function(self, context, instance_uuid, *args, **kwargs)
+        except exception.InstanceNotFound:
+            raise
+        except Exception, e:
+            with utils.save_and_reraise_exception():
+                self.add_instance_fault_from_exc(context, instance_uuid, e)
+
+    return decorated_function
+
+
 def _get_image_meta(context, image_ref):
     image_service, image_id = nova.image.get_image_service(context, image_ref)
     return image_service.show(context, image_id)
@@ -359,7 +378,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             with utils.save_and_reraise_exception():
                 self._instance_update(context, instance_uuid,
                                       vm_state=vm_states.ERROR)
-                self.add_instance_fault_from_exc(context, instance_uuid, e)
 
     def _check_instance_not_already_created(self, context, instance):
         """Ensure an instance with the same name is not already present."""
@@ -528,11 +546,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         return {'block_device_mapping': block_device_mapping}
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
     def run_instance(self, context, instance_uuid, **kwargs):
         self._run_instance(context, instance_uuid, **kwargs)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def start_instance(self, context, instance_uuid):
         """Starting an instance on this host."""
         # TODO(yamahata): injected_files isn't supported.
@@ -603,6 +623,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def terminate_instance(self, context, instance_uuid):
         """Terminate an instance on this host."""
         elevated = context.elevated()
@@ -612,6 +633,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def stop_instance(self, context, instance_uuid):
         """Stopping an instance on this host."""
         # FIXME(vish): I've kept the files during stop instance, but
@@ -627,6 +649,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def power_off_instance(self, context, instance_uuid):
         """Power off an instance on this host."""
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
@@ -639,6 +662,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def power_on_instance(self, context, instance_uuid):
         """Power on an instance on this host."""
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
@@ -651,6 +675,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def rebuild_instance(self, context, instance_uuid, **kwargs):
         """Destroy and re-make this instance.
 
@@ -716,6 +741,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def reboot_instance(self, context, instance_uuid, reboot_type="SOFT"):
         """Reboot an instance on this host."""
         LOG.audit(_("Rebooting instance %s"), instance_uuid, context=context)
@@ -747,6 +773,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
     def snapshot_instance(self, context, instance_uuid, image_id,
                           image_type='snapshot', backup_type=None,
                           rotation=None):
@@ -801,6 +828,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         elif image_type == 'backup':
             raise exception.RotationRequiredForBackup()
 
+    @wrap_instance_fault
     def rotate_backups(self, context, instance_uuid, backup_type, rotation):
         """Delete excess backups associated to an instance.
 
@@ -849,6 +877,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def set_admin_password(self, context, instance_uuid, new_pass=None):
         """Set the root/admin password for an instance on this host.
 
@@ -895,18 +924,21 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # Catch all here because this could be anything.
                     LOG.exception(e)
                     if i == max_tries - 1:
-                        # At some point this exception may make it back
-                        # to the API caller, and we don't want to reveal
-                        # too much.  The real exception is logged above
                         self._instance_update(context,
                                               instance_id,
+                                              task_state=None,
                                               vm_state=vm_states.ERROR)
-                        raise exception.Error(_('Internal error'))
+                        # We create a new exception here so that we won't
+                        # potentially reveal password information to the
+                        # API caller.  The real exception is logged above
+                        _msg = _('Error setting admin password')
+                        raise exception.Error(_msg)
                     time.sleep(1)
                     continue
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def inject_file(self, context, instance_uuid, path, file_contents):
         """Write a file to the specified path in an instance on this host."""
         context = context.elevated()
@@ -924,6 +956,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def agent_update(self, context, instance_uuid, url, md5hash):
         """Update agent running on an instance on this host."""
         context = context.elevated()
@@ -941,6 +974,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def rescue_instance(self, context, instance_uuid, **kwargs):
         """
         Rescue an instance on this host.
@@ -967,6 +1001,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def unrescue_instance(self, context, instance_uuid):
         """Rescue an instance on this host."""
         LOG.audit(_('instance %s: unrescuing'), instance_uuid, context=context)
@@ -986,6 +1021,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def confirm_resize(self, context, instance_uuid, migration_id):
         """Destroys the source instance."""
         migration_ref = self.db.migration_get(context, migration_id)
@@ -1004,6 +1040,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def revert_resize(self, context, instance_uuid, migration_id):
         """Destroys the new instance on the destination machine.
 
@@ -1027,6 +1064,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def finish_revert_resize(self, context, instance_uuid, migration_id):
         """Finishes the second half of reverting a resize.
 
@@ -1062,6 +1100,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def prep_resize(self, context, instance_uuid, instance_type_id):
         """Initiates the process of moving a running instance to another host.
 
@@ -1077,8 +1116,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._instance_update(context,
                                   instance_uuid,
                                   vm_state=vm_states.ERROR)
-            msg = _('Migration error: destination same as source!')
-            raise exception.Error(msg)
+            msg = _('destination same as source!')
+            raise exception.MigrationError(msg)
 
         old_instance_type_id = instance_ref['instance_type_id']
         old_instance_type = instance_types.get_instance_type(
@@ -1113,6 +1152,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def resize_instance(self, context, instance_uuid, migration_id):
         """Starts the migration of a running instance to another host."""
         migration_ref = self.db.migration_get(context, migration_id)
@@ -1154,6 +1194,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def finish_resize(self, context, instance_uuid, migration_id, disk_info):
         """Completes the migration process.
 
@@ -1209,6 +1250,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def add_fixed_ip_to_instance(self, context, instance_uuid, network_id):
         """Calls network_api to add new fixed_ip to instance
         then injects the new network info and resets instance networking.
@@ -1228,6 +1270,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def remove_fixed_ip_from_instance(self, context, instance_uuid, address):
         """Calls network_api to remove existing fixed_ip from instance
         by injecting the altered network info and resetting
@@ -1247,6 +1290,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def pause_instance(self, context, instance_uuid):
         """Pause an instance on this host."""
         LOG.audit(_('instance %s: pausing'), instance_uuid, context=context)
@@ -1264,6 +1308,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def unpause_instance(self, context, instance_uuid):
         """Unpause a paused instance on this host."""
         LOG.audit(_('instance %s: unpausing'), instance_uuid, context=context)
@@ -1290,6 +1335,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.set_host_enabled(host, enabled)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
     def get_diagnostics(self, context, instance_uuid):
         """Retrieve diagnostics for an instance on this host."""
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
@@ -1300,6 +1346,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def suspend_instance(self, context, instance_uuid):
         """Suspend the given instance."""
         LOG.audit(_('instance %s: suspending'), instance_uuid, context=context)
@@ -1317,6 +1364,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def resume_instance(self, context, instance_uuid):
         """Resume the given suspended instance."""
         LOG.audit(_('instance %s: resuming'), instance_uuid, context=context)
@@ -1333,6 +1381,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
     def lock_instance(self, context, instance_uuid):
         """Lock the given instance."""
         context = context.elevated()
@@ -1341,6 +1390,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.instance_update(context, instance_uuid, {'locked': True})
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
     def unlock_instance(self, context, instance_uuid):
         """Unlock the given instance."""
         context = context.elevated()
@@ -1349,6 +1399,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.instance_update(context, instance_uuid, {'locked': False})
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
     def get_lock(self, context, instance_uuid):
         """Return the boolean state of the given instance's lock."""
         context = context.elevated()
@@ -1358,6 +1409,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return instance_ref['locked']
 
     @checks_instance_lock
+    @wrap_instance_fault
     def reset_network(self, context, instance_uuid):
         """Reset networking on the given instance."""
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
@@ -1366,6 +1418,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.reset_network(instance)
 
     @checks_instance_lock
+    @wrap_instance_fault
     def inject_network_info(self, context, instance_uuid):
         """Inject network info for the given instance."""
         LOG.debug(_('instance %s: inject network info'), instance_uuid,
@@ -1377,6 +1430,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.inject_network_info(instance, network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
     def get_console_output(self, context, instance_uuid, tail_length=None):
         """Send the console output for the given instance."""
         context = context.elevated()
@@ -1402,6 +1456,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             return '\n'.join(log.split('\n')[-int(length):])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
     def get_ajax_console(self, context, instance_uuid):
         """Return connection information for an ajax console."""
         context = context.elevated()
@@ -1410,6 +1465,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.get_ajax_console(instance_ref)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @wrap_instance_fault
     def get_vnc_console(self, context, instance_uuid):
         """Return connection information for a vnc console."""
         context = context.elevated()
@@ -1435,6 +1491,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def attach_volume(self, context, instance_uuid, volume_id, mountpoint):
         """Attach a volume to an instance."""
         context = context.elevated()
@@ -1492,6 +1549,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
+    @wrap_instance_fault
     def detach_volume(self, context, instance_uuid, volume_id):
         """Detach a volume from an instance."""
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
@@ -1989,16 +2047,5 @@ class ComputeManager(manager.SchedulerDependentManager):
             'code': code,
             'message': fault.__class__.__name__,
             'details': fault.message,
-        }
-        self.db.instance_fault_create(context, values)
-
-    def add_instance_fault(self, context, instance_uuid, code=500,
-                           message='', details=''):
-        """Adds a fault to the database using the specified values."""
-        values = {
-            'instance_uuid': instance_uuid,
-            'code': code,
-            'message': message,
-            'details': details,
         }
         self.db.instance_fault_create(context, values)

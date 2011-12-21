@@ -21,6 +21,7 @@ Tests For Compute
 """
 from copy import copy
 import datetime
+import time
 from webob import exc
 
 import mox
@@ -178,6 +179,46 @@ class BaseTestCase(test.TestCase):
 
 
 class ComputeTestCase(BaseTestCase):
+
+    def test_wrap_instance_fault(self):
+        inst_uuid = "fake_uuid"
+
+        called = {'fault_added': False}
+
+        def did_it_add_fault(_ctxt, _inst_uuid, _e):
+            called['fault_added'] = True
+
+        self.stubs.Set(self.compute, 'add_instance_fault_from_exc',
+                       did_it_add_fault)
+
+        @nova.compute.manager.wrap_instance_fault
+        def failer(self2, context, instance_uuid):
+            raise NotImplementedError()
+
+        self.assertRaises(NotImplementedError, failer,
+                          self.compute, self.context, inst_uuid)
+
+        self.assertTrue(called['fault_added'])
+
+    def test_wrap_instance_fault_no_instance(self):
+        inst_uuid = "fake_uuid"
+
+        called = {'fault_added': False}
+
+        def did_it_add_fault(_ctxt, _inst_uuid, _e):
+            called['fault_added'] = True
+
+        self.stubs.Set(self.compute, 'add_instance_fault_from_exc',
+                       did_it_add_fault)
+
+        @nova.compute.manager.wrap_instance_fault
+        def failer(self2, context, instance_uuid):
+            raise exception.InstanceNotFound()
+
+        self.assertRaises(exception.InstanceNotFound, failer,
+                          self.compute, self.context, inst_uuid)
+
+        self.assertFalse(called['fault_added'])
 
     def test_create_instance_with_img_ref_associates_config_drive(self):
         """Make sure create associates a config drive."""
@@ -471,6 +512,42 @@ class ComputeTestCase(BaseTestCase):
 
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(inst_ref['task_state'], None)
+
+        self.compute.terminate_instance(self.context, inst_ref['uuid'])
+
+    def test_set_admin_password_driver_error(self):
+        """Ensure error is raised admin password set"""
+
+        def fake_sleep(_time):
+            pass
+
+        self.stubs.Set(time, 'sleep', fake_sleep)
+
+        def fake_driver_set_pass(self2, _instance, _pwd):
+            raise exception.NotAuthorized(_('Internal error'))
+
+        self.stubs.Set(nova.virt.fake.FakeConnection, 'set_admin_password',
+                       fake_driver_set_pass)
+
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance_uuid)
+        db.instance_update(self.context, instance_uuid,
+                           {'task_state': task_states.UPDATING_PASSWORD})
+
+        inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(inst_ref['task_state'], task_states.UPDATING_PASSWORD)
+
+        #error raised from the driver should not reveal internal information
+        #so a new error is raised
+        self.assertRaises(exception.Error,
+                          self.compute.set_admin_password,
+                          self.context, instance_uuid)
+
+        inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
         self.assertEqual(inst_ref['task_state'], None)
 
         self.compute.terminate_instance(self.context, inst_ref['uuid'])
@@ -896,6 +973,48 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(context, instance_uuid)
 
+    def test_prep_resize_instance_migration_error(self):
+        """Ensure prep_resize raise a migration error"""
+        self.flags(host="foo", allow_resize_to_same_host=False)
+
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+        context = self.context.elevated()
+
+        self.compute.run_instance(self.context, instance_uuid)
+        db.instance_update(self.context, instance_uuid, {'host': 'foo'})
+
+        self.assertRaises(exception.MigrationError, self.compute.prep_resize,
+                          context, instance_uuid, 1)
+        self.compute.terminate_instance(context, instance_uuid)
+
+    def test_resize_instance_driver_error(self):
+        """Ensure instance status set to Error on resize error"""
+
+        def throw_up(*args, **kwargs):
+            raise Exception()
+
+        self.stubs.Set(self.compute.driver, 'migrate_disk_and_power_off',
+                       throw_up)
+
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+        context = self.context.elevated()
+
+        self.compute.run_instance(self.context, instance_uuid)
+        db.instance_update(self.context, instance_uuid, {'host': 'foo'})
+        self.compute.prep_resize(context, instance_uuid, 1)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_uuid, 'pre-migrating')
+
+        #verify
+        self.assertRaises(Exception, self.compute.resize_instance, context,
+                          instance_uuid, migration_ref['id'])
+        instance = db.instance_get_by_uuid(context, instance_uuid)
+        self.assertEqual(instance['vm_state'], vm_states.ERROR)
+
+        self.compute.terminate_instance(context, instance_uuid)
+
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
         instance = self._create_fake_instance()
@@ -977,7 +1096,7 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
         self.compute.run_instance(self.context, instance['uuid'])
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertRaises(exception.Error, self.compute.prep_resize,
+        self.assertRaises(exception.MigrationError, self.compute.prep_resize,
                 self.context, instance['uuid'], 1)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
@@ -1191,24 +1310,6 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(power_state.NOSTATE, instances[0]['power_state'])
 
     def test_add_instance_fault(self):
-        instance_uuid = str(utils.gen_uuid())
-
-        def fake_db_fault_create(ctxt, values):
-            expected = {
-                'code': 404,
-                'message': 'HTTPNotFound',
-                'details': 'Error Details',
-                'instance_uuid': instance_uuid,
-            }
-            self.assertEquals(expected, values)
-
-        self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
-
-        ctxt = context.get_admin_context()
-        self.compute.add_instance_fault(ctxt, instance_uuid, 404,
-                                        'HTTPNotFound', 'Error Details')
-
-    def test_add_instance_fault_error(self):
         instance_uuid = str(utils.gen_uuid())
 
         def fake_db_fault_create(ctxt, values):
