@@ -233,7 +233,7 @@ class API(base.Base):
         if 'properties' in image and 'vm_mode' in image['properties']:
             vm_mode = image['properties']['vm_mode']
 
-        # If instance doesn't have auto_disk_config overriden by request, use
+        # If instance doesn't have auto_disk_config overridden by request, use
         # whatever the image indicates
         if auto_disk_config is None:
             if ('properties' in image and
@@ -926,7 +926,7 @@ class API(base.Base):
     def get_all(self, context, search_opts=None):
         """Get all instances filtered by one of the given parameters.
 
-        If there is no filter and the context is an admin, it will retreive
+        If there is no filter and the context is an admin, it will retrieve
         all instances in the system.
 
         Deleted instances will be returned by default, unless there is a
