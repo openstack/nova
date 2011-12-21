@@ -25,7 +25,6 @@ import os
 
 from nova import exception
 from nova import flags
-from nova.image import glance as glance_image_service
 import nova.image
 from nova import log as logging
 from nova import utils

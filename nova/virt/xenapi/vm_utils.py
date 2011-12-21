@@ -22,7 +22,6 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 
 import contextlib
 import json
-import math
 import os
 import pickle
 import re
@@ -34,7 +33,6 @@ import uuid
 from decimal import Decimal
 from xml.dom import minidom
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova.image import glance
@@ -43,7 +41,6 @@ from nova import utils
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import disk
-from nova.virt import images
 from nova.virt.xenapi import HelperBase
 from nova.virt.xenapi import volume_utils
 

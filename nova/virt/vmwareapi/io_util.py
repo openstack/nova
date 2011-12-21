@@ -24,8 +24,6 @@ from eventlet import event
 from eventlet import greenthread
 from eventlet.queue import LightQueue
 
-from glance import client
-
 from nova import exception
 from nova import log as logging
 

@@ -25,11 +25,11 @@ semantics of real hypervisor connections.
 
 """
 
+from nova.compute import power_state
 from nova import db
 from nova import exception
 from nova import log as logging
 from nova import utils
-from nova.compute import power_state
 from nova.virt import driver
 
 
