@@ -24,7 +24,6 @@ import uuid
 
 from nova import exception
 from nova import log as logging
-from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',

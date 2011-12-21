@@ -19,9 +19,8 @@
 from nova import context
 from nova import db
 from nova import flags
-from nova import utils
-
 from nova.notifier import api as notifier_api
+from nova import utils
 
 
 FLAGS = flags.FLAGS

@@ -63,10 +63,10 @@ Using the Python WMI library:
 import os
 import time
 
+from nova.compute import power_state
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.compute import power_state
 from nova.virt import driver
 from nova.virt import images
 

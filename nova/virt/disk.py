@@ -30,8 +30,6 @@ import os
 import tempfile
 import time
 
-from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging

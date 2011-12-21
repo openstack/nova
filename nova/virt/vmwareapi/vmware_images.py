@@ -19,7 +19,6 @@ Utility functions for Image transfer.
 """
 
 from nova import exception
-from nova import flags
 from nova.image import glance
 from nova import log as logging
 from nova.virt.vmwareapi import io_util

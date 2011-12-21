@@ -26,12 +26,11 @@ import urllib
 import urllib2
 import uuid
 
-from nova import context as nova_context
+from nova.compute import power_state
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.compute import power_state
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmware_images

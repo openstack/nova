@@ -27,9 +27,6 @@ import urllib
 import urllib2
 import urlparse
 
-from eventlet import event
-from eventlet import greenthread
-
 from glance import client
 
 from nova import flags

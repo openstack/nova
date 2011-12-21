@@ -42,22 +42,20 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 import hashlib
 import functools
 import multiprocessing
-import netaddr
 import os
-import random
-import re
 import shutil
 import sys
 import tempfile
-import time
 import uuid
+
+from eventlet import greenthread
 from xml.dom import minidom
 from xml.etree import ElementTree
 
-from eventlet import greenthread
-from eventlet import tpool
-
+from nova.auth import manager
 from nova import block_device
+from nova.compute import instance_types
+from nova.compute import power_state
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -65,10 +63,6 @@ from nova import flags
 import nova.image
 from nova import log as logging
 from nova import utils
-from nova import vnc
-from nova.auth import manager
-from nova.compute import instance_types
-from nova.compute import power_state
 from nova.virt import disk
 from nova.virt import driver
 from nova.virt import images

@@ -21,10 +21,8 @@ Management class for VM-related functions (spawn, reboot, etc).
 
 import base64
 import json
-import os
 import pickle
 import random
-import subprocess
 import sys
 import time
 import uuid
@@ -38,7 +36,6 @@ from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import ipv6
 from nova import log as logging
 from nova import utils
 from nova.virt import driver

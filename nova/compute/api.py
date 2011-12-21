@@ -20,13 +20,18 @@
 """Handles all requests relating to instances (guest vms)."""
 
 import functools
-import novaclient
 import re
 import time
 
+import novaclient
 import webob.exc
 
 from nova import block_device
+from nova.compute import instance_types
+from nova.compute import power_state
+from nova.compute import task_states
+from nova.compute import vm_states
+from nova.db import base
 from nova import exception
 from nova import flags
 import nova.image
@@ -34,14 +39,9 @@ from nova import log as logging
 from nova import network
 from nova import quota
 from nova import rpc
+from nova.scheduler import api as scheduler_api
 from nova import utils
 from nova import volume
-from nova.compute import instance_types
-from nova.compute import power_state
-from nova.compute import task_states
-from nova.compute import vm_states
-from nova.scheduler import api as scheduler_api
-from nova.db import base
 
 
 LOG = logging.getLogger('nova.compute.api')

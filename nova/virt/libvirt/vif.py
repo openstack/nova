@@ -19,13 +19,13 @@
 
 """VIF drivers for libvirt."""
 
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.network import linux_net
-from nova.virt.libvirt import netutils
 from nova import utils
+from nova.virt.libvirt import netutils
 from nova.virt.vif import VIFDriver
-from nova import exception
 
 LOG = logging.getLogger('nova.virt.libvirt.vif')
 
