@@ -1194,25 +1194,22 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.ACTIVE],
                           task_state=[None, task_states.RESIZE_VERIFY])
     @scheduler_api.reroute_compute("rebuild")
-    def rebuild(self, context, instance, image_href, admin_password,
-                name=None, metadata=None, files_to_inject=None):
-        """Rebuild the given instance with the provided metadata."""
-        name = name or instance["display_name"]
+    def rebuild(self, context, instance, image_href, admin_password, **kwargs):
+        """Rebuild the given instance with the provided attributes."""
 
-        files_to_inject = files_to_inject or []
-        metadata = metadata or {}
-
+        files_to_inject = kwargs.pop('files_to_inject', [])
         self._check_injected_file_quota(context, files_to_inject)
+
+        metadata = kwargs.get('metadata', {})
         self._check_metadata_properties_quota(context, metadata)
 
         self.update(context,
                     instance,
-                    metadata=metadata,
-                    display_name=name,
                     image_ref=image_href,
                     vm_state=vm_states.REBUILDING,
                     task_state=None,
-                    progress=0)
+                    progress=0,
+                    **kwargs)
 
         rebuild_params = {
             "new_pass": admin_password,

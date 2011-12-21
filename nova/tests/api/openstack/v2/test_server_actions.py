@@ -16,6 +16,7 @@
 import base64
 import datetime
 
+import mox
 import stubout
 import webob
 
@@ -69,7 +70,8 @@ def return_server_with_uuid_and_state(vm_state, task_state=None):
 
 
 def stub_instance(id, metadata=None, image_ref="10", flavor_id="1",
-                  name=None, vm_state=None, task_state=None, uuid=None):
+                  name=None, vm_state=None, task_state=None, uuid=None,
+                  access_ip_v4="", access_ip_v6=""):
     if metadata is not None:
         metadata_items = [{'key':k, 'value':v} for k, v in metadata.items()]
     else:
@@ -113,8 +115,8 @@ def stub_instance(id, metadata=None, image_ref="10", flavor_id="1",
         "display_description": "",
         "locked": False,
         "metadata": metadata_items,
-        "access_ip_v4": "",
-        "access_ip_v6": "",
+        "access_ip_v4": access_ip_v4,
+        "access_ip_v6": access_ip_v6,
         "uuid": uuid,
         "virtual_interfaces": [],
         "progress": 0,
@@ -253,7 +255,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.action,
                           req, str(utils.gen_uuid()), body)
 
-    def test_server_rebuild_accepted_minimum(self):
+    def test_rebuild_accepted_minimum(self):
         new_return_server = return_server_with_attributes(image_ref='2')
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
@@ -270,7 +272,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertEqual(len(body['server']['adminPass']),
                          FLAGS.password_length)
 
-    def test_server_rebuild_rejected_when_building(self):
+    def test_rebuild_rejected_when_building(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -286,7 +288,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller.action, req, FAKE_UUID, body)
 
-    def test_server_rebuild_accepted_with_metadata(self):
+    def test_rebuild_accepted_with_metadata(self):
         metadata = {'new': 'metadata'}
 
         new_return_server = return_server_with_attributes(metadata=metadata)
@@ -304,7 +306,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.assertEqual(body['server']['metadata'], metadata)
 
-    def test_server_rebuild_accepted_with_bad_metadata(self):
+    def test_rebuild_accepted_with_bad_metadata(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -316,7 +318,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
 
-    def test_server_rebuild_bad_entity(self):
+    def test_rebuild_bad_entity(self):
         body = {
             "rebuild": {
                 "imageId": 2,
@@ -327,7 +329,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
 
-    def test_server_rebuild_bad_personality(self):
+    def test_rebuild_bad_personality(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -342,7 +344,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
 
-    def test_server_rebuild_personality(self):
+    def test_rebuild_personality(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -358,7 +360,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.assertTrue('personality' not in body['server'])
 
-    def test_server_rebuild_admin_pass(self):
+    def test_rebuild_admin_pass(self):
         new_return_server = return_server_with_attributes(image_ref='2')
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
 
@@ -375,7 +377,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertEqual(body['server']['adminPass'], 'asdf')
 
-    def test_server_rebuild_server_not_found(self):
+    def test_rebuild_server_not_found(self):
         def server_not_found(self, instance_id):
             raise exception.InstanceNotFound(instance_id=instance_id)
         self.stubs.Set(nova.db, 'instance_get', server_not_found)
@@ -389,6 +391,33 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.action, req, FAKE_UUID, body)
+
+    def test_rebuild_accessIP(self):
+        attributes = {
+            'access_ip_v4': '172.19.0.1',
+            'access_ip_v6': 'fe80::1',
+        }
+
+        body = {
+            "rebuild": {
+                "imageRef": "http://localhost/images/2",
+                "accessIPv4": "172.19.0.1",
+                "accessIPv6": "fe80::1",
+            },
+        }
+
+        update = self.mox.CreateMockAnything()
+        self.stubs.Set(nova.compute.API, 'update', update)
+        req = fakes.HTTPRequest.blank(self.url)
+        context = req.environ['nova.context']
+        update(context, mox.IgnoreArg(),
+                image_ref='http://localhost/images/2',
+                vm_state=vm_states.REBUILDING,
+                task_state=None, progress=0, **attributes).AndReturn(None)
+        self.mox.ReplayAll()
+
+        self.controller.action(req, FAKE_UUID, body)
+        self.mox.VerifyAll()
 
     def test_resize_server(self):
 
