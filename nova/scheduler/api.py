@@ -290,6 +290,7 @@ class reroute_compute(object):
         raise RedirectResult(self.unmarshall_result(result))
 
     def __call__(self, f):
+        @functools.wraps(f)
         def wrapped_f(*args, **kwargs):
             collection, context, item_id_or_uuid = \
                             self.get_collection_context_and_id(args, kwargs)
