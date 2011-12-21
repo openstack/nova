@@ -627,14 +627,6 @@ class Controller(wsgi.Controller):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
-    def diagnostics(self, req, id):
-        """Permit Admins to retrieve server diagnostics."""
-        ctxt = req.environ["nova.context"]
-        instance = self._get_server(ctxt, id)
-        return self.compute_api.get_diagnostics(ctxt, instance)
-
     def actions(self, req, id):
         """Permit Admins to retrieve server actions."""
         ctxt = req.environ["nova.context"]

@@ -205,7 +205,6 @@ class ServersControllerTest(test.TestCase):
                        instance_addresses)
         self.stubs.Set(nova.db, 'instance_get_floating_address',
                        instance_addresses)
-        self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_actions)
 
         self.config_drive = None

@@ -114,6 +114,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Quotas",
             "Rescue",
             "SecurityGroups",
+            "ServerDiagnostics",
             "SimpleTenantUsage",
             "VSAs",
             "VirtualInterfaces",

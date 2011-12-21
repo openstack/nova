@@ -138,7 +138,6 @@ class APIRouter(base_wsgi.Router):
         if FLAGS.allow_admin_api:
             LOG.debug(_("Including admin operations in API."))
 
-            server_members['diagnostics'] = 'GET'
             server_members['actions'] = 'GET'
 
             mapper.resource("user", "users",
