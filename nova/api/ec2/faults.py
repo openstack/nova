@@ -15,9 +15,9 @@
 import webob.dec
 import webob.exc
 
-from nova import utils
 from nova import context
 from nova import flags
+from nova import utils
 
 FLAGS = flags.FLAGS
 

@@ -14,7 +14,6 @@
 #    under the License.
 
 import json
-import urlparse
 
 from nova.api.openstack import common
 from nova.api.openstack.v2 import servers
@@ -22,7 +21,6 @@ from nova.api.openstack import xmlutil
 from nova.api.openstack import wsgi
 from nova.compute import api as compute
 from nova import crypto
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging

@@ -37,12 +37,11 @@ import urllib
 import routes
 import webob
 
+import nova.api.openstack.wsgi
 from nova import context
 from nova import exception
-from nova import flags
 from nova import utils
 from nova import wsgi
-import nova.api.openstack.wsgi
 
 
 # Global storage for registering modules.
