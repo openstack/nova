@@ -309,6 +309,7 @@ class VlanNetworkTestCase(test.TestCase):
         db.fixed_ip_associate(mox.IgnoreArg(),
                               mox.IgnoreArg(),
                               mox.IgnoreArg(),
+                              mox.IgnoreArg(),
                               reserved=True).AndReturn('192.168.0.1')
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
@@ -320,6 +321,19 @@ class VlanNetworkTestCase(test.TestCase):
         network = dict(networks[0])
         network['vpn_private_address'] = '192.168.0.2'
         self.network.allocate_fixed_ip(None, 0, network, vpn=True)
+
+    def test_vpn_allocate_fixed_ip_no_network_id(self):
+        network = dict(networks[0])
+        network['vpn_private_address'] = '192.168.0.2'
+        network['id'] = None
+        context_admin = context.RequestContext('testuser', 'testproject',
+                is_admin=True)
+        self.assertRaises(exception.FixedIpNotFoundForNetwork,
+                self.network.allocate_fixed_ip,
+                context_admin,
+                0,
+                network,
+                vpn=True)
 
     def test_allocate_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
