@@ -24,13 +24,10 @@ import json
 import math
 import re
 import time
-import urllib
 
-from lxml import etree
 from webob.dec import wsgify
 import webob.exc
 
-from nova.api.openstack import common
 from nova.api.openstack.v2.views import limits as limits_views
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil

@@ -24,11 +24,11 @@ import datetime
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
 
+from nova.api.ec2.admin import AdminController
+from nova.api.ec2 import ec2utils
+from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import exception
-from nova.api.ec2 import ec2utils
-from nova.api.ec2.admin import AdminController
 
 LOG = logging.getLogger("nova.api.request")
 FLAGS = flags.FLAGS

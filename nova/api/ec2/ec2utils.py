@@ -20,8 +20,8 @@ import re
 
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova import ipv6
+from nova import log as logging
 
 
 FLAGS = flags.FLAGS

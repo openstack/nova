@@ -23,6 +23,7 @@ import base64
 import webob.dec
 import webob.exc
 
+from nova.api.ec2 import ec2utils
 from nova import block_device
 from nova import compute
 from nova import context
@@ -33,7 +34,6 @@ from nova import log as logging
 from nova import network
 from nova import volume
 from nova import wsgi
-from nova.api.ec2 import ec2utils
 
 
 LOG = logging.getLogger('nova.api.metadata')

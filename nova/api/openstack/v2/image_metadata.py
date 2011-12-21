@@ -22,7 +22,6 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova import flags
 from nova import image
-from nova import utils
 
 
 FLAGS = flags.FLAGS

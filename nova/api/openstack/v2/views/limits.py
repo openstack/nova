@@ -17,7 +17,6 @@
 
 import datetime
 
-from nova.api.openstack import common
 from nova import utils
 
 

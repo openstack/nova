@@ -15,10 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
-import webob
 from xml.dom import minidom
 from xml.parsers import expat
+
+from lxml import etree
+import webob
 
 from nova import exception
 from nova import log as logging

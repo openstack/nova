@@ -30,22 +30,21 @@ import tempfile
 import time
 import urllib
 
+from nova.api.ec2 import ec2utils
+from nova.compute import instance_types
 from nova import block_device
 from nova import compute
-
+from nova.compute import vm_states
 from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova.image import s3
 from nova import log as logging
 from nova import network
 from nova import rpc
 from nova import utils
 from nova import volume
-from nova.api.ec2 import ec2utils
-from nova.compute import instance_types
-from nova.compute import vm_states
-from nova.image import s3
 
 
 FLAGS = flags.FLAGS
