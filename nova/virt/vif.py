@@ -20,11 +20,15 @@
 
 class VIFDriver(object):
     """Abstract class that defines generic interfaces for all VIF drivers."""
+    def __init__(self, **kwargs):
+        # NOTE(jkoelker) __init__ is here so subclasses *could* take
+        #                advantage of any kwargs should they need to
+        pass
 
-    def plug(self, instance, network, mapping):
+    def plug(self, instance, network, mapping, **kwargs):
         """Plug VIF into network."""
         raise NotImplementedError()
 
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, network, mapping, **kwargs):
         """Unplug VIF from network."""
         raise NotImplementedError()
