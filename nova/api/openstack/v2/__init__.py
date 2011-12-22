@@ -105,7 +105,6 @@ class APIRouter(base_wsgi.Router):
         if ext_mgr is None:
             ext_mgr = extensions.ExtensionManager()
 
-        self.server_members = {}
         mapper = ProjectMapper()
         self._setup_routes(mapper)
         self._setup_ext_routes(mapper, ext_mgr)
@@ -133,12 +132,8 @@ class APIRouter(base_wsgi.Router):
             mapper.resource(resource.collection, resource.collection, **kargs)
 
     def _setup_routes(self, mapper):
-        server_members = self.server_members
-        server_members['action'] = 'POST'
         if FLAGS.allow_admin_api:
             LOG.debug(_("Including admin operations in API."))
-
-            server_members['actions'] = 'GET'
 
             mapper.resource("user", "users",
                         controller=users.create_resource(),
@@ -168,7 +163,7 @@ class APIRouter(base_wsgi.Router):
         mapper.resource("server", "servers",
                         controller=servers.create_resource(),
                         collection={'detail': 'GET'},
-                        member=self.server_members)
+                        member={'action': 'POST'})
 
         mapper.resource("ip", "ips", controller=ips.create_resource(),
                         parent_resource=dict(member_name='server',

@@ -559,21 +559,6 @@ class Controller(wsgi.Controller):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    def actions(self, req, id):
-        """Permit Admins to retrieve server actions."""
-        ctxt = req.environ["nova.context"]
-        instance = self._get_server(ctxt, id)
-        items = self.compute_api.get_actions(ctxt, instance)
-        actions = []
-        # TODO(jk0): Do not do pre-serialization here once the default
-        # serializer is updated
-        for item in items:
-            actions.append(dict(
-                created_at=str(item.created_at),
-                action=item.action,
-                error=item.error))
-        return dict(actions=actions)
-
     def _resize(self, req, instance_id, flavor_id):
         """Begin the resize process with given instance/flavor."""
         context = req.environ["nova.context"]
