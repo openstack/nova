@@ -34,7 +34,7 @@ class Rescue(exts.ExtensionDescriptor):
 
     name = "Rescue"
     alias = "os-rescue"
-    namespace = "http://docs.openstack.org/ext/rescue/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/rescue/api/v1.1"
     updated = "2011-08-18T00:00:00+00:00"
 
     def __init__(self, ext_mgr):

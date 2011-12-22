@@ -640,7 +640,7 @@ class Virtual_storage_arrays(extensions.ExtensionDescriptor):
 
     name = "VSAs"
     alias = "zadr-vsa"
-    namespace = "http://docs.openstack.org/ext/vsa/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/vsa/api/v1.1"
     updated = "2011-08-25T00:00:00+00:00"
 
     def get_resources(self):

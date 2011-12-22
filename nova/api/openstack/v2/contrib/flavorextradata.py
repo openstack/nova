@@ -32,5 +32,6 @@ class Flavorextradata(extensions.ExtensionDescriptor):
 
     name = "FlavorExtraData"
     alias = "os-flavor-extra-data"
-    namespace = "http://docs.openstack.org/ext/flavor_extra_data/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/" \
+                "flavor_extra_data/api/v1.1"
     updated = "2011-09-14T00:00:00+00:00"

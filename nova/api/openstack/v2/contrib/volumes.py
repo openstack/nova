@@ -537,7 +537,7 @@ class Volumes(extensions.ExtensionDescriptor):
 
     name = "Volumes"
     alias = "os-volumes"
-    namespace = "http://docs.openstack.org/ext/volumes/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/volumes/api/v1.1"
     updated = "2011-03-25T00:00:00+00:00"
 
     def get_resources(self):

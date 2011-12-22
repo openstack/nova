@@ -32,7 +32,8 @@ class Console_output(extensions.ExtensionDescriptor):
 
     name = "Console_output"
     alias = "os-console-output"
-    namespace = "http://docs.openstack.org/ext/os-console-output/api/v2"
+    namespace = "http://docs.openstack.org/compute/ext/" \
+                "os-console-output/api/v2"
     updated = "2011-12-08T00:00:00+00:00"
 
     def __init__(self, ext_mgr):

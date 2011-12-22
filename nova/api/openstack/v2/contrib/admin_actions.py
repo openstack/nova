@@ -40,7 +40,7 @@ class Admin_actions(extensions.ExtensionDescriptor):
 
     name = "AdminActions"
     alias = "os-admin-actions"
-    namespace = "http://docs.openstack.org/ext/admin-actions/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/admin-actions/api/v1.1"
     updated = "2011-09-20T00:00:00+00:00"
     admin_only = True
 

@@ -256,7 +256,8 @@ class Simple_tenant_usage(extensions.ExtensionDescriptor):
 
     name = "SimpleTenantUsage"
     alias = "os-simple-tenant-usage"
-    namespace = "http://docs.openstack.org/ext/os-simple-tenant-usage/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/" \
+                "os-simple-tenant-usage/api/v1.1"
     updated = "2011-08-19T00:00:00+00:00"
     admin_only = True
 

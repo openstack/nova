@@ -231,7 +231,7 @@ class Volumetypes(extensions.ExtensionDescriptor):
 
     name = "VolumeTypes"
     alias = "os-volume-types"
-    namespace = "http://docs.openstack.org/ext/volume_types/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/volume_types/api/v1.1"
     updated = "2011-08-24T00:00:00+00:00"
 
     def get_resources(self):

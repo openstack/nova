@@ -34,7 +34,7 @@ class Multinic(extensions.ExtensionDescriptor):
 
     name = "Multinic"
     alias = "NMN"
-    namespace = "http://docs.openstack.org/ext/multinic/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/multinic/api/v1.1"
     updated = "2011-06-09T00:00:00+00:00"
 
     def __init__(self, ext_mgr):

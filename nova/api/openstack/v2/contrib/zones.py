@@ -35,7 +35,7 @@ class Zones(extensions.ExtensionDescriptor):
 
     name = "Zones"
     alias = "os-zones"
-    namespace = "http://docs.openstack.org/ext/zones/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/zones/api/v1.1"
     updated = "2011-09-21T00:00:00+00:00"
 
     def get_resources(self):

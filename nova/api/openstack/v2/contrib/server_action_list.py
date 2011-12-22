@@ -48,7 +48,8 @@ class Server_action_list(extensions.ExtensionDescriptor):
 
     name = "ServerActionList"
     alias = "os-server-action-list"
-    namespace = "http://docs.openstack.org/ext/server-actions-list/api/v1.1"
+    namespace = "http://docs.openstack.org/compute/ext/" \
+                "server-actions-list/api/v1.1"
     updated = "2011-12-21T00:00:00+00:00"
     admin_only = True
 
