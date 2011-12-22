@@ -158,7 +158,6 @@ class ServerActionsControllerTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         self.snapshot = fakes.stub_out_compute_api_snapshot(self.stubs)
-        self.backup = fakes.stub_out_compute_api_backup(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
         self.context = context.RequestContext(1, None)
@@ -600,131 +599,6 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller.action, req, FAKE_UUID, body)
-
-    def test_create_backup(self):
-        """The happy path for creating backups"""
-        self.flags(allow_admin_api=True)
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-            },
-        }
-
-        req = fakes.HTTPRequest.blank(self.url)
-        response = self.controller.action(req, FAKE_UUID, body)
-
-        self.assertTrue(response.headers['Location'])
-        server_location = self.backup.extra_props_last_call['instance_ref']
-        expected_server_location = 'http://localhost/v2/servers/' + self.uuid
-        self.assertEqual(expected_server_location, server_location)
-
-    def test_create_backup_admin_api_off(self):
-        """The happy path for creating backups"""
-        self.flags(allow_admin_api=False)
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-            },
-        }
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
-
-    def test_create_backup_with_metadata(self):
-        self.flags(allow_admin_api=True)
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-                'metadata': {'123': 'asdf'},
-            },
-        }
-
-        req = fakes.HTTPRequest.blank(self.url)
-        response = self.controller.action(req, FAKE_UUID, body)
-
-        self.assertTrue(response.headers['Location'])
-
-    def test_create_backup_with_too_much_metadata(self):
-        self.flags(allow_admin_api=True)
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-                'metadata': {'123': 'asdf'},
-            },
-        }
-        for num in range(FLAGS.quota_metadata_items + 1):
-            body['createBackup']['metadata']['foo%i' % num] = "bar"
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.action, req, FAKE_UUID, body)
-
-    def test_create_backup_no_name(self):
-        """Name is required for backups"""
-        self.flags(allow_admin_api=True)
-
-        body = {
-            'createBackup': {
-                'backup_type': 'daily',
-                'rotation': 1,
-            },
-        }
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
-
-    def test_create_backup_no_rotation(self):
-        """Rotation is required for backup requests"""
-        self.flags(allow_admin_api=True)
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-            },
-        }
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
-
-    def test_create_backup_no_backup_type(self):
-        """Backup Type (daily or weekly) is required for backup requests"""
-        self.flags(allow_admin_api=True)
-
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'rotation': 1,
-            },
-        }
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
-
-    def test_create_backup_bad_entity(self):
-        self.flags(allow_admin_api=True)
-
-        body = {'createBackup': 'go'}
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
 
 

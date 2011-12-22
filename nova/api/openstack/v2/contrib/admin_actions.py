@@ -12,11 +12,13 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import os.path
 import traceback
 
 import webob
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack.v2 import extensions
 from nova import compute
 from nova import exception
@@ -30,8 +32,10 @@ LOG = logging.getLogger("nova.api.openstack.v2.contrib.admin_actions")
 
 
 class Admin_actions(extensions.ExtensionDescriptor):
-    """Adds admin-only server actions: pause, unpause, suspend,
-    resume, migrate, resetNetwork, injectNetworkInfo, lock and unlock
+    """Enable admin-only server actions
+
+    Actions include: pause, unpause, suspend, resume, migrate,
+    resetNetwork, injectNetworkInfo, lock, unlock, createBackup
     """
 
     name = "AdminActions"
@@ -173,6 +177,75 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    def _create_backup(self, input_dict, req, instance_id):
+        """Backup a server instance.
+
+        Images now have an `image_type` associated with them, which can be
+        'snapshot' or the backup type, like 'daily' or 'weekly'.
+
+        If the image_type is backup-like, then the rotation factor can be
+        included and that will cause the oldest backups that exceed the
+        rotation factor to be deleted.
+
+        """
+        context = req.environ["nova.context"]
+
+        try:
+            entity = input_dict["createBackup"]
+        except (KeyError, TypeError):
+            raise exc.HTTPBadRequest(_("Malformed request body"))
+
+        try:
+            image_name = entity["name"]
+            backup_type = entity["backup_type"]
+            rotation = entity["rotation"]
+
+        except KeyError as missing_key:
+            msg = _("createBackup entity requires %s attribute") % missing_key
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        except TypeError:
+            msg = _("Malformed createBackup entity")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            rotation = int(rotation)
+        except ValueError:
+            msg = _("createBackup attribute 'rotation' must be an integer")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        # preserve link to server in image properties
+        server_ref = os.path.join(req.application_url, 'servers', instance_id)
+        props = {'instance_ref': server_ref}
+
+        metadata = entity.get('metadata', {})
+        common.check_img_metadata_quota_limit(context, metadata)
+        try:
+            props.update(metadata)
+        except ValueError:
+            msg = _("Invalid metadata")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            instance = self.compute_api.get(context, instance_id)
+        except exception.NotFound:
+            raise exc.HTTPNotFound(_("Instance not found"))
+
+        image = self.compute_api.backup(context,
+                                        instance,
+                                        image_name,
+                                        backup_type,
+                                        rotation,
+                                        extra_properties=props)
+
+        # build location of newly-created image entity
+        image_id = str(image['id'])
+        image_ref = os.path.join(req.application_url, 'images', image_id)
+
+        resp = webob.Response(status_int=202)
+        resp.headers['Location'] = image_ref
+        return resp
+
     def get_actions(self):
         actions = [
             #TODO(bcwaldon): These actions should be prefixed with 'os-'
@@ -181,6 +254,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
             extensions.ActionExtension("servers", "suspend", self._suspend),
             extensions.ActionExtension("servers", "resume", self._resume),
             extensions.ActionExtension("servers", "migrate", self._migrate),
+
+            extensions.ActionExtension("servers",
+                                       "createBackup",
+                                       self._create_backup),
 
             extensions.ActionExtension("servers",
                                        "resetNetwork",

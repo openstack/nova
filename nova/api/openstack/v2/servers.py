@@ -500,12 +500,6 @@ class Controller(wsgi.Controller):
             'createImage': self._action_create_image,
         }
 
-        if FLAGS.allow_admin_api:
-            admin_actions = {
-                'createBackup': self._action_create_backup,
-            }
-            _actions.update(admin_actions)
-
         for key in body:
             if key in _actions:
                 return _actions[key](body, req, id)
@@ -515,68 +509,6 @@ class Controller(wsgi.Controller):
 
         msg = _("Invalid request body")
         raise exc.HTTPBadRequest(explanation=msg)
-
-    def _action_create_backup(self, input_dict, req, instance_id):
-        """Backup a server instance.
-
-        Images now have an `image_type` associated with them, which can be
-        'snapshot' or the backup type, like 'daily' or 'weekly'.
-
-        If the image_type is backup-like, then the rotation factor can be
-        included and that will cause the oldest backups that exceed the
-        rotation factor to be deleted.
-
-        """
-        context = req.environ["nova.context"]
-        entity = input_dict["createBackup"]
-
-        try:
-            image_name = entity["name"]
-            backup_type = entity["backup_type"]
-            rotation = entity["rotation"]
-
-        except KeyError as missing_key:
-            msg = _("createBackup entity requires %s attribute") % missing_key
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        except TypeError:
-            msg = _("Malformed createBackup entity")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        try:
-            rotation = int(rotation)
-        except ValueError:
-            msg = _("createBackup attribute 'rotation' must be an integer")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        # preserve link to server in image properties
-        server_ref = os.path.join(req.application_url, 'servers', instance_id)
-        props = {'instance_ref': server_ref}
-
-        metadata = entity.get('metadata', {})
-        common.check_img_metadata_quota_limit(context, metadata)
-        try:
-            props.update(metadata)
-        except ValueError:
-            msg = _("Invalid metadata")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        instance = self._get_server(context, instance_id)
-
-        image = self.compute_api.backup(context,
-                                        instance,
-                                        image_name,
-                                        backup_type,
-                                        rotation,
-                                        extra_properties=props)
-
-        # build location of newly-created image entity
-        image_id = str(image['id'])
-        image_ref = os.path.join(req.application_url, 'images', image_id)
-
-        resp = webob.Response(status_int=202)
-        resp.headers['Location'] = image_ref
-        return resp
 
     def _action_confirm_resize(self, input_dict, req, id):
         context = req.environ['nova.context']
@@ -1021,7 +953,6 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
         action_deserializer = {
             'createImage': self._action_create_image,
-            'createBackup': self._action_create_backup,
             'changePassword': self._action_change_password,
             'reboot': self._action_reboot,
             'rebuild': self._action_rebuild,
@@ -1036,10 +967,6 @@ class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
     def _action_create_image(self, node):
         return self._deserialize_image_action(node, ('name',))
-
-    def _action_create_backup(self, node):
-        attributes = ('name', 'backup_type', 'rotation')
-        return self._deserialize_image_action(node, attributes)
 
     def _action_change_password(self, node):
         if not node.hasAttribute("adminPass"):
