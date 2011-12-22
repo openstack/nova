@@ -42,7 +42,7 @@ class Server_diagnostics(extensions.ExtensionDescriptor):
     alias = "os-server-diagnostics"
     namespace = "http://docs.openstack.org/ext/server-diagnostics/api/v1.1"
     updated = "2011-12-21T00:00:00+00:00"
-    admin_only = False
+    admin_only = True
 
     def get_resources(self):
         parent_def = {'member_name': 'server', 'collection_name': 'servers'}
