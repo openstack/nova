@@ -26,7 +26,7 @@ import shutil
 from nova import exception
 from nova import flags
 from nova import utils
-from nova.virt import disk
+from nova.virt.disk import api as disk
 from nova.virt import images
 
 FLAGS = flags.FLAGS

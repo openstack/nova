@@ -36,7 +36,7 @@ from nova import utils
 from nova.api.ec2 import cloud
 from nova.compute import power_state
 from nova.compute import vm_states
-from nova.virt import disk
+from nova.virt.disk import api as disk
 from nova.virt import images
 from nova.virt import driver
 from nova.virt.libvirt import connection

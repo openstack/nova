@@ -19,53 +19,50 @@
 from nova.rootwrap.filters import CommandFilter, DnsmasqFilter
 
 filters = [
-    # nova/virt/disk.py: 'kpartx', '-a', device
-    # nova/virt/disk.py: 'kpartx', '-d', device
+    # nova/virt/disk/mount.py: 'kpartx', '-a', device
+    # nova/virt/disk/mount.py: 'kpartx', '-d', device
     CommandFilter("/sbin/kpartx", "root"),
 
-    # nova/virt/disk.py: 'tune2fs', '-c', 0, '-i', 0, mapped_device
+    # nova/virt/disk/mount.py: 'tune2fs', '-c', 0, '-i', 0, mapped_device
     # nova/virt/xenapi/vm_utils.py: "tune2fs", "-O ^has_journal", part_path
     # nova/virt/xenapi/vm_utils.py: "tune2fs", "-j", partition_path
     CommandFilter("/sbin/tune2fs", "root"),
 
-    # nova/virt/disk.py: 'mount', mapped_device, tmpdir
-    # nova/virt/disk.py: 'mount', device, container_dir
-    # nova/virt/disk.py: 'mount'
+    # nova/virt/disk/mount.py: 'mount', mapped_device, mount_dir
     # nova/virt/xenapi/vm_utils.py: 'mount', '-t', 'ext2,ext3,ext4,reiserfs'..
     CommandFilter("/bin/mount", "root"),
 
-    # nova/virt/disk.py: 'umount', mapped_device
-    # nova/virt/disk.py: 'umount', container_dir
+    # nova/virt/disk/mount.py: 'umount', mapped_device
     # nova/virt/xenapi/vm_utils.py: 'umount', dev_path
     CommandFilter("/bin/umount", "root"),
 
-    # nova/virt/disk.py: 'qemu-nbd', '-c', device, image
-    # nova/virt/disk.py: 'qemu-nbd', '-d', device
+    # nova/virt/disk/nbd.py: 'qemu-nbd', '-c', device, image
+    # nova/virt/disk/nbd.py: 'qemu-nbd', '-d', device
     CommandFilter("/usr/bin/qemu-nbd", "root"),
 
-    # nova/virt/disk.py: 'losetup', '--find', '--show', image
-    # nova/virt/disk.py: 'losetup', '--detach', device
+    # nova/virt/disk/loop.py: 'losetup', '--find', '--show', image
+    # nova/virt/disk/loop.py: 'losetup', '--detach', device
     CommandFilter("/sbin/losetup", "root"),
 
-    # nova/virt/disk.py: 'tee', metadata_path
-    # nova/virt/disk.py: 'tee', '-a', keyfile
-    # nova/virt/disk.py: 'tee', netfile
+    # nova/virt/disk/api.py: 'tee', metadata_path
+    # nova/virt/disk/api.py: 'tee', '-a', keyfile
+    # nova/virt/disk/api.py: 'tee', netfile
     CommandFilter("/usr/bin/tee", "root"),
 
-    # nova/virt/disk.py: 'mkdir', '-p', sshdir
-    # nova/virt/disk.py: 'mkdir', '-p', netdir
+    # nova/virt/disk/api.py: 'mkdir', '-p', sshdir
+    # nova/virt/disk/api.py: 'mkdir', '-p', netdir
     CommandFilter("/bin/mkdir", "root"),
 
-    # nova/virt/disk.py: 'chown', 'root', sshdir
-    # nova/virt/disk.py: 'chown', 'root:root', netdir
+    # nova/virt/disk/api.py: 'chown', 'root', sshdir
+    # nova/virt/disk/api.py: 'chown', 'root:root', netdir
     # nova/virt/libvirt/connection.py: 'chown', os.getuid(), console_log
     # nova/virt/libvirt/connection.py: 'chown', os.getuid(), console_log
     # nova/virt/libvirt/connection.py: 'chown', 'root', basepath('disk')
     # nova/virt/xenapi/vm_utils.py: 'chown', os.getuid(), dev_path
     CommandFilter("/bin/chown", "root"),
 
-    # nova/virt/disk.py: 'chmod', '700', sshdir
-    # nova/virt/disk.py: 'chmod', 755, netdir
+    # nova/virt/disk/api.py: 'chmod', '700', sshdir
+    # nova/virt/disk/api.py: 'chmod', 755, netdir
     CommandFilter("/bin/chmod", "root"),
 
     # nova/virt/libvirt/vif.py: 'ip', 'tuntap', 'add', dev, 'mode', 'tap'
