@@ -59,6 +59,7 @@ from nova.notifier import api as notifier
 from nova import rpc
 from nova import utils
 from nova.virt import driver
+from nova import vnc
 from nova import volume
 
 
@@ -1490,12 +1491,30 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def get_vnc_console(self, context, instance_uuid):
+    def get_vnc_console(self, context, instance_uuid, console_type):
         """Return connection information for a vnc console."""
         context = context.elevated()
         LOG.debug(_("instance %s: getting vnc console"), instance_uuid)
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        return self.driver.get_vnc_console(instance_ref)
+
+        token = str(utils.gen_uuid())
+
+        if console_type == 'novnc':
+            # For essex, novncproxy_base_url must include the full path
+            # including the html file (like http://myhost/vnc_auto.html)
+            access_url = '%s?token=%s' % (FLAGS.novncproxy_base_url, token)
+        elif console_type == 'xvpvnc':
+            access_url = '%s?token=%s' % (FLAGS.xvpvncproxy_base_url, token)
+        else:
+            raise exception.ConsoleTypeInvalid(console_type=console_type)
+
+        # Retrieve connect info from driver, and then decorate with our
+        # access info token
+        connect_info = self.driver.get_vnc_console(instance_ref)
+        connect_info['token'] = token
+        connect_info['access_url'] = access_url
+
+        return connect_info
 
     def _attach_volume_boot(self, context, instance, volume, mountpoint):
         """Attach a volume to an instance at boot time. So actual attach

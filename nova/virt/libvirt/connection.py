@@ -781,10 +781,9 @@ class LibvirtConnection(driver.ComputeDriver):
                     return graphic.getAttribute('port')
 
         port = get_vnc_port_for_instance(instance['name'])
-        token = str(uuid.uuid4())
         host = instance['host']
 
-        return {'token': token, 'host': host, 'port': port}
+        return {'host': host, 'port': port, 'internal_access_path': None}
 
     @staticmethod
     def _cache_image(fn, target, fname, cow=False, *args, **kwargs):

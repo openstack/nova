@@ -15,68 +15,117 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Getting Started with the VNC Proxy
-==================================
 
+Overview
+========
 The VNC Proxy is an OpenStack component that allows users of Nova to access
-their instances through a websocket enabled browser (like Google Chrome).
+their instances through vnc clients.  In essex and beyond, there is support
+for for both libvirt and XenServer using both java and websocket cleints.
 
-A VNC Connection works like so:
+In general, a VNC console Connection works like so:
 
-* User connects over an api and gets a url like http://ip:port/?token=xyz
-* User pastes url in browser
-* Browser connects to VNC Proxy though a websocket enabled client like noVNC
-* VNC Proxy authorizes users token, maps the token to a host and port of an
+* User connects to api and gets an access_url like http://ip:port/?token=xyz
+* User pastes url in browser or as client parameter
+* Browser/Client connects to proxy
+* Proxy authorizes users token, maps the token to a host and port of an
   instance's VNC server
-* VNC Proxy initiates connection to VNC server, and continues proxying until
+* Proxy initiates connection to VNC server, and continues proxying until
   the session ends
 
-
-Configuring the VNC Proxy
--------------------------
-nova-vncproxy requires a websocket enabled html client to work properly.  At
-this time, the only tested client is a slightly modified fork of noVNC, which
-you can at find http://github.com/openstack/noVNC.git
-
-.. todo:: add instruction for installing from package
-
-noVNC must be in the location specified by --vncproxy_wwwroot, which defaults
-to /var/lib/nova/noVNC.  nova-vncproxy will fail to launch until this code
-is properly installed.
-
-By default, nova-vncproxy binds 0.0.0.0:6080.  This can be configured with:
-
-* :option:`--vncproxy_port=[port]`
-* :option:`--vncproxy_host=[host]`
-
-It also binds a separate Flash socket policy listener on 0.0.0.0:843.  This
-can be configured with:
-
-* :option:`--vncproxy_flash_socket_policy_port=[port]`
-* :option:`--vncproxy_flash_socket_policy_host=[host]`
+Note that in general, the vnc proxy performs multiple functions:
+* Bridges between public network (where clients live) and private network
+  (where vncservers live)
+* Mediates token authentication
+* Transparently deals with hypervisor-specific connection details to provide
+  a uniform client experience.
 
 
-Enabling VNC Consoles in Nova
------------------------------
-At the moment, VNC support is supported only when using libvirt.  To enable VNC
-Console, configure the following flags:
+About nova-consoleauth
+----------------------
+Both client proxies leverage a shared service to manage token auth called
+nova-consoleauth.  This service must be running in order for for either proxy
+to work.  Many proxies of either type can be run against a single
+nova-consoleauth service in a cluster configuration.
 
-* :option:`--vnc_console_proxy_url=http://[proxy_host]:[proxy_port]` -
-  proxy_port defaults to 6080.  This url must point to nova-vncproxy
+Getting an Access Url
+---------------------
+Nova provides the ability to create access_urls through the os-consoles extension.
+Support for accessing this url is provided by novaclient:
+
+    # FIXME (sleepsonthefloor) update this branch name once client code merges
+    git clone https://github.com/cloudbuilders/python-novaclient
+    git checkout vnc_redux
+    . openrc # or whatever you use to load standard nova creds
+    nova get-vnc-console [server_id] [xvpvnc|novnc]
+
+
+Accessing VNC Consoles with a Java client
+-----------------------------------------
+To enable support for the OpenStack java vnc client in nova, nova provides the
+nova-xvpvncproxy service, which you should run to enable this feature.
+
+* :option:`--xvpvncproxy_baseurl=[base url for client connections]` -
+  this is the public base url to which clients will connect.  "?token=abc"
+  will be added to this url for the purposes of auth.
+* :option:`--xvpvncproxy_port=[port]` - port to bind (defaults to 6081)
+* :option:`--xvpvncproxy_host=[host]` - host to bind (defaults to 0.0.0.0)
+
+As a client, you will need a special Java client, which is
+a version of TightVNC slightly modified to support our token auth::
+
+    git clone https://github.com/cloudbuilders/nova-xvpvncviewer
+    cd nova-xvpvncviewer
+    make
+
+Then, to create a session, first request an access url using python-novaclient
+and then run the client like so::
+
+    # Retrieve access url
+    nova get-vnc-console [server_id] xvpvnc
+    # Run client
+    java -jar VncViewer.jar [access_url]
+
+
+nova-vncproxy replaced with nova-novncproxy
+-------------------------------------------
+The previous vnc proxy, nova-vncproxy, has been removed from the nova source
+tree and replaced with an improved server that can be found externally at
+http://github.com/cloudbuilders/noVNC.git (in a branch called vnc_redux while
+this patch is in review).
+
+To use this nova-novncproxy:
+    git clone http://github.com/cloudbuilders/noVNC.git
+    git checkout vnc_redux
+    utils/nova-novncproxy --flagfile=[path to flagfile]
+
+The --flagfile param should point to your nova config that includes the rabbit
+server address and credentials.
+
+By default, nova-novncproxy binds 0.0.0.0:6080.  This can be configured with:
+
+* :option:`--novncproxy_baseurl=[base url for client connections]` -
+  this is the public base url to which clients will connect.  "?token=abc"
+  will be added to this url for the purposes of auth.
+* :option:`--novncproxy_port=[port]`
+* :option:`--novncproxy_host=[host]`
+
+
+Accessing a vnc console through a web browser
+---------------------------------------------
+Retrieving an access_url for a web browser is similar to the flow for
+the java client:
+
+    # Retrieve access url
+    nova get-vnc-console [server_id] novnc
+    # Then, paste the url into your web browser
+
+Support for a streamlined flow via dashboard will land in essex.
+
+
+Important Options
+-----------------
 * :option:`--vnc_enabled=[True|False]` - defaults to True. If this flag is
   not set your instances will launch without vnc support.
-
-
-Getting an instance's VNC Console
----------------------------------
-You can access an instance's VNC Console url in the following methods:
-
-* Using the direct api:
-  eg: '``stack --user=admin --project=admin compute get_vnc_console instance_id=1``'
-* Support for Dashboard, and the Openstack API will be forthcoming
-
-
-Accessing VNC Consoles without a web browser
---------------------------------------------
-At the moment, VNC Consoles are only supported through the web browser, but
-more general VNC support is in the works.
+* :option:`--vncserver_host=[instance vncserver host]` - defaults to 127.0.0.1
+  This is the address that vncservers will bind, and should be overridden in
+  production deployments as a private address.  Applies to libvirt only.

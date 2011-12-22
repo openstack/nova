@@ -22,13 +22,15 @@ from nova import flags
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vncproxy_topic', 'vncproxy',
-                   'the topic vnc proxy nodes listen on')
-flags.DEFINE_string('vncproxy_url',
-                   'http://127.0.0.1:6080',
+flags.DEFINE_string('novncproxy_base_url',
+                   'http://127.0.0.1:6080/vnc_auto.html',
                    'location of vnc console proxy, \
-                    in the form "http://127.0.0.1:6080"')
-flags.DEFINE_string('vncserver_host', '0.0.0.0',
+                    in the form "http://127.0.0.1:6080/vnc_auto.html"')
+flags.DEFINE_string('xvpvncproxy_base_url',
+                   'http://127.0.0.1:6081/console',
+                   'location of nova xvp vnc console proxy, \
+                    in the form "http://127.0.0.1:6081/console"')
+flags.DEFINE_string('vncserver_host', '127.0.0.1',
                     'the host interface on which vnc server should listen')
 flags.DEFINE_bool('vnc_enabled', True,
                   'enable vnc related features')

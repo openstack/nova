@@ -679,6 +679,10 @@ class ConsoleNotFoundInPoolForInstance(ConsoleNotFound):
                 "in pool %(pool_id)s could not be found.")
 
 
+class ConsoleTypeInvalid(Invalid):
+    message = _("Invalid console type %(console_type)s ")
+
+
 class NoInstanceTypesFound(NotFound):
     message = _("Zero instance types found.")
 

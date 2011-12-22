@@ -59,6 +59,9 @@ flags.DEFINE_integer('xenapi_running_timeout', 60,
 flags.DEFINE_string('xenapi_vif_driver',
                     'nova.virt.xenapi.vif.XenAPIBridgeDriver',
                     'The XenAPI VIF driver using XenServer Network APIs.')
+flags.DEFINE_string('dom0_address',
+                    '169.254.0.1',
+                    'Ip address of dom0.  Override for multi-host vnc.')
 flags.DEFINE_bool('xenapi_generate_swap',
                   False,
                   'Whether to generate swap (False means fetching it'
@@ -1380,6 +1383,17 @@ class VMOps(object):
         """Return link to instance's ajax console."""
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
+
+    def get_vnc_console(self, instance):
+        """Return connection info for a vnc console."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        session_id = self._session.get_session_id()
+        path = "/console?ref=%s&session_id=%s"\
+                   % (str(vm_ref), session_id)
+
+        # NOTE: XS5.6sp2+ use http over port 80 for xenapi com
+        return {'host': FLAGS.dom0_address, 'port': 80,
+                'internal_access_path': path}
 
     def host_power_action(self, host, action):
         """Reboots or shuts down the host."""

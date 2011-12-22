@@ -338,6 +338,10 @@ class XenAPIConnection(driver.ComputeDriver):
         """Return link to instance's ajax console"""
         return self._vmops.get_ajax_console(instance)
 
+    def get_vnc_console(self, instance):
+        """Return link to instance's ajax console"""
+        return self._vmops.get_vnc_console(instance)
+
     @staticmethod
     def get_host_ip_addr():
         xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
@@ -492,6 +496,11 @@ class XenAPISession(object):
     def get_imported_xenapi(self):
         """Stubout point. This can be replaced with a mock xenapi module."""
         return __import__('XenAPI')
+
+    def get_session_id(self):
+        """Return a string session_id.  Used for vnc consoles."""
+        with self._get_session() as session:
+            return str(session._session)
 
     @contextlib.contextmanager
     def _get_session(self):

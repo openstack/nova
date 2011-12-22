@@ -294,7 +294,7 @@ class _VirtDriverTestCase(test.TestCase):
     def test_get_vnc_console(self):
         instance_ref, network_info = self._get_running_instance()
         vnc_console = self.connection.get_vnc_console(instance_ref)
-        self.assertIn('token', vnc_console)
+        self.assertIn('internal_access_path', vnc_console)
         self.assertIn('host', vnc_console)
         self.assertIn('port', vnc_console)
 

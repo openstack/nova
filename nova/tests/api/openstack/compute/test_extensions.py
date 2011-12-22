@@ -157,6 +157,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "AdminActions",
             "Cloudpipe",
             "Console_output",
+            "Consoles",
             "Createserverext",
             "DeferredDelete",
             "DiskConfig",

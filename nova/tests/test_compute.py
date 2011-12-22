@@ -696,13 +696,38 @@ class ComputeTestCase(BaseTestCase):
         self.assert_(set(['token', 'host', 'port']).issubset(console.keys()))
         self.compute.terminate_instance(self.context, instance['uuid'])
 
-    def test_vnc_console(self):
+    def test_novnc_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
         instance = self._create_fake_instance()
         self.compute.run_instance(self.context, instance['uuid'])
 
-        console = self.compute.get_vnc_console(self.context, instance['uuid'])
+        console = self.compute.get_vnc_console(self.context,
+                                               instance['uuid'],
+                                               'novnc')
         self.assert_(console)
+        self.compute.terminate_instance(self.context, instance['uuid'])
+
+    def test_xvpvnc_vnc_console(self):
+        """Make sure we can a vnc console for an instance."""
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['uuid'])
+
+        console = self.compute.get_vnc_console(self.context,
+                                               instance['uuid'],
+                                               'xvpvnc')
+        self.assert_(console)
+        self.compute.terminate_instance(self.context, instance['uuid'])
+
+    def test_invalid_vnc_console_type(self):
+        """Make sure we can a vnc console for an instance."""
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['uuid'])
+
+        self.assertRaises(exception.ConsoleTypeInvalid,
+                          self.compute.get_vnc_console,
+                          self.context,
+                          instance['uuid'],
+                          'invalid')
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_diagnostics(self):
@@ -2831,16 +2856,20 @@ class ComputeAPITestCase(BaseTestCase):
     def test_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
         def vnc_rpc_call_wrapper(*args, **kwargs):
-            return {'token': 'asdf', 'host': '0.0.0.0', 'port': 8080}
+            return {'token': 'asdf', 'host': '0.0.0.0',
+                    'port': 8080, 'access_url': None,
+                    'internal_access_path': None}
 
         self.stubs.Set(rpc, 'call', vnc_rpc_call_wrapper)
 
         instance = self._create_fake_instance()
-        console = self.compute_api.get_vnc_console(self.context, instance)
+        console = self.compute_api.get_vnc_console(self.context,
+                                                   instance,
+                                                   'novnc')
         self.compute_api.delete(self.context, instance)
 
     def test_ajax_console(self):
-        """Make sure we can a vnc console for an instance."""
+        """Make sure we can an ajax console for an instance."""
         def ajax_rpc_call_wrapper(*args, **kwargs):
             return {'token': 'asdf', 'host': '0.0.0.0', 'port': 8080}
 

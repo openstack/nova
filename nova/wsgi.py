@@ -44,7 +44,8 @@ class Server(object):
 
     default_pool_size = 1000
 
-    def __init__(self, name, app, host=None, port=None, pool_size=None):
+    def __init__(self, name, app, host=None, port=None, pool_size=None,
+                       protocol=eventlet.wsgi.HttpProtocol):
         """Initialize, but do not start, a WSGI server.
 
         :param name: Pretty name for logging.
@@ -62,6 +63,7 @@ class Server(object):
         self._server = None
         self._tcp_server = None
         self._socket = None
+        self._protocol = protocol
         self._pool = eventlet.GreenPool(pool_size or self.default_pool_size)
         self._logger = logging.getLogger("eventlet.wsgi.server")
         self._wsgi_logger = logging.WritableLogger(self._logger)
@@ -74,6 +76,7 @@ class Server(object):
         """
         eventlet.wsgi.server(self._socket,
                              self.app,
+                             protocol=self._protocol,
                              custom_pool=self._pool,
                              log=self._wsgi_logger)
 

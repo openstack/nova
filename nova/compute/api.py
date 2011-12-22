@@ -50,7 +50,7 @@ LOG = logging.getLogger('nova.compute.api')
 
 FLAGS = flags.FLAGS
 flags.DECLARE('enable_zone_routing', 'nova.scheduler.api')
-flags.DECLARE('vncproxy_topic', 'nova.vnc')
+flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
 flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
 
@@ -1571,23 +1571,23 @@ class API(base.Base):
                                          output['token'])}
 
     @wrap_check_policy
-    def get_vnc_console(self, context, instance):
-        """Get a url to a VNC Console."""
-        output = self._call_compute_message('get_vnc_console',
-                                            context,
-                                            instance)
-        rpc.call(context, '%s' % FLAGS.vncproxy_topic,
-                 {'method': 'authorize_vnc_console',
-                  'args': {'token': output['token'],
-                           'host': output['host'],
-                           'port': output['port']}})
+    def get_vnc_console(self, context, instance, console_type):
+        """Get a url to an instance Console."""
+        connect_info = self._call_compute_message('get_vnc_console',
+                                        context,
+                                        instance,
+                                        params={"console_type": console_type})
 
-        # hostignore and portignore are compatibility params for noVNC
-        return {'url': '%s/vnc_auto.html?token=%s&host=%s&port=%s' % (
-                       FLAGS.vncproxy_url,
-                       output['token'],
-                       'hostignore',
-                       'portignore')}
+        rpc.call(context, '%s' % FLAGS.consoleauth_topic,
+                 {'method': 'authorize_console',
+                  'args': {'token': connect_info['token'],
+                           'console_type': console_type,
+                           'host': connect_info['host'],
+                           'port': connect_info['port'],
+                           'internal_access_path':\
+                            connect_info['internal_access_path']}})
+
+        return {'url': connect_info['access_url']}
 
     @wrap_check_policy
     def get_console_output(self, context, instance, tail_length=None):

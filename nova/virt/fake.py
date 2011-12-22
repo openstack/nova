@@ -225,7 +225,7 @@ class FakeConnection(driver.ComputeDriver):
                 'port': 6969}
 
     def get_vnc_console(self, instance):
-        return {'token': 'FAKETOKEN',
+        return {'internal_access_path': 'FAKE',
                 'host': 'fakevncconsole.com',
                 'port': 6969}
 
