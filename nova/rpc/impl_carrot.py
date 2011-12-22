@@ -42,6 +42,7 @@ import greenlet
 from nova import context
 from nova import exception
 from nova import flags
+from nova.rpc import common as rpc_common
 from nova.rpc.common import RemoteError, LOG
 from nova.testing import fake
 
@@ -51,7 +52,7 @@ eventlet.monkey_patch()
 FLAGS = flags.FLAGS
 
 
-class Connection(carrot_connection.BrokerConnection):
+class Connection(carrot_connection.BrokerConnection, rpc_common.Connection):
     """Connection instance object."""
 
     def __init__(self, *args, **kwargs):
@@ -105,7 +106,7 @@ class Connection(carrot_connection.BrokerConnection):
                 # ignore all errors
                 pass
         self._rpc_consumers = []
-        super(Connection, self).close()
+        carrot_connection.BrokerConnection.close(self)
 
     def consume_in_thread(self):
         """Consumer from all queues/consumers in a greenthread"""
