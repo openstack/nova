@@ -44,6 +44,14 @@ filters = [
     # nova/virt/disk/loop.py: 'losetup', '--detach', device
     CommandFilter("/sbin/losetup", "root"),
 
+    # nova/virt/disk/guestfs.py: 'guestmount', '--rw', '-a', image, '-i'
+    # nova/virt/disk/guestfs.py: 'guestmount', '--rw', '-a', image, '-m' dev
+    Commandfilter("/usr/bin/guestmount", "root"),
+
+    # nova/virt/disk/guestfs.py: 'fusermount', 'u', mount_dir
+    Commandfilter("/bin/fusermount", "root"),
+    Commandfilter("/usr/bin/fusermount", "root"),
+
     # nova/virt/disk/api.py: 'tee', metadata_path
     # nova/virt/disk/api.py: 'tee', '-a', keyfile
     # nova/virt/disk/api.py: 'tee', netfile
