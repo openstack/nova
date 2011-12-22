@@ -16,10 +16,10 @@
 
 import base64
 import os
+from xml.dom import minidom
 
 from webob import exc
 import webob
-from xml.dom import minidom
 
 from nova.api.openstack import common
 from nova.api.openstack.v2 import ips
@@ -731,46 +731,68 @@ class Controller(wsgi.Controller):
         return self._resize(req, id, flavor_ref)
 
     def _action_rebuild(self, info, request, instance_id):
+        """Rebuild an instance with the given attributes"""
+        try:
+            body = info['rebuild']
+        except (KeyError, TypeError):
+            raise exc.HTTPBadRequest(_("Invalid request body"))
+
+        try:
+            image_href = body["imageRef"]
+        except (KeyError, TypeError):
+            msg = _("Could not parse imageRef from request.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            password = body['adminPass']
+        except (KeyError, TypeError):
+            password = utils.generate_password(FLAGS.password_length)
+
         context = request.environ['nova.context']
         instance = self._get_server(context, instance_id)
 
+        attr_map = {
+            'personality': 'files_to_inject',
+            'name': 'display_name',
+            'accessIPv4': 'access_ip_v4',
+            'accessIPv6': 'access_ip_v6',
+            'metadata': 'metadata',
+        }
+
+        kwargs = {}
+
+        for request_attribute, instance_attribute in attr_map.items():
+            try:
+                kwargs[instance_attribute] = body[request_attribute]
+            except (KeyError, TypeError):
+                pass
+
+        self._validate_metadata(kwargs.get('metadata', {}))
+
+        if 'files_to_inject' in kwargs:
+            personality = kwargs['files_to_inject']
+            kwargs['files_to_inject'] = self._get_injected_files(personality)
+
         try:
-            image_href = info["rebuild"]["imageRef"]
-        except (KeyError, TypeError):
-            msg = _("Could not parse imageRef from request.")
-            LOG.debug(msg)
-            raise exc.HTTPBadRequest(explanation=msg)
+            self.compute_api.rebuild(context,
+                                     instance,
+                                     image_href,
+                                     password,
+                                     **kwargs)
 
-        personality = info["rebuild"].get("personality", [])
-        injected_files = []
-        if personality:
-            injected_files = self._get_injected_files(personality)
-
-        metadata = info["rebuild"].get("metadata")
-        name = info["rebuild"].get("name")
-
-        if metadata:
-            self._validate_metadata(metadata)
-
-        if 'rebuild' in info and 'adminPass' in info['rebuild']:
-            password = info['rebuild']['adminPass']
-        else:
-            password = utils.generate_password(FLAGS.password_length)
-
-        try:
-            self.compute_api.rebuild(context, instance, image_href,
-                                     password, name=name, metadata=metadata,
-                                     files_to_inject=injected_files)
         except exception.RebuildRequiresActiveInstance:
-            msg = _("Instance %s must be active to rebuild.") % instance_id
+            msg = _("Instance must be active to rebuild.")
             raise exc.HTTPConflict(explanation=msg)
         except exception.InstanceNotFound:
-            msg = _("Instance %s could not be found") % instance_id
+            msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
 
         instance = self._get_server(context, instance_id)
+
         self._add_instance_faults(context, [instance])
         view = self._view_builder.show(request, instance)
+
+        # Add on the adminPass attribute since the view doesn't do it
         view['server']['adminPass'] = password
 
         return view
