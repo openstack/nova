@@ -28,6 +28,7 @@ import webob.exc
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import faults
+from nova.api import validator
 from nova.auth import manager
 from nova import context
 from nova import exception
@@ -340,12 +341,52 @@ class Authorizer(wsgi.Middleware):
         return any(role in context.roles for role in roles)
 
 
+class Validator(wsgi.Middleware):
+
+    def validate_ec2_id(val):
+        if not validator.validate_str()(val):
+            return False
+        try:
+            ec2utils.ec2_id_to_id(val)
+        except exception.InvalidEc2Id:
+            return False
+        return True
+
+    validator.validate_ec2_id = validate_ec2_id
+
+    validator.DEFAULT_VALIDATOR = {
+        'instance_id': validator.validate_ec2_id,
+        'volume_id': validator.validate_ec2_id,
+        'image_id': validator.validate_ec2_id,
+        'attribute': validator.validate_str(),
+        'image_location': validator.validate_image_path,
+        'public_ip': validator.validate_ipv4,
+        'region_name': validator.validate_str(),
+        'group_name': validator.validate_str(max_length=255),
+        'group_description': validator.validate_str(max_length=255),
+        'size': validator.validate_int(),
+        'user_data': validator.validate_user_data
+    }
+
+    def __init__(self, application):
+        super(Validator, self).__init__(application)
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        if validator.validate(req.environ['ec2.request'].args,
+                              validator.DEFAULT_VALIDATOR):
+            return self.application
+        else:
+            raise webob.exc.HTTPBadRequest()
+
+
 class Executor(wsgi.Application):
 
     """Execute an EC2 API request.
 
-    Executes 'ec2.request', passing 'nova.context' (both variables in WSGI
-    environ.)  Returns an XML response, or a 400 upon failure.
+    Executes 'ec2.action' upon 'ec2.controller', passing 'nova.context' and
+    'ec2.action_args' (all variables in WSGI environ.)  Returns an XML
+    response, or a 400 upon failure.
     """
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
