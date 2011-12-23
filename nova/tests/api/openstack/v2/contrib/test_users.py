@@ -15,11 +15,11 @@
 
 from lxml import etree
 
-from nova import test
-from nova import utils
-from nova.api.openstack.v2 import users
+from nova.api.openstack.v2.contrib import users
 from nova.auth.manager import User, Project
+from nova import test
 from nova.tests.api.openstack import fakes
+from nova import utils
 
 
 def fake_init(self):

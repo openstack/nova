@@ -16,6 +16,7 @@
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.v2 import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.auth import manager
@@ -129,11 +130,25 @@ class UserXMLSerializer(xmlutil.XMLTemplateSerializer):
         return UserTemplate()
 
 
-def create_resource():
-    body_serializers = {
-        'application/xml': UserXMLSerializer(),
-    }
+class Users(extensions.ExtensionDescriptor):
+    """Allow admins to acces user information"""
 
-    serializer = wsgi.ResponseSerializer(body_serializers)
+    name = "Users"
+    alias = "os-users"
+    namespace = "http://docs.openstack.org/compute/ext/users/api/v1.1"
+    updated = "2011-08-08T00:00:00+00:00"
+    admin_only = True
 
-    return wsgi.Resource(Controller(), serializer=serializer)
+    def get_resources(self):
+        body_serializers = {
+            'application/xml': UserXMLSerializer(),
+        }
+        serializer = wsgi.ResponseSerializer(body_serializers)
+
+        coll_actions = {'detail': 'GET'}
+        res = extensions.ResourceExtension('users',
+                                           Controller(),
+                                           serializer=serializer,
+                                           collection_actions=coll_actions)
+
+        return [res]
