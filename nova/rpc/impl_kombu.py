@@ -33,6 +33,7 @@ import greenlet
 from nova import context
 from nova import exception
 from nova import flags
+from nova.rpc import common as rpc_common
 from nova.rpc.common import RemoteError, LOG
 
 # Needed for tests
@@ -512,7 +513,7 @@ ConnectionPool = Pool(
         order_as_stack=True)
 
 
-class ConnectionContext(object):
+class ConnectionContext(rpc_common.Connection):
     """The class that is actually returned to the caller of
     create_connection().  This is a essentially a wrapper around
     Connection that supports 'with' and can return a new Connection or
@@ -568,6 +569,12 @@ class ConnectionContext(object):
     def close(self):
         """Caller is done with this connection."""
         self._done()
+
+    def create_consumer(self, topic, proxy, fanout=False):
+        self.connection.create_consumer(topic, proxy, fanout)
+
+    def consume_in_thread(self):
+        self.connection.consume_in_thread()
 
     def __getattr__(self, key):
         """Proxy all other calls to the Connection instance"""
