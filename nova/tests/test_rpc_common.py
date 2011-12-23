@@ -90,6 +90,17 @@ class _BaseRpcTestCase(test.TestCase):
         for i, x in enumerate(result):
             self.assertEqual(value + i, x)
 
+    def test_multicall_three_nones(self):
+        value = 42
+        result = self.rpc.multicall(self.context,
+                              'test',
+                              {"method": "multicall_three_nones",
+                               "args": {"value": value}})
+        for i, x in enumerate(result):
+            self.assertEqual(x, None)
+        # i should have been 0, 1, and finally 2:
+        self.assertEqual(i, 2)
+
     def test_context_passed(self):
         """Makes sure a context is passed through rpc call."""
         value = 42
@@ -176,6 +187,13 @@ class TestReceiver(object):
         context.reply(value)
         context.reply(value + 1)
         context.reply(value + 2)
+        context.reply(ending=True)
+
+    @staticmethod
+    def multicall_three_nones(context, value):
+        yield None
+        yield None
+        yield None
 
     @staticmethod
     def echo_three_times_yield(context, value):
