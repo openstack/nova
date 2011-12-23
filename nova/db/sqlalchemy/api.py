@@ -777,12 +777,12 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     session = get_session()
     # NOTE(vish): only update fixed ips that "belong" to this
     #             host; i.e. the network host or the instance
-    #             host matches. Inner queries necessary because
+    #             host matches. Two queries necessary because
     #             join with update doesn't work.
     host_filter = or_(and_(models.Instance.host == host,
                            models.Network.multi_host == True),
                       models.Network.host == host)
-    subq = model_query(context, models.FixedIp.id, session=session,
+    fixed_ips = model_query(context, models.FixedIp.id, session=session,
                        read_deleted="yes").\
                       filter(models.FixedIp.updated_at < time).\
                       filter(models.FixedIp.instance_id != None).\
@@ -790,10 +790,10 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
                       join(models.FixedIp.instance).\
                       join(models.FixedIp.network).\
                       filter(host_filter).\
-                      subquery()
+                      all()
     result = model_query(context, models.FixedIp, session=session,
                          read_deleted="yes").\
-                     filter(models.FixedIp.id.in_(subq)).\
+                     filter(models.FixedIp.id.in_(fixed_ips)).\
                      update({'instance_id': None,
                              'leased': False,
                              'updated_at': utils.utcnow()},
