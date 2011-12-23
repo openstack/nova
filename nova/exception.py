@@ -50,6 +50,12 @@ def novaclient_converter(f):
 class ProcessExecutionError(IOError):
     def __init__(self, stdout=None, stderr=None, exit_code=None, cmd=None,
                  description=None):
+        self.exit_code = exit_code
+        self.stderr = stderr
+        self.stdout = stdout
+        self.cmd = cmd
+        self.description = description
+
         if description is None:
             description = _('Unexpected error while running command.')
         if exit_code is None:
