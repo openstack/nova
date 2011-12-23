@@ -20,7 +20,7 @@ from lxml import etree
 import webob
 
 from nova import test
-from nova.api.openstack.v2 import accounts
+from nova.api.openstack.v2.contrib import accounts
 from nova.auth.manager import User
 from nova.tests.api.openstack import fakes
 

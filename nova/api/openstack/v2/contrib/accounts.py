@@ -15,6 +15,7 @@
 
 import webob.exc
 
+from nova.api.openstack.v2 import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.auth import manager
@@ -24,7 +25,7 @@ from nova import log as logging
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.api.openstack.v2.accounts')
+LOG = logging.getLogger('nova.api.openstack.v2.contrib.accounts')
 
 
 def _translate_keys(account):
@@ -46,9 +47,6 @@ class Controller(object):
             raise exception.AdminRequired()
 
     def index(self, req):
-        raise webob.exc.HTTPNotImplemented()
-
-    def detail(self, req):
         raise webob.exc.HTTPNotImplemented()
 
     def show(self, req, id):
@@ -95,9 +93,24 @@ class AccountXMLSerializer(xmlutil.XMLTemplateSerializer):
         return AccountTemplate()
 
 
-def create_resource():
-    body_serializers = {
-        'application/xml': AccountXMLSerializer(),
-    }
-    serializer = wsgi.ResponseSerializer(body_serializers)
-    return wsgi.Resource(Controller(), serializer=serializer)
+class Accounts(extensions.ExtensionDescriptor):
+    """Admin-only access to accounts"""
+
+    name = "Accounts"
+    alias = "os-accounts"
+    namespace = "http://docs.openstack.org/compute/ext/accounts/api/v1.1"
+    updated = "2011-12-23T00:00:00+00:00"
+    admin_only = True
+
+    def get_resources(self):
+        body_serializers = {
+            'application/xml': AccountXMLSerializer(),
+        }
+        serializer = wsgi.ResponseSerializer(body_serializers)
+
+        #TODO(bcwaldon): This should be prefixed with 'os-'
+        res = extensions.ResourceExtension('accounts',
+                                           Controller(),
+                                           serializer=serializer)
+
+        return [res]
