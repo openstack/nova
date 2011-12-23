@@ -15,7 +15,6 @@
 
 """The security groups extension."""
 
-import netaddr
 import urllib
 from webob import exc
 import webob
@@ -26,6 +25,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
+from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -270,28 +270,54 @@ class SecurityGroupRulesController(SecurityGroupController):
             # If this fails, it throws an exception. This is what we want.
             try:
                 cidr = urllib.unquote(cidr).decode()
-                netaddr.IPNetwork(cidr)
             except Exception:
                 raise exception.InvalidCidr(cidr=cidr)
+
+            if not utils.is_valid_cidr(cidr):
+                # Raise exception for non-valid address
+                raise exception.InvalidCidr(cidr=cidr)
+
             values['cidr'] = cidr
         else:
             values['cidr'] = '0.0.0.0/0'
 
         if ip_protocol and from_port and to_port:
 
+            ip_protocol = str(ip_protocol)
             try:
                 from_port = int(from_port)
                 to_port = int(to_port)
             except ValueError:
-                raise exception.InvalidPortRange(from_port=from_port,
-                                                 to_port=to_port)
-            ip_protocol = str(ip_protocol)
+                if ip_protocol.upper() == 'ICMP':
+                    raise exception.InvalidInput(reason="Type and"
+                         " Code must be integers for ICMP protocol type")
+                else:
+                    raise exception.InvalidInput(reason="To and From ports "
+                          "must be integers")
+
             if ip_protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
                 raise exception.InvalidIpProtocol(protocol=ip_protocol)
-            if ((min(from_port, to_port) < -1) or
-                       (max(from_port, to_port) > 65535)):
+
+            # Verify that from_port must always be less than
+            # or equal to to_port
+            if from_port > to_port:
                 raise exception.InvalidPortRange(from_port=from_port,
-                                                 to_port=to_port)
+                      to_port=to_port, msg="Former value cannot"
+                                            " be greater than the later")
+
+            # Verify valid TCP, UDP port ranges
+            if (ip_protocol.upper() in ['TCP', 'UDP'] and
+                (from_port < 1 or to_port > 65535)):
+                raise exception.InvalidPortRange(from_port=from_port,
+                      to_port=to_port, msg="Valid TCP ports should"
+                                           " be between 1-65535")
+
+            # Verify ICMP type and code
+            if (ip_protocol.upper() == "ICMP" and
+                (from_port < -1 or to_port > 255)):
+                raise exception.InvalidPortRange(from_port=from_port,
+                      to_port=to_port, msg="For ICMP, the"
+                                           " type:code must be valid")
 
             values['protocol'] = ip_protocol
             values['from_port'] = from_port

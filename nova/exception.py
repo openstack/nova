@@ -210,7 +210,7 @@ class InvalidVolumeType(Invalid):
 
 
 class InvalidPortRange(Invalid):
-    message = _("Invalid port range %(from_port)s:%(to_port)s.")
+    message = _("Invalid port range %(from_port)s:%(to_port)s. %(msg)s")
 
 
 class InvalidIpProtocol(Invalid):

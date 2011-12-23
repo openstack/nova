@@ -23,7 +23,6 @@ datastore.
 """
 
 import base64
-import netaddr
 import os
 import re
 import shutil
@@ -692,22 +691,53 @@ class CloudController(object):
         elif cidr_ip:
             # If this fails, it throws an exception. This is what we want.
             cidr_ip = urllib.unquote(cidr_ip).decode()
-            netaddr.IPNetwork(cidr_ip)
+
+            if not utils.is_valid_cidr(cidr_ip):
+                # Raise exception for non-valid address
+                raise exception.InvalidCidr(cidr=cidr_ip)
+
             values['cidr'] = cidr_ip
         else:
             values['cidr'] = '0.0.0.0/0'
 
         if ip_protocol and from_port and to_port:
-            from_port = int(from_port)
-            to_port = int(to_port)
+
             ip_protocol = str(ip_protocol)
+            try:
+                # Verify integer conversions
+                from_port = int(from_port)
+                to_port = int(to_port)
+            except ValueError:
+                if ip_protocol.upper() == 'ICMP':
+                    raise exception.InvalidInput(reason="Type and"
+                         " Code must be integers for ICMP protocol type")
+                else:
+                    raise exception.InvalidInput(reason="To and From ports "
+                          "must be integers")
 
             if ip_protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
                 raise exception.InvalidIpProtocol(protocol=ip_protocol)
-            if ((min(from_port, to_port) < -1) or
-                (max(from_port, to_port) > 65535)):
+
+            # Verify that from_port must always be less than
+            # or equal to to_port
+            if from_port > to_port:
                 raise exception.InvalidPortRange(from_port=from_port,
-                                                 to_port=to_port)
+                      to_port=to_port, msg="Former value cannot"
+                                            " be greater than the later")
+
+            # Verify valid TCP, UDP port ranges
+            if (ip_protocol.upper() in ['TCP', 'UDP'] and
+                (from_port < 1 or to_port > 65535)):
+                raise exception.InvalidPortRange(from_port=from_port,
+                      to_port=to_port, msg="Valid TCP ports should"
+                                           " be between 1-65535")
+
+            # Verify ICMP type and code
+            if (ip_protocol.upper() == "ICMP" and
+                (from_port < -1 or to_port > 255)):
+                raise exception.InvalidPortRange(from_port=from_port,
+                      to_port=to_port, msg="For ICMP, the"
+                                           " type:code must be valid")
 
             values['protocol'] = ip_protocol
             values['from_port'] = from_port
