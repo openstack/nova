@@ -118,6 +118,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "ServerActionList",
             "ServerDiagnostics",
             "SimpleTenantUsage",
+            "Users",
             "VSAs",
             "VirtualInterfaces",
             "Volumes",
