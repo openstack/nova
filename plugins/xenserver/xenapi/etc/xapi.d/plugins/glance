@@ -315,25 +315,6 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     """
     conn = httplib.HTTPConnection(glance_host, glance_port)
 
-    # NOTE(dprince): We need to resend any existing Glance meta/property
-    # headers so they are preserved in Glance. We obtain them here with a
-    # HEAD request.
-    conn.putrequest('HEAD', '/v1/images/%s' % image_id)
-    if auth_token:
-        conn.putheader('x-auth-token', auth_token)
-    conn.endheaders()
-
-    resp = conn.getresponse()
-    if resp.status != httplib.OK:
-        raise Exception("Unexpected response from Glance %i" % resp.status)
-    headers = {}
-    for header, value in resp.getheaders():
-        if header.lower().startswith("x-image-meta-property-"):
-            headers[header.lower()] = value
-
-    # Toss body so connection state-machine is ready for next request/response
-    resp.read()
-
     # NOTE(sirp): httplib under python2.4 won't accept a file-like object
     # to request
     conn.putrequest('PUT', '/v1/images/%s' % image_id)
@@ -346,23 +327,21 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     #   2. We're currently uploading a vanilla tarball. In order to be OVF/OVA
     #      compliant, we'll need to embed a minimal OVF manifest as the first
     #      file.
-    ovf_headers = {
+
+    # NOTE(dprince): In order to preserve existing Glance properties
+    # we set X-Glance-Registry-Purge-Props on this request.
+    headers = {
         'content-type': 'application/octet-stream',
         'transfer-encoding': 'chunked',
         'x-image-meta-is-public': 'False',
         'x-image-meta-status': 'queued',
         'x-image-meta-disk-format': 'vhd',
-        'x-image-meta-container-format': 'ovf'}
-
-    for key, value in properties.items():
-        header_key = "x-image-meta-property-%s" % key.replace('_', '-')
-        headers[header_key] = str(value)
+        'x-image-meta-container-format': 'ovf',
+        'x-glance-registry-purge-props': 'False'}
 
     # If we have an auth_token, set an x-auth-token header
     if auth_token:
-        ovf_headers['x-auth-token'] = auth_token
-
-    headers.update(ovf_headers)
+        headers['x-auth-token'] = auth_token
 
     for header, value in headers.iteritems():
         conn.putheader(header, value)
