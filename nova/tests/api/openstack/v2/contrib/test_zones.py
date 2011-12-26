@@ -18,7 +18,7 @@ import json
 
 from lxml import etree
 
-from nova.api.openstack.v2 import zones
+from nova.api.openstack.v2.contrib import zones
 from nova.api.openstack import xmlutil
 from nova import crypto
 import nova.db

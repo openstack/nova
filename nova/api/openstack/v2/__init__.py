@@ -34,7 +34,6 @@ from nova.api.openstack.v2 import limits
 from nova.api.openstack.v2 import servers
 from nova.api.openstack.v2 import server_metadata
 from nova.api.openstack.v2 import versions
-from nova.api.openstack.v2 import zones
 from nova.api.openstack import wsgi
 from nova import flags
 from nova import log as logging
@@ -130,15 +129,6 @@ class APIRouter(base_wsgi.Router):
             mapper.resource(resource.collection, resource.collection, **kargs)
 
     def _setup_routes(self, mapper):
-        if FLAGS.allow_admin_api:
-            LOG.debug(_("Including admin operations in API."))
-
-            mapper.resource("zone", "zones",
-                        controller=zones.create_resource(),
-                        collection={'detail': 'GET',
-                                    'info': 'GET',
-                                    'select': 'POST'})
-
         mapper.connect("versions", "/",
                     controller=versions.create_resource(),
                     action='show')
