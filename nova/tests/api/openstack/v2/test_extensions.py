@@ -98,6 +98,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         super(ExtensionControllerTest, self).setUp()
         self.flags(allow_admin_api=True)
         self.ext_list = [
+            "Accounts",
             "AdminActions",
             "Console_output",
             "Createserverext",

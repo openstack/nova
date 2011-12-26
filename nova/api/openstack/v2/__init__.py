@@ -24,7 +24,6 @@ import routes
 import webob.dec
 import webob.exc
 
-from nova.api.openstack.v2 import accounts
 from nova.api.openstack.v2 import consoles
 from nova.api.openstack.v2 import extensions
 from nova.api.openstack.v2 import flavors
@@ -138,10 +137,6 @@ class APIRouter(base_wsgi.Router):
             mapper.resource("user", "users",
                         controller=users.create_resource(),
                         collection={'detail': 'GET'})
-
-            mapper.resource("account", "accounts",
-                            controller=accounts.create_resource(),
-                            collection={'detail': 'GET'})
 
             mapper.resource("zone", "zones",
                         controller=zones.create_resource(),
