@@ -32,7 +32,6 @@ from nova.tests import fake_network
 
 
 FLAGS = flags.FLAGS
-flags.DECLARE('dhcp_domain', 'nova.network.manager')
 
 USER_DATA_STRING = ("This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)

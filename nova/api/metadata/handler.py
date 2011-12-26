@@ -39,6 +39,7 @@ from nova import wsgi
 LOG = logging.getLogger('nova.api.metadata')
 FLAGS = flags.FLAGS
 flags.DECLARE('use_forwarded_for', 'nova.api.auth')
+flags.DECLARE('dhcp_domain', 'nova.network.manager')
 
 _DEFAULT_MAPPINGS = {'ami': 'sda1',
                      'ephemeral0': 'sda2',
