@@ -482,7 +482,7 @@ class VMHelper(HelperBase):
             # 4. Create VBD between instance VM and swap VDI
             volume_utils.VolumeHelper.create_vbd(
                 session, vm_ref, vdi_ref, userdevice, bootable=False)
-        except:
+        except Exception:
             with utils.save_and_reraise_exception():
                 cls.destroy_vdi(session, vdi_ref)
 

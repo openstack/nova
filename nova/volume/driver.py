@@ -870,7 +870,7 @@ class ZadaraBEDriver(ISCSIDriver):
                                                           volume['host'])
         try:
             ret = self._common_be_export(context, volume, iscsi_target)
-        except:
+        except Exception:
             raise exception.ProcessExecutionError
         return ret
 
