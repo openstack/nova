@@ -55,7 +55,7 @@ try:
                 BuildDoc.run(self)
     nova_cmdclass['build_sphinx'] = local_BuildDoc
 
-except:
+except Exception:
     pass
 
 

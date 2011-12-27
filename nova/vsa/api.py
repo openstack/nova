@@ -253,7 +253,7 @@ class API(base.Base):
                                     volume_type=vol_type,
                                     metadata=dict(to_vsa_id=str(vsa_id)),
                                     availability_zone=availability_zone)
-                except:
+                except Exception:
                     self.update_vsa_status(context, vsa_id,
                                            status=VsaState.PARTIAL)
                     raise

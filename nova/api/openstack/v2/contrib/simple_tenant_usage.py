@@ -157,10 +157,10 @@ class SimpleTenantUsageController(object):
             return dtstr
         try:
             return datetime.strptime(dtstr, "%Y-%m-%dT%H:%M:%S")
-        except:
+        except Exception:
             try:
                 return datetime.strptime(dtstr, "%Y-%m-%dT%H:%M:%S.%f")
-            except:
+            except Exception:
                 return datetime.strptime(dtstr, "%Y-%m-%d %H:%M:%S.%f")
 
     def _get_datetime_range(self, req):

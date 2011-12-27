@@ -107,7 +107,7 @@ class _AnsiColorizer(object):
                 except curses.error:
                     curses.setupterm()
                     return curses.tigetnum("colors") > 2
-            except:
+            except Exception:
                 raise
                 # guess false in case of error
                 return False

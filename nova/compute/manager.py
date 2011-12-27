@@ -323,7 +323,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if instance['task_state'] == task_states.DELETING:
                 return True
             return False
-        except:
+        except Exception:
             return True
 
     def _shutdown_instance_even_if_deleted(self, context, instance_uuid):
@@ -362,7 +362,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance = self._spawn(context, instance, image_meta,
                                        network_info, block_device_info,
                                        injected_files, admin_password)
-            except:
+            except Exception:
                 with utils.save_and_reraise_exception():
                     self._deallocate_network(context, instance)
             self._notify_about_instance_usage(instance)
@@ -460,7 +460,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = self.network_api.allocate_for_instance(
                                 context, instance, vpn=is_vpn,
                                 requested_networks=requested_networks)
-        except:
+        except Exception:
             msg = _("Instance %s failed network setup")
             LOG.exception(msg % instance['uuid'])
             raise
@@ -475,7 +475,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             mapping = self._setup_block_device_mapping(context, instance)
             swap, ephemerals, block_device_mapping = mapping
-        except:
+        except Exception:
             msg = _("Instance %s failed block device setup")
             LOG.exception(msg % instance['uuid'])
             raise
@@ -495,7 +495,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self.driver.spawn(context, instance, image_meta,
                               network_info, block_device_info)
-        except:
+        except Exception:
             msg = _("Instance %s failed to spawn")
             LOG.exception(msg % instance['uuid'])
             raise
