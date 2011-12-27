@@ -388,26 +388,39 @@ class CloudController(object):
                 'keyMaterial': data['private_key']}
         # TODO(vish): when context is no longer an object, pass it here
 
-    def import_public_key(self, context, key_name, public_key,
-                         fingerprint=None):
+    def _get_fingerprint(self, public_key):
+        tmpdir = tempfile.mkdtemp()
+        pubfile = os.path.join(tmpdir, 'temp.pub')
+        fh = open(pubfile, 'w')
+        fh.write(public_key)
+        fh.close()
+        try:
+            (out, err) = utils.execute('ssh-keygen', '-l', '-f',
+                                       '%s' % (pubfile))
+            return out.split(' ')[1]
+        except:
+            raise
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def import_key_pair(self, context, key_name, public_key_material,
+                        **kwargs):
         LOG.audit(_("Import key %s"), key_name, context=context)
+        try:
+            db.key_pair_get(context, context.user_id, key_name)
+            raise exception.KeyPairExists(key_name=key_name)
+        except exception.NotFound:
+            pass
+        public_key = base64.b64decode(public_key_material)
+        fingerprint = self._get_fingerprint(public_key)
         key = {}
         key['user_id'] = context.user_id
         key['name'] = key_name
         key['public_key'] = public_key
-        if fingerprint is None:
-            tmpdir = tempfile.mkdtemp()
-            pubfile = os.path.join(tmpdir, 'temp.pub')
-            fh = open(pubfile, 'w')
-            fh.write(public_key)
-            fh.close()
-            (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f',
-                                       '%s' % (pubfile))
-            fingerprint = out.split(' ')[1]
-            shutil.rmtree(tmpdir)
         key['fingerprint'] = fingerprint
         db.key_pair_create(context, key)
-        return True
+        return {'keyName': key_name,
+                'keyFingerprint': fingerprint}
 
     def delete_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Delete key pair %s"), key_name, context=context)

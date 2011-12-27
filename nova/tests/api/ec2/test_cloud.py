@@ -1164,19 +1164,7 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(filter(lambda k: k['keyName'] == 'test1', keys))
         self.assertTrue(filter(lambda k: k['keyName'] == 'test2', keys))
 
-    def test_import_public_key(self):
-        # test when user provides all values
-        result1 = self.cloud.import_public_key(self.context,
-                                               'testimportkey1',
-                                               'mytestpubkey',
-                                               'mytestfprint')
-        self.assertTrue(result1)
-        keydata = db.key_pair_get(self.context,
-                                  self.context.user_id,
-                                  'testimportkey1')
-        self.assertEqual('mytestpubkey', keydata['public_key'])
-        self.assertEqual('mytestfprint', keydata['fingerprint'])
-        # test when user omits fingerprint
+    def test_import_key_pair(self):
         pubkey_path = os.path.join(os.path.dirname(__file__), 'public_key')
         f = open(pubkey_path + '/dummy.pub', 'r')
         dummypub = f.readline().rstrip()
@@ -1184,13 +1172,16 @@ class CloudTestCase(test.TestCase):
         f = open(pubkey_path + '/dummy.fingerprint', 'r')
         dummyfprint = f.readline().rstrip()
         f.close
-        result2 = self.cloud.import_public_key(self.context,
-                                               'testimportkey2',
-                                               dummypub)
-        self.assertTrue(result2)
+        key_name = 'testimportkey'
+        public_key_material = base64.b64encode(dummypub)
+        result = self.cloud.import_key_pair(self.context,
+                                            key_name,
+                                            public_key_material)
+        self.assertEqual(result['keyName'], key_name)
+        self.assertEqual(result['keyFingerprint'], dummyfprint)
         keydata = db.key_pair_get(self.context,
                                   self.context.user_id,
-                                  'testimportkey2')
+                                  key_name)
         self.assertEqual(dummypub, keydata['public_key'])
         self.assertEqual(dummyfprint, keydata['fingerprint'])
 
