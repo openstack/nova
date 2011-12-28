@@ -132,6 +132,10 @@ def cast(context, topic, msg):
         pass
 
 
+def notify(context, topic, msg):
+    pass
+
+
 def fanout_cast(context, topic, msg):
     """Cast to all consumers of a topic"""
     method = msg.get('method')

@@ -392,10 +392,11 @@ class TopicPublisher(Publisher):
 
     exchange_type = 'topic'
 
-    def __init__(self, connection=None, topic='broadcast'):
+    def __init__(self, connection=None, topic='broadcast', durable=None):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
-        self.durable = FLAGS.rabbit_durable_queues
+        self.durable = FLAGS.rabbit_durable_queues \
+                       if durable is None else durable
         super(TopicPublisher, self).__init__(connection=connection)
 
 
@@ -613,6 +614,17 @@ def fanout_cast(context, topic, msg):
     _pack_context(msg, context)
     with ConnectionPool.item() as conn:
         publisher = FanoutPublisher(topic, connection=conn)
+        publisher.send(msg)
+        publisher.close()
+
+
+def notify(context, topic, msg):
+    """Sends a notification event on a topic."""
+    LOG.debug(_('Sending notification on %s...'), topic)
+    _pack_context(msg, context)
+    with ConnectionPool.item() as conn:
+        publisher = TopicPublisher(connection=conn, topic=topic,
+                                   durable=True)
         publisher.send(msg)
         publisher.close()
 

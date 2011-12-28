@@ -425,12 +425,12 @@ class Connection(object):
                 pass
             self.consumer_thread = None
 
-    def publisher_send(self, cls, topic, msg):
+    def publisher_send(self, cls, topic, msg, **kwargs):
         """Send to a publisher based on the publisher class"""
         while True:
             publisher = None
             try:
-                publisher = cls(self.channel, topic)
+                publisher = cls(self.channel, topic, **kwargs)
                 publisher.send(msg)
                 return
             except self.connection.connection_errors, e:
@@ -461,9 +461,9 @@ class Connection(object):
         """Send a 'direct' message"""
         self.publisher_send(DirectPublisher, msg_id, msg)
 
-    def topic_send(self, topic, msg):
+    def topic_send(self, topic, msg, **kwargs):
         """Send a 'topic' message"""
-        self.publisher_send(TopicPublisher, topic, msg)
+        self.publisher_send(TopicPublisher, topic, msg, **kwargs)
 
     def fanout_send(self, topic, msg):
         """Send a 'fanout' message"""
@@ -771,6 +771,14 @@ def fanout_cast(context, topic, msg):
     _pack_context(msg, context)
     with ConnectionContext() as conn:
         conn.fanout_send(topic, msg)
+
+
+def notify(context, topic, msg):
+    """Sends a notification event on a topic."""
+    LOG.debug(_('Sending notification on %s...'), topic)
+    _pack_context(msg, context)
+    with ConnectionContext() as conn:
+        conn.topic_send(topic, msg, durable=True)
 
 
 def msg_reply(msg_id, reply=None, failure=None, ending=False):

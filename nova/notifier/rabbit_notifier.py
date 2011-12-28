@@ -33,4 +33,4 @@ def notify(message):
                            FLAGS.default_notification_level)
     priority = priority.lower()
     topic = '%s.%s' % (FLAGS.notification_topic, priority)
-    rpc.cast(context, topic, message)
+    rpc.notify(context, topic, message)

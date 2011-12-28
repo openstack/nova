@@ -122,6 +122,19 @@ def multicall(context, topic, msg):
     return _get_impl().multicall(context, topic, msg)
 
 
+def notify(context, topic, msg):
+    """Send notification event.
+
+    :param context: Information that identifies the user that has made this
+                    request.
+    :param topic: The topic to send the notification to.
+    :param msg: This is a dict of content of event.
+
+    :returns: None
+    """
+    return _get_impl().notify(context, topic, msg)
+
+
 _RPCIMPL = None
 
 

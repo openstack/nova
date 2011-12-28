@@ -24,6 +24,7 @@ import nova.notifier.api
 from nova.notifier.api import notify
 from nova.notifier import no_op_notifier
 from nova.notifier import rabbit_notifier
+from nova.rpc import impl_kombu
 from nova import test
 
 
@@ -46,8 +47,6 @@ class NotifierTestCase(test.TestCase):
         self.stubs.Set(nova.notifier.no_op_notifier, 'notify',
                 mock_notify)
 
-        class Mock(object):
-            pass
         notify('publisher_id', 'event_type',
                 nova.notifier.api.WARN, dict(a=3))
         self.assertEqual(self.notify_called, True)
@@ -74,28 +73,18 @@ class NotifierTestCase(test.TestCase):
     def test_send_rabbit_notification(self):
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
                 'nova.notifier.rabbit_notifier')
-        self.mock_cast = False
+        self.mock_notify = False
 
-        def mock_cast(cls, *args):
-            self.mock_cast = True
+        def mock_notify(cls, *args):
+            self.mock_notify = True
 
-        class Mock(object):
-            pass
-
-        self.stubs.Set(nova.rpc, 'cast', mock_cast)
+        self.stubs.Set(nova.rpc, 'notify', mock_notify)
         notify('publisher_id', 'event_type',
                 nova.notifier.api.WARN, dict(a=3))
 
-        self.assertEqual(self.mock_cast, True)
+        self.assertEqual(self.mock_notify, True)
 
     def test_invalid_priority(self):
-        def mock_cast(cls, *args):
-            pass
-
-        class Mock(object):
-            pass
-
-        self.stubs.Set(nova.rpc, 'cast', mock_cast)
         self.assertRaises(nova.notifier.api.BadPriorityException,
                 notify, 'publisher_id',
                 'event_type', 'not a priority', dict(a=3))
@@ -108,12 +97,11 @@ class NotifierTestCase(test.TestCase):
 
         self.test_topic = None
 
-        def mock_cast(context, topic, msg):
+        def mock_notify(context, topic, msg):
             self.test_topic = topic
 
-        self.stubs.Set(nova.rpc, 'cast', mock_cast)
-        notify('publisher_id',
-                'event_type', 'DEBUG', dict(a=3))
+        self.stubs.Set(nova.rpc, 'notify', mock_notify)
+        notify('publisher_id', 'event_type', 'DEBUG', dict(a=3))
         self.assertEqual(self.test_topic, 'testnotify.debug')
 
     def test_error_notification(self):
@@ -124,10 +112,10 @@ class NotifierTestCase(test.TestCase):
         LOG.setup_from_flags()
         msgs = []
 
-        def mock_cast(context, topic, data):
+        def mock_notify(context, topic, data):
             msgs.append(data)
 
-        self.stubs.Set(nova.rpc, 'cast', mock_cast)
+        self.stubs.Set(nova.rpc, 'notify', mock_notify)
         LOG.error('foo')
         self.assertEqual(1, len(msgs))
         msg = msgs[0]
@@ -151,7 +139,5 @@ class NotifierTestCase(test.TestCase):
         self.stubs.Set(nova.notifier.no_op_notifier, 'notify',
                 mock_notify)
 
-        class Mock(object):
-            pass
         self.assertEqual(3, example_api(1, 2))
         self.assertEqual(self.notify_called, True)
