@@ -16,6 +16,7 @@ import os
 import shutil
 import tempfile
 
+from nova import exception
 from nova import flags
 
 
@@ -41,7 +42,7 @@ class MiniDNS(object):
             f.close()
 
     def get_zones(self):
-        return ["example.org", "example.com", "example.gov"]
+        return flags.FLAGS.floating_ip_dns_zones
 
     def qualify(self, name, zone):
         if zone:
@@ -52,6 +53,10 @@ class MiniDNS(object):
         return qualified
 
     def create_entry(self, name, address, type, dnszone):
+
+        if self.get_entries_by_name(name, dnszone):
+            raise exception.FloatingIpDNSExists(name=name, zone=dnszone)
+
         outfile = open(self.filename, 'a+')
         outfile.write("%s   %s   %s\n" %
             (address, self.qualify(name, dnszone), type))
@@ -69,6 +74,7 @@ class MiniDNS(object):
             return entry
 
     def delete_entry(self, name, dnszone=""):
+        deleted = False
         infile = open(self.filename, 'r')
         outfile = tempfile.NamedTemporaryFile('w', delete=False)
         for line in infile:
@@ -76,9 +82,13 @@ class MiniDNS(object):
             if ((not entry) or
                 entry['name'] != self.qualify(name, dnszone).lower()):
                 outfile.write(line)
+            else:
+                deleted = True
         infile.close()
         outfile.close()
         shutil.move(outfile.name, self.filename)
+        if not deleted:
+            raise exception.NotFound
 
     def rename_entry(self, address, name, dnszone):
         infile = open(self.filename, 'r')

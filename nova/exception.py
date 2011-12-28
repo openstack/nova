@@ -555,6 +555,10 @@ class FloatingIpNotFound(NotFound):
     message = _("Floating ip not found for id %(id)s.")
 
 
+class FloatingIpDNSExists(Invalid):
+    message = _("The DNS entry %(name)s already exists in zone %(zone)s.")
+
+
 class FloatingIpNotFoundForAddress(FloatingIpNotFound):
     message = _("Floating ip not found for address %(address)s.")
 

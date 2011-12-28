@@ -19,11 +19,13 @@ import mox
 from nova import context
 from nova import db
 from nova import exception
+from nova import flags
 from nova import log as logging
 from nova import rpc
 from nova import test
 from nova import utils
 from nova.network import manager as network_manager
+from nova.network import api as network_api
 from nova.tests import fake_network
 
 
@@ -1123,10 +1125,16 @@ class FloatingIPTestCase(test.TestCase):
     def setUp(self):
         super(FloatingIPTestCase, self).setUp()
         self.network = TestFloatingIPManager()
+        temp = utils.import_object('nova.network.minidns.MiniDNS')
+        self.network.floating_dns_manager = temp
         self.network.db = db
         self.project_id = 'testproject'
         self.context = context.RequestContext('testuser', self.project_id,
             is_admin=False)
+
+    def tearDown(self):
+        super(FloatingIPTestCase, self).tearDown()
+        self.network.floating_dns_manager.delete_dns_file()
 
     def test_double_deallocation(self):
         instance_ref = db.api.instance_create(self.context,
@@ -1138,3 +1146,66 @@ class FloatingIPTestCase(test.TestCase):
                 instance_id=instance_ref['id'])
         self.network.deallocate_for_instance(self.context,
                 instance_id=instance_ref['id'])
+
+    def test_floating_dns_zones(self):
+        zone1 = "example.org"
+        zone2 = "example.com"
+        flags.FLAGS.floating_ip_dns_zones = [zone1, zone2]
+
+        zones = self.network.get_dns_zones(self.context)
+        self.assertEqual(len(zones), 2)
+        self.assertEqual(zones[0], zone1)
+        self.assertEqual(zones[1], zone2)
+
+    def test_floating_dns_create_conflict(self):
+        zone = "example.org"
+        address1 = "10.10.10.11"
+        name1 = "foo"
+        name2 = "bar"
+
+        self.network.add_dns_entry(self.context, address1, name1, "A", zone)
+
+        self.assertRaises(exception.FloatingIpDNSExists,
+                          self.network.add_dns_entry, self.context,
+                          address1, name1, "A", zone)
+
+    def test_floating_create_and_get(self):
+        zone = "example.org"
+        address1 = "10.10.10.11"
+        name1 = "foo"
+        name2 = "bar"
+        entries = self.network.get_dns_entries_by_address(self.context,
+                                                          address1, zone)
+        self.assertFalse(entries)
+
+        self.network.add_dns_entry(self.context, address1, name1, "A", zone)
+        self.network.add_dns_entry(self.context, address1, name2, "A", zone)
+        entries = self.network.get_dns_entries_by_address(self.context,
+                                                          address1, zone)
+        self.assertEquals(len(entries), 2)
+        self.assertEquals(entries[0], name1)
+        self.assertEquals(entries[1], name2)
+
+        entries = self.network.get_dns_entries_by_name(self.context,
+                                                       name1, zone)
+        self.assertEquals(len(entries), 1)
+        self.assertEquals(entries[0], address1)
+
+    def test_floating_dns_delete(self):
+        zone = "example.org"
+        address1 = "10.10.10.11"
+        name1 = "foo"
+        name2 = "bar"
+
+        self.network.add_dns_entry(self.context, address1, name1, "A", zone)
+        self.network.add_dns_entry(self.context, address1, name2, "A", zone)
+        self.network.delete_dns_entry(self.context, name1, zone)
+
+        entries = self.network.get_dns_entries_by_address(self.context,
+                                                          address1, zone)
+        self.assertEquals(len(entries), 1)
+        self.assertEquals(entries[0], name2)
+
+        self.assertRaises(exception.NotFound,
+                          self.network.delete_dns_entry, self.context,
+                          name1, zone)
