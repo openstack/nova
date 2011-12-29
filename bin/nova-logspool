@@ -123,7 +123,7 @@ class LogReader(object):
         mkdir = False
         try:
             os.stat(d)
-        except:
+        except Exception:
             mkdir = True
         if mkdir:
             os.mkdir(d)
@@ -133,7 +133,7 @@ class LogReader(object):
         try:
             os.stat("%s/%s" % (processed_dir, rid))
             rv = True
-        except:
+        except Exception:
             pass
         return rv
 

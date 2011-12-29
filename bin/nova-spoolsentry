@@ -28,7 +28,7 @@ import urllib
 import urllib2
 try:
     import cPickle as pickle
-except:
+except Exception:
     import pickle
 
 
@@ -51,7 +51,7 @@ class SpoolSentry(object):
                 self.send_data(data)
                 destfile = "%s/processed/%s" % (self.spool_dir, fname)
                 shutil.move(sourcefile, destfile)
-            except:
+            except Exception:
                 logging.exception("Unable to upload record %s", fname)
                 raise
 

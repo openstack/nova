@@ -1391,7 +1391,7 @@ class VsaCommands(object):
         if storage is not None:
             try:
                 storage_list = ast.literal_eval(storage)
-            except:
+            except Exception:
                 print _("Invalid string format %s") % storage
                 raise
 
@@ -1580,7 +1580,7 @@ class VsaDriveTypeCommands(object):
         except exception.DBError, e:
             print "DB Error: %s" % e
             sys.exit(2)
-        except:
+        except Exception:
             sys.exit(3)
         else:
             print "%s %s" % (name, verb)
@@ -1740,7 +1740,7 @@ class InstanceTypeCommands(object):
             print "Currently defined instance_type names and flavorids:"
             self.list("--all")
             sys.exit(2)
-        except:
+        except Exception:
             print "Unknown error"
             sys.exit(3)
         else:
@@ -1765,7 +1765,7 @@ class InstanceTypeCommands(object):
         except exception.DBError, e:
             print "DB Error: %s" % e
             sys.exit(2)
-        except:
+        except Exception:
             sys.exit(3)
         else:
             print "%s %s" % (name, verb)
