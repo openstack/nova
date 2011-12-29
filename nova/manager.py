@@ -53,9 +53,9 @@ This module provides Manager, a base class for managers.
 
 """
 
+from nova.db import base
 from nova import flags
 from nova import log as logging
-from nova.db import base
 from nova.scheduler import api
 from nova import version
 

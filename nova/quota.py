@@ -19,7 +19,6 @@
 """Quotas for instances, volumes, and floating ips."""
 
 from nova import db
-from nova import exception
 from nova import flags
 
 

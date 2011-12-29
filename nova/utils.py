@@ -25,7 +25,6 @@ import functools
 import inspect
 import json
 import lockfile
-import netaddr
 import os
 import random
 import re
@@ -43,11 +42,11 @@ from eventlet import event
 from eventlet import greenthread
 from eventlet import semaphore
 from eventlet.green import subprocess
+import netaddr
 
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import version
 
 
 LOG = logging.getLogger("nova.utils")

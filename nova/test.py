@@ -31,13 +31,11 @@ import unittest
 
 import mox
 import nose.plugins.skip
-import nova.image.fake
-import shutil
 import stubout
 
 from nova import flags
+import nova.image.fake
 from nova import log
-from nova import rpc
 from nova import utils
 from nova import service
 from nova.testing.fake import rabbit

@@ -19,19 +19,15 @@
 
 """Utility methods for working with WSGI servers."""
 
-import os
 import sys
-
-from xml.dom import minidom
 
 import eventlet
 import eventlet.wsgi
 import greenlet
+from paste import deploy
 import routes.middleware
 import webob.dec
 import webob.exc
-
-from paste import deploy
 
 from nova import exception
 from nova import flags
