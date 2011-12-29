@@ -41,14 +41,6 @@ LOG = logging.getLogger('nova.api.openstack.v2.servers')
 FLAGS = flags.FLAGS
 
 
-class ConvertedException(exc.WSGIHTTPException):
-    def __init__(self, code, title, explanation):
-        self.code = code
-        self.title = title
-        self.explanation = explanation
-        super(ConvertedException, self).__init__()
-
-
 class Controller(wsgi.Controller):
     """ The Server API base controller class for the OpenStack API """
 

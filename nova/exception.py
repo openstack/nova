@@ -28,10 +28,19 @@ from functools import wraps
 import sys
 
 from novaclient import exceptions as novaclient_exceptions
+import webob.exc
 
 from nova import log as logging
 
 LOG = logging.getLogger('nova.exception')
+
+
+class ConvertedException(webob.exc.WSGIHTTPException):
+    def __init__(self, code=0, title="", explanation=""):
+        self.code = code
+        self.title = title
+        self.explanation = explanation
+        super(ConvertedException, self).__init__()
 
 
 def novaclient_converter(f):
