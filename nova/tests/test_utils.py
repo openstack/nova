@@ -360,6 +360,14 @@ class GenericUtilsTestCase(test.TestCase):
         self.mox.UnsetStubs()
         self.assertEqual(data, fake_contents)
 
+    def test_generate_password(self):
+        password = utils.generate_password()
+        self.assertTrue([c for c in password if c in '0123456789'])
+        self.assertTrue([c for c in password
+                         if c in 'abcdefghijklmnopqrstuvwxyz'])
+        self.assertTrue([c for c in password
+                         if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'])
+
 
 class IsUUIDLikeTestCase(test.TestCase):
     def assertUUIDLike(self, val, expected):
