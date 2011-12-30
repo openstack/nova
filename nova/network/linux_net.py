@@ -51,7 +51,7 @@ flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
 flags.DEFINE_string('routing_source_ip', '$my_ip',
                     'Public IP of network host')
 flags.DEFINE_integer('dhcp_lease_time', 120,
-                     'Lifetime of a DHCP lease')
+                     'Lifetime of a DHCP lease in seconds')
 flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
 flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
@@ -678,7 +678,8 @@ def restart_dhcp(context, dev, network_ref):
            '--pid-file=%s' % _dhcp_file(dev, 'pid'),
            '--listen-address=%s' % network_ref['dhcp_server'],
            '--except-interface=lo',
-           '--dhcp-range=%s,static,120s' % network_ref['dhcp_start'],
+           '--dhcp-range=%s,static,%ss' % (network_ref['dhcp_start'],
+                                           FLAGS.dhcp_lease_time),
            '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(network_ref['cidr'])),
            '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
            '--dhcp-script=%s' % FLAGS.dhcpbridge,
