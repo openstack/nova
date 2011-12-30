@@ -17,10 +17,10 @@
 
 """Policy Engine For Nova"""
 
+from nova.common import policy
 from nova import exception
 from nova import flags
 from nova import utils
-from nova.common import policy
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('policy_file', 'policy.json',
@@ -43,8 +43,8 @@ def init():
     global _POLICY_CACHE
     if not _POLICY_PATH:
         _POLICY_PATH = utils.find_config(FLAGS.policy_file)
-    data = utils.read_cached_file(_POLICY_PATH, _POLICY_CACHE,
-                                  reload_func=_set_brain)
+    utils.read_cached_file(_POLICY_PATH, _POLICY_CACHE,
+                           reload_func=_set_brain)
 
 
 def _set_brain(data):
@@ -74,5 +74,5 @@ def enforce(context, action, target):
     credentials_dict = context.to_dict()
     try:
         policy.enforce(match_list, target_dict, credentials_dict)
-    except policy.NotAllowed:
-        raise exception.PolicyNotAllowed(action=action)
+    except policy.NotAuthorized:
+        raise exception.PolicyNotAuthorized(action=action)

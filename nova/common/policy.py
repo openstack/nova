@@ -22,7 +22,7 @@ import urllib
 import urllib2
 
 
-class NotAllowed(Exception):
+class NotAuthorized(Exception):
     pass
 
 
@@ -91,14 +91,14 @@ def enforce(match_list, target_dict, credentials_dict):
     Credentials dicts contain as much information as we can about the user
     performing the action.
 
-    :raises NotAllowed if the check fails
+    :raises NotAuthorized if the check fails
 
     """
     global _BRAIN
     if not _BRAIN:
         _BRAIN = Brain()
     if not _BRAIN.check(match_list, target_dict, credentials_dict):
-        raise NotAllowed()
+        raise NotAuthorized()
 
 
 class Brain(object):

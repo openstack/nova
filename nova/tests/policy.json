@@ -1,11 +1,70 @@
 {
-    "true" : [],
-    "compute:create_instance" :          [],
-    "compute:attach_network" :  [],
-    "compute:attach_volume" :   [],
-    "compute:list_instances":   [],
-    "compute:get_instance":     [],
-    "network:attach_network" :  [],
-    "volume:create_volume":     [],
-    "volume:attach_volume":     []
+    "compute:create": [],
+    "compute:create:attach_network": [],
+    "compute:create:attach_volume": [],
+
+    "compute:get": [],
+    "compute:get_all" :[],
+
+    "compute:update": [],
+
+    "compute:get_instance_metadata": [],
+    "compute:update_instance_metadata": [],
+    "compute:delete_instance_metadata": [],
+
+    "compute:get_instance_faults": [],
+    "compute:get_actions": [],
+    "compute:get_diagnostics": [],
+
+    "compute:get_lock": [],
+    "compute:lock": [],
+    "compute:unlock": [],
+
+    "compute:get_ajax_console": [],
+    "compute:get_vnc_console": [],
+    "compute:get_console_output": [],
+
+    "compute:associate_floating_ip": [],
+    "compute:reset_network": [],
+    "compute:inject_network_info": [],
+    "compute:add_fixed_ip": [],
+    "compute:remove_fixed_ip": [],
+
+    "compute:attach_volume": [],
+    "compute:detach_volume": [],
+
+    "compute:inject_file": [],
+
+    "compute:set_admin_password": [],
+
+    "compute:rescue": [],
+    "compute:unrescue": [],
+
+    "compute:suspend": [],
+    "compute:resume": [],
+
+    "compute:pause": [],
+    "compute:unpause": [],
+
+    "compute:start": [],
+    "compute:stop": [],
+
+    "compute:resize": [],
+    "compute:confirm_resize": [],
+    "compute:revert_resize": [],
+
+    "compute:rebuild": [],
+
+    "compute:reboot": [],
+
+    "compute:snapshot": [],
+    "compute:backup": [],
+
+    "compute:add_security_group": [],
+    "compute:remove_security_group": [],
+
+    "compute:delete": [],
+    "compute:soft_delete": [],
+    "compute:force_delete": [],
+    "compute:restore": []
 }

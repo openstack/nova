@@ -1,0 +1,73 @@
+{
+    "admin_or_owner":  [["role:admin"], ["project_id:%(project_id)s"]],
+
+
+    "compute:create": [["rule:admin_or_owner"]],
+    "compute:create:attach_network": [["rule:admin_or_owner"]],
+    "compute:create:attach_volume": [["rule:admin_or_owner"]],
+
+    "compute:get": [["rule:admin_or_owner"]],
+    "compute:get_all" :[],
+
+    "compute:update": [["rule:admin_or_owner"]],
+
+    "compute:get_instance_metadata": [["rule:admin_or_owner"]],
+    "compute:update_instance_metadata": [["rule:admin_or_owner"]],
+    "compute:delete_instance_metadata": [["rule:admin_or_owner"]],
+
+    "compute:get_instance_faults": [["rule:admin_or_owner"]],
+    "compute:get_actions": [["rule:admin_or_owner"]],
+    "compute:get_diagnostics": [["rule:admin_or_owner"]],
+
+    "compute:get_lock": [["rule:admin_or_owner"]],
+    "compute:lock": [["rule:admin_or_owner"]],
+    "compute:unlock": [["rule:admin_or_owner"]],
+
+    "compute:get_ajax_console": [["rule:admin_or_owner"]],
+    "compute:get_vnc_console": [["rule:admin_or_owner"]],
+    "compute:get_console_output": [["rule:admin_or_owner"]],
+
+    "compute:associate_floating_ip": [["rule:admin_or_owner"]],
+    "compute:reset_network": [["rule:admin_or_owner"]],
+    "compute:inject_network_info": [["rule:admin_or_owner"]],
+    "compute:add_fixed_ip": [["rule:admin_or_owner"]],
+    "compute:remove_fixed_ip": [["rule:admin_or_owner"]],
+
+    "compute:attach_volume": [["rule:admin_or_owner"]],
+    "compute:detach_volume": [["rule:admin_or_owner"]],
+
+    "compute:inject_file": [["rule:admin_or_owner"]],
+
+    "compute:set_admin_password": [["rule:admin_or_owner"]],
+
+    "compute:rescue": [["rule:admin_or_owner"]],
+    "compute:unrescue": [["rule:admin_or_owner"]],
+
+    "compute:suspend": [["rule:admin_or_owner"]],
+    "compute:resume": [["rule:admin_or_owner"]],
+
+    "compute:pause": [["rule:admin_or_owner"]],
+    "compute:unpause": [["rule:admin_or_owner"]],
+
+    "compute:start": [["rule:admin_or_owner"]],
+    "compute:stop": [["rule:admin_or_owner"]],
+
+    "compute:resize": [["rule:admin_or_owner"]],
+    "compute:confirm_resize": [["rule:admin_or_owner"]],
+    "compute:revert_resize": [["rule:admin_or_owner"]],
+
+    "compute:rebuild": [["rule:admin_or_owner"]],
+
+    "compute:reboot": [["rule:admin_or_owner"]],
+
+    "compute:snapshot": [["rule:admin_or_owner"]],
+    "compute:backup": [["rule:admin_or_owner"]],
+
+    "compute:add_security_group": [["rule:admin_or_owner"]],
+    "compute:remove_security_group": [["rule:admin_or_owner"]],
+
+    "compute:delete": [["rule:admin_or_owner"]],
+    "compute:soft_delete": [["rule:admin_or_owner"]],
+    "compute:force_delete": [["rule:admin_or_owner"]],
+    "compute:restore": [["rule:admin_or_owner"]]
+}

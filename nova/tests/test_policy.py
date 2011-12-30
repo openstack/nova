@@ -53,7 +53,7 @@ class PolicyFileTestCase(test.TestCase):
             policyfile.write("""{"example:test": ["false:false"]}""")
         # NOTE(vish): reset stored policy cache so we don't have to sleep(1)
         policy._POLICY_CACHE = {}
-        self.assertRaises(exception.PolicyNotAllowed, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
                           self.context, action, self.target)
 
 
@@ -89,12 +89,12 @@ class PolicyTestCase(test.TestCase):
 
     def test_enforce_nonexistent_action_throws(self):
         action = "example:noexist"
-        self.assertRaises(exception.PolicyNotAllowed, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
                           self.context, action, self.target)
 
     def test_enforce_bad_action_throws(self):
         action = "example:denied"
-        self.assertRaises(exception.PolicyNotAllowed, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
                           self.context, action, self.target)
 
     def test_enforce_good_action(self):
@@ -118,7 +118,7 @@ class PolicyTestCase(test.TestCase):
         self.stubs.Set(urllib2, 'urlopen', fakeurlopen)
         action = "example:get_http"
         target = {}
-        self.assertRaises(exception.PolicyNotAllowed, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
                           self.context, action, target)
 
     def test_templatized_enforcement(self):
@@ -126,12 +126,12 @@ class PolicyTestCase(test.TestCase):
         target_not_mine = {'project_id': 'another'}
         action = "example:my_file"
         policy.enforce(self.context, action, target_mine)
-        self.assertRaises(exception.PolicyNotAllowed, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
                           self.context, action, target_not_mine)
 
     def test_early_AND_enforcement(self):
         action = "example:early_and_fail"
-        self.assertRaises(exception.PolicyNotAllowed, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
                           self.context, action, self.target)
 
     def test_early_OR_enforcement(self):

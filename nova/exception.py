@@ -203,7 +203,7 @@ class AdminRequired(NotAuthorized):
     message = _("User does not have admin privileges")
 
 
-class PolicyNotAllowed(NotAuthorized):
+class PolicyNotAuthorized(NotAuthorized):
     message = _("Policy Doesn't allow %(action)s to be performed.")
 
 
