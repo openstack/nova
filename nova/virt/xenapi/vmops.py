@@ -1325,6 +1325,7 @@ class VMOps(object):
         except exception.CouldNotFetchMetrics:
             LOG.exception(_("Could not get bandwidth info."),
                           exc_info=sys.exc_info())
+            return {}
         bw = {}
         for uuid, data in metrics.iteritems():
             vm_ref = self._session.call_xenapi("VM.get_by_uuid", uuid)
