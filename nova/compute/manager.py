@@ -1509,14 +1509,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       instance_ref['name'],
                                       mountpoint)
         except Exception:  # pylint: disable=W0702
-            exc = sys.exc_info()
-            # NOTE(vish): The inline callback eats the exception info so we
-            #             log the traceback here and reraise the same
-            #             ecxception below.
-            LOG.exception(_("instance %(instance_uuid)s: attach failed"
-                    " %(mountpoint)s, removing") % locals(), context=context)
-            self.volume_api.terminate_connection(context, volume_id, address)
-            raise exc
+            with utils.save_and_reraise_exception():
+                LOG.exception(_("instance %(instance_uuid)s: attach failed"
+                                " %(mountpoint)s, removing") % locals(),
+                              context=context)
+                self.volume_api.terminate_connection(context, volume_id,
+                                                     address)
 
         self.volume_api.attach(context, volume_id, instance_id, mountpoint)
         values = {
@@ -1749,13 +1747,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                'disk': disk}})
 
         except Exception:
-            exc = sys.exc_info()
-            i_name = instance_ref.name
-            msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
-            LOG.exception(msg % locals())
-            self.rollback_live_migration(context, instance_ref,
-                                         dest, block_migration)
-            raise exc
+            with utils.save_and_reraise_exception():
+                i_name = instance_ref.name
+                msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
+                LOG.exception(msg % locals())
+                self.rollback_live_migration(context, instance_ref, dest,
+                                             block_migration)
 
         # Executing live migration
         # live_migration might raises exceptions, but
