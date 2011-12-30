@@ -278,7 +278,7 @@ class Authorizer(wsgi.Middleware):
                 'CreateKeyPair': ['all'],
                 'DeleteKeyPair': ['all'],
                 'DescribeSecurityGroups': ['all'],
-                'ImportPublicKey': ['all'],
+                'ImportKeyPair': ['all'],
                 'AuthorizeSecurityGroupIngress': ['netadmin'],
                 'RevokeSecurityGroupIngress': ['netadmin'],
                 'CreateSecurityGroup': ['netadmin'],
