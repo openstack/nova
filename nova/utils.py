@@ -213,7 +213,7 @@ def execute(*cmd, **kwargs):
             _returncode = obj.returncode  # pylint: disable=E1101
             if _returncode:
                 LOG.debug(_('Result was %s') % _returncode)
-                if ignore_exit_code == False \
+                if not ignore_exit_code \
                     and _returncode not in check_exit_code:
                     (stdout, stderr) = result
                     raise exception.ProcessExecutionError(

@@ -821,7 +821,7 @@ class ConfigOpts(object):
         :return: False if the opt was already register, True otherwise
         :raises: DuplicateOptError, ArgsAlreadyParsedError
         """
-        if self._args != None:
+        if self._args is not None:
             raise ArgsAlreadyParsedError("cannot register CLI option")
 
         if not self.register_opt(opt, group):

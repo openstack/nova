@@ -130,8 +130,7 @@ class VsaScheduler(simple.SimpleScheduler):
         return filtered_hosts
 
     def _allowed_to_use_host(self, host, selected_hosts, unique):
-        if unique == False or \
-           host not in [item[0] for item in selected_hosts]:
+        if not unique or host not in [item[0] for item in selected_hosts]:
             return True
         else:
             return False

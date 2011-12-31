@@ -102,8 +102,8 @@ def stub_out_db_network_api(stubs):
     networks = [network_fields]
 
     def fake_floating_ip_allocate_address(context, project_id):
-        ips = filter(lambda i: i['fixed_ip_id'] == None \
-                           and i['project_id'] == None,
+        ips = filter(lambda i: i['fixed_ip_id'] is None \
+                           and i['project_id'] is None,
                      floating_ips)
         if not ips:
             raise exception.NoMoreFloatingIps()

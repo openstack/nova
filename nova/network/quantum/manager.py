@@ -339,7 +339,7 @@ class QuantumManager(manager.FlatManager):
             if not port:  # No dhcp server has been started
                 mac_address = self.generate_mac_address()
                 dev = self.driver.plug(network_ref, mac_address,
-                    gateway=(network_ref['gateway'] != None))
+                    gateway=(network_ref['gateway'] is not None))
                 self.driver.initialize_gateway_device(dev, network_ref)
                 LOG.debug("Intializing DHCP for network: %s" %
                     network_ref)

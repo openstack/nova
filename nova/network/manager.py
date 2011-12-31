@@ -148,7 +148,7 @@ class RPCAllocateFixedIP(object):
             if not network['multi_host']:
                 host = network['host']
             # NOTE(vish): if there is no network host, set one
-            if host == None:
+            if host is None:
                 host = rpc.call(context, FLAGS.network_topic,
                                 {'method': 'set_network_host',
                                  'args': {'network_ref': network}})

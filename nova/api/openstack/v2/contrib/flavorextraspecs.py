@@ -37,7 +37,7 @@ class FlavorExtraSpecsController(object):
         return dict(extra_specs=specs_dict)
 
     def _check_body(self, body):
-        if body == None or body == "":
+        if body is None or body == "":
             expl = _('No Request Body')
             raise exc.HTTPBadRequest(explanation=expl)
 

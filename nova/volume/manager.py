@@ -111,7 +111,7 @@ class VolumeManager(manager.SchedulerDependentManager):
             vol_size = volume_ref['size']
             LOG.debug(_("volume %(vol_name)s: creating lv of"
                     " size %(vol_size)sG") % locals())
-            if snapshot_id == None:
+            if snapshot_id is None:
                 model_update = self.driver.create_volume(volume_ref)
             else:
                 snapshot_ref = self.db.snapshot_get(context, snapshot_id)

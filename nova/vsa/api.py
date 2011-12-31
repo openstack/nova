@@ -68,10 +68,10 @@ class API(base.Base):
         super(API, self).__init__(**kwargs)
 
     def _check_volume_type_correctness(self, vol_type):
-        if vol_type.get('extra_specs') == None or\
+        if vol_type.get('extra_specs') is None or\
            vol_type['extra_specs'].get('type') != 'vsa_drive' or\
-           vol_type['extra_specs'].get('drive_type') == None or\
-           vol_type['extra_specs'].get('drive_size') == None:
+           vol_type['extra_specs'].get('drive_type') is None or\
+           vol_type['extra_specs'].get('drive_size') is None:
 
             raise exception.ApiError(_("Invalid drive type %s")
                                         % vol_type['name'])
@@ -162,7 +162,7 @@ class API(base.Base):
         if storage is None:
             storage = []
 
-        if shared is None or shared == 'False' or shared == False:
+        if not shared or shared == 'False':
             shared = False
         else:
             shared = True

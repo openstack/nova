@@ -69,7 +69,7 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
     data = _qemu_img_info(path_tmp)
 
     fmt = data.get("file format", None)
-    if fmt == None:
+    if fmt is None:
         os.unlink(path_tmp)
         raise exception.ImageUnacceptable(
             reason=_("'qemu-img info' parsing failed."), image_id=image_href)

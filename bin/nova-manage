@@ -1605,7 +1605,7 @@ class VsaDriveTypeCommands(object):
         if name is not None:
             search_opts['extra_specs']['name'] = name
 
-        if all == False:
+        if not all:
             search_opts['extra_specs']['visible'] = '1'
 
         drives = volume_types.get_all_types(self.context,
@@ -1973,7 +1973,7 @@ class StorageManagerCommands(object):
         ctxt = context.get_admin_context()
 
         try:
-            if flavor == None:
+            if flavor is None:
                 flavors = db.sm_flavor_get_all(ctxt)
             else:
                 flavors = db.sm_flavor_get(ctxt, flavor)
@@ -2015,7 +2015,7 @@ class StorageManagerCommands(object):
         ctxt = context.get_admin_context()
 
         try:
-            if backend_conf_id == None:
+            if backend_conf_id is None:
                 backends = db.sm_backend_conf_get_all(ctxt)
             else:
                 backends = db.sm_backend_conf_get(ctxt, backend_conf_id)
@@ -2075,7 +2075,7 @@ class StorageManagerCommands(object):
         print '(WARNING: Creating will destroy all data on backend!!!)'
         c = raw_input('Proceed? (y/n) ')
         if c == 'y' or c == 'Y':
-            if flavor_label == None:
+            if flavor_label is None:
                 print "error: backend needs to be associated with flavor"
                 sys.exit(2)
 

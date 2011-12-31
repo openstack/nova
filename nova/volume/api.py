@@ -42,7 +42,7 @@ class API(base.Base):
 
     def create(self, context, size, snapshot_id, name, description,
                      volume_type=None, metadata=None, availability_zone=None):
-        if snapshot_id != None:
+        if snapshot_id is not None:
             snapshot = self.get_snapshot(context, snapshot_id)
             if snapshot['status'] != "available":
                 raise exception.ApiError(

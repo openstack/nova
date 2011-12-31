@@ -61,7 +61,7 @@ class VolumeOps(object):
 
     def delete_volume_for_sm(self, vdi_uuid):
         vdi_ref = self._session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
-        if vdi_ref == None:
+        if vdi_ref is None:
             raise exception.Error(_('Could not find VDI ref'))
 
         try:
@@ -73,10 +73,10 @@ class VolumeOps(object):
     def create_sr(self, label, params):
         LOG.debug(_("Creating SR %s") % label)
         sr_ref = VolumeHelper.create_sr(self._session, label, params)
-        if sr_ref == None:
+        if sr_ref is None:
             raise exception.Error(_('Could not create SR'))
         sr_rec = self._session.call_xenapi("SR.get_record", sr_ref)
-        if sr_rec == None:
+        if sr_rec is None:
             raise exception.Error(_('Could not retrieve SR record'))
         return sr_rec['uuid']
 
@@ -89,7 +89,7 @@ class VolumeOps(object):
             return sr_ref
         sr_ref = VolumeHelper.introduce_sr(self._session, sr_uuid, label,
                                            params)
-        if sr_ref == None:
+        if sr_ref is None:
             raise exception.Error(_('Could not introduce SR'))
         return sr_ref
 
@@ -103,7 +103,7 @@ class VolumeOps(object):
     # Checks if sr has been introduced
     def forget_sr(self, sr_uuid):
         sr_ref = VolumeHelper.find_sr_by_uuid(self._session, sr_uuid)
-        if sr_ref == None:
+        if sr_ref is None:
             LOG.INFO(_('SR %s not found in the xapi database') % sr_uuid)
             return
         try:

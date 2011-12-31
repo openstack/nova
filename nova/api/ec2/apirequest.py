@@ -99,7 +99,7 @@ class APIRequest(object):
         request_id_el = xml.createElement('requestId')
         request_id_el.appendChild(xml.createTextNode(request_id))
         response_el.appendChild(request_id_el)
-        if(response_data == True):
+        if response_data is True:
             self._render_dict(xml, response_el, {'return': 'true'})
         else:
             self._render_dict(xml, response_el, response_data)

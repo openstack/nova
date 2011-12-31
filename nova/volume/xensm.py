@@ -53,7 +53,7 @@ class XenSMDriver(VolumeDriver):
 
         params['sr_type'] = backend_ref['sr_type']
 
-        if backend_ref['sr_uuid'] == None:
+        if backend_ref['sr_uuid'] is None:
             # run the sr create command
             try:
                 LOG.debug(_('SR name = %s') % label)
