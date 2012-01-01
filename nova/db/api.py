@@ -463,11 +463,6 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
     return IMPL.virtual_interface_get_by_uuid(context, vif_uuid)
 
 
-def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
-    """Gets the virtual interface fixed_ip is associated with."""
-    return IMPL.virtual_interface_get_by_fixed_ip(context, fixed_ip_id)
-
-
 def virtual_interface_get_by_instance(context, instance_id):
     """Gets all virtual_interfaces for instance."""
     return IMPL.virtual_interface_get_by_instance(context, instance_id)
@@ -578,16 +573,6 @@ def instance_get_all_by_host(context, host):
 def instance_get_all_by_reservation(context, reservation_id):
     """Get all instances belonging to a reservation."""
     return IMPL.instance_get_all_by_reservation(context, reservation_id)
-
-
-def instance_get_by_fixed_ip(context, address):
-    """Get an instance for a fixed ip by address."""
-    return IMPL.instance_get_by_fixed_ip(context, address)
-
-
-def instance_get_by_fixed_ipv6(context, address):
-    """Get an instance for a fixed ip by IPv6 address."""
-    return IMPL.instance_get_by_fixed_ipv6(context, address)
 
 
 def instance_get_fixed_addresses(context, instance_id):
