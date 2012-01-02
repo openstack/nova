@@ -17,7 +17,6 @@
 """This modules stubs out functions in nova.utils."""
 
 import re
-import types
 
 from eventlet import greenthread
 

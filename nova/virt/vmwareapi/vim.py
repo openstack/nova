@@ -167,7 +167,7 @@ class Vim:
     def _request_managed_object_builder(self, managed_object):
         """Builds the request managed object."""
         # Request Managed Object Builder
-        if type(managed_object) == type(""):
+        if isinstance(managed_object, str):
             mo = suds.sudsobject.Property(managed_object)
             mo._type = managed_object
         else:

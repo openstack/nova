@@ -21,7 +21,6 @@ Weighing Functions.
 
 import json
 import operator
-import types
 
 import M2Crypto
 
@@ -358,7 +357,7 @@ class DistributedScheduler(driver.Scheduler):
             return getattr(filters, nm)
 
         return [get_itm(itm) for itm in dir(filters)
-                if (type(get_itm(itm)) is types.TypeType)
+                if isinstance(get_itm(itm), type)
                 and issubclass(get_itm(itm), filters.AbstractHostFilter)
                 and get_itm(itm) is not filters.AbstractHostFilter]
 

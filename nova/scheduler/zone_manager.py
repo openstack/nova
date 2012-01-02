@@ -140,7 +140,7 @@ class ReadOnlyDict(UserDict.IterableUserDict):
             return
         elif isinstance(source, UserDict.UserDict):
             self.data = source.data
-        elif isinstance(source, type({})):
+        elif isinstance(source, dict):
             self.data = source
         else:
             raise TypeError

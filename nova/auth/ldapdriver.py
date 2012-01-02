@@ -85,7 +85,7 @@ def _clean(attr):
     """Clean attr for insertion into ldap"""
     if attr is None:
         return None
-    if type(attr) is unicode:
+    if isinstance(attr, unicode):
         return str(attr)
     return attr
 

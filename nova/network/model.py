@@ -17,7 +17,6 @@
 
 import json
 import netaddr
-import types
 
 from nova import exception
 
@@ -247,7 +246,7 @@ class NetworkInfo(list):
 
     @classmethod
     def hydrate(cls, network_info):
-        if isinstance(network_info, types.StringTypes):
+        if isinstance(network_info, basestring):
             network_info = json.loads(network_info)
         return NetworkInfo([VIF.hydrate(vif) for vif in network_info])
 
