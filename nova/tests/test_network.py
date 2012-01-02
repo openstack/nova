@@ -305,21 +305,22 @@ class FlatNetworkTestCase(test.TestCase):
         driver.create_entry("hostthree", "10.0.0.3", 0, zone1)
         driver.create_entry("hostfour", "10.0.0.4", 0, zone1)
         driver.create_entry("hostfive", "10.0.0.5", 0, zone2)
-        driver.create_entry("hostsix", "10.0.0.6", 0, zone2)
-        driver.delete_entry("hosttwo", zone1)
-        driver.rename_entry("10.0.0.3", "hostone", zone1)
+
+        driver.delete_entry("hostone", zone1)
         driver.modify_address("hostfour", "10.0.0.1", zone1)
+        driver.modify_address("hostthree", "10.0.0.1", zone1)
         names = driver.get_entries_by_address("10.0.0.1", zone1)
         self.assertEqual(len(names), 2)
-        self.assertIn('hostone', names)
+        self.assertIn('hostthree', names)
         self.assertIn('hostfour', names)
-        names = driver.get_entries_by_address("10.0.0.6", zone2)
+
+        names = driver.get_entries_by_address("10.0.0.5", zone2)
         self.assertEqual(len(names), 1)
-        self.assertIn('hostsix', names)
-        addresses = driver.get_entries_by_name("hostone", zone1)
-        self.assertEqual(len(addresses), 2)
-        self.assertIn('10.0.0.1', addresses)
-        self.assertIn('10.0.0.3', addresses)
+        self.assertIn('hostfive', names)
+
+        addresses = driver.get_entries_by_name("hosttwo", zone1)
+        self.assertEqual(len(addresses), 1)
+        self.assertIn('10.0.0.2', addresses)
 
     def test_instance_dns(self):
         fixedip = '192.168.0.101'

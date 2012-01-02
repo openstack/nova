@@ -220,6 +220,15 @@ class API(base.Base):
                         {'method': 'add_dns_entry',
                          'args': args})
 
+    def modify_dns_entry(self, context, name, address, dns_zone):
+        """Create specified DNS entry for address"""
+        args = {'address': address,
+                'dns_name': name,
+                'dns_zone': dns_zone}
+        return rpc.call(context, FLAGS.network_topic,
+                        {'method': 'modify_dns_entry',
+                         'args': args})
+
     def delete_dns_entry(self, context, name, zone):
         """Delete the specified dns entry."""
         args = {'dns_name': name, 'dns_zone': zone}

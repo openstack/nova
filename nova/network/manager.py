@@ -462,6 +462,10 @@ class FloatingIP(object):
         self.floating_dns_manager.create_entry(dns_name, address,
                                                dns_type, dns_zone)
 
+    def modify_dns_entry(self, context, address, dns_name, dns_zone):
+        self.floating_dns_manager.modify_address(dns_name, address,
+                                                 dns_zone)
+
     def delete_dns_entry(self, context, dns_name, dns_zone):
         self.floating_dns_manager.delete_entry(dns_name, dns_zone)
 

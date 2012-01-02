@@ -115,6 +115,25 @@ Create a DNS entry:
 
     Failure Response Code: 409 (indicates an entry with name & zone already exists.)
 
+
+Change the ip address of an existing DNS entry:
+
+        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<domain>
+
+    # Sample body:
+    { 'dns_entry' :
+      { 'name': 'instance1',
+        'ip': '192.168.53.99'}}
+
+    # Sample Response (success):
+    { 'dns_entry' :
+      { 'ip' : '192.168.53.99',
+        'name' : 'instance1',
+        'zone' : 'example.org'}}
+
+    Failure Response Code: 404 (Entry to be modified not found)
+
+
 Find DNS entries for a given domain and name:
 
         GET /v1.1/<tenant_id>/os-floating-ip-dns/<domain>?name=<name>

@@ -75,6 +75,12 @@ def network_add_dns_entry(self, context, address, name, dns_type, zone):
                           'zone': zone}}
 
 
+def network_modify_dns_entry(self, context, address, name, zone):
+    return {'dns_entry': {'name': name,
+                          'ip': address,
+                          'zone': zone}}
+
+
 class FloatingIpDNSTest(test.TestCase):
     def _create_floating_ip(self):
         """Create a floating ip object."""
@@ -98,6 +104,8 @@ class FloatingIpDNSTest(test.TestCase):
                        network_api_get_floating_ip)
         self.stubs.Set(network.api.API, "add_dns_entry",
                        network_add_dns_entry)
+        self.stubs.Set(network.api.API, "modify_dns_entry",
+                       network_modify_dns_entry)
 
         self.context = context.get_admin_context()
 
@@ -182,6 +190,16 @@ class FloatingIpDNSTest(test.TestCase):
 
         self.assertTrue(self.called)
         self.assertEquals(self.deleted_zone, zone)
+
+    def test_modify(self):
+        body = {'dns_entry':
+                 {'name': name,
+                  'ip': testaddress2}}
+        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
+                                      zone)
+        entry = self.dns_controller.update(req, zone, body)
+
+        self.assertEqual(entry['dns_entry']['ip'], testaddress2)
 
 
 class FloatingIpDNSSerializerTest(test.TestCase):

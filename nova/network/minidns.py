@@ -90,21 +90,11 @@ class MiniDNS(object):
         if not deleted:
             raise exception.NotFound
 
-    def rename_entry(self, address, name, dnszone):
-        infile = open(self.filename, 'r')
-        outfile = tempfile.NamedTemporaryFile('w', delete=False)
-        for line in infile:
-            entry = self.parse_line(line)
-            if entry and entry['address'] == address.lower():
-                outfile.write("%s   %s   %s\n" %
-                    (address, self.qualify(name, dnszone), entry['type']))
-            else:
-                outfile.write(line)
-        infile.close()
-        outfile.close()
-        shutil.move(outfile.name, self.filename)
-
     def modify_address(self, name, address, dnszone):
+
+        if not self.get_entries_by_name(name, dnszone):
+            raise exception.NotFound
+
         infile = open(self.filename, 'r')
         outfile = tempfile.NamedTemporaryFile('w', delete=False)
         for line in infile:

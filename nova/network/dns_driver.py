@@ -28,9 +28,6 @@ class DNSDriver(object):
     def delete_entry(self, _name, _dnszone=""):
         pass
 
-    def rename_entry(self, _address, _name, _dnszone):
-        pass
-
     def modify_address(self, _name, _address, _dnszone):
         pass
 

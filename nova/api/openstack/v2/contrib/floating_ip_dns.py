@@ -168,6 +168,28 @@ class FloatingIPDNSController(object):
                                           'type': dns_type,
                                           'zone': zone})
 
+    def update(self, req, id, body):
+        """Modify a dns entry."""
+        context = req.environ['nova.context']
+        zone = _unquote_zone(id)
+
+        try:
+            entry = body['dns_entry']
+            name = entry['name']
+            new_ip = entry['ip']
+        except (TypeError, KeyError):
+            raise webob.exc.HTTPUnprocessableEntity()
+
+        try:
+            self.network_api.modify_dns_entry(context, name,
+                                              new_ip, zone)
+        except exception.NotFound:
+            return webob.Response(status_int=404)
+
+        return _translate_dns_entry_view({'ip': new_ip,
+                                          'name': name,
+                                          'zone': zone})
+
     def delete(self, req, id):
         """Delete the entry identified by req and id. """
         context = req.environ['nova.context']
