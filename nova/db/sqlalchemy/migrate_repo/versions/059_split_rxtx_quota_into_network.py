@@ -34,12 +34,12 @@ def upgrade(migrate_engine):
     instance_types.create_column(rxtx_factor)
     networks.create_column(rxtx_base)
 
-    base = migrate_engine.execute(_("select min(rxtx_cap) as min_rxtx from "\
-                                    "instance_types where rxtx_cap > 0"))\
-                                    .scalar()
+    base = migrate_engine.execute("select min(rxtx_cap) as min_rxtx from "\
+                                  "instance_types where rxtx_cap > 0")\
+                                  .scalar()
     base = base if base > 1 else 1
-    update_i_type_sql = _("update instance_types set rxtx_factor = rxtx_cap"\
-                            "/%s where rxtx_cap > 0" % base)
+    update_i_type_sql = "update instance_types set rxtx_factor = rxtx_cap"\
+                        "/%s where rxtx_cap > 0" % base
     migrate_engine.execute(update_i_type_sql)
     migrate_engine.execute("update networks set rxtx_base = %s" % base)
 
@@ -55,12 +55,12 @@ def downgrade(migrate_engine):
     instance_types.create_column(rxtx_quota)
     instance_types.create_column(rxtx_cap)
 
-    base = migrate_engine.execute(_("select min(rxtx_base) from networks "\
-                                    "where rxtx_base > 0")).scalar()
+    base = migrate_engine.execute("select min(rxtx_base) from networks "\
+                                  "where rxtx_base > 0").scalar()
     base = base if base > 1 else 1
 
-    update_i_type_sql = (_("update instance_types set rxtx_cap = " \
-                         "rxtx_factor * %s" % base))
+    update_i_type_sql = "update instance_types set rxtx_cap = "\
+                        "rxtx_factor * %s" % base
     migrate_engine.execute(update_i_type_sql)
 
     instance_types.c.rxtx_factor.drop()
