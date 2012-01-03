@@ -766,7 +766,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 info['ip6s'] = [ip6_dict()]
             # TODO(tr3buchet): handle ip6 routes here as well
             if network['gateway_v6']:
-                info['gateway6'] = network['gateway_v6']
+                info['gateway_v6'] = network['gateway_v6']
             if network['dns1']:
                 info['dns'].append(network['dns1'])
             if network['dns2']:

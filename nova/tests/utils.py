@@ -83,7 +83,7 @@ def get_test_network_info(count=1):
     mapping = {'mac': fake,
                'dhcp_server': fake,
                'gateway': fake,
-               'gateway6': fake,
+               'gateway_v6': fake,
                'ips': [{'ip': fake_ip}, {'ip': fake_ip}]}
     if ipv6:
         mapping['ip6s'] = [{'ip': fake_ip},

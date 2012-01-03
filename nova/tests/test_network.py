@@ -168,7 +168,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'dhcp_server': '192.168.%d.1' % i,
                      'dns': ['192.168.%d.3' % n, '192.168.%d.4' % n],
                      'gateway': '192.168.%d.1' % i,
-                     'gateway6': '2001:db8:0:%x::1' % i,
+                     'gateway_v6': '2001:db8:0:%x::1' % i,
                      'ip6s': 'DONTCARE',
                      'ips': 'DONTCARE',
                      'label': 'test%d' % i,

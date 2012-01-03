@@ -456,7 +456,7 @@ class QuantumManager(manager.FlatManager):
                     info['ip6s'] = [ip_dict(ip, v6_subnet) for ip in v6_ips]
 
                 if v6_subnet['gateway']:
-                    info['gateway6'] = v6_subnet['gateway']
+                    info['gateway_v6'] = v6_subnet['gateway']
 
             dns_dict = {}
             for s in [v4_subnet, v6_subnet]:
