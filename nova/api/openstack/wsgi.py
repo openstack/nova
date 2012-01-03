@@ -366,7 +366,7 @@ class XMLDictSerializer(DictSerializer):
             result.setAttribute('xmlns', xmlns)
 
         #TODO(bcwaldon): accomplish this without a type-check
-        if type(data) is list:
+        if isinstance(data, list):
             collections = metadata.get('list_collections', {})
             if nodename in collections:
                 metadata = collections[nodename]
@@ -385,7 +385,7 @@ class XMLDictSerializer(DictSerializer):
                 node = self._to_xml_node(doc, metadata, singular, item)
                 result.appendChild(node)
         #TODO(bcwaldon): accomplish this without a type-check
-        elif type(data) is dict:
+        elif isinstance(data, dict):
             collections = metadata.get('dict_collections', {})
             if nodename in collections:
                 metadata = collections[nodename]
@@ -573,7 +573,7 @@ class Resource(wsgi.Application):
             LOG.info(_("HTTP exception thrown: %s"), unicode(ex))
             action_result = Fault(ex)
 
-        if type(action_result) is dict or action_result is None:
+        if isinstance(action_result, dict) or action_result is None:
             response = self.serializer.serialize(request,
                                                  action_result,
                                                  accept,

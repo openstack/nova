@@ -285,7 +285,7 @@ class ServiceWrapper(object):
         params = dict([(str(k), v) for (k, v) in params.iteritems()])
         result = method(context, **params)
 
-        if result is None or type(result) is str or type(result) is unicode:
+        if result is None or isinstance(result, basestring):
             return result
 
         try:

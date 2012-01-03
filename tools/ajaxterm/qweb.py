@@ -1035,7 +1035,7 @@ class QWebRequest:
                 name_dict = cgi.parse_header(sub['Content-Disposition'])[1]
                 if 'filename' in name_dict:
                     # Nested MIME Messages are not supported'
-                    if type([]) == type(sub.get_payload()):
+                    if isinstance(sub.get_payload(), list):
                         continue
                     if not name_dict['filename'].strip():
                         continue

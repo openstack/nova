@@ -812,7 +812,7 @@ class CloudController(object):
         LOG.audit(_("Get console output for instance %s"), instance_id,
                   context=context)
         # instance_id may be passed in as a list of instances
-        if type(instance_id) == list:
+        if isinstance(instance_id, list):
             ec2_id = instance_id[0]
         else:
             ec2_id = instance_id

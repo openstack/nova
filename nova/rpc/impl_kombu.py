@@ -18,11 +18,11 @@ import kombu
 import kombu.entity
 import kombu.messaging
 import kombu.connection
+import inspect
 import itertools
 import sys
 import time
 import traceback
-import types
 import uuid
 
 import eventlet
@@ -651,7 +651,7 @@ class ProxyCallback(object):
         try:
             rval = node_func(context=ctxt, **node_args)
             # Check if the result was a generator
-            if isinstance(rval, types.GeneratorType):
+            if inspect.isgenerator(rval):
                 for x in rval:
                     ctxt.reply(x, None)
             else:

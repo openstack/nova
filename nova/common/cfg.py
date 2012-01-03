@@ -962,9 +962,9 @@ class ConfigOpts(object):
         :param value: the string value, or list of string values
         :returns: the substituted string(s)
         """
-        if type(value) is list:
+        if isinstance(value, list):
             return [self._substitute(i) for i in value]
-        elif type(value) is str:
+        elif isinstance(value, str):
             tmpl = string.Template(value)
             return tmpl.safe_substitute(self.StrSubWrapper(self))
         else:

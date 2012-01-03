@@ -1084,7 +1084,7 @@ class ServiceCommands(object):
                      {"method": "show_host_resources",
                       "args": {"host": host}})
 
-        if type(result) != dict:
+        if not isinstance(result, dict):
             print _('An unexpected error has occurred.')
             print _('[Result]'), result
         else:

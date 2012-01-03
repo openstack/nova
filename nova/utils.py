@@ -33,7 +33,6 @@ import socket
 import struct
 import sys
 import time
-import types
 import uuid
 import pyclbr
 from xml.sax import saxutils
@@ -176,11 +175,11 @@ def execute(*cmd, **kwargs):
     process_input = kwargs.pop('process_input', None)
     check_exit_code = kwargs.pop('check_exit_code', [0])
     ignore_exit_code = False
-    if type(check_exit_code) == int:
-        check_exit_code = [check_exit_code]
-    elif type(check_exit_code) == bool:
+    if isinstance(check_exit_code, bool):
         ignore_exit_code = not check_exit_code
         check_exit_code = [0]
+    elif isinstance(check_exit_code, int):
+        check_exit_code = [check_exit_code]
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
     run_as_root = kwargs.pop('run_as_root', False)
@@ -569,7 +568,7 @@ class LazyPluggable(object):
                 raise exception.Error(_('Invalid backend: %s') % backend_name)
 
             backend = self.__backends[backend_name]
-            if type(backend) == type(tuple()):
+            if isinstance(backend, tuple):
                 name = backend[0]
                 fromlist = backend[1]
             else:
@@ -696,13 +695,13 @@ def to_primitive(value, convert_instances=False, level=0):
     # The try block may not be necessary after the class check above,
     # but just in case ...
     try:
-        if type(value) is type([]) or type(value) is type((None,)):
+        if isinstance(value, (list, tuple)):
             o = []
             for v in value:
                 o.append(to_primitive(v, convert_instances=convert_instances,
                                       level=level))
             return o
-        elif type(value) is type({}):
+        elif isinstance(value, dict):
             o = {}
             for k, v in value.iteritems():
                 o[k] = to_primitive(v, convert_instances=convert_instances,
@@ -858,7 +857,7 @@ def get_from_path(items, path):
     if items is None:
         return results
 
-    if not isinstance(items, types.ListType):
+    if not isinstance(items, list):
         # Wrap single objects in a list
         items = [items]
 
@@ -871,7 +870,7 @@ def get_from_path(items, path):
         child = get_method(first_token)
         if child is None:
             continue
-        if isinstance(child, types.ListType):
+        if isinstance(child, list):
             # Flatten intermediate lists
             for x in child:
                 results.append(x)

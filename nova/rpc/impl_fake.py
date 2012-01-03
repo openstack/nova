@@ -17,9 +17,9 @@
 queues.  Casts will block, but this is very useful for tests.
 """
 
+import inspect
 import sys
 import traceback
-import types
 
 from nova import context
 from nova.rpc import common as rpc_common
@@ -60,7 +60,7 @@ class Consumer(object):
             # if ending not 'sent'...we might have more data to
             # return from the function itself
             if not ctxt._done:
-                if isinstance(rval, types.GeneratorType):
+                if inspect.isgenerator(rval):
                     for val in rval:
                         yield val
                 else:

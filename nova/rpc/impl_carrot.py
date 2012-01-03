@@ -24,11 +24,11 @@ No fan-out support yet.
 
 """
 
+import inspect
 import json
 import sys
 import time
 import traceback
-import types
 import uuid
 
 from carrot import connection as carrot_connection
@@ -284,7 +284,7 @@ class AdapterConsumer(Consumer):
         try:
             rval = node_func(context=ctxt, **node_args)
             # Check if the result was a generator
-            if isinstance(rval, types.GeneratorType):
+            if inspect.isgenerator(rval):
                 for x in rval:
                     ctxt.reply(x, None)
             else:
