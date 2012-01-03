@@ -1180,3 +1180,31 @@ def read_cached_file(filename, cache_info):
     cache_info['data'] = data
     cache_info['mtime'] = mtime
     return data
+
+
+@contextlib.contextmanager
+def temporary_mutation(obj, **kwargs):
+    """Temporarily set the attr on a particular object to a given value then
+    revert when finished.
+
+    One use of this is to temporarily set the read_deleted flag on a context
+    object:
+
+        with temporary_mutation(context, read_deleted="yes"):
+            do_something_that_needed_deleted_objects()
+    """
+    NOT_PRESENT = object()
+
+    old_values = {}
+    for attr, new_value in kwargs.items():
+        old_values[attr] = getattr(obj, attr, NOT_PRESENT)
+        setattr(obj, attr, new_value)
+
+    try:
+        yield
+    finally:
+        for attr, old_value in old_values.items():
+            if old_value is NOT_PRESENT:
+                del obj[attr]
+            else:
+                setattr(obj, attr, old_value)

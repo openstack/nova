@@ -85,6 +85,17 @@ flags.DEFINE_integer("resize_confirm_window", 0,
                      " Set to 0 to disable.")
 flags.DEFINE_integer('host_state_interval', 120,
                      'Interval in seconds for querying the host status')
+flags.DEFINE_integer("running_deleted_instance_timeout", 0,
+                     "Number of seconds after being deleted when a"
+                     " still-running instance should be considered"
+                     " eligible for cleanup.")
+flags.DEFINE_integer("running_deleted_instance_poll_interval", 30,
+                     "Number of periodic scheduler ticks to wait between"
+                     " runs of the cleanup task.")
+flags.DEFINE_string("running_deleted_instance_action", "noop",
+                     "Action to take if a running deleted instance is"
+                     " detected. Valid options are 'noop', 'log', and"
+                     " 'reap'. Set to 'noop' to disable.")
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -2046,3 +2057,65 @@ class ComputeManager(manager.SchedulerDependentManager):
             'details': fault.message,
         }
         self.db.instance_fault_create(context, values)
+
+    @manager.periodic_task(
+        ticks_between_runs=FLAGS.running_deleted_instance_poll_interval)
+    def _cleanup_running_deleted_instances(self, context):
+        """Cleanup any instances which are erroneously still running after
+        having been deleted.
+
+        Valid actions to take are:
+
+            1. noop - do nothing
+            2. log - log which instances are erroneously running
+            3. reap - shutdown and cleanup any erroneously running instances
+
+        The use-case for this cleanup task is: for various reasons, it may be
+        possible for the database to show an instance as deleted but for that
+        instance to still be running on a host machine (see bug
+        https://bugs.launchpad.net/nova/+bug/911366).
+
+        This cleanup task is a cross-hypervisor utility for finding these
+        zombied instances and either logging the discrepancy (likely what you
+        should do in production), or automatically reaping the instances (more
+        appropriate for dev environments).
+        """
+        action = FLAGS.running_deleted_instance_action
+
+        if action == "noop":
+            return
+
+        present_name_labels = set(self.driver.list_instances())
+
+        # NOTE(sirp): admin contexts don't ordinarily return deleted records
+        with utils.temporary_mutation(context, read_deleted="yes"):
+            instances = self.db.instance_get_all_by_host(context, self.host)
+            for instance in instances:
+                present = instance.name in present_name_labels
+                erroneously_running = instance.deleted and present
+                old_enough = (not instance.deleted_at or utils.is_older_than(
+                        instance.deleted_at,
+                        FLAGS.running_deleted_instance_timeout))
+
+                if erroneously_running and old_enough:
+                    instance_id = instance.id
+                    name_label = instance.name
+
+                    if action == "log":
+                        LOG.warning(_("Detected instance %(instance_id)s with"
+                                      " name label '%(name_label)s' which is"
+                                      " marked as DELETED but still present on"
+                                      " host."), locals())
+
+                    elif action == 'reap':
+                        LOG.info(_("Destroying instance %(instance_id)s with"
+                                   " name label '%(name_label)s' which is"
+                                   " marked as DELETED but still present on"
+                                   " host."), locals())
+                        self._shutdown_instance(
+                                context, instance, 'Terminating', True)
+                        self._cleanup_volumes(context, instance_id)
+                    else:
+                        raise Exception(_("Unrecognized value '%(action)s'"
+                                          " for FLAGS.running_deleted_"
+                                          "instance_action"), locals())
