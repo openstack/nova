@@ -996,18 +996,6 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
 
 
 @require_context
-def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
-    """Gets the virtual interface fixed_ip is associated with.
-
-    :param fixed_ip_id: = id of the fixed_ip
-    """
-    vif_ref = _virtual_interface_query(context).\
-                      filter_by(fixed_ip_id=fixed_ip_id).\
-                      first()
-    return vif_ref
-
-
-@require_context
 @require_instance_exists
 def virtual_interface_get_by_instance(context, instance_id):
     """Gets all virtual interfaces for instance.
@@ -2345,15 +2333,6 @@ def volume_metadata_delete(context, volume_id, key):
 
 @require_context
 @require_volume_exists
-def volume_metadata_delete_all(context, volume_id):
-    _volume_metadata_get_query(context, volume_id).\
-        update({'deleted': True,
-                'deleted_at': utils.utcnow(),
-                'updated_at': literal_column('updated_at')})
-
-
-@require_context
-@require_volume_exists
 def volume_metadata_get_item(context, volume_id, key, session=None):
     result = _volume_metadata_get_query(context, volume_id, session=session).\
                     filter_by(key=key).\
@@ -3364,15 +3343,6 @@ def instance_metadata_get(context, instance_id):
 def instance_metadata_delete(context, instance_id, key):
     _instance_metadata_get_query(context, instance_id).\
         filter_by(key=key).\
-        update({'deleted': True,
-                'deleted_at': utils.utcnow(),
-                'updated_at': literal_column('updated_at')})
-
-
-@require_context
-@require_instance_exists
-def instance_metadata_delete_all(context, instance_id):
-    _instance_metadata_get_query(context, instance_id).\
         update({'deleted': True,
                 'deleted_at': utils.utcnow(),
                 'updated_at': literal_column('updated_at')})
