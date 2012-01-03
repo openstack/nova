@@ -345,7 +345,7 @@ class NWFilterFirewall(FirewallDriver):
 
         if FLAGS.use_ipv6:
             networks = [network for (network, info) in network_info if
-                        info['gateway6']]
+                        info['gateway_v6']]
 
             if networks:
                 instance_secgroup_filter_children.\
@@ -634,7 +634,7 @@ class IptablesFirewallDriver(FirewallDriver):
         # they're not worth the clutter.
         if FLAGS.use_ipv6:
             # Allow RA responses
-            gateways_v6 = [mapping['gateway6'] for (_n, mapping) in
+            gateways_v6 = [mapping['gateway_v6'] for (_n, mapping) in
                            network_info]
             for gateway_v6 in gateways_v6:
                 ipv6_rules.append(

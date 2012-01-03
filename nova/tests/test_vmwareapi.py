@@ -63,7 +63,7 @@ class VMWareAPIVMTestCase(test.TestCase):
                           {'broadcast': '192.168.0.255',
                            'dns': ['192.168.0.1'],
                            'gateway': '192.168.0.1',
-                           'gateway6': 'dead:beef::1',
+                           'gateway_v6': 'dead:beef::1',
                            'ip6s': [{'enabled': '1',
                                      'ip': 'dead:beef::dcad:beff:feef:0',
                                            'netmask': '64'}],
