@@ -1373,6 +1373,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.SUSPENDED,
                               task_state=None)
 
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier.notify('compute.%s' % self.host, 'compute.instance.suspend',
+                notifier.INFO, usage_info)
+
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
@@ -1390,6 +1394,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
+
+        usage_info = utils.usage_from_instance(instance_ref)
+        notifier.notify('compute.%s' % self.host, 'compute.instance.resume',
+                notifier.INFO, usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
