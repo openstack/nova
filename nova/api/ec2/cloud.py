@@ -398,7 +398,7 @@ class CloudController(object):
             (out, err) = utils.execute('ssh-keygen', '-l', '-f',
                                        '%s' % (pubfile))
             return out.split(' ')[1]
-        except:
+        except Exception:
             raise
         finally:
             shutil.rmtree(tmpdir)
