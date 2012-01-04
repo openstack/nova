@@ -850,7 +850,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def _create_swap(target, swap_mb):
         """Create a swap file of specified size"""
         libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
-        libvirt_utils.mkfs(target, 'swap')
+        libvirt_utils.mkfs('swap', target)
 
     def _create_image(self, context, inst, libvirt_xml, suffix='',
                       disk_images=None, network_info=None,
