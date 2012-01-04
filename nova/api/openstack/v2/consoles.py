@@ -39,6 +39,7 @@ def _translate_detail_keys(cons):
     info = {'id': cons['id'],
             'console_type': pool['console_type'],
             'password': cons['password'],
+            'instance_name': cons['instance_name'],
             'port': cons['port'],
             'host': pool['public_hostname']}
     return dict(console=info)
