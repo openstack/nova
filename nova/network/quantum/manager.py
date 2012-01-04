@@ -46,7 +46,7 @@ flags.DEFINE_bool('use_melange_mac_generation', False,
                   "Use Melange for assignment of MAC addresses")
 
 
-flags.DEFINE_string('quantum_use_dhcp', 'False',
+flags.DEFINE_bool('quantum_use_dhcp', False,
                     'Whether or not to enable DHCP for networks')
 
 
