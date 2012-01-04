@@ -46,11 +46,11 @@ filters = [
 
     # nova/virt/disk/guestfs.py: 'guestmount', '--rw', '-a', image, '-i'
     # nova/virt/disk/guestfs.py: 'guestmount', '--rw', '-a', image, '-m' dev
-    Commandfilter("/usr/bin/guestmount", "root"),
+    CommandFilter("/usr/bin/guestmount", "root"),
 
     # nova/virt/disk/guestfs.py: 'fusermount', 'u', mount_dir
-    Commandfilter("/bin/fusermount", "root"),
-    Commandfilter("/usr/bin/fusermount", "root"),
+    CommandFilter("/bin/fusermount", "root"),
+    CommandFilter("/usr/bin/fusermount", "root"),
 
     # nova/virt/disk/api.py: 'tee', metadata_path
     # nova/virt/disk/api.py: 'tee', '-a', keyfile
