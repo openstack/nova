@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2011 OpenStack LLC.
+# Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2011 Grid Dynamics
 # Copyright 2011 Eldar Nugaev, Kirill Shileev, Ilya Alekseyev
 #
@@ -34,6 +35,7 @@ LOG = logging.getLogger('nova.api.openstack.v2.contrib.floating_ips')
 def make_float_ip(elem):
     elem.set('id')
     elem.set('ip')
+    elem.set('pool')
     elem.set('fixed_ip')
     elem.set('instance_id')
 
@@ -56,8 +58,11 @@ class FloatingIPsTemplate(xmlutil.TemplateBuilder):
 
 
 def _translate_floating_ip_view(floating_ip):
-    result = {'id': floating_ip['id'],
-              'ip': floating_ip['address']}
+    result = {
+        'id': floating_ip['id'],
+        'ip': floating_ip['address'],
+        'pool': floating_ip['pool'],
+    }
     try:
         result['fixed_ip'] = floating_ip['fixed_ip']['address']
     except (TypeError, KeyError):
@@ -106,13 +111,19 @@ class FloatingIPController(object):
     def create(self, req, body=None):
         context = req.environ['nova.context']
 
+        pool = None
+        if body and 'pool' in body:
+            pool = body['pool']
         try:
-            address = self.network_api.allocate_floating_ip(context)
+            address = self.network_api.allocate_floating_ip(context, pool)
             ip = self.network_api.get_floating_ip_by_address(context, address)
         except rpc.RemoteError as ex:
             # NOTE(tr3buchet) - why does this block exist?
             if ex.exc_type == 'NoMoreFloatingIps':
-                msg = _("No more floating ips available.")
+                if pool:
+                    msg = _("No more floating ips in pool %s.") % pool
+                else:
+                    msg = _("No more floating ips available.")
                 raise webob.exc.HTTPBadRequest(explanation=msg)
             else:
                 raise

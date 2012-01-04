@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -94,6 +95,8 @@ flags.DEFINE_integer('network_size', 256,
                         'Number of addresses in each private subnet')
 flags.DEFINE_string('floating_range', '4.4.4.0/24',
                     'Floating IP address block')
+flags.DEFINE_string('default_floating_pool', 'nova',
+                    'Default pool for floating ips')
 flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
 flags.DEFINE_string('gateway', None, 'Default IPv4 gateway')
@@ -201,7 +204,9 @@ class FloatingIP(object):
                 fixed_address = floating_ip['fixed_ip']['address']
                 # NOTE(vish): The False here is because we ignore the case
                 #             that the ip is already bound.
-                self.driver.bind_floating_ip(floating_ip['address'], False)
+                self.driver.bind_floating_ip(floating_ip['address'],
+                                             floating_ip['interface'],
+                                             False)
                 self.driver.ensure_floating_forward(floating_ip['address'],
                                                     fixed_address)
 
@@ -286,8 +291,8 @@ class FloatingIP(object):
                            'project': context.project_id})
                 raise exception.NotAuthorized()
 
-    def allocate_floating_ip(self, context, project_id):
-        """Gets an floating ip from the pool."""
+    def allocate_floating_ip(self, context, project_id, pool=None):
+        """Gets a floating ip from the pool."""
         # NOTE(tr3buchet): all network hosts in zone now use the same pool
         LOG.debug("QUOTA: %s" % quota.allowed_floating_ips(context, 1))
         if quota.allowed_floating_ips(context, 1) < 1:
@@ -296,9 +301,10 @@ class FloatingIP(object):
                      context.project_id)
             raise exception.QuotaError(_('Address quota exceeded. You cannot '
                                      'allocate any more addresses'))
-        # TODO(vish): add floating ips through manage command
+        pool = pool or FLAGS.default_floating_pool
         return self.db.floating_ip_allocate_address(context,
-                                                    project_id)
+                                                    project_id,
+                                                    pool)
 
     def deallocate_floating_ip(self, context, address,
                                affect_auto_assigned=False):
@@ -337,7 +343,6 @@ class FloatingIP(object):
 
         # make sure floating ip isn't already associated
         if floating_ip['fixed_ip_id']:
-            floating_address = floating_ip['address']
             raise exception.FloatingIpAssociated(address=floating_address)
 
         fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_address)
@@ -348,20 +353,22 @@ class FloatingIP(object):
             host = instance['host']
         else:
             host = fixed_ip['network']['host']
-        LOG.info("%s", self.host)
+        interface = floating_ip['interface']
         if host == self.host:
             # i'm the correct host
             self._associate_floating_ip(context, floating_address,
-                                                 fixed_address)
+                                        fixed_address, interface)
         else:
             # send to correct host
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.network_topic, host),
                      {'method': '_associate_floating_ip',
-                      'args': {'floating_address': floating_ip['address'],
-                               'fixed_address': fixed_ip['address']}})
+                      'args': {'floating_address': floating_address,
+                               'fixed_address': fixed_address,
+                               'interface': interface}})
 
-    def _associate_floating_ip(self, context, floating_address, fixed_address):
+    def _associate_floating_ip(self, context, floating_address, fixed_address,
+                               interface):
         """Performs db and driver calls to associate floating ip & fixed ip"""
         # associate floating ip
         self.db.floating_ip_fixed_ip_associate(context,
@@ -369,7 +376,7 @@ class FloatingIP(object):
                                                fixed_address,
                                                self.host)
         # gogo driver time
-        self.driver.bind_floating_ip(floating_address)
+        self.driver.bind_floating_ip(floating_address, interface)
         self.driver.ensure_floating_forward(floating_address, fixed_address)
 
     def disassociate_floating_ip(self, context, address,
@@ -401,28 +408,35 @@ class FloatingIP(object):
             host = instance['host']
         else:
             host = fixed_ip['network']['host']
+        interface = floating_ip['interface']
         if host == self.host:
             # i'm the correct host
-            self._disassociate_floating_ip(context, address)
+            self._disassociate_floating_ip(context, address, interface)
         else:
             # send to correct host
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.network_topic, host),
                      {'method': '_disassociate_floating_ip',
-                      'args': {'address': address}})
+                      'args': {'address': address,
+                               'interface': interface}})
 
-    def _disassociate_floating_ip(self, context, address):
+    def _disassociate_floating_ip(self, context, address, interface):
         """Performs db and driver calls to disassociate floating ip"""
         # disassociate floating ip
         fixed_address = self.db.floating_ip_disassociate(context, address)
 
         # go go driver time
-        self.driver.unbind_floating_ip(address)
+        self.driver.unbind_floating_ip(address, interface)
         self.driver.remove_floating_forward(address, fixed_address)
 
     def get_floating_ip(self, context, id):
         """Returns a floating IP as a dict"""
         return dict(self.db.floating_ip_get(context, id).iteritems())
+
+    def get_floating_pools(self, context):
+        """Returns list of floating pools"""
+        pools = self.db.floating_ip_get_pools(context)
+        return [dict(pool.iteritems()) for pool in pools]
 
     def get_floating_ip_by_address(self, context, address):
         """Returns a floating IP as a dict"""

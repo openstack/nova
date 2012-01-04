@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -153,7 +154,7 @@ class CloudTestCase(test.TestCase):
         address = "10.10.10.10"
         db.floating_ip_create(self.context,
                               {'address': address,
-                               'host': self.network.host})
+                               'pool': 'nova'})
         self.cloud.allocate_address(self.context)
         self.cloud.describe_addresses(self.context)
         self.cloud.release_address(self.context,
@@ -165,7 +166,7 @@ class CloudTestCase(test.TestCase):
         allocate = self.cloud.allocate_address
         db.floating_ip_create(self.context,
                               {'address': address,
-                               'host': self.network.host})
+                               'pool': 'nova'})
         self.assertEqual(allocate(self.context)['publicIp'], address)
         db.floating_ip_destroy(self.context, address)
         self.assertRaises(exception.NoMoreFloatingIps,
@@ -177,7 +178,7 @@ class CloudTestCase(test.TestCase):
         allocate = self.cloud.allocate_address
         db.floating_ip_create(self.context,
                               {'address': address,
-                               'host': self.network.host,
+                               'pool': 'nova',
                                'project_id': self.project_id})
         result = self.cloud.release_address(self.context, address)
         self.assertEqual(result['releaseResponse'], ['Address released.'])
@@ -185,7 +186,9 @@ class CloudTestCase(test.TestCase):
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
         address = "10.10.10.10"
-        db.floating_ip_create(self.context, {'address': address})
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'pool': 'nova'})
         self.cloud.allocate_address(self.context)
         # TODO(jkoelker) Probably need to query for instance_type_id and
         #                make sure we get a valid one

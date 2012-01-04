@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -103,6 +104,8 @@ flags.DECLARE('multi_host', 'nova.network.manager')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
+flags.DECLARE('default_floating_pool', 'nova.network.manager')
+flags.DECLARE('public_interface', 'nova.network.linux_net')
 flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
@@ -684,14 +687,23 @@ class FixedIpCommands(object):
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
-    @args('--ip_range', dest="range", metavar='<range>', help='IP range')
-    def create(self, range):
+    @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
+    @args('--pool', dest="pool", metavar='<pool>', help='Optional pool')
+    @args('--interface', dest="interface", metavar='<interface>',
+          help='Optional interface')
+    def create(self, ip_range, pool=None, interface=None):
         """Creates floating ips for zone by range"""
-        addresses = netaddr.IPNetwork(range)
+        addresses = netaddr.IPNetwork(ip_range)
         admin_context = context.get_admin_context()
+        if not pool:
+            pool = FLAGS.default_floating_pool
+        if not interface:
+            interface = FLAGS.public_interface
         for address in addresses.iter_hosts():
             db.floating_ip_create(admin_context,
-                                  {'address': str(address)})
+                                  {'address': str(address),
+                                   'pool': pool,
+                                   'interface': interface})
 
     @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     def delete(self, ip_range):

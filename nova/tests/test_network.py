@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2011 Rackspace
+# Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -108,6 +109,8 @@ flavor = {'id': 0,
 
 floating_ip_fields = {'id': 0,
                       'address': '192.168.10.100',
+                      'pool': 'nova',
+                      'interface': 'eth0',
                       'fixed_ip_id': 0,
                       'project_id': None,
                       'auto_assigned': False}
@@ -580,21 +583,29 @@ class VlanNetworkTestCase(test.TestCase):
         # floating ip that's already associated
         def fake2(*args, **kwargs):
             return {'address': '10.0.0.1',
+                    'pool': 'nova',
+                    'interface': 'eth0',
                     'fixed_ip_id': 1}
 
         # floating ip that isn't associated
         def fake3(*args, **kwargs):
             return {'address': '10.0.0.1',
+                    'pool': 'nova',
+                    'interface': 'eth0',
                     'fixed_ip_id': None}
 
         # fixed ip with remote host
         def fake4(*args, **kwargs):
             return {'address': '10.0.0.1',
+                    'pool': 'nova',
+                    'interface': 'eth0',
                     'network': {'multi_host': False, 'host': 'jibberjabber'}}
 
         # fixed ip with local host
         def fake5(*args, **kwargs):
             return {'address': '10.0.0.1',
+                    'pool': 'nova',
+                    'interface': 'eth0',
                     'network': {'multi_host': False, 'host': 'testhost'}}
 
         def fake6(*args, **kwargs):
@@ -641,21 +652,29 @@ class VlanNetworkTestCase(test.TestCase):
         # floating ip that isn't associated
         def fake2(*args, **kwargs):
             return {'address': '10.0.0.1',
+                    'pool': 'nova',
+                    'interface': 'eth0',
                     'fixed_ip_id': None}
 
         # floating ip that is associated
         def fake3(*args, **kwargs):
             return {'address': '10.0.0.1',
+                    'pool': 'nova',
+                    'interface': 'eth0',
                     'fixed_ip_id': 1}
 
         # fixed ip with remote host
         def fake4(*args, **kwargs):
             return {'address': '10.0.0.1',
+                    'pool': 'nova',
+                    'interface': 'eth0',
                     'network': {'multi_host': False, 'host': 'jibberjabber'}}
 
         # fixed ip with local host
         def fake5(*args, **kwargs):
             return {'address': '10.0.0.1',
+                    'pool': 'nova',
+                    'interface': 'eth0',
                     'network': {'multi_host': False, 'host': 'testhost'}}
 
         def fake6(*args, **kwargs):

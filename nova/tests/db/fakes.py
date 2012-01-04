@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2010 OpenStack, LLC
 # All Rights Reserved.
 #
@@ -88,6 +89,7 @@ def stub_out_db_network_api(stubs):
                           'fixed_ip_id': None,
                           'fixed_ip': None,
                           'project_id': None,
+                          'pool': 'nova',
                           'auto_assigned': False}
 
     virtual_interface_fields = {'id': 0,
@@ -101,9 +103,10 @@ def stub_out_db_network_api(stubs):
     virtual_interfacees = [virtual_interface_fields]
     networks = [network_fields]
 
-    def fake_floating_ip_allocate_address(context, project_id):
+    def fake_floating_ip_allocate_address(context, project_id, pool):
         ips = filter(lambda i: i['fixed_ip_id'] is None \
-                           and i['project_id'] is None,
+                           and i['project_id'] is None \
+                           and i['pool'] == pool,
                      floating_ips)
         if not ips:
             raise exception.NoMoreFloatingIps()

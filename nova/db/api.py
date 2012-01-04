@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -237,13 +238,18 @@ def floating_ip_get(context, id):
     return IMPL.floating_ip_get(context, id)
 
 
-def floating_ip_allocate_address(context, project_id):
-    """Allocate free floating ip and return the address.
+def floating_ip_get_pools(context):
+    """Returns a list of floating ip pools"""
+    return IMPL.floating_ip_get_pools(context)
+
+
+def floating_ip_allocate_address(context, project_id, pool):
+    """Allocate free floating ip from specified pool and return the address.
 
     Raises if one is not available.
 
     """
-    return IMPL.floating_ip_allocate_address(context, project_id)
+    return IMPL.floating_ip_allocate_address(context, project_id, pool)
 
 
 def floating_ip_create(context, values):
