@@ -162,6 +162,7 @@ class RequestExtensionController(object):
             pre_handler(req)
 
         res = req.get_response(self.application)
+        res.environ = req.environ
 
         # Don't call extensions if the main application returned an
         # unsuccessful status

@@ -113,7 +113,7 @@ class FloatingIPDNSController(object):
            names.  if name is specified, query for ips.
            Quoted domain (aka 'zone') specified as id."""
         context = req.environ['nova.context']
-        params = req.str_GET
+        params = req.GET
         floating_ip = params['ip'] if 'ip' in params else ""
         name = params['name'] if 'name' in params else ""
         zone = _unquote_zone(id)
@@ -193,7 +193,7 @@ class FloatingIPDNSController(object):
     def delete(self, req, id):
         """Delete the entry identified by req and id. """
         context = req.environ['nova.context']
-        params = req.str_GET
+        params = req.GET
         name = params['name'] if 'name' in params else ""
         zone = _unquote_zone(id)
 
