@@ -575,6 +575,10 @@ class Controller(wsgi.Controller):
             self._delete(req.environ['nova.context'], id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
+        except exception.InstanceInvalidState as state_error:
+            state = state_error.kwargs.get("state")
+            msg = _("Unable to delete instance when %s") % state
+            raise exc.HTTPConflict(explanation=msg)
 
     def _get_key_name(self, req, body):
         if 'server' in body:
