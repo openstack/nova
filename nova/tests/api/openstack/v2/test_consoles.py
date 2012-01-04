@@ -155,12 +155,13 @@ class ConsolesControllerTest(test.TestCase):
             pool = dict(console_type='fake_type',
                     public_hostname='fake_hostname')
             return dict(id=console_id, password='fake_password',
-                    port='fake_port', pool=pool)
+                    port='fake_port', pool=pool, instance_name='inst-0001')
 
         expected = {'console': {'id': 20,
                                 'port': 'fake_port',
                                 'host': 'fake_hostname',
                                 'password': 'fake_password',
+                                'instance_name': 'inst-0001',
                                 'console_type': 'fake_type'}}
 
         self.stubs.Set(console.API, 'get_console', fake_get_console)
