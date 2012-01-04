@@ -46,6 +46,7 @@ flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
 flags.DEFINE_string('public_interface', 'eth0',
                     'Interface for public IP addresses')
+flags.DEFINE_string('network_device_mtu', None, 'MTU setting for vlan')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
 flags.DEFINE_string('routing_source_ip', '$my_ip',
@@ -942,6 +943,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 _execute('ip', 'link', 'set', interface, "address",
                             mac_address, run_as_root=True)
             _execute('ip', 'link', 'set', interface, 'up', run_as_root=True)
+            if FLAGS.network_device_mtu:
+                _execute('ip', 'link', 'set', interface, 'mtu',
+                         FLAGS.network_device_mtu, run_as_root=True)
         return interface
 
     @classmethod
@@ -1042,6 +1046,9 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                         run_as_root=True)
             _execute('ip', 'link', 'set', dev, "address", mac_address,
                         run_as_root=True)
+            if FLAGS.network_device_mtu:
+                _execute('ip', 'link', 'set', dev, 'mtu',
+                         FLAGS.network_device_mtu, run_as_root=True)
             _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
             if not gateway:
                 # If we weren't instructed to act as a gateway then add the
