@@ -45,7 +45,7 @@ class LibvirtBridgeDriver(VIFDriver):
         mac_id = mapping['mac'].replace(':', '')
 
         if FLAGS.allow_same_net_traffic:
-            template = "<parameter name=\"%s\"value=\"%s\" />\n"
+            template = "<parameter name=\"%s\" value=\"%s\" />\n"
             net, mask = netutils.get_net_and_mask(network['cidr'])
             values = [("PROJNET", net), ("PROJMASK", mask)]
             if FLAGS.use_ipv6:
