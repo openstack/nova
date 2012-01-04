@@ -1411,14 +1411,19 @@ class XenAPIDom0IptablesFirewallTestCase(test.TestCase):
         instance_ref = db.instance_get(admin_ctxt, instance_ref['id'])
         src_instance_ref = db.instance_get(admin_ctxt, src_instance_ref['id'])
 
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
+
         def get_fixed_ips(*args, **kwargs):
             ips = []
             for _n, info in network_info:
                 ips.extend(info['ips'])
             return [ip['ip'] for ip in ips]
 
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
-        self.stubs.Set(db, 'instance_get_fixed_addresses', get_fixed_ips)
+        def nw_info(*args, **kwargs):
+            return network_info
+
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          nw_info)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
 

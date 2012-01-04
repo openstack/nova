@@ -1217,20 +1217,17 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        if context.is_admin:
-            iterator = db.floating_ip_get_all(context)
-        else:
-            iterator = db.floating_ip_get_all_by_project(context,
-                                                         context.project_id)
-        for floating_ip_ref in iterator:
+        floaters = self.network_api.get_floating_ips_by_project(context)
+        for floating_ip_ref in floaters:
             if floating_ip_ref['project_id'] is None:
                 continue
             address = floating_ip_ref['address']
             ec2_id = None
-            if (floating_ip_ref['fixed_ip']
-                and floating_ip_ref['fixed_ip']['instance']):
-                instance_id = floating_ip_ref['fixed_ip']['instance']['id']
-                ec2_id = ec2utils.id_to_ec2_id(instance_id)
+            if floating_ip_ref['fixed_ip_id']:
+                fixed_id = floating_ip_ref['fixed_ip_id']
+                fixed = self.network_api.get_fixed_ip(context, fixed_id)
+                if fixed['instance_id'] is not None:
+                    ec2_id = ec2utils.id_to_ec2_id(fixed['instance_id'])
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}
             if context.is_admin:

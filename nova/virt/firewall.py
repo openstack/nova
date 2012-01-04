@@ -303,13 +303,24 @@ class IptablesFirewallDriver(FirewallDriver):
                     fw_rules += [' '.join(args)]
                 else:
                     if rule['grantee_group']:
+                        # FIXME(jkoelker) This needs to be ported up into
+                        #                 the compute manager which already
+                        #                 has access to a nw_api handle,
+                        #                 and should be the only one making
+                        #                 making rpc calls.
+                        import nova.network
+                        nw_api = nova.network.API()
                         for instance in rule['grantee_group']['instances']:
                             LOG.info('instance: %r', instance)
-                            ips = db.instance_get_fixed_addresses(ctxt,
-                                                                instance['id'])
+                            ips = []
+                            nw_info = nw_api.get_instance_nw_info(ctxt,
+                                                                  instance)
+                            for net in nw_info:
+                                ips.extend(net[1]['ips'])
+
                             LOG.info('ips: %r', ips)
                             for ip in ips:
-                                subrule = args + ['-s %s' % ip]
+                                subrule = args + ['-s %s' % ip['ip']]
                                 fw_rules += [' '.join(subrule)]
 
                 LOG.info('Using fw_rules: %r', fw_rules)

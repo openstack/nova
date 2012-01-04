@@ -555,10 +555,20 @@ def get_dhcp_leases(context, network_ref):
     hosts = []
     for fixed_ref in db.network_get_associated_fixed_ips(context,
                                                          network_ref['id']):
-        host = fixed_ref['instance']['host']
-        if network_ref['multi_host'] and FLAGS.host != host:
+        vif_id = fixed_ref['virtual_interface_id']
+        # NOTE(jkoelker) We need a larger refactor to happen to prevent
+        #                looking these up here
+        vif_ref = db.virtual_interface_get(context, vif_id)
+        instance_id = fixed_ref['instance_id']
+        try:
+            instance_ref = db.instance_get(context, instance_id)
+        except exception.InstanceNotFound:
+            msg = _("Instance %(instance_id)s not found")
+            LOG.debug(msg % {'instance_id': instance_id})
             continue
-        hosts.append(_host_lease(fixed_ref))
+        if network_ref['multi_host'] and FLAGS.host != instance_ref['host']:
+            continue
+        hosts.append(_host_lease(fixed_ref, vif_ref, instance_ref))
     return '\n'.join(hosts)
 
 
@@ -567,10 +577,20 @@ def get_dhcp_hosts(context, network_ref):
     hosts = []
     for fixed_ref in db.network_get_associated_fixed_ips(context,
                                                          network_ref['id']):
-        host = fixed_ref['instance']['host']
-        if network_ref['multi_host'] and FLAGS.host != host:
+        vif_id = fixed_ref['virtual_interface_id']
+        # NOTE(jkoelker) We need a larger refactor to happen to prevent
+        #                looking these up here
+        vif_ref = db.virtual_interface_get(context, vif_id)
+        instance_id = fixed_ref['instance_id']
+        try:
+            instance_ref = db.instance_get(context, instance_id)
+        except exception.InstanceNotFound:
+            msg = _("Instance %(instance_id)s not found")
+            LOG.debug(msg % {'instance_id': instance_id})
             continue
-        hosts.append(_host_dhcp(fixed_ref))
+        if network_ref['multi_host'] and FLAGS.host != instance_ref['host']:
+            continue
+        hosts.append(_host_dhcp(fixed_ref, vif_ref, instance_ref))
     return '\n'.join(hosts)
 
 
@@ -604,11 +624,19 @@ def get_dhcp_opts(context, network_ref):
 
         for fixed_ip_ref in ips_ref:
             instance_id = fixed_ip_ref['instance_id']
+            try:
+                instance_ref = db.instance_get(context, instance_id)
+            except exception.InstanceNotFound:
+                msg = _("Instance %(instance_id)s not found")
+                LOG.debug(msg % {'instance_id': instance_id})
+                continue
+
             if instance_id in default_gw_network_node:
                 target_network_id = default_gw_network_node[instance_id]
                 # we don't want default gateway for this fixed ip
                 if target_network_id != fixed_ip_ref['network_id']:
-                    hosts.append(_host_dhcp_opts(fixed_ip_ref))
+                    hosts.append(_host_dhcp_opts(fixed_ip_ref,
+                                                 instance_ref))
     return '\n'.join(hosts)
 
 
@@ -739,9 +767,8 @@ interface %s
     _execute(*cmd, run_as_root=True)
 
 
-def _host_lease(fixed_ip_ref):
+def _host_lease(fixed_ip_ref, vif_ref, instance_ref):
     """Return a host string for an address in leasefile format."""
-    instance_ref = fixed_ip_ref['instance']
     if instance_ref['updated_at']:
         timestamp = instance_ref['updated_at']
     else:
@@ -750,37 +777,35 @@ def _host_lease(fixed_ip_ref):
     seconds_since_epoch = calendar.timegm(timestamp.utctimetuple())
 
     return '%d %s %s %s *' % (seconds_since_epoch + FLAGS.dhcp_lease_time,
-                              fixed_ip_ref['virtual_interface']['address'],
+                              vif_ref['address'],
                               fixed_ip_ref['address'],
                               instance_ref['hostname'] or '*')
 
 
-def _host_dhcp_network(fixed_ip_ref):
-    instance_ref = fixed_ip_ref['instance']
+def _host_dhcp_network(fixed_ip_ref, instance_ref):
     return 'NW-i%08d-%s' % (instance_ref['id'],
                             fixed_ip_ref['network_id'])
 
 
-def _host_dhcp(fixed_ip_ref):
+def _host_dhcp(fixed_ip_ref, vif_ref, instance_ref):
     """Return a host string for an address in dhcp-host format."""
-    instance_ref = fixed_ip_ref['instance']
-    vif = fixed_ip_ref['virtual_interface']
     if FLAGS.use_single_default_gateway:
-        return '%s,%s.%s,%s,%s' % (vif['address'],
+        return '%s,%s.%s,%s,%s' % (vif_ref['address'],
                                instance_ref['hostname'],
                                FLAGS.dhcp_domain,
                                fixed_ip_ref['address'],
-                               "net:" + _host_dhcp_network(fixed_ip_ref))
+                               "net:" + _host_dhcp_network(fixed_ip_ref,
+                                                           instance_ref))
     else:
-        return '%s,%s.%s,%s' % (vif['address'],
+        return '%s,%s.%s,%s' % (vif_ref['address'],
                                instance_ref['hostname'],
                                FLAGS.dhcp_domain,
                                fixed_ip_ref['address'])
 
 
-def _host_dhcp_opts(fixed_ip_ref):
+def _host_dhcp_opts(fixed_ip_ref, instance_ref):
     """Return a host string for an address in dhcp-host format."""
-    return '%s,%s' % (_host_dhcp_network(fixed_ip_ref), 3)
+    return '%s,%s' % (_host_dhcp_network(fixed_ip_ref, instance_ref), 3)
 
 
 def _execute(*cmd, **kwargs):

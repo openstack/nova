@@ -96,10 +96,6 @@ def stub_out_db_instance_api(stubs):
         """Stubs out the db.instance_action_create method."""
         pass
 
-    def fake_instance_get_fixed_addresses(context, instance_id):
-        """Stubs out the db.instance_get_fixed_address method."""
-        return '10.10.10.10'
-
     def fake_instance_type_get_all(context, inactive=0, filters=None):
         return INSTANCE_TYPES.values()
 
@@ -109,7 +105,5 @@ def stub_out_db_instance_api(stubs):
     stubs.Set(db, 'instance_create', fake_instance_create)
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
     stubs.Set(db, 'instance_action_create', fake_instance_action_create)
-    stubs.Set(db, 'instance_get_fixed_addresses',
-                fake_instance_get_fixed_addresses)
     stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
     stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)

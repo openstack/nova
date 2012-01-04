@@ -67,19 +67,6 @@ class DbApiTestCase(test.TestCase):
                                              self.project_id)
         self.assertEqual(instance['id'], result['id'])
 
-    def test_instance_get_project_vpn_joins(self):
-        values = {'instance_type_id': FLAGS.default_instance_type,
-                  'image_ref': FLAGS.vpn_image_id,
-                  'project_id': self.project_id,
-                 }
-        instance = db.instance_create(self.context, values)
-        _setup_networking(instance['id'])
-        result = db.instance_get_project_vpn(self.context.elevated(),
-                                             self.project_id)
-        self.assertEqual(instance['id'], result['id'])
-        self.assertEqual(result['fixed_ips'][0]['floating_ips'][0].address,
-                         '1.2.1.2')
-
     def test_instance_get_all_by_filters(self):
         args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
         inst1 = db.instance_create(self.context, args)

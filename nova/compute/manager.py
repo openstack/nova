@@ -378,7 +378,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             except Exception:
                 with utils.save_and_reraise_exception():
                     self._deallocate_network(context, instance)
-            self._notify_about_instance_usage(instance)
+            self._notify_about_instance_usage(instance, network_info)
             if self._is_instance_terminated(instance_uuid):
                 raise exception.InstanceNotFound
         except exception.InstanceNotFound:
@@ -520,8 +520,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      task_state=None,
                                      launched_at=utils.utcnow())
 
-    def _notify_about_instance_usage(self, instance):
-        usage_info = utils.usage_from_instance(instance)
+    def _notify_about_instance_usage(self, instance, network_info=None):
+        usage_info = utils.usage_from_instance(instance, network_info)
         notifier.notify('compute.%s' % self.host,
                         'compute.instance.create',
                         notifier.INFO, usage_info)
@@ -744,7 +744,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               task_state=None,
                               launched_at=utils.utcnow())
 
-        usage_info = utils.usage_from_instance(instance)
+        usage_info = utils.usage_from_instance(instance, network_info)
         notifier.notify('compute.%s' % self.host,
                             'compute.instance.rebuild',
                             notifier.INFO,
@@ -1043,7 +1043,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.confirm_migration(
                 migration_ref, instance_ref, network_info)
 
-        usage_info = utils.usage_from_instance(instance_ref)
+        usage_info = utils.usage_from_instance(instance_ref, network_info)
         notifier.notify('compute.%s' % self.host,
                             'compute.instance.resize.confirm',
                             notifier.INFO,
@@ -1271,13 +1271,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_id = instance_ref['id']
         self.network_api.add_fixed_ip_to_instance(context, instance_id,
                                                   self.host, network_id)
-        usage = utils.usage_from_instance(instance_ref)
+
+        network_info = self.inject_network_info(context,
+                                                instance_ref['uuid'])
+        self.reset_network(context, instance_ref['uuid'])
+
+        usage = utils.usage_from_instance(instance_ref, network_info)
         notifier.notify('compute.%s' % self.host,
                         'compute.instance.create_ip',
                         notifier.INFO, usage)
-
-        self.inject_network_info(context, instance_ref['uuid'])
-        self.reset_network(context, instance_ref['uuid'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1291,13 +1293,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_id = instance_ref['id']
         self.network_api.remove_fixed_ip_from_instance(context, instance_id,
                                                        address)
-        usage = utils.usage_from_instance(instance_ref)
+
+        network_info = self.inject_network_info(context,
+                                                instance_ref['uuid'])
+        self.reset_network(context, instance_ref['uuid'])
+
+        usage = utils.usage_from_instance(instance_ref, network_info)
         notifier.notify('compute.%s' % self.host,
                         'compute.instance.delete_ip',
                         notifier.INFO, usage)
-
-        self.inject_network_info(context, instance_ref['uuid'])
-        self.reset_network(context, instance_ref['uuid'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1447,6 +1451,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.debug(_("network_info to inject: |%s|"), network_info)
 
         self.driver.inject_network_info(instance, network_info)
+        return network_info
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
@@ -1831,6 +1836,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.unfilter_instance(instance_ref, network_info)
 
         # Database updating.
+        # NOTE(jkoelker) This needs to be converted to network api calls
+        #                if nova wants to support floating_ips in
+        #                quantum/melange
         try:
             # Not return if floating_ip is not found, otherwise,
             # instance never be accessible..

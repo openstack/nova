@@ -86,7 +86,7 @@ class UsageInfoTestCase(test.TestCase):
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         for attr in ('display_name', 'created_at', 'launched_at',
-                     'state', 'state_description', 'fixed_ips',
+                     'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
                      'audit_period_ending'):
             self.assertTrue(attr in payload,

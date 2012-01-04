@@ -683,19 +683,9 @@ class FixedIp(BASE, NovaBase):
     __tablename__ = 'fixed_ips'
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
-    network = relationship(Network, backref=backref('fixed_ips'))
-    virtual_interface_id = Column(Integer, ForeignKey('virtual_interfaces.id'),
-                                                                 nullable=True)
-    virtual_interface = relationship(VirtualInterface,
-                                     backref=backref('fixed_ips'))
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance,
-                            backref=backref('fixed_ips'),
-                            foreign_keys=instance_id,
-                            primaryjoin='and_('
-                                'FixedIp.instance_id == Instance.id,'
-                                'FixedIp.deleted == False)')
+    network_id = Column(Integer, nullable=True)
+    virtual_interface_id = Column(Integer, nullable=True)
+    instance_id = Column(Integer, nullable=True)
     # associated means that a fixed_ip has its instance_id column set
     # allocated means that a fixed_ip has a its virtual_interface_id column set
     allocated = Column(Boolean, default=False)
@@ -710,13 +700,7 @@ class FloatingIp(BASE, NovaBase):
     __tablename__ = 'floating_ips'
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
-    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
-    fixed_ip = relationship(FixedIp,
-                            backref=backref('floating_ips'),
-                            foreign_keys=fixed_ip_id,
-                            primaryjoin='and_('
-                                'FloatingIp.fixed_ip_id == FixedIp.id,'
-                                'FloatingIp.deleted == False)')
+    fixed_ip_id = Column(Integer, nullable=True)
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     auto_assigned = Column(Boolean, default=False, nullable=False)

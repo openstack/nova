@@ -466,35 +466,14 @@ class FakeRateLimiter(object):
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
-def create_fixed_ips(project_id, publics, privates, publics_are_floating):
-    if publics is None:
-        publics = []
-    if privates is None:
-        privates = []
+def create_info_cache(nw_cache):
+    if nw_cache is None:
+        return {}
 
-    fixed_ips = []
-    private_vif = dict(address='aa:bb:cc:dd:ee:ff')
-    private_net = dict(label='private', project_id=project_id, cidr_v6=None)
+    if not isinstance(nw_cache, basestring):
+        nw_cache = utils.dumps(nw_cache)
 
-    for private in privates:
-        entry = dict(address=private, network=private_net,
-                virtual_interface=private_vif, floating_ips=[])
-        if publics_are_floating:
-            for public in publics:
-                entry['floating_ips'].append(dict(address=public))
-            # Only add them once
-            publics = []
-        fixed_ips.append(entry)
-
-    if not publics_are_floating:
-        public_vif = dict(address='ff:ee:dd:cc:bb:aa')
-        public_net = dict(label='public', project_id=project_id,
-                cidr_v6='b33f::/64')
-        for public in publics:
-            entry = dict(address=public, network=public_net,
-                    virtual_interface=public_vif, floating_ips=[])
-            fixed_ips.append(entry)
-    return fixed_ips
+    return {"info_cache": {"network_info": nw_cache}}
 
 
 def stub_instance(id, user_id='fake', project_id='fake', host=None,
@@ -502,10 +481,9 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
                   flavor_id="1", name=None, key_name='',
                   access_ipv4=None, access_ipv6=None, progress=0,
-                  auto_disk_config=False, public_ips=None, private_ips=None,
-                  public_ips_are_floating=False, display_name=None,
+                  auto_disk_config=False, display_name=None,
                   include_fake_metadata=True,
-                  power_state=None):
+                  power_state=None, nw_cache=None):
 
     if include_fake_metadata:
         metadata = [models.InstanceMetadata(key='seq', value=id)]
@@ -522,13 +500,12 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
     else:
         key_data = ''
 
-    fixed_ips = create_fixed_ips(project_id, public_ips, private_ips,
-                                 public_ips_are_floating)
-
     # ReservationID isn't sent back, hack it in there.
     server_name = name or "server%s" % id
     if reservation_id != "":
         server_name = "reservation_%s" % (reservation_id, )
+
+    info_cache = create_info_cache(nw_cache)
 
     instance = {
         "id": int(id),
@@ -569,8 +546,9 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
         "progress": progress,
         "auto_disk_config": auto_disk_config,
         "name": "instance-%s" % id,
-        "fixed_ips": fixed_ips,
         "shutdown_terminate": True,
         "disable_terminate": False}
+
+    instance.update(info_cache)
 
     return instance

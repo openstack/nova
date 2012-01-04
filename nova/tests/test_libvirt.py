@@ -1328,17 +1328,22 @@ class IptablesFirewallTestCase(test.TestCase):
                 return '', ''
             print cmd, kwargs
 
+        network_info = _fake_network_info(self.stubs, 1)
+
         def get_fixed_ips(*args, **kwargs):
             ips = []
             for network, info in network_info:
                 ips.extend(info['ips'])
-            return [ip['ip'] for ip in ips]
+                return [ip['ip'] for ip in ips]
+
+        def nw_info(*args, **kwargs):
+            return network_info
 
         from nova.network import linux_net
         linux_net.iptables_manager.execute = fake_iptables_execute
 
-        network_info = _fake_network_info(self.stubs, 1)
-        self.stubs.Set(db, 'instance_get_fixed_addresses', get_fixed_ips)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          nw_info)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
 

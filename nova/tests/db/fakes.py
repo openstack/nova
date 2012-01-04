@@ -441,12 +441,6 @@ def stub_out_db_instance_api(stubs, injected=True):
         else:
             return [FakeModel(flat_network_fields)]
 
-    def fake_instance_get_fixed_addresses(context, instance_id):
-        return [FakeModel(fixed_ip_fields).address]
-
-    def fake_instance_get_fixed_addresses_v6(context, instance_id):
-        return [FakeModel(fixed_ip_fields).address]
-
     def fake_fixed_ip_get_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
@@ -455,8 +449,6 @@ def stub_out_db_instance_api(stubs, injected=True):
              fake_instance_type_get_all,
              fake_instance_type_get_by_name,
              fake_instance_type_get,
-             fake_instance_get_fixed_addresses,
-             fake_instance_get_fixed_addresses_v6,
              fake_network_get_all_by_instance,
              fake_fixed_ip_get_by_instance]
     stub_out(stubs, funcs)

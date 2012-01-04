@@ -56,6 +56,12 @@ class API(base.Base):
                         {'method': 'disassociate_network',
                          'args': {'network_uuid': network_uuid}})
 
+    def get_fixed_ip(self, context, id):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_fixed_ip',
+                         'args': {'id': id}})
+
     def get_floating_ip(self, context, id):
         return rpc.call(context,
                         FLAGS.network_topic,
