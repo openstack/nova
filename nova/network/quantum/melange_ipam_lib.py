@@ -128,7 +128,7 @@ class QuantumMelangeIPAMLib(object):
 
     def get_project_networks(self, admin_context):
         try:
-            nets = db.network_get_all(context.elevated())
+            nets = db.network_get_all(admin_context.elevated())
         except exception.NoNetworksFound:
             return []
         # only return networks with a project_id set
