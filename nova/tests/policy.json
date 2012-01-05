@@ -127,6 +127,8 @@
 
     "volume:attach": [],
     "volume:detach": [],
+    "volume:reserve_volume": [],
+    "volume:unreserve_volume": [],
     "volume:check_attach": [],
     "volume:check_detach": [],
     "volume:initialize_connection": [],
