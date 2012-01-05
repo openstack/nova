@@ -313,7 +313,7 @@ class DistributedSchedulerTestCase(test.TestCase):
                        _fake_choose_host_filters)
 
         hosts = [('host1', '1info'), ('host2', '2info'), ('host3', '3info')]
-        request_spec = dict(original_host='host2',
+        request_spec = dict(instance_properties=dict(host='host2'),
                             avoid_original_host=True)
 
         filtered = sched._filter_hosts('compute', request_spec, hosts, {})
@@ -333,7 +333,7 @@ class DistributedSchedulerTestCase(test.TestCase):
                        _fake_choose_host_filters)
 
         hosts = [('host1', '1info'), ('host2', '2info'), ('host3', '3info')]
-        request_spec = dict(original_host='host2',
+        request_spec = dict(instance_properties=dict(host='host2'),
                             avoid_original_host=False)
 
         filtered = sched._filter_hosts('compute', request_spec, hosts, {})

@@ -394,10 +394,12 @@ class DistributedScheduler(driver.Scheduler):
         selected_filters = self._choose_host_filters()
 
         # Filter out original host
-        if ('original_host' in request_spec and
-            request_spec.get('avoid_original_host', True)):
-            hosts = [(h, hi) for h, hi in hosts
-                     if h != request_spec['original_host']]
+        try:
+            if request_spec['avoid_original_host']:
+                original_host = request_spec['instance_properties']['host']
+                hosts = [(h, hi) for h, hi in hosts if h != original_host]
+        except (KeyError, TypeError):
+            pass
 
         # TODO(sandy): We're only using InstanceType-based specs
         # currently. Later we'll need to snoop for more detailed

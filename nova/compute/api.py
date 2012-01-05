@@ -1317,7 +1317,7 @@ class API(base.Base):
             'instance_type': new_instance_type,
             'filter': None,
             'num_instances': 1,
-            'original_host': instance['host'],
+            'instance_properties': instance,
             'avoid_original_host': not FLAGS.allow_resize_to_same_host,
             'local_zone': True,
             }
