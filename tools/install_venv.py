@@ -106,6 +106,7 @@ class UbuntuOneiric(Distro):
         """
         The pip installed version of m2crypto has problems on oneiric
         """
+        print "Attempting to install 'python-m2crypto' via apt-get"
         run_command(['sudo', 'apt-get', 'install', '-y',
             "python-m2crypto"])
 
@@ -120,6 +121,7 @@ class Fedora(Distro):
                                      check_exit_code=False)[1] == 0
 
     def yum_install(self, pkg, **kwargs):
+        print "Attempting to install '%s' via yum" % pkg
         run_command(['sudo', 'yum', 'install', '-y', pkg], **kwargs)
 
     def apply_patch(self, originalfile, patchfile):
