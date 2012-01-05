@@ -1379,7 +1379,13 @@ class LibvirtConnection(driver.ComputeDriver):
         total = 0
         for dom_id in self._conn.listDomainsID():
             dom = self._conn.lookupByID(dom_id)
-            total += len(dom.vcpus()[1])
+            vcpus = dom.vcpus()
+            if vcpus is None:
+                # dom.vcpus is not implemented for lxc, but returning 0 for
+                # a used count is hardly useful for something measuring usage
+                total += 1
+            else:
+                total += len(vcpus[1])
         return total
 
     def get_memory_mb_used(self):
