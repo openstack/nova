@@ -690,8 +690,11 @@ class SheepdogDriver(VolumeDriver):
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
         try:
+            #NOTE(francois-charlier) Since 0.24 'collie cluster info -r'
+            #  gives short output, but for compatibility reason we won't
+            #  use it and just check if 'running' is in the output.
             (out, err) = self._execute('collie', 'cluster', 'info')
-            if not out.startswith('running'):
+            if not 'running' in out.split():
                 raise exception.Error(_("Sheepdog is not working: %s") % out)
         except exception.ProcessExecutionError:
             raise exception.Error(_("Sheepdog is not working"))
