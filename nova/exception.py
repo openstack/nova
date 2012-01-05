@@ -207,6 +207,10 @@ class AdminRequired(NotAuthorized):
     message = _("User does not have admin privileges")
 
 
+class PolicyNotAllowed(NotAuthorized):
+    message = _("Policy Doesn't allow %(action)s to be performed.")
+
+
 class InstanceBusy(NovaException):
     message = _("Instance %(instance_id)s is busy. (%(task_state)s)")
 
