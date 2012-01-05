@@ -1214,8 +1214,10 @@ class ServersControllerTest(test.TestCase):
             self.server_delete_called = True
         self.stubs.Set(nova.db, 'instance_destroy', instance_destroy_mock)
 
-        with self.assertRaises(webob.exc.HTTPConflict):
-            self.controller.delete(req, FAKE_UUID)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.delete,
+                          req,
+                          FAKE_UUID)
 
     def test_delete_server_instance_while_resize(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
@@ -1231,8 +1233,10 @@ class ServersControllerTest(test.TestCase):
             self.server_delete_called = True
         self.stubs.Set(nova.db, 'instance_destroy', instance_destroy_mock)
 
-        with self.assertRaises(webob.exc.HTTPConflict):
-            self.controller.delete(req, FAKE_UUID)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.delete,
+                          req,
+                          FAKE_UUID)
 
 
 class ServerStatusTest(test.TestCase):
