@@ -69,9 +69,7 @@ Example::
 
   Then a new paragraph after a newline that explains in more detail any
   general information about the function, class or method. Example usages
-  are also great to have here if it is a complex class for function. After
-  you have finished your descriptions add an extra newline and close the
-  quotations.
+  are also great to have here if it is a complex class for function.
 
   When writing the docstring for a class, an extra line should be placed
   after the closing quotations. For more in-depth explanations for these
@@ -85,7 +83,6 @@ Example::
   :returns: return_type -- description of the return value
   :returns: description of the return value
   :raises: AttributeError, KeyError
-
   """
 
 
