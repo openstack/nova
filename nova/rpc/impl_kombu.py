@@ -449,7 +449,6 @@ class Connection(object):
     def publisher_send(self, cls, topic, msg, **kwargs):
         """Send to a publisher based on the publisher class"""
         while True:
-            publisher = None
             try:
                 publisher = cls(self.channel, topic, **kwargs)
                 publisher.send(msg)
@@ -458,8 +457,6 @@ class Connection(object):
                 LOG.exception(_('Failed to publish message %s' % str(e)))
                 try:
                     self.reconnect()
-                    if publisher:
-                        publisher.reconnect(self.channel)
                 except self.connection.connection_errors, e:
                     pass
 
