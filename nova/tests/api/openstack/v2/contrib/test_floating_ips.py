@@ -100,17 +100,17 @@ class StubExtensionManager(object):
 
 
 class FloatingIpTest(test.TestCase):
-    address = "10.10.10.10"
+    floating_ip = "10.10.10.10"
 
     def _create_floating_ip(self):
         """Create a floating ip object."""
         host = "fake_host"
         return db.floating_ip_create(self.context,
-                                     {'address': self.address,
+                                     {'address': self.floating_ip,
                                       'host': host})
 
     def _delete_floating_ip(self):
-        db.floating_ip_destroy(self.context, self.address)
+        db.floating_ip_destroy(self.context, self.floating_ip)
 
     def setUp(self):
         super(FloatingIpTest, self).setUp()
@@ -146,7 +146,7 @@ class FloatingIpTest(test.TestCase):
         view = floating_ips._translate_floating_ip_view(floating_ip)
         self.assertTrue('floating_ip' in view)
         self.assertTrue(view['floating_ip']['id'])
-        self.assertEqual(view['floating_ip']['ip'], self.address)
+        self.assertEqual(view['floating_ip']['ip'], self.floating_ip)
         self.assertEqual(view['floating_ip']['fixed_ip'], None)
         self.assertEqual(view['floating_ip']['instance_id'], None)
 
@@ -233,7 +233,7 @@ class FloatingIpTest(test.TestCase):
 # test floating ip add/remove -> associate/disassociate
 
     def test_floating_ip_associate(self):
-        body = dict(addFloatingIp=dict(address=self.address))
+        body = dict(addFloatingIp=dict(address=self.floating_ip))
 
         req = fakes.HTTPRequest.blank('/v2/123/servers/test_inst/action')
         self.manager._add_floating_ip(body, req, 'test_inst')
