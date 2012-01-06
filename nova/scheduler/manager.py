@@ -148,6 +148,9 @@ class SchedulerManager(manager.Manager):
                 'local_gb_used': 64}
 
         """
+        # Update latest compute_node table
+        topic = db.queue_get_for(context, FLAGS.compute_topic, host)
+        rpc.call(context, topic, {"method": "update_available_resource"})
 
         # Getting compute node info and related instances info
         compute_ref = db.service_get_all_compute_by_host(context, host)

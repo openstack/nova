@@ -147,6 +147,7 @@ class ComputeNode(BASE, NovaBase):
     # above, since it is copied from <cpu> tag of getCapabilities()
     # (See libvirt.virtConnection).
     cpu_info = Column(Text, nullable=True)
+    disk_available_least = Column(Integer)
 
 
 class Certificate(BASE, NovaBase):

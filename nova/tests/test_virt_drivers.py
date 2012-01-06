@@ -324,11 +324,6 @@ class _VirtDriverTestCase(test.TestCase):
         self.connection.refresh_provider_fw_rules()
 
     @catch_notimplementederror
-    def test_update_available_resource(self):
-        self.compute = self.start_service('compute', host='dummy')
-        self.connection.update_available_resource(self.ctxt, 'dummy')
-
-    @catch_notimplementederror
     def test_compare_cpu(self):
         cpu_info = '''{ "topology": {
                                "sockets": 1,

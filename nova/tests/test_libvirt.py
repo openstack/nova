@@ -757,67 +757,6 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEquals(conn.uri, testuri)
         db.instance_destroy(user_context, instance_ref['id'])
 
-    def test_update_available_resource_works_correctly(self):
-        """Confirm compute_node table is updated successfully."""
-        self.flags(instances_path='.')
-
-        # Prepare mocks
-        def getVersion():
-            return 12003
-
-        def getType():
-            return 'qemu'
-
-        def listDomainsID():
-            return []
-
-        service_ref = self.create_service(host='dummy')
-        self.create_fake_libvirt_mock(getVersion=getVersion,
-                                      getType=getType,
-                                      listDomainsID=listDomainsID)
-        self.mox.StubOutWithMock(connection.LibvirtConnection,
-                                 'get_cpu_info')
-        connection.LibvirtConnection.get_cpu_info().AndReturn('cpuinfo')
-
-        # Start test
-        self.mox.ReplayAll()
-        conn = connection.LibvirtConnection(False)
-        conn.update_available_resource(self.context, 'dummy')
-        service_ref = db.service_get(self.context, service_ref['id'])
-        compute_node = service_ref['compute_node'][0]
-
-        if sys.platform.upper() == 'LINUX2':
-            self.assertTrue(compute_node['vcpus'] >= 0)
-            self.assertTrue(compute_node['memory_mb'] > 0)
-            self.assertTrue(compute_node['local_gb'] > 0)
-            self.assertTrue(compute_node['vcpus_used'] == 0)
-            self.assertTrue(compute_node['memory_mb_used'] > 0)
-            self.assertTrue(compute_node['local_gb_used'] > 0)
-            self.assertTrue(len(compute_node['hypervisor_type']) > 0)
-            self.assertTrue(compute_node['hypervisor_version'] > 0)
-        else:
-            self.assertTrue(compute_node['vcpus'] >= 0)
-            self.assertTrue(compute_node['memory_mb'] == 0)
-            self.assertTrue(compute_node['local_gb'] > 0)
-            self.assertTrue(compute_node['vcpus_used'] == 0)
-            self.assertTrue(compute_node['memory_mb_used'] == 0)
-            self.assertTrue(compute_node['local_gb_used'] > 0)
-            self.assertTrue(len(compute_node['hypervisor_type']) > 0)
-            self.assertTrue(compute_node['hypervisor_version'] > 0)
-
-        db.service_destroy(self.context, service_ref['id'])
-
-    def test_update_resource_info_no_compute_record_found(self):
-        """Raise exception if no recorde found on services table."""
-        self.flags(instances_path='.')
-        self.create_fake_libvirt_mock()
-
-        self.mox.ReplayAll()
-        conn = connection.LibvirtConnection(False)
-        self.assertRaises(exception.ComputeServiceUnavailable,
-                          conn.update_available_resource,
-                          self.context, 'dummy')
-
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_ensure_filtering_rules_for_instance_timeout(self):
         """ensure_filtering_fules_for_instance() finishes with timeout."""
@@ -950,7 +889,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         # Test data
         instance_ref = db.instance_create(self.context, self.test_instance)
-        dummyjson = ('[{"path": "%s/disk", "local_gb": "10G",'
+        dummyjson = ('[{"path": "%s/disk", "disk_size": "10737418240",'
                      ' "type": "raw", "backing_file": ""}]')
 
         # Preparing mocks
@@ -984,6 +923,13 @@ class LibvirtConnTestCase(test.TestCase):
                     "<target dev='vdb' bus='virtio'/></disk>"
                     "</devices></domain>")
 
+        ret = ("image: /test/disk\n"
+               "file format: raw\n"
+               "virtual size: 20G (21474836480 bytes)\n"
+               "disk size: 3.1G\n"
+               "cluster_size: 2097152\n"
+               "backing file: /test/dummy (actual path: /backing/file)\n")
+
         # Preparing mocks
         vdmock = self.mox.CreateMock(libvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
@@ -998,18 +944,27 @@ class LibvirtConnTestCase(test.TestCase):
         fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * GB
         fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * GB
         fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
+
+        self.mox.StubOutWithMock(os.path, "getsize")
+        os.path.getsize('/test/disk').AndReturn((10737418240))
+
+        self.mox.StubOutWithMock(utils, "execute")
+        utils.execute('qemu-img', 'info', '/test/disk.local').\
+            AndReturn((ret, ''))
+
+        os.path.getsize('/test/disk.local').AndReturn((21474836480))
+
         self.mox.ReplayAll()
         conn = connection.LibvirtConnection(False)
-        info = conn.get_instance_disk_info(self.context, instance_ref)
+        info = conn.get_instance_disk_info(instance_ref.name)
         info = utils.loads(info)
-
         self.assertEquals(info[0]['type'], 'raw')
-        self.assertEquals(info[1]['type'], 'qcow2')
         self.assertEquals(info[0]['path'], '/test/disk')
-        self.assertEquals(info[1]['path'], '/test/disk.local')
-        self.assertEquals(info[0]['local_gb'], '10G')
-        self.assertEquals(info[1]['local_gb'], '20G')
+        self.assertEquals(info[0]['disk_size'], 10737418240)
         self.assertEquals(info[0]['backing_file'], "")
+        self.assertEquals(info[1]['type'], 'qcow2')
+        self.assertEquals(info[1]['path'], '/test/disk.local')
+        self.assertEquals(info[1]['virt_disk_size'], 21474836480)
         self.assertEquals(info[1]['backing_file'], "file")
 
         db.instance_destroy(self.context, instance_ref['id'])
@@ -1186,6 +1141,9 @@ class HostStateTestCase(test.TestCase):
             return 'QEMU'
 
         def get_hypervisor_version(self):
+            return 13091
+
+        def get_disk_available_least(self):
             return 13091
 
     def test_update_status(self):

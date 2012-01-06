@@ -169,12 +169,16 @@ class Scheduler(object):
         raise NotImplementedError(_("Must implement a fallback schedule"))
 
     def schedule_live_migration(self, context, instance_id, dest,
-                                block_migration=False):
+                                block_migration=False,
+                                disk_over_commit=False):
         """Live migration scheduling method.
-
         :param context:
         :param instance_id:
         :param dest: destination host
+        :param block_migration: if true, block_migration.
+        :param disk_over_commit: if True, consider real(not virtual)
+                                 disk size.
+
         :return:
             The host where instance is running currently.
             Then scheduler send request that host.
@@ -187,10 +191,12 @@ class Scheduler(object):
 
         # Checking destination host.
         self._live_migration_dest_check(context, instance_ref,
-                                        dest, block_migration)
+                                        dest, block_migration,
+                                        disk_over_commit)
         # Common checking.
         self._live_migration_common_check(context, instance_ref,
-                                          dest, block_migration)
+                                          dest, block_migration,
+                                          disk_over_commit)
 
         # Changing instance_state.
         values = {"vm_state": vm_states.MIGRATING}
@@ -238,13 +244,15 @@ class Scheduler(object):
             raise exception.ComputeServiceUnavailable(host=src)
 
     def _live_migration_dest_check(self, context, instance_ref, dest,
-                                   block_migration):
+                                   block_migration, disk_over_commit):
         """Live migration check routine (for destination host).
 
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest: destination host
-
+        :param block_migration: if true, block_migration.
+        :param disk_over_commit: if True, consider real(not virtual)
+                                 disk size.
         """
 
         # Checking dest exists and compute node.
@@ -267,10 +275,11 @@ class Scheduler(object):
         self.assert_compute_node_has_enough_resources(context,
                                                       instance_ref,
                                                       dest,
-                                                      block_migration)
+                                                      block_migration,
+                                                      disk_over_commit)
 
     def _live_migration_common_check(self, context, instance_ref, dest,
-                                     block_migration):
+                                     block_migration, disk_over_commit):
         """Live migration common check routine.
 
         Below checkings are followed by
@@ -279,7 +288,9 @@ class Scheduler(object):
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest: destination host
-        :param block_migration if True, check for block_migration.
+        :param block_migration: if true, block_migration.
+        :param disk_over_commit: if True, consider real(not virtual)
+                                 disk size.
 
         """
 
@@ -300,7 +311,7 @@ class Scheduler(object):
                                 "and %(dest)s.") % locals())
                 raise
 
-        # Checking dest exists.
+        # Checking destination host exists.
         dservice_refs = db.service_get_all_compute_by_host(context, dest)
         dservice_ref = dservice_refs[0]['compute_node'][0]
 
@@ -338,20 +349,26 @@ class Scheduler(object):
             raise
 
     def assert_compute_node_has_enough_resources(self, context, instance_ref,
-                                                 dest, block_migration):
+                                                 dest, block_migration,
+                                                 disk_over_commit):
 
         """Checks if destination host has enough resource for live migration.
 
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest: destination host
-        :param block_migration: if True, disk checking has been done
+        :param block_migration: if true, block_migration.
+        :param disk_over_commit: if True, consider real(not virtual)
+                                 disk size.
 
         """
-        self.assert_compute_node_has_enough_memory(context, instance_ref, dest)
+        self.assert_compute_node_has_enough_memory(context,
+                                                   instance_ref, dest)
         if not block_migration:
             return
-        self.assert_compute_node_has_enough_disk(context, instance_ref, dest)
+        self.assert_compute_node_has_enough_disk(context,
+                                                 instance_ref, dest,
+                                                 disk_over_commit)
 
     def assert_compute_node_has_enough_memory(self, context,
                                               instance_ref, dest):
@@ -364,7 +381,7 @@ class Scheduler(object):
 
         """
 
-        # Getting total available memory and disk of host
+        # Getting total available memory of host
         avail = self._get_compute_info(context, dest, 'memory_mb')
 
         # Getting total used memory and disk of host
@@ -385,35 +402,65 @@ class Scheduler(object):
                        "instance:%(mem_inst)s)")
             raise exception.MigrationError(reason=reason % locals())
 
-    def assert_compute_node_has_enough_disk(self, context,
-                                            instance_ref, dest):
+    def assert_compute_node_has_enough_disk(self, context, instance_ref, dest,
+                                            disk_over_commit):
         """Checks if destination host has enough disk for block migration.
 
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest: destination host
+        :param disk_over_commit: if True, consider real(not virtual)
+                                 disk size.
 
         """
 
-        # Getting total available memory and disk of host
-        avail = self._get_compute_info(context, dest, 'local_gb')
+        # Libvirt supports qcow2 disk format,which is usually compressed
+        # on compute nodes.
+        # Real disk image (compressed) may enlarged to "virtual disk size",
+        # that is specified as the maximum disk size.
+        # (See qemu-img -f path-to-disk)
+        # Scheduler recognizes destination host still has enough disk space
+        # if real disk size < available disk size
+        # if disk_over_commit is True,
+        #  otherwise virtual disk size < available disk size.
 
-        # Getting total used memory and disk of host
-        # It should be sum of disks that are assigned as max value
-        # because overcommiting is risky.
-        used = 0
-        instance_refs = db.instance_get_all_by_host(context, dest)
-        used_list = [i['local_gb'] for i in instance_refs]
-        if used_list:
-            used = reduce(lambda x, y: x + y, used_list)
+        # Refresh compute_nodes table
+        topic = db.queue_get_for(context, FLAGS.compute_topic, dest)
+        rpc.call(context, topic,
+                 {"method": "update_available_resource"})
 
-        disk_inst = instance_ref['local_gb']
-        avail = avail - used
-        if avail <= disk_inst:
+        # Getting total available disk of host
+        available_gb = self._get_compute_info(context,
+                                              dest, 'disk_available_least')
+        available = available_gb * (1024 ** 3)
+
+        # Getting necessary disk size
+        try:
+            topic = db.queue_get_for(context, FLAGS.compute_topic,
+                                              instance_ref['host'])
+            ret = rpc.call(context, topic,
+                           {"method": 'get_instance_disk_info',
+                            "args": {'instance_name': instance_ref.name}})
+            disk_infos = utils.loads(ret)
+        except rpc.RemoteError:
+            LOG.exception(_("host %(dest)s is not compatible with "
+                                "original host %(src)s.") % locals())
+            raise
+
+        necessary = 0
+        if disk_over_commit:
+            for info in disk_infos:
+                necessary += int(info['disk_size'])
+        else:
+            for info in disk_infos:
+                necessary += int(info['virt_disk_size'])
+
+        # Check that available disk > necessary disk
+        if (available - necessary) < 0:
             instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
             reason = _("Unable to migrate %(instance_id)s to %(dest)s: "
-                       "Lack of disk(host:%(avail)s "
-                       "<= instance:%(disk_inst)s)")
+                       "Lack of disk(host:%(available)s "
+                       "<= instance:%(necessary)s)")
             raise exception.MigrationError(reason=reason % locals())
 
     def _get_compute_info(self, context, host, key):

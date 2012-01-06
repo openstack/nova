@@ -1194,6 +1194,10 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, FLAGS.volume_topic, {"method": "check_for_export",
                                          "args": {'instance_id': instance_id}})
+
+        self.mox.StubOutWithMock(self.compute.driver, 'get_instance_disk_info')
+        self.compute.driver.get_instance_disk_info(inst_ref.name)
+
         rpc.call(c, topic, {"method": "pre_live_migration",
                             "args": {'instance_id': instance_id,
                                      'block_migration': True,

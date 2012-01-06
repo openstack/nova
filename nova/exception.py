@@ -299,6 +299,10 @@ class UnableToMigrateToSelf(Invalid):
                 "to current host (%(host)s).")
 
 
+class DestinationHostUnavailable(Invalid):
+    message = _("Destination compute host is unavailable at this time.")
+
+
 class SourceHostUnavailable(Invalid):
     message = _("Original compute host is unavailable at this time.")
 

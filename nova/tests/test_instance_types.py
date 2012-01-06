@@ -144,7 +144,7 @@ class InstanceTypeTestCase(test.TestCase):
         instance_types.create(name, 256, 1, 120, 'flavor1')
         self.assertRaises(exception.ApiError,
                           instance_types.create,
-                          name, 256, 1, 120, 'flavor2')
+                          name, "256", 1, 120, 'flavor2')
 
     def test_duplicate_flavorids_fail(self):
         """Ensures that flavorid duplicates raise ApiError"""

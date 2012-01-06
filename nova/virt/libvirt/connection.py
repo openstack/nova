@@ -1562,7 +1562,8 @@ class LibvirtConnection(driver.ComputeDriver):
                'local_gb_used': self.get_local_gb_used(),
                'hypervisor_type': self.get_hypervisor_type(),
                'hypervisor_version': self.get_hypervisor_version(),
-               'cpu_info': self.get_cpu_info()}
+               'cpu_info': self.get_cpu_info(),
+               'disk_available_least': self.get_disk_available_least()}
 
         compute_node_ref = service_ref['compute_node']
         if not compute_node_ref:
@@ -1773,7 +1774,7 @@ class LibvirtConnection(driver.ComputeDriver):
             instance_disk = os.path.join(instance_dir, base)
             if not info['backing_file']:
                 libvirt_utils.create_image(info['type'], instance_disk,
-                                           info['local_gb'])
+                                           info['disk_size'])
             else:
                 # Creating backing file follows same way as spawning instances.
                 backing_file = os.path.join(FLAGS.instances_path,
@@ -1842,7 +1843,7 @@ class LibvirtConnection(driver.ComputeDriver):
             dom = self._lookup_by_name(instance_ref.name)
             self._conn.defineXML(dom.XMLDesc(0))
 
-    def get_instance_disk_info(self, ctxt, instance_ref):
+    def get_instance_disk_info(self, instance_name):
         """Preparation block migration.
 
         :params ctxt: security context
@@ -1851,12 +1852,15 @@ class LibvirtConnection(driver.ComputeDriver):
             instance object that is migrated.
         :return:
             json strings with below format.
-           "[{'path':'disk', 'type':'raw', 'local_gb':'10G'},...]"
+           "[{'path':'disk', 'type':'raw',
+              'virt_disk_size':'10737418240',
+              'backing_file':'backing_file',
+              'disk_size':'83886080'},...]"
 
         """
         disk_info = []
 
-        virt_dom = self._lookup_by_name(instance_ref.name)
+        virt_dom = self._lookup_by_name(instance_name)
         xml = virt_dom.XMLDesc(0)
         doc = ElementTree.fromstring(xml)
         disk_nodes = doc.findall('.//devices/disk')
@@ -1873,30 +1877,57 @@ class LibvirtConnection(driver.ComputeDriver):
                 continue
 
             disk_type = driver_nodes[cnt].get('type')
-            size = libvirt_utils.get_disk_size(path)
             if disk_type == 'raw':
+                dk_size = int(os.path.getsize(path))
                 backing_file = ""
+                virt_size = 0
             else:
-                backing_file = libvirt_utils.get_backing_file(path)
+                out, err = utils.execute('qemu-img', 'info', path)
 
-            # block migration needs same/larger size of empty image on the
-            # destination host. since qemu-img creates bit smaller size image
-            # depending on original image size, fixed value is necessary.
-            for unit, divisor in [('G', 1024 ** 3), ('M', 1024 ** 2),
-                                  ('K', 1024), ('', 1)]:
-                if size / divisor == 0:
-                    continue
-                if size % divisor != 0:
-                    size = size / divisor + 1
-                else:
-                    size = size / divisor
-                size = str(size) + unit
-                break
+                # virtual size:
+                size = [i.split('(')[1].split()[0] for i in out.split('\n')
+                    if i.strip().find('virtual size') >= 0]
+                virt_size = int(size[0])
 
-            disk_info.append({'type': disk_type, 'path': path,
-                              'local_gb': size, 'backing_file': backing_file})
+                # real disk size:
+                dk_size = int(os.path.getsize(path))
 
+                # backing file:(actual path:)
+                backing_file = libvirt_utils.get_disk_backing_file(path)
+
+            disk_info.append({'type': disk_type,
+                              'path': path,
+                              'virt_disk_size': virt_size,
+                              'backing_file': backing_file,
+                              'disk_size': dk_size})
         return utils.dumps(disk_info)
+
+    def get_disk_available_least(self):
+        """Return disk available least size.
+
+        The size of available disk, when block_migration command given
+        disk_over_commit param is FALSE.
+
+        The size that deducted real nstance disk size from the total size
+        of the virtual disk of all instances.
+
+        """
+        # available size of the disk
+        dk_sz_gb = self.get_local_gb_total() - self.get_local_gb_used()
+
+        # Disk size that all instance uses : virtual_size - disk_size
+        instances_name = self.list_instances()
+        instances_sz = 0
+        for i_name in instances_name:
+            disk_infos = utils.loads(self.get_instance_disk_info(i_name))
+            for info in disk_infos:
+                i_vt_sz = int(info['virt_disk_size'])
+                i_dk_sz = int(info['disk_size'])
+                instances_sz += i_vt_sz - i_dk_sz
+
+        # Disk available least size
+        available_least_size = dk_sz_gb * (1024 ** 3) - instances_sz
+        return (available_least_size / 1024 / 1024 / 1024)
 
     def unfilter_instance(self, instance_ref, network_info):
         """See comments of same method in firewall_driver."""
