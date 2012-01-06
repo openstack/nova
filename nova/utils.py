@@ -41,7 +41,6 @@ from eventlet import event
 from eventlet import greenthread
 from eventlet import semaphore
 from eventlet.green import subprocess
-import mox
 import netaddr
 
 from nova import exception
@@ -690,10 +689,12 @@ def to_primitive(value, convert_instances=False, level=0):
         if test(value):
             return unicode(value)
 
-    # NOTE(vish): Workaround for LP bug 852095. Without this workaround,
-    #             tests that raise an exception in a mocked method that
-    #             has a @wrap_exception with a notifier will fail.
-    if isinstance(value, mox.MockAnything):
+    # FIXME(vish): Workaround for LP bug 852095. Without this workaround,
+    #              tests that raise an exception in a mocked method that
+    #              has a @wrap_exception with a notifier will fail. If
+    #              we up the dependency to 0.5.4 (when it is released) we
+    #              can remove this workaround.
+    if getattr(value, '__module__', None) == 'mox':
         return 'mock'
 
     if level > 3:
