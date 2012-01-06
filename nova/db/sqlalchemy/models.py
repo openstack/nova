@@ -262,7 +262,7 @@ class InstanceInfoCache(BASE, NovaBase):
     Represents a cache of information about an instance
     """
     __tablename__ = 'instance_info_caches'
-    id = Column(String(36), primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     # text column used for storing a json object of network data for api
     network_info = Column(Text)

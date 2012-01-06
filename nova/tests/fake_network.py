@@ -143,25 +143,26 @@ def fake_network(network_id, ipv6=None):
     if ipv6 is None:
         ipv6 = FLAGS.use_ipv6
     fake_network = {'id': network_id,
-                    'label': 'test%d' % network_id,
-                    'injected': False,
-                    'multi_host': False,
-                    'cidr': '192.168.%d.0/24' % network_id,
-                    'cidr_v6': None,
-                    'netmask': '255.255.255.0',
-                    'netmask_v6': None,
-                    'bridge': 'fake_br%d' % network_id,
-                    'bridge_interface': 'fake_eth%d' % network_id,
-                    'gateway': '192.168.%d.1' % network_id,
-                    'gateway_v6': None,
-                    'broadcast': '192.168.%d.255' % network_id,
-                    'dns1': '192.168.%d.3' % network_id,
-                    'dns2': '192.168.%d.4' % network_id,
-                    'vlan': None,
-                    'host': None,
-                    'project_id': 'fake_project',
-                    'vpn_public_address': '192.168.%d.2' % network_id,
-                    'rxtx_base': '%d' % network_id * 10}
+             'uuid': '00000000-0000-0000-0000-00000000000000%02d' % network_id,
+             'label': 'test%d' % network_id,
+             'injected': False,
+             'multi_host': False,
+             'cidr': '192.168.%d.0/24' % network_id,
+             'cidr_v6': None,
+             'netmask': '255.255.255.0',
+             'netmask_v6': None,
+             'bridge': 'fake_br%d' % network_id,
+             'bridge_interface': 'fake_eth%d' % network_id,
+             'gateway': '192.168.%d.1' % network_id,
+             'gateway_v6': None,
+             'broadcast': '192.168.%d.255' % network_id,
+             'dns1': '192.168.%d.3' % network_id,
+             'dns2': '192.168.%d.4' % network_id,
+             'vlan': None,
+             'host': None,
+             'project_id': 'fake_project',
+             'vpn_public_address': '192.168.%d.2' % network_id,
+             'rxtx_base': '%d' % network_id * 10}
     if ipv6:
         fake_network['cidr_v6'] = '2001:db8:0:%x::/64' % network_id
         fake_network['gateway_v6'] = '2001:db8:0:%x::1' % network_id
@@ -248,6 +249,9 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
         return [next_fixed_ip(i, floating_ips_per_fixed_ip)
                 for i in xrange(num_networks) for j in xrange(ips_per_vif)]
 
+    def floating_ips_fake(*args, **kwargs):
+        return []
+
     def virtual_interfaces_fake(*args, **kwargs):
         return [vif for vif in vifs(num_networks)]
 
@@ -260,9 +264,18 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
             raise exception.NetworkNotFound(network_id=network_id)
         return nets[0]
 
+    def update_cache_fake(*args, **kwargs):
+        pass
+
     stubs.Set(db, 'fixed_ip_get_by_instance', fixed_ips_fake)
+    stubs.Set(db, 'floating_ip_get_by_fixed_address', floating_ips_fake)
     stubs.Set(db, 'virtual_interface_get_by_instance', virtual_interfaces_fake)
     stubs.Set(db, 'instance_type_get', instance_type_fake)
     stubs.Set(db, 'network_get', network_get_fake)
+    stubs.Set(db, 'instance_info_cache_update', update_cache_fake)
 
-    return network.get_instance_nw_info(None, 0, 0, None)
+    class FakeContext(object):
+        def __init__(self):
+            self.project_id = 1
+
+    return network.get_instance_nw_info(FakeContext(), 0, 0, 0, None)
