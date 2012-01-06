@@ -46,6 +46,7 @@ class Extended_status(extensions.ExtensionDescriptor):
             try:
                 inst_ref = compute_api.routing_get(context, server_id)
             except exception.NotFound:
+                LOG.warn("Instance %s not found (one)" % server_id)
                 explanation = _("Server not found.")
                 raise exc.HTTPNotFound(explanation=explanation)
 
@@ -61,12 +62,18 @@ class Extended_status(extensions.ExtensionDescriptor):
             # and whatever else elements and find each individual.
             compute_api = compute.API()
 
-            for server in body['servers']:
+            for server in list(body['servers']):
                 try:
                     inst_ref = compute_api.routing_get(context, server['id'])
                 except exception.NotFound:
-                    explanation = _("Server not found.")
-                    raise exc.HTTPNotFound(explanation=explanation)
+                    # NOTE(dtroyer): A NotFound exception at this point
+                    # happens because a delete was in progress and the
+                    # server that was present in the original call to
+                    # compute.api.get_all() is no longer present.
+                    # Delete it from the response and move on.
+                    LOG.warn("Instance %s not found (all)" % server['id'])
+                    body['servers'].remove(server)
+                    continue
 
                 #TODO(bcwaldon): these attributes should be prefixed with
                 # something specific to this extension
