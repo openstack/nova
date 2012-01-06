@@ -47,7 +47,8 @@ class ProjectTestCase(test.TestCase):
         missing = set()
         contributors = set()
         mailmap = parse_mailmap(os.path.join(topdir, '.mailmap'))
-        authors_file = open(os.path.join(topdir, 'Authors'), 'r').read()
+        authors_file = open(os.path.join(topdir,
+                                         'Authors'), 'r').read().lower()
 
         if os.path.exists(os.path.join(topdir, '.git')):
             for email in commands.getoutput('git log --format=%ae').split():
@@ -55,7 +56,7 @@ class ProjectTestCase(test.TestCase):
                     continue
                 if "jenkins" in email and "openstack.org" in email:
                     continue
-                email = '<' + email + '>'
+                email = '<' + email.lower() + '>'
                 contributors.add(str_dict_replace(email, mailmap))
         else:
             return

@@ -544,7 +544,7 @@ def parse_mailmap(mailmap='.mailmap'):
             l = l.strip()
             if not l.startswith('#') and ' ' in l:
                 canonical_email, alias = l.split(' ')
-                mapping[alias] = canonical_email
+                mapping[alias.lower()] = canonical_email.lower()
     return mapping
 
 
