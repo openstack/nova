@@ -155,7 +155,7 @@ flavor = {'id': 0,
           'name': 'fake_flavor',
           'memory_mb': 2048,
           'vcpus': 2,
-          'local_gb': 10,
+          'root_gb': 10,
           'flavor_id': 0,
           'swap': 0,
           'rxtx_factor': 3}

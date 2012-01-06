@@ -37,7 +37,7 @@ class ViewBuilder(common.ViewBuilder):
                 "id": flavor["flavorid"],
                 "name": flavor["name"],
                 "ram": flavor["memory_mb"],
-                "disk": flavor["local_gb"],
+                "disk": flavor["root_gb"],
                 "vcpus": flavor.get("vcpus") or "",
                 "swap": flavor.get("swap") or "",
                 "rxtx_factor": flavor.get("rxtx_factor") or "",

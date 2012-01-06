@@ -104,7 +104,8 @@ class DistributedSchedulerTestCase(test.TestCase):
         self.stubs.Set(db, 'zone_get_all', fake_zone_get_all)
 
         fake_context = context.RequestContext('user', 'project')
-        request_spec = {'instance_type': {'memory_mb': 1, 'local_gb': 1},
+        request_spec = {'instance_type': {'memory_mb': 1, 'root_gb': 1,
+                                          'ephemeral_gb': 0},
                         'instance_properties': {'project_id': 1}}
         self.assertRaises(exception.NoValidHost, sched.schedule_run_instance,
                           fake_context, request_spec)
@@ -219,7 +220,8 @@ class DistributedSchedulerTestCase(test.TestCase):
         self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
 
         request_spec = {'num_instances': 10,
-                        'instance_type': {'memory_mb': 512, 'local_gb': 512},
+                        'instance_type': {'memory_mb': 512, 'root_gb': 512,
+                                          'ephemeral_gb': 0},
                         'instance_properties': {'project_id': 1}}
         self.mox.ReplayAll()
         weighted_hosts = sched._schedule(fake_context, 'compute',
@@ -260,10 +262,12 @@ class DistributedSchedulerTestCase(test.TestCase):
         self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
 
         request_spec = {'num_instances': 10,
-                        'instance_type': {'memory_mb': 512, 'local_gb': 512},
+                        'instance_type': {'memory_mb': 512, 'root_gb': 512,
+                                          'ephemeral_gb': 256},
                         'instance_properties': {'project_id': 1,
                                                 'memory_mb': 512,
-                                                'local_gb': 512,
+                                                'root_gb': 512,
+                                                'ephemeral_gb': 0,
                                                 'vcpus': 1}}
         filter_properties = {'local_zone_only': True}
         self.mox.ReplayAll()

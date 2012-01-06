@@ -393,7 +393,7 @@ class VMHelper(HelperBase):
             # Resize partition and filesystem down
             cls.auto_configure_disk(session=session,
                                     vdi_ref=copy_ref,
-                                    new_gb=instance_type['local_gb'])
+                                    new_gb=instance_type['root_gb'])
 
             # Create new VDI
             new_ref = cls.fetch_blank_disk(session,
@@ -401,7 +401,7 @@ class VMHelper(HelperBase):
             new_uuid = session.call_xenapi('VDI.get_uuid', new_ref)
 
             # Manually copy contents over
-            virtual_size = instance_type['local_gb'] * 1024 * 1024 * 1024
+            virtual_size = instance_type['root_gb'] * 1024 * 1024 * 1024
             _copy_partition(session, copy_ref, new_ref, 1, virtual_size)
 
             return new_ref, new_uuid
@@ -411,7 +411,7 @@ class VMHelper(HelperBase):
     @classmethod
     def auto_configure_disk(cls, session, vdi_ref, new_gb):
         """Partition and resize FS to match the size specified by
-        instance_types.local_gb.
+        instance_types.root_gb.
 
         This is a fail-safe to prevent accidentally destroying data on a disk
         erroneously marked as auto_disk_config=True.
@@ -437,47 +437,51 @@ class VMHelper(HelperBase):
                 _resize_part_and_fs(dev, start, old_sectors, new_sectors)
 
     @classmethod
-    def generate_swap(cls, session, instance, vm_ref, userdevice, swap_mb):
+    def _generate_disk(cls, session, instance, vm_ref, userdevice, name,
+                       size_mb, fs_type):
         """
-        Steps to programmatically generate swap:
+        Steps to programmatically generate a disk:
 
-            1. Create VDI of desired swap size
+            1. Create VDI of desired size
 
             2. Attach VDI to compute worker
 
-            3. Create swap partition
+            3. Create partition
 
-            4. Create VBD between instance VM and swap VDI
+            4. Create VBD between instance VM and VDI
         """
         # 1. Create VDI
         sr_ref = cls.safe_find_sr(session)
-        name_label = instance.name + "-swap"
+        name_label = '%s-%s' % (instance.name, name)
         ONE_MEG = 1024 * 1024
-        virtual_size = swap_mb * ONE_MEG
+        virtual_size = size_mb * ONE_MEG
         vdi_ref = cls.create_vdi(
             session, sr_ref, name_label, virtual_size, read_only=False)
 
         try:
             # 2. Attach VDI to compute worker (VBD hotplug)
             with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
-                # 3. Create swap partition
-
-                # NOTE(jk0): We use a FAT32 filesystem for the Windows swap
-                # partition because that is what parted supports.
-                is_windows = instance.os_type == "windows"
-                fs_type = "fat32" if is_windows else "linux-swap"
-
+                # 3. Create partition
                 dev_path = utils.make_dev_path(dev)
                 utils.execute('parted', '--script', dev_path,
                               'mklabel', 'msdos', run_as_root=True)
 
                 partition_start = 0
-                partition_end = swap_mb
-                utils.execute('parted', '--script', dev_path, 'mkpartfs',
-                              'primary', fs_type,
+                partition_end = size_mb
+                utils.execute('parted', '--script', dev_path,
+                              'mkpart', 'primary',
                               str(partition_start),
                               str(partition_end),
                               run_as_root=True)
+
+                partition_path = utils.make_dev_path(dev, partition=1)
+
+                if fs_type == 'linux-swap':
+                    utils.execute('mkswap', partition_path,
+                                  run_as_root=True)
+                elif fs_type is not None:
+                    utils.execute('mkfs', '-t', fs_type, partition_path,
+                                  run_as_root=True)
 
             # 4. Create VBD between instance VM and swap VDI
             volume_utils.VolumeHelper.create_vbd(
@@ -487,11 +491,28 @@ class VMHelper(HelperBase):
                 cls.destroy_vdi(session, vdi_ref)
 
     @classmethod
+    def generate_swap(cls, session, instance, vm_ref, userdevice, swap_mb):
+        # NOTE(jk0): We use a FAT32 filesystem for the Windows swap
+        # partition because that is what parted supports.
+        is_windows = instance.os_type == "windows"
+        fs_type = "fat32" if is_windows else "linux-swap"
+
+        cls._generate_disk(session, instance, vm_ref, userdevice,
+                           'swap', swap_mb, fs_type)
+
+    @classmethod
+    def generate_ephemeral(cls, session, instance, vm_ref, userdevice,
+                           size_gb):
+        cls._generate_disk(session, instance, vm_ref, userdevice,
+                           'ephemeral', size_gb * 1024,
+                           FLAGS.default_ephemeral_format)
+
+    @classmethod
     def fetch_blank_disk(cls, session, instance_type_id):
         # Size the blank harddrive to suit the machine type:
         one_gig = 1024 * 1024 * 1024
         req_type = instance_types.get_instance_type(instance_type_id)
-        req_size = req_type['local_gb']
+        req_size = req_type['root_gb']
 
         LOG.debug("Creating blank HD of size %(req_size)d gigs"
                     % locals())
@@ -595,7 +616,7 @@ class VMHelper(HelperBase):
         # refactor this to a common area
         instance_type_id = instance['instance_type_id']
         instance_type = instance_types.get_instance_type(instance_type_id)
-        allowed_size_gb = instance_type['local_gb']
+        allowed_size_gb = instance_type['root_gb']
         allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 
         LOG.debug(_("image_size_bytes=%(size_bytes)d, allowed_size_bytes="

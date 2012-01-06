@@ -115,7 +115,7 @@ class HostState(object):
 
     def consume_from_instance(self, instance):
         """Update information about a host from instance info."""
-        disk_mb = instance['local_gb'] * 1024
+        disk_mb = (instance['root_gb'] + instance['ephemeral_gb']) * 1024
         ram_mb = instance['memory_mb']
         vcpus = instance['vcpus']
         self.free_ram_mb -= ram_mb

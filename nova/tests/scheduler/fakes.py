@@ -40,14 +40,20 @@ COMPUTE_NODES = [
 ]
 
 INSTANCES = [
-        dict(local_gb=512, memory_mb=512, vcpus=1, host='host1'),
-        dict(local_gb=512, memory_mb=512, vcpus=1, host='host2'),
-        dict(local_gb=512, memory_mb=512, vcpus=1, host='host2'),
-        dict(local_gb=1024, memory_mb=1024, vcpus=1, host='host3'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
+             host='host1'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
+             host='host2'),
+        dict(root_gb=512, ephemeral_gb=0, memory_mb=512, vcpus=1,
+             host='host2'),
+        dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
+             host='host3'),
         # Broken host
-        dict(local_gb=1024, memory_mb=1024, vcpus=1, host=None),
+        dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
+             host=None),
         # No matching host
-        dict(local_gb=1024, memory_mb=1024, vcpus=1, host='host5'),
+        dict(root_gb=1024, ephemeral_gb=0, memory_mb=1024, vcpus=1,
+             host='host5'),
 ]
 
 

@@ -66,6 +66,8 @@ class UsageInfoTestCase(test.TestCase):
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
+        inst['root_gb'] = 0
+        inst['ephemeral_gb'] = 0
         inst.update(params)
         return db.instance_create(self.context, inst)['id']
 

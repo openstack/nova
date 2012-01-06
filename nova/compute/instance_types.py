@@ -30,13 +30,14 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.instance_types')
 
 
-def create(name, memory, vcpus, local_gb, flavorid, swap=0,
+def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid, swap=0,
            rxtx_factor=1):
     """Creates instance types."""
     kwargs = {
         'memory_mb': memory,
         'vcpus': vcpus,
-        'local_gb': local_gb,
+        'root_gb': root_gb,
+        'ephemeral_gb': ephemeral_gb,
         'swap': swap,
         'rxtx_factor': rxtx_factor,
     }

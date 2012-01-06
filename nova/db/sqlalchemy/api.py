@@ -3380,9 +3380,9 @@ def instance_type_get_all(context, inactive=False, filters=None):
     if 'min_memory_mb' in filters:
         query = query.filter(
                 models.InstanceTypes.memory_mb >= filters['min_memory_mb'])
-    if 'min_local_gb' in filters:
+    if 'min_root_gb' in filters:
         query = query.filter(
-                models.InstanceTypes.local_gb >= filters['min_local_gb'])
+                models.InstanceTypes.root_gb >= filters['min_root_gb'])
 
     inst_types = query.order_by("name").all()
 

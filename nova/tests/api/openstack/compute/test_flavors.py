@@ -38,13 +38,13 @@ FAKE_FLAVORS = {
         "flavorid": '1',
         "name": 'flavor 1',
         "memory_mb": '256',
-        "local_gb": '10'
+        "root_gb": '10'
     },
     'flavor 2': {
         "flavorid": '2',
         "name": 'flavor 2',
         "memory_mb": '512',
-        "local_gb": '20'
+        "root_gb": '20'
     },
 }
 
@@ -63,7 +63,7 @@ def fake_instance_type_get_all(inactive=False, filters=None):
     for (flavor_name, flavor) in FAKE_FLAVORS.items():
         if reject_min('memory_mb', 'min_memory_mb'):
             continue
-        elif reject_min('local_gb', 'min_local_gb'):
+        elif reject_min('root_gb', 'min_root_gb'):
             continue
 
         output[flavor_name] = flavor

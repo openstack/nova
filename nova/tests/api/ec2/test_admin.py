@@ -123,7 +123,7 @@ class AdminTestCase(test.TestCase):
         inst = {'name': 'this_inst',
                 'memory_mb': 1024,
                 'vcpus': 2,
-                'local_gb': 500,
+                'root_gb': 500,
                 'flavorid': 1}
 
         expected_inst_dict = {'name': 'this_inst',

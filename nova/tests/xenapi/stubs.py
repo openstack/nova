@@ -289,10 +289,15 @@ def stub_out_vm_methods(stubs):
     def fake_spawn_rescue(self, context, inst, network_info, image_meta):
         inst._rescue = False
 
+    @classmethod
+    def fake_generate_ephemeral(cls, *args):
+        pass
+
     stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
     stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
     stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
     stubs.Set(vmops.VMOps, "spawn_rescue", fake_spawn_rescue)
+    stubs.Set(vm_utils.VMHelper, 'generate_ephemeral', fake_generate_ephemeral)
 
 
 class FakeSessionForVolumeTests(fake.SessionBase):
@@ -383,6 +388,10 @@ def stub_out_migration_methods(stubs):
     def fake_reset_network(*args, **kwargs):
         pass
 
+    @classmethod
+    def fake_generate_ephemeral(cls, *args):
+        pass
+
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
     stubs.Set(vm_utils.VMHelper, 'scan_default_sr', fake_sr)
     stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_sr)
@@ -392,3 +401,4 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)
     stubs.Set(vmops.VMOps, 'reset_network', fake_reset_network)
     stubs.Set(vmops.VMOps, '_shutdown', fake_shutdown)
+    stubs.Set(vm_utils.VMHelper, 'generate_ephemeral', fake_generate_ephemeral)

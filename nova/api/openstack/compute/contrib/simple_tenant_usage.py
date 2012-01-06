@@ -135,7 +135,7 @@ class SimpleTenantUsageController(object):
             info['name'] = instance['display_name']
 
             info['memory_mb'] = flavor['memory_mb']
-            info['local_gb'] = flavor['local_gb']
+            info['local_gb'] = flavor['root_gb'] + flavor['ephemeral_gb']
             info['vcpus'] = flavor['vcpus']
 
             info['tenant_id'] = instance['project_id']
