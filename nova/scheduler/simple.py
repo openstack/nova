@@ -36,6 +36,10 @@ flags.DEFINE_integer("max_networks", 1000,
                      "maximum number of networks to allow per host")
 flags.DEFINE_string('default_schedule_zone', None,
                     'zone to use when user doesnt specify one')
+flags.DEFINE_list('isolated_images', [], 'Images to run on isolated host')
+flags.DEFINE_list('isolated_hosts', [], 'Host reserved for specific images')
+flags.DEFINE_boolean('skip_isolated_core_check', True,
+                     'Allow overcommitting vcpus on isolated hosts')
 
 
 class SimpleScheduler(chance.ChanceScheduler):
@@ -58,12 +62,21 @@ class SimpleScheduler(chance.ChanceScheduler):
             return host
 
         results = db.service_get_all_compute_sorted(elevated)
+        in_isolation = instance_opts['image_ref'] in FLAGS.isolated_images
+        check_cores = not in_isolation or not FLAGS.skip_isolated_core_check
         if zone:
             results = [(service, cores) for (service, cores) in results
                        if service['availability_zone'] == zone]
         for result in results:
             (service, instance_cores) = result
-            if instance_cores + instance_opts['vcpus'] > FLAGS.max_cores:
+            if in_isolation and service['host'] not in FLAGS.isolated_hosts:
+                # isloated images run on isolated hosts
+                continue
+            if service['host'] in FLAGS.isolated_hosts and not in_isolation:
+                # images that aren't isolated only run on general hosts
+                continue
+            if check_cores and \
+                    instance_cores + instance_opts['vcpus'] > FLAGS.max_cores:
                 msg = _("Not enough allocatable CPU cores remaining")
                 raise exception.NoValidHost(reason=msg)
             if self.service_is_up(service):
