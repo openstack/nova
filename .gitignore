@@ -10,7 +10,11 @@ build-stamp
 nova.egg-info
 .nova-venv
 .venv
+.tox
 *.sqlite
 *.log
 *.mo
 tools/conf/nova.conf*
+cover/*
+dist/*
+.coverage
