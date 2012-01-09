@@ -32,14 +32,14 @@ Options can be strings, integers, floats, booleans, lists or 'multi strings':
 
     enabled_apis_opt = \
         cfg.ListOpt('enabled_apis',
-                    default=['ec2', 'osapi'],
+                    default=['ec2', 'osapi_compute'],
                     help='List of APIs to enable by default')
 
     DEFAULT_EXTENSIONS = [
         'nova.api.openstack.contrib.standard_extensions'
     ]
-    osapi_extension_opt = \
-        cfg.MultiStrOpt('osapi_extension',
+    osapi_compute_extension_opt = \
+        cfg.MultiStrOpt('osapi_compute_extension',
                         default=DEFAULT_EXTENSIONS)
 
 Option schemas are registered with with the config manager at runtime, but
@@ -55,7 +55,7 @@ before the option is referenced:
             ...
 
         def _load_extensions(self):
-            for ext_factory in self.conf.osapi_extension:
+            for ext_factory in self.conf.osapi_compute_extension:
                 ....
 
 A common usage pattern is for each option schema to be defined in the module or

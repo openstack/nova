@@ -17,7 +17,7 @@
 
 import os
 
-from nova.api.openstack.v2 import extensions
+from nova.api.openstack.compute import extensions
 from nova import flags
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
@@ -32,9 +32,10 @@ class ExtensionsTest(integrated_helpers._IntegratedTestBase):
         extensions.ExtensionManager.reset()
 
         f = super(ExtensionsTest, self)._get_flags()
-        f['osapi_extension'] = FLAGS.osapi_extension[:]
-        f['osapi_extension'].append('nova.tests.api.openstack.v2.extensions.'
-                                    'foxinsocks.Foxinsocks')
+        f['osapi_compute_extension'] = FLAGS.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.tests.api.openstack.compute.extensions.'
+            'foxinsocks.Foxinsocks')
         return f
 
     def test_get_foxnsocks(self):

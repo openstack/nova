@@ -18,6 +18,7 @@
 import unittest
 import time
 
+from nova import service
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
@@ -31,6 +32,12 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
     def setUp(self):
         super(VolumesTest, self).setUp()
         driver.LoggingVolumeDriver.clear_logs()
+
+    def _start_api_service(self):
+        self.osapi = service.WSGIService("osapi_volume")
+        self.osapi.start()
+        self.auth_url = 'http://%s:%s/v1' % (self.osapi.host, self.osapi.port)
+        LOG.warn(self.auth_url)
 
     def _get_flags(self):
         f = super(VolumesTest, self)._get_flags()
@@ -134,157 +141,6 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         self.assertEquals(1, len(delete_actions))
         delete_action = export_actions[0]
         self.assertEquals(delete_action['id'], created_volume_id)
-
-    def test_attach_and_detach_volume(self):
-        """Creates, attaches, detaches and deletes a volume."""
-        self.flags(stub_network=True)
-
-        # Create server
-        server_req = {'server': self._build_minimal_create_server_request()}
-        # NOTE(justinsb): Create an extra server so that server_id != volume_id
-        self.api.post_server(server_req)
-        created_server = self.api.post_server(server_req)
-        LOG.debug("created_server: %s" % created_server)
-        server_id = created_server['id']
-
-        # Create volume
-        created_volume = self.api.post_volume({'volume': {'size': 1}})
-        LOG.debug("created_volume: %s" % created_volume)
-        volume_id = created_volume['id']
-        self._poll_while(volume_id, ['creating'])
-
-        # Check we've got different IDs
-        self.assertNotEqual(server_id, volume_id)
-
-        # List current server attachments - should be none
-        attachments = self.api.get_server_volumes(server_id)
-        self.assertEquals([], attachments)
-
-        # Template attach request
-        device = '/dev/sdc'
-        attach_req = {'device': device}
-        post_req = {'volumeAttachment': attach_req}
-
-        # Try to attach to a non-existent volume; should fail
-        attach_req['volumeId'] = 3405691582
-        self.assertRaises(client.OpenStackApiNotFoundException,
-                          self.api.post_server_volume, server_id, post_req)
-
-        # Try to attach to a non-existent server; should fail
-        attach_req['volumeId'] = volume_id
-        self.assertRaises(client.OpenStackApiNotFoundException,
-                          self.api.post_server_volume, 3405691582, post_req)
-
-        # Should still be no attachments...
-        attachments = self.api.get_server_volumes(server_id)
-        self.assertEquals([], attachments)
-
-        # Do a real attach
-        attach_req['volumeId'] = volume_id
-        attach_result = self.api.post_server_volume(server_id, post_req)
-        LOG.debug(_("Attachment = %s") % attach_result)
-
-        attachment_id = attach_result['id']
-        self.assertEquals(volume_id, attach_result['volumeId'])
-
-        # These fields aren't set because it's async
-        #self.assertEquals(server_id, attach_result['serverId'])
-        #self.assertEquals(device, attach_result['device'])
-
-        # This is just an implementation detail, but let's check it...
-        self.assertEquals(volume_id, attachment_id)
-
-        # NOTE(justinsb): There's an issue with the attach code, in that
-        # it's currently asynchronous and not recorded until the attach
-        # completes.  So the caller must be 'smart', like this...
-        attach_done = None
-        retries = 0
-        while True:
-            try:
-                attach_done = self.api.get_server_volume(server_id,
-                                                             attachment_id)
-                break
-            except client.OpenStackApiNotFoundException:
-                LOG.debug("Got 404, waiting")
-
-            time.sleep(1)
-            retries = retries + 1
-            if retries > 10:
-                break
-
-        expect_attach = {}
-        expect_attach['id'] = volume_id
-        expect_attach['volumeId'] = volume_id
-        expect_attach['serverId'] = server_id
-        expect_attach['device'] = device
-
-        self.assertEqual(expect_attach, attach_done)
-
-        # Should be one attachemnt
-        attachments = self.api.get_server_volumes(server_id)
-        self.assertEquals([expect_attach], attachments)
-
-        # Should be able to get details
-        attachment_info = self.api.get_server_volume(server_id, attachment_id)
-        self.assertEquals(expect_attach, attachment_info)
-
-        # Getting details on a different id should fail
-        self.assertRaises(client.OpenStackApiNotFoundException,
-                          self.api.get_server_volume, server_id, 3405691582)
-        self.assertRaises(client.OpenStackApiNotFoundException,
-                          self.api.get_server_volume,
-                          3405691582, attachment_id)
-
-        # Trying to detach a different id should fail
-        self.assertRaises(client.OpenStackApiNotFoundException,
-                          self.api.delete_server_volume, server_id, 3405691582)
-
-        # Detach should work
-        self.api.delete_server_volume(server_id, attachment_id)
-
-        # Again, it's async, so wait...
-        retries = 0
-        while True:
-            try:
-                attachment = self.api.get_server_volume(server_id,
-                                                        attachment_id)
-                LOG.debug("Attachment still there: %s" % attachment)
-            except client.OpenStackApiNotFoundException:
-                LOG.debug("Got 404, delete done")
-                break
-
-            time.sleep(1)
-            retries = retries + 1
-            self.assertTrue(retries < 10)
-
-        # Should be no attachments again
-        attachments = self.api.get_server_volumes(server_id)
-        self.assertEquals([], attachments)
-
-        LOG.debug("Logs: %s" % driver.LoggingVolumeDriver.all_logs())
-
-        # prepare_attach and prepare_detach are called from compute
-        #  on attach/detach
-
-        disco_moves = driver.LoggingVolumeDriver.logs_like(
-                            'initialize_connection',
-                            id=volume_id)
-        LOG.debug("initialize_connection actions: %s" % disco_moves)
-
-        self.assertEquals(1, len(disco_moves))
-        disco_move = disco_moves[0]
-        self.assertEquals(disco_move['id'], volume_id)
-
-        last_days_of_disco_moves = driver.LoggingVolumeDriver.logs_like(
-                            'terminate_connection',
-                            id=volume_id)
-        LOG.debug("terminate_connection actions: %s" %
-                  last_days_of_disco_moves)
-
-        self.assertEquals(1, len(last_days_of_disco_moves))
-        undisco_move = last_days_of_disco_moves[0]
-        self.assertEquals(undisco_move['id'], volume_id)
-        self.assertEquals(undisco_move['mountpoint'], device)
 
     def test_create_volume_with_metadata(self):
         """Creates and deletes a volume."""

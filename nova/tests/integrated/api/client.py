@@ -261,17 +261,17 @@ class TestOpenStackClient(object):
         return self.api_delete('/flavors/%s' % flavor_id)
 
     def get_volume(self, volume_id):
-        return self.api_get('/os-volumes/%s' % volume_id)['volume']
+        return self.api_get('/volumes/%s' % volume_id)['volume']
 
     def get_volumes(self, detail=True):
-        rel_url = '/os-volumes/detail' if detail else '/os-volumes'
+        rel_url = '/volumes/detail' if detail else '/volumes'
         return self.api_get(rel_url)['volumes']
 
     def post_volume(self, volume):
-        return self.api_post('/os-volumes', volume)['volume']
+        return self.api_post('/volumes', volume)['volume']
 
     def delete_volume(self, volume_id):
-        return self.api_delete('/os-volumes/%s' % volume_id)
+        return self.api_delete('/volumes/%s' % volume_id)
 
     def get_server_volume(self, server_id, attachment_id):
         return self.api_get('/servers/%s/os-volume_attachments/%s' %

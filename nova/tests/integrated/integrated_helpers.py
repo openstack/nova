@@ -80,10 +80,14 @@ class _IntegratedTestBase(test.TestCase):
 
         self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url)
 
+    def tearDown(self):
+        self.osapi.stop()
+        super(_IntegratedTestBase, self).tearDown()
+
     def _start_api_service(self):
-        osapi = service.WSGIService("osapi")
-        osapi.start()
-        self.auth_url = 'http://%s:%s/v2' % (osapi.host, osapi.port)
+        self.osapi = service.WSGIService("osapi_compute")
+        self.osapi.start()
+        self.auth_url = 'http://%s:%s/v2' % (self.osapi.host, self.osapi.port)
         LOG.warn(self.auth_url)
 
     def _get_flags(self):
