@@ -255,9 +255,6 @@ class ConsolesControllerTest(test.TestCase):
 
 
 class TestConsolesXMLSerializer(test.TestCase):
-
-    serializer = consoles.ConsoleXMLSerializer()
-
     def test_show(self):
         fixture = {'console': {'id': 20,
                                'password': 'fake_password',
@@ -265,7 +262,7 @@ class TestConsolesXMLSerializer(test.TestCase):
                                'host': 'fake_hostname',
                                'console_type': 'fake_type'}}
 
-        output = self.serializer.serialize(fixture, 'show')
+        output = consoles.ConsoleTemplate().serialize(fixture)
         res_tree = etree.XML(output)
 
         self.assertEqual(res_tree.tag, 'console')
@@ -281,7 +278,7 @@ class TestConsolesXMLSerializer(test.TestCase):
                                 {'console': {'id': 11,
                                              'console_type': 'fake_type2'}}]}
 
-        output = self.serializer.serialize(fixture, 'index')
+        output = consoles.ConsolesTemplate().serialize(fixture)
         res_tree = etree.XML(output)
 
         self.assertEqual(res_tree.tag, 'consoles')

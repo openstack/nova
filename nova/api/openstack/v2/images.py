@@ -40,106 +40,6 @@ SUPPORTED_FILTERS = {
 }
 
 
-class Controller(wsgi.Controller):
-    """Base controller for retrieving/displaying images."""
-
-    _view_builder_class = views_images.ViewBuilder
-
-    def __init__(self, image_service=None, compute_service=None, **kwargs):
-        """Initialize new `ImageController`.
-
-        :param compute_service: `nova.compute.api:API`
-        :param image_service: `nova.image.glance:GlancemageService`
-
-        """
-        super(Controller, self).__init__(**kwargs)
-        self._compute_service = compute_service or compute.API()
-        self._image_service = image_service or \
-                nova.image.get_default_image_service()
-
-    def _get_filters(self, req):
-        """
-        Return a dictionary of query param filters from the request
-
-        :param req: the Request object coming from the wsgi layer
-        :retval a dict of key/value filters
-        """
-        filters = {}
-        for param in req.str_params:
-            if param in SUPPORTED_FILTERS or param.startswith('property-'):
-                # map filter name or carry through if property-*
-                filter_name = SUPPORTED_FILTERS.get(param, param)
-                filters[filter_name] = req.str_params.get(param)
-        return filters
-
-    def show(self, req, id):
-        """Return detailed information about a specific image.
-
-        :param req: `wsgi.Request` object
-        :param id: Image identifier
-        """
-        context = req.environ['nova.context']
-
-        try:
-            image = self._image_service.show(context, id)
-        except (exception.NotFound, exception.InvalidImageRef):
-            explanation = _("Image not found.")
-            raise webob.exc.HTTPNotFound(explanation=explanation)
-
-        return self._view_builder.show(req, image)
-
-    def delete(self, req, id):
-        """Delete an image, if allowed.
-
-        :param req: `wsgi.Request` object
-        :param id: Image identifier (integer)
-        """
-        context = req.environ['nova.context']
-        try:
-            self._image_service.delete(context, id)
-        except exception.ImageNotFound:
-            explanation = _("Image not found.")
-            raise webob.exc.HTTPNotFound(explanation=explanation)
-        return webob.exc.HTTPNoContent()
-
-    def index(self, req):
-        """Return an index listing of images available to the request.
-
-        :param req: `wsgi.Request` object
-
-        """
-        context = req.environ['nova.context']
-        filters = self._get_filters(req)
-        params = req.GET.copy()
-        page_params = common.get_pagination_params(req)
-        for key, val in page_params.iteritems():
-            params[key] = val
-
-        images = self._image_service.index(context, filters=filters,
-                                           **page_params)
-        return self._view_builder.index(req, images)
-
-    def detail(self, req):
-        """Return a detailed index listing of images available to the request.
-
-        :param req: `wsgi.Request` object.
-
-        """
-        context = req.environ['nova.context']
-        filters = self._get_filters(req)
-        params = req.GET.copy()
-        page_params = common.get_pagination_params(req)
-        for key, val in page_params.iteritems():
-            params[key] = val
-        images = self._image_service.detail(context, filters=filters,
-                                            **page_params)
-
-        return self._view_builder.detail(req, images)
-
-    def create(self, *args, **kwargs):
-        raise webob.exc.HTTPMethodNotAllowed()
-
-
 def make_image(elem, detailed=False):
     elem.set('name')
     elem.set('id')
@@ -188,18 +88,108 @@ class ImagesTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
 
 
-class ImageXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return MinimalImagesTemplate()
+class Controller(wsgi.Controller):
+    """Base controller for retrieving/displaying images."""
 
-    def detail(self):
-        return ImagesTemplate()
+    _view_builder_class = views_images.ViewBuilder
 
-    def show(self):
-        return ImageTemplate()
+    def __init__(self, image_service=None, compute_service=None, **kwargs):
+        """Initialize new `ImageController`.
+
+        :param compute_service: `nova.compute.api:API`
+        :param image_service: `nova.image.glance:GlancemageService`
+
+        """
+        super(Controller, self).__init__(**kwargs)
+        self._compute_service = compute_service or compute.API()
+        self._image_service = image_service or \
+                nova.image.get_default_image_service()
+
+    def _get_filters(self, req):
+        """
+        Return a dictionary of query param filters from the request
+
+        :param req: the Request object coming from the wsgi layer
+        :retval a dict of key/value filters
+        """
+        filters = {}
+        for param in req.str_params:
+            if param in SUPPORTED_FILTERS or param.startswith('property-'):
+                # map filter name or carry through if property-*
+                filter_name = SUPPORTED_FILTERS.get(param, param)
+                filters[filter_name] = req.str_params.get(param)
+        return filters
+
+    @wsgi.serializers(xml=ImageTemplate)
+    def show(self, req, id):
+        """Return detailed information about a specific image.
+
+        :param req: `wsgi.Request` object
+        :param id: Image identifier
+        """
+        context = req.environ['nova.context']
+
+        try:
+            image = self._image_service.show(context, id)
+        except (exception.NotFound, exception.InvalidImageRef):
+            explanation = _("Image not found.")
+            raise webob.exc.HTTPNotFound(explanation=explanation)
+
+        return self._view_builder.show(req, image)
+
+    def delete(self, req, id):
+        """Delete an image, if allowed.
+
+        :param req: `wsgi.Request` object
+        :param id: Image identifier (integer)
+        """
+        context = req.environ['nova.context']
+        try:
+            self._image_service.delete(context, id)
+        except exception.ImageNotFound:
+            explanation = _("Image not found.")
+            raise webob.exc.HTTPNotFound(explanation=explanation)
+        return webob.exc.HTTPNoContent()
+
+    @wsgi.serializers(xml=MinimalImagesTemplate)
+    def index(self, req):
+        """Return an index listing of images available to the request.
+
+        :param req: `wsgi.Request` object
+
+        """
+        context = req.environ['nova.context']
+        filters = self._get_filters(req)
+        params = req.GET.copy()
+        page_params = common.get_pagination_params(req)
+        for key, val in page_params.iteritems():
+            params[key] = val
+
+        images = self._image_service.index(context, filters=filters,
+                                           **page_params)
+        return self._view_builder.index(req, images)
+
+    @wsgi.serializers(xml=ImagesTemplate)
+    def detail(self, req):
+        """Return a detailed index listing of images available to the request.
+
+        :param req: `wsgi.Request` object.
+
+        """
+        context = req.environ['nova.context']
+        filters = self._get_filters(req)
+        params = req.GET.copy()
+        page_params = common.get_pagination_params(req)
+        for key, val in page_params.iteritems():
+            params[key] = val
+        images = self._image_service.detail(context, filters=filters,
+                                            **page_params)
+
+        return self._view_builder.detail(req, images)
+
+    def create(self, *args, **kwargs):
+        raise webob.exc.HTTPMethodNotAllowed()
 
 
 def create_resource():
-    body_serializers = {'application/xml': ImageXMLSerializer()}
-    serializer = wsgi.ResponseSerializer(body_serializers)
-    return wsgi.Resource(Controller(), serializer=serializer)
+    return wsgi.Resource(Controller())

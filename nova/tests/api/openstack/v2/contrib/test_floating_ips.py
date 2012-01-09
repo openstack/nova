@@ -273,7 +273,7 @@ class FloatingIpTest(test.TestCase):
 
 class FloatingIpSerializerTest(test.TestCase):
     def test_default_serializer(self):
-        serializer = floating_ips.FloatingIPSerializer()
+        serializer = floating_ips.FloatingIPTemplate()
         text = serializer.serialize(dict(
                 floating_ip=dict(
                     instance_id=1,
@@ -290,7 +290,7 @@ class FloatingIpSerializerTest(test.TestCase):
         self.assertEqual('1', tree.get('id'))
 
     def test_index_serializer(self):
-        serializer = floating_ips.FloatingIPSerializer()
+        serializer = floating_ips.FloatingIPsTemplate()
         text = serializer.serialize(dict(
                 floating_ips=[
                     dict(instance_id=1,
@@ -300,7 +300,7 @@ class FloatingIpSerializerTest(test.TestCase):
                     dict(instance_id=None,
                          ip='10.10.10.11',
                          fixed_ip=None,
-                         id=2)]), 'index')
+                         id=2)]))
 
         tree = etree.fromstring(text)
 

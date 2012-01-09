@@ -165,15 +165,12 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
 
 
 class VolumeTypeExtraSpecsSerializerTest(test.TestCase):
-    def setUp(self):
-        super(VolumeTypeExtraSpecsSerializerTest, self).setUp()
-        self.serializer = volumetypes.VolumeTypeExtraSpecsSerializer()
-
     def test_index_create_serializer(self):
+        serializer = volumetypes.VolumeTypeExtraSpecsTemplate()
+
         # Just getting some input data
         extra_specs = stub_volume_type_extra_specs()
-        text = self.serializer.serialize(dict(extra_specs=extra_specs),
-                                         'index')
+        text = serializer.serialize(dict(extra_specs=extra_specs))
 
         print text
         tree = etree.fromstring(text)
@@ -188,8 +185,10 @@ class VolumeTypeExtraSpecsSerializerTest(test.TestCase):
         self.assertEqual(len(seen), 0)
 
     def test_update_show_serializer(self):
+        serializer = volumetypes.VolumeTypeExtraSpecTemplate()
+
         exemplar = dict(key1='value1')
-        text = self.serializer.serialize(exemplar, 'update')
+        text = serializer.serialize(exemplar)
 
         print text
         tree = etree.fromstring(text)

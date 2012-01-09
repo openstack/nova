@@ -43,11 +43,14 @@ class Controller(object):
             meta_dict[key] = value
         return meta_dict
 
+    @wsgi.serializers(xml=common.MetadataTemplate)
     def index(self, req, server_id):
         """ Returns the list of metadata for a given instance """
         context = req.environ['nova.context']
         return {'metadata': self._get_metadata(context, server_id)}
 
+    @wsgi.serializers(xml=common.MetadataTemplate)
+    @wsgi.deserializers(xml=common.MetadataDeserializer)
     def create(self, req, server_id, body):
         try:
             metadata = body['metadata']
@@ -64,6 +67,8 @@ class Controller(object):
 
         return {'metadata': new_metadata}
 
+    @wsgi.serializers(xml=common.MetaItemTemplate)
+    @wsgi.deserializers(xml=common.MetaItemDeserializer)
     def update(self, req, server_id, id, body):
         try:
             meta_item = body['meta']
@@ -89,6 +94,8 @@ class Controller(object):
 
         return {'meta': meta_item}
 
+    @wsgi.serializers(xml=common.MetadataTemplate)
+    @wsgi.deserializers(xml=common.MetadataDeserializer)
     def update_all(self, req, server_id, body):
         try:
             metadata = body['metadata']
@@ -124,6 +131,7 @@ class Controller(object):
         except exception.QuotaError as error:
             self._handle_quota_error(error)
 
+    @wsgi.serializers(xml=common.MetaItemTemplate)
     def show(self, req, server_id, id):
         """ Return a single metadata item """
         context = req.environ['nova.context']
@@ -135,6 +143,7 @@ class Controller(object):
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
+    @wsgi.response(204)
     def delete(self, req, server_id, id):
         """ Deletes an existing metadata """
         context = req.environ['nova.context']
@@ -163,16 +172,4 @@ class Controller(object):
 
 
 def create_resource():
-    headers_serializer = common.MetadataHeadersSerializer()
-
-    body_deserializers = {
-        'application/xml': common.MetadataXMLDeserializer(),
-    }
-
-    body_serializers = {
-        'application/xml': common.MetadataXMLSerializer(),
-    }
-    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
-    deserializer = wsgi.RequestDeserializer(body_deserializers)
-
-    return wsgi.Resource(Controller(), deserializer, serializer)
+    return wsgi.Resource(Controller())

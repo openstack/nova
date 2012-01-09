@@ -251,7 +251,7 @@ class SnapshotSerializerTest(test.TestCase):
             self.assertEqual(str(snap[attr]), tree.get(attr))
 
     def test_snapshot_show_create_serializer(self):
-        serializer = volumes.SnapshotSerializer()
+        serializer = volumes.SnapshotTemplate()
         raw_snapshot = dict(
             id='snap_id',
             status='snap_status',
@@ -261,7 +261,7 @@ class SnapshotSerializerTest(test.TestCase):
             displayDescription='snap_desc',
             volumeId='vol_id',
             )
-        text = serializer.serialize(dict(snapshot=raw_snapshot), 'show')
+        text = serializer.serialize(dict(snapshot=raw_snapshot))
 
         print text
         tree = etree.fromstring(text)
@@ -269,7 +269,7 @@ class SnapshotSerializerTest(test.TestCase):
         self._verify_snapshot(raw_snapshot, tree)
 
     def test_snapshot_index_detail_serializer(self):
-        serializer = volumes.SnapshotSerializer()
+        serializer = volumes.SnapshotsTemplate()
         raw_snapshots = [dict(
                 id='snap1_id',
                 status='snap1_status',
@@ -288,7 +288,7 @@ class SnapshotSerializerTest(test.TestCase):
                 displayDescription='snap2_desc',
                 volumeId='vol2_id',
                 )]
-        text = serializer.serialize(dict(snapshots=raw_snapshots), 'index')
+        text = serializer.serialize(dict(snapshots=raw_snapshots))
 
         print text
         tree = etree.fromstring(text)

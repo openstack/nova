@@ -490,8 +490,8 @@ class VersionsSerializerTests(test.TestCase):
             ]
         }
 
-        serializer = versions.VersionsXMLSerializer()
-        response = serializer.index(versions_data)
+        serializer = versions.VersionsTemplate()
+        response = serializer.serialize(versions_data)
 
         root = etree.XML(response)
         xmlutil.validate_schema(root, 'versions')
@@ -528,8 +528,8 @@ class VersionsSerializerTests(test.TestCase):
             ]
         }
 
-        serializer = versions.VersionsXMLSerializer()
-        response = serializer.multi(versions_data)
+        serializer = versions.ChoicesTemplate()
+        response = serializer.serialize(versions_data)
 
         root = etree.XML(response)
         self.assertTrue(root.xpath('/ns:choices', namespaces=NS))
@@ -568,7 +568,7 @@ class VersionsSerializerTests(test.TestCase):
         }
 
         serializer = versions.VersionsAtomSerializer()
-        response = serializer.index(versions_data)
+        response = serializer.serialize(versions_data)
         f = feedparser.parse(response)
 
         self.assertEqual(f.feed.title, 'Available API Versions')
@@ -631,8 +631,8 @@ class VersionsSerializerTests(test.TestCase):
             },
         }
 
-        serializer = versions.VersionsAtomSerializer()
-        response = serializer.show(versions_data)
+        serializer = versions.VersionAtomSerializer()
+        response = serializer.serialize(versions_data)
         f = feedparser.parse(response)
 
         self.assertEqual(f.feed.title, 'About This Version')

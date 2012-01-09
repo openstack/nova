@@ -526,6 +526,7 @@ class Template(object):
 
         self.root = root.unwrap() if root is not None else None
         self.nsmap = nsmap or {}
+        self.serialize_options = dict(encoding='UTF-8', xml_declaration=True)
 
     def _serialize(self, parent, obj, siblings, nsmap=None):
         """Internal serialization.
@@ -584,6 +585,9 @@ class Template(object):
         elem = self.make_tree(obj)
         if elem is None:
             return ''
+
+        for k, v in self.serialize_options.items():
+            kwargs.setdefault(k, v)
 
         # Serialize it into XML
         return etree.tostring(elem, *args, **kwargs)

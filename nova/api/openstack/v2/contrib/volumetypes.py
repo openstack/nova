@@ -27,14 +27,39 @@ from nova import exception
 from nova.volume import volume_types
 
 
+def make_voltype(elem):
+    elem.set('id')
+    elem.set('name')
+    extra_specs = xmlutil.make_flat_dict('extra_specs', selector='extra_specs')
+    elem.append(extra_specs)
+
+
+class VolumeTypeTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('volume_type', selector='volume_type')
+        make_voltype(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class VolumeTypesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('volume_types')
+        sel = lambda obj, do_raise=False: obj.values()
+        elem = xmlutil.SubTemplateElement(root, 'volume_type', selector=sel)
+        make_voltype(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
 class VolumeTypesController(object):
     """ The volume types API controller for the Openstack API """
 
+    @wsgi.serializers(xml=VolumeTypesTemplate)
     def index(self, req):
         """ Returns the list of volume types """
         context = req.environ['nova.context']
         return volume_types.get_all_types(context)
 
+    @wsgi.serializers(xml=VolumeTypeTemplate)
     def create(self, req, body):
         """Creates a new volume type."""
         context = req.environ['nova.context']
@@ -62,6 +87,7 @@ class VolumeTypesController(object):
 
         return {'volume_type': vol_type}
 
+    @wsgi.serializers(xml=VolumeTypeTemplate)
     def show(self, req, id):
         """ Return a single volume type item """
         context = req.environ['nova.context']
@@ -90,35 +116,24 @@ class VolumeTypesController(object):
         raise error
 
 
-def make_voltype(elem):
-    elem.set('id')
-    elem.set('name')
-    extra_specs = xmlutil.make_flat_dict('extra_specs', selector='extra_specs')
-    elem.append(extra_specs)
-
-
-class VolumeTypeTemplate(xmlutil.TemplateBuilder):
+class VolumeTypeExtraSpecsTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        root = xmlutil.TemplateElement('volume_type', selector='volume_type')
-        make_voltype(root)
+        root = xmlutil.make_flat_dict('extra_specs', selector='extra_specs')
         return xmlutil.MasterTemplate(root, 1)
 
 
-class VolumeTypesTemplate(xmlutil.TemplateBuilder):
+class VolumeTypeExtraSpecTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        root = xmlutil.TemplateElement('volume_types')
-        sel = lambda obj, do_raise=False: obj.values()
-        elem = xmlutil.SubTemplateElement(root, 'volume_type', selector=sel)
-        make_voltype(elem)
+        tagname = xmlutil.Selector('key')
+
+        def extraspec_sel(obj, do_raise=False):
+            # Have to extract the key and value for later use...
+            key, value = obj.items()[0]
+            return dict(key=key, value=value)
+
+        root = xmlutil.TemplateElement(tagname, selector=extraspec_sel)
+        root.text = 'value'
         return xmlutil.MasterTemplate(root, 1)
-
-
-class VolumeTypesSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return VolumeTypesTemplate()
-
-    def default(self):
-        return VolumeTypeTemplate()
 
 
 class VolumeTypeExtraSpecsController(object):
@@ -136,11 +151,13 @@ class VolumeTypeExtraSpecsController(object):
             expl = _('No Request Body')
             raise exc.HTTPBadRequest(explanation=expl)
 
+    @wsgi.serializers(xml=VolumeTypeExtraSpecsTemplate)
     def index(self, req, vol_type_id):
         """ Returns the list of extra specs for a given volume type """
         context = req.environ['nova.context']
         return self._get_extra_specs(context, vol_type_id)
 
+    @wsgi.serializers(xml=VolumeTypeExtraSpecsTemplate)
     def create(self, req, vol_type_id, body):
         self._check_body(body)
         context = req.environ['nova.context']
@@ -153,6 +170,7 @@ class VolumeTypeExtraSpecsController(object):
             self._handle_quota_error(error)
         return body
 
+    @wsgi.serializers(xml=VolumeTypeExtraSpecTemplate)
     def update(self, req, vol_type_id, id, body):
         self._check_body(body)
         context = req.environ['nova.context']
@@ -171,6 +189,7 @@ class VolumeTypeExtraSpecsController(object):
 
         return body
 
+    @wsgi.serializers(xml=VolumeTypeExtraSpecTemplate)
     def show(self, req, vol_type_id, id):
         """ Return a single extra spec item """
         context = req.environ['nova.context']
@@ -192,40 +211,6 @@ class VolumeTypeExtraSpecsController(object):
         raise error
 
 
-class VolumeTypeExtraSpecsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.make_flat_dict('extra_specs', selector='extra_specs')
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class VolumeTypeExtraSpecTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        tagname = xmlutil.Selector('key')
-
-        def extraspec_sel(obj, do_raise=False):
-            # Have to extract the key and value for later use...
-            key, value = obj.items()[0]
-            return dict(key=key, value=value)
-
-        root = xmlutil.TemplateElement(tagname, selector=extraspec_sel)
-        root.text = 'value'
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class VolumeTypeExtraSpecsSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return VolumeTypeExtraSpecsTemplate()
-
-    def create(self):
-        return VolumeTypeExtraSpecsTemplate()
-
-    def update(self):
-        return VolumeTypeExtraSpecTemplate()
-
-    def show(self):
-        return VolumeTypeExtraSpecTemplate()
-
-
 class Volumetypes(extensions.ExtensionDescriptor):
     """Volume types support"""
 
@@ -237,25 +222,13 @@ class Volumetypes(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        body_serializers = {
-            'application/xml': VolumeTypesSerializer(),
-            }
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension(
                     'os-volume-types',
-                    VolumeTypesController(),
-                    serializer=serializer)
+                    VolumeTypesController())
         resources.append(res)
-
-        body_serializers = {
-            'application/xml': VolumeTypeExtraSpecsSerializer(),
-            }
-        serializer = wsgi.ResponseSerializer(body_serializers)
 
         res = extensions.ResourceExtension('extra_specs',
                             VolumeTypeExtraSpecsController(),
-                            serializer=serializer,
                             parent=dict(
                                 member_name='vol_type',
                                 collection_name='os-volume-types'))

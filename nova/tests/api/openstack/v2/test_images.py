@@ -1005,7 +1005,7 @@ class ImageXMLSerializationTest(test.TestCase):
     IMAGE_BOOKMARK = 'http://localhost/fake/images/%s'
 
     def test_xml_declaration(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.ImageTemplate()
 
         fixture = {
             'image': {
@@ -1044,12 +1044,12 @@ class ImageXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
     def test_show(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.ImageTemplate()
 
         fixture = {
             'image': {
@@ -1090,7 +1090,7 @@ class ImageXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1121,7 +1121,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 self.assertEqual(link_nodes[i].get(key), value)
 
     def test_show_zero_metadata(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.ImageTemplate()
 
         fixture = {
             'image': {
@@ -1157,7 +1157,7 @@ class ImageXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1183,7 +1183,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 self.assertEqual(link_nodes[i].get(key), value)
 
     def test_show_image_no_metadata_key(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.ImageTemplate()
 
         fixture = {
             'image': {
@@ -1218,7 +1218,7 @@ class ImageXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1244,7 +1244,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 self.assertEqual(link_nodes[i].get(key), value)
 
     def test_show_no_server(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.ImageTemplate()
 
         fixture = {
             'image': {
@@ -1269,7 +1269,7 @@ class ImageXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1295,7 +1295,7 @@ class ImageXMLSerializationTest(test.TestCase):
         self.assertEqual(server_root, None)
 
     def test_show_with_min_ram(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.ImageTemplate()
 
         fixture = {
             'image': {
@@ -1335,7 +1335,7 @@ class ImageXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1367,7 +1367,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 self.assertEqual(link_nodes[i].get(key), value)
 
     def test_show_with_min_disk(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.ImageTemplate()
 
         fixture = {
             'image': {
@@ -1407,7 +1407,7 @@ class ImageXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'image')
         image_dict = fixture['image']
@@ -1439,7 +1439,7 @@ class ImageXMLSerializationTest(test.TestCase):
                 self.assertEqual(link_nodes[i].get(key), value)
 
     def test_index(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.MinimalImagesTemplate()
 
         fixture = {
             'images': [
@@ -1474,7 +1474,7 @@ class ImageXMLSerializationTest(test.TestCase):
             ]
         }
 
-        output = serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images_index')
         image_elems = root.findall('{0}image'.format(NS))
@@ -1492,7 +1492,7 @@ class ImageXMLSerializationTest(test.TestCase):
                     self.assertEqual(link_nodes[i].get(key), value)
 
     def test_index_with_links(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.MinimalImagesTemplate()
 
         fixture = {
             'images': [
@@ -1533,7 +1533,7 @@ class ImageXMLSerializationTest(test.TestCase):
             ],
         }
 
-        output = serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images_index')
         image_elems = root.findall('{0}image'.format(NS))
@@ -1557,20 +1557,20 @@ class ImageXMLSerializationTest(test.TestCase):
                     self.assertEqual(images_links[i].get(key), value)
 
     def test_index_zero_images(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.MinimalImagesTemplate()
 
         fixtures = {
             'images': [],
         }
 
-        output = serializer.serialize(fixtures, 'index')
+        output = serializer.serialize(fixtures)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images_index')
         image_elems = root.findall('{0}image'.format(NS))
         self.assertEqual(len(image_elems), 0)
 
     def test_detail(self):
-        serializer = images.ImageXMLSerializer()
+        serializer = images.ImagesTemplate()
 
         fixture = {
             'images': [
@@ -1628,7 +1628,7 @@ class ImageXMLSerializationTest(test.TestCase):
             ]
         }
 
-        output = serializer.serialize(fixture, 'detail')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'images')
         image_elems = root.findall('{0}image'.format(NS))

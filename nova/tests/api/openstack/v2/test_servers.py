@@ -1397,7 +1397,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
-        server = self.controller.create(req, body)['server']
+        server = self.controller.create(req, body).obj['server']
 
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(FAKE_UUID, server['id'])
@@ -1424,7 +1424,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body).obj
 
         self.assertEqual(FAKE_UUID, res["server"]["id"])
         self.assertEqual(12, len(res["server"]["adminPass"]))
@@ -1565,7 +1565,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body).obj
 
         server = res['server']
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
@@ -1598,7 +1598,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body).obj
 
         server = res['server']
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
@@ -1628,7 +1628,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body).obj
 
         self.assertEqual(FAKE_UUID, res["server"]["id"])
         self.assertEqual(12, len(res["server"]["adminPass"]))
@@ -1700,7 +1700,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body).obj
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
@@ -1727,7 +1727,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body).obj
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
@@ -1779,7 +1779,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body).obj
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
@@ -1814,7 +1814,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body).obj
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
@@ -1834,7 +1834,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body).obj
 
         server = res['server']
         self.assertEqual(server['adminPass'], body['server']['adminPass'])
@@ -1867,12 +1867,44 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
 
+    def test_create_location(self):
+        selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
+        bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        robj = self.controller.create(req, body)
+
+        self.assertEqual(robj['Location'], selfhref)
+
 
 class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
     def setUp(self):
         super(TestServerCreateRequestXMLDeserializer, self).setUp()
-        self.deserializer = servers.ServerXMLDeserializer()
+        self.deserializer = servers.CreateDeserializer()
 
     def test_minimal_request(self):
         serial_request = """
@@ -1880,7 +1912,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         name="new-server-test"
         imageRef="1"
         flavorRef="2"/>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -1897,7 +1929,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         imageRef="1"
         flavorRef="2"
         accessIPv4="1.2.3.4"/>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -1915,7 +1947,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         imageRef="1"
         flavorRef="2"
         accessIPv6="fead::1234"/>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -1934,7 +1966,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         flavorRef="2"
         accessIPv4="1.2.3.4"
         accessIPv6="fead::1234"/>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -1953,7 +1985,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         imageRef="1"
         flavorRef="2"
         adminPass="1234"/>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -1970,7 +2002,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         name="new-server-test"
         imageRef="http://localhost:8774/v2/images/2"
         flavorRef="3"/>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -1986,7 +2018,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         name="new-server-test"
         imageRef="1"
         flavorRef="http://localhost:8774/v2/flavors/3"/>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -2005,7 +2037,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
     <metadata/>
     <personality/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -2028,7 +2060,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         <meta key="open">snack</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -2050,7 +2082,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         <file path="/etc/hosts">Mg==</file>
     </personality>
 </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -2079,7 +2111,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
     <file path="/etc/banner.txt">Mg==</file>
   </personality>
 </server>""" % (image_bookmark_link)
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
@@ -2103,7 +2135,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
  name="new-server-test" imageRef="1" flavorRef="1">
     <networks/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
@@ -2120,7 +2152,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
        <network uuid="1" fixed_ip="10.0.1.12"/>
     </networks>
 </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
@@ -2138,7 +2170,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
        <network uuid="2" fixed_ip="10.0.2.12"/>
     </networks>
 </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
@@ -2159,7 +2191,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
        <network uuid="2" fixed_ip="10.0.2.12"/>
     </networks>
 </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
@@ -2176,7 +2208,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
        <network fixed_ip="10.0.1.12"/>
     </networks>
 </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
@@ -2193,7 +2225,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
        <network uuid="1"/>
     </networks>
 </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
@@ -2210,7 +2242,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
            <network uuid="" fixed_ip="10.0.1.12"/>
         </networks>
     </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
@@ -2227,7 +2259,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
            <network uuid="1" fixed_ip=""/>
         </networks>
     </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
@@ -2245,7 +2277,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
            <network uuid="1" fixed_ip="10.0.2.12"/>
         </networks>
     </server>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
                 "imageRef": "1",
@@ -2258,7 +2290,8 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
 class TestAddressesXMLSerialization(test.TestCase):
 
-    serializer = nova.api.openstack.v2.ips.IPXMLSerializer()
+    index_serializer = nova.api.openstack.v2.ips.AddressesTemplate()
+    show_serializer = nova.api.openstack.v2.ips.NetworkTemplate()
 
     def test_xml_declaration(self):
         fixture = {
@@ -2267,7 +2300,7 @@ class TestAddressesXMLSerialization(test.TestCase):
                 {'addr': 'fe80::beef', 'version': 6},
             ],
         }
-        output = self.serializer.serialize(fixture, 'show')
+        output = self.show_serializer.serialize(fixture)
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
@@ -2278,7 +2311,7 @@ class TestAddressesXMLSerialization(test.TestCase):
                 {'addr': 'fe80::beef', 'version': 6},
             ],
         }
-        output = self.serializer.serialize(fixture, 'show')
+        output = self.show_serializer.serialize(fixture)
         root = etree.XML(output)
         network = fixture['network_2']
         self.assertEqual(str(root.get('id')), 'network_2')
@@ -2303,7 +2336,7 @@ class TestAddressesXMLSerialization(test.TestCase):
                 ],
             },
         }
-        output = self.serializer.serialize(fixture, 'index')
+        output = self.index_serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'addresses')
         addresses_dict = fixture['addresses']
@@ -2889,7 +2922,7 @@ class ServerXMLSerializationTest(test.TestCase):
         test.TestCase.setUp(self)
 
     def test_xml_declaration(self):
-        serializer = servers.ServerXMLSerializer()
+        serializer = servers.ServerTemplate()
 
         fixture = {
             "server": {
@@ -2961,13 +2994,13 @@ class ServerXMLSerializationTest(test.TestCase):
             }
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         print output
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
     def test_show(self):
-        serializer = servers.ServerXMLSerializer()
+        serializer = servers.ServerTemplate()
 
         fixture = {
             "server": {
@@ -3040,7 +3073,7 @@ class ServerXMLSerializationTest(test.TestCase):
             }
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
@@ -3098,7 +3131,7 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['addr']))
 
     def test_create(self):
-        serializer = servers.ServerXMLSerializer()
+        serializer = servers.FullServerTemplate()
 
         fixture = {
             "server": {
@@ -3171,7 +3204,7 @@ class ServerXMLSerializationTest(test.TestCase):
             }
         }
 
-        output = serializer.serialize(fixture, 'create')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
@@ -3229,7 +3262,7 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['addr']))
 
     def test_index(self):
-        serializer = servers.ServerXMLSerializer()
+        serializer = servers.MinimalServersTemplate()
 
         uuid1 = get_fake_uuid(1)
         uuid2 = get_fake_uuid(2)
@@ -3268,7 +3301,7 @@ class ServerXMLSerializationTest(test.TestCase):
             },
         ]}
 
-        output = serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'servers_index')
@@ -3286,7 +3319,7 @@ class ServerXMLSerializationTest(test.TestCase):
                     self.assertEqual(link_nodes[i].get(key), value)
 
     def test_index_with_servers_links(self):
-        serializer = servers.ServerXMLSerializer()
+        serializer = servers.MinimalServersTemplate()
 
         uuid1 = get_fake_uuid(1)
         uuid2 = get_fake_uuid(2)
@@ -3332,7 +3365,7 @@ class ServerXMLSerializationTest(test.TestCase):
             },
         ]}
 
-        output = serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'servers_index')
@@ -3356,7 +3389,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 self.assertEqual(servers_links[i].get(key), value)
 
     def test_detail(self):
-        serializer = servers.ServerXMLSerializer()
+        serializer = servers.ServersTemplate()
 
         uuid1 = get_fake_uuid(1)
         expected_server_href = 'http://localhost/v2/servers/%s' % uuid1
@@ -3482,7 +3515,7 @@ class ServerXMLSerializationTest(test.TestCase):
             },
         ]}
 
-        output = serializer.serialize(fixture, 'detail')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'servers')
         server_elems = root.findall('{0}server'.format(NS))
@@ -3541,7 +3574,7 @@ class ServerXMLSerializationTest(test.TestCase):
                                      str(ip['addr']))
 
     def test_update(self):
-        serializer = servers.ServerXMLSerializer()
+        serializer = servers.ServerTemplate()
 
         fixture = {
             "server": {
@@ -3619,7 +3652,7 @@ class ServerXMLSerializationTest(test.TestCase):
             }
         }
 
-        output = serializer.serialize(fixture, 'update')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
@@ -3686,7 +3719,7 @@ class ServerXMLSerializationTest(test.TestCase):
         self.assertEqual(det_elem.text, fault_dict["details"])
 
     def test_action(self):
-        serializer = servers.ServerXMLSerializer()
+        serializer = servers.FullServerTemplate()
 
         fixture = {
             "server": {
@@ -3759,7 +3792,7 @@ class ServerXMLSerializationTest(test.TestCase):
             }
         }
 
-        output = serializer.serialize(fixture, 'action')
+        output = serializer.serialize(fixture)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
 
@@ -3814,42 +3847,3 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['version']))
                 self.assertEqual(str(ip_elem.get('addr')),
                                  str(ip['addr']))
-
-
-class ServerHeadersSerializationTest(test.TestCase):
-    def test_create_location(self):
-        selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
-        bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
-
-        serializer = servers.HeadersSerializer()
-        response = webob.Response()
-        server = {
-            'links': [{
-                'rel': 'self',
-                'href': selfhref,
-            }, {
-                'rel': 'bookmark',
-                'href': bookhref,
-            }],
-        }
-        serializer.create(response, {'server': server})
-        self.assertEqual(response.headers['Location'], selfhref)
-
-    def test_rebuild_location(self):
-        selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
-        bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
-
-        serializer = servers.HeadersSerializer()
-        response = webob.Response()
-        server = {
-            'status': 'REBUILD',
-            'links': [{
-                'rel': 'self',
-                'href': selfhref,
-            }, {
-                'rel': 'bookmark',
-                'href': bookhref,
-            }],
-        }
-        serializer.action(response, {'server': server})
-        self.assertEqual(response.headers['Location'], selfhref)

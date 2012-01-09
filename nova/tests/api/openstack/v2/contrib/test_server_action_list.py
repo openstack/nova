@@ -15,8 +15,12 @@
 
 import datetime
 import json
+import unittest
+
+from lxml import etree
 
 from nova.api.openstack import v2
+from nova.api.openstack.v2.contrib import server_action_list
 from nova.api.openstack.v2 import extensions
 from nova.api.openstack import wsgi
 import nova.compute
@@ -39,10 +43,10 @@ def fake_instance_get(self, _context, instance_uuid):
     return {'uuid': instance_uuid}
 
 
-class ServerDiagnosticsTest(test.TestCase):
+class ServerActionsTest(test.TestCase):
 
     def setUp(self):
-        super(ServerDiagnosticsTest, self).setUp()
+        super(ServerActionsTest, self).setUp()
         self.flags(allow_admin_api=True)
         self.flags(verbose=True)
         self.stubs.Set(nova.compute.API, 'get_actions', fake_get_actions)
@@ -63,3 +67,37 @@ class ServerDiagnosticsTest(test.TestCase):
             {'action': 'reboot', 'error': 'Failed!', 'created_at': str(dt)},
         ]}
         self.assertEqual(output, expected)
+
+
+class TestServerActionsXMLSerializer(unittest.TestCase):
+    namespace = wsgi.XMLNS_V11
+
+    def _tag(self, elem):
+        tagname = elem.tag
+        self.assertEqual(tagname[0], '{')
+        tmp = tagname.partition('}')
+        namespace = tmp[0][1:]
+        self.assertEqual(namespace, self.namespace)
+        return tmp[2]
+
+    def test_index_serializer(self):
+        serializer = server_action_list.ServerActionsTemplate()
+        exemplar = [dict(
+                created_at=datetime.datetime.now(),
+                action='foo',
+                error='quxx'),
+                    dict(
+                created_at=datetime.datetime.now(),
+                action='bar',
+                error='xxuq')]
+        text = serializer.serialize(dict(actions=exemplar))
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('actions', self._tag(tree))
+        self.assertEqual(len(tree), len(exemplar))
+        for idx, child in enumerate(tree):
+            self.assertEqual('action', self._tag(child))
+            for field in ('created_at', 'action', 'error'):
+                self.assertEqual(str(exemplar[idx][field]), child.get(field))

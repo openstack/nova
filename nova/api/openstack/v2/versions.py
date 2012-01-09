@@ -57,103 +57,53 @@ VERSIONS = {
 }
 
 
-class Versions(wsgi.Resource):
-    def __init__(self):
-        metadata = {
-            "attributes": {
-                "version": ["status", "id"],
-                "link": ["rel", "href"],
-            }
-        }
-
-        headers_serializer = VersionsHeadersSerializer()
-
-        body_serializers = {
-            'application/atom+xml': VersionsAtomSerializer(metadata=metadata),
-            'application/xml': VersionsXMLSerializer(metadata=metadata),
-        }
-        serializer = wsgi.ResponseSerializer(
-            body_serializers=body_serializers,
-            headers_serializer=headers_serializer)
-
-        deserializer = VersionsRequestDeserializer()
-
-        wsgi.Resource.__init__(self, None, serializer=serializer,
-                               deserializer=deserializer)
-
-    def dispatch(self, request, *args):
-        """Respond to a request for all OpenStack API versions."""
-        builder = views_versions.get_view_builder(request)
-        if request.path == '/':
-            # List Versions
-            return builder.build_versions(VERSIONS)
-        else:
-            # Versions Multiple Choice
-            return builder.build_choices(VERSIONS, request)
+class MediaTypesTemplateElement(xmlutil.TemplateElement):
+    def will_render(self, datum):
+        return 'media-types' in datum
 
 
-class VersionV2(object):
-    def show(self, req):
-        builder = views_versions.get_view_builder(req)
-        return builder.build_version(VERSIONS['v2.0'])
+def make_version(elem):
+    elem.set('id')
+    elem.set('status')
+    elem.set('updated')
+
+    mts = MediaTypesTemplateElement('media-types')
+    elem.append(mts)
+
+    mt = xmlutil.SubTemplateElement(mts, 'media-type', selector='media-types')
+    mt.set('base')
+    mt.set('type')
+
+    xmlutil.make_links(elem, 'links')
 
 
-class VersionsRequestDeserializer(wsgi.RequestDeserializer):
-    def get_action_args(self, request_environment):
-        """Parse dictionary created by routes library."""
-        args = {}
-        if request_environment['PATH_INFO'] == '/':
-            args['action'] = 'index'
-        else:
-            args['action'] = 'multi'
-
-        return args
+version_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
 
-class VersionsXMLSerializer(wsgi.XMLDictSerializer):
-
-    def _populate_version(self, version_node, version):
-        version_node.set('id', version['id'])
-        version_node.set('status', version['status'])
-        if 'updated' in version:
-            version_node.set('updated', version['updated'])
-        if 'media-types' in version:
-            media_types = etree.SubElement(version_node, 'media-types')
-            for mtype in version['media-types']:
-                elem = etree.SubElement(media_types, 'media-type')
-                elem.set('base', mtype['base'])
-                elem.set('type', mtype['type'])
-        for link in version.get('links', []):
-            elem = etree.SubElement(version_node,
-                                    '{%s}link' % xmlutil.XMLNS_ATOM)
-            elem.set('rel', link['rel'])
-            elem.set('href', link['href'])
-            if 'type' in link:
-                elem.set('type', link['type'])
-
-    NSMAP = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
-
-    def index(self, data):
-        root = etree.Element('versions', nsmap=self.NSMAP)
-        for version in data['versions']:
-            version_elem = etree.SubElement(root, 'version')
-            self._populate_version(version_elem, version)
-        return self._to_xml(root)
-
-    def show(self, data):
-        root = etree.Element('version', nsmap=self.NSMAP)
-        self._populate_version(root, data['version'])
-        return self._to_xml(root)
-
-    def multi(self, data):
-        root = etree.Element('choices', nsmap=self.NSMAP)
-        for version in data['choices']:
-            version_elem = etree.SubElement(root, 'version')
-            self._populate_version(version_elem, version)
-        return self._to_xml(root)
+class VersionTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('version', selector='version')
+        make_version(root)
+        return xmlutil.MasterTemplate(root, 1, nsmap=version_nsmap)
 
 
-class VersionsAtomSerializer(wsgi.XMLDictSerializer):
+class VersionsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('versions')
+        elem = xmlutil.SubTemplateElement(root, 'version', selector='versions')
+        make_version(elem)
+        return xmlutil.MasterTemplate(root, 1, nsmap=version_nsmap)
+
+
+class ChoicesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('choices')
+        elem = xmlutil.SubTemplateElement(root, 'version', selector='choices')
+        make_version(elem)
+        return xmlutil.MasterTemplate(root, 1, nsmap=version_nsmap)
+
+
+class AtomSerializer(wsgi.XMLDictSerializer):
 
     NSMAP = {None: xmlutil.XMLNS_ATOM}
 
@@ -228,32 +178,59 @@ class VersionsAtomSerializer(wsgi.XMLDictSerializer):
                                                version['updated'])
         return entry
 
-    def index(self, data):
+
+class VersionsAtomSerializer(AtomSerializer):
+    def default(self, data):
         versions = data['versions']
         feed_id = self._get_base_url(versions[0]['links'][0]['href'])
         feed = self._create_feed(versions, 'Available API Versions', feed_id)
         return self._to_xml(feed)
 
-    def show(self, data):
+
+class VersionAtomSerializer(AtomSerializer):
+    def default(self, data):
         version = data['version']
         feed_id = version['links'][0]['href']
         feed = self._create_feed([version], 'About This Version', feed_id)
         return self._to_xml(feed)
 
 
-class VersionsHeadersSerializer(wsgi.ResponseHeadersSerializer):
-    def multi(self, response, data):
-        response.status_int = 300
+class Versions(wsgi.Resource):
+    def __init__(self):
+        super(Versions, self).__init__(None)
+
+    @wsgi.serializers(xml=VersionsTemplate,
+                      atom=VersionsAtomSerializer)
+    def index(self, req):
+        """Return all versions."""
+        builder = views_versions.get_view_builder(req)
+        return builder.build_versions(VERSIONS)
+
+    @wsgi.serializers(xml=ChoicesTemplate)
+    @wsgi.response(300)
+    def multi(self, req):
+        """Return multiple choices."""
+        builder = views_versions.get_view_builder(req)
+        return builder.build_choices(VERSIONS, req)
+
+    def get_action_args(self, request_environment):
+        """Parse dictionary created by routes library."""
+        args = {}
+        if request_environment['PATH_INFO'] == '/':
+            args['action'] = 'index'
+        else:
+            args['action'] = 'multi'
+
+        return args
+
+
+class VersionV2(object):
+    @wsgi.serializers(xml=VersionTemplate,
+                      atom=VersionAtomSerializer)
+    def show(self, req):
+        builder = views_versions.get_view_builder(req)
+        return builder.build_version(VERSIONS['v2.0'])
 
 
 def create_resource():
-    body_serializers = {
-        'application/xml': VersionsXMLSerializer(),
-        'application/atom+xml': VersionsAtomSerializer(),
-    }
-    serializer = wsgi.ResponseSerializer(body_serializers)
-
-    deserializer = wsgi.RequestDeserializer()
-
-    return wsgi.Resource(VersionV2(), serializer=serializer,
-                         deserializer=deserializer)
+    return wsgi.Resource(VersionV2())

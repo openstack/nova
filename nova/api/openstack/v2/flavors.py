@@ -24,48 +24,6 @@ from nova.compute import instance_types
 from nova import exception
 
 
-class Controller(wsgi.Controller):
-    """Flavor controller for the OpenStack API."""
-
-    _view_builder_class = flavors_view.ViewBuilder
-
-    def index(self, req):
-        """Return all flavors in brief."""
-        flavors = self._get_flavors(req)
-        return self._view_builder.index(req, flavors)
-
-    def detail(self, req):
-        """Return all flavors in detail."""
-        flavors = self._get_flavors(req)
-        return self._view_builder.detail(req, flavors)
-
-    def show(self, req, id):
-        """Return data about the given flavor id."""
-        try:
-            flavor = instance_types.get_instance_type_by_flavor_id(id)
-        except exception.NotFound:
-            raise webob.exc.HTTPNotFound()
-
-        return self._view_builder.show(req, flavor)
-
-    def _get_flavors(self, req):
-        """Helper function that returns a list of flavor dicts."""
-        filters = {}
-        if 'minRam' in req.params:
-            try:
-                filters['min_memory_mb'] = int(req.params['minRam'])
-            except ValueError:
-                pass  # ignore bogus values per spec
-
-        if 'minDisk' in req.params:
-            try:
-                filters['min_local_gb'] = int(req.params['minDisk'])
-            except ValueError:
-                pass  # ignore bogus values per spec
-
-        return instance_types.get_all_types(filters=filters)
-
-
 def make_flavor(elem, detailed=False):
     elem.set('name')
     elem.set('id')
@@ -105,18 +63,50 @@ class FlavorsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1, nsmap=flavor_nsmap)
 
 
-class FlavorXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def show(self):
-        return FlavorTemplate()
+class Controller(wsgi.Controller):
+    """Flavor controller for the OpenStack API."""
 
-    def detail(self):
-        return FlavorsTemplate()
+    _view_builder_class = flavors_view.ViewBuilder
 
-    def index(self):
-        return MinimalFlavorsTemplate()
+    @wsgi.serializers(xml=MinimalFlavorsTemplate)
+    def index(self, req):
+        """Return all flavors in brief."""
+        flavors = self._get_flavors(req)
+        return self._view_builder.index(req, flavors)
+
+    @wsgi.serializers(xml=FlavorsTemplate)
+    def detail(self, req):
+        """Return all flavors in detail."""
+        flavors = self._get_flavors(req)
+        return self._view_builder.detail(req, flavors)
+
+    @wsgi.serializers(xml=FlavorTemplate)
+    def show(self, req, id):
+        """Return data about the given flavor id."""
+        try:
+            flavor = instance_types.get_instance_type_by_flavor_id(id)
+        except exception.NotFound:
+            raise webob.exc.HTTPNotFound()
+
+        return self._view_builder.show(req, flavor)
+
+    def _get_flavors(self, req):
+        """Helper function that returns a list of flavor dicts."""
+        filters = {}
+        if 'minRam' in req.params:
+            try:
+                filters['min_memory_mb'] = int(req.params['minRam'])
+            except ValueError:
+                pass  # ignore bogus values per spec
+
+        if 'minDisk' in req.params:
+            try:
+                filters['min_local_gb'] = int(req.params['minDisk'])
+            except ValueError:
+                pass  # ignore bogus values per spec
+
+        return instance_types.get_all_types(filters=filters)
 
 
 def create_resource():
-    body_serializers = {'application/xml': FlavorXMLSerializer()}
-    serializer = wsgi.ResponseSerializer(body_serializers)
-    return wsgi.Resource(Controller(), serializer=serializer)
+    return wsgi.Resource(Controller())

@@ -136,7 +136,9 @@ class ActionExtensionResource(wsgi.Resource):
 
     def __init__(self, application):
         controller = ActionExtensionController(application)
-        wsgi.Resource.__init__(self, controller)
+        wsgi.Resource.__init__(self, controller,
+                               serializer=wsgi.ResponseSerializer(),
+                               deserializer=wsgi.RequestDeserializer())
 
     def add_action(self, action_name, handler):
         self.controller.add_action(action_name, handler)
@@ -187,7 +189,9 @@ class RequestExtensionResource(wsgi.Resource):
 
     def __init__(self, application):
         controller = RequestExtensionController(application)
-        wsgi.Resource.__init__(self, controller)
+        wsgi.Resource.__init__(self, controller,
+                               serializer=wsgi.ResponseSerializer(),
+                               deserializer=wsgi.RequestDeserializer())
 
     def add_handler(self, handler):
         self.controller.add_handler(handler)
@@ -196,10 +200,42 @@ class RequestExtensionResource(wsgi.Resource):
         self.controller.add_pre_handler(pre_handler)
 
 
+def make_ext(elem):
+    elem.set('name')
+    elem.set('namespace')
+    elem.set('alias')
+    elem.set('updated')
+
+    desc = xmlutil.SubTemplateElement(elem, 'description')
+    desc.text = 'description'
+
+    xmlutil.make_links(elem, 'links')
+
+
+ext_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+
+
+class ExtensionTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('extension', selector='extension')
+        make_ext(root)
+        return xmlutil.MasterTemplate(root, 1, nsmap=ext_nsmap)
+
+
+class ExtensionsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('extensions')
+        elem = xmlutil.SubTemplateElement(root, 'extension',
+                                          selector='extensions')
+        make_ext(elem)
+        return xmlutil.MasterTemplate(root, 1, nsmap=ext_nsmap)
+
+
 class ExtensionsResource(wsgi.Resource):
 
     def __init__(self, extension_manager):
         self.extension_manager = extension_manager
+        super(ExtensionsResource, self).__init__(None)
 
     def _translate(self, ext):
         ext_data = {}
@@ -211,12 +247,14 @@ class ExtensionsResource(wsgi.Resource):
         ext_data['links'] = []  # TODO(dprince): implement extension links
         return ext_data
 
+    @wsgi.serializers(xml=ExtensionsTemplate)
     def index(self, req):
         extensions = []
         for _alias, ext in self.extension_manager.extensions.iteritems():
             extensions.append(self._translate(ext))
         return dict(extensions=extensions)
 
+    @wsgi.serializers(xml=ExtensionTemplate)
     def show(self, req, id):
         try:
             # NOTE(dprince): the extensions alias is used as the 'id' for show
@@ -374,12 +412,11 @@ class ExtensionManager(object):
 
     def get_resources(self):
         """Returns a list of ResourceExtension objects."""
+
         resources = []
-        serializer = wsgi.ResponseSerializer(
-            {'application/xml': ExtensionsXMLSerializer()})
         resources.append(ResourceExtension('extensions',
-                                           ExtensionsResource(self),
-                                           serializer=serializer))
+                                           ExtensionsResource(self)))
+
         for ext in self.extensions.values():
             try:
                 resources.extend(ext.get_resources())
@@ -506,37 +543,6 @@ class ResourceExtension(object):
         self.member_actions = member_actions
         self.deserializer = deserializer
         self.serializer = serializer
-
-
-def make_ext(elem):
-    elem.set('name')
-    elem.set('namespace')
-    elem.set('alias')
-    elem.set('updated')
-
-    desc = xmlutil.SubTemplateElement(elem, 'description')
-    desc.text = 'description'
-
-    xmlutil.make_links(elem, 'links')
-
-
-ext_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class ExtensionTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('extension', selector='extension')
-        make_ext(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=ext_nsmap)
-
-
-class ExtensionsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('extensions')
-        elem = xmlutil.SubTemplateElement(root, 'extension',
-                                          selector='extensions')
-        make_ext(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=ext_nsmap)
 
 
 class ExtensionsXMLSerializer(xmlutil.XMLTemplateSerializer):

@@ -176,10 +176,6 @@ class SimpleTenantUsageTest(test.TestCase):
 
 
 class SimpleTenantUsageSerializerTest(test.TestCase):
-    def setUp(self):
-        super(SimpleTenantUsageSerializerTest, self).setUp()
-        self.serializer = simple_tenant_usage.SimpleTenantUsageSerializer()
-
     def _verify_server_usage(self, raw_usage, tree):
         self.assertEqual('server_usage', tree.tag)
 
@@ -212,6 +208,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
         self.assertEqual(len(not_seen), 0)
 
     def test_serializer_show(self):
+        serializer = simple_tenant_usage.SimpleTenantUsageTemplate()
         today = datetime.datetime.now()
         yesterday = today - datetime.timedelta(days=1)
         raw_usage = dict(
@@ -249,7 +246,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
                            ],
             )
         tenant_usage = dict(tenant_usage=raw_usage)
-        text = self.serializer.serialize(tenant_usage, 'show')
+        text = serializer.serialize(tenant_usage)
 
         print text
         tree = etree.fromstring(text)
@@ -257,6 +254,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
         self._verify_tenant_usage(raw_usage, tree)
 
     def test_serializer_index(self):
+        serializer = simple_tenant_usage.SimpleTenantUsagesTemplate()
         today = datetime.datetime.now()
         yesterday = today - datetime.timedelta(days=1)
         raw_usages = [dict(
@@ -329,7 +327,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
                 ),
             ]
         tenant_usages = dict(tenant_usages=raw_usages)
-        text = self.serializer.serialize(tenant_usages, 'index')
+        text = serializer.serialize(tenant_usages)
 
         print text
         tree = etree.fromstring(text)

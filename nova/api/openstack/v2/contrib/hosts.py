@@ -33,6 +33,53 @@ LOG = logging.getLogger("nova.api.openstack.v2.contrib.hosts")
 FLAGS = flags.FLAGS
 
 
+class HostIndexTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        def shimmer(obj, do_raise=False):
+            # A bare list is passed in; we need to wrap it in a dict
+            return dict(hosts=obj)
+
+        root = xmlutil.TemplateElement('hosts', selector=shimmer)
+        elem = xmlutil.SubTemplateElement(root, 'host', selector='hosts')
+        elem.set('host_name')
+        elem.set('service')
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class HostUpdateTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('host')
+        root.set('host')
+        root.set('status')
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class HostActionTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('host')
+        root.set('host')
+        root.set('power_action')
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class HostDeserializer(wsgi.XMLDeserializer):
+    def default(self, string):
+        try:
+            node = minidom.parseString(string)
+        except expat.ExpatError:
+            msg = _("cannot understand XML")
+            raise exception.MalformedRequestBody(reason=msg)
+
+        updates = {}
+        for child in node.childNodes[0].childNodes:
+            updates[child.tagName] = self.extract_text(child)
+
+        return dict(body=updates)
+
+
 def _list_hosts(req, service=None):
     """Returns a summary list of hosts, optionally filtering
     by service type.
@@ -63,9 +110,12 @@ class HostController(object):
         self.compute_api = compute.API()
         super(HostController, self).__init__()
 
+    @wsgi.serializers(xml=HostIndexTemplate)
     def index(self, req):
         return {'hosts': _list_hosts(req)}
 
+    @wsgi.serializers(xml=HostUpdateTemplate)
+    @wsgi.deserializers(xml=HostDeserializer)
     @check_host
     def update(self, req, id, body):
         for raw_key, raw_val in body.iteritems():
@@ -106,72 +156,17 @@ class HostController(object):
             raise webob.exc.HTTPBadRequest(explanation=e.msg)
         return {"host": host, "power_action": result}
 
+    @wsgi.serializers(xml=HostActionTemplate)
     def startup(self, req, id):
         return self._host_power_action(req, host=id, action="startup")
 
+    @wsgi.serializers(xml=HostActionTemplate)
     def shutdown(self, req, id):
         return self._host_power_action(req, host=id, action="shutdown")
 
+    @wsgi.serializers(xml=HostActionTemplate)
     def reboot(self, req, id):
         return self._host_power_action(req, host=id, action="reboot")
-
-
-class HostIndexTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        def shimmer(obj, do_raise=False):
-            # A bare list is passed in; we need to wrap it in a dict
-            return dict(hosts=obj)
-
-        root = xmlutil.TemplateElement('hosts', selector=shimmer)
-        elem = xmlutil.SubTemplateElement(root, 'host', selector='hosts')
-        elem.set('host_name')
-        elem.set('service')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class HostUpdateTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('host')
-        root.set('host')
-        root.set('status')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class HostActionTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('host')
-        root.set('host')
-        root.set('power_action')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class HostSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return HostIndexTemplate()
-
-    def update(self):
-        return HostUpdateTemplate()
-
-    def default(self):
-        return HostActionTemplate()
-
-
-class HostDeserializer(wsgi.XMLDeserializer):
-    def update(self, string):
-        try:
-            node = minidom.parseString(string)
-        except expat.ExpatError:
-            msg = _("cannot understand XML")
-            raise exception.MalformedRequestBody(reason=msg)
-
-        updates = {}
-        for child in node.childNodes[0].childNodes:
-            updates[child.tagName] = self.extract_text(child)
-
-        return dict(body=updates)
 
 
 class Hosts(extensions.ExtensionDescriptor):
@@ -184,19 +179,8 @@ class Hosts(extensions.ExtensionDescriptor):
     admin_only = True
 
     def get_resources(self):
-        body_serializers = {
-            'application/xml': HostSerializer(),
-            }
-        body_deserializers = {
-            'application/xml': HostDeserializer(),
-            }
-
-        serializer = wsgi.ResponseSerializer(body_serializers)
-        deserializer = wsgi.RequestDeserializer(body_deserializers)
-
         resources = [extensions.ResourceExtension('os-hosts',
                 HostController(),
-                serializer=serializer, deserializer=deserializer,
                 collection_actions={'update': 'PUT'},
                 member_actions={"startup": "GET", "shutdown": "GET",
                         "reboot": "GET"})]

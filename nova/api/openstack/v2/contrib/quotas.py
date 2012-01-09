@@ -30,6 +30,18 @@ quota_resources = ['metadata_items', 'injected_file_content_bytes',
         'injected_files', 'cores']
 
 
+class QuotaTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('quota_set', selector='quota_set')
+        root.set('id')
+
+        for resource in quota_resources:
+            elem = xmlutil.SubTemplateElement(root, resource)
+            elem.text = resource
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
 class QuotaSetsController(object):
 
     def _format_quota_set(self, project_id, quota_set):
@@ -42,6 +54,7 @@ class QuotaSetsController(object):
 
         return dict(quota_set=result)
 
+    @wsgi.serializers(xml=QuotaTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
         try:
@@ -51,6 +64,7 @@ class QuotaSetsController(object):
         except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()
 
+    @wsgi.serializers(xml=QuotaTemplate)
     def update(self, req, id, body):
         context = req.environ['nova.context']
         project_id = id
@@ -69,23 +83,6 @@ class QuotaSetsController(object):
         return self._format_quota_set(id, quota._get_default_quotas())
 
 
-class QuotaTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('quota_set', selector='quota_set')
-        root.set('id')
-
-        for resource in quota_resources:
-            elem = xmlutil.SubTemplateElement(root, resource)
-            elem.text = resource
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class QuotaSerializer(xmlutil.XMLTemplateSerializer):
-    def default(self):
-        return QuotaTemplate()
-
-
 class Quotas(extensions.ExtensionDescriptor):
     """Quotas management support"""
 
@@ -97,15 +94,8 @@ class Quotas(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        body_serializers = {
-            'application/xml': QuotaSerializer(),
-            }
-
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension('os-quota-sets',
                                             QuotaSetsController(),
-                                            serializer=serializer,
                                             member_actions={'defaults': 'GET'})
         resources.append(res)
 

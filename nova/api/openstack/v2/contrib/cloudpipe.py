@@ -34,6 +34,20 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.openstack.v2.contrib.cloudpipe")
 
 
+class CloudpipeTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        return xmlutil.MasterTemplate(xmlutil.make_flat_dict('cloudpipe'), 1)
+
+
+class CloudpipesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('cloudpipes')
+        elem = xmlutil.make_flat_dict('cloudpipe', selector='cloudpipes',
+                                      subselector='cloudpipe')
+        root.append(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
 class CloudpipeController(object):
     """Handle creating and listing cloudpipe instances."""
 
@@ -98,6 +112,7 @@ class CloudpipeController(object):
             rv['state'] = 'pending'
         return rv
 
+    @wsgi.serializers(xml=CloudpipeTemplate)
     def create(self, req, body):
         """Create a new cloudpipe instance, if none exists.
 
@@ -120,6 +135,7 @@ class CloudpipeController(object):
             instance = self._get_cloudpipe_for_project(ctxt, proj)
         return {'instance_id': instance['uuid']}
 
+    @wsgi.serializers(xml=CloudpipesTemplate)
     def index(self, req):
         """Show admins the list of running cloudpipe instances."""
         context = req.environ['nova.context']
@@ -150,34 +166,7 @@ class Cloudpipe(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         resources = []
-        body_serializers = {
-            'application/xml': CloudpipeSerializer(),
-            }
-        serializer = wsgi.ResponseSerializer(body_serializers)
         res = extensions.ResourceExtension('os-cloudpipe',
-                                           CloudpipeController(),
-                                           serializer=serializer)
+                                           CloudpipeController())
         resources.append(res)
         return resources
-
-
-class CloudpipeSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return CloudpipesTemplate()
-
-    def default(self):
-        return CloudpipeTemplate()
-
-
-class CloudpipeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        return xmlutil.MasterTemplate(xmlutil.make_flat_dict('cloudpipe'), 1)
-
-
-class CloudpipesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('cloudpipes')
-        elem = xmlutil.make_flat_dict('cloudpipe', selector='cloudpipes',
-                                      subselector='cloudpipe')
-        root.append(elem)
-        return xmlutil.MasterTemplate(root, 1)

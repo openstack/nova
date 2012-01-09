@@ -37,6 +37,141 @@ LOG = logging.getLogger("nova.api.openstack.v2.contrib.security_groups")
 FLAGS = flags.FLAGS
 
 
+def make_rule(elem):
+    elem.set('id')
+    elem.set('parent_group_id')
+
+    proto = xmlutil.SubTemplateElement(elem, 'ip_protocol')
+    proto.text = 'ip_protocol'
+
+    from_port = xmlutil.SubTemplateElement(elem, 'from_port')
+    from_port.text = 'from_port'
+
+    to_port = xmlutil.SubTemplateElement(elem, 'to_port')
+    to_port.text = 'to_port'
+
+    group = xmlutil.SubTemplateElement(elem, 'group', selector='group')
+    name = xmlutil.SubTemplateElement(group, 'name')
+    name.text = 'name'
+    tenant_id = xmlutil.SubTemplateElement(group, 'tenant_id')
+    tenant_id.text = 'tenant_id'
+
+    ip_range = xmlutil.SubTemplateElement(elem, 'ip_range',
+                                          selector='ip_range')
+    cidr = xmlutil.SubTemplateElement(ip_range, 'cidr')
+    cidr.text = 'cidr'
+
+
+def make_sg(elem):
+    elem.set('id')
+    elem.set('tenant_id')
+    elem.set('name')
+
+    desc = xmlutil.SubTemplateElement(elem, 'description')
+    desc.text = 'description'
+
+    rules = xmlutil.SubTemplateElement(elem, 'rules')
+    rule = xmlutil.SubTemplateElement(rules, 'rule', selector='rules')
+    make_rule(rule)
+
+
+sg_nsmap = {None: wsgi.XMLNS_V11}
+
+
+class SecurityGroupRuleTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('security_group_rule',
+                                       selector='security_group_rule')
+        make_rule(root)
+        return xmlutil.MasterTemplate(root, 1, nsmap=sg_nsmap)
+
+
+class SecurityGroupTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('security_group',
+                                       selector='security_group')
+        make_sg(root)
+        return xmlutil.MasterTemplate(root, 1, nsmap=sg_nsmap)
+
+
+class SecurityGroupsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('security_groups')
+        elem = xmlutil.SubTemplateElement(root, 'security_group',
+                                          selector='security_groups')
+        make_sg(elem)
+        return xmlutil.MasterTemplate(root, 1, nsmap=sg_nsmap)
+
+
+class SecurityGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
+    """
+    Deserializer to handle xml-formatted security group requests.
+    """
+    def default(self, string):
+        """Deserialize an xml-formatted security group create request"""
+        dom = minidom.parseString(string)
+        security_group = {}
+        sg_node = self.find_first_child_named(dom,
+                                               'security_group')
+        if sg_node is not None:
+            if sg_node.hasAttribute('name'):
+                security_group['name'] = sg_node.getAttribute('name')
+            desc_node = self.find_first_child_named(sg_node,
+                                                     "description")
+            if desc_node:
+                security_group['description'] = self.extract_text(desc_node)
+        return {'body': {'security_group': security_group}}
+
+
+class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
+    """
+    Deserializer to handle xml-formatted security group requests.
+    """
+
+    def default(self, string):
+        """Deserialize an xml-formatted security group create request"""
+        dom = minidom.parseString(string)
+        security_group_rule = self._extract_security_group_rule(dom)
+        return {'body': {'security_group_rule': security_group_rule}}
+
+    def _extract_security_group_rule(self, node):
+        """Marshal the security group rule attribute of a parsed request"""
+        sg_rule = {}
+        sg_rule_node = self.find_first_child_named(node,
+                                                   'security_group_rule')
+        if sg_rule_node is not None:
+            ip_protocol_node = self.find_first_child_named(sg_rule_node,
+                                                           "ip_protocol")
+            if ip_protocol_node is not None:
+                sg_rule['ip_protocol'] = self.extract_text(ip_protocol_node)
+
+            from_port_node = self.find_first_child_named(sg_rule_node,
+                                                         "from_port")
+            if from_port_node is not None:
+                sg_rule['from_port'] = self.extract_text(from_port_node)
+
+            to_port_node = self.find_first_child_named(sg_rule_node, "to_port")
+            if to_port_node is not None:
+                sg_rule['to_port'] = self.extract_text(to_port_node)
+
+            parent_group_id_node = self.find_first_child_named(sg_rule_node,
+                                                            "parent_group_id")
+            if parent_group_id_node is not None:
+                sg_rule['parent_group_id'] = self.extract_text(
+                                                         parent_group_id_node)
+
+            group_id_node = self.find_first_child_named(sg_rule_node,
+                                                        "group_id")
+            if group_id_node is not None:
+                sg_rule['group_id'] = self.extract_text(group_id_node)
+
+            cidr_node = self.find_first_child_named(sg_rule_node, "cidr")
+            if cidr_node is not None:
+                sg_rule['cidr'] = self.extract_text(cidr_node)
+
+        return sg_rule
+
+
 class SecurityGroupController(object):
     """The Security group API controller for the OpenStack API."""
 
@@ -84,6 +219,7 @@ class SecurityGroupController(object):
             raise exc.HTTPNotFound(explanation=unicode(exp))
         return security_group
 
+    @wsgi.serializers(xml=SecurityGroupTemplate)
     def show(self, req, id):
         """Return data about the given security group."""
         context = req.environ['nova.context']
@@ -100,6 +236,7 @@ class SecurityGroupController(object):
 
         return webob.Response(status_int=202)
 
+    @wsgi.serializers(xml=SecurityGroupsTemplate)
     def index(self, req):
         """Returns a list of security groups"""
         context = req.environ['nova.context']
@@ -115,6 +252,8 @@ class SecurityGroupController(object):
                 list(sorted(result,
                             key=lambda k: (k['tenant_id'], k['name'])))}
 
+    @wsgi.serializers(xml=SecurityGroupTemplate)
+    @wsgi.deserializers(xml=SecurityGroupXMLDeserializer)
     def create(self, req, body):
         """Creates a new security group."""
         context = req.environ['nova.context']
@@ -170,6 +309,8 @@ class SecurityGroupController(object):
 
 class SecurityGroupRulesController(SecurityGroupController):
 
+    @wsgi.serializers(xml=SecurityGroupRuleTemplate)
+    @wsgi.deserializers(xml=SecurityGroupRulesXMLDeserializer)
     def create(self, req, body):
         context = req.environ['nova.context']
 
@@ -356,85 +497,6 @@ class SecurityGroupRulesController(SecurityGroupController):
         return webob.Response(status_int=202)
 
 
-def make_rule(elem):
-    elem.set('id')
-    elem.set('parent_group_id')
-
-    proto = xmlutil.SubTemplateElement(elem, 'ip_protocol')
-    proto.text = 'ip_protocol'
-
-    from_port = xmlutil.SubTemplateElement(elem, 'from_port')
-    from_port.text = 'from_port'
-
-    to_port = xmlutil.SubTemplateElement(elem, 'to_port')
-    to_port.text = 'to_port'
-
-    group = xmlutil.SubTemplateElement(elem, 'group', selector='group')
-    name = xmlutil.SubTemplateElement(group, 'name')
-    name.text = 'name'
-    tenant_id = xmlutil.SubTemplateElement(group, 'tenant_id')
-    tenant_id.text = 'tenant_id'
-
-    ip_range = xmlutil.SubTemplateElement(elem, 'ip_range',
-                                          selector='ip_range')
-    cidr = xmlutil.SubTemplateElement(ip_range, 'cidr')
-    cidr.text = 'cidr'
-
-
-def make_sg(elem):
-    elem.set('id')
-    elem.set('tenant_id')
-    elem.set('name')
-
-    desc = xmlutil.SubTemplateElement(elem, 'description')
-    desc.text = 'description'
-
-    rules = xmlutil.SubTemplateElement(elem, 'rules')
-    rule = xmlutil.SubTemplateElement(rules, 'rule', selector='rules')
-    make_rule(rule)
-
-
-sg_nsmap = {None: wsgi.XMLNS_V11}
-
-
-class SecurityGroupRuleTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('security_group_rule',
-                                       selector='security_group_rule')
-        make_rule(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=sg_nsmap)
-
-
-class SecurityGroupTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('security_group',
-                                       selector='security_group')
-        make_sg(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=sg_nsmap)
-
-
-class SecurityGroupsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('security_groups')
-        elem = xmlutil.SubTemplateElement(root, 'security_group',
-                                          selector='security_groups')
-        make_sg(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=sg_nsmap)
-
-
-class SecurityGroupXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return SecurityGroupsTemplate()
-
-    def default(self):
-        return SecurityGroupTemplate()
-
-
-class SecurityGroupRulesXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def default(self):
-        return SecurityGroupRuleTemplate()
-
-
 class Security_groups(extensions.ExtensionDescriptor):
     """Security group support"""
 
@@ -519,105 +581,12 @@ class Security_groups(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        body_serializers = {
-            'application/xml': SecurityGroupXMLSerializer(),
-        }
-        serializer = wsgi.ResponseSerializer(body_serializers, None)
-
-        body_deserializers = {
-            'application/xml': SecurityGroupXMLDeserializer(),
-        }
-        deserializer = wsgi.RequestDeserializer(body_deserializers)
-
         res = extensions.ResourceExtension('os-security-groups',
-                                controller=SecurityGroupController(),
-                                deserializer=deserializer,
-                                serializer=serializer)
+                                controller=SecurityGroupController())
 
         resources.append(res)
-
-        body_serializers = {
-            'application/xml': SecurityGroupRulesXMLSerializer(),
-        }
-        serializer = wsgi.ResponseSerializer(body_serializers, None)
-
-        body_deserializers = {
-            'application/xml': SecurityGroupRulesXMLDeserializer(),
-        }
-        deserializer = wsgi.RequestDeserializer(body_deserializers)
 
         res = extensions.ResourceExtension('os-security-group-rules',
-                                controller=SecurityGroupRulesController(),
-                                deserializer=deserializer,
-                                serializer=serializer)
+                                controller=SecurityGroupRulesController())
         resources.append(res)
         return resources
-
-
-class SecurityGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
-    """
-    Deserializer to handle xml-formatted security group requests.
-    """
-    def create(self, string):
-        """Deserialize an xml-formatted security group create request"""
-        dom = minidom.parseString(string)
-        security_group = {}
-        sg_node = self.find_first_child_named(dom,
-                                               'security_group')
-        if sg_node is not None:
-            if sg_node.hasAttribute('name'):
-                security_group['name'] = sg_node.getAttribute('name')
-            desc_node = self.find_first_child_named(sg_node,
-                                                     "description")
-            if desc_node:
-                security_group['description'] = self.extract_text(desc_node)
-        return {'body': {'security_group': security_group}}
-
-
-class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
-    """
-    Deserializer to handle xml-formatted security group requests.
-    """
-
-    def create(self, string):
-        """Deserialize an xml-formatted security group create request"""
-        dom = minidom.parseString(string)
-        security_group_rule = self._extract_security_group_rule(dom)
-        return {'body': {'security_group_rule': security_group_rule}}
-
-    def _extract_security_group_rule(self, node):
-        """Marshal the security group rule attribute of a parsed request"""
-        sg_rule = {}
-        sg_rule_node = self.find_first_child_named(node,
-                                                   'security_group_rule')
-        if sg_rule_node is not None:
-            ip_protocol_node = self.find_first_child_named(sg_rule_node,
-                                                           "ip_protocol")
-            if ip_protocol_node is not None:
-                sg_rule['ip_protocol'] = self.extract_text(ip_protocol_node)
-
-            from_port_node = self.find_first_child_named(sg_rule_node,
-                                                         "from_port")
-            if from_port_node is not None:
-                sg_rule['from_port'] = self.extract_text(from_port_node)
-
-            to_port_node = self.find_first_child_named(sg_rule_node, "to_port")
-            if to_port_node is not None:
-                sg_rule['to_port'] = self.extract_text(to_port_node)
-
-            parent_group_id_node = self.find_first_child_named(sg_rule_node,
-                                                            "parent_group_id")
-            if parent_group_id_node is not None:
-                sg_rule['parent_group_id'] = self.extract_text(
-                                                         parent_group_id_node)
-
-            group_id_node = self.find_first_child_named(sg_rule_node,
-                                                        "group_id")
-            if group_id_node is not None:
-                sg_rule['group_id'] = self.extract_text(group_id_node)
-
-            cidr_node = self.find_first_child_named(sg_rule_node, "cidr")
-            if cidr_node is not None:
-                sg_rule['cidr'] = self.extract_text(cidr_node)
-
-        return sg_rule

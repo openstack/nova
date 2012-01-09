@@ -853,19 +853,19 @@ class LimitsXMLSerializationTest(test.TestCase):
         pass
 
     def test_xml_declaration(self):
-        serializer = limits.LimitsXMLSerializer()
+        serializer = limits.LimitsTemplate()
 
         fixture = {"limits": {
                    "rate": [],
                    "absolute": {}}}
 
-        output = serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         print output
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
     def test_index(self):
-        serializer = limits.LimitsXMLSerializer()
+        serializer = limits.LimitsTemplate()
         fixture = {
             "limits": {
                    "rate": [{
@@ -890,7 +890,7 @@ class LimitsXMLSerializationTest(test.TestCase):
                                  "maxPersonality": 5,
                                  "maxPersonalitySize": 10240}}}
 
-        output = serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'limits')
@@ -919,13 +919,13 @@ class LimitsXMLSerializationTest(test.TestCase):
                          str(fixture['limits']['rate'][i]['limit'][j][key]))
 
     def test_index_no_limits(self):
-        serializer = limits.LimitsXMLSerializer()
+        serializer = limits.LimitsTemplate()
 
         fixture = {"limits": {
                    "rate": [],
                    "absolute": {}}}
 
-        output = serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'limits')

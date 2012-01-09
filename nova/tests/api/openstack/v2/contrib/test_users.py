@@ -116,9 +116,8 @@ class UsersTest(test.TestCase):
 
 class TestUsersXMLSerializer(test.TestCase):
 
-    serializer = users.UserXMLSerializer()
-
     def test_index(self):
+        serializer = users.UsersTemplate()
         fixture = {'users': [{'id': 'id1',
                               'name': 'guy1',
                               'secret': 'secret1',
@@ -128,7 +127,7 @@ class TestUsersXMLSerializer(test.TestCase):
                               'secret': 'secret2',
                               'admin': True}]}
 
-        output = self.serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         res_tree = etree.XML(output)
 
         self.assertEqual(res_tree.tag, 'users')
@@ -139,12 +138,13 @@ class TestUsersXMLSerializer(test.TestCase):
         self.assertEqual(res_tree[1].get('id'), 'id2')
 
     def test_show(self):
+        serializer = users.UserTemplate()
         fixture = {'user': {'id': 'id2',
                             'name': 'guy2',
                             'secret': 'secret2',
                             'admin': True}}
 
-        output = self.serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         res_tree = etree.XML(output)
 
         self.assertEqual(res_tree.tag, 'user')

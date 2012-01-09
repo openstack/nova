@@ -769,7 +769,7 @@ class TestSecurityGroupRulesXMLDeserializer(unittest.TestCase):
   <ip_protocol>tcp</ip_protocol>
   <cidr>10.0.0.0/24</cidr>
 </security_group_rule>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "security_group_rule": {
                 "parent_group_id": "12",
@@ -791,7 +791,7 @@ class TestSecurityGroupRulesXMLDeserializer(unittest.TestCase):
   <group_id></group_id>
   <cidr>10.0.0.0/24</cidr>
 </security_group_rule>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "security_group_rule": {
                 "parent_group_id": "12",
@@ -814,7 +814,7 @@ class TestSecurityGroupXMLDeserializer(unittest.TestCase):
 <security_group name="test">
    <description>test</description>
 </security_group>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "security_group": {
                 "name": "test",
@@ -827,7 +827,7 @@ class TestSecurityGroupXMLDeserializer(unittest.TestCase):
         serial_request = """
 <security_group name="test">
 </security_group>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "security_group": {
                 "name": "test",
@@ -840,7 +840,7 @@ class TestSecurityGroupXMLDeserializer(unittest.TestCase):
 <security_group>
 <description>test</description>
 </security_group>"""
-        request = self.deserializer.deserialize(serial_request, 'create')
+        request = self.deserializer.deserialize(serial_request)
         expected = {
             "security_group": {
                 "description": "test",
@@ -852,9 +852,9 @@ class TestSecurityGroupXMLDeserializer(unittest.TestCase):
 class TestSecurityGroupXMLSerializer(unittest.TestCase):
     def setUp(self):
         self.namespace = wsgi.XMLNS_V11
-        tmp = security_groups.SecurityGroupRulesXMLSerializer()
-        self.rule_serializer = tmp
-        self.group_serializer = security_groups.SecurityGroupXMLSerializer()
+        self.rule_serializer = security_groups.SecurityGroupRuleTemplate()
+        self.index_serializer = security_groups.SecurityGroupsTemplate()
+        self.default_serializer = security_groups.SecurityGroupTemplate()
 
     def _tag(self, elem):
         tagname = elem.tag
@@ -949,7 +949,7 @@ class TestSecurityGroupXMLSerializer(unittest.TestCase):
             tenant_id='tenant',
             rules=rules)
         sg_group = dict(security_group=raw_group)
-        text = self.group_serializer.serialize(sg_group)
+        text = self.default_serializer.serialize(sg_group)
 
         print text
         tree = etree.fromstring(text)
@@ -1002,7 +1002,7 @@ class TestSecurityGroupXMLSerializer(unittest.TestCase):
                 tenant_id='tenant2',
                 rules=rules[2:4])]
         sg_groups = dict(security_groups=groups)
-        text = self.group_serializer.serialize(sg_groups, 'index')
+        text = self.index_serializer.serialize(sg_groups)
 
         print text
         tree = etree.fromstring(text)

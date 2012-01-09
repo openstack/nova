@@ -168,7 +168,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
 class FlavorsExtraSpecsXMLSerializerTest(test.TestCase):
     def test_serializer(self):
-        serializer = flavorextraspecs.ExtraSpecsSerializer()
+        serializer = flavorextraspecs.ExtraSpecsTemplate()
         expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
                     '<extra_specs><key1>value1</key1></extra_specs>')
         text = serializer.serialize(dict(extra_specs={"key1": "value1"}))

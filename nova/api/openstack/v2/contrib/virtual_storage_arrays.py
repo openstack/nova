@@ -82,6 +82,34 @@ def _vsa_view(context, vsa, details=False, instances=None):
     return d
 
 
+def make_vsa(elem):
+    elem.set('id')
+    elem.set('name')
+    elem.set('displayName')
+    elem.set('displayDescription')
+    elem.set('createTime')
+    elem.set('status')
+    elem.set('vcType')
+    elem.set('vcCount')
+    elem.set('driveCount')
+    elem.set('ipAddress')
+
+
+class VsaTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('vsa', selector='vsa')
+        make_vsa(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class VsaSetTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('vsaSet')
+        elem = xmlutil.SubTemplateElement(root, 'vsa', selector='vsaSet')
+        make_vsa(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
 class VsaController(object):
     """The Virtual Storage Array API controller for the OpenStack API."""
 
@@ -107,14 +135,17 @@ class VsaController(object):
             vsa_list.append(_vsa_view(context, vsa, details, instances))
         return {'vsaSet': vsa_list}
 
+    @wsgi.serializers(xml=VsaSetTemplate)
     def index(self, req):
         """Return a short list of VSAs."""
         return self._items(req, details=False)
 
+    @wsgi.serializers(xml=VsaSetTemplate)
     def detail(self, req):
         """Return a detailed list of VSAs."""
         return self._items(req, details=True)
 
+    @wsgi.serializers(xml=VsaTemplate)
     def show(self, req, id):
         """Return data about the given VSA."""
         context = req.environ['nova.context']
@@ -127,6 +158,7 @@ class VsaController(object):
         instances = self._get_instances_by_vsa_id(context, vsa.get('id'))
         return {'vsa': _vsa_view(context, vsa, True, instances)}
 
+    @wsgi.serializers(xml=VsaTemplate)
     def create(self, req, body):
         """Create a new VSA."""
         context = req.environ['nova.context']
@@ -215,43 +247,10 @@ class VsaController(object):
         # Placeholder
 
 
-def make_vsa(elem):
-    elem.set('id')
+def make_volume(elem):
+    volumes.make_volume(elem)
     elem.set('name')
-    elem.set('displayName')
-    elem.set('displayDescription')
-    elem.set('createTime')
-    elem.set('status')
-    elem.set('vcType')
-    elem.set('vcCount')
-    elem.set('driveCount')
-    elem.set('ipAddress')
-
-
-class VsaTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('vsa', selector='vsa')
-        make_vsa(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class VsaSetTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('vsaSet')
-        elem = xmlutil.SubTemplateElement(root, 'vsa', selector='vsaSet')
-        make_vsa(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class VsaSerializer(xmlutil.XMLTemplateSerializer):
-    def default(self):
-        return VsaTemplate()
-
-    def index(self):
-        return VsaSetTemplate()
-
-    def detail(self):
-        return VsaSetTemplate()
+    elem.set('vsaId')
 
 
 class VsaVolumeDriveController(volumes.VolumeController):
@@ -410,10 +409,19 @@ class VsaVolumeDriveController(volumes.VolumeController):
         return super(VsaVolumeDriveController, self).show(req, id)
 
 
-def make_volume(elem):
-    volumes.make_volume(elem)
-    elem.set('name')
-    elem.set('vsaId')
+class VsaVolumeTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('volume', selector='volume')
+        make_volume(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class VsaVolumesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('volumes')
+        elem = xmlutil.SubTemplateElement(root, 'volume', selector='volumes')
+        make_volume(elem)
+        return xmlutil.MasterTemplate(root, 1)
 
 
 class VsaVolumeController(VsaVolumeDriveController):
@@ -430,31 +438,40 @@ class VsaVolumeController(VsaVolumeDriveController):
         self.object = 'volume'
         super(VsaVolumeController, self).__init__()
 
+    @wsgi.serializers(xml=VsaVolumesTemplate)
+    def index(self, req, vsa_id):
+        return super(VsaVolumeController, self).index(req, vsa_id)
 
-class VsaVolumeTemplate(xmlutil.TemplateBuilder):
+    @wsgi.serializers(xml=VsaVolumesTemplate)
+    def detail(self, req, vsa_id):
+        return super(VsaVolumeController, self).detail(req, vsa_id)
+
+    @wsgi.serializers(xml=VsaVolumeTemplate)
+    def create(self, req, vsa_id, body):
+        return super(VsaVolumeController, self).create(req, vsa_id, body)
+
+    @wsgi.serializers(xml=VsaVolumeTemplate)
+    def update(self, req, vsa_id, id, body):
+        return super(VsaVolumeController, self).update(req, vsa_id, id, body)
+
+    @wsgi.serializers(xml=VsaVolumeTemplate)
+    def show(self, req, vsa_id, id):
+        return super(VsaVolumeController, self).show(req, vsa_id, id)
+
+
+class VsaDriveTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        root = xmlutil.TemplateElement('volume', selector='volume')
+        root = xmlutil.TemplateElement('drive', selector='drive')
         make_volume(root)
         return xmlutil.MasterTemplate(root, 1)
 
 
-class VsaVolumesTemplate(xmlutil.TemplateBuilder):
+class VsaDrivesTemplate(xmlutil.TemplateBuilder):
     def construct(self):
-        root = xmlutil.TemplateElement('volumes')
-        elem = xmlutil.SubTemplateElement(root, 'volume', selector='volumes')
+        root = xmlutil.TemplateElement('drives')
+        elem = xmlutil.SubTemplateElement(root, 'drive', selector='drives')
         make_volume(elem)
         return xmlutil.MasterTemplate(root, 1)
-
-
-class VsaVolumeSerializer(xmlutil.XMLTemplateSerializer):
-    def default(self):
-        return VsaVolumeTemplate()
-
-    def index(self):
-        return VsaVolumesTemplate()
-
-    def detail(self):
-        return VsaVolumesTemplate()
 
 
 class VsaDriveController(VsaVolumeDriveController):
@@ -483,59 +500,17 @@ class VsaDriveController(VsaVolumeDriveController):
         """Delete a volume. Should be done through VSA APIs"""
         raise exc.HTTPBadRequest()
 
-
-class VsaDriveTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('drive', selector='drive')
-        make_volume(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class VsaDrivesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('drives')
-        elem = xmlutil.SubTemplateElement(root, 'drive', selector='drives')
-        make_volume(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class VsaDriveSerializer(xmlutil.XMLTemplateSerializer):
-    def default(self):
-        return VsaDriveTemplate()
-
-    def index(self):
-        return VsaDrivesTemplate()
-
-    def detail(self):
-        return VsaDrivesTemplate()
-
-
-class VsaVPoolController(object):
-    """The vPool VSA API controller for the OpenStack API."""
-
-    def __init__(self):
-        self.vsa_api = vsa.API()
-        super(VsaVPoolController, self).__init__()
-
+    @wsgi.serializers(xml=VsaDrivesTemplate)
     def index(self, req, vsa_id):
-        """Return a short list of vpools created from particular VSA."""
-        return {'vpools': []}
+        return super(VsaDriveController, self).index(req, vsa_id)
 
-    def create(self, req, vsa_id, body):
-        """Create a new vPool for VSA."""
-        raise exc.HTTPBadRequest()
+    @wsgi.serializers(xml=VsaDrivesTemplate)
+    def detail(self, req, vsa_id):
+        return super(VsaDriveController, self).detail(req, vsa_id)
 
-    def update(self, req, vsa_id, id, body):
-        """Update vPool parameters."""
-        raise exc.HTTPBadRequest()
-
-    def delete(self, req, vsa_id, id):
-        """Delete a vPool."""
-        raise exc.HTTPBadRequest()
-
+    @wsgi.serializers(xml=VsaDriveTemplate)
     def show(self, req, vsa_id, id):
-        """Return data about the given vPool."""
-        raise exc.HTTPBadRequest()
+        return super(VsaDriveController, self).show(req, vsa_id, id)
 
 
 def make_vpool(elem):
@@ -572,12 +547,33 @@ class VsaVPoolsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class VsaVPoolSerializer(xmlutil.XMLTemplateSerializer):
-    def default(self):
-        return VsaVPoolTemplate()
+class VsaVPoolController(object):
+    """The vPool VSA API controller for the OpenStack API."""
 
-    def index(self):
-        return VsaVPoolsTemplate()
+    def __init__(self):
+        self.vsa_api = vsa.API()
+        super(VsaVPoolController, self).__init__()
+
+    @wsgi.serializers(xml=VsaVPoolsTemplate)
+    def index(self, req, vsa_id):
+        """Return a short list of vpools created from particular VSA."""
+        return {'vpools': []}
+
+    def create(self, req, vsa_id, body):
+        """Create a new vPool for VSA."""
+        raise exc.HTTPBadRequest()
+
+    def update(self, req, vsa_id, id, body):
+        """Update vPool parameters."""
+        raise exc.HTTPBadRequest()
+
+    def delete(self, req, vsa_id, id):
+        """Delete a vPool."""
+        raise exc.HTTPBadRequest()
+
+    def show(self, req, vsa_id, id):
+        """Return data about the given vPool."""
+        raise exc.HTTPBadRequest()
 
 
 class VsaVCController(servers.Controller):
@@ -608,6 +604,7 @@ class VsaVCController(servers.Controller):
                 for inst in limited_list]
         return dict(servers=servers)
 
+    @wsgi.serializers(xml=servers.MinimalServersTemplate)
     def index(self, req, vsa_id):
         """Return list of instances for particular VSA."""
 
@@ -630,6 +627,7 @@ class VsaVCController(servers.Controller):
         """Delete VSA instance."""
         raise exc.HTTPBadRequest()
 
+    @wsgi.serializers(xml=servers.ServerTemplate)
     def show(self, req, vsa_id, id):
         """Return data about the given instance."""
         return super(VsaVCController, self).show(req, id)
@@ -646,15 +644,9 @@ class Virtual_storage_arrays(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        body_serializers = {
-            'application/xml': VsaSerializer(),
-            }
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension(
                             'zadr-vsa',
                             VsaController(),
-                            serializer=serializer,
                             collection_actions={'detail': 'GET'},
                             member_actions={'add_capacity': 'POST',
                                             'remove_capacity': 'POST',
@@ -662,63 +654,31 @@ class Virtual_storage_arrays(extensions.ExtensionDescriptor):
                                             'disassociate_address': 'POST'})
         resources.append(res)
 
-        body_serializers = {
-            'application/xml': VsaVolumeSerializer(),
-            }
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension('volumes',
                             VsaVolumeController(),
-                            serializer=serializer,
                             collection_actions={'detail': 'GET'},
                             parent=dict(
                                 member_name='vsa',
                                 collection_name='zadr-vsa'))
         resources.append(res)
-
-        body_serializers = {
-            'application/xml': VsaDriveSerializer(),
-            }
-        serializer = wsgi.ResponseSerializer(body_serializers)
 
         res = extensions.ResourceExtension('drives',
                             VsaDriveController(),
-                            serializer=serializer,
                             collection_actions={'detail': 'GET'},
                             parent=dict(
                                 member_name='vsa',
                                 collection_name='zadr-vsa'))
         resources.append(res)
 
-        body_serializers = {
-            'application/xml': VsaVPoolSerializer(),
-            }
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension('vpools',
                             VsaVPoolController(),
-                            serializer=serializer,
                             parent=dict(
                                 member_name='vsa',
                                 collection_name='zadr-vsa'))
         resources.append(res)
 
-        headers_serializer = servers.HeadersSerializer()
-        body_serializers = {
-            'application/xml': servers.ServerXMLSerializer(),
-            }
-        serializer = wsgi.ResponseSerializer(body_serializers,
-                                             headers_serializer)
-
-        body_deserializers = {
-            'application/xml': servers.ServerXMLDeserializer(),
-            }
-        deserializer = wsgi.RequestDeserializer(body_deserializers)
-
         res = extensions.ResourceExtension('instances',
                             VsaVCController(),
-                            serializer=serializer,
-                            deserializer=deserializer,
                             parent=dict(
                                 member_name='vsa',
                                 collection_name='zadr-vsa'))

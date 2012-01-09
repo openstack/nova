@@ -137,7 +137,7 @@ class QuotaSetsTest(test.TestCase):
 class QuotaXMLSerializerTest(test.TestCase):
     def setUp(self):
         super(QuotaXMLSerializerTest, self).setUp()
-        self.serializer = quotas.QuotaSerializer()
+        self.serializer = quotas.QuotaTemplate()
         self.deserializer = wsgi.XMLDeserializer()
 
     def test_serializer(self):

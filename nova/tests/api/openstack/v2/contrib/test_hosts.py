@@ -126,11 +126,11 @@ class HostTestCase(test.TestCase):
 class HostSerializerTest(test.TestCase):
     def setUp(self):
         super(HostSerializerTest, self).setUp()
-        self.serializer = os_hosts.HostSerializer()
         self.deserializer = os_hosts.HostDeserializer()
 
     def test_index_serializer(self):
-        text = self.serializer.serialize(HOST_LIST, 'index')
+        serializer = os_hosts.HostIndexTemplate()
+        text = serializer.serialize(HOST_LIST)
 
         tree = etree.fromstring(text)
 
@@ -145,7 +145,8 @@ class HostSerializerTest(test.TestCase):
 
     def test_update_serializer(self):
         exemplar = dict(host='host_c1', status='enabled')
-        text = self.serializer.serialize(exemplar, 'update')
+        serializer = os_hosts.HostUpdateTemplate()
+        text = serializer.serialize(exemplar)
 
         tree = etree.fromstring(text)
 
@@ -155,7 +156,8 @@ class HostSerializerTest(test.TestCase):
 
     def test_action_serializer(self):
         exemplar = dict(host='host_c1', power_action='reboot')
-        text = self.serializer.serialize(exemplar)
+        serializer = os_hosts.HostActionTemplate()
+        text = serializer.serialize(exemplar)
 
         tree = etree.fromstring(text)
 
@@ -167,6 +169,6 @@ class HostSerializerTest(test.TestCase):
         exemplar = dict(status='enabled', foo='bar')
         intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
                   '<updates><status>enabled</status><foo>bar</foo></updates>')
-        result = self.deserializer.deserialize(intext, action='update')
+        result = self.deserializer.deserialize(intext)
 
         self.assertEqual(dict(body=exemplar), result)

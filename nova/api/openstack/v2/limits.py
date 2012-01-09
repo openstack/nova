@@ -43,26 +43,6 @@ PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
 
 
-class LimitsController(object):
-    """
-    Controller for accessing limits in the OpenStack API.
-    """
-
-    def index(self, req):
-        """
-        Return all global and rate limit information.
-        """
-        context = req.environ['nova.context']
-        abs_limits = quota.get_project_quotas(context, context.project_id)
-        rate_limits = req.environ.get("nova.limits", [])
-
-        builder = self._get_view_builder(req)
-        return builder.build(rate_limits, abs_limits)
-
-    def _get_view_builder(self, req):
-        return limits_views.ViewBuilder()
-
-
 limits_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
 
 
@@ -91,15 +71,29 @@ class LimitsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1, nsmap=limits_nsmap)
 
 
-class LimitsXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return LimitsTemplate()
+class LimitsController(object):
+    """
+    Controller for accessing limits in the OpenStack API.
+    """
+
+    @wsgi.serializers(xml=LimitsTemplate)
+    def index(self, req):
+        """
+        Return all global and rate limit information.
+        """
+        context = req.environ['nova.context']
+        abs_limits = quota.get_project_quotas(context, context.project_id)
+        rate_limits = req.environ.get("nova.limits", [])
+
+        builder = self._get_view_builder(req)
+        return builder.build(rate_limits, abs_limits)
+
+    def _get_view_builder(self, req):
+        return limits_views.ViewBuilder()
 
 
 def create_resource():
-    body_serializers = {'application/xml': LimitsXMLSerializer()}
-    serializer = wsgi.ResponseSerializer(body_serializers)
-    return wsgi.Resource(LimitsController(), serializer=serializer)
+    return wsgi.Resource(LimitsController())
 
 
 class Limit(object):

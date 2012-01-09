@@ -41,16 +41,321 @@ LOG = logging.getLogger('nova.api.openstack.v2.servers')
 FLAGS = flags.FLAGS
 
 
+class SecurityGroupsTemplateElement(xmlutil.TemplateElement):
+    def will_render(self, datum):
+        return 'security_groups' in datum
+
+
+def make_fault(elem):
+    fault = xmlutil.SubTemplateElement(elem, 'fault', selector='fault')
+    fault.set('code')
+    fault.set('created')
+    msg = xmlutil.SubTemplateElement(fault, 'message')
+    msg.text = 'message'
+    det = xmlutil.SubTemplateElement(fault, 'details')
+    det.text = 'details'
+
+
+def make_server(elem, detailed=False):
+    elem.set('name')
+    elem.set('id')
+
+    if detailed:
+        elem.set('userId', 'user_id')
+        elem.set('tenantId', 'tenant_id')
+        elem.set('updated')
+        elem.set('created')
+        elem.set('hostId')
+        elem.set('accessIPv4')
+        elem.set('accessIPv6')
+        elem.set('status')
+        elem.set('progress')
+
+        # Attach image node
+        image = xmlutil.SubTemplateElement(elem, 'image', selector='image')
+        image.set('id')
+        xmlutil.make_links(image, 'links')
+
+        # Attach flavor node
+        flavor = xmlutil.SubTemplateElement(elem, 'flavor', selector='flavor')
+        flavor.set('id')
+        xmlutil.make_links(flavor, 'links')
+
+        # Attach fault node
+        make_fault(elem)
+
+        # Attach metadata node
+        elem.append(common.MetadataTemplate())
+
+        # Attach addresses node
+        elem.append(ips.AddressesTemplate())
+
+        # Attach security groups node
+        secgrps = SecurityGroupsTemplateElement('security_groups')
+        elem.append(secgrps)
+        secgrp = xmlutil.SubTemplateElement(secgrps, 'security_group',
+                                            selector='security_groups')
+        secgrp.set('name')
+
+    xmlutil.make_links(elem, 'links')
+
+
+server_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+
+
+class ServerTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('server', selector='server')
+        make_server(root, detailed=True)
+        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
+
+
+class MinimalServersTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('servers')
+        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
+        make_server(elem)
+        xmlutil.make_links(root, 'servers_links')
+        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
+
+
+class ServersTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('servers')
+        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
+        make_server(elem, detailed=True)
+        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
+
+
+class ServerAdminPassTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('server')
+        root.set('adminPass')
+        return xmlutil.SlaveTemplate(root, 1, nsmap=server_nsmap)
+
+
+def FullServerTemplate():
+    master = ServerTemplate()
+    master.attach(ServerAdminPassTemplate())
+    return master
+
+
+class CommonDeserializer(wsgi.MetadataXMLDeserializer):
+    """
+    Common deserializer to handle xml-formatted server create
+    requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
+
+    metadata_deserializer = common.MetadataXMLDeserializer()
+
+    def _extract_personality(self, server_node):
+        """Marshal the personality attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "personality")
+        if node is not None:
+            personality = []
+            for file_node in self.find_children_named(node, "file"):
+                item = {}
+                if file_node.hasAttribute("path"):
+                    item["path"] = file_node.getAttribute("path")
+                item["contents"] = self.extract_text(file_node)
+                personality.append(item)
+            return personality
+        else:
+            return None
+
+    def _extract_server(self, node):
+        """Marshal the server attribute of a parsed request"""
+        server = {}
+        server_node = self.find_first_child_named(node, 'server')
+
+        attributes = ["name", "imageRef", "flavorRef", "adminPass",
+                      "accessIPv4", "accessIPv6"]
+        for attr in attributes:
+            if server_node.getAttribute(attr):
+                server[attr] = server_node.getAttribute(attr)
+
+        metadata_node = self.find_first_child_named(server_node, "metadata")
+        if metadata_node is not None:
+            server["metadata"] = self.extract_metadata(metadata_node)
+
+        personality = self._extract_personality(server_node)
+        if personality is not None:
+            server["personality"] = personality
+
+        networks = self._extract_networks(server_node)
+        if networks is not None:
+            server["networks"] = networks
+
+        security_groups = self._extract_security_groups(server_node)
+        if security_groups is not None:
+            server["security_groups"] = security_groups
+
+        auto_disk_config = server_node.getAttribute('auto_disk_config')
+        if auto_disk_config:
+            server['auto_disk_config'] = utils.bool_from_str(auto_disk_config)
+
+        return server
+
+    def _extract_networks(self, server_node):
+        """Marshal the networks attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "networks")
+        if node is not None:
+            networks = []
+            for network_node in self.find_children_named(node,
+                                                         "network"):
+                item = {}
+                if network_node.hasAttribute("uuid"):
+                    item["uuid"] = network_node.getAttribute("uuid")
+                if network_node.hasAttribute("fixed_ip"):
+                    item["fixed_ip"] = network_node.getAttribute("fixed_ip")
+                networks.append(item)
+            return networks
+        else:
+            return None
+
+    def _extract_security_groups(self, server_node):
+        """Marshal the security_groups attribute of a parsed request"""
+        node = self.find_first_child_named(server_node, "security_groups")
+        if node is not None:
+            security_groups = []
+            for sg_node in self.find_children_named(node, "security_group"):
+                item = {}
+                name_node = self.find_first_child_named(sg_node, "name")
+                if name_node:
+                    item["name"] = self.extract_text(name_node)
+                    security_groups.append(item)
+            return security_groups
+        else:
+            return None
+
+
+class ActionDeserializer(CommonDeserializer):
+    """
+    Deserializer to handle xml-formatted server action requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
+
+    def default(self, string):
+        dom = minidom.parseString(string)
+        action_node = dom.childNodes[0]
+        action_name = action_node.tagName
+
+        action_deserializer = {
+            'createImage': self._action_create_image,
+            'changePassword': self._action_change_password,
+            'reboot': self._action_reboot,
+            'rebuild': self._action_rebuild,
+            'resize': self._action_resize,
+            'confirmResize': self._action_confirm_resize,
+            'revertResize': self._action_revert_resize,
+        }.get(action_name, super(ActionDeserializer, self).default)
+
+        action_data = action_deserializer(action_node)
+
+        return {'body': {action_name: action_data}}
+
+    def _action_create_image(self, node):
+        return self._deserialize_image_action(node, ('name',))
+
+    def _action_change_password(self, node):
+        if not node.hasAttribute("adminPass"):
+            raise AttributeError("No adminPass was specified in request")
+        return {"adminPass": node.getAttribute("adminPass")}
+
+    def _action_reboot(self, node):
+        if not node.hasAttribute("type"):
+            raise AttributeError("No reboot type was specified in request")
+        return {"type": node.getAttribute("type")}
+
+    def _action_rebuild(self, node):
+        rebuild = {}
+        if node.hasAttribute("name"):
+            rebuild['name'] = node.getAttribute("name")
+
+        metadata_node = self.find_first_child_named(node, "metadata")
+        if metadata_node is not None:
+            rebuild["metadata"] = self.extract_metadata(metadata_node)
+
+        personality = self._extract_personality(node)
+        if personality is not None:
+            rebuild["personality"] = personality
+
+        if not node.hasAttribute("imageRef"):
+            raise AttributeError("No imageRef was specified in request")
+        rebuild["imageRef"] = node.getAttribute("imageRef")
+
+        return rebuild
+
+    def _action_resize(self, node):
+        if not node.hasAttribute("flavorRef"):
+            raise AttributeError("No flavorRef was specified in request")
+        return {"flavorRef": node.getAttribute("flavorRef")}
+
+    def _action_confirm_resize(self, node):
+        return None
+
+    def _action_revert_resize(self, node):
+        return None
+
+    def _deserialize_image_action(self, node, allowed_attributes):
+        data = {}
+        for attribute in allowed_attributes:
+            value = node.getAttribute(attribute)
+            if value:
+                data[attribute] = value
+        metadata_node = self.find_first_child_named(node, 'metadata')
+        if metadata_node is not None:
+            metadata = self.metadata_deserializer.extract_metadata(
+                                                        metadata_node)
+            data['metadata'] = metadata
+        return data
+
+
+class CreateDeserializer(CommonDeserializer):
+    """
+    Deserializer to handle xml-formatted server create requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
+
+    def default(self, string):
+        """Deserialize an xml-formatted server create request"""
+        dom = minidom.parseString(string)
+        server = self._extract_server(dom)
+        return {'body': {'server': server}}
+
+
 class Controller(wsgi.Controller):
     """ The Server API base controller class for the OpenStack API """
 
     _view_builder_class = views_servers.ViewBuilder
+
+    @staticmethod
+    def _add_location(robj):
+        # Just in case...
+        if 'server' not in robj.obj:
+            return robj
+
+        link = filter(lambda l: l['rel'] == 'self',
+                      robj.obj['server']['links'])
+        if link:
+            robj['Location'] = link[0]['href']
+
+        # Convenience return
+        return robj
 
     def __init__(self, **kwargs):
         super(Controller, self).__init__(**kwargs)
         self.compute_api = compute.API()
         self.network_api = network.API()
 
+    @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
         try:
@@ -61,6 +366,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPNotFound()
         return servers
 
+    @wsgi.serializers(xml=ServersTemplate)
     def detail(self, req):
         """ Returns a list of server details for a given user """
         try:
@@ -263,6 +569,7 @@ class Controller(wsgi.Controller):
             expl = _('Userdata content cannot be decoded')
             raise exc.HTTPBadRequest(explanation=expl)
 
+    @wsgi.serializers(xml=ServerTemplate)
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def show(self, req, id):
@@ -275,6 +582,9 @@ class Controller(wsgi.Controller):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
+    @wsgi.response(202)
+    @wsgi.serializers(xml=FullServerTemplate)
+    @wsgi.deserializers(xml=CreateDeserializer)
     def create(self, req, body):
         """ Creates a new server for a given user """
         if not body:
@@ -427,7 +737,9 @@ class Controller(wsgi.Controller):
         else:
             server['server']['adminPass'] = password
 
-        return server
+        robj = wsgi.ResponseObject(server)
+
+        return self._add_location(robj)
 
     def _delete(self, context, id):
         instance = self._get_server(context, id)
@@ -436,6 +748,7 @@ class Controller(wsgi.Controller):
         else:
             self.compute_api.delete(context, instance)
 
+    @wsgi.serializers(xml=ServerTemplate)
     @scheduler_api.redirect_handler
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller"""
@@ -478,6 +791,9 @@ class Controller(wsgi.Controller):
         self._add_instance_faults(ctxt, [instance])
         return self._view_builder.show(req, instance)
 
+    @wsgi.response(202)
+    @wsgi.serializers(xml=FullServerTemplate)
+    @wsgi.deserializers(xml=ActionDeserializer)
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def action(self, req, id, body):
@@ -567,6 +883,7 @@ class Controller(wsgi.Controller):
 
         return webob.Response(status_int=202)
 
+    @wsgi.response(204)
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
     def delete(self, req, id):
@@ -708,7 +1025,8 @@ class Controller(wsgi.Controller):
         # Add on the adminPass attribute since the view doesn't do it
         view['server']['adminPass'] = password
 
-        return view
+        robj = wsgi.ResponseObject(view)
+        return self._add_location(robj)
 
     @common.check_snapshots_enabled
     def _action_create_image(self, input_dict, req, instance_id):
@@ -778,324 +1096,8 @@ class Controller(wsgi.Controller):
                 'status', 'image', 'flavor', 'changes-since')
 
 
-class HeadersSerializer(wsgi.ResponseHeadersSerializer):
-
-    def _add_server_location(self, response, data):
-        link = filter(lambda l: l['rel'] == 'self', data['server']['links'])
-        if link:
-            response.headers['Location'] = link[0]['href']
-
-    def create(self, response, data):
-        if 'server' in data:
-            self._add_server_location(response, data)
-        response.status_int = 202
-
-    def delete(self, response, data):
-        response.status_int = 204
-
-    def action(self, response, data):
-        # FIXME(jerdfelt): This is kind of a hack. Unfortunately the original
-        # action requested isn't available to us, so we need to look at the
-        # response to see if it looks like a rebuild response.
-        if data.get('server', {}).get('status') == 'REBUILD':
-            self._add_server_location(response, data)
-        response.status_int = 202
-
-
-class SecurityGroupsTemplateElement(xmlutil.TemplateElement):
-    def will_render(self, datum):
-        return 'security_groups' in datum
-
-
-def make_fault(elem):
-    fault = xmlutil.SubTemplateElement(elem, 'fault', selector='fault')
-    fault.set('code')
-    fault.set('created')
-    msg = xmlutil.SubTemplateElement(fault, 'message')
-    msg.text = 'message'
-    det = xmlutil.SubTemplateElement(fault, 'details')
-    det.text = 'details'
-
-
-def make_server(elem, detailed=False):
-    elem.set('name')
-    elem.set('id')
-
-    if detailed:
-        elem.set('userId', 'user_id')
-        elem.set('tenantId', 'tenant_id')
-        elem.set('updated')
-        elem.set('created')
-        elem.set('hostId')
-        elem.set('accessIPv4')
-        elem.set('accessIPv6')
-        elem.set('status')
-        elem.set('progress')
-
-        # Attach image node
-        image = xmlutil.SubTemplateElement(elem, 'image', selector='image')
-        image.set('id')
-        xmlutil.make_links(image, 'links')
-
-        # Attach flavor node
-        flavor = xmlutil.SubTemplateElement(elem, 'flavor', selector='flavor')
-        flavor.set('id')
-        xmlutil.make_links(flavor, 'links')
-
-        # Attach fault node
-        make_fault(elem)
-
-        # Attach metadata node
-        elem.append(common.MetadataTemplate())
-
-        # Attach addresses node
-        elem.append(ips.AddressesTemplate())
-
-        # Attach security groups node
-        secgrps = SecurityGroupsTemplateElement('security_groups')
-        elem.append(secgrps)
-        secgrp = xmlutil.SubTemplateElement(secgrps, 'security_group',
-                                            selector='security_groups')
-        secgrp.set('name')
-
-    xmlutil.make_links(elem, 'links')
-
-
-server_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class ServerTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        make_server(root, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
-
-
-class MinimalServersTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        xmlutil.make_links(root, 'servers_links')
-        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
-
-
-class ServersTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
-
-
-class ServerAdminPassTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        root.set('adminPass')
-        return xmlutil.SlaveTemplate(root, 1, nsmap=server_nsmap)
-
-
-class ServerXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return MinimalServersTemplate()
-
-    def detail(self):
-        return ServersTemplate()
-
-    def show(self):
-        return ServerTemplate()
-
-    def update(self):
-        return ServerTemplate()
-
-    def create(self):
-        master = ServerTemplate()
-        master.attach(ServerAdminPassTemplate())
-        return master
-
-    def action(self):
-        return self.create()
-
-
-class ServerXMLDeserializer(wsgi.MetadataXMLDeserializer):
-    """
-    Deserializer to handle xml-formatted server create requests.
-
-    Handles standard server attributes as well as optional metadata
-    and personality attributes
-    """
-
-    metadata_deserializer = common.MetadataXMLDeserializer()
-
-    def action(self, string):
-        dom = minidom.parseString(string)
-        action_node = dom.childNodes[0]
-        action_name = action_node.tagName
-
-        action_deserializer = {
-            'createImage': self._action_create_image,
-            'changePassword': self._action_change_password,
-            'reboot': self._action_reboot,
-            'rebuild': self._action_rebuild,
-            'resize': self._action_resize,
-            'confirmResize': self._action_confirm_resize,
-            'revertResize': self._action_revert_resize,
-        }.get(action_name, self.default)
-
-        action_data = action_deserializer(action_node)
-
-        return {'body': {action_name: action_data}}
-
-    def _action_create_image(self, node):
-        return self._deserialize_image_action(node, ('name',))
-
-    def _action_change_password(self, node):
-        if not node.hasAttribute("adminPass"):
-            raise AttributeError("No adminPass was specified in request")
-        return {"adminPass": node.getAttribute("adminPass")}
-
-    def _action_reboot(self, node):
-        if not node.hasAttribute("type"):
-            raise AttributeError("No reboot type was specified in request")
-        return {"type": node.getAttribute("type")}
-
-    def _action_rebuild(self, node):
-        rebuild = {}
-        if node.hasAttribute("name"):
-            rebuild['name'] = node.getAttribute("name")
-
-        metadata_node = self.find_first_child_named(node, "metadata")
-        if metadata_node is not None:
-            rebuild["metadata"] = self.extract_metadata(metadata_node)
-
-        personality = self._extract_personality(node)
-        if personality is not None:
-            rebuild["personality"] = personality
-
-        if not node.hasAttribute("imageRef"):
-            raise AttributeError("No imageRef was specified in request")
-        rebuild["imageRef"] = node.getAttribute("imageRef")
-
-        return rebuild
-
-    def _action_resize(self, node):
-        if not node.hasAttribute("flavorRef"):
-            raise AttributeError("No flavorRef was specified in request")
-        return {"flavorRef": node.getAttribute("flavorRef")}
-
-    def _action_confirm_resize(self, node):
-        return None
-
-    def _action_revert_resize(self, node):
-        return None
-
-    def _deserialize_image_action(self, node, allowed_attributes):
-        data = {}
-        for attribute in allowed_attributes:
-            value = node.getAttribute(attribute)
-            if value:
-                data[attribute] = value
-        metadata_node = self.find_first_child_named(node, 'metadata')
-        if metadata_node is not None:
-            metadata = self.metadata_deserializer.extract_metadata(
-                                                        metadata_node)
-            data['metadata'] = metadata
-        return data
-
-    def create(self, string):
-        """Deserialize an xml-formatted server create request"""
-        dom = minidom.parseString(string)
-        server = self._extract_server(dom)
-        return {'body': {'server': server}}
-
-    def _extract_server(self, node):
-        """Marshal the server attribute of a parsed request"""
-        server = {}
-        server_node = self.find_first_child_named(node, 'server')
-
-        attributes = ["name", "imageRef", "flavorRef", "adminPass",
-                      "accessIPv4", "accessIPv6"]
-        for attr in attributes:
-            if server_node.getAttribute(attr):
-                server[attr] = server_node.getAttribute(attr)
-
-        metadata_node = self.find_first_child_named(server_node, "metadata")
-        if metadata_node is not None:
-            server["metadata"] = self.extract_metadata(metadata_node)
-
-        personality = self._extract_personality(server_node)
-        if personality is not None:
-            server["personality"] = personality
-
-        networks = self._extract_networks(server_node)
-        if networks is not None:
-            server["networks"] = networks
-
-        security_groups = self._extract_security_groups(server_node)
-        if security_groups is not None:
-            server["security_groups"] = security_groups
-
-        auto_disk_config = server_node.getAttribute('auto_disk_config')
-        if auto_disk_config:
-            server['auto_disk_config'] = utils.bool_from_str(auto_disk_config)
-
-        return server
-
-    def _extract_personality(self, server_node):
-        """Marshal the personality attribute of a parsed request"""
-        node = self.find_first_child_named(server_node, "personality")
-        if node is not None:
-            personality = []
-            for file_node in self.find_children_named(node, "file"):
-                item = {}
-                if file_node.hasAttribute("path"):
-                    item["path"] = file_node.getAttribute("path")
-                item["contents"] = self.extract_text(file_node)
-                personality.append(item)
-            return personality
-        else:
-            return None
-
-    def _extract_networks(self, server_node):
-        """Marshal the networks attribute of a parsed request"""
-        node = self.find_first_child_named(server_node, "networks")
-        if node is not None:
-            networks = []
-            for network_node in self.find_children_named(node,
-                                                         "network"):
-                item = {}
-                if network_node.hasAttribute("uuid"):
-                    item["uuid"] = network_node.getAttribute("uuid")
-                if network_node.hasAttribute("fixed_ip"):
-                    item["fixed_ip"] = network_node.getAttribute("fixed_ip")
-                networks.append(item)
-            return networks
-        else:
-            return None
-
-    def _extract_security_groups(self, server_node):
-        """Marshal the security_groups attribute of a parsed request"""
-        node = self.find_first_child_named(server_node, "security_groups")
-        if node is not None:
-            security_groups = []
-            for sg_node in self.find_children_named(node, "security_group"):
-                item = {}
-                name_node = self.find_first_child_named(sg_node, "name")
-                if name_node:
-                    item["name"] = self.extract_text(name_node)
-                    security_groups.append(item)
-            return security_groups
-        else:
-            return None
-
-
 def create_resource():
-    headers_serializer = HeadersSerializer()
-    body_serializers = {'application/xml': ServerXMLSerializer()}
-    serializer = wsgi.ResponseSerializer(body_serializers, headers_serializer)
-    body_deserializers = {'application/xml': ServerXMLDeserializer()}
-    deserializer = wsgi.RequestDeserializer(body_deserializers)
-    return wsgi.Resource(Controller(), deserializer, serializer)
+    return wsgi.Resource(Controller())
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):

@@ -28,6 +28,17 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.api.openstack.v2.contrib.accounts')
 
 
+class AccountTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('account', selector='account')
+        root.set('id', 'id')
+        root.set('name', 'name')
+        root.set('description', 'description')
+        root.set('manager', 'manager')
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
 def _translate_keys(account):
     return dict(id=account.id,
                 name=account.name,
@@ -49,6 +60,7 @@ class Controller(object):
     def index(self, req):
         raise webob.exc.HTTPNotImplemented()
 
+    @wsgi.serializers(xml=AccountTemplate)
     def show(self, req, id):
         """Return data about the given account id"""
         account = self.manager.get_project(id)
@@ -64,6 +76,7 @@ class Controller(object):
            because the id comes from an external source"""
         raise webob.exc.HTTPNotImplemented()
 
+    @wsgi.serializers(xml=AccountTemplate)
     def update(self, req, id, body):
         """This is really create or update."""
         self._check_admin(req.environ['nova.context'])
@@ -77,22 +90,6 @@ class Controller(object):
         return dict(account=_translate_keys(account))
 
 
-class AccountTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('account', selector='account')
-        root.set('id', 'id')
-        root.set('name', 'name')
-        root.set('description', 'description')
-        root.set('manager', 'manager')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class AccountXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def default(self):
-        return AccountTemplate()
-
-
 class Accounts(extensions.ExtensionDescriptor):
     """Admin-only access to accounts"""
 
@@ -103,14 +100,8 @@ class Accounts(extensions.ExtensionDescriptor):
     admin_only = True
 
     def get_resources(self):
-        body_serializers = {
-            'application/xml': AccountXMLSerializer(),
-        }
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         #TODO(bcwaldon): This should be prefixed with 'os-'
         res = extensions.ResourceExtension('accounts',
-                                           Controller(),
-                                           serializer=serializer)
+                                           Controller())
 
         return [res]

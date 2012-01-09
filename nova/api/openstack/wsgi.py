@@ -49,6 +49,14 @@ SUPPORTED_CONTENT_TYPES = (
     'application/vnd.openstack.compute+xml',
 )
 
+_MEDIA_TYPE_MAP = {
+    'application/vnd.openstack.compute+json': 'json',
+    'application/json': 'json',
+    'application/vnd.openstack.compute+xml': 'xml',
+    'application/xml': 'xml',
+    'application/atom+xml': 'atom',
+}
+
 
 class Request(webob.Request):
     """Add some Openstack API-specific logic to the base webob.Request."""
@@ -499,6 +507,13 @@ class LazySerializationMiddleware(wsgi.Middleware):
 
         response = req.get_response(self.application)
 
+        # See if we're using the simple serialization driver
+        simple_serial = req.environ.get('nova.simple_serial')
+        if simple_serial is not None:
+            body_obj = utils.loads(response.body)
+            response.body = simple_serial.serialize(body_obj)
+            return response
+
         # See if there's a serializer...
         serializer = req.environ.get('nova.serializer')
         if serializer is None:
@@ -513,6 +528,173 @@ class LazySerializationMiddleware(wsgi.Middleware):
         response.body = serializer.serialize(utils.loads(response.body),
                                              **kwargs)
         return response
+
+
+def serializers(**serializers):
+    """Attaches serializers to a method.
+
+    This decorator associates a dictionary of serializers with a
+    method.  Note that the function attributes are directly
+    manipulated; the method is not wrapped.
+    """
+
+    def decorator(func):
+        if not hasattr(func, 'wsgi_serializers'):
+            func.wsgi_serializers = {}
+        func.wsgi_serializers.update(serializers)
+        return func
+    return decorator
+
+
+def deserializers(**deserializers):
+    """Attaches deserializers to a method.
+
+    This decorator associates a dictionary of deserializers with a
+    method.  Note that the function attributes are directly
+    manipulated; the method is not wrapped.
+    """
+
+    def decorator(func):
+        if not hasattr(func, 'wsgi_deserializers'):
+            func.wsgi_deserializers = {}
+        func.wsgi_deserializers.update(deserializers)
+        return func
+    return decorator
+
+
+def response(code):
+    """Attaches response code to a method.
+
+    This decorator associates a response code with a method.  Note
+    that the function attributes are directly manipulated; the method
+    is not wrapped.
+    """
+
+    def decorator(func):
+        func.wsgi_code = code
+        return func
+    return decorator
+
+
+class ResponseObject(object):
+    """Bundles a response object with appropriate serializers.
+
+    Object that app methods may return in order to bind alternate
+    serializers with a response object to be serialized.  Its use is
+    optional.
+    """
+
+    def __init__(self, obj, code=None, **serializers):
+        """Binds serializers with an object.
+
+        Takes keyword arguments akin to the @serializer() decorator
+        for specifying serializers.  Serializers specified will be
+        given preference over default serializers or method-specific
+        serializers on return.
+        """
+
+        self.obj = obj
+        self.serializers = serializers
+        self._default_code = 200
+        self._code = code
+        self._headers = {}
+
+    def __getitem__(self, key):
+        """Retrieves a header with the given name."""
+
+        return self._headers[key.lower()]
+
+    def __setitem__(self, key, value):
+        """Sets a header with the given name to the given value."""
+
+        self._headers[key.lower()] = value
+
+    def __delitem__(self, key):
+        """Deletes the header with the given name."""
+
+        del self._headers[key.lower()]
+
+    def _bind_method_serializers(self, meth_serializers):
+        """Binds method serializers with the response object.
+
+        Binds the method serializers with the response object.
+        Serializers specified to the constructor will take precedence
+        over serializers specified to this method.
+
+        :param meth_serializers: A dictionary with keys mapping to
+                                 response types and values containing
+                                 serializer objects.
+        """
+
+        # We can't use update because that would be the wrong
+        # precedence
+        for mtype, serializer in meth_serializers.items():
+            self.serializers.setdefault(mtype, serializer)
+
+    def get_serializer(self, content_type, default_serializers=None):
+        """Returns the serializer for the wrapped object.
+
+        Returns the serializer for the wrapped object subject to the
+        indicated content type.  If no serializer matching the content
+        type is attached, an appropriate serializer drawn from the
+        default serializers will be used.  If no appropriate
+        serializer is available, raises InvalidContentType.
+        """
+
+        default_serializers = default_serializers or {}
+
+        try:
+            mtype = _MEDIA_TYPE_MAP.get(content_type, content_type)
+            if mtype in self.serializers:
+                return self.serializers[mtype]
+            else:
+                return default_serializers[mtype]
+        except (KeyError, TypeError):
+            raise exception.InvalidContentType(content_type=content_type)
+
+    def serialize(self, request, content_type, default_serializers=None):
+        """Serializes the wrapped object.
+
+        Utility method for serializing the wrapped object.  Returns a
+        webob.Response object.
+        """
+
+        serializer = self.get_serializer(content_type, default_serializers)()
+
+        response = webob.Response()
+        response.status_int = self.code
+        for hdr, value in self._headers.items():
+            response.headers[hdr] = value
+        response.headers['Content-Type'] = content_type
+        if self.obj is not None:
+            # TODO(Vek): When lazy serialization is retired, so can
+            #            this inner 'if'...
+            lazy_serialize = request.environ.get('nova.lazy_serialize', False)
+            if lazy_serialize:
+                response.body = utils.dumps(self.obj)
+                request.environ['nova.simple_serial'] = serializer
+                # NOTE(Vek): Temporary ugly hack to support xml
+                #            templates in extensions, until we can
+                #            fold extensions into Resource and do away
+                #            with lazy serialization...
+                if _MEDIA_TYPE_MAP.get(content_type) == 'xml':
+                    request.environ['nova.template'] = serializer
+            else:
+                response.body = serializer.serialize(self.obj)
+
+        return response
+
+    @property
+    def code(self):
+        """Retrieve the response status."""
+
+        return self._code or self._default_code
+
+    @property
+    def headers(self):
+        """Retrieve the headers."""
+
+        return self._headers.copy()
 
 
 class Resource(wsgi.Application):
@@ -531,7 +713,8 @@ class Resource(wsgi.Application):
 
     """
 
-    def __init__(self, controller, deserializer=None, serializer=None):
+    def __init__(self, controller, deserializer=None, serializer=None,
+                 **deserializers):
         """
         :param controller: object that implement methods created by routes lib
         :param deserializer: object that can serialize the output of a
@@ -541,18 +724,100 @@ class Resource(wsgi.Application):
 
         """
         self.controller = controller
-        self.deserializer = deserializer or RequestDeserializer()
-        self.serializer = serializer or ResponseSerializer()
+        self.deserializer = deserializer
+        self.serializer = serializer
+
+        default_deserializers = dict(xml=XMLDeserializer,
+                                     json=JSONDeserializer)
+        default_deserializers.update(deserializers)
+
+        self.default_deserializers = default_deserializers
+        self.default_serializers = dict(xml=XMLDictSerializer,
+                                        json=JSONDictSerializer)
+
+    def get_action_args(self, request_environment):
+        """Parse dictionary created by routes library."""
+
+        # NOTE(Vek): Check for get_action_args() override in the
+        # controller
+        if hasattr(self.controller, 'get_action_args'):
+            return self.controller.get_action_args(request_environment)
+
+        try:
+            args = request_environment['wsgiorg.routing_args'][1].copy()
+        except (KeyError, IndexError, AttributeError):
+            return {}
+
+        try:
+            del args['controller']
+        except KeyError:
+            pass
+
+        try:
+            del args['format']
+        except KeyError:
+            pass
+
+        return args
+
+    def get_body(self, request):
+        try:
+            content_type = request.get_content_type()
+        except exception.InvalidContentType:
+            LOG.debug(_("Unrecognized Content-Type provided in request"))
+            return None, ''
+
+        if not content_type:
+            LOG.debug(_("No Content-Type provided in request"))
+            return None, ''
+
+        if len(request.body) <= 0:
+            LOG.debug(_("Empty body provided in request"))
+            return None, ''
+
+        return content_type, request.body
+
+    def deserialize(self, meth, content_type, body):
+        meth_deserializers = getattr(meth, 'wsgi_deserializers', {})
+        try:
+            mtype = _MEDIA_TYPE_MAP.get(content_type, content_type)
+            if mtype in meth_deserializers:
+                deserializer = meth_deserializers[mtype]
+            else:
+                deserializer = self.default_deserializers[mtype]
+        except (KeyError, TypeError):
+            raise exception.InvalidContentType(content_type=content_type)
+
+        return deserializer().deserialize(body)
 
     @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, request):
         """WSGI method that controls (de)serialization and method dispatch."""
 
         LOG.info("%(method)s %(url)s" % {"method": request.method,
-                                          "url": request.url})
+                                         "url": request.url})
 
+        # Identify the action, its arguments, and the requested
+        # content type
+        action_args = self.get_action_args(request.environ)
+        action = action_args.pop('action', None)
+        content_type, body = self.get_body(request)
+        accept = request.best_match_content_type()
+
+        # Get the implementing method
         try:
-            action, args, accept = self.deserializer.deserialize(request)
+            meth = self.get_method(request, action)
+        except (AttributeError, TypeError):
+            return Fault(webob.exc.HTTPNotFound())
+
+        # Now, deserialize the request body...
+        try:
+            if self.deserializer is not None:
+                contents = self.deserializer.deserialize_body(request, action)
+            elif content_type is not None:
+                contents = self.deserialize(meth, content_type, body)
+            else:
+                contents = {}
         except exception.InvalidContentType:
             msg = _("Unsupported Content-Type")
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
@@ -560,26 +825,51 @@ class Resource(wsgi.Application):
             msg = _("Malformed request body")
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
-        project_id = args.pop("project_id", None)
+        # Update the action args
+        action_args.update(contents)
+
+        project_id = action_args.pop("project_id", None)
         if 'nova.context' in request.environ and project_id:
             request.environ['nova.context'].project_id = project_id
 
+        response = None
         try:
-            action_result = self.dispatch(request, action, args)
+            action_result = self.dispatch(meth, request, action_args)
+        except TypeError as ex:
+            LOG.exception(ex)
+            response = Fault(webob.exc.HTTPBadRequest())
         except Fault as ex:
             LOG.info(_("Fault thrown: %s"), unicode(ex))
-            action_result = ex
+            response = ex
         except webob.exc.HTTPException as ex:
             LOG.info(_("HTTP exception thrown: %s"), unicode(ex))
-            action_result = Fault(ex)
+            response = Fault(ex)
 
-        if isinstance(action_result, dict) or action_result is None:
-            response = self.serializer.serialize(request,
-                                                 action_result,
-                                                 accept,
-                                                 action=action)
-        else:
-            response = action_result
+        if not response:
+            # No exceptions; convert action_result into a
+            # ResponseObject
+            resp_obj = None
+            if type(action_result) is dict or action_result is None:
+                resp_obj = ResponseObject(action_result)
+            elif isinstance(action_result, ResponseObject):
+                resp_obj = action_result
+            else:
+                response = action_result
+
+            if resp_obj:
+                if self.serializer:
+                    response = self.serializer.serialize(request,
+                                                         resp_obj.obj,
+                                                         accept,
+                                                         action=action)
+                else:
+                    serializers = getattr(meth, 'wsgi_serializers', {})
+                    resp_obj._bind_method_serializers(serializers)
+                    if hasattr(meth, 'wsgi_code'):
+                        resp_obj._default_code = meth.wsgi_code
+
+                    response = resp_obj.serialize(request, accept,
+                                                  self.default_serializers)
 
         try:
             msg_dict = dict(url=request.url, status=response.status_int)
@@ -592,15 +882,17 @@ class Resource(wsgi.Application):
 
         return response
 
-    def dispatch(self, request, action, action_args):
-        """Find action-spefic method on controller and call it."""
+    def get_method(self, request, action):
+        """Look up the action-specific method."""
 
-        controller_method = getattr(self.controller, action)
-        try:
-            return controller_method(req=request, **action_args)
-        except TypeError as exc:
-            LOG.exception(exc)
-            return Fault(webob.exc.HTTPBadRequest())
+        if self.controller is None:
+            return getattr(self, action)
+        return getattr(self.controller, action)
+
+    def dispatch(self, method, request, action_args):
+        """Dispatch a call to the action-specific method."""
+
+        return method(req=request, **action_args)
 
 
 class Controller(object):

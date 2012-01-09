@@ -30,47 +30,6 @@ LOG = logging.getLogger('nova.api.openstack.v2.ips')
 FLAGS = flags.FLAGS
 
 
-class Controller(wsgi.Controller):
-    """The servers addresses API controller for the Openstack API."""
-
-    _view_builder_class = view_addresses.ViewBuilder
-
-    def __init__(self, **kwargs):
-        super(Controller, self).__init__(**kwargs)
-        self._compute_api = nova.compute.API()
-
-    def _get_instance(self, context, server_id):
-        try:
-            instance = self._compute_api.get(context, server_id)
-        except nova.exception.NotFound:
-            msg = _("Instance does not exist")
-            raise exc.HTTPNotFound(explanation=msg)
-        return instance
-
-    def create(self, req, server_id, body):
-        raise exc.HTTPNotImplemented()
-
-    def delete(self, req, server_id, id):
-        raise exc.HTTPNotImplemented()
-
-    def index(self, req, server_id):
-        context = req.environ["nova.context"]
-        instance = self._get_instance(context, server_id)
-        networks = common.get_networks_for_instance(context, instance)
-        return self._view_builder.index(networks)
-
-    def show(self, req, server_id, id):
-        context = req.environ["nova.context"]
-        instance = self._get_instance(context, server_id)
-        networks = common.get_networks_for_instance(context, instance)
-
-        if id not in networks:
-            msg = _("Instance is not a member of specified network")
-            raise exc.HTTPNotFound(explanation=msg)
-
-        return self._view_builder.show(networks[id], id)
-
-
 def make_network(elem):
     elem.set('id', 0)
 
@@ -99,15 +58,48 @@ class AddressesTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1, nsmap=network_nsmap)
 
 
-class IPXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def show(self):
-        return NetworkTemplate()
+class Controller(wsgi.Controller):
+    """The servers addresses API controller for the Openstack API."""
 
-    def index(self):
-        return AddressesTemplate()
+    _view_builder_class = view_addresses.ViewBuilder
+
+    def __init__(self, **kwargs):
+        super(Controller, self).__init__(**kwargs)
+        self._compute_api = nova.compute.API()
+
+    def _get_instance(self, context, server_id):
+        try:
+            instance = self._compute_api.get(context, server_id)
+        except nova.exception.NotFound:
+            msg = _("Instance does not exist")
+            raise exc.HTTPNotFound(explanation=msg)
+        return instance
+
+    def create(self, req, server_id, body):
+        raise exc.HTTPNotImplemented()
+
+    def delete(self, req, server_id, id):
+        raise exc.HTTPNotImplemented()
+
+    @wsgi.serializers(xml=AddressesTemplate)
+    def index(self, req, server_id):
+        context = req.environ["nova.context"]
+        instance = self._get_instance(context, server_id)
+        networks = common.get_networks_for_instance(context, instance)
+        return self._view_builder.index(networks)
+
+    @wsgi.serializers(xml=NetworkTemplate)
+    def show(self, req, server_id, id):
+        context = req.environ["nova.context"]
+        instance = self._get_instance(context, server_id)
+        networks = common.get_networks_for_instance(context, instance)
+
+        if id not in networks:
+            msg = _("Instance is not a member of specified network")
+            raise exc.HTTPNotFound(explanation=msg)
+
+        return self._view_builder.show(networks[id], id)
 
 
 def create_resource():
-    body_serializers = {'application/xml': IPXMLSerializer()}
-    serializer = wsgi.ResponseSerializer(body_serializers)
-    return wsgi.Resource(Controller(), serializer=serializer)
+    return wsgi.Resource(Controller())

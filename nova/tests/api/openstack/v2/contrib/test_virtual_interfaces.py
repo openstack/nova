@@ -61,7 +61,7 @@ class ServerVirtualInterfaceSerializerTest(test.TestCase):
     def setUp(self):
         super(ServerVirtualInterfaceSerializerTest, self).setUp()
         self.namespace = wsgi.XMLNS_V11
-        self.serializer = virtual_interfaces.VirtualInterfaceSerializer()
+        self.serializer = virtual_interfaces.VirtualInterfaceTemplate()
 
     def _tag(self, elem):
         tagname = elem.tag

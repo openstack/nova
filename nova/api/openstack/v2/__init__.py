@@ -108,13 +108,9 @@ class APIRouter(base_wsgi.Router):
         super(APIRouter, self).__init__(mapper)
 
     def _setup_ext_routes(self, mapper, ext_mgr):
-        serializer = wsgi.ResponseSerializer(
-            {'application/xml': wsgi.XMLDictSerializer()})
         for resource in ext_mgr.get_resources():
             LOG.debug(_('Extended resource: %s'),
                       resource.collection)
-            if resource.serializer is None:
-                resource.serializer = serializer
 
             kargs = dict(
                 controller=wsgi.Resource(

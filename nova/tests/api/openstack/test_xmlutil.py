@@ -786,7 +786,8 @@ class XMLTemplateSerializerTest(test.TestCase):
 
 class MiscellaneousXMLUtilTests(test.TestCase):
     def test_make_flat_dict(self):
-        expected_xml = ('<wrapper><a>foo</a><b>bar</b></wrapper>')
+        expected_xml = ("<?xml version='1.0' encoding='UTF-8'?>\n"
+                        '<wrapper><a>foo</a><b>bar</b></wrapper>')
         root = xmlutil.make_flat_dict('wrapper')
         tmpl = xmlutil.MasterTemplate(root, 1)
         result = tmpl.serialize(dict(wrapper=dict(a='foo', b='bar')))

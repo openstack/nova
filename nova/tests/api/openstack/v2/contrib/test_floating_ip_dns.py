@@ -186,7 +186,7 @@ class FloatingIpDNSTest(test.TestCase):
 
 class FloatingIpDNSSerializerTest(test.TestCase):
     def test_default_serializer(self):
-        serializer = floating_ip_dns.FloatingIPDNSSerializer()
+        serializer = floating_ip_dns.FloatingIPDNSTemplate()
         text = serializer.serialize(dict(
                 dns_entry=dict(
                     ip=testaddress,
@@ -202,11 +202,11 @@ class FloatingIpDNSSerializerTest(test.TestCase):
         self.assertEqual(name, tree.get('name'))
 
     def test_index_serializer(self):
-        serializer = floating_ip_dns.FloatingIPDNSSerializer()
+        serializer = floating_ip_dns.ZonesTemplate()
         text = serializer.serialize(dict(
                 zones=[
                     dict(zone=zone),
-                    dict(zone=zone2)]), 'index')
+                    dict(zone=zone2)]))
 
         tree = etree.fromstring(text)
         self.assertEqual('zones', tree.tag)
@@ -215,7 +215,7 @@ class FloatingIpDNSSerializerTest(test.TestCase):
         self.assertEqual(zone2, tree[1].get('zone'))
 
     def test_show_serializer(self):
-        serializer = floating_ip_dns.FloatingIPDNSSerializer()
+        serializer = floating_ip_dns.FloatingIPDNSsTemplate()
         text = serializer.serialize(dict(
                 dns_entries=[
                     dict(ip=testaddress,
@@ -225,7 +225,7 @@ class FloatingIpDNSSerializerTest(test.TestCase):
                     dict(ip=testaddress2,
                          type='C',
                          zone=zone,
-                         name=name2)]), 'show')
+                         name=name2)]))
 
         tree = etree.fromstring(text)
         self.assertEqual('dns_entries', tree.tag)

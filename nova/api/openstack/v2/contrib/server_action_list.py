@@ -16,12 +16,27 @@
 import webob.exc
 
 from nova.api.openstack.v2 import extensions
+from nova.api.openstack import wsgi
+from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 
 
-class ServerActionListController(object):
+sa_nsmap = {None: wsgi.XMLNS_V11}
 
+
+class ServerActionsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('actions')
+        elem = xmlutil.SubTemplateElement(root, 'action', selector='actions')
+        elem.set('created_at')
+        elem.set('action')
+        elem.set('error')
+        return xmlutil.MasterTemplate(root, 1, nsmap=sa_nsmap)
+
+
+class ServerActionListController(object):
+    @wsgi.serializers(xml=ServerActionsTemplate)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         compute_api = compute.API()

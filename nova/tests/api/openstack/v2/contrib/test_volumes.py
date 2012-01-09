@@ -120,13 +120,13 @@ class VolumeSerializerTest(test.TestCase):
                 self.assertEqual(0, len(not_seen))
 
     def test_attach_show_create_serializer(self):
-        serializer = volumes.VolumeAttachmentSerializer()
+        serializer = volumes.VolumeAttachmentTemplate()
         raw_attach = dict(
             id='vol_id',
             volumeId='vol_id',
             serverId='instance_uuid',
             device='/foo')
-        text = serializer.serialize(dict(volumeAttachment=raw_attach), 'show')
+        text = serializer.serialize(dict(volumeAttachment=raw_attach))
 
         print text
         tree = etree.fromstring(text)
@@ -135,7 +135,7 @@ class VolumeSerializerTest(test.TestCase):
         self._verify_volume_attachment(raw_attach, tree)
 
     def test_attach_index_serializer(self):
-        serializer = volumes.VolumeAttachmentSerializer()
+        serializer = volumes.VolumeAttachmentsTemplate()
         raw_attaches = [dict(
                 id='vol_id1',
                 volumeId='vol_id1',
@@ -146,8 +146,7 @@ class VolumeSerializerTest(test.TestCase):
                 volumeId='vol_id2',
                 serverId='instance2_uuid',
                 device='/foo2')]
-        text = serializer.serialize(dict(volumeAttachments=raw_attaches),
-                                    'index')
+        text = serializer.serialize(dict(volumeAttachments=raw_attaches))
 
         print text
         tree = etree.fromstring(text)
@@ -159,7 +158,7 @@ class VolumeSerializerTest(test.TestCase):
             self._verify_volume_attachment(raw_attaches[idx], child)
 
     def test_volume_show_create_serializer(self):
-        serializer = volumes.VolumeSerializer()
+        serializer = volumes.VolumeTemplate()
         raw_volume = dict(
             id='vol_id',
             status='vol_status',
@@ -180,7 +179,7 @@ class VolumeSerializerTest(test.TestCase):
                 baz='quux',
                 ),
             )
-        text = serializer.serialize(dict(volume=raw_volume), 'show')
+        text = serializer.serialize(dict(volume=raw_volume))
 
         print text
         tree = etree.fromstring(text)
@@ -188,7 +187,7 @@ class VolumeSerializerTest(test.TestCase):
         self._verify_volume(raw_volume, tree)
 
     def test_volume_index_detail_serializer(self):
-        serializer = volumes.VolumeSerializer()
+        serializer = volumes.VolumesTemplate()
         raw_volumes = [dict(
                 id='vol1_id',
                 status='vol1_status',
@@ -229,7 +228,7 @@ class VolumeSerializerTest(test.TestCase):
                     bar='vol2_bar',
                     ),
                 )]
-        text = serializer.serialize(dict(volumes=raw_volumes), 'index')
+        text = serializer.serialize(dict(volumes=raw_volumes))
 
         print text
         tree = etree.fromstring(text)

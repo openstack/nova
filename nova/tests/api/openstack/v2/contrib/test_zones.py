@@ -201,9 +201,9 @@ class ZonesTest(test.TestCase):
 
 class TestZonesXMLSerializer(test.TestCase):
 
-    serializer = zones.ZonesXMLSerializer()
-
     def test_select(self):
+        serializer = zones.WeightsTemplate()
+
         key = 'c286696d887c9aa0611bbb3e2025a45a'
 
         encrypt = crypto.encryptor(key)
@@ -213,7 +213,7 @@ class TestZonesXMLSerializer(test.TestCase):
         fixture = {'weights': {'blob': encrypt(json.dumps(item)),
                                'weight': item['weight']}}
 
-        output = self.serializer.serialize(fixture, 'select')
+        output = serializer.serialize(fixture)
         res_tree = etree.XML(output)
 
         self.assertEqual(res_tree.tag, '{%s}weights' % xmlutil.XMLNS_V10)
@@ -242,9 +242,11 @@ class TestZonesXMLSerializer(test.TestCase):
             self.assertTrue(weight)
 
     def test_index(self):
+        serializer = zones.ZonesTemplate()
+
         fixture = {'zones': zone_get_all_scheduler()}
 
-        output = self.serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         res_tree = etree.XML(output)
 
         self.assertEqual(res_tree.tag, '{%s}zones' % xmlutil.XMLNS_V10)
@@ -253,6 +255,8 @@ class TestZonesXMLSerializer(test.TestCase):
         self.assertEqual(res_tree[1].tag, '{%s}zone' % xmlutil.XMLNS_V10)
 
     def test_show(self):
+        serializer = zones.ZoneTemplate()
+
         zone = {'id': 1,
                 'api_url': 'http://example.com',
                 'name': 'darksecret',
@@ -260,7 +264,7 @@ class TestZonesXMLSerializer(test.TestCase):
                 'cap2': 'c;d'}
         fixture = {'zone': zone}
 
-        output = self.serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         print repr(output)
         res_tree = etree.XML(output)
 

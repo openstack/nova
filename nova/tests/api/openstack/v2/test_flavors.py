@@ -400,7 +400,7 @@ class FlavorsTest(test.TestCase):
 class FlavorsXMLSerializationTest(test.TestCase):
 
     def test_xml_declaration(self):
-        serializer = flavors.FlavorXMLSerializer()
+        serializer = flavors.FlavorTemplate()
 
         fixture = {
             "flavor": {
@@ -424,13 +424,13 @@ class FlavorsXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         print output
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
         self.assertTrue(has_dec)
 
     def test_show(self):
-        serializer = flavors.FlavorXMLSerializer()
+        serializer = flavors.FlavorTemplate()
 
         fixture = {
             "flavor": {
@@ -454,7 +454,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavor')
@@ -470,7 +470,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 self.assertEqual(link_nodes[i].get(key), value)
 
     def test_show_handles_integers(self):
-        serializer = flavors.FlavorXMLSerializer()
+        serializer = flavors.FlavorTemplate()
 
         fixture = {
             "flavor": {
@@ -494,7 +494,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
             },
         }
 
-        output = serializer.serialize(fixture, 'show')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavor')
@@ -510,7 +510,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 self.assertEqual(link_nodes[i].get(key), value)
 
     def test_detail(self):
-        serializer = flavors.FlavorXMLSerializer()
+        serializer = flavors.FlavorsTemplate()
 
         fixture = {
             "flavors": [
@@ -555,7 +555,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
             ],
         }
 
-        output = serializer.serialize(fixture, 'detail')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavors')
@@ -574,7 +574,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     self.assertEqual(link_nodes[i].get(key), value)
 
     def test_index(self):
-        serializer = flavors.FlavorXMLSerializer()
+        serializer = flavors.MinimalFlavorsTemplate()
 
         fixture = {
             "flavors": [
@@ -619,7 +619,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
             ],
         }
 
-        output = serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavors_index')
@@ -638,13 +638,13 @@ class FlavorsXMLSerializationTest(test.TestCase):
                     self.assertEqual(link_nodes[i].get(key), value)
 
     def test_index_empty(self):
-        serializer = flavors.FlavorXMLSerializer()
+        serializer = flavors.MinimalFlavorsTemplate()
 
         fixture = {
             "flavors": [],
         }
 
-        output = serializer.serialize(fixture, 'index')
+        output = serializer.serialize(fixture)
         print output
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'flavors_index')

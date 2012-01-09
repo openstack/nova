@@ -453,19 +453,14 @@ class VSADriveApiTest(VSAVolumeApiTest):
 
 
 class SerializerTestCommon(test.TestCase):
-    def setUp(self):
-        super(SerializerTestCommon, self).setUp()
-        self.serializer = self.serializer_class()
-
     def _verify_attrs(self, obj, tree, attrs):
         for attr in attrs:
             self.assertEqual(str(obj[attr]), tree.get(attr))
 
 
 class VsaSerializerTest(SerializerTestCommon):
-    serializer_class = vsa_ext.VsaSerializer
-
     def test_serialize_show_create(self):
+        serializer = vsa_ext.VsaTemplate()
         exemplar = dict(
             id='vsa_id',
             name='vsa_name',
@@ -477,7 +472,7 @@ class VsaSerializerTest(SerializerTestCommon):
             vcCount=24,
             driveCount=48,
             ipAddress='10.11.12.13')
-        text = self.serializer.serialize(dict(vsa=exemplar), 'show')
+        text = serializer.serialize(dict(vsa=exemplar))
 
         print text
         tree = etree.fromstring(text)
@@ -486,6 +481,7 @@ class VsaSerializerTest(SerializerTestCommon):
         self._verify_attrs(exemplar, tree, exemplar.keys())
 
     def test_serialize_index_detail(self):
+        serializer = vsa_ext.VsaSetTemplate()
         exemplar = [dict(
                 id='vsa1_id',
                 name='vsa1_name',
@@ -508,7 +504,7 @@ class VsaSerializerTest(SerializerTestCommon):
                 vcCount=42,
                 driveCount=84,
                 ipAddress='11.12.13.14')]
-        text = self.serializer.serialize(dict(vsaSet=exemplar), 'index')
+        text = serializer.serialize(dict(vsaSet=exemplar))
 
         print text
         tree = etree.fromstring(text)
@@ -521,7 +517,8 @@ class VsaSerializerTest(SerializerTestCommon):
 
 
 class VsaVolumeSerializerTest(SerializerTestCommon):
-    serializer_class = vsa_ext.VsaVolumeSerializer
+    show_serializer = vsa_ext.VsaVolumeTemplate
+    index_serializer = vsa_ext.VsaVolumesTemplate
     object = 'volume'
     objects = 'volumes'
 
@@ -550,6 +547,7 @@ class VsaVolumeSerializerTest(SerializerTestCommon):
                 self.assertEqual(0, len(not_seen))
 
     def test_show_create_serializer(self):
+        serializer = self.show_serializer()
         raw_volume = dict(
             id='vol_id',
             status='vol_status',
@@ -571,7 +569,7 @@ class VsaVolumeSerializerTest(SerializerTestCommon):
             vsaId='vol_vsa_id',
             name='vol_vsa_name',
             )
-        text = self.serializer.serialize({self.object: raw_volume}, 'show')
+        text = serializer.serialize({self.object: raw_volume})
 
         print text
         tree = etree.fromstring(text)
@@ -579,6 +577,7 @@ class VsaVolumeSerializerTest(SerializerTestCommon):
         self._verify_voldrive(raw_volume, tree)
 
     def test_index_detail_serializer(self):
+        serializer = self.index_serializer()
         raw_volumes = [dict(
                 id='vol1_id',
                 status='vol1_status',
@@ -621,7 +620,7 @@ class VsaVolumeSerializerTest(SerializerTestCommon):
                 vsaId='vol2_vsa_id',
                 name='vol2_vsa_name',
                 )]
-        text = self.serializer.serialize({self.objects: raw_volumes}, 'index')
+        text = serializer.serialize({self.objects: raw_volumes})
 
         print text
         tree = etree.fromstring(text)
@@ -633,14 +632,13 @@ class VsaVolumeSerializerTest(SerializerTestCommon):
 
 
 class VsaDriveSerializerTest(VsaVolumeSerializerTest):
-    serializer_class = vsa_ext.VsaDriveSerializer
+    show_serializer = vsa_ext.VsaDriveTemplate
+    index_serializer = vsa_ext.VsaDrivesTemplate
     object = 'drive'
     objects = 'drives'
 
 
 class VsaVPoolSerializerTest(SerializerTestCommon):
-    serializer_class = vsa_ext.VsaVPoolSerializer
-
     def _verify_vpool(self, vpool, tree):
         self._verify_attrs(vpool, tree, ('id', 'vsaId', 'name', 'displayName',
                                          'displayDescription', 'driveCount',
@@ -656,6 +654,7 @@ class VsaVPoolSerializerTest(SerializerTestCommon):
             self.assertEqual(str(vpool['driveIds'][idx]), gr_child.text)
 
     def test_vpool_create_show_serializer(self):
+        serializer = vsa_ext.VsaVPoolTemplate()
         exemplar = dict(
             id='vpool_id',
             vsaId='vpool_vsa_id',
@@ -669,7 +668,7 @@ class VsaVPoolSerializerTest(SerializerTestCommon):
             stripeWidth=2048,
             createTime=datetime.datetime.now(),
             status='available')
-        text = self.serializer.serialize(dict(vpool=exemplar), 'show')
+        text = serializer.serialize(dict(vpool=exemplar))
 
         print text
         tree = etree.fromstring(text)
@@ -677,6 +676,7 @@ class VsaVPoolSerializerTest(SerializerTestCommon):
         self._verify_vpool(exemplar, tree)
 
     def test_vpool_index_serializer(self):
+        serializer = vsa_ext.VsaVPoolsTemplate()
         exemplar = [dict(
                 id='vpool1_id',
                 vsaId='vpool1_vsa_id',
@@ -703,7 +703,7 @@ class VsaVPoolSerializerTest(SerializerTestCommon):
                 stripeWidth=256,
                 createTime=datetime.datetime.now(),
                 status='available')]
-        text = self.serializer.serialize(dict(vpools=exemplar), 'index')
+        text = serializer.serialize(dict(vpools=exemplar))
 
         print text
         tree = etree.fromstring(text)

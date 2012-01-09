@@ -404,16 +404,252 @@ class ResourceTest(test.TestCase):
             def index(self, req, pants=None):
                 return pants
 
-        resource = wsgi.Resource(Controller())
-        actual = resource.dispatch(None, 'index', {'pants': 'off'})
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        method = resource.get_method(None, 'index')
+        actual = resource.dispatch(method, None, {'pants': 'off'})
         expected = 'off'
         self.assertEqual(actual, expected)
 
-    def test_dispatch_unknown_controller_action(self):
+    def test_get_method_unknown_controller_action(self):
         class Controller(object):
             def index(self, req, pants=None):
                 return pants
 
-        resource = wsgi.Resource(Controller())
-        self.assertRaises(AttributeError, resource.dispatch,
-                          None, 'create', {})
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        self.assertRaises(AttributeError, resource.get_method,
+                          None, 'create')
+
+    def test_get_action_args(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        env = {
+            'wsgiorg.routing_args': [None, {
+                'controller': None,
+                'format': None,
+                'action': 'update',
+                'id': 12,
+            }],
+        }
+
+        expected = {'action': 'update', 'id': 12}
+
+        self.assertEqual(resource.get_action_args(env), expected)
+
+    def test_get_body_bad_content(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        request = wsgi.Request.blank('/', method='POST')
+        request.headers['Content-Type'] = 'application/none'
+        request.body = 'foo'
+
+        content_type, body = resource.get_body(request)
+        self.assertEqual(content_type, None)
+        self.assertEqual(body, '')
+
+    def test_get_body_no_content_type(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        request = wsgi.Request.blank('/', method='POST')
+        request.body = 'foo'
+
+        content_type, body = resource.get_body(request)
+        self.assertEqual(content_type, None)
+        self.assertEqual(body, '')
+
+    def test_get_body_no_content_body(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        request = wsgi.Request.blank('/', method='POST')
+        request.headers['Content-Type'] = 'application/json'
+        request.body = ''
+
+        content_type, body = resource.get_body(request)
+        self.assertEqual(content_type, None)
+        self.assertEqual(body, '')
+
+    def test_get_body(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        request = wsgi.Request.blank('/', method='POST')
+        request.headers['Content-Type'] = 'application/json'
+        request.body = 'foo'
+
+        content_type, body = resource.get_body(request)
+        self.assertEqual(content_type, 'application/json')
+        self.assertEqual(body, 'foo')
+
+    def test_deserialize_badtype(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        self.assertRaises(exception.InvalidContentType,
+                          resource.deserialize,
+                          controller.index, 'application/none', 'foo')
+
+    def test_deserialize_default(self):
+        class JSONDeserializer(object):
+            def deserialize(self, body):
+                return 'json'
+
+        class XMLDeserializer(object):
+            def deserialize(self, body):
+                return 'xml'
+
+        class Controller(object):
+            @wsgi.deserializers(xml=XMLDeserializer)
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller, json=JSONDeserializer)
+
+        obj = resource.deserialize(controller.index, 'application/json', 'foo')
+        self.assertEqual(obj, 'json')
+
+    def test_deserialize_decorator(self):
+        class JSONDeserializer(object):
+            def deserialize(self, body):
+                return 'json'
+
+        class XMLDeserializer(object):
+            def deserialize(self, body):
+                return 'xml'
+
+        class Controller(object):
+            @wsgi.deserializers(xml=XMLDeserializer)
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller, json=JSONDeserializer)
+
+        obj = resource.deserialize(controller.index, 'application/xml', 'foo')
+        self.assertEqual(obj, 'xml')
+
+
+class ResponseObjectTest(test.TestCase):
+    def test_default_code(self):
+        robj = wsgi.ResponseObject({})
+        self.assertEqual(robj.code, 200)
+
+    def test_modified_code(self):
+        robj = wsgi.ResponseObject({})
+        robj._default_code = 202
+        self.assertEqual(robj.code, 202)
+
+    def test_override_default_code(self):
+        robj = wsgi.ResponseObject({}, code=404)
+        self.assertEqual(robj.code, 404)
+
+    def test_override_modified_code(self):
+        robj = wsgi.ResponseObject({}, code=404)
+        robj._default_code = 202
+        self.assertEqual(robj.code, 404)
+
+    def test_set_header(self):
+        robj = wsgi.ResponseObject({})
+        robj['Header'] = 'foo'
+        self.assertEqual(robj.headers, {'header': 'foo'})
+
+    def test_get_header(self):
+        robj = wsgi.ResponseObject({})
+        robj['Header'] = 'foo'
+        self.assertEqual(robj['hEADER'], 'foo')
+
+    def test_del_header(self):
+        robj = wsgi.ResponseObject({})
+        robj['Header'] = 'foo'
+        del robj['hEADER']
+        self.assertFalse('header' in robj.headers)
+
+    def test_header_isolation(self):
+        robj = wsgi.ResponseObject({})
+        robj['Header'] = 'foo'
+        hdrs = robj.headers
+        hdrs['hEADER'] = 'bar'
+        self.assertEqual(robj['hEADER'], 'foo')
+
+    def test_default_serializers(self):
+        robj = wsgi.ResponseObject({})
+        self.assertEqual(robj.serializers, {})
+
+    def test_bind_serializers(self):
+        robj = wsgi.ResponseObject({}, json='foo')
+        robj._bind_method_serializers(dict(xml='bar', json='baz'))
+        self.assertEqual(robj.serializers, dict(xml='bar', json='foo'))
+
+    def test_get_serializer(self):
+        robj = wsgi.ResponseObject({}, json='json', xml='xml', atom='atom')
+        for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
+            serializer = robj.get_serializer(content_type)
+            self.assertEqual(serializer, mtype)
+
+    def test_get_serializer_defaults(self):
+        robj = wsgi.ResponseObject({})
+        default_serializers = dict(json='json', xml='xml', atom='atom')
+        for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
+            self.assertRaises(exception.InvalidContentType,
+                              robj.get_serializer, content_type)
+            serializer = robj.get_serializer(content_type,
+                                             default_serializers)
+            self.assertEqual(serializer, mtype)
+
+    def test_serialize(self):
+        class JSONSerializer(object):
+            def serialize(self, obj):
+                return 'json'
+
+        class XMLSerializer(object):
+            def serialize(self, obj):
+                return 'xml'
+
+        class AtomSerializer(object):
+            def serialize(self, obj):
+                return 'atom'
+
+        robj = wsgi.ResponseObject({}, code=202,
+                                   json=JSONSerializer,
+                                   xml=XMLSerializer,
+                                   atom=AtomSerializer)
+        robj['X-header1'] = 'header1'
+        robj['X-header2'] = 'header2'
+
+        for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
+            request = wsgi.Request.blank('/tests/123')
+            response = robj.serialize(request, content_type)
+
+            self.assertEqual(response.headers['Content-Type'], content_type)
+            self.assertEqual(response.headers['X-header1'], 'header1')
+            self.assertEqual(response.headers['X-header2'], 'header2')
+            self.assertEqual(response.status_int, 202)
+            self.assertEqual(response.body, mtype)

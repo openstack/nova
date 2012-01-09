@@ -31,6 +31,39 @@ from nova import flags
 FLAGS = flags.FLAGS
 
 
+def make_usage(elem):
+    for subelem_tag in ('tenant_id', 'total_local_gb_usage',
+                        'total_vcpus_usage', 'total_memory_mb_usage',
+                        'total_hours', 'start', 'stop'):
+        subelem = xmlutil.SubTemplateElement(elem, subelem_tag)
+        subelem.text = subelem_tag
+
+    server_usages = xmlutil.SubTemplateElement(elem, 'server_usages')
+    server_usage = xmlutil.SubTemplateElement(server_usages, 'server_usage',
+                                              selector='server_usages')
+    for subelem_tag in ('name', 'hours', 'memory_mb', 'local_gb', 'vcpus',
+                        'tenant_id', 'flavor', 'started_at', 'ended_at',
+                        'state', 'uptime'):
+        subelem = xmlutil.SubTemplateElement(server_usage, subelem_tag)
+        subelem.text = subelem_tag
+
+
+class SimpleTenantUsageTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('tenant_usage', selector='tenant_usage')
+        make_usage(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class SimpleTenantUsagesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('tenant_usages')
+        elem = xmlutil.SubTemplateElement(root, 'tenant_usage',
+                                          selector='tenant_usages')
+        make_usage(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
 class SimpleTenantUsageController(object):
     def _hours_for(self, instance, period_start, period_stop):
         launched_at = instance['launched_at']
@@ -174,6 +207,7 @@ class SimpleTenantUsageController(object):
         detailed = bool(env.get('detailed', False))
         return (period_start, period_stop, detailed)
 
+    @wsgi.serializers(xml=SimpleTenantUsagesTemplate)
     def index(self, req):
         """Retrive tenant_usage for all tenants"""
         context = req.environ['nova.context']
@@ -188,6 +222,7 @@ class SimpleTenantUsageController(object):
                                                 detailed=detailed)
         return {'tenant_usages': usages}
 
+    @wsgi.serializers(xml=SimpleTenantUsageTemplate)
     def show(self, req, id):
         """Retrive tenant_usage for a specified tenant"""
         tenant_id = id
@@ -210,47 +245,6 @@ class SimpleTenantUsageController(object):
         return {'tenant_usage': usage}
 
 
-def make_usage(elem):
-    for subelem_tag in ('tenant_id', 'total_local_gb_usage',
-                        'total_vcpus_usage', 'total_memory_mb_usage',
-                        'total_hours', 'start', 'stop'):
-        subelem = xmlutil.SubTemplateElement(elem, subelem_tag)
-        subelem.text = subelem_tag
-
-    server_usages = xmlutil.SubTemplateElement(elem, 'server_usages')
-    server_usage = xmlutil.SubTemplateElement(server_usages, 'server_usage',
-                                              selector='server_usages')
-    for subelem_tag in ('name', 'hours', 'memory_mb', 'local_gb', 'vcpus',
-                        'tenant_id', 'flavor', 'started_at', 'ended_at',
-                        'state', 'uptime'):
-        subelem = xmlutil.SubTemplateElement(server_usage, subelem_tag)
-        subelem.text = subelem_tag
-
-
-class SimpleTenantUsageTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('tenant_usage', selector='tenant_usage')
-        make_usage(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class SimpleTenantUsagesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('tenant_usages')
-        elem = xmlutil.SubTemplateElement(root, 'tenant_usage',
-                                          selector='tenant_usages')
-        make_usage(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class SimpleTenantUsageSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return SimpleTenantUsagesTemplate()
-
-    def show(self):
-        return SimpleTenantUsageTemplate()
-
-
 class Simple_tenant_usage(extensions.ExtensionDescriptor):
     """Simple tenant usage extension"""
 
@@ -264,14 +258,8 @@ class Simple_tenant_usage(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        body_serializers = {
-            'application/xml': SimpleTenantUsageSerializer(),
-            }
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension('os-simple-tenant-usage',
-                                           SimpleTenantUsageController(),
-                                           serializer=serializer)
+                                           SimpleTenantUsageController())
         resources.append(res)
 
         return resources

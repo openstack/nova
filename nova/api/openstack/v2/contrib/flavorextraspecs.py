@@ -26,6 +26,11 @@ from nova import db
 from nova import exception
 
 
+class ExtraSpecsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        return xmlutil.MasterTemplate(xmlutil.make_flat_dict('extra_specs'), 1)
+
+
 class FlavorExtraSpecsController(object):
     """ The flavor extra specs API controller for the Openstack API """
 
@@ -41,11 +46,13 @@ class FlavorExtraSpecsController(object):
             expl = _('No Request Body')
             raise exc.HTTPBadRequest(explanation=expl)
 
+    @wsgi.serializers(xml=ExtraSpecsTemplate)
     def index(self, req, flavor_id):
         """ Returns the list of extra specs for a givenflavor """
         context = req.environ['nova.context']
         return self._get_extra_specs(context, flavor_id)
 
+    @wsgi.serializers(xml=ExtraSpecsTemplate)
     def create(self, req, flavor_id, body):
         self._check_body(body)
         context = req.environ['nova.context']
@@ -58,6 +65,7 @@ class FlavorExtraSpecsController(object):
             self._handle_quota_error(error)
         return body
 
+    @wsgi.serializers(xml=ExtraSpecsTemplate)
     def update(self, req, flavor_id, id, body):
         self._check_body(body)
         context = req.environ['nova.context']
@@ -76,6 +84,7 @@ class FlavorExtraSpecsController(object):
 
         return body
 
+    @wsgi.serializers(xml=ExtraSpecsTemplate)
     def show(self, req, flavor_id, id):
         """ Return a single extra spec item """
         context = req.environ['nova.context']
@@ -97,16 +106,6 @@ class FlavorExtraSpecsController(object):
         raise error
 
 
-class ExtraSpecsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        return xmlutil.MasterTemplate(xmlutil.make_flat_dict('extra_specs'), 1)
-
-
-class ExtraSpecsSerializer(xmlutil.XMLTemplateSerializer):
-    def default(self):
-        return ExtraSpecsTemplate()
-
-
 class Flavorextraspecs(extensions.ExtensionDescriptor):
     """Instance type (flavor) extra specs"""
 
@@ -119,16 +118,9 @@ class Flavorextraspecs(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        body_serializers = {
-            'application/xml': ExtraSpecsSerializer(),
-            }
-
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension(
                 'os-extra_specs',
                 FlavorExtraSpecsController(),
-                serializer=serializer,
                 parent=dict(member_name='flavor', collection_name='flavors'))
 
         resources.append(res)

@@ -257,6 +257,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_accepted_minimum(self):
         new_return_server = return_server_with_attributes(image_ref='2')
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
+        self_href = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
 
         body = {
             "rebuild": {
@@ -265,11 +266,13 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body)
+        robj = self.controller.action(req, FAKE_UUID, body)
+        body = robj.obj
 
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertEqual(len(body['server']['adminPass']),
                          FLAGS.password_length)
+        self.assertEqual(robj['location'], self_href)
 
     def test_rebuild_rejected_when_building(self):
         body = {
@@ -301,7 +304,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body)
+        body = self.controller.action(req, FAKE_UUID, body).obj
 
         self.assertEqual(body['server']['metadata'], metadata)
 
@@ -355,7 +358,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body)
+        body = self.controller.action(req, FAKE_UUID, body).obj
 
         self.assertTrue('personality' not in body['server'])
 
@@ -371,7 +374,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body)
+        body = self.controller.action(req, FAKE_UUID, body).obj
 
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertEqual(body['server']['adminPass'], 'asdf')
@@ -605,7 +608,7 @@ class ServerActionsControllerTest(test.TestCase):
 class TestServerActionXMLDeserializer(test.TestCase):
 
     def setUp(self):
-        self.deserializer = servers.ServerXMLDeserializer()
+        self.deserializer = servers.ActionDeserializer()
 
     def tearDown(self):
         pass

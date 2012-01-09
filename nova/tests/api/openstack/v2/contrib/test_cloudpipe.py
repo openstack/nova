@@ -190,14 +190,10 @@ class CloudpipeTest(test.TestCase):
 
 
 class CloudpipesXMLSerializerTest(test.TestCase):
-    def setUp(self):
-        super(CloudpipesXMLSerializerTest, self).setUp()
-        self.serializer = cloudpipe.CloudpipeSerializer()
-        self.deserializer = wsgi.XMLDeserializer()
-
     def test_default_serializer(self):
+        serializer = cloudpipe.CloudpipeTemplate()
         exemplar = dict(cloudpipe=dict(instance_id='1234-1234-1234-1234'))
-        text = self.serializer.serialize(exemplar)
+        text = serializer.serialize(exemplar)
         tree = etree.fromstring(text)
         self.assertEqual('cloudpipe', tree.tag)
         for child in tree:
@@ -205,6 +201,7 @@ class CloudpipesXMLSerializerTest(test.TestCase):
             self.assertEqual(child.text, exemplar['cloudpipe'][child.tag])
 
     def test_index_serializer(self):
+        serializer = cloudpipe.CloudpipesTemplate()
         exemplar = dict(cloudpipes=[
                 dict(cloudpipe=dict(
                         project_id='1234',
@@ -218,20 +215,21 @@ class CloudpipesXMLSerializerTest(test.TestCase):
                         public_ip='4.3.2.1',
                         public_port='123',
                         state='pending'))])
-        text = self.serializer.serialize(exemplar, 'index')
+        text = serializer.serialize(exemplar)
         tree = etree.fromstring(text)
         self.assertEqual('cloudpipes', tree.tag)
         self.assertEqual(len(exemplar['cloudpipes']), len(tree))
-        for idx, cloudpipe in enumerate(tree):
-            self.assertEqual('cloudpipe', cloudpipe.tag)
+        for idx, cl_pipe in enumerate(tree):
+            self.assertEqual('cloudpipe', cl_pipe.tag)
             kp_data = exemplar['cloudpipes'][idx]['cloudpipe']
-            for child in cloudpipe:
+            for child in cl_pipe:
                 self.assertTrue(child.tag in kp_data)
                 self.assertEqual(child.text, kp_data[child.tag])
 
     def test_deserializer(self):
+        deserializer = wsgi.XMLDeserializer()
         exemplar = dict(cloudpipe=dict(project_id='4321'))
         intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
                   '<cloudpipe><project_id>4321</project_id></cloudpipe>')
-        result = self.deserializer.deserialize(intext)['body']
+        result = deserializer.deserialize(intext)['body']
         self.assertEqual(result, exemplar)

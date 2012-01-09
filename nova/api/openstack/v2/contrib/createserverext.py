@@ -51,25 +51,10 @@ class Createserverext(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         resources = []
-
-        headers_serializer = servers.HeadersSerializer()
-        body_serializers = {
-            'application/xml': servers.ServerXMLSerializer(),
-        }
-
-        body_deserializers = {
-            'application/xml': servers.ServerXMLDeserializer(),
-        }
-
-        serializer = wsgi.ResponseSerializer(body_serializers,
-                                             headers_serializer)
-        deserializer = wsgi.RequestDeserializer(body_deserializers)
         controller = Controller()
 
         res = extensions.ResourceExtension('os-create-server-ext',
-                                        controller=controller,
-                                        deserializer=deserializer,
-                                        serializer=serializer)
+                                           controller=controller)
         resources.append(res)
 
         return resources

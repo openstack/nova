@@ -31,6 +31,30 @@ from nova import rpc
 LOG = logging.getLogger('nova.api.openstack.v2.contrib.floating_ips')
 
 
+def make_float_ip(elem):
+    elem.set('id')
+    elem.set('ip')
+    elem.set('fixed_ip')
+    elem.set('instance_id')
+
+
+class FloatingIPTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('floating_ip',
+                                       selector='floating_ip')
+        make_float_ip(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class FloatingIPsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('floating_ips')
+        elem = xmlutil.SubTemplateElement(root, 'floating_ip',
+                                          selector='floating_ips')
+        make_float_ip(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
 def _translate_floating_ip_view(floating_ip):
     result = {'id': floating_ip['id'],
               'ip': floating_ip['address']}
@@ -57,6 +81,7 @@ class FloatingIPController(object):
         self.network_api = network.API()
         super(FloatingIPController, self).__init__()
 
+    @wsgi.serializers(xml=FloatingIPTemplate)
     def show(self, req, id):
         """Return data about the given floating ip."""
         context = req.environ['nova.context']
@@ -68,6 +93,7 @@ class FloatingIPController(object):
 
         return _translate_floating_ip_view(floating_ip)
 
+    @wsgi.serializers(xml=FloatingIPsTemplate)
     def index(self, req):
         """Return a list of floating ips allocated to a project."""
         context = req.environ['nova.context']
@@ -76,6 +102,7 @@ class FloatingIPController(object):
 
         return _translate_floating_ips_view(floating_ips)
 
+    @wsgi.serializers(xml=FloatingIPTemplate)
     def create(self, req, body=None):
         context = req.environ['nova.context']
 
@@ -107,30 +134,6 @@ class FloatingIPController(object):
     def _get_ip_by_id(self, context, value):
         """Checks that value is id and then returns its address."""
         return self.network_api.get_floating_ip(context, value)['address']
-
-
-def make_float_ip(elem):
-    elem.set('id')
-    elem.set('ip')
-    elem.set('fixed_ip')
-    elem.set('instance_id')
-
-
-class FloatingIPTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('floating_ip',
-                                       selector='floating_ip')
-        make_float_ip(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class FloatingIPsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('floating_ips')
-        elem = xmlutil.SubTemplateElement(root, 'floating_ip',
-                                          selector='floating_ips')
-        make_float_ip(elem)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class FloatingIPSerializer(xmlutil.XMLTemplateSerializer):
@@ -204,15 +207,8 @@ class Floating_ips(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        body_serializers = {
-            'application/xml': FloatingIPSerializer(),
-            }
-
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension('os-floating-ips',
                          FloatingIPController(),
-                         serializer=serializer,
                          member_actions={})
         resources.append(res)
 

@@ -14,8 +14,12 @@
 #    under the License.
 
 import json
+import unittest
+
+from lxml import etree
 
 from nova.api.openstack import v2
+from nova.api.openstack.v2.contrib import server_diagnostics
 from nova.api.openstack.v2 import extensions
 from nova.api.openstack import wsgi
 import nova.compute
@@ -53,3 +57,30 @@ class ServerDiagnosticsTest(test.TestCase):
         res = req.get_response(self.app)
         output = json.loads(res.body)
         self.assertEqual(output, {'data': 'Some diagnostic info'})
+
+
+class TestServerDiagnosticsXMLSerializer(unittest.TestCase):
+    namespace = wsgi.XMLNS_V11
+
+    def _tag(self, elem):
+        tagname = elem.tag
+        self.assertEqual(tagname[0], '{')
+        tmp = tagname.partition('}')
+        namespace = tmp[0][1:]
+        self.assertEqual(namespace, self.namespace)
+        return tmp[2]
+
+    def test_index_serializer(self):
+        serializer = server_diagnostics.ServerDiagnosticsTemplate()
+        exemplar = dict(diag1='foo', diag2='bar')
+        text = serializer.serialize(exemplar)
+
+        print text
+        tree = etree.fromstring(text)
+
+        self.assertEqual('diagnostics', self._tag(tree))
+        self.assertEqual(len(tree), len(exemplar))
+        for child in tree:
+            tag = self._tag(child)
+            self.assertTrue(tag in exemplar)
+            self.assertEqual(child.text, exemplar[tag])

@@ -29,6 +29,44 @@ from nova import network
 LOG = logging.getLogger('nova.api.openstack.v2.contrib.floating_ip_dns')
 
 
+def make_dns_entry(elem):
+    elem.set('id')
+    elem.set('ip')
+    elem.set('type')
+    elem.set('zone')
+    elem.set('name')
+
+
+def make_zone_entry(elem):
+    elem.set('zone')
+
+
+class FloatingIPDNSTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('dns_entry',
+                                       selector='dns_entry')
+        make_dns_entry(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class FloatingIPDNSsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('dns_entries')
+        elem = xmlutil.SubTemplateElement(root, 'dns_entry',
+                                          selector='dns_entries')
+        make_dns_entry(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class ZonesTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('zones')
+        elem = xmlutil.SubTemplateElement(root, 'zone',
+                                          selector='zones')
+        make_zone_entry(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
 def _translate_dns_entry_view(dns_entry):
     result = {}
     result['ip'] = dns_entry.get('ip')
@@ -69,6 +107,7 @@ class FloatingIPDNSController(object):
         self.network_api = network.API()
         super(FloatingIPDNSController, self).__init__()
 
+    @wsgi.serializers(xml=FloatingIPDNSsTemplate)
     def show(self, req, id):
         """Return a list of dns entries.  If ip is specified, query for
            names.  if name is specified, query for ips.
@@ -95,6 +134,7 @@ class FloatingIPDNSController(object):
 
         return _translate_dns_entries_view(entrylist)
 
+    @wsgi.serializers(xml=ZonesTemplate)
     def index(self, req):
         """Return a list of available DNS zones."""
 
@@ -103,6 +143,7 @@ class FloatingIPDNSController(object):
 
         return _translate_zone_entries_view(zones)
 
+    @wsgi.serializers(xml=FloatingIPDNSTemplate)
     def create(self, req, body):
         """Add dns entry for name and address"""
         context = req.environ['nova.context']
@@ -142,55 +183,6 @@ class FloatingIPDNSController(object):
         return webob.Response(status_int=200)
 
 
-def make_dns_entry(elem):
-    elem.set('id')
-    elem.set('ip')
-    elem.set('type')
-    elem.set('zone')
-    elem.set('name')
-
-
-def make_zone_entry(elem):
-    elem.set('zone')
-
-
-class FloatingIPDNSTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('dns_entry',
-                                       selector='dns_entry')
-        make_dns_entry(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class FloatingIPDNSsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('dns_entries')
-        elem = xmlutil.SubTemplateElement(root, 'dns_entry',
-                                          selector='dns_entries')
-        make_dns_entry(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class ZonesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('zones')
-        elem = xmlutil.SubTemplateElement(root, 'zone',
-                                          selector='zones')
-        make_zone_entry(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class FloatingIPDNSSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return ZonesTemplate()
-
-    def show(self):
-        return FloatingIPDNSsTemplate()
-
-    def default(self):
-        return FloatingIPDNSTemplate()
-
-
 class Floating_ip_dns(extensions.ExtensionDescriptor):
     """Floating IP DNS support"""
 
@@ -206,15 +198,8 @@ class Floating_ip_dns(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        body_serializers = {
-            'application/xml': FloatingIPDNSSerializer(),
-            }
-
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension('os-floating-ip-dns',
-                         FloatingIPDNSController(),
-                         serializer=serializer)
+                         FloatingIPDNSController())
         resources.append(res)
 
         return resources

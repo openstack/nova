@@ -118,7 +118,6 @@ class KeypairsTest(test.TestCase):
 class KeypairsXMLSerializerTest(test.TestCase):
     def setUp(self):
         super(KeypairsXMLSerializerTest, self).setUp()
-        self.serializer = keypairs.KeypairsSerializer()
         self.deserializer = wsgi.XMLDeserializer()
 
     def test_default_serializer(self):
@@ -128,7 +127,8 @@ class KeypairsXMLSerializerTest(test.TestCase):
                 fingerprint='fake_fingerprint',
                 user_id='fake_user_id',
                 name='fake_key_name'))
-        text = self.serializer.serialize(exemplar)
+        serializer = keypairs.KeypairTemplate()
+        text = serializer.serialize(exemplar)
 
         print text
         tree = etree.fromstring(text)
@@ -148,7 +148,8 @@ class KeypairsXMLSerializerTest(test.TestCase):
                         name='key2_name',
                         public_key='key2_key',
                         fingerprint='key2_fingerprint'))])
-        text = self.serializer.serialize(exemplar, 'index')
+        serializer = keypairs.KeypairsTemplate()
+        text = serializer.serialize(exemplar)
 
         print text
         tree = etree.fromstring(text)

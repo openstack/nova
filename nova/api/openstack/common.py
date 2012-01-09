@@ -334,6 +334,21 @@ def get_networks_for_instance(context, instance):
     return networks
 
 
+class MetadataDeserializer(wsgi.MetadataXMLDeserializer):
+    def deserialize(self, text):
+        dom = minidom.parseString(text)
+        metadata_node = self.find_first_child_named(dom, "metadata")
+        metadata = self.extract_metadata(metadata_node)
+        return {'body': {'metadata': metadata}}
+
+
+class MetaItemDeserializer(wsgi.MetadataXMLDeserializer):
+    def deserialize(self, text):
+        dom = minidom.parseString(text)
+        metadata_item = self.extract_metadata(dom)
+        return {'body': {'meta': metadata_item}}
+
+
 class MetadataXMLDeserializer(wsgi.XMLDeserializer):
 
     def extract_metadata(self, metadata_node):
