@@ -161,20 +161,23 @@ class SecurityGroupTests(base.UserSmokeTestCase):
         result = self.conn.associate_address(self.data['instance'].id,
                                              self.data['public_ip'])
         start_time = time.time()
-        try:
-            while not self.__public_instance_is_accessible():
-                # 1 minute to launch
-                if time.time() - start_time > 60:
-                    raise Exception("Timeout")
-                time.sleep(1)
-        finally:
-            result = self.conn.disassociate_address(self.data['public_ip'])
+        while not self.__public_instance_is_accessible():
+            # 1 minute to launch
+            if time.time() - start_time > 60:
+                raise Exception("Timeout")
+            time.sleep(1)
 
     def test_005_validate_metadata(self):
-
         instance = self.data['instance']
-        self.assertTrue(instance.instance_type,
-                            self.__get_metadata_item("instance-type"))
+        start_time = time.time()
+        instance_type = False
+        while not instance_type:
+            instance_type = self.__get_metadata_item('instance-type')
+            # 10 seconds to restart proxy
+            if time.time() - start_time > 10:
+                raise Exception("Timeout")
+            time.sleep(1)
+        self.assertEqual(instance.instance_type, instance_type)
         #FIXME(dprince): validate more metadata here
 
     def test_006_can_revoke_security_group_ingress(self):
@@ -190,6 +193,7 @@ class SecurityGroupTests(base.UserSmokeTestCase):
             time.sleep(1)
 
     def test_999_tearDown(self):
+        self.conn.disassociate_address(self.data['public_ip'])
         self.conn.delete_key_pair(TEST_KEY)
         self.conn.delete_security_group(TEST_GROUP)
         groups = self.conn.get_all_security_groups()
