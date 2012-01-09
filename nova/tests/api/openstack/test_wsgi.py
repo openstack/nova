@@ -5,7 +5,9 @@ import webob
 
 from nova import exception
 from nova import test
+from nova import utils
 from nova.api.openstack import wsgi
+import nova.context
 
 
 class RequestTest(test.TestCase):
@@ -97,7 +99,9 @@ class ActionDispatcherTest(test.TestCase):
 class ResponseHeadersSerializerTest(test.TestCase):
     def test_default(self):
         serializer = wsgi.ResponseHeadersSerializer()
-        response = webob.Response()
+        context = nova.context.get_admin_context()
+        req = webob.Request.blank('/', environ={'nova.context': context})
+        response = webob.Response(request=req)
         serializer.serialize(response, {'v': '123'}, 'asdf')
         self.assertEqual(response.status_int, 200)
 
@@ -107,7 +111,9 @@ class ResponseHeadersSerializerTest(test.TestCase):
                 response.status_int = 404
                 response.headers['X-Custom-Header'] = data['v']
         serializer = Serializer()
-        response = webob.Response()
+        context = nova.context.get_admin_context()
+        req = webob.Request.blank('/', environ={'nova.context': context})
+        response = webob.Response(request=req)
         serializer.serialize(response, {'v': '123'}, 'update')
         self.assertEqual(response.status_int, 404)
         self.assertEqual(response.headers['X-Custom-Header'], '123')
@@ -213,6 +219,17 @@ class RequestHeadersDeserializerTest(test.TestCase):
         req = wsgi.Request.blank('/')
         req.headers['X-Custom-Header'] = 'b'
         self.assertEqual(deserializer.deserialize(req, 'update'), {'a': 'b'})
+
+
+class ResponseHeadersSerializerTest(test.TestCase):
+    def test_request_id(self):
+        serializer = wsgi.ResponseHeadersSerializer()
+        context = nova.context.get_admin_context()
+        req = webob.Request.blank('/', environ={'nova.context': context})
+        res = webob.Response(request=req)
+        serializer.serialize(res, {}, 'foo')
+        self.assertTrue(
+            utils.is_uuid_like(res.headers['X-Compute-Request-Id']))
 
 
 class JSONSerializer(object):

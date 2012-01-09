@@ -438,6 +438,9 @@ class ResponseHeadersSerializer(ActionDispatcher):
 
     def serialize(self, response, data, action):
         self.dispatch(response, data, action=action)
+        context = response.request.environ.get('nova.context')
+        if context:
+            response.headers['X-Compute-Request-Id'] = context.request_id
 
     def default(self, response, data):
         response.status_int = 200
@@ -464,7 +467,7 @@ class ResponseSerializer(object):
         :param content_type: expected mimetype of serialized response body
 
         """
-        response = webob.Response()
+        response = webob.Response(request=request)
         self.serialize_headers(response, response_data, action)
         self.serialize_body(request, response, response_data, content_type,
                             action)
