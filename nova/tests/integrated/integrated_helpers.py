@@ -134,5 +134,4 @@ class _IntegratedTestBase(test.TestCase):
         # Set a valid server name
         server_name = self.get_unused_server_name()
         server['name'] = server_name
-
         return server

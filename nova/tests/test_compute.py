@@ -113,6 +113,7 @@ class BaseTestCase(test.TestCase):
                    notification_driver='nova.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
+
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id,
@@ -463,6 +464,12 @@ class ComputeTestCase(BaseTestCase):
 
     def test_rebuild(self):
         """Ensure instance can be rebuilt"""
+        def fake_get_nw_info(cls, ctxt, instance):
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                          spectacular=True)
+
+        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+                       fake_get_nw_info)
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
 
@@ -878,6 +885,12 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
 
+        def fake_get_nw_info(cls, ctxt, instance):
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                          spectacular=True)
+
+        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+                       fake_get_nw_info)
         self.mox.StubOutWithMock(self.compute.network_api,
                                  "allocate_for_instance")
         self.compute.network_api.allocate_for_instance(mox.IgnoreArg(),
@@ -1002,6 +1015,13 @@ class ComputeTestCase(BaseTestCase):
 
     def test_resize_instance_notification(self):
         """Ensure notifications on instance migrate/resize"""
+        def fake_get_nw_info(cls, ctxt, instance):
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                          spectacular=True)
+
+        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+                       fake_get_nw_info)
+
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
         context = self.context.elevated()
@@ -1212,6 +1232,14 @@ class ComputeTestCase(BaseTestCase):
 
     def test_pre_live_migration_works_correctly(self):
         """Confirm setup_compute_volume is called when volume is mounted."""
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          spectacular=True)
+
+        def stupid(*args, **kwargs):
+            return fake_network.fake_get_instance_nw_info(self.stubs,
+                                                          spectacular=True)
+        self.stubs.Set(nova.compute.manager.ComputeManager,
+                       '_get_instance_nw_info', stupid)
         # creating instance testdata
         inst_ref = self._create_fake_instance({'host': 'dummy'})
         c = context.get_admin_context()
@@ -1220,16 +1248,13 @@ class ComputeTestCase(BaseTestCase):
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'pre_live_migration')
         self.compute.driver.pre_live_migration({'block_device_mapping': []})
-        dummy_nw_info = [[None, {'ips':'1.1.1.1'}]]
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
-        self.compute._get_instance_nw_info(c, mox.IsA(inst_ref)
-            ).AndReturn(dummy_nw_info)
+        nw_info = fake_network.fake_get_instance_nw_info(self.stubs)
         self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
-        self.compute.driver.plug_vifs(mox.IsA(inst_ref), dummy_nw_info)
+        self.compute.driver.plug_vifs(mox.IsA(inst_ref), nw_info)
         self.mox.StubOutWithMock(self.compute.driver,
                                  'ensure_filtering_rules_for_instance')
         self.compute.driver.ensure_filtering_rules_for_instance(
-            mox.IsA(inst_ref), dummy_nw_info)
+            mox.IsA(inst_ref), nw_info)
 
         # start test
         self.mox.ReplayAll()
@@ -2239,11 +2264,10 @@ class ComputeAPITestCase(BaseTestCase):
                                           fixed_address):
             called['associate'] = True
 
-        nw_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
-
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)
-            return nw_info
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                          spectacular=True)
 
         self.stubs.Set(nova.network.API, 'associate_floating_ip',
                        fake_associate_ip_network_api)
@@ -2968,7 +2992,14 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(self.compute_api.get_lock(self.context, instance))
 
     def test_add_remove_security_group(self):
+        def fake_get_nw_info(cls, ctxt, instance):
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                          spectacular=True)
+
+        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+                       fake_get_nw_info)
         instance = self._create_fake_instance()
+
         self.compute.run_instance(self.context, instance['uuid'])
         instance = self.compute_api.get(self.context, instance['uuid'])
         security_group_name = self._create_group()['name']

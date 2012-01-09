@@ -21,6 +21,7 @@ from nova.db import base
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.network import model as network_model
 from nova import rpc
 from nova.rpc import common as rpc_common
 
@@ -150,9 +151,11 @@ class API(base.Base):
         args['host'] = instance['host']
         args['instance_type_id'] = instance['instance_type_id']
 
-        return rpc.call(context, FLAGS.network_topic,
-                        {'method': 'allocate_for_instance',
-                         'args': args})
+        nw_info = rpc.call(context, FLAGS.network_topic,
+                           {'method': 'allocate_for_instance',
+                             'args': args})
+
+        return network_model.NetworkInfo.hydrate(nw_info)
 
     def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocates all network structures related to instance."""
@@ -193,9 +196,10 @@ class API(base.Base):
                 'instance_type_id': instance['instance_type_id'],
                 'host': instance['host']}
         try:
-            return rpc.call(context, FLAGS.network_topic,
-                    {'method': 'get_instance_nw_info',
-                    'args': args})
+            nw_info = rpc.call(context, FLAGS.network_topic,
+                               {'method': 'get_instance_nw_info',
+                                'args': args})
+            return network_model.NetworkInfo.hydrate(nw_info)
         # FIXME(comstud) rpc calls raise RemoteError if the remote raises
         # an exception.  In the case here, because of a race condition,
         # it's possible the remote will raise a InstanceNotFound when

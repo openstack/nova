@@ -93,7 +93,6 @@ class Controller(wsgi.Controller):
         context = req.environ["nova.context"]
         instance = self._get_instance(context, server_id)
         networks = common.get_networks_for_instance(context, instance)
-
         if id not in networks:
             msg = _("Instance is not a member of specified network")
             raise exc.HTTPNotFound(explanation=msg)

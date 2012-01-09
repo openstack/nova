@@ -106,16 +106,16 @@ class SubnetTests(test.TestCase):
 
         route1 = fake_network_cache_model.new_route()
 
-        self.assertEqual(subnet['cidr'], '255.255.255.0')
+        self.assertEqual(subnet['cidr'], '10.10.0.0/24')
         self.assertEqual(subnet['dns'],
                 [fake_network_cache_model.new_ip(dict(address='1.2.3.4')),
                  fake_network_cache_model.new_ip(dict(address='2.3.4.5'))])
-        self.assertEqual(subnet['gateway']['address'], '192.168.1.1')
+        self.assertEqual(subnet['gateway']['address'], '10.10.0.1')
         self.assertEqual(subnet['ips'],
                 [fake_network_cache_model.new_ip(
-                        dict(address='192.168.1.100')),
+                        dict(address='10.10.0.2')),
                  fake_network_cache_model.new_ip(
-                            dict(address='192.168.1.101'))])
+                            dict(address='10.10.0.3'))])
         self.assertEqual(subnet['routes'], [route1])
         self.assertEqual(subnet['version'], 4)
 
@@ -159,9 +159,9 @@ class SubnetTests(test.TestCase):
                 dict(address='192.168.1.102')))
         self.assertEqual(subnet['ips'],
                 [fake_network_cache_model.new_ip(
-                        dict(address='192.168.1.100')),
+                        dict(address='10.10.0.2')),
                  fake_network_cache_model.new_ip(
-                        dict(address='192.168.1.101')),
+                        dict(address='10.10.0.3')),
                  fake_network_cache_model.new_ip(
                         dict(address='192.168.1.102'))])
 
@@ -172,9 +172,9 @@ class SubnetTests(test.TestCase):
                         dict(address='192.168.1.102')))
         self.assertEqual(subnet['ips'],
                 [fake_network_cache_model.new_ip(
-                        dict(address='192.168.1.100')),
+                        dict(address='10.10.0.2')),
                  fake_network_cache_model.new_ip(
-                        dict(address='192.168.1.101')),
+                        dict(address='10.10.0.3')),
                  fake_network_cache_model.new_ip(
                         dict(address='192.168.1.102'))])
 
@@ -262,9 +262,9 @@ class VIFTests(test.TestCase):
     def test_vif_get_fixed_ips(self):
         vif = fake_network_cache_model.new_vif()
         fixed_ips = vif.fixed_ips()
-        ips = [fake_network_cache_model.new_ip(dict(address='192.168.1.100')),
+        ips = [fake_network_cache_model.new_ip(dict(address='10.10.0.2')),
                 fake_network_cache_model.new_ip(
-                        dict(address='192.168.1.101'))] * 2
+                        dict(address='10.10.0.3'))] * 2
         self.assertEqual(fixed_ips, ips)
 
     def test_vif_get_floating_ips(self):
@@ -279,9 +279,9 @@ class VIFTests(test.TestCase):
         ip_dict = {
             'network_id': 1,
             'ips': [fake_network_cache_model.new_ip(
-                        {'address': '192.168.1.100'}),
+                        {'address': '10.10.0.2'}),
                     fake_network_cache_model.new_ip(
-                        {'address': '192.168.1.101'})] * 2,
+                        {'address': '10.10.0.3'})] * 2,
             'network_label': 'public'}
         self.assertEqual(labeled_ips, ip_dict)
 
@@ -303,9 +303,9 @@ class NetworkInfoTests(test.TestCase):
                 fake_network_cache_model.new_vif(
                     {'address':'bb:bb:bb:bb:bb:bb'})])
         self.assertEqual(ninfo.fixed_ips(),
-                [fake_network_cache_model.new_ip({'address': '192.168.1.100'}),
+                [fake_network_cache_model.new_ip({'address': '10.10.0.2'}),
                  fake_network_cache_model.new_ip(
-                    {'address': '192.168.1.101'})] * 4)
+                    {'address': '10.10.0.3'})] * 4)
 
     def test_get_floating_ips(self):
         vif = fake_network_cache_model.new_vif()
@@ -321,6 +321,6 @@ class NetworkInfoTests(test.TestCase):
                         {'address':'bb:bb:bb:bb:bb:bb'})])
         deserialized = model.NetworkInfo.hydrate(ninfo)
         self.assertEqual(ninfo.fixed_ips(),
-                [fake_network_cache_model.new_ip({'address': '192.168.1.100'}),
+                [fake_network_cache_model.new_ip({'address': '10.10.0.2'}),
                  fake_network_cache_model.new_ip(
-                        {'address': '192.168.1.101'})] * 4)
+                        {'address': '10.10.0.3'})] * 4)

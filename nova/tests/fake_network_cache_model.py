@@ -38,14 +38,13 @@ def new_route(route_dict=None):
 
 def new_subnet(subnet_dict=None):
     new_subnet = dict(
-        cidr='255.255.255.0',
+        cidr='10.10.0.0/24',
         dns=[new_ip(dict(address='1.2.3.4')),
                 new_ip(dict(address='2.3.4.5'))],
-        gateway=new_ip(dict(address='192.168.1.1')),
-        ips=[new_ip(dict(address='192.168.1.100')),
-                new_ip(dict(address='192.168.1.101'))],
-        routes=[new_route()],
-        version=4)
+        gateway=new_ip(dict(address='10.10.0.1')),
+        ips=[new_ip(dict(address='10.10.0.2')),
+                new_ip(dict(address='10.10.0.3'))],
+        routes=[new_route()])
     subnet_dict = subnet_dict or {}
     new_subnet.update(subnet_dict)
     return model.Subnet(**new_subnet)

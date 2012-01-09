@@ -24,6 +24,7 @@ from nova import network
 from nova import compute
 from nova import rpc
 from nova import test
+from nova.tests import fake_network
 from nova.tests.api.openstack import fakes
 from nova import utils
 
@@ -58,7 +59,7 @@ def network_api_get_floating_ips_by_project(self, context):
 
 
 def compute_api_get(self, context, instance_id):
-    return dict(uuid=FAKE_UUID)
+    return dict(uuid=FAKE_UUID, id=instance_id, instance_type_id=1, host='bob')
 
 
 def network_api_allocate(self, context):
@@ -79,23 +80,6 @@ def network_api_associate(self, context, floating_address, fixed_address):
 
 def network_api_disassociate(self, context, floating_address):
     pass
-
-
-def network_get_instance_nw_info(self, context, instance):
-    info = {
-        'label': 'fake',
-        'gateway': 'fake',
-        'dhcp_server': 'fake',
-        'broadcast': 'fake',
-        'mac': 'fake',
-        'vif_uuid': 'fake',
-        'rxtx_cap': 'fake',
-        'dns': [],
-        'ips': [{'ip': '10.0.0.1'}],
-        'should_create_bridge': False,
-        'should_create_vlan': False}
-
-    return [['ignore', info]]
 
 
 def fake_instance_get(context, instance_id):
@@ -137,8 +121,12 @@ class FloatingIpTest(test.TestCase):
                        network_api_release)
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        network_api_disassociate)
-        self.stubs.Set(network.api.API, "get_instance_nw_info",
-                       network_get_instance_nw_info)
+
+        fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                               spectacular=True)
+
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          spectacular=True)
         self.stubs.Set(db, 'instance_get',
                        fake_instance_get)
 

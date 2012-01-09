@@ -40,6 +40,7 @@ from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
 import nova.image.fake
+from nova.tests import fake_network
 from nova.tests.glance import stubs as glance_stubs
 from nova import utils
 from nova import wsgi
@@ -180,15 +181,9 @@ class stub_out_compute_api_backup(object):
         return dict(id='123', status='ACTIVE', name=name, properties=props)
 
 
-def stub_out_nw_api_get_instance_nw_info(stubs, func=None):
-    def get_instance_nw_info(self, context, instance):
-        return [(None, {'label': 'public',
-                         'ips': [{'ip': '192.168.0.3'}],
-                         'ip6s': []})]
-
-    if func is None:
-        func = get_instance_nw_info
-    stubs.Set(nova.network.API, 'get_instance_nw_info', func)
+def stub_out_nw_api_get_instance_nw_info(stubs, num_networks=1, func=None):
+    fake_network.stub_out_nw_api_get_instance_nw_info(stubs,
+                                                      spectacular=True)
 
 
 def stub_out_nw_api_get_floating_ips_by_fixed_address(stubs, func=None):
@@ -208,8 +203,7 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
 
     class Fake:
         def get_instance_nw_info(*args, **kwargs):
-            return [(None, {'label': 'private',
-                            'ips': [{'ip': private}]})]
+            pass
 
         def get_floating_ips_by_fixed_address(*args, **kwargs):
             return publics
@@ -217,6 +211,7 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
     if cls is None:
         cls = Fake
     stubs.Set(nova.network, 'API', cls)
+    fake_network.stub_out_nw_api_get_instance_nw_info(stubs, spectacular=True)
 
 
 def _make_image_fixtures():
@@ -473,7 +468,6 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
                   auto_disk_config=False, display_name=None,
                   include_fake_metadata=True,
                   power_state=None, nw_cache=None):
-
     if include_fake_metadata:
         metadata = [models.InstanceMetadata(key='seq', value=id)]
     else:
@@ -518,6 +512,7 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
         "ephemeral_gb": 0,
         "hostname": "",
         "host": host,
+        "instance_type_id": 1,
         "instance_type": dict(inst_type),
         "user_data": "",
         "reservation_id": reservation_id,

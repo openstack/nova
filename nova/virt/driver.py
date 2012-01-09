@@ -605,3 +605,10 @@ class ComputeDriver(object):
         Note that this function takes an instance ID.
         """
         raise NotImplementedError()
+
+    def legacy_nwinfo(self):
+        """
+        Indicate if the driver requires the legacy network_info format.
+        """
+        # TODO(tr3buchet): update all subclasses and remove this
+        return True

@@ -29,10 +29,10 @@ LOG = logging.getLogger('nova.tests.integrated')
 
 class ServersTest(integrated_helpers._IntegratedTestBase):
 
-    def _wait_for_state_change(self, server, status):
+    def _wait_for_state_change(self, server, from_status):
         for i in xrange(0, 50):
             server = self.api.get_server(server['id'])
-            if server['status'] != status:
+            if server['status'] != from_status:
                 break
             time.sleep(.1)
 
@@ -129,7 +129,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertTrue(created_server_id in server_ids)
 
         found_server = self._wait_for_state_change(found_server, 'BUILD')
-
         # It should be available...
         # TODO(justinsb): Mock doesn't yet do this...
         self.assertEqual('ACTIVE', found_server['status'])
