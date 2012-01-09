@@ -17,7 +17,9 @@
 import __builtin__
 import mox
 import datetime
+import hashlib
 import os
+import StringIO
 import tempfile
 
 import nova
@@ -679,3 +681,10 @@ class DeprecationTest(test.TestCase):
         self.mox.ReplayAll()
         result = utils.service_is_up(service)
         self.assertFalse(result)
+
+    def test_hash_file(self):
+        data = 'Mary had a little lamb, its fleece as white as snow'
+        flo = StringIO.StringIO(data)
+        h1 = utils.hash_file(flo)
+        h2 = hashlib.sha1(data).hexdigest()
+        self.assertEquals(h1, h2)
