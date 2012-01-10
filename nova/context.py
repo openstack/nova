@@ -35,11 +35,15 @@ class RequestContext(object):
 
     def __init__(self, user_id, project_id, is_admin=None, read_deleted="no",
                  roles=None, remote_address=None, timestamp=None,
-                 request_id=None, auth_token=None, strategy='noauth'):
+                 request_id=None, auth_token=None, strategy='noauth',
+                 overwrite=True):
         """
         :param read_deleted: 'no' indicates deleted records are hidden, 'yes'
             indicates deleted records are visible, 'only' indicates that
             *only* deleted records are visible.
+
+        :param overwrite: Set to False to ensure that the greenthread local
+            copy of the index is not overwritten.
         """
         self.user_id = user_id
         self.project_id = project_id
@@ -59,7 +63,8 @@ class RequestContext(object):
         self.request_id = request_id
         self.auth_token = auth_token
         self.strategy = strategy
-        local.store.context = self
+        if overwrite or not hasattr(local.store, 'context'):
+            local.store.context = self
 
     def to_dict(self):
         return {'user_id': self.user_id,
@@ -77,7 +82,7 @@ class RequestContext(object):
     def from_dict(cls, values):
         return cls(**values)
 
-    def elevated(self, read_deleted=None):
+    def elevated(self, read_deleted=None, overwrite=False):
         """Return a version of this context with admin flag set."""
         context = copy.copy(self)
         context.is_admin = True
@@ -92,4 +97,5 @@ def get_admin_context(read_deleted="no"):
     return RequestContext(user_id=None,
                           project_id=None,
                           is_admin=True,
-                          read_deleted=read_deleted)
+                          read_deleted=read_deleted,
+                          overwrite=False)
