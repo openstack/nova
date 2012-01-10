@@ -642,10 +642,10 @@ class ProxyCallback(object):
         object and calls it.
         """
 
-        node_func = getattr(self.proxy, str(method))
-        node_args = dict((str(k), v) for k, v in args.iteritems())
-        # NOTE(vish): magic is fun!
         try:
+            node_func = getattr(self.proxy, str(method))
+            node_args = dict((str(k), v) for k, v in args.iteritems())
+            # NOTE(vish): magic is fun!
             rval = node_func(context=ctxt, **node_args)
             # Check if the result was a generator
             if inspect.isgenerator(rval):
