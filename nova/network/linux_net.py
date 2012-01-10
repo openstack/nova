@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -432,21 +433,21 @@ def init_host(ip_range=None):
     iptables_manager.apply()
 
 
-def bind_floating_ip(floating_ip, check_exit_code=True):
+def bind_floating_ip(floating_ip, device, check_exit_code=True):
     """Bind ip to public interface."""
     _execute('ip', 'addr', 'add', str(floating_ip) + '/32',
-             'dev', FLAGS.public_interface,
+             'dev', device,
              run_as_root=True, check_exit_code=check_exit_code)
     if FLAGS.send_arp_for_ha:
         _execute('arping', '-U', floating_ip,
-                 '-A', '-I', FLAGS.public_interface,
+                 '-A', '-I', device,
                  '-c', 1, run_as_root=True, check_exit_code=False)
 
 
-def unbind_floating_ip(floating_ip):
+def unbind_floating_ip(floating_ip, device):
     """Unbind a public ip from public interface."""
     _execute('ip', 'addr', 'del', str(floating_ip) + '/32',
-             'dev', FLAGS.public_interface, run_as_root=True)
+             'dev', device, run_as_root=True)
 
 
 def ensure_metadata_ip():
