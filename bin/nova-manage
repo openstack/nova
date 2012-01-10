@@ -708,7 +708,7 @@ class FloatingIpCommands(object):
     @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     def delete(self, ip_range):
         """Deletes floating ips by range"""
-        for address in netaddr.IPNetwork(ip_range):
+        for address in netaddr.IPNetwork(ip_range).iter_hosts():
             db.floating_ip_destroy(context.get_admin_context(),
                                    str(address))
 
@@ -724,10 +724,12 @@ class FloatingIpCommands(object):
         for floating_ip in floating_ips:
             instance = None
             if floating_ip['fixed_ip']:
-                instance = floating_ip['fixed_ip']['instance']['hostname']
-            print "%s\t%s\t%s" % (floating_ip['host'],
-                                  floating_ip['address'],
-                                  instance)
+                instance = floating_ip['fixed_ip']['instance']['uuid']
+            print "%s\t%s\t%s\t%s\t%s" % (floating_ip['project_id'],
+                                          floating_ip['address'],
+                                          instance,
+                                          floating_ip['pool'],
+                                          floating_ip['interface'])
 
 
 class NetworkCommands(object):
