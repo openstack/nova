@@ -206,7 +206,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                or FLAGS.start_guests_on_host_boot:
                 LOG.info(_('Rebooting instance %(inst_name)s after '
                             'nova-compute restart.'), locals())
-                self.reboot_instance(context, instance['id'])
+                self.reboot_instance(context, instance['uuid'])
             elif drv_state == power_state.RUNNING:
                 # Hyper-V and VMWareAPI drivers will raise an exception
                 try:
