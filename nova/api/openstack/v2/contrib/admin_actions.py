@@ -108,8 +108,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
     @scheduler_api.redirect_handler
     def _migrate(self, input_dict, req, id):
         """Permit admins to migrate a server to a new host"""
+        context = req.environ['nova.context']
         try:
-            self.compute_api.resize(req.environ['nova.context'], id)
+            instance = self.compute_api.get(context, id)
+            self.compute_api.resize(req.environ['nova.context'], instance)
         except Exception, e:
             LOG.exception(_("Error in migrate %s"), e)
             raise exc.HTTPBadRequest()
