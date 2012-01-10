@@ -26,6 +26,7 @@ import inspect
 import json
 import lockfile
 import os
+import pyclbr
 import random
 import re
 import shlex
@@ -33,8 +34,9 @@ import socket
 import struct
 import sys
 import time
+import types
 import uuid
-import pyclbr
+import warnings
 from xml.sax import saxutils
 
 from eventlet import event
@@ -1222,3 +1224,170 @@ def temporary_mutation(obj, **kwargs):
                 del obj[attr]
             else:
                 setattr(obj, attr, old_value)
+
+
+def warn_deprecated_class(cls, msg):
+    """
+    Issues a warning to indicate that the given class is deprecated.
+    If a message is given, it is appended to the deprecation warning.
+    """
+
+    fullname = '%s.%s' % (cls.__module__, cls.__name__)
+    if msg:
+        fullmsg = _("Class %(fullname)s is deprecated: %(msg)s")
+    else:
+        fullmsg = _("Class %(fullname)s is deprecated")
+
+    # Issue the warning
+    warnings.warn(fullmsg % locals(), DeprecationWarning, stacklevel=3)
+
+
+def warn_deprecated_function(func, msg):
+    """
+    Issues a warning to indicate that the given function is
+    deprecated.  If a message is given, it is appended to the
+    deprecation warning.
+    """
+
+    name = func.__name__
+
+    # Find the function's definition
+    sourcefile = inspect.getsourcefile(func)
+
+    # Find the line number, if possible
+    if inspect.ismethod(func):
+        code = func.im_func.func_code
+    else:
+        code = func.func_code
+    lineno = getattr(code, 'co_firstlineno', None)
+
+    if lineno is None:
+        location = sourcefile
+    else:
+        location = "%s:%d" % (sourcefile, lineno)
+
+    # Build up the message
+    if msg:
+        fullmsg = _("Function %(name)s in %(location)s is deprecated: %(msg)s")
+    else:
+        fullmsg = _("Function %(name)s in %(location)s is deprecated")
+
+    # Issue the warning
+    warnings.warn(fullmsg % locals(), DeprecationWarning, stacklevel=3)
+
+
+def _stubout(klass, message):
+    """
+    Scans a class and generates wrapping stubs for __new__() and every
+    class and static method.  Returns a dictionary which can be passed
+    to type() to generate a wrapping class.
+    """
+
+    overrides = {}
+
+    def makestub_class(name, func):
+        """
+        Create a stub for wrapping class methods.
+        """
+
+        def stub(cls, *args, **kwargs):
+            warn_deprecated_class(klass, message)
+            return func(*args, **kwargs)
+
+        # Overwrite the stub's name
+        stub.__name__ = name
+        stub.func_name = name
+
+        return classmethod(stub)
+
+    def makestub_static(name, func):
+        """
+        Create a stub for wrapping static methods.
+        """
+
+        def stub(*args, **kwargs):
+            warn_deprecated_class(klass, message)
+            return func(*args, **kwargs)
+
+        # Overwrite the stub's name
+        stub.__name__ = name
+        stub.func_name = name
+
+        return staticmethod(stub)
+
+    for name, kind, _klass, _obj in inspect.classify_class_attrs(klass):
+        # We're only interested in __new__(), class methods, and
+        # static methods...
+        if (name != '__new__' and
+            kind not in ('class method', 'static method')):
+            continue
+
+        # Get the function...
+        func = getattr(klass, name)
+
+        # Override it in the class
+        if kind == 'class method':
+            stub = makestub_class(name, func)
+        elif kind == 'static method' or name == '__new__':
+            stub = makestub_static(name, func)
+
+        # Save it in the overrides dictionary...
+        overrides[name] = stub
+
+    # Apply the overrides
+    for name, stub in overrides.items():
+        setattr(klass, name, stub)
+
+
+def deprecated(message=''):
+    """
+    Marks a function, class, or method as being deprecated.  For
+    functions and methods, emits a warning each time the function or
+    method is called.  For classes, generates a new subclass which
+    will emit a warning each time the class is instantiated, or each
+    time any class or static method is called.
+
+    If a message is passed to the decorator, that message will be
+    appended to the emitted warning.  This may be used to suggest an
+    alternate way of achieving the desired effect, or to explain why
+    the function, class, or method is deprecated.
+    """
+
+    def decorator(f_or_c):
+        # Make sure we can deprecate it...
+        if not callable(f_or_c) or isinstance(f_or_c, types.ClassType):
+            warnings.warn("Cannot mark object %r as deprecated" % f_or_c,
+                          DeprecationWarning, stacklevel=2)
+            return f_or_c
+
+        # If we're deprecating a class, create a subclass of it and
+        # stub out all the class and static methods
+        if inspect.isclass(f_or_c):
+            klass = f_or_c
+            _stubout(klass, message)
+            return klass
+
+        # OK, it's a function; use a traditional wrapper...
+        func = f_or_c
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            warn_deprecated_function(func, message)
+
+            return func(*args, **kwargs)
+
+        return wrapper
+    return decorator
+
+
+def _showwarning(message, category, filename, lineno, file=None, line=None):
+    """
+    Redirect warnings into logging.
+    """
+
+    fmtmsg = warnings.formatwarning(message, category, filename, lineno, line)
+    LOG.warning(fmtmsg)
+
+
+# Install our warnings handler
+warnings.showwarning = _showwarning

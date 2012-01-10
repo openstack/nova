@@ -535,3 +535,113 @@ class MonkeyPatchTestCase(test.TestCase):
             in nova.tests.monkey_patch_example.CALLED_FUNCTION)
         self.assertFalse(package_b + 'ExampleClassB.example_method_add'
             in nova.tests.monkey_patch_example.CALLED_FUNCTION)
+
+
+class DeprecationTest(test.TestCase):
+    def setUp(self):
+        super(DeprecationTest, self).setUp()
+
+        def fake_warn_deprecated_class(cls, msg):
+            self.warn = ('class', cls, msg)
+
+        def fake_warn_deprecated_function(func, msg):
+            self.warn = ('function', func, msg)
+
+        self.stubs.Set(utils, 'warn_deprecated_class',
+                       fake_warn_deprecated_class)
+        self.stubs.Set(utils, 'warn_deprecated_function',
+                       fake_warn_deprecated_function)
+        self.warn = None
+
+    def test_deprecated_function_no_message(self):
+        def test_function():
+            pass
+
+        decorated = utils.deprecated()(test_function)
+
+        decorated()
+        self.assertEqual(self.warn, ('function', test_function, ''))
+
+    def test_deprecated_function_with_message(self):
+        def test_function():
+            pass
+
+        decorated = utils.deprecated('string')(test_function)
+
+        decorated()
+        self.assertEqual(self.warn, ('function', test_function, 'string'))
+
+    def test_deprecated_class_no_message(self):
+        @utils.deprecated()
+        class TestClass(object):
+            pass
+
+        TestClass()
+        self.assertEqual(self.warn, ('class', TestClass, ''))
+
+    def test_deprecated_class_with_message(self):
+        @utils.deprecated('string')
+        class TestClass(object):
+            pass
+
+        TestClass()
+        self.assertEqual(self.warn, ('class', TestClass, 'string'))
+
+    def test_deprecated_classmethod_no_message(self):
+        @utils.deprecated()
+        class TestClass(object):
+            @classmethod
+            def class_method(cls):
+                pass
+
+        TestClass.class_method()
+        self.assertEqual(self.warn, ('class', TestClass, ''))
+
+    def test_deprecated_classmethod_with_message(self):
+        @utils.deprecated('string')
+        class TestClass(object):
+            @classmethod
+            def class_method(cls):
+                pass
+
+        TestClass.class_method()
+        self.assertEqual(self.warn, ('class', TestClass, 'string'))
+
+    def test_deprecated_staticmethod_no_message(self):
+        @utils.deprecated()
+        class TestClass(object):
+            @staticmethod
+            def static_method():
+                pass
+
+        TestClass.static_method()
+        self.assertEqual(self.warn, ('class', TestClass, ''))
+
+    def test_deprecated_staticmethod_with_message(self):
+        @utils.deprecated('string')
+        class TestClass(object):
+            @staticmethod
+            def static_method():
+                pass
+
+        TestClass.static_method()
+        self.assertEqual(self.warn, ('class', TestClass, 'string'))
+
+    def test_deprecated_instancemethod(self):
+        @utils.deprecated()
+        class TestClass(object):
+            def instance_method(self):
+                pass
+
+        # Instantiate the class...
+        obj = TestClass()
+        self.assertEqual(self.warn, ('class', TestClass, ''))
+
+        # Reset warn...
+        self.warn = None
+
+        # Call the instance method...
+        obj.instance_method()
+
+        # Make sure that did *not* generate a warning
+        self.assertEqual(self.warn, None)
