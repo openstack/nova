@@ -1,0 +1,11 @@
+{
+    "true" : [],
+    "compute:create_instance" :          [],
+    "compute:attach_network" :  [],
+    "compute:attach_volume" :   [],
+    "compute:list_instances":   [],
+    "compute:get_instance":     [],
+    "network:attach_network" :  [],
+    "volume:create_volume":     [],
+    "volume:attach_volume":     []
+}
