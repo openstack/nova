@@ -216,7 +216,7 @@ class S3ImageService(object):
         def _translate_dependent_image_id(image_key, image_id):
             image_id = ec2utils.ec2_id_to_id(image_id)
             image_uuid = self.get_image_uuid(context, image_id)
-            properties['image_id'] = image_uuid
+            properties[image_key] = image_uuid
 
         if kernel_id:
             _translate_dependent_image_id('kernel_id', kernel_id)
@@ -248,7 +248,7 @@ class S3ImageService(object):
         return manifest, image, image_uuid
 
     def _s3_create(self, context, metadata):
-        """Gets a manifext from s3 and makes an image."""
+        """Gets a manifest from s3 and makes an image."""
 
         image_path = tempfile.mkdtemp(dir=FLAGS.image_decryption_dir)
 
