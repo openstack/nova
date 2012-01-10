@@ -2062,7 +2062,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_resize_request_spec(self):
         def _fake_cast(context, args):
             request_spec = args['args']['request_spec']
-            self.assertEqual(request_spec['original_host'], 'host2')
+            instance_properties = request_spec['instance_properties']
+            self.assertEqual(instance_properties['host'], 'host2')
             self.assertEqual(request_spec['avoid_original_host'], True)
 
         self.stubs.Set(self.compute_api, '_cast_scheduler_message',
@@ -2080,7 +2081,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_resize_request_spec_noavoid(self):
         def _fake_cast(context, args):
             request_spec = args['args']['request_spec']
-            self.assertEqual(request_spec['original_host'], 'host2')
+            instance_properties = request_spec['instance_properties']
+            self.assertEqual(instance_properties['host'], 'host2')
             self.assertEqual(request_spec['avoid_original_host'], False)
 
         self.stubs.Set(self.compute_api, '_cast_scheduler_message',

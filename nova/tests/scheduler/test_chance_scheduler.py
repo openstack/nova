@@ -30,7 +30,7 @@ class ChanceSchedulerTestCase(test.TestCase):
         sched = chance.ChanceScheduler()
 
         hosts = ['host1', 'host2', 'host3']
-        request_spec = dict(original_host='host2',
+        request_spec = dict(instance_properties=dict(host='host2'),
                             avoid_original_host=True)
 
         filtered = sched._filter_hosts(request_spec, hosts)
@@ -43,7 +43,7 @@ class ChanceSchedulerTestCase(test.TestCase):
         sched = chance.ChanceScheduler()
 
         hosts = ['host1', 'host2', 'host3']
-        request_spec = dict(original_host='host2',
+        request_spec = dict(instance_properties=dict(host='host2'),
                             avoid_original_host=False)
 
         filtered = sched._filter_hosts(request_spec, hosts)
