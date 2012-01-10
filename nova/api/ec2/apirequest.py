@@ -108,7 +108,13 @@ class APIRequest(object):
 
         response = xml.toxml()
         xml.unlink()
-        LOG.debug(response)
+
+        # Don't write private key to log
+        if self.action != "CreateKeyPair":
+            LOG.debug(response)
+        else:
+            LOG.debug("CreateKeyPair: Return Private Key")
+
         return response
 
     def _render_dict(self, xml, el, data):
