@@ -33,11 +33,17 @@ class Mount(mount.Mount):
         self.mapped = False
 
     def mnt_dev(self):
+        try:
+            partition = int(self.partition or 0)
+        except ValueError:
+            self.error = _('unsupported partition: %s') % self.partition
+            return False
+
         args = ('guestmount', '--rw', '-a', self.image)
-        if self.partition == -1:
+        if partition == -1:
             args += ('-i',)  # find the OS partition
-        elif self.partition:
-            args += ('-m', '/dev/sda%d' % self.partition)
+        elif partition:
+            args += ('-m', '/dev/sda%d' % partition)
         else:
             # We don't resort to -i for this case yet,
             # as some older versions of libguestfs
