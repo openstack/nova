@@ -54,7 +54,7 @@ class ConsoleOutputExtensionTest(test.TestCase):
 
     def test_get_text_console_instance_action(self):
         body = {'os-getConsoleOutput': {}}
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -66,7 +66,7 @@ class ConsoleOutputExtensionTest(test.TestCase):
 
     def test_get_console_output_with_tail(self):
         body = {'os-getConsoleOutput': {'length': 3}}
-        req = webob.Request.blank('/v2/123/servers/1/action')
+        req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -78,7 +78,7 @@ class ConsoleOutputExtensionTest(test.TestCase):
     def test_get_text_console_no_instance(self):
         self.stubs.Set(compute.API, 'get', fake_get_not_found)
         body = {'os-getConsoleOutput': {}}
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -88,7 +88,7 @@ class ConsoleOutputExtensionTest(test.TestCase):
 
     def test_get_text_console_bad_body(self):
         body = {}
-        req = webob.Request.blank('/v1.1/123/servers/1/action')
+        req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"

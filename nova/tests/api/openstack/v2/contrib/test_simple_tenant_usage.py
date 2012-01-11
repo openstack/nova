@@ -90,7 +90,7 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_index(self):
         req = webob.Request.blank(
-                    '/v2/123/os-simple-tenant-usage?start=%s&end=%s' %
+                    '/v2/faketenant_0/os-simple-tenant-usage?start=%s&end=%s' %
                     (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
@@ -116,7 +116,7 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_detailed_index(self):
         req = webob.Request.blank(
-                    '/v2/123/os-simple-tenant-usage?'
+                    '/v2/faketenant_0/os-simple-tenant-usage?'
                     'detailed=1&start=%s&end=%s' %
                     (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
@@ -134,13 +134,14 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_index_fails_for_nonadmin(self):
         req = webob.Request.blank(
-                    '/v2/123/os-simple-tenant-usage?'
+                    '/v2/faketenant_0/os-simple-tenant-usage?'
                     'detailed=1&start=%s&end=%s' %
                     (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app(
+                               fake_auth_context=self.user_context))
         self.assertEqual(res.status_int, 403)
 
     def test_verify_show(self):

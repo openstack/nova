@@ -135,7 +135,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         app = v2.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/123/extensions")
+        request = webob.Request.blank("/fake/extensions")
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
 
@@ -162,7 +162,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         app = v2.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/123/extensions/FOXNSOX")
+        request = webob.Request.blank("/fake/extensions/FOXNSOX")
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
 
@@ -178,7 +178,7 @@ class ExtensionControllerTest(ExtensionTestCase):
     def test_get_non_existing_extension_json(self):
         app = v2.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/123/extensions/4")
+        request = webob.Request.blank("/fake/extensions/4")
         response = request.get_response(ext_midware)
         self.assertEqual(404, response.status_int)
 
@@ -186,7 +186,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         app = v2.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/123/extensions")
+        request = webob.Request.blank("/fake/extensions")
         request.accept = "application/xml"
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
@@ -214,7 +214,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         app = v2.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/123/extensions/FOXNSOX")
+        request = webob.Request.blank("/fake/extensions/FOXNSOX")
         request.accept = "application/xml"
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
@@ -252,7 +252,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         app = v2.APIRouter(manager)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/123/tweedles")
+        request = webob.Request.blank("/fake/tweedles")
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
@@ -264,7 +264,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         app = v2.APIRouter(manager)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/123/tweedles")
+        request = webob.Request.blank("/fake/tweedles")
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
@@ -276,7 +276,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         app = v2.APIRouter(manager)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/123/tweedles")
+        request = webob.Request.blank("/fake/tweedles")
         request.method = "POST"
         response = request.get_response(ser_midware)
         self.assertEqual(400, response.status_int)
@@ -297,7 +297,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         app = v2.APIRouter(manager)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/123/tweedles/1")
+        request = webob.Request.blank("/fake/tweedles/1")
         response = request.get_response(ser_midware)
         self.assertEqual(404, response.status_int)
         self.assertEqual('application/json', response.content_type)
@@ -337,7 +337,7 @@ class ExtensionManagerTest(ExtensionTestCase):
         app = v2.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/123/foxnsocks")
+        request = webob.Request.blank("/fake/foxnsocks")
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
@@ -386,7 +386,7 @@ class ActionExtensionTest(ExtensionTestCase):
 
     def test_extended_action(self):
         body = dict(add_tweedle=dict(name="test"))
-        url = "/123/servers/abcd/action"
+        url = "/fake/servers/abcd/action"
         response = self._send_server_action_request(url, body)
         self.assertEqual(200, response.status_int)
         self.assertEqual("Tweedle Beetle Added.", response.body)
@@ -398,7 +398,7 @@ class ActionExtensionTest(ExtensionTestCase):
 
     def test_invalid_action(self):
         body = dict(blah=dict(name="test"))  # Doesn't exist
-        url = "/123/servers/abcd/action"
+        url = "/fake/servers/abcd/action"
         response = self._send_server_action_request(url, body)
         self.assertEqual(400, response.status_int)
         self.assertEqual('application/json', response.content_type)
@@ -413,13 +413,13 @@ class ActionExtensionTest(ExtensionTestCase):
 
     def test_non_exist_action(self):
         body = dict(blah=dict(name="test"))
-        url = "/123/fdsa/1/action"
+        url = "/fake/fdsa/1/action"
         response = self._send_server_action_request(url, body)
         self.assertEqual(404, response.status_int)
 
     def test_failed_action(self):
         body = dict(fail=dict(name="test"))
-        url = "/123/servers/abcd/action"
+        url = "/fake/servers/abcd/action"
         response = self._send_server_action_request(url, body)
         self.assertEqual(400, response.status_int)
         self.assertEqual('application/json', response.content_type)
@@ -443,14 +443,14 @@ class RequestExtensionTest(ExtensionTestCase):
             return res
 
         req_ext = extensions.RequestExtension('GET',
-                                                '/v2/123/flavors/:(id)',
+                                                '/v2/fake/flavors/:(id)',
                                                 _req_handler)
 
         manager = StubExtensionManager(None, None, req_ext)
         app = fakes.wsgi_app(serialization=base_wsgi.Middleware)
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/v2/123/flavors/1?chewing=bluegoo")
+        request = webob.Request.blank("/v2/fake/flavors/1?chewing=bluegoo")
         request.environ['api.version'] = '2'
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)
@@ -462,7 +462,7 @@ class RequestExtensionTest(ExtensionTestCase):
         app = fakes.wsgi_app(serialization=base_wsgi.Middleware)
         ext_midware = extensions.ExtensionMiddleware(app)
         ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
-        request = webob.Request.blank("/v2/123/flavors/1?chewing=newblue")
+        request = webob.Request.blank("/v2/fake/flavors/1?chewing=newblue")
         request.environ['api.version'] = '2'
         response = request.get_response(ser_midware)
         self.assertEqual(200, response.status_int)

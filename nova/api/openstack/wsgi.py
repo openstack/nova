@@ -832,8 +832,10 @@ class Resource(wsgi.Application):
         action_args.update(contents)
 
         project_id = action_args.pop("project_id", None)
-        if 'nova.context' in request.environ and project_id:
-            request.environ['nova.context'].project_id = project_id
+        if ('nova.context' in request.environ and project_id
+            and project_id != request.environ['nova.context'].project_id):
+            msg = _("Malformed request url")
+            return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         response = None
         try:

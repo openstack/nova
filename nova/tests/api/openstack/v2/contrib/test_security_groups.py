@@ -124,7 +124,7 @@ class TestSecurityGroups(test.TestCase):
     def test_create_security_group(self):
         sg = security_group_template()
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         res_dict = self.controller.create(req, {'security_group': sg})
         self.assertEqual(res_dict['security_group']['name'], 'test')
         self.assertEqual(res_dict['security_group']['description'],
@@ -134,7 +134,7 @@ class TestSecurityGroups(test.TestCase):
         sg = security_group_template()
         del sg['name']
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, sg)
 
@@ -142,35 +142,35 @@ class TestSecurityGroups(test.TestCase):
         sg = security_group_template()
         del sg['description']
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
     def test_create_security_group_with_blank_name(self):
         sg = security_group_template(name='')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
     def test_create_security_group_with_whitespace_name(self):
         sg = security_group_template(name=' ')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
     def test_create_security_group_with_blank_description(self):
         sg = security_group_template(description='')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
     def test_create_security_group_with_whitespace_description(self):
         sg = security_group_template(description=' ')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
@@ -178,50 +178,50 @@ class TestSecurityGroups(test.TestCase):
         sg = security_group_template()
 
         # FIXME: Stub out _get instead of creating twice
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.controller.create(req, {'security_group': sg})
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
     def test_create_security_group_with_no_body(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, None)
 
     def test_create_security_group_with_no_security_group(self):
         body = {'no-securityGroup': None}
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, body)
 
     def test_create_security_group_above_255_characters_name(self):
         sg = security_group_template(name='1234567890' * 26)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
     def test_create_security_group_above_255_characters_description(self):
         sg = security_group_template(description='1234567890' * 26)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
     def test_create_security_group_non_string_name(self):
         sg = security_group_template(name=12)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
     def test_create_security_group_non_string_description(self):
         sg = security_group_template(description=12)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group': sg})
 
@@ -241,7 +241,7 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'security_group_get_by_project',
                        return_security_groups)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         res_dict = self.controller.index(req)
 
         self.assertEquals(res_dict, expected)
@@ -256,19 +256,19 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'security_group_get',
                        return_security_group)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups/2')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/2')
         res_dict = self.controller.show(req, '2')
 
         expected = {'security_group': sg}
         self.assertEquals(res_dict, expected)
 
     def test_get_security_group_by_invalid_id(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups/invalid')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/invalid')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                           req, 'invalid')
 
     def test_get_security_group_by_non_existing_id(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups/111111111')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/111111111')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, '111111111')
 
@@ -289,32 +289,32 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'security_group_get',
                        return_security_group)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups/1')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/1')
         self.controller.delete(req, '1')
 
         self.assertTrue(self.called)
 
     def test_delete_security_group_by_invalid_id(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups/invalid')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/invalid')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                           req, 'invalid')
 
     def test_delete_security_group_by_non_existing_id(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-groups/11111111')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/11111111')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, '11111111')
 
     def test_associate_by_non_existing_security_group_name(self):
         body = dict(addSecurityGroup=dict(name='non-existing'))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._addSecurityGroup, body, req, '1')
 
     def test_associate_by_invalid_server_id(self):
         body = dict(addSecurityGroup=dict(name='test'))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/invalid/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/invalid/action')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._addSecurityGroup, body, req, 'invalid')
 
@@ -322,7 +322,7 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', return_server)
         body = dict(addSecurityGroup=None)
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._addSecurityGroup, body, req, '1')
 
@@ -330,7 +330,7 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', return_server)
         body = dict(addSecurityGroup=dict())
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._addSecurityGroup, body, req, '1')
 
@@ -338,7 +338,7 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', return_server)
         body = dict(addSecurityGroup=dict(name="   "))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._addSecurityGroup, body, req, '1')
 
@@ -348,7 +348,7 @@ class TestSecurityGroups(test.TestCase):
                        return_server_nonexistent)
         body = dict(addSecurityGroup=dict(name="test"))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._addSecurityGroup, body, req, '1')
 
@@ -360,7 +360,7 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group_without_instances)
         body = dict(addSecurityGroup=dict(name="test"))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._addSecurityGroup, body, req, '1')
 
@@ -372,7 +372,7 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group_by_name)
         body = dict(addSecurityGroup=dict(name="test"))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._addSecurityGroup, body, req, '1')
 
@@ -390,13 +390,13 @@ class TestSecurityGroups(test.TestCase):
 
         body = dict(addSecurityGroup=dict(name="test"))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.manager._addSecurityGroup(body, req, '1')
 
     def test_disassociate_by_non_existing_security_group_name(self):
         body = dict(removeSecurityGroup=dict(name='non-existing'))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._removeSecurityGroup, body, req, '1')
 
@@ -405,7 +405,7 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group_by_name)
         body = dict(removeSecurityGroup=dict(name='test'))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/invalid/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/invalid/action')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._removeSecurityGroup, body, req,
                           'invalid')
@@ -414,7 +414,7 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', return_server)
         body = dict(removeSecurityGroup=None)
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._removeSecurityGroup, body, req, '1')
 
@@ -422,7 +422,7 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', return_server)
         body = dict(removeSecurityGroup=dict())
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._removeSecurityGroup, body, req, '1')
 
@@ -430,7 +430,7 @@ class TestSecurityGroups(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', return_server)
         body = dict(removeSecurityGroup=dict(name="   "))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._removeSecurityGroup, body, req, '1')
 
@@ -440,7 +440,7 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group_by_name)
         body = dict(removeSecurityGroup=dict(name="test"))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._removeSecurityGroup, body, req, '1')
 
@@ -452,7 +452,7 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group_by_name)
         body = dict(removeSecurityGroup=dict(name="test"))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._removeSecurityGroup, body, req, '1')
 
@@ -464,7 +464,7 @@ class TestSecurityGroups(test.TestCase):
                        return_security_group_without_instances)
         body = dict(removeSecurityGroup=dict(name="test"))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._removeSecurityGroup, body, req, '1')
 
@@ -482,7 +482,7 @@ class TestSecurityGroups(test.TestCase):
 
         body = dict(removeSecurityGroup=dict(name="test"))
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/1/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.manager._removeSecurityGroup(body, req, '1')
 
 
@@ -517,7 +517,7 @@ class TestSecurityGroupRules(test.TestCase):
     def test_create_by_cidr(self):
         rule = security_group_rule_template(cidr='10.2.3.124/24')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
 
         security_group_rule = res_dict['security_group_rule']
@@ -529,7 +529,7 @@ class TestSecurityGroupRules(test.TestCase):
     def test_create_by_group_id(self):
         rule = security_group_rule_template(group_id='1')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
 
         security_group_rule = res_dict['security_group_rule']
@@ -550,7 +550,7 @@ class TestSecurityGroupRules(test.TestCase):
                 to_port=22,
                 parent_group_id=2,
                 cidr="10.2.3.124/2433")
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -562,7 +562,7 @@ class TestSecurityGroupRules(test.TestCase):
                 parent_group_id=2,
                 cidr="10.2.3.124/24")
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -573,7 +573,7 @@ class TestSecurityGroupRules(test.TestCase):
                 to_port=256,
                 parent_group_id=2,
                 cidr="10.2.3.124/24")
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -582,25 +582,25 @@ class TestSecurityGroupRules(test.TestCase):
 
         self.parent_security_group['rules'] = [security_group_rule_db(rule)]
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_no_body(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, None)
 
     def test_create_with_no_security_group_rule_in_body(self):
         rules = {'test': 'test'}
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, req, rules)
 
     def test_create_with_invalid_parent_group_id(self):
         rule = security_group_rule_template(parent_group_id='invalid')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -608,7 +608,7 @@ class TestSecurityGroupRules(test.TestCase):
         rule = security_group_rule_template(group_id='invalid',
                                             parent_group_id='1111111111111')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -616,7 +616,7 @@ class TestSecurityGroupRules(test.TestCase):
         rule = security_group_rule_template(ip_protocol='invalid-protocol',
                                             cidr='10.2.2.0/24')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -624,7 +624,7 @@ class TestSecurityGroupRules(test.TestCase):
         rule = security_group_rule_template(cidr='10.2.2.0/24')
         del rule['ip_protocol']
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -632,7 +632,7 @@ class TestSecurityGroupRules(test.TestCase):
         rule = security_group_rule_template(from_port='666666',
                                             cidr='10.2.2.0/24')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -640,7 +640,7 @@ class TestSecurityGroupRules(test.TestCase):
         rule = security_group_rule_template(to_port='666666',
                                             cidr='10.2.2.0/24')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -648,7 +648,7 @@ class TestSecurityGroupRules(test.TestCase):
         rule = security_group_rule_template(from_port='invalid',
                                             cidr='10.2.2.0/24')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -656,7 +656,7 @@ class TestSecurityGroupRules(test.TestCase):
         rule = security_group_rule_template(to_port='invalid',
                                             cidr='10.2.2.0/24')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -664,7 +664,7 @@ class TestSecurityGroupRules(test.TestCase):
         rule = security_group_rule_template(cidr='10.2.2.0/24')
         del rule['from_port']
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -672,21 +672,21 @@ class TestSecurityGroupRules(test.TestCase):
         rule = security_group_rule_template(cidr='10.2.2.0/24')
         del rule['to_port']
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_invalid_cidr(self):
         rule = security_group_rule_template(cidr='10.2.2222.0/24')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_no_cidr_group(self):
         rule = security_group_rule_template()
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
 
         security_group_rule = res_dict['security_group_rule']
@@ -699,28 +699,28 @@ class TestSecurityGroupRules(test.TestCase):
     def test_create_with_invalid_group_id(self):
         rule = security_group_rule_template(group_id='invalid')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_empty_group_id(self):
         rule = security_group_rule_template(group_id='')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_nonexist_group_id(self):
         rule = security_group_rule_template(group_id='222222')
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_rule_with_same_group_parent_id(self):
         rule = security_group_rule_template(group_id=2)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
@@ -738,17 +738,17 @@ class TestSecurityGroupRules(test.TestCase):
         self.stubs.Set(nova.db, 'security_group_rule_destroy',
                        security_group_rule_destroy)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules/10')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules/10')
         self.controller.delete(req, '10')
 
     def test_delete_invalid_rule_id(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules' +
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules' +
                                       '/invalid')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                           req, 'invalid')
 
     def test_delete_non_existing_rule_id(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-security-group-rules' +
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules' +
                                       '/22222222222222')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, '22222222222222')

@@ -1043,7 +1043,7 @@ class ServersControllerTest(test.TestCase):
                 return_server_with_attributes(name='server_test',
                                               access_ipv4='0.0.0.0',
                                               access_ipv6='beef::0123'))
-        req = fakes.HTTPRequest.blank('/v2/123/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {
@@ -1075,7 +1075,7 @@ class ServersControllerTest(test.TestCase):
     def test_update_server_access_ipv4(self):
         self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(access_ipv4='0.0.0.0'))
-        req = fakes.HTTPRequest.blank('/v2/123/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {'accessIPv4': '0.0.0.0'}}
@@ -1088,7 +1088,7 @@ class ServersControllerTest(test.TestCase):
     def test_update_server_access_ipv6(self):
         self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(access_ipv6='beef::0123'))
-        req = fakes.HTTPRequest.blank('/v2/123/servers/%s' % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {'accessIPv6': 'beef::0123'}}
@@ -1420,7 +1420,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1448,7 +1448,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1476,7 +1476,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1502,7 +1502,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers',
+        req = fakes.HTTPRequest.blank('/v2/fake/servers',
                                       use_admin_context=True)
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -1561,7 +1561,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1649,13 +1649,13 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, req, body)
 
     def test_create_instance_invalid_flavor_id_int(self):
-        image_href = 'http://localhost/v2/123/images/2'
+        image_href = 'http://localhost/v2/fake/images/2'
         flavor_ref = -1
         body = dict(server=dict(
             name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = fakes.HTTPRequest.blank('/v2/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1681,7 +1681,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_config_drive(self):
         self.config_drive = True
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v2/123/flavors/3'
+        flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1696,7 +1696,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1708,7 +1708,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_config_drive_as_id(self):
         self.config_drive = 2
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v2/123/flavors/3'
+        flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1723,7 +1723,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1735,7 +1735,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_bad_config_drive(self):
         self.config_drive = "asdf"
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v2/123/flavors/3'
+        flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1750,7 +1750,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -1760,7 +1760,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_without_config_drive(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v2/123/flavors/3'
+        flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -1775,7 +1775,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"

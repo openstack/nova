@@ -113,8 +113,8 @@ class CloudpipeTest(test.TestCase):
         self.flags(allow_admin_api=True)
         self.app = fakes.wsgi_app()
         inner_app = v2.APIRouter()
-        adm_ctxt = context.get_admin_context()
-        self.app = auth.InjectContext(adm_ctxt, inner_app)
+        self.context = context.RequestContext('fake', 'fake', is_admin=True)
+        self.app = auth.InjectContext(self.context, inner_app)
         route = inner_app.map.match('/1234/os-cloudpipe')
         self.controller = route['controller'].controller
         fakes.stub_out_networking(self.stubs)
@@ -133,13 +133,12 @@ class CloudpipeTest(test.TestCase):
         # causes failures in AuthManagerLdapTestCase.  So use a fake object.
         self.controller.auth_manager = FakeAuthManager()
         self.stubs.Set(utils, 'vpn_ping', utils_vpn_ping)
-        self.context = context.get_admin_context()
         global EMPTY_INSTANCE_LIST
         EMPTY_INSTANCE_LIST = True
 
     def test_cloudpipe_list_none_running(self):
         """Should still get an entry per-project, just less descriptive."""
-        req = webob.Request.blank('/123/os-cloudpipe')
+        req = webob.Request.blank('/fake/os-cloudpipe')
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -150,7 +149,7 @@ class CloudpipeTest(test.TestCase):
     def test_cloudpipe_list(self):
         global EMPTY_INSTANCE_LIST
         EMPTY_INSTANCE_LIST = False
-        req = webob.Request.blank('/123/os-cloudpipe')
+        req = webob.Request.blank('/fake/os-cloudpipe')
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -162,7 +161,7 @@ class CloudpipeTest(test.TestCase):
 
     def test_cloudpipe_create(self):
         body = {'cloudpipe': {'project_id': 1}}
-        req = webob.Request.blank('/123/os-cloudpipe')
+        req = webob.Request.blank('/fake/os-cloudpipe')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -178,7 +177,7 @@ class CloudpipeTest(test.TestCase):
         self.stubs.SmartSet(self.controller.cloudpipe, 'launch_vpn_instance',
                             better_not_call_this)
         body = {'cloudpipe': {'project_id': 1}}
-        req = webob.Request.blank('/123/os-cloudpipe')
+        req = webob.Request.blank('/fake/os-cloudpipe')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['Content-Type'] = 'application/json'

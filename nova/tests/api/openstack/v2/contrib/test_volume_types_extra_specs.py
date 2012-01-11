@@ -58,7 +58,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
     def setUp(self):
         super(VolumeTypesExtraSpecsTest, self).setUp()
         fakes.stub_out_key_pair_funcs(self.stubs)
-        self.api_path = '/v2/123/os-volume-types/1/extra_specs'
+        self.api_path = '/v2/fake/os-volume-types/1/extra_specs'
         self.controller = volumetypes.VolumeTypeExtraSpecsController()
 
     def test_index(self):

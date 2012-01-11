@@ -61,7 +61,7 @@ class KeypairsTest(test.TestCase):
         self.context = context.get_admin_context()
 
     def test_keypair_list(self):
-        req = webob.Request.blank('/v2/123/os-keypairs')
+        req = webob.Request.blank('/v2/fake/os-keypairs')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -70,7 +70,7 @@ class KeypairsTest(test.TestCase):
 
     def test_keypair_create(self):
         body = {'keypair': {'name': 'create_test'}}
-        req = webob.Request.blank('/v2/123/os-keypairs')
+        req = webob.Request.blank('/v2/fake/os-keypairs')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -96,7 +96,7 @@ class KeypairsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v2/123/os-keypairs')
+        req = webob.Request.blank('/v2/fake/os-keypairs')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -108,7 +108,7 @@ class KeypairsTest(test.TestCase):
         self.assertFalse('private_key' in res_dict['keypair'])
 
     def test_keypair_delete(self):
-        req = webob.Request.blank('/v2/123/os-keypairs/FAKE')
+        req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
         req.method = 'DELETE'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())

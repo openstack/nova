@@ -35,7 +35,7 @@ class ImageMetaDataTest(test.TestCase):
         self.controller = image_metadata.Controller()
 
     def test_index(self):
-        req = fakes.HTTPRequest.blank('/v2/123/images/123/metadata')
+        req = fakes.HTTPRequest.blank('/v2/fake/images/123/metadata')
         res_dict = self.controller.index(req, '123')
         expected = {'metadata': {'key1': 'value1'}}
         self.assertEqual(res_dict, expected)

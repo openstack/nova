@@ -121,7 +121,7 @@ class SnapshotApiTest(test.TestCase):
                 "display_name": "Snapshot Test Name",
                 "display_description": "Snapshot Test Desc"}
         body = dict(snapshot=snapshot)
-        req = webob.Request.blank('/v1.1/777/os-snapshots')
+        req = webob.Request.blank('/v2/fake/os-snapshots')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -152,7 +152,7 @@ class SnapshotApiTest(test.TestCase):
                 "display_name": "Snapshot Test Name",
                 "display_description": "Snapshot Test Desc"}
         body = dict(snapshot=snapshot)
-        req = webob.Request.blank('/v1.1/777/os-snapshots')
+        req = webob.Request.blank('/v2/fake/os-snapshots')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -179,7 +179,7 @@ class SnapshotApiTest(test.TestCase):
         _last_param = {}
 
         snapshot_id = 123
-        req = webob.Request.blank('/v1.1/777/os-snapshots/%d' % snapshot_id)
+        req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
         req.method = 'DELETE'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -191,7 +191,7 @@ class SnapshotApiTest(test.TestCase):
         _last_param = {}
 
         snapshot_id = 234
-        req = webob.Request.blank('/v1.1/777/os-snapshots/%d' % snapshot_id)
+        req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
         req.method = 'DELETE'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -203,7 +203,7 @@ class SnapshotApiTest(test.TestCase):
         _last_param = {}
 
         snapshot_id = 123
-        req = webob.Request.blank('/v1.1/777/os-snapshots/%d' % snapshot_id)
+        req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
         req.method = 'GET'
         resp = req.get_response(fakes.wsgi_app())
 
@@ -220,14 +220,14 @@ class SnapshotApiTest(test.TestCase):
         _last_param = {}
 
         snapshot_id = 234
-        req = webob.Request.blank('/v1.1/777/os-snapshots/%d' % snapshot_id)
+        req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
         req.method = 'GET'
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 404)
         self.assertEqual(str(_last_param['snapshot_id']), str(snapshot_id))
 
     def test_snapshot_detail(self):
-        req = webob.Request.blank('/v1.1/777/os-snapshots/detail')
+        req = webob.Request.blank('/v2/fake/os-snapshots/detail')
         req.method = 'GET'
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)

@@ -46,7 +46,7 @@ class RescueTest(test.TestCase):
 
     def test_rescue_with_preset_password(self):
         body = {"rescue": {"adminPass": "AABBCC112233"}}
-        req = webob.Request.blank('/v2/123/servers/test_inst/action')
+        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -58,7 +58,7 @@ class RescueTest(test.TestCase):
 
     def test_rescue_generates_password(self):
         body = dict(rescue=None)
-        req = webob.Request.blank('/v2/123/servers/test_inst/action')
+        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -70,7 +70,7 @@ class RescueTest(test.TestCase):
 
     def test_unrescue(self):
         body = dict(unrescue=None)
-        req = webob.Request.blank('/v2/123/servers/test_inst/action')
+        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"

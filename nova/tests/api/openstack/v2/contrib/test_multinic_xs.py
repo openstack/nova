@@ -61,7 +61,7 @@ class FixedIpTest(test.TestCase):
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict(networkId='test_net'))
-        req = webob.Request.blank('/v2/123/servers/%s/action' % UUID)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -75,7 +75,7 @@ class FixedIpTest(test.TestCase):
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict())
-        req = webob.Request.blank('/v2/123/servers/%s/action' % UUID)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -89,7 +89,7 @@ class FixedIpTest(test.TestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict(address='10.10.10.1'))
-        req = webob.Request.blank('/v2/123/servers/%s/action' % UUID)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -103,7 +103,7 @@ class FixedIpTest(test.TestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict())
-        req = webob.Request.blank('/v2/123/servers/%s/action' % UUID)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
