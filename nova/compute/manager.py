@@ -192,19 +192,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = nova.context.get_admin_context()
         instances = self.db.instance_get_all_by_host(context, self.host)
         for instance in instances:
-            inst_name = instance['name']
+            instance_uuid = instance['uuid']
             db_state = instance['power_state']
             drv_state = self._get_power_state(context, instance)
 
             expect_running = db_state == power_state.RUNNING \
                              and drv_state != db_state
 
-            LOG.debug(_('Current state of %(inst_name)s is %(drv_state)s, '
+            LOG.debug(_('Current state of %(instance_uuid)s is %(drv_state)s, '
                         'state in DB is %(db_state)s.'), locals())
 
             if (expect_running and FLAGS.resume_guests_state_on_host_boot)\
                or FLAGS.start_guests_on_host_boot:
-                LOG.info(_('Rebooting instance %(inst_name)s after '
+                LOG.info(_('Rebooting instance %(instance_uuid)s after '
                             'nova-compute restart.'), locals())
                 self.reboot_instance(context, instance['id'])
             elif drv_state == power_state.RUNNING:
@@ -219,7 +219,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _get_power_state(self, context, instance):
         """Retrieve the power state for the given instance."""
-        LOG.debug(_('Checking state of %s'), instance['name'])
+        LOG.debug(_('Checking state of %s'), instance['uuid'])
         try:
             return self.driver.get_info(instance['name'])["state"]
         except exception.NotFound:
@@ -352,7 +352,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.terminate_instance(ctxt, instance_uuid)
         except Exception as ex:
             LOG.info(_("exception terminating the instance "
-                     "%(instance_id)s") % locals())
+                     "%(instance_uuid)s") % locals())
 
     def _run_instance(self, context, instance_uuid,
                       requested_networks=None,
@@ -917,7 +917,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 try:
                     self.driver.set_admin_password(instance_ref, new_pass)
                     LOG.audit(_("Instance %s: Root password set"),
-                                instance_ref["name"])
+                                instance_ref["uuid"])
                     self._instance_update(context,
                                           instance_id,
                                           task_state=None)
@@ -960,9 +960,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.warn(_('trying to inject a file into a non-running '
                     'instance: %(instance_uuid)s (state: %(instance_state)s '
                     'expected: %(expected_state)s)') % locals())
-        nm = instance_ref['name']
-        msg = _('instance %(nm)s: injecting file to %(path)s') % locals()
-        LOG.audit(msg)
+        instance_uuid = instance_ref['uuid']
+        msg = _('instance %(instance_uuid)s: injecting file to %(path)s')
+        LOG.audit(msg % locals())
         self.driver.inject_file(instance_ref, path, file_contents)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -978,9 +978,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.warn(_('trying to update agent on a non-running '
                     'instance: %(instance_uuid)s (state: %(instance_state)s '
                     'expected: %(expected_state)s)') % locals())
-        nm = instance_ref['name']
-        msg = _('instance %(nm)s: updating agent to %(url)s') % locals()
-        LOG.audit(msg)
+        instance_uuid = instance_ref['uuid']
+        msg = _('instance %(instance_uuid)s: updating agent to %(url)s')
+        LOG.audit(msg % locals())
         self.driver.agent_update(instance_ref, url, md5hash)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1497,8 +1497,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         is done by instance creation"""
 
         instance_id = instance['id']
+        instance_uuid = instance['uuid']
         context = context.elevated()
-        LOG.audit(_("instance %(instance_id)s: booting with "
+        LOG.audit(_("instance %(instance_uuid)s: booting with "
                     "volume %(volume_id)s at %(mountpoint)s") %
                   locals(), context=context)
         address = FLAGS.my_ip
@@ -1549,17 +1550,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.block_device_mapping_create(context, values)
         return True
 
-    def _detach_volume(self, context, instance_name, bdm):
+    def _detach_volume(self, context, instance, bdm):
         """Do the actual driver detach using block device mapping."""
+        instance_name = instance['name']
+        instance_uuid = instance['uuid']
         mp = bdm['device_name']
         volume_id = bdm['volume_id']
 
         LOG.audit(_("Detach volume %(volume_id)s from mountpoint %(mp)s"
-                " on instance %(instance_name)s") % locals(), context=context)
+                " on instance %(instance_uuid)s") % locals(), context=context)
 
         if instance_name not in self.driver.list_instances():
             LOG.warn(_("Detaching volume from unknown instance %s"),
-                     instance_name, context=context)
+                     instance_uuid, context=context)
         self.driver.detach_volume(utils.loads(bdm['connection_info']),
                                   instance_name,
                                   mp)
@@ -1572,7 +1575,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         instance_id = instance_ref['id']
         bdm = self._get_instance_volume_bdm(context, instance_id, volume_id)
-        self._detach_volume(context, instance_ref['name'], bdm)
+        self._detach_volume(context, instance_ref, bdm)
         self.volume_api.terminate_connection(context, volume_id, FLAGS.my_ip)
         self.volume_api.detach(context.elevated(), volume_id)
         self.db.block_device_mapping_destroy_by_instance_and_volume(
@@ -1590,7 +1593,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             bdm = self._get_instance_volume_bdm(context,
                                                 instance_id,
                                                 volume_id)
-            self._detach_volume(context, instance_ref['name'],
+            self._detach_volume(context, instance_ref,
                                 bdm['volume_id'], bdm['device_name'])
             self.volume_api.terminate_connection(context,
                                                  volume_id,
@@ -1684,7 +1687,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         block_device_info = \
             self._get_instance_volume_block_device_info(context, instance_id)
         if not block_device_info['block_device_mapping']:
-            LOG.info(_("%s has no volume."), instance_ref.name)
+            LOG.info(_("%s has no volume."), instance_ref['uuid'])
 
         self.driver.pre_live_migration(block_device_info)
 
@@ -1767,8 +1770,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         except Exception:
             with utils.save_and_reraise_exception():
-                i_name = instance_ref.name
-                msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
+                instance_uuid = instance_ref['uuid']
+                msg = _("Pre live migration for %(instance_uuid)s failed at"
+                        " %(dest)s")
                 LOG.exception(msg % locals())
                 self.rollback_live_migration(context, instance_ref, dest,
                                              block_migration)
@@ -1797,6 +1801,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         LOG.info(_('post_live_migration() is started..'))
         instance_id = instance_ref['id']
+        instance_uuid = instance_ref['uuid']
 
         # Detaching volumes.
         for bdm in self._get_instance_volume_bdms(ctxt, instance_id):
@@ -1814,14 +1819,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.unfilter_instance(instance_ref, network_info)
 
         # Database updating.
-        i_name = instance_ref.name
         try:
             # Not return if floating_ip is not found, otherwise,
             # instance never be accessible..
             floating_ip = self.db.instance_get_floating_address(ctxt,
                                                          instance_id)
             if not floating_ip:
-                LOG.info(_('No floating_ip is found for %s.'), i_name)
+                LOG.info(_('No floating_ip is found for %s.'), instance_uuid)
             else:
                 floating_ip_ref = self.db.floating_ip_get_by_address(ctxt,
                                                               floating_ip)
@@ -1829,10 +1833,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            floating_ip_ref['address'],
                                            {'host': dest})
         except exception.NotFound:
-            LOG.info(_('No floating_ip is found for %s.'), i_name)
+            LOG.info(_('No floating_ip is found for %s.'), instance_uuid)
         except Exception, e:
             LOG.error(_("Live migration: Unexpected error: "
-                        "%(i_name)s cannot inherit floating "
+                        "%(instance_uuid)s cannot inherit floating "
                         "ip.\n%(e)s") % (locals()))
 
         # Define domain at destination host, without doing it,
@@ -1840,7 +1844,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         rpc.call(ctxt,
                  self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
                      {"method": "post_live_migration_at_destination",
-                      "args": {'instance_id': instance_ref.id,
+                      "args": {'instance_id': instance_ref['id'],
                                'block_migration': block_migration}})
 
         # Restore instance state
@@ -1868,8 +1872,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # torn down
             self.driver.unplug_vifs(instance_ref, network_info)
 
-        LOG.info(_('Migrating %(i_name)s to %(dest)s finished successfully.')
-                 % locals())
+        LOG.info(_('Migrating %(instance_uuid)s to %(dest)s finished'
+                   ' successfully.') % locals())
         LOG.info(_("You may see the error \"libvirt: QEMU error: "
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."))
@@ -1885,7 +1889,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.info(_('Post operation of migraton started for %s .')
-                 % instance_ref.name)
+                 % instance_ref['uuid'])
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.post_live_migration_at_destination(context,
                                                        instance_ref,
@@ -2046,8 +2050,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             soft_deleted = instance.vm_state == vm_states.SOFT_DELETE
 
             if soft_deleted and old_enough:
-                instance_id = instance.id
-                LOG.info(_("Reclaiming deleted instance %(instance_id)s"),
+                instance_uuid = instance['uuid']
+                LOG.info(_("Reclaiming deleted instance %(instance_uuid)s"),
                          locals())
                 self._delete_instance(context, instance)
 
@@ -2106,17 +2110,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                         FLAGS.running_deleted_instance_timeout))
 
                 if erroneously_running and old_enough:
-                    instance_id = instance.id
-                    name_label = instance.name
+                    instance_id = instance['id']
+                    instance_uuid = instance['uuid']
+                    name_label = instance['name']
 
                     if action == "log":
-                        LOG.warning(_("Detected instance %(instance_id)s with"
-                                      " name label '%(name_label)s' which is"
-                                      " marked as DELETED but still present on"
-                                      " host."), locals())
+                        LOG.warning(_("Detected instance %(instance_uuid)s"
+                                      " with name label '%(name_label)s' which"
+                                      " is marked as DELETED but still present"
+                                      " on host."), locals())
 
                     elif action == 'reap':
-                        LOG.info(_("Destroying instance %(instance_id)s with"
+                        LOG.info(_("Destroying instance %(instance_uuid)s with"
                                    " name label '%(name_label)s' which is"
                                    " marked as DELETED but still present on"
                                    " host."), locals())
