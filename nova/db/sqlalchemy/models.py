@@ -934,7 +934,7 @@ def register_models():
     """
     from sqlalchemy import create_engine
     models = (Service, Instance, InstanceActions, InstanceTypes,
-              Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
+              Volume, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
