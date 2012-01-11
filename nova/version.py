@@ -14,13 +14,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-NOVA_VERSION = ['2012', '1']
-YEAR, COUNT = NOVA_VERSION
+NOVA_VERSION = ['2012', '1', None]
+YEAR, COUNT, REVISION = NOVA_VERSION
 FINAL = False   # This becomes true at Release Candidate time
 
 
 def canonical_version_string():
-    return '.'.join([YEAR, COUNT])
+    return '.'.join(filter(None, NOVA_VERSION))
 
 
 def version_string():
