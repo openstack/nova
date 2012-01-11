@@ -22,13 +22,13 @@ except ImportError:
                     'revno': 0}
 
 
-NOVA_VERSION = ['2011', '3']
-YEAR, COUNT = NOVA_VERSION
+NOVA_VERSION = ['2011', '3', None]
+YEAR, COUNT, REVISION = NOVA_VERSION
 FINAL = True    # This becomes true at Release Candidate time
 
 
 def canonical_version_string():
-    return '.'.join([YEAR, COUNT])
+    return '.'.join(filter(None, NOVA_VERSION))
 
 
 def version_string():
