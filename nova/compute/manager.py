@@ -928,6 +928,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_ref["uuid"],
                               memory_mb=instance_type['memory_mb'],
+                              host=migration_ref['source_compute'],
                               vcpus=instance_type['vcpus'],
                               local_gb=instance_type['local_gb'],
                               instance_type_id=instance_type['id'])
