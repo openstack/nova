@@ -165,7 +165,7 @@ class CreateserverextTest(test.TestCase):
         return {'server': server}
 
     def _get_create_request_json(self, body_dict):
-        req = webob.Request.blank('/v1.1/123/os-create-server-ext')
+        req = webob.Request.blank('/v1.1/fake/os-create-server-ext')
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body_dict)
@@ -209,7 +209,7 @@ class CreateserverextTest(test.TestCase):
         return ''.join(body_parts)
 
     def _get_create_request_xml(self, body_dict):
-        req = webob.Request.blank('/v1.1/123/os-create-server-ext')
+        req = webob.Request.blank('/v1.1/fake/os-create-server-ext')
         req.content_type = 'application/xml'
         req.accept = 'application/xml'
         req.method = 'POST'
@@ -392,7 +392,7 @@ class CreateserverextTest(test.TestCase):
 
     def test_get_server_by_id_verify_security_groups_json(self):
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
-        req = webob.Request.blank('/v1.1/123/os-create-server-ext/1')
+        req = webob.Request.blank('/v1.1/fake/os-create-server-ext/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 200)
@@ -403,7 +403,7 @@ class CreateserverextTest(test.TestCase):
 
     def test_get_server_by_id_verify_security_groups_xml(self):
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
-        req = webob.Request.blank('/v1.1/123/os-create-server-ext/1')
+        req = webob.Request.blank('/v1.1/fake/os-create-server-ext/1')
         req.headers['Accept'] = 'application/xml'
         response = req.get_response(fakes.wsgi_app())
         self.assertEquals(response.status_int, 200)

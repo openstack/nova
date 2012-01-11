@@ -78,7 +78,7 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(qs['injected_file_content_bytes'], 10240)
 
     def test_quotas_defaults(self):
-        uri = '/v1.1/fake_tenant/os-quota-sets/fake_tenant/defaults'
+        uri = '/v1.1/fake/os-quota-sets/fake_tenant/defaults'
         req = webob.Request.blank(uri)
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
@@ -100,7 +100,7 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(json.loads(res.body), expected)
 
     def test_quotas_show_as_admin(self):
-        req = webob.Request.blank('/v1.1/1234/os-quota-sets/1234')
+        req = webob.Request.blank('/v1.1/fake/os-quota-sets/1234')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app(
@@ -125,7 +125,7 @@ class QuotaSetsTest(test.TestCase):
                              'metadata_items': 128, 'injected_files': 5,
                              'injected_file_content_bytes': 10240}}
 
-        req = webob.Request.blank('/v1.1/1234/os-quota-sets/update_me')
+        req = webob.Request.blank('/v1.1/fake/os-quota-sets/update_me')
         req.method = 'PUT'
         req.body = json.dumps(updated_quota_set)
         req.headers['Content-Type'] = 'application/json'
@@ -142,7 +142,7 @@ class QuotaSetsTest(test.TestCase):
                              'metadata_items': 128, 'injected_files': 5,
                              'injected_file_content_bytes': 10240}}
 
-        req = webob.Request.blank('/v1.1/1234/os-quota-sets/update_me')
+        req = webob.Request.blank('/v1.1/fake/os-quota-sets/update_me')
         req.method = 'PUT'
         req.body = json.dumps(updated_quota_set)
         req.headers['Content-Type'] = 'application/json'

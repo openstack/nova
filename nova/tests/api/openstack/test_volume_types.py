@@ -83,7 +83,7 @@ class VolumeTypesApiTest(test.TestCase):
     def test_volume_types_index(self):
         self.stubs.Set(volume_types, 'get_all_types',
                        return_volume_types_get_all_types)
-        req = webob.Request.blank('/v1.1/123/os-volume-types')
+        req = webob.Request.blank('/v1.1/fake/os-volume-types')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
@@ -97,7 +97,7 @@ class VolumeTypesApiTest(test.TestCase):
     def test_volume_types_index_no_data(self):
         self.stubs.Set(volume_types, 'get_all_types',
                        return_empty_volume_types_get_all_types)
-        req = webob.Request.blank('/v1.1/123/os-volume-types')
+        req = webob.Request.blank('/v1.1/fake/os-volume-types')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
@@ -107,7 +107,7 @@ class VolumeTypesApiTest(test.TestCase):
     def test_volume_types_show(self):
         self.stubs.Set(volume_types, 'get_volume_type',
                        return_volume_types_get_volume_type)
-        req = webob.Request.blank('/v1.1/123/os-volume-types/1')
+        req = webob.Request.blank('/v1.1/fake/os-volume-types/1')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
@@ -118,7 +118,7 @@ class VolumeTypesApiTest(test.TestCase):
     def test_volume_types_show_not_found(self):
         self.stubs.Set(volume_types, 'get_volume_type',
                        return_volume_types_get_volume_type)
-        req = webob.Request.blank('/v1.1/123/os-volume-types/777')
+        req = webob.Request.blank('/v1.1/fake/os-volume-types/777')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(404, res.status_int)
 
@@ -127,7 +127,7 @@ class VolumeTypesApiTest(test.TestCase):
                        return_volume_types_get_volume_type)
         self.stubs.Set(volume_types, 'destroy',
                        return_volume_types_destroy)
-        req = webob.Request.blank('/v1.1/123/os-volume-types/1')
+        req = webob.Request.blank('/v1.1/fake/os-volume-types/1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
@@ -137,7 +137,7 @@ class VolumeTypesApiTest(test.TestCase):
                        return_volume_types_get_volume_type)
         self.stubs.Set(volume_types, 'destroy',
                        return_volume_types_destroy)
-        req = webob.Request.blank('/v1.1/123/os-volume-types/777')
+        req = webob.Request.blank('/v1.1/fake/os-volume-types/777')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(404, res.status_int)
@@ -147,7 +147,7 @@ class VolumeTypesApiTest(test.TestCase):
                        return_volume_types_create)
         self.stubs.Set(volume_types, 'get_volume_type_by_name',
                        return_volume_types_get_by_name)
-        req = webob.Request.blank('/v1.1/123/os-volume-types')
+        req = webob.Request.blank('/v1.1/fake/os-volume-types')
         req.method = 'POST'
         req.body = '{"volume_type": {"name": "vol_type_1", '\
                                     '"extra_specs": {"key1": "value1"}}}'
@@ -164,7 +164,7 @@ class VolumeTypesApiTest(test.TestCase):
                        return_volume_types_create)
         self.stubs.Set(volume_types, 'get_volume_type_by_name',
                        return_volume_types_get_by_name)
-        req = webob.Request.blank('/v1.1/123/os-volume-types')
+        req = webob.Request.blank('/v1.1/fake/os-volume-types')
         req.method = 'POST'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())

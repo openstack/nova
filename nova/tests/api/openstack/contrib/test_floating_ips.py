@@ -147,7 +147,7 @@ class FloatingIpTest(test.TestCase):
         self.assertTrue('floating_ip' in view)
 
     def test_floating_ips_list(self):
-        req = webob.Request.blank('/v1.1/123/os-floating-ips')
+        req = webob.Request.blank('/v1.1/fake/os-floating-ips')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -162,7 +162,7 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_floating_ip_show(self):
-        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
+        req = webob.Request.blank('/v1.1/fake/os-floating-ips/1')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -176,7 +176,7 @@ class FloatingIpTest(test.TestCase):
                     'fixed_ip': {'address': '10.0.0.1', 'instance_id': 1}}
         self.stubs.Set(network.api.API, "get_floating_ip", get_floating_ip)
 
-        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
+        req = webob.Request.blank('/v1.1/fake/os-floating-ips/1')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
@@ -189,7 +189,7 @@ class FloatingIpTest(test.TestCase):
             raise(rpc.RemoteError('NoMoreFloatingIps', '', ''))
 
         self.stubs.Set(rpc, "call", fake_call)
-        req = webob.Request.blank('/v1.1/123/os-floating-ips')
+        req = webob.Request.blank('/v1.1/fake/os-floating-ips')
         req.method = 'POST'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
@@ -198,7 +198,7 @@ class FloatingIpTest(test.TestCase):
     def test_floating_ip_allocate(self):
         self.stubs.Set(network.api.API, "allocate_floating_ip",
                        network_api_allocate)
-        req = webob.Request.blank('/v1.1/123/os-floating-ips')
+        req = webob.Request.blank('/v1.1/fake/os-floating-ips')
         req.method = 'POST'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
@@ -226,7 +226,7 @@ class FloatingIpTest(test.TestCase):
                        get_floating_ip)
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        disassociate)
-        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
+        req = webob.Request.blank('/v1.1/fake/os-floating-ips/1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
@@ -246,7 +246,7 @@ class FloatingIpTest(test.TestCase):
                        fake_get_floating_ip)
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        fake_disassociate)
-        req = webob.Request.blank('/v1.1/123/os-floating-ips/1')
+        req = webob.Request.blank('/v1.1/fake/os-floating-ips/1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
@@ -256,7 +256,7 @@ class FloatingIpTest(test.TestCase):
         self.stubs.Set(network.api.API, "associate_floating_ip",
                        network_api_associate)
         body = dict(addFloatingIp=dict(address='11.0.0.1'))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -273,7 +273,7 @@ class FloatingIpTest(test.TestCase):
         db.floating_ip_update(self.context, self.address, {'project_id': 'bad',
                                                            'fixed_ip_id': 1})
         body = dict(addFloatingIp=dict(address=self.address))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -289,7 +289,7 @@ class FloatingIpTest(test.TestCase):
         db.floating_ip_update(self.context, self.address, {'project_id': None,
                                                            'fixed_ip_id': 1})
         body = dict(addFloatingIp=dict(address=self.address))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -306,15 +306,15 @@ class FloatingIpTest(test.TestCase):
         def fake_network_api_disassociate(local_self, ctx, floating_address):
             self.disassociated = True
 
-        db.floating_ip_update(self.context, self.address, {'project_id': '123',
-                                                           'fixed_ip_id': 1})
+        db.floating_ip_update(self.context, self.address,
+                              {'project_id': 'fake', 'fixed_ip_id': 1})
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        fake_network_api_disassociate)
         self.stubs.Set(db.api, "fixed_ip_get_by_address",
                        fake_fixed_ip_get_by_address)
 
         body = dict(addFloatingIp=dict(address=self.address))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -338,7 +338,7 @@ class FloatingIpTest(test.TestCase):
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        fake_disassociate)
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -362,7 +362,7 @@ class FloatingIpTest(test.TestCase):
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        fake_disassociate)
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -373,7 +373,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_bad_address_param_in_remove_floating_ip(self):
         body = dict(removeFloatingIp=dict(badparam='11.0.0.1'))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -383,7 +383,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_missing_dict_param_in_remove_floating_ip(self):
         body = dict(removeFloatingIp='11.0.0.1')
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -393,7 +393,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_bad_address_param_in_add_floating_ip(self):
         body = dict(addFloatingIp=dict(badparam='11.0.0.1'))
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -403,7 +403,7 @@ class FloatingIpTest(test.TestCase):
 
     def test_missing_dict_param_in_add_floating_ip(self):
         body = dict(addFloatingIp='11.0.0.1')
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"

@@ -36,7 +36,7 @@ class RescueTest(test.TestCase):
 
     def test_rescue(self):
         body = dict(rescue=None)
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -46,7 +46,7 @@ class RescueTest(test.TestCase):
 
     def test_unrescue(self):
         body = dict(unrescue=None)
-        req = webob.Request.blank('/v1.1/123/servers/test_inst/action')
+        req = webob.Request.blank('/v1.1/fake/servers/test_inst/action')
         req.method = "POST"
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"

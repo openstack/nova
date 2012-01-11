@@ -62,7 +62,7 @@ class VolumeTypesExtraSpecsTest(test.TestCase):
     def setUp(self):
         super(VolumeTypesExtraSpecsTest, self).setUp()
         fakes.stub_out_key_pair_funcs(self.stubs)
-        self.api_path = '/v1.1/123/os-volume-types/1/extra_specs'
+        self.api_path = '/v1.1/fake/os-volume-types/1/extra_specs'
 
     def test_index(self):
         self.stubs.Set(nova.db.api, 'volume_type_extra_specs_get',
