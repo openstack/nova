@@ -229,7 +229,7 @@ class ArgsAlreadyParsedError(Error):
         return ret
 
 
-class NoSuchOptError(Error):
+class NoSuchOptError(Error, AttributeError):
     """Raised if an opt which doesn't exist is referenced."""
 
     def __init__(self, opt_name, group=None):

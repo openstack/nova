@@ -598,6 +598,11 @@ class SadPathTestCase(BaseTestCase):
         self.assertFalse(hasattr(self.conf, 'foo'))
         self.assertRaises(NoSuchOptError, getattr, self.conf, 'foo')
 
+    def test_unknown_attr_is_attr_error(self):
+        self.conf([])
+        self.assertFalse(hasattr(self.conf, 'foo'))
+        self.assertRaises(AttributeError, getattr, self.conf, 'foo')
+
     def test_unknown_group_attr(self):
         self.conf.register_group(OptGroup('blaa'))
 
