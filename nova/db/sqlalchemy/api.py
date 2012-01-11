@@ -1128,6 +1128,7 @@ def instance_data_get_for_project(context, project_id):
 def instance_destroy(context, instance_id):
     session = get_session()
     with session.begin():
+        instance_ref = instance_get(context, instance_id, session=session)
         session.query(models.Instance).\
                 filter_by(id=instance_id).\
                 update({'deleted': True,
@@ -1148,7 +1149,9 @@ def instance_destroy(context, instance_id):
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
-        instance_info_cache_delete(context, instance_id, session=session)
+
+        instance_info_cache_delete(context, instance_ref['uuid'],
+                                   session=session)
 
 
 @require_context
@@ -1426,7 +1429,6 @@ def instance_get_project_vpn(context, project_id):
 def instance_get_fixed_addresses(context, instance_id):
     session = get_session()
     with session.begin():
-        instance_ref = instance_get(context, instance_id, session=session)
         try:
             fixed_ips = fixed_ip_get_by_instance(context, instance_id)
         except exception.NotFound:
@@ -1590,31 +1592,31 @@ def instance_info_cache_create(context, values):
 
 
 @require_context
-def instance_info_cache_get(context, instance_id, session=None):
+def instance_info_cache_get(context, instance_uuid, session=None):
     """Gets an instance info cache from the table.
 
-    :param instance_id: = uuid of the info cache's instance
+    :param instance_uuid: = uuid of the info cache's instance
     :param session: = optional session object
     """
     session = session or get_session()
 
     info_cache = session.query(models.InstanceInfoCache).\
-                         filter_by(instance_id=instance_id).\
+                         filter_by(instance_id=instance_uuid).\
                          first()
     return info_cache
 
 
 @require_context
-def instance_info_cache_update(context, instance_id, values,
+def instance_info_cache_update(context, instance_uuid, values,
                                session=None):
     """Update an instance info cache record in the table.
 
-    :param instance_id: = uuid of info cache's instance
+    :param instance_uuid: = uuid of info cache's instance
     :param values: = dict containing column values to update
     :param session: = optional session object
     """
     session = session or get_session()
-    info_cache = instance_info_cache_get(context, instance_id,
+    info_cache = instance_info_cache_get(context, instance_uuid,
                                          session=session)
 
     values['updated_at'] = literal_column('updated_at')
@@ -1626,15 +1628,15 @@ def instance_info_cache_update(context, instance_id, values,
 
 
 @require_context
-def instance_info_cache_delete(context, instance_id, session=None):
+def instance_info_cache_delete(context, instance_uuid, session=None):
     """Deletes an existing instance_info_cache record
 
-    :param instance_id: = uuid of the instance tied to the cache record
+    :param instance_uuid: = uuid of the instance tied to the cache record
     :param session: = optional session object
     """
     values = {'deleted': True,
               'deleted_at': utils.utcnow()}
-    instance_info_cache_update(context, instance_id, values, session)
+    instance_info_cache_update(context, instance_uuid, values, session)
 
 
 ###################

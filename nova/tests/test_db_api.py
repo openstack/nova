@@ -92,7 +92,7 @@ class DbApiTestCase(test.TestCase):
         inst1 = db.instance_create(self.context, args1)
         args2 = {'reservation_id': 'b', 'image_ref': 1, 'host': 'host1'}
         inst2 = db.instance_create(self.context, args2)
-        db.instance_destroy(self.context, inst1.id)
+        db.instance_destroy(self.context.elevated(), inst1['id'])
         result = db.instance_get_all_by_filters(self.context.elevated(), {})
         self.assertEqual(2, len(result))
         self.assertIn(inst1.id, [result[0].id, result[1].id])
