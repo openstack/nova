@@ -152,26 +152,61 @@ class NovaLogger(logging.Logger):
                 level = globals()[level_name]
         self.setLevel(level)
 
-    def _log(self, level, msg, args, exc_info=None, extra=None, context=None):
-        """Extract context from any log call."""
-        if not extra:
-            extra = {}
-        if context is None:
+    def _update_extra(self, params):
+        if 'extra' not in params:
+            params['extra'] = {}
+        extra = params['extra']
+        context = None
+        if 'context' in params:
+            context = params['context']
+            del params['context']
+        if not context:
             context = getattr(local.store, 'context', None)
         if context:
             extra.update(_dictify_context(context))
         extra.update({"nova_version": version.version_string_with_vcs()})
-        return logging.Logger._log(self, level, msg, args, exc_info, extra)
+
+    def log(self, lvl, msg, *args, **kwargs):
+        self._update_extra(kwargs)
+        super(NovaLogger, self).log(lvl, msg, *args, **kwargs)
+
+    def debug(self, msg, *args, **kwargs):
+        self._update_extra(kwargs)
+        super(NovaLogger, self).debug(msg, *args, **kwargs)
+
+    def info(self, msg, *args, **kwargs):
+        self._update_extra(kwargs)
+        super(NovaLogger, self).info(msg, *args, **kwargs)
+
+    def warn(self, msg, *args, **kwargs):
+        self._update_extra(kwargs)
+        super(NovaLogger, self).warn(msg, *args, **kwargs)
+
+    def warning(self, msg, *args, **kwargs):
+        self._update_extra(kwargs)
+        super(NovaLogger, self).warning(msg, *args, **kwargs)
+
+    def error(self, msg, *args, **kwargs):
+        self._update_extra(kwargs)
+        super(NovaLogger, self).error(msg, *args, **kwargs)
+
+    def critical(self, msg, *args, **kwargs):
+        self._update_extra(kwargs)
+        super(NovaLogger, self).critical(msg, *args, **kwargs)
+
+    def fatal(self, msg, *args, **kwargs):
+        self._update_extra(kwargs)
+        super(NovaLogger, self).fatal(msg, *args, **kwargs)
+
+    def audit(self, msg, *args, **kwargs):
+        """Shortcut for our AUDIT level."""
+        self._update_extra(kwargs)
+        self.log(AUDIT, msg, *args, **kwargs)
 
     def addHandler(self, handler):
         """Each handler gets our custom formatter."""
         handler.setFormatter(_formatter)
         return logging.Logger.addHandler(self, handler)
-
-    def audit(self, msg, *args, **kwargs):
-        """Shortcut for our AUDIT level."""
-        if self.isEnabledFor(AUDIT):
-            self._log(AUDIT, msg, args, **kwargs)
 
     def exception(self, msg, *args, **kwargs):
         """Logging.exception doesn't handle kwargs, so breaks context."""
@@ -330,7 +365,7 @@ logging.setLoggerClass(NovaLogger)
 
 def audit(msg, *args, **kwargs):
     """Shortcut for logging to root log with severity 'AUDIT'."""
-    logging.root.log(AUDIT, msg, *args, **kwargs)
+    logging.root.audit(msg, *args, **kwargs)
 
 
 class WritableLogger(object):
