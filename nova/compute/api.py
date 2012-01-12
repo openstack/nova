@@ -37,7 +37,7 @@ from nova import flags
 import nova.image
 from nova import log as logging
 from nova import network
-from nova import policy
+import nova.policy
 from nova import quota
 from nova import rpc
 from nova.scheduler import api as scheduler_api
