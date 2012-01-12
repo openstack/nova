@@ -28,7 +28,6 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import instance_types
-from nova import network
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -353,7 +352,6 @@ class Controller(wsgi.Controller):
     def __init__(self, **kwargs):
         super(Controller, self).__init__(**kwargs)
         self.compute_api = compute.API()
-        self.network_api = network.API()
 
     @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
