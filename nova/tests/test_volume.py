@@ -27,6 +27,7 @@ from nova import exception
 from nova import db
 from nova import flags
 from nova import log as logging
+import nova.policy
 from nova import rpc
 from nova import test
 from nova import utils
@@ -399,3 +400,47 @@ class ISCSITestCase(DriverTestCase):
         self.mox.UnsetStubs()
 
         self._detach_volume(volume_id_list)
+
+
+class VolumePolicyTestCase(test.TestCase):
+
+    def setUp(self):
+        super(VolumePolicyTestCase, self).setUp()
+
+        nova.policy.reset()
+        nova.policy.init()
+
+        self.context = context.get_admin_context()
+        self.volume_api = nova.volume.api.API()
+
+    def tearDown(self):
+        super(VolumePolicyTestCase, self).tearDown()
+        nova.policy.reset()
+
+    def _set_rules(self, rules):
+        nova.common.policy.set_brain(nova.common.policy.HttpBrain(rules))
+
+    def test_check_policy(self):
+        self.mox.StubOutWithMock(nova.policy, 'enforce')
+        target = {
+            'project_id': self.context.project_id,
+            'user_id': self.context.user_id,
+        }
+        nova.policy.enforce(self.context, 'volume:attach', target)
+        self.mox.ReplayAll()
+        nova.volume.api.check_policy(self.context, 'attach')
+        self.mox.UnsetStubs()
+        self.mox.VerifyAll()
+
+    def test_check_policy_with_target(self):
+        self.mox.StubOutWithMock(nova.policy, 'enforce')
+        target = {
+            'project_id': self.context.project_id,
+            'user_id': self.context.user_id,
+            'id': 2,
+        }
+        nova.policy.enforce(self.context, 'volume:attach', target)
+        self.mox.ReplayAll()
+        nova.volume.api.check_policy(self.context, 'attach', {'id': 2})
+        self.mox.UnsetStubs()
+        self.mox.VerifyAll()
