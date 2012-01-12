@@ -43,7 +43,7 @@ flags.DEFINE_string('san_login', 'admin',
                     'Username for SAN controller')
 flags.DEFINE_string('san_password', '',
                     'Password for SAN controller')
-flags.DEFINE_string('san_privatekey', '',
+flags.DEFINE_string('san_private_key', '',
                     'Filename of private key to use for SSH authentication')
 flags.DEFINE_string('san_clustername', '',
                     'Cluster name to use for creating volumes')
@@ -81,8 +81,8 @@ class SanISCSIDriver(ISCSIDriver):
                         port=FLAGS.san_ssh_port,
                         username=FLAGS.san_login,
                         password=FLAGS.san_password)
-        elif FLAGS.san_privatekey:
-            privatekeyfile = os.path.expanduser(FLAGS.san_privatekey)
+        elif FLAGS.san_private_key:
+            privatekeyfile = os.path.expanduser(FLAGS.san_private_key)
             # It sucks that paramiko doesn't support DSA keys
             privatekey = paramiko.RSAKey.from_private_key_file(privatekeyfile)
             ssh.connect(FLAGS.san_ip,
@@ -90,7 +90,7 @@ class SanISCSIDriver(ISCSIDriver):
                         username=FLAGS.san_login,
                         pkey=privatekey)
         else:
-            raise exception.Error(_("Specify san_password or san_privatekey"))
+            raise exception.Error(_("Specify san_password or san_private_key"))
         return ssh
 
     def _execute(self, *cmd, **kwargs):
@@ -127,9 +127,9 @@ class SanISCSIDriver(ISCSIDriver):
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
         if not self.run_local:
-            if not (FLAGS.san_password or FLAGS.san_privatekey):
+            if not (FLAGS.san_password or FLAGS.san_private_key):
                 raise exception.Error(_('Specify san_password or '
-                                        'san_privatekey'))
+                                        'san_private_key'))
 
         # The san_ip must always be set, because we use it for the target
         if not (FLAGS.san_ip):
@@ -184,7 +184,7 @@ class SolarisISCSIDriver(SanISCSIDriver):
 
     usermod -P'Primary Administrator' justinsb
 
-    Also make sure you can login using san_login & san_password/san_privatekey
+    Also make sure you can login using san_login & san_password/san_private_key
     """
 
     def _execute(self, *cmd, **kwargs):
