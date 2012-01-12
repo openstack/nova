@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Generic Node baseclass for all workers that run on hosts."""
+"""Generic Node base class for all workers that run on hosts."""
 
 import inspect
 import os
