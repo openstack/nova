@@ -7,6 +7,7 @@ from nova import exception
 from nova import test
 from nova import utils
 from nova.api.openstack import wsgi
+from nova.tests.api.openstack import fakes
 import nova.context
 
 
@@ -416,6 +417,27 @@ class RequestDeserializerTest(test.TestCase):
 
 
 class ResourceTest(test.TestCase):
+    def test_resource_call(self):
+        class Controller(object):
+            def index(self, req):
+                return 'off'
+
+        req = webob.Request.blank('/tests')
+        app = fakes.TestRouter(Controller())
+        response = req.get_response(app)
+        self.assertEqual(response.body, 'off')
+        self.assertEqual(response.status_int, 200)
+
+    def test_resource_not_authorized(self):
+        class Controller(object):
+            def index(self, req):
+                raise exception.NotAuthorized()
+
+        req = webob.Request.blank('/tests')
+        app = fakes.TestRouter(Controller())
+        response = req.get_response(app)
+        self.assertEqual(response.status_int, 401)
+
     def test_dispatch(self):
         class Controller(object):
             def index(self, req, pants=None):

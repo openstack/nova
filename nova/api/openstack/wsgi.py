@@ -840,6 +840,9 @@ class Resource(wsgi.Application):
         response = None
         try:
             action_result = self.dispatch(meth, request, action_args)
+        except exception.NotAuthorized as ex:
+            msg = unicode(ex)
+            response = Fault(webob.exc.HTTPUnauthorized(explanation=msg))
         except TypeError as ex:
             LOG.exception(ex)
             response = Fault(webob.exc.HTTPBadRequest())

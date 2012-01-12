@@ -17,6 +17,7 @@
 
 import datetime
 
+import routes
 import webob
 import webob.dec
 import webob.request
@@ -316,6 +317,14 @@ class HTTPRequest(webob.Request):
         out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
                 is_admin=use_admin_context)
         return out
+
+
+class TestRouter(wsgi.Router):
+    def __init__(self, controller):
+        mapper = routes.Mapper()
+        mapper.resource("test", "tests",
+                        controller=os_wsgi.Resource(controller))
+        super(TestRouter, self).__init__(mapper)
 
 
 class FakeAuthDatabase(object):
