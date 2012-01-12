@@ -20,6 +20,7 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova import flags
@@ -31,26 +32,17 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.admin_actions")
 
 
-class Admin_actions(extensions.ExtensionDescriptor):
-    """Enable admin-only server actions
-
-    Actions include: pause, unpause, suspend, resume, migrate,
-    resetNetwork, injectNetworkInfo, lock, unlock, createBackup
-    """
-
-    name = "AdminActions"
-    alias = "os-admin-actions"
-    namespace = "http://docs.openstack.org/compute/ext/admin-actions/api/v1.1"
-    updated = "2011-09-20T00:00:00+00:00"
-    admin_only = True
-
-    def __init__(self, ext_mgr):
-        super(Admin_actions, self).__init__(ext_mgr)
+class AdminActionsController(wsgi.Controller):
+    def __init__(self, *args, **kwargs):
+        super(AdminActionsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    # TODO(bcwaldon): These action names should be prefixed with 'os-'
+
+    @wsgi.action('pause')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def _pause(self, input_dict, req, id):
+    def _pause(self, req, id, body):
         """Permit Admins to pause the server"""
         ctxt = req.environ['nova.context']
         try:
@@ -65,9 +57,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @wsgi.action('unpause')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def _unpause(self, input_dict, req, id):
+    def _unpause(self, req, id, body):
         """Permit Admins to unpause the server"""
         ctxt = req.environ['nova.context']
         try:
@@ -82,9 +75,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @wsgi.action('suspend')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def _suspend(self, input_dict, req, id):
+    def _suspend(self, req, id, body):
         """Permit admins to suspend the server"""
         context = req.environ['nova.context']
         try:
@@ -99,9 +93,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @wsgi.action('resume')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def _resume(self, input_dict, req, id):
+    def _resume(self, req, id, body):
         """Permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
         try:
@@ -116,9 +111,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @wsgi.action('migrate')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def _migrate(self, input_dict, req, id):
+    def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host"""
         context = req.environ['nova.context']
         try:
@@ -132,9 +128,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
+    @wsgi.action('resetNetwork')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def _reset_network(self, input_dict, req, id):
+    def _reset_network(self, req, id, body):
         """Permit admins to reset networking on an server"""
         context = req.environ['nova.context']
         try:
@@ -146,9 +143,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @wsgi.action('injectNetworkInfo')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def _inject_network_info(self, input_dict, req, id):
+    def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server"""
         context = req.environ['nova.context']
         try:
@@ -162,9 +160,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @wsgi.action('lock')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def _lock(self, input_dict, req, id):
+    def _lock(self, req, id, body):
         """Permit admins to lock a server"""
         context = req.environ['nova.context']
         try:
@@ -178,9 +177,10 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
+    @wsgi.action('unlock')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def _unlock(self, input_dict, req, id):
+    def _unlock(self, req, id, body):
         """Permit admins to lock a server"""
         context = req.environ['nova.context']
         try:
@@ -194,7 +194,8 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
-    def _create_backup(self, input_dict, req, instance_id):
+    @wsgi.action('createBackup')
+    def _create_backup(self, req, id, body):
         """Backup a server instance.
 
         Images now have an `image_type` associated with them, which can be
@@ -208,7 +209,7 @@ class Admin_actions(extensions.ExtensionDescriptor):
         context = req.environ["nova.context"]
 
         try:
-            entity = input_dict["createBackup"]
+            entity = body["createBackup"]
         except (KeyError, TypeError):
             raise exc.HTTPBadRequest(_("Malformed request body"))
 
@@ -232,7 +233,7 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPBadRequest(explanation=msg)
 
         # preserve link to server in image properties
-        server_ref = os.path.join(req.application_url, 'servers', instance_id)
+        server_ref = os.path.join(req.application_url, 'servers', id)
         props = {'instance_ref': server_ref}
 
         metadata = entity.get('metadata', {})
@@ -244,7 +245,7 @@ class Admin_actions(extensions.ExtensionDescriptor):
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            instance = self.compute_api.get(context, instance_id)
+            instance = self.compute_api.get(context, id)
         except exception.NotFound:
             raise exc.HTTPNotFound(_("Instance not found"))
 
@@ -263,29 +264,21 @@ class Admin_actions(extensions.ExtensionDescriptor):
         resp.headers['Location'] = image_ref
         return resp
 
-    def get_actions(self):
-        actions = [
-            #TODO(bcwaldon): These actions should be prefixed with 'os-'
-            extensions.ActionExtension("servers", "pause", self._pause),
-            extensions.ActionExtension("servers", "unpause", self._unpause),
-            extensions.ActionExtension("servers", "suspend", self._suspend),
-            extensions.ActionExtension("servers", "resume", self._resume),
-            extensions.ActionExtension("servers", "migrate", self._migrate),
 
-            extensions.ActionExtension("servers",
-                                       "createBackup",
-                                       self._create_backup),
+class Admin_actions(extensions.ExtensionDescriptor):
+    """Enable admin-only server actions
 
-            extensions.ActionExtension("servers",
-                                       "resetNetwork",
-                                       self._reset_network),
+    Actions include: pause, unpause, suspend, resume, migrate,
+    resetNetwork, injectNetworkInfo, lock, unlock, createBackup
+    """
 
-            extensions.ActionExtension("servers",
-                                       "injectNetworkInfo",
-                                       self._inject_network_info),
+    name = "AdminActions"
+    alias = "os-admin-actions"
+    namespace = "http://docs.openstack.org/compute/ext/admin-actions/api/v1.1"
+    updated = "2011-09-20T00:00:00+00:00"
+    admin_only = True
 
-            extensions.ActionExtension("servers", "lock", self._lock),
-            extensions.ActionExtension("servers", "unlock", self._unlock),
-        ]
-
-        return actions
+    def get_controller_extensions(self):
+        controller = AdminActionsController()
+        extension = extensions.ControllerExtension(self, 'servers', controller)
+        return [extension]

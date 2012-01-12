@@ -23,11 +23,6 @@ from nova import exception
 from nova import test
 
 
-class FakeExtensionDescriptor(object):
-    def register(*args, **kwargs):
-        pass
-
-
 class FakeRequest(object):
     def __init__(self, context):
         self.environ = {'nova.context': context}
@@ -36,8 +31,7 @@ class FakeRequest(object):
 class DeferredDeleteExtensionTest(test.TestCase):
     def setUp(self):
         super(DeferredDeleteExtensionTest, self).setUp()
-        self.extension = deferred_delete.Deferred_delete(
-                FakeExtensionDescriptor())
+        self.extension = deferred_delete.DeferredDeleteController()
         self.fake_input_dict = {}
         self.fake_uuid = 'fake_uuid'
         self.fake_context = 'fake_context'
@@ -54,8 +48,8 @@ class DeferredDeleteExtensionTest(test.TestCase):
         compute.API.force_delete(self.fake_context, fake_instance)
 
         self.mox.ReplayAll()
-        res = self.extension._force_delete(self.fake_input_dict,
-                self.fake_req, self.fake_uuid)
+        res = self.extension._force_delete(self.fake_req, self.fake_uuid,
+                                           self.fake_input_dict)
         self.mox.VerifyAll()
         self.assertEqual(res.status_int, 202)
 
@@ -72,8 +66,8 @@ class DeferredDeleteExtensionTest(test.TestCase):
 
         self.mox.ReplayAll()
         self.assertRaises(webob.exc.HTTPConflict,
-                self.extension._force_delete, self.fake_input_dict,
-                self.fake_req, self.fake_uuid)
+                self.extension._force_delete, self.fake_req, self.fake_uuid,
+                self.fake_input_dict)
         self.mox.VerifyAll()
 
     def test_restore(self):
@@ -87,8 +81,8 @@ class DeferredDeleteExtensionTest(test.TestCase):
         compute.API.restore(self.fake_context, fake_instance)
 
         self.mox.ReplayAll()
-        res = self.extension._restore(self.fake_input_dict,
-                self.fake_req, self.fake_uuid)
+        res = self.extension._restore(self.fake_req, self.fake_uuid,
+                                      self.fake_input_dict)
         self.mox.VerifyAll()
         self.assertEqual(res.status_int, 202)
 
@@ -105,15 +99,5 @@ class DeferredDeleteExtensionTest(test.TestCase):
 
         self.mox.ReplayAll()
         self.assertRaises(webob.exc.HTTPConflict, self.extension._restore,
-                self.fake_input_dict, self.fake_req, self.fake_uuid)
+                self.fake_req, self.fake_uuid, self.fake_input_dict)
         self.mox.VerifyAll()
-
-    def test_get_actions(self):
-        result = self.extension.get_actions()
-        self.assertEqual(len(result), 2)
-
-        action_and_methods = [(x.action_name, x.handler) for x in result]
-        self.assertIn(('restore', self.extension._restore),
-                action_and_methods)
-        self.assertIn(('forceDelete', self.extension._force_delete),
-                action_and_methods)

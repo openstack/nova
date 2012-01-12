@@ -19,12 +19,45 @@ import webob
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova import log as logging
 
 
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.deferred-delete")
+
+
+class DeferredDeleteController(wsgi.Controller):
+    def __init__(self, *args, **kwargs):
+        super(DeferredDeleteController, self).__init__(*args, **kwargs)
+        self.compute_api = compute.API()
+
+    @wsgi.action('restore')
+    def _restore(self, req, id, body):
+        """Restore a previously deleted instance."""
+
+        context = req.environ["nova.context"]
+        instance = self.compute_api.get(context, id)
+        try:
+            self.compute_api.restore(context, instance)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'restore')
+        return webob.Response(status_int=202)
+
+    @wsgi.action('forceDelete')
+    def _force_delete(self, req, id, body):
+        """Force delete of instance before deferred cleanup."""
+
+        context = req.environ["nova.context"]
+        instance = self.compute_api.get(context, id)
+        try:
+            self.compute_api.force_delete(context, instance)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'forceDelete')
+        return webob.Response(status_int=202)
 
 
 class Deferred_delete(extensions.ExtensionDescriptor):
@@ -36,41 +69,7 @@ class Deferred_delete(extensions.ExtensionDescriptor):
                 "deferred-delete/api/v1.1"
     updated = "2011-09-01T00:00:00+00:00"
 
-    def __init__(self, ext_mgr):
-        super(Deferred_delete, self).__init__(ext_mgr)
-        self.compute_api = compute.API()
-
-    def _restore(self, input_dict, req, instance_id):
-        """Restore a previously deleted instance."""
-
-        context = req.environ["nova.context"]
-        instance = self.compute_api.get(context, instance_id)
-        try:
-            self.compute_api.restore(context, instance)
-        except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'restore')
-        return webob.Response(status_int=202)
-
-    def _force_delete(self, input_dict, req, instance_id):
-        """Force delete of instance before deferred cleanup."""
-
-        context = req.environ["nova.context"]
-        instance = self.compute_api.get(context, instance_id)
-        try:
-            self.compute_api.force_delete(context, instance)
-        except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'forceDelete')
-        return webob.Response(status_int=202)
-
-    def get_actions(self):
-        """Return the actions the extension adds, as required by contract."""
-        actions = [
-            extensions.ActionExtension("servers", "restore",
-                                       self._restore),
-            extensions.ActionExtension("servers", "forceDelete",
-                                       self._force_delete),
-        ]
-
-        return actions
+    def get_controller_extensions(self):
+        controller = DeferredDeleteController()
+        extension = extensions.ControllerExtension(self, 'servers', controller)
+        return [extension]

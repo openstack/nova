@@ -18,6 +18,7 @@ import webob
 from webob import exc
 
 from nova.api.openstack import extensions as exts
+from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova import flags
@@ -29,16 +30,9 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.rescue")
 
 
-class Rescue(exts.ExtensionDescriptor):
-    """Instance rescue mode"""
-
-    name = "Rescue"
-    alias = "os-rescue"
-    namespace = "http://docs.openstack.org/compute/ext/rescue/api/v1.1"
-    updated = "2011-08-18T00:00:00+00:00"
-
-    def __init__(self, ext_mgr):
-        super(Rescue, self).__init__(ext_mgr)
+class RescueController(wsgi.Controller):
+    def __init__(self, *args, **kwargs):
+        super(RescueController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
     def _get_instance(self, context, instance_id):
@@ -48,33 +42,40 @@ class Rescue(exts.ExtensionDescriptor):
             msg = _("Server not found")
             raise exc.HTTPNotFound(msg)
 
+    @wsgi.action('rescue')
     @exts.wrap_errors
-    def _rescue(self, input_dict, req, instance_id):
+    def _rescue(self, req, id, body):
         """Rescue an instance."""
         context = req.environ["nova.context"]
 
-        if input_dict['rescue'] and 'adminPass' in input_dict['rescue']:
-            password = input_dict['rescue']['adminPass']
+        if body['rescue'] and 'adminPass' in body['rescue']:
+            password = body['rescue']['adminPass']
         else:
             password = utils.generate_password(FLAGS.password_length)
 
-        instance = self._get_instance(context, instance_id)
+        instance = self._get_instance(context, id)
         self.compute_api.rescue(context, instance, rescue_password=password)
         return {'adminPass': password}
 
+    @wsgi.action('unrescue')
     @exts.wrap_errors
-    def _unrescue(self, input_dict, req, instance_id):
+    def _unrescue(self, req, id, body):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
-        instance = self._get_instance(context, instance_id)
+        instance = self._get_instance(context, id)
         self.compute_api.unrescue(context, instance)
         return webob.Response(status_int=202)
 
-    def get_actions(self):
-        """Return the actions the extension adds, as required by contract."""
-        actions = [
-                exts.ActionExtension("servers", "rescue", self._rescue),
-                exts.ActionExtension("servers", "unrescue", self._unrescue),
-        ]
 
-        return actions
+class Rescue(exts.ExtensionDescriptor):
+    """Instance rescue mode"""
+
+    name = "Rescue"
+    alias = "os-rescue"
+    namespace = "http://docs.openstack.org/compute/ext/rescue/api/v1.1"
+    updated = "2011-08-18T00:00:00+00:00"
+
+    def get_controller_extensions(self):
+        controller = RescueController()
+        extension = exts.ControllerExtension(self, 'servers', controller)
+        return [extension]
