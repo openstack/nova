@@ -120,8 +120,11 @@ class _DiskImage(object):
         # As a performance tweak, don't bother trying to
         # directly loopback mount a cow image.
         self.handlers = FLAGS.img_handlers[:]
-        if use_cow:
+        if use_cow and 'loop' in self.handlers:
             self.handlers.remove('loop')
+
+        if not self.handlers:
+            raise exception.Error(_('no capable image handler configured'))
 
     @property
     def errors(self):
