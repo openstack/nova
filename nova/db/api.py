@@ -654,32 +654,32 @@ def instance_info_cache_create(context, values):
     return IMPL.instance_info_cache_create(context, values)
 
 
-def instance_info_cache_get(context, instance_id, session=None):
+def instance_info_cache_get(context, instance_uuid, session=None):
     """Gets an instance info cache from the table.
 
-    :param instance_id: = id of the info cache's instance
+    :param instance_uuid: = uuid of the info cache's instance
     :param session: = optional session object
     """
-    return IMPL.instance_info_cache_get(context, instance_id, session=None)
+    return IMPL.instance_info_cache_get(context, instance_uuid, session=None)
 
 
-def instance_info_cache_update(context, instance_id, values,
+def instance_info_cache_update(context, instance_uuid, values,
                                session=None):
     """Update an instance info cache record in the table.
 
-    :param instance_id: = id of info cache's instance
+    :param instance_uuid: = uuid of info cache's instance
     :param values: = dict containing column values to update
     """
-    return IMPL.instance_info_cache_update(context, instance_id, values,
+    return IMPL.instance_info_cache_update(context, instance_uuid, values,
                                            session)
 
 
-def instance_info_cache_delete(context, instance_id, session=None):
+def instance_info_cache_delete(context, instance_uuid, session=None):
     """Deletes an existing instance_info_cache record
 
-    :param instance_id: = id of the instance tied to the cache record
+    :param instance_uuid: = uuid of the instance tied to the cache record
     """
-    return IMPL.instance_info_cache_delete(context, instance_id, session)
+    return IMPL.instance_info_cache_delete(context, instance_uuid, session)
 
 
 ###################
