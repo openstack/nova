@@ -57,6 +57,9 @@ _STATE_MAP = {
     vm_states.STOPPED: {
         'default': 'STOPPED',
     },
+    vm_states.SHUTOFF: {
+        'default': 'SHUTOFF',
+    },
     vm_states.MIGRATING: {
         'default': 'MIGRATING',
     },

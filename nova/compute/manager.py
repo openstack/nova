@@ -571,7 +571,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         #              I think start will fail due to the files still
         self._run_instance(context, instance_uuid)
 
-    def _shutdown_instance(self, context, instance, action_str, cleanup):
+    def _shutdown_instance(self, context, instance, action_str):
         """Shutdown an instance on this host."""
         context = context.elevated()
         instance_id = instance['id']
@@ -592,7 +592,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         bdms = self._get_instance_volume_bdms(context, instance_id)
         block_device_info = self._get_instance_volume_block_device_info(
             context, instance_id)
-        self.driver.destroy(instance, network_info, block_device_info, cleanup)
+        self.driver.destroy(instance, network_info, block_device_info)
         for bdm in bdms:
             try:
                 # NOTE(vish): actual driver detach done in driver.destroy, so
@@ -616,7 +616,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _delete_instance(self, context, instance):
         """Delete an instance on this host."""
         instance_id = instance['id']
-        self._shutdown_instance(context, instance, 'Terminating', True)
+        self._shutdown_instance(context, instance, 'Terminating')
         self._cleanup_volumes(context, instance_id)
         self._instance_update(context,
                               instance_id,
@@ -646,12 +646,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_instance_fault
     def stop_instance(self, context, instance_uuid):
         """Stopping an instance on this host."""
-        # FIXME(vish): I've kept the files during stop instance, but
-        #              I think start will fail due to the files still
-        #              existing.  I don't really know what the purpose of
-        #              stop and start are when compared to pause and unpause
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
-        self._shutdown_instance(context, instance, 'Stopping', False)
+        self._shutdown_instance(context, instance, 'Stopping')
         self._instance_update(context,
                               instance_uuid,
                               vm_state=vm_states.STOPPED,
@@ -2030,9 +2026,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             if vm_power_state == db_power_state:
                 continue
 
-            self._instance_update(context,
-                                  db_instance["id"],
-                                  power_state=vm_power_state)
+            if (vm_power_state in (power_state.NOSTATE, power_state.SHUTOFF)
+                and db_instance['vm_state'] == vm_states.ACTIVE):
+                self._instance_update(context,
+                                      db_instance["id"],
+                                      power_state=vm_power_state,
+                                      vm_state=vm_states.SHUTOFF)
+            else:
+                self._instance_update(context,
+                                      db_instance["id"],
+                                      power_state=vm_power_state)
 
     @manager.periodic_task
     def _reclaim_queued_deletes(self, context):

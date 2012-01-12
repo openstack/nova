@@ -29,6 +29,7 @@ REBUILDING = 'rebuilding'
 
 PAUSED = 'paused'
 SUSPENDED = 'suspended'
+SHUTOFF = 'shutoff'
 RESCUED = 'rescued'
 DELETED = 'deleted'
 STOPPED = 'stopped'

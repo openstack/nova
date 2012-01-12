@@ -152,8 +152,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                cleanup=True):
+    def destroy(self, instance, network_info, block_device_info=None):
         """Destroy (shutdown and delete) the specified instance.
 
         If the instance is not found (for example if networking failed), this
@@ -165,7 +164,6 @@ class ComputeDriver(object):
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
         :param block_device_info: Information about block devices that should
                                   be detached from the instance.
-        :param cleanup:
 
         """
         # TODO(Vek): Need to pass context in for access to auth_token

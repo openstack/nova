@@ -304,8 +304,8 @@ class LibvirtConnection(driver.ComputeDriver):
         for (network, mapping) in network_info:
             self.vif_driver.unplug(instance, network, mapping)
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                cleanup=True):
+    def _destroy(self, instance, network_info, block_device_info=None,
+                 cleanup=True):
         instance_name = instance['name']
 
         try:
@@ -392,6 +392,10 @@ class LibvirtConnection(driver.ComputeDriver):
             self._cleanup(instance)
 
         return True
+
+    def destroy(self, instance, network_info, block_device_info=None):
+        return self._destroy(instance, network_info, block_device_info,
+                             cleanup=True)
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
@@ -554,7 +558,7 @@ class LibvirtConnection(driver.ComputeDriver):
         # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
         # better because we cannot ensure flushing dirty buffers
         # in the guest OS. But, in case of KVM, shutdown() does not work...
-        self.destroy(instance, network_info, cleanup=False)
+        self._destroy(instance, network_info, cleanup=False)
         self.unplug_vifs(instance, network_info)
         self.plug_vifs(instance, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)

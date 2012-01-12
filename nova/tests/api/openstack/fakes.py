@@ -560,6 +560,8 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
         "progress": progress,
         "auto_disk_config": auto_disk_config,
         "name": "instance-%s" % id,
-        "fixed_ips": fixed_ips}
+        "fixed_ips": fixed_ips,
+        "shutdown_terminate": True,
+        "disable_terminate": False}
 
     return instance
