@@ -25,6 +25,7 @@ try:
     import json
 except ImportError:
     import simplejson as json
+import logging
 import os
 import random
 import re
@@ -65,6 +66,35 @@ def _run_command(cmd):
     if err:
         raise pluginlib.PluginError(err)
     return proc.stdout.read()
+
+
+# NOTE (salvatore-orlando):
+# Instead of updating run_command a new method has been implemented,
+# in order to avoid risking breaking existing functions calling _run_command
+def _run_command_with_input(cmd, process_input):
+    """Abstracts out the basics of issuing system commands. If the command
+    returns anything in stderr, a PluginError is raised with that information.
+    Otherwise, the output from stdout is returned.
+
+    process_input specificies a variable to use as the process' standard input.
+    """
+    pipe = subprocess.PIPE
+    # cmd can be either a single string with command and arguments,
+    # or a sequence of string
+    if not hasattr(cmd, '__iter__'):
+        cmd = [cmd]  # make it iterable
+
+    #Note(salvatore-orlando): the shell argument has been set to False
+    proc = subprocess.Popen(cmd, shell=False, stdin=pipe, stdout=pipe,
+            stderr=pipe, close_fds=True)
+    if process_input is not None:
+        (output, err) = proc.communicate(process_input)
+    else:
+        (output, err) = proc.communicate()
+    if err:
+        raise pluginlib.PluginError(err)
+    # This is tantamount to proc.stdout.read()
+    return output
 
 
 def _get_host_uuid():
@@ -161,6 +191,31 @@ def set_config(self, arg_dict):
     else:
         conf.update({key: val})
     _write_config_dict(conf)
+
+
+def iptables_config(session, args):
+    # command should be either save or restore
+    logging.debug("iptables_config:enter")
+    logging.debug("iptables_config: args=%s", args)
+    cmd_args = pluginlib.exists(args, 'cmd_args')
+    logging.debug("iptables_config: cmd_args=%s", cmd_args)
+    process_input = pluginlib.optional(args, 'process_input')
+    logging.debug("iptables_config: process_input=%s", process_input)
+    cmd = json.loads(cmd_args)
+    cmd = map(str, cmd)
+
+    # either execute iptable-save or iptables-restore
+    # command must be only one of these two
+    # process_input must be used only with iptables-restore
+    if len(cmd) > 0 and cmd[0] in ('iptables-save', 'iptables-restore'):
+        result = _run_command_with_input(cmd, process_input)
+        ret_str = json.dumps(dict(out=result,
+                                  err=''))
+        logging.debug("iptables_config:exit")
+        return ret_str
+    else:
+    # else don't do anything and return an error
+        raise pluginlib.PluginError(_("Invalid iptables command"))
 
 
 def _power_action(action):
@@ -326,4 +381,5 @@ if __name__ == "__main__":
             "host_reboot": host_reboot,
             "host_start": host_start,
             "get_config": get_config,
-            "set_config": set_config})
+            "set_config": set_config,
+            "iptables_config": iptables_config})

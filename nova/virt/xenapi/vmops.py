@@ -94,6 +94,8 @@ class VMOps(object):
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
+        fw_class = utils.import_class(FLAGS.firewall_driver)
+        self.firewall_driver = fw_class(xenapi_session=self._session)
         vif_impl = utils.import_class(FLAGS.xenapi_vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
         self._product_version = product_version
@@ -207,9 +209,22 @@ class VMOps(object):
             self._update_instance_progress(context, instance,
                                            step=3,
                                            total_steps=BUILD_TOTAL_STEPS)
+            # 4. Prepare security group filters
+            # NOTE(salvatore-orlando): setup_basic_filtering might be empty or
+            # not implemented at all, as basic filter could be implemented
+            # with VIF rules created by xapi plugin
+            try:
+                self.firewall_driver.setup_basic_filtering(
+                        instance, network_info)
+            except NotImplementedError:
+                pass
+            self.firewall_driver.prepare_instance_filter(instance,
+                                                         network_info)
 
-            # 4. Boot the Instance
+            # 5. Boot the Instance
             self._spawn(instance, vm_ref)
+            # The VM has started, let's ensure the security groups are enforced
+            self.firewall_driver.apply_instance_filter(instance, network_info)
             self._update_instance_progress(context, instance,
                                            step=4,
                                            total_steps=BUILD_TOTAL_STEPS)
@@ -828,6 +843,9 @@ class VMOps(object):
 
     def reboot(self, instance, reboot_type):
         """Reboot VM instance."""
+        # Note (salvatore-orlando): security group rules are not re-enforced
+        # upon reboot, since this action on the XenAPI drivers does not
+        # remove existing filters
         vm_ref = self._get_vm_opaque_ref(instance)
 
         if reboot_type == "HARD":
@@ -1117,16 +1135,21 @@ class VMOps(object):
         if vm_ref is None:
             LOG.warning(_("VM is not present, skipping destroy..."))
             return
-
+        is_snapshot = VMHelper.is_snapshot(self._session, vm_ref)
         if shutdown:
             self._shutdown(instance, vm_ref)
 
         self._destroy_vdis(instance, vm_ref)
         if destroy_kernel_ramdisk:
             self._destroy_kernel_ramdisk(instance, vm_ref)
-        self._destroy_vm(instance, vm_ref)
 
+        self._destroy_vm(instance, vm_ref)
         self.unplug_vifs(instance, network_info)
+        # Remove security groups filters for instance
+        # Unless the vm is a snapshot
+        if not is_snapshot:
+            self.firewall_driver.unfilter_instance(instance,
+                                                   network_info=network_info)
 
     def pause(self, instance):
         """Pause VM instance."""
@@ -1683,6 +1706,19 @@ class VMOps(object):
     def clear_param_xenstore(self, instance_or_vm):
         """Removes all data from the xenstore parameter record for this VM."""
         self.write_to_param_xenstore(instance_or_vm, {})
+
+    def refresh_security_group_rules(self, security_group_id):
+        """ recreates security group rules for every instance """
+        self.firewall_driver.refresh_security_group_rules(security_group_id)
+
+    def refresh_security_group_members(self, security_group_id):
+        """ recreates security group rules for every instance """
+        self.firewall_driver.refresh_security_group_members(security_group_id)
+
+    def unfilter_instance(self, instance_ref, network_info):
+        """Removes filters for each VIF of the specified instance."""
+        self.firewall_driver.unfilter_instance(instance_ref,
+                                               network_info=network_info)
     ########################################################################
 
 
