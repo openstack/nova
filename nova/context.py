@@ -59,7 +59,7 @@ class RequestContext(object):
             timestamp = utils.parse_strtime(timestamp)
         self.timestamp = timestamp
         if not request_id:
-            request_id = unicode(uuid.uuid4())
+            request_id = 'req-' + str(utils.gen_uuid())
         self.request_id = request_id
         self.auth_token = auth_token
         self.strategy = strategy
