@@ -254,6 +254,18 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.action,
                           req, str(utils.gen_uuid()), body)
 
+    def test_reboot_raises_conflict_on_invalid_state(self):
+        body = dict(reboot=dict(type="HARD"))
+
+        def fake_reboot(*args, **kwargs):
+            raise exception.InstanceInvalidState
+
+        self.stubs.Set(nova.compute.api.API, 'reboot', fake_reboot)
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.action,
+                          req, FAKE_UUID, body)
+
     def test_rebuild_accepted_minimum(self):
         new_return_server = return_server_with_attributes(image_ref='2')
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
@@ -274,7 +286,7 @@ class ServerActionsControllerTest(test.TestCase):
                          FLAGS.password_length)
         self.assertEqual(robj['location'], self_href)
 
-    def test_rebuild_rejected_when_building(self):
+    def test_rebuild_raises_conflict_on_invalid_state(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -282,7 +294,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         def fake_rebuild(*args, **kwargs):
-            raise exception.RebuildRequiresActiveInstance
+            raise exception.InstanceInvalidState
 
         self.stubs.Set(nova.compute.api.API, 'rebuild', fake_rebuild)
 
@@ -451,6 +463,18 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
 
+    def test_resize_raises_conflict_on_invalid_state(self):
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
+
+        def fake_resize(*args, **kwargs):
+            raise exception.InstanceInvalidState
+
+        self.stubs.Set(nova.compute.api.API, 'resize', fake_resize)
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.action,
+                          req, FAKE_UUID, body)
+
     def test_confirm_resize_server(self):
         body = dict(confirmResize=None)
 
@@ -481,6 +505,19 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
 
+    def test_confirm_resize_raises_conflict_on_invalid_state(self):
+        body = dict(confirmResize=None)
+
+        def fake_confirm_resize(*args, **kwargs):
+            raise exception.InstanceInvalidState
+
+        self.stubs.Set(nova.compute.api.API, 'confirm_resize',
+                fake_confirm_resize)
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.action,
+                          req, FAKE_UUID, body)
+
     def test_revert_resize_migration_not_found(self):
         body = dict(revertResize=None)
 
@@ -510,6 +547,19 @@ class ServerActionsControllerTest(test.TestCase):
         body = self.controller.action(req, FAKE_UUID, body)
 
         self.assertEqual(self.revert_resize_called, True)
+
+    def test_revert_resize_raises_conflict_on_invalid_state(self):
+        body = dict(revertResize=None)
+
+        def fake_revert_resize(*args, **kwargs):
+            raise exception.InstanceInvalidState
+
+        self.stubs.Set(nova.compute.api.API, 'revert_resize',
+                fake_revert_resize)
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.action,
+                          req, FAKE_UUID, body)
 
     def test_create_image(self):
         body = {
@@ -588,10 +638,9 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, FAKE_UUID, body)
 
-    def test_create_image_conflict_snapshot(self):
-        """Attempt to create image when image is already being created."""
+    def test_create_image_raises_conflict_on_invalid_state(self):
         def snapshot(*args, **kwargs):
-            raise exception.InstanceSnapshotting
+            raise exception.InstanceInvalidState
         self.stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
         body = {

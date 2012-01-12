@@ -56,6 +56,9 @@ class Admin_actions(extensions.ExtensionDescriptor):
         try:
             server = self.compute_api.get(ctxt, id)
             self.compute_api.pause(ctxt, server)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'pause')
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
@@ -70,6 +73,9 @@ class Admin_actions(extensions.ExtensionDescriptor):
         try:
             server = self.compute_api.get(ctxt, id)
             self.compute_api.unpause(ctxt, server)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'unpause')
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
@@ -84,6 +90,9 @@ class Admin_actions(extensions.ExtensionDescriptor):
         try:
             server = self.compute_api.get(context, id)
             self.compute_api.suspend(context, server)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'suspend')
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::suspend %s"), readable)
@@ -98,6 +107,9 @@ class Admin_actions(extensions.ExtensionDescriptor):
         try:
             server = self.compute_api.get(context, id)
             self.compute_api.resume(context, server)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'resume')
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("compute.api::resume %s"), readable)
@@ -112,6 +124,9 @@ class Admin_actions(extensions.ExtensionDescriptor):
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.resize(req.environ['nova.context'], instance)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'migrate')
         except Exception, e:
             LOG.exception(_("Error in migrate %s"), e)
             raise exc.HTTPBadRequest()
@@ -233,12 +248,12 @@ class Admin_actions(extensions.ExtensionDescriptor):
         except exception.NotFound:
             raise exc.HTTPNotFound(_("Instance not found"))
 
-        image = self.compute_api.backup(context,
-                                        instance,
-                                        image_name,
-                                        backup_type,
-                                        rotation,
-                                        extra_properties=props)
+        try:
+            image = self.compute_api.backup(context, instance, image_name,
+                    backup_type, rotation, extra_properties=props)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'createBackup')
 
         # build location of newly-created image entity
         image_id = str(image['id'])

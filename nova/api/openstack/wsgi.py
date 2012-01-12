@@ -919,7 +919,7 @@ class Fault(webob.exc.HTTPException):
             403: "resizeNotAllowed",
             404: "itemNotFound",
             405: "badMethod",
-            409: "inProgress",
+            409: "inProgress",  # FIXME(comstud): This doesn't seem right
             413: "overLimit",
             415: "badMediaType",
             501: "notImplemented",

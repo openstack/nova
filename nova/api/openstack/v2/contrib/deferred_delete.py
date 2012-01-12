@@ -17,9 +17,11 @@
 
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack.v2 import extensions
 from nova.api.openstack.v2 import servers
 from nova import compute
+from nova import exception
 from nova import log as logging
 
 
@@ -44,7 +46,11 @@ class Deferred_delete(extensions.ExtensionDescriptor):
 
         context = req.environ["nova.context"]
         instance = self.compute_api.get(context, instance_id)
-        self.compute_api.restore(context, instance)
+        try:
+            self.compute_api.restore(context, instance)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'restore')
         return webob.Response(status_int=202)
 
     def _force_delete(self, input_dict, req, instance_id):
@@ -52,7 +58,11 @@ class Deferred_delete(extensions.ExtensionDescriptor):
 
         context = req.environ["nova.context"]
         instance = self.compute_api.get(context, instance_id)
-        self.compute_api.force_delete(context, instance)
+        try:
+            self.compute_api.force_delete(context, instance)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'forceDelete')
         return webob.Response(status_int=202)
 
     def get_actions(self):

@@ -334,6 +334,21 @@ def get_networks_for_instance(context, instance):
     return networks
 
 
+def raise_http_conflict_for_instance_invalid_state(exc, action):
+    """Return a webob.exc.HTTPConflict instance containing a message
+    appropriate to return via the API based on the original
+    InstanceInvalidState exception.
+    """
+    attr = exc.kwargs.get('attr')
+    state = exc.kwargs.get('state')
+    if attr and state:
+        msg = _("Cannot '%(action)s' while instance is in %(attr)s %(state)s")
+    else:
+        # At least give some meaningful message
+        msg = _("Instance is in an invalid state for '%(action)s'")
+    raise webob.exc.HTTPConflict(explanation=msg % locals())
+
+
 class MetadataDeserializer(wsgi.MetadataXMLDeserializer):
     def deserialize(self, text):
         dom = minidom.parseString(text)

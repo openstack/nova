@@ -21,6 +21,7 @@ from nova.api.openstack import v2
 from nova.api.openstack.v2 import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
@@ -46,8 +47,12 @@ INSTANCE = {
         }
 
 
-def fake_compute_api(cls, req, id):
+def fake_compute_api(*args, **kwargs):
     return True
+
+
+def fake_compute_api_raises_invalid_state(*args, **kwargs):
+    raise exception.InstanceInvalidState
 
 
 def fake_compute_api_get(self, context, instance_id):
@@ -62,6 +67,14 @@ class AdminActionsTest(test.TestCase):
     _methods = ('pause', 'unpause', 'suspend', 'resume', 'resize',
                 'reset_network', 'inject_network_info', 'lock', 'unlock')
 
+    _actions_that_check_state = (
+            # action, method
+            ('pause', 'pause'),
+            ('unpause', 'unpause'),
+            ('suspend', 'suspend'),
+            ('resume', 'resume'),
+            ('migrate', 'resize'))
+
     def setUp(self):
         super(AdminActionsTest, self).setUp()
         self.stubs.Set(compute.API, 'get', fake_compute_api_get)
@@ -74,12 +87,31 @@ class AdminActionsTest(test.TestCase):
         self.maxDiff = None
         app = fakes.wsgi_app()
         for _action in self._actions:
-            req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+            req = webob.Request.blank('/v2/fake/servers/%s/action' %
+                    self.UUID)
             req.method = 'POST'
             req.body = json.dumps({_action: None})
             req.content_type = 'application/json'
             res = req.get_response(app)
             self.assertEqual(res.status_int, 202)
+
+    def test_admin_api_actions_raise_conflict_on_invalid_state(self):
+        self.maxDiff = None
+        app = fakes.wsgi_app()
+
+        for _action, _method in self._actions_that_check_state:
+            self.stubs.Set(compute.API, _method,
+                fake_compute_api_raises_invalid_state)
+
+            req = webob.Request.blank('/v2/fake/servers/%s/action' %
+                    self.UUID)
+            req.method = 'POST'
+            req.body = json.dumps({_action: None})
+            req.content_type = 'application/json'
+            res = req.get_response(app)
+            self.assertEqual(res.status_int, 409)
+            self.assertIn("invalid state for '%(_action)s'" % locals(),
+                    res.body)
 
 
 class CreateBackupTests(test.TestCase):
@@ -200,3 +232,19 @@ class CreateBackupTests(test.TestCase):
         instance_ref = self.backup_stubs.extra_props_last_call['instance_ref']
         expected_server_location = 'http://localhost/v2/servers/%s' % self.uuid
         self.assertEqual(expected_server_location, instance_ref)
+
+    def test_create_backup_raises_conflict_on_invalid_state(self):
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+
+        self.stubs.Set(compute.API, 'backup',
+                fake_compute_api_raises_invalid_state)
+
+        request = self._get_request(body)
+        response = request.get_response(self.app)
+        self.assertEqual(response.status_int, 409)
