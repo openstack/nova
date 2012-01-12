@@ -88,5 +88,39 @@
     "volume:create_snapshot": [],
     "volume:delete_snapshot": [],
     "volume:get_snapshot": [],
-    "volume:get_all_snapshots": []
+    "volume:get_all_snapshots": [],
+
+
+    "network:get_all_networks": [],
+    "network:get_network": [],
+    "network:delete_network": [],
+    "network:disassociate_network": [],
+    "network:get_vifs_by_instance": [],
+    "network:allocate_for_instance": [],
+    "network:deallocate_for_instance": [],
+    "network:validate_networks": [],
+    "network:get_instance_uuids_by_ip_filter": [],
+
+    "network:get_floating_ip": [],
+    "network:get_floating_ip_pools": [],
+    "network:get_floating_ip_by_address": [],
+    "network:get_floating_ips_by_project": [],
+    "network:get_floating_ips_by_fixed_address": [],
+    "network:allocate_floating_ip": [],
+    "network:deallocate_floating_ip": [],
+    "network:associate_floating_ip": [],
+    "network:disassociate_floating_ip": [],
+
+    "network:get_fixed_ip": [],
+    "network:add_fixed_ip_to_instance": [],
+    "network:remove_fixed_ip_from_instance": [],
+    "network:add_network_to_project": [],
+    "network:get_instance_nw_info": [],
+
+    "network:get_dns_zones": [],
+    "network:add_dns_entry": [],
+    "network:modify_dns_entry": [],
+    "network:delete_dns_entry": [],
+    "network:get_dns_entries_by_address": [],
+    "network:get_dns_entries_by_name": []
 }
