@@ -17,8 +17,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Handles all requests relating to instances (guest vms)."""
-
 from nova.db import base
 from nova import exception
 from nova import flags
@@ -33,6 +31,30 @@ LOG = logging.getLogger('nova.network')
 
 class API(base.Base):
     """API for interacting with the network manager."""
+
+    def get_all(self, context):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_all_networks'})
+
+    def get(self, context, fixed_range, network_uuid):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_network',
+                         'args': {'network_uuid': network_uuid}})
+
+    def delete(self, context, network_uuid):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'delete_network',
+                         'args': {'fixed_range': None,
+                                  'uuid': network_uuid}})
+
+    def disassociate(self, context, network_uuid):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'disassociate_network',
+                         'args': {'network_uuid': network_uuid}})
 
     def get_floating_ip(self, context, id):
         return rpc.call(context,
