@@ -20,6 +20,7 @@
 """Implementation of SQLAlchemy backend."""
 
 import datetime
+import functools
 import re
 import warnings
 
@@ -29,6 +30,7 @@ from nova import exception
 from nova import flags
 from nova import utils
 from nova import log as logging
+from nova.compute import aggregate_states
 from nova.compute import vm_states
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
@@ -140,6 +142,20 @@ def require_volume_exists(f):
         db.volume_get(context, volume_id)
         return f(context, volume_id, *args, **kwargs)
     wrapper.__name__ = f.__name__
+    return wrapper
+
+
+def require_aggregate_exists(f):
+    """Decorator to require the specified aggregate to exist.
+
+    Requires the wrapped function to use context and aggregate_id as
+    their first two arguments.
+    """
+
+    @functools.wraps(f)
+    def wrapper(context, aggregate_id, *args, **kwargs):
+        db.aggregate_get(context, aggregate_id)
+        return f(context, aggregate_id, *args, **kwargs)
     return wrapper
 
 
@@ -3948,6 +3964,218 @@ def sm_volume_get(context, volume_id):
 
 def sm_volume_get_all(context):
     return model_query(context, models.SMVolume, read_deleted="yes").all()
+
+
+################
+
+
+def _aggregate_get_query(context, model_class, id_field, id,
+                         session=None, read_deleted='yes'):
+    return model_query(context, model_class, session=session,
+                       read_deleted=read_deleted).filter(id_field == id)
+
+
+@require_admin_context
+def aggregate_create(context, values, metadata=None):
+    try:
+        aggregate = models.Aggregate()
+        aggregate.update(values)
+        aggregate.operational_state = aggregate_states.BUILDING
+        aggregate.save()
+    except exception.DBError:
+        raise exception.AggregateNameExists(aggregate_name=values['name'])
+    if metadata:
+        aggregate_metadata_add(context, aggregate.id, metadata)
+    return aggregate
+
+
+@require_admin_context
+def aggregate_get(context, aggregate_id, read_deleted='no'):
+    aggregate = _aggregate_get_query(context,
+                                     models.Aggregate,
+                                     models.Aggregate.id, aggregate_id,
+                                     read_deleted=read_deleted).first()
+
+    if not aggregate:
+        raise exception.AggregateNotFound(aggregate_id=aggregate_id)
+
+    return aggregate
+
+
+@require_admin_context
+def aggregate_update(context, aggregate_id, values):
+    session = get_session()
+    aggregate = _aggregate_get_query(context,
+                                     models.Aggregate,
+                                     models.Aggregate.id, aggregate_id,
+                                     session=session,
+                                     read_deleted='no').first()
+    if aggregate:
+        metadata = values.get('metadata')
+        if metadata is not None:
+            aggregate_metadata_add(context,
+                                   aggregate_id,
+                                   values.pop('metadata'),
+                                   set_delete=True)
+        with session.begin():
+            aggregate.update(values)
+            aggregate.save(session=session)
+        values['metadata'] = metadata
+        return aggregate
+    else:
+        raise exception.AggregateNotFound(aggregate_id=aggregate_id)
+
+
+@require_admin_context
+def aggregate_delete(context, aggregate_id):
+    query = _aggregate_get_query(context,
+                                 models.Aggregate,
+                                 models.Aggregate.id, aggregate_id,
+                                 read_deleted='no')
+    if query.first():
+        query.update({'deleted': True,
+                      'deleted_at': utils.utcnow(),
+                      'updated_at': literal_column('updated_at')})
+    else:
+        raise exception.AggregateNotFound(aggregate_id=aggregate_id)
+
+
+@require_admin_context
+def aggregate_get_all(context, read_deleted='yes'):
+    return model_query(context,
+                       models.Aggregate,
+                       read_deleted=read_deleted).all()
+
+
+@require_admin_context
+@require_aggregate_exists
+def aggregate_metadata_get(context, aggregate_id, read_deleted='no'):
+    rows = model_query(context,
+                       models.AggregateMetadata,
+                       read_deleted=read_deleted).\
+                       filter_by(aggregate_id=aggregate_id).all()
+
+    return dict([(r['key'], r['value']) for r in rows])
+
+
+@require_admin_context
+@require_aggregate_exists
+def aggregate_metadata_delete(context, aggregate_id, key):
+    query = _aggregate_get_query(context,
+                                 models.AggregateMetadata,
+                                 models.AggregateMetadata.aggregate_id,
+                                 aggregate_id, read_deleted='no').\
+                                 filter_by(key=key)
+    if query.first():
+        query.update({'deleted': True,
+                      'deleted_at': utils.utcnow(),
+                      'updated_at': literal_column('updated_at')})
+    else:
+        raise exception.AggregateMetadataNotFound(aggregate_id=aggregate_id,
+                                                  metadata_key=key)
+
+
+@require_admin_context
+@require_aggregate_exists
+def aggregate_metadata_get_item(context, aggregate_id, key,
+                                session=None, read_deleted='yes'):
+    result = _aggregate_get_query(context,
+                                  models.AggregateMetadata,
+                                  models.AggregateMetadata.aggregate_id,
+                                  aggregate_id, session=session,
+                                  read_deleted=read_deleted).\
+                                  filter_by(key=key).first()
+
+    if not result:
+        raise exception.AggregateMetadataNotFound(metadata_key=key,
+                                                 aggregate_id=aggregate_id)
+
+    return result
+
+
+@require_admin_context
+@require_aggregate_exists
+def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False):
+    session = get_session()
+
+    if set_delete:
+        original_metadata = aggregate_metadata_get(context, aggregate_id)
+        for meta_key, meta_value in original_metadata.iteritems():
+            if meta_key not in metadata:
+                meta_ref = aggregate_metadata_get_item(context, aggregate_id,
+                                                      meta_key, session)
+                meta_ref.update({'deleted': True})
+                meta_ref.save(session=session)
+
+    meta_ref = None
+
+    for meta_key, meta_value in metadata.iteritems():
+        item = {"value": meta_value}
+        try:
+            meta_ref = aggregate_metadata_get_item(context, aggregate_id,
+                                                  meta_key, session)
+            if meta_ref.deleted:
+                item.update({'deleted': False, 'deleted_at': None,
+                             'updated_at': literal_column('updated_at')})
+        except exception.AggregateMetadataNotFound:
+            meta_ref = models.AggregateMetadata()
+            item.update({"key": meta_key, "aggregate_id": aggregate_id})
+
+        meta_ref.update(item)
+        meta_ref.save(session=session)
+
+    return metadata
+
+
+@require_admin_context
+@require_aggregate_exists
+def aggregate_host_get_all(context, aggregate_id, read_deleted='yes'):
+    rows = model_query(context,
+                       models.AggregateHost,
+                       read_deleted=read_deleted).\
+                       filter_by(aggregate_id=aggregate_id).all()
+
+    return [r.host for r in rows]
+
+
+@require_admin_context
+@require_aggregate_exists
+def aggregate_host_delete(context, aggregate_id, host):
+    query = _aggregate_get_query(context,
+                                 models.AggregateHost,
+                                 models.AggregateHost.aggregate_id,
+                                 aggregate_id,
+                                 read_deleted='no').filter_by(host=host)
+    if query.first():
+        query.update({'deleted': True,
+                      'deleted_at': utils.utcnow(),
+                      'updated_at': literal_column('updated_at')})
+    else:
+        raise exception.AggregateHostNotFound(aggregate_id=aggregate_id,
+                                              host=host)
+
+
+@require_admin_context
+@require_aggregate_exists
+def aggregate_host_add(context, aggregate_id, host):
+    host_ref = _aggregate_get_query(context,
+                                    models.AggregateHost,
+                                    models.AggregateHost.aggregate_id,
+                                    aggregate_id,
+                                    read_deleted='no').\
+                                    filter_by(host=host).first()
+    if not host_ref:
+        try:
+            host_ref = models.AggregateHost()
+            values = {"host": host, "aggregate_id": aggregate_id, }
+            host_ref.update(values)
+            host_ref.save()
+        except exception.DBError:
+            raise exception.AggregateHostConflict(host=host)
+    else:
+        raise exception.AggregateHostExists(host=host,
+                                            aggregate_id=aggregate_id)
+    return host_ref
 
 
 ################
