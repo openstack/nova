@@ -1199,20 +1199,21 @@ class API(base.Base):
             'image_type': image_type,
         }
 
+        sent_meta = {'name': name, 'is_public': False}
+
         if image_type == 'backup':
             properties['backup_type'] = backup_type
 
-        properties.update(extra_properties or {})
-        sent_meta = {'name': name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-
-        if image_type == 'snapshot':
+        elif image_type == 'snapshot':
             min_ram, min_disk = self._get_minram_mindisk_params(context,
                                                                 instance)
             if min_ram is not None:
                 sent_meta['min_ram'] = min_ram
             if min_disk is not None:
                 sent_meta['min_disk'] = min_disk
+
+        properties.update(extra_properties or {})
+        sent_meta['properties'] = properties
 
         recv_meta = self.image_service.create(context, sent_meta)
         params = {'image_id': recv_meta['id'], 'image_type': image_type,
