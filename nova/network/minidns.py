@@ -54,6 +54,10 @@ class MiniDNS(object):
 
     def create_entry(self, name, address, type, dnszone):
 
+        if type.lower() != 'a':
+            raise exception.InvalidInput(_("This driver only supports "
+                                           "type 'a'"))
+
         if self.get_entries_by_name(name, dnszone):
             raise exception.FloatingIpDNSExists(name=name, zone=dnszone)
 

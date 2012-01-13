@@ -1008,8 +1008,11 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         instance_ref = self.db.instance_get(context, instance_id)
         name = instance_ref['display_name']
+        uuid = instance_ref['uuid']
         self.instance_dns_manager.create_entry(name, address,
-                                               "type", FLAGS.instance_dns_zone)
+                                               "A", FLAGS.instance_dns_zone)
+        self.instance_dns_manager.create_entry(uuid, address,
+                                               "A", FLAGS.instance_dns_zone)
 
         self._setup_network(context, network)
         return address
