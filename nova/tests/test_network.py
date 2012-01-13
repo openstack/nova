@@ -277,6 +277,8 @@ class FlatNetworkTestCase(test.TestCase):
         db.instance_get(self.context,
                         1).AndReturn({'display_name': HOST,
                                       'uuid': 'test-00001'})
+        db.instance_get(mox.IgnoreArg(),
+                        mox.IgnoreArg()).AndReturn({'availability_zone': ''})
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
@@ -343,6 +345,8 @@ class FlatNetworkTestCase(test.TestCase):
         db.instance_get(self.context,
                         1).AndReturn({'display_name': HOST,
                                       'uuid': 'test-00001'})
+        db.instance_get(mox.IgnoreArg(),
+                        mox.IgnoreArg()).AndReturn({'availability_zone': ''})
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn(fixedip)
@@ -750,7 +754,8 @@ class VlanNetworkTestCase(test.TestCase):
 
         db.instance_get(mox.IgnoreArg(),
                         mox.IgnoreArg()).AndReturn({'security_groups':
-                                                             [{'id': 0}]})
+                                                             [{'id': 0}],
+                                                    'availability_zone': ''})
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
@@ -1264,16 +1269,6 @@ class FloatingIPTestCase(test.TestCase):
         self.network.deallocate_for_instance(self.context,
                 instance_id=instance_ref['id'])
 
-    def test_floating_dns_zones(self):
-        zone1 = "example.org"
-        zone2 = "example.com"
-        flags.FLAGS.floating_ip_dns_zones = [zone1, zone2]
-
-        zones = self.network.get_dns_zones(self.context)
-        self.assertEqual(len(zones), 2)
-        self.assertEqual(zones[0], zone1)
-        self.assertEqual(zones[1], zone2)
-
     def test_floating_dns_create_conflict(self):
         zone = "example.org"
         address1 = "10.10.10.11"
@@ -1327,6 +1322,49 @@ class FloatingIPTestCase(test.TestCase):
                           self.network.delete_dns_entry, self.context,
                           name1, zone)
 
+    def test_floating_dns_domains_public(self):
+        zone1 = "testzone"
+        domain1 = "example.org"
+        domain2 = "example.com"
+        address1 = '10.10.10.10'
+        entryname = 'testentry'
+
+        context_admin = context.RequestContext('testuser', 'testproject',
+                                               is_admin=True)
+
+        self.assertRaises(exception.AdminRequired,
+                          self.network.create_public_dns_domain, self.context,
+                          domain1, zone1)
+        self.network.create_public_dns_domain(context_admin, domain1,
+                                              'testproject')
+        self.network.create_public_dns_domain(context_admin, domain2,
+                                              'fakeproject')
+
+        domains = self.network.get_dns_zones(self.context)
+        self.assertEquals(len(domains), 2)
+        self.assertEquals(domains[0]['domain'], domain1)
+        self.assertEquals(domains[1]['domain'], domain2)
+        self.assertEquals(domains[0]['project'], 'testproject')
+        self.assertEquals(domains[1]['project'], 'fakeproject')
+
+        self.network.add_dns_entry(self.context, address1, entryname,
+                                   'A', domain1)
+        entries = self.network.get_dns_entries_by_name(self.context,
+                                                       entryname, domain1)
+        self.assertEquals(len(entries), 1)
+        self.assertEquals(entries[0], address1)
+
+        self.assertRaises(exception.AdminRequired,
+                          self.network.delete_dns_domain, self.context,
+                          domain1)
+        self.network.delete_dns_domain(context_admin, domain1)
+        self.network.delete_dns_domain(context_admin, domain2)
+
+        # Verify that deleting the domain deleted the associated entry
+        entries = self.network.get_dns_entries_by_name(self.context,
+                                                       entryname, domain1)
+        self.assertFalse(entries)
+
 
 class NetworkPolicyTestCase(test.TestCase):
     def setUp(self):
@@ -1355,3 +1393,44 @@ class NetworkPolicyTestCase(test.TestCase):
         network_manager.check_policy(self.context, 'get_all')
         self.mox.UnsetStubs()
         self.mox.VerifyAll()
+
+
+class InstanceDNSTestCase(test.TestCase):
+    """Tests nova.network.manager instance DNS"""
+    def setUp(self):
+        super(InstanceDNSTestCase, self).setUp()
+        self.network = TestFloatingIPManager()
+        temp = utils.import_object('nova.network.minidns.MiniDNS')
+        self.network.instance_dns_manager = temp
+        temp = utils.import_object('nova.network.dns_driver.DNSDriver')
+        self.network.floating_dns_manager = temp
+        self.network.db = db
+        self.project_id = 'testproject'
+        self.context = context.RequestContext('testuser', self.project_id,
+            is_admin=False)
+
+    def tearDown(self):
+        super(InstanceDNSTestCase, self).tearDown()
+        self.network.instance_dns_manager.delete_dns_file()
+
+    def test_dns_domains_private(self):
+        zone1 = 'testzone'
+        domain1 = 'example.org'
+
+        context_admin = context.RequestContext('testuser', 'testproject',
+                                              is_admin=True)
+
+        self.assertRaises(exception.AdminRequired,
+                          self.network.create_private_dns_domain, self.context,
+                          domain1, zone1)
+
+        self.network.create_private_dns_domain(context_admin, domain1, zone1)
+        domains = self.network.get_dns_zones(self.context)
+        self.assertEquals(len(domains), 1)
+        self.assertEquals(domains[0]['domain'], domain1)
+        self.assertEquals(domains[0]['availability_zone'], zone1)
+
+        self.assertRaises(exception.AdminRequired,
+                          self.network.delete_dns_domain, self.context,
+                          domain1)
+        self.network.delete_dns_domain(context_admin, domain1)

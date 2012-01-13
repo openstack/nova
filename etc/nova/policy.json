@@ -6,7 +6,7 @@
     "compute:create": [],
     "compute:create:attach_network": [],
     "compute:create:attach_volume": [],
-    "compute:get_all" :[],
+    "compute:get_all": [],
 
 
     "volume:create": [],
@@ -47,6 +47,8 @@
     "network:modify_dns_entry": [],
     "network:delete_dns_entry": [],
     "network:get_dns_entries_by_address": [],
-    "network:get_dns_entries_by_name": []
+    "network:get_dns_entries_by_name": [],
+    "network:create_private_dns_domain": [],
+    "network:create_public_dns_domain": [],
+    "network:delete_dns_domain": []
 }
-

@@ -695,6 +695,77 @@ def floating_ip_update(context, address, values):
         floating_ip_ref.save(session=session)
 
 
+@require_context
+def _dnsdomain_get(context, session, fqdomain):
+    return model_query(context, models.DNSDomain,
+                       session=session, read_deleted="no").\
+               filter_by(domain=fqdomain).\
+               with_lockmode('update').\
+               first()
+
+
+@require_context
+def dnsdomain_get(context, fqdomain):
+    session = get_session()
+    with session.begin():
+        return _dnsdomain_get(context, session, fqdomain)
+
+
+@require_admin_context
+def _dnsdomain_get_or_create(context, session, fqdomain):
+    domain_ref = _dnsdomain_get(context, session, fqdomain)
+    if not domain_ref:
+        dns_ref = models.DNSDomain()
+        dns_ref.update({'domain': fqdomain,
+                        'availability_zone': None,
+                        'project_id': None})
+        return dns_ref
+
+    return domain_ref
+
+
+@require_admin_context
+def dnsdomain_register_for_zone(context, fqdomain, zone):
+    session = get_session()
+    with session.begin():
+        domain_ref = _dnsdomain_get_or_create(context, session, fqdomain)
+        domain_ref.scope = 'private'
+        domain_ref.availability_zone = zone
+        domain_ref.save(session=session)
+
+
+@require_admin_context
+def dnsdomain_register_for_project(context, fqdomain, project):
+    session = get_session()
+    with session.begin():
+        domain_ref = _dnsdomain_get_or_create(context, session, fqdomain)
+        domain_ref.scope = 'public'
+        domain_ref.project_id = project
+        domain_ref.save(session=session)
+
+
+@require_admin_context
+def dnsdomain_unregister(context, fqdomain):
+    session = get_session()
+    with session.begin():
+        domain_ref = _dnsdomain_get(context, session, fqdomain)
+        if domain_ref:
+            domain_ref.delete(session=session)
+
+
+@require_context
+def dnsdomain_list(context):
+    session = get_session()
+    records = model_query(context, models.DNSDomain,
+                  session=session, read_deleted="no").\
+                  with_lockmode('update').all()
+    domains = []
+    for record in records:
+        domains.append(record.domain)
+
+    return domains
+
+
 ###################
 
 

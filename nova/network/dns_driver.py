@@ -36,3 +36,9 @@ class DNSDriver(object):
 
     def get_entries_by_name(self, _name, _dnszone=""):
         return []
+
+    def create_domain(self, _fqdomain):
+        pass
+
+    def delete_domain(self, _fqdomain):
+        pass

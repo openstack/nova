@@ -85,70 +85,90 @@ None
 
 New Resources
 -------------
-Get a list of DNS Domains (aka 'zones') published by the DNS driver:
+Get a list of registered DNS Domains published by the DNS drivers:
 
         GET /v1.1/<tenant_id>/os-floating-ip-dns/
 
     # Sample Response:
-    { 'zones' : [
-      {'zone' : 'example.org'}
-      {'zone' : 'example.net'}]}
+    {'zone_entries' : [
+      {'domain': 'domain1.example.org', 'scope': 'public', 'project': 'proj1'}
+      {'domain': 'domain2.example.net', 'scope': 'public', 'project': 'proj2'}
+      {'domain': 'example.net', 'scope': 'public', 'project': ''}
+      {'domain': 'example.internal', 'scope': 'private', 'zone': 'zone1'}]}
 
 
-Create a DNS entry:
+Create or modify a DNS domain:
 
-        POST /v1.1/<tenant_id>/os-floating-ip-dns/
+        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<zone>
+
+    # Sample body, public domain:
+     {'zone_entry' :
+       {'scope': 'public',
+        'project' : 'project1'}}
+
+    # Sample body, public (projectless) domain:
+     {'zone_entry' :
+       {'scope': 'public'}}
+
+    # Sample Response, public domain (success):
+     {'zone_entry' :
+       {'zone': 'domain1.example.org',
+        'scope': 'public',
+        'project': 'project1'}}
+
+    # Sample body, private domain:
+     {'zone_entry' :
+       {'scope': 'private',
+        'availability_zone': 'zone1'}}
+
+    # Sample Response, private domain (success):
+     {'zone_entry' :
+       {'zone': 'domain1.private',
+        'scope': 'private',
+        'availability_zone': 'zone1'}}
+
+    Failure Response Code: 403 (Insufficient permissions.)
+
+
+Delete a DNS domain and all associated host entries:
+
+DELETE /v1.1/<tenant_id>/os-floating-ip-dns/<domain>
+
+    Normal Response Code: 200
+    Failure Response Code: 404 (Domain to be deleted not found.)
+    Failure Response Code: 403 (Insufficient permissions to delete.)
+
+
+Create or modify a DNS entry:
+
+        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<zone>/entries/<name>
 
     # Sample body:
     { 'dns_entry' :
-      { 'name': 'instance1',
-        'ip': '192.168.53.11',
-        'dns_type': 'A',
-        'zone': 'example.org'}}
+      { 'ip': '192.168.53.11',
+        'dns_type': 'A' }}
 
     # Sample Response (success):
     { 'dns_entry' :
-      { 'ip' : '192.168.53.11',
-        'type' : 'A',
-        'zone' : 'example.org',
+      { 'type' : 'A',
         'name' : 'instance1' }}
 
-    Failure Response Code: 409 (indicates an entry with name & zone already exists.)
 
+Find unique DNS entry for a given domain and name:
 
-Change the ip address of an existing DNS entry:
-
-        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<domain>
-
-    # Sample body:
-    { 'dns_entry' :
-      { 'name': 'instance1',
-        'ip': '192.168.53.99'}}
-
-    # Sample Response (success):
-    { 'dns_entry' :
-      { 'ip' : '192.168.53.99',
-        'name' : 'instance1',
-        'zone' : 'example.org'}}
-
-    Failure Response Code: 404 (Entry to be modified not found)
-
-
-Find DNS entries for a given domain and name:
-
-        GET /v1.1/<tenant_id>/os-floating-ip-dns/<domain>?name=<name>
+        GET /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries/<name>
 
     # Sample Response:
-    { 'dns_entries' : [
+    { 'dns_entry' :
       { 'ip' : '192.168.53.11',
         'type' : 'A',
         'zone' : <domain>,
-        'name' : <name> }]}
+        'name' : <name> }}
 
 
 Find DNS entries for a given domain and ip:
 
-        GET /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/?ip=<ip>
+        GET /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries?ip=<ip>
 
     # Sample Response:
     { 'dns_entries' : [
@@ -164,10 +184,11 @@ Find DNS entries for a given domain and ip:
 
 Delete a DNS entry:
 
-DELETE /v1.1/<tenant_id>/os-floating-ip-dns/<domain>?name=<name>
+DELETE /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries/<name>
 
     Normal Response Code: 200
     Failure Response Code: 404 (Entry to be deleted not found)
+
 
 New States
 ----------
@@ -176,4 +197,3 @@ None
 Changes to the Cloud Servers Specification
 ------------------------------------------
 None
-

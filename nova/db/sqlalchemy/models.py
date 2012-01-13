@@ -749,6 +749,19 @@ class Project(BASE, NovaBase):
                            backref='projects')
 
 
+class DNSDomain(BASE, NovaBase):
+    """Represents a DNS domain with availability zone or project info."""
+    __tablename__ = 'dns_domains'
+    domain = Column(String(512), primary_key=True)
+    scope = Column(String(255))
+    availability_zone = Column(String(255))
+    project_id = Column(String(255))
+    project = relationship(Project,
+                           primaryjoin=project_id == Project.id,
+                           foreign_keys=[Project.id],
+                           uselist=False)
+
+
 class UserProjectRoleAssociation(BASE, NovaBase):
     __tablename__ = 'user_project_role_association'
     user_id = Column(String(255), primary_key=True)

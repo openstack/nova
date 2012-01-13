@@ -42,7 +42,14 @@ class MiniDNS(object):
             f.close()
 
     def get_zones(self):
-        return flags.FLAGS.floating_ip_dns_zones
+        entries = []
+        infile = open(self.filename, 'r')
+        for line in infile:
+            entry = self.parse_line(line)
+            if entry and entry['address'].lower() == 'domain'.lower():
+                entries.append(entry['name'])
+        infile.close()
+        return entries
 
     def qualify(self, name, zone):
         if zone:
@@ -75,6 +82,10 @@ class MiniDNS(object):
             entry['address'] = vals[0]
             entry['name'] = vals[1]
             entry['type'] = vals[2]
+            if entry['address'] == 'domain':
+                entry['domain'] = entry['name']
+            else:
+                entry['domain'] = entry['name'].partition('.')[2]
             return entry
 
     def delete_entry(self, name, dnszone=""):
@@ -138,3 +149,30 @@ class MiniDNS(object):
 
     def delete_dns_file(self):
         os.remove(self.filename)
+
+    def create_domain(self, fqdomain):
+        if self.get_entries_by_name(fqdomain, ''):
+            raise exception.FloatingIpDNSExists(name=fqdomain, zone='')
+
+        outfile = open(self.filename, 'a+')
+        outfile.write("%s   %s   %s\n" %
+            ('domain', fqdomain, 'domain'))
+        outfile.close()
+
+    def delete_domain(self, fqdomain):
+        deleted = False
+        infile = open(self.filename, 'r')
+        outfile = tempfile.NamedTemporaryFile('w', delete=False)
+        for line in infile:
+            entry = self.parse_line(line)
+            if ((not entry) or
+                entry['domain'] != fqdomain):
+                outfile.write(line)
+            else:
+                print "deleted %s" % entry
+                deleted = True
+        infile.close()
+        outfile.close()
+        shutil.move(outfile.name, self.filename)
+        if not deleted:
+            raise exception.NotFound

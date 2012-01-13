@@ -264,6 +264,13 @@ class API(base.Base):
                         {'method': 'delete_dns_entry',
                          'args': args})
 
+    def delete_dns_domain(self, context, fqdomain):
+        """Delete the specified dns domain."""
+        args = {'fqdomain': fqdomain}
+        return rpc.call(context, FLAGS.network_topic,
+                        {'method': 'delete_dns_domain',
+                         'args': args})
+
     def get_dns_entries_by_address(self, context, address, zone):
         """Get entries for address and zone"""
         args = {'address': address, 'dns_zone': zone}
@@ -276,4 +283,18 @@ class API(base.Base):
         args = {'name': name, 'dns_zone': zone}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_dns_entries_by_name',
+                         'args': args})
+
+    def create_private_dns_domain(self, context, fqdomain, availability_zone):
+        """Create a private DNS domain with nova availability zone."""
+        args = {'fqdomain': fqdomain, 'zone': availability_zone}
+        return rpc.call(context, FLAGS.network_topic,
+                        {'method': 'create_private_dns_domain',
+                         'args': args})
+
+    def create_public_dns_domain(self, context, fqdomain, project=None):
+        """Create a private DNS domain with optional nova project."""
+        args = {'fqdomain': fqdomain, 'project': project}
+        return rpc.call(context, FLAGS.network_topic,
+                        {'method': 'create_public_dns_domain',
                          'args': args})

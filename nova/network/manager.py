@@ -497,9 +497,42 @@ class FloatingIP(object):
                                                                 fixed_address)
         return [floating_ip['address'] for floating_ip in floating_ips]
 
+    def _prepare_domain_entry(self, context, domain):
+        domainref = self.db.dnsdomain_get(context, domain)
+        scope = domainref.scope
+        if scope == 'private':
+            av_zone = domainref.availability_zone
+            this_zone = {'domain': domain,
+                         'scope': scope,
+                         'availability_zone': av_zone}
+        else:
+            project = domainref.project_id
+            this_zone = {'domain': domain,
+                         'scope': scope,
+                         'project': project}
+        return this_zone
+
     @wrap_check_policy
     def get_dns_zones(self, context):
-        return self.floating_dns_manager.get_zones()
+        zones = []
+
+        db_zone_list = self.db.dnsdomain_list(context)
+        floating_driver_zone_list = self.floating_dns_manager.get_zones()
+        instance_driver_zone_list = self.instance_dns_manager.get_zones()
+
+        for db_zone in db_zone_list:
+            if (db_zone in floating_driver_zone_list or
+                db_zone in instance_driver_zone_list):
+                    zone_entry = self._prepare_domain_entry(context, db_zone)
+                    if zone_entry:
+                        zones.append(zone_entry)
+            else:
+                LOG.warn(_('Database inconsistency: DNS domain |%s| is '
+                         'registered in the Nova db but not visible to '
+                         'either the floating or instance DNS driver. It '
+                         'will be ignored.'), db_zone)
+
+        return zones
 
     @wrap_check_policy
     def add_dns_entry(self, context, address, dns_name, dns_type, dns_zone):
@@ -524,6 +557,34 @@ class FloatingIP(object):
     def get_dns_entries_by_name(self, context, name, dns_zone):
         return self.floating_dns_manager.get_entries_by_name(name,
                                                              dns_zone)
+
+    @wrap_check_policy
+    def create_private_dns_domain(self, context, fqdomain, zone):
+        self.db.dnsdomain_register_for_zone(context, fqdomain, zone)
+        try:
+            self.instance_dns_manager.create_domain(fqdomain)
+        except exception.FloatingIpDNSExists:
+            LOG.warn(_('Domain |%(domain)s| already exists, '
+                       'changing zone to |%(zone)s|.'),
+                     {'domain': fqdomain, 'zone': zone})
+
+    @wrap_check_policy
+    def create_public_dns_domain(self, context, fqdomain, project):
+        self.db.dnsdomain_register_for_project(context, fqdomain, project)
+        try:
+            self.floating_dns_manager.create_domain(fqdomain)
+        except exception.FloatingIpDNSExists:
+            LOG.warn(_('Domain |%(domain)s| already exists, '
+                       'changing project to |%(project)s|.'),
+                     {'domain': fqdomain, 'project': project})
+
+    @wrap_check_policy
+    def delete_dns_domain(self, context, fqdomain):
+        self.db.dnsdomain_unregister(context, fqdomain)
+        self.floating_dns_manager.delete_domain(fqdomain)
+
+    def _get_project_for_domain(self, context, fqdomain):
+        return self.db.dnsdomain_project(context, fqdomain)
 
 
 class NetworkManager(manager.SchedulerDependentManager):
@@ -553,6 +614,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.driver = utils.import_object(network_driver)
         temp = utils.import_object(FLAGS.instance_dns_manager)
         self.instance_dns_manager = temp
+        self.instance_dns_domain = FLAGS.instance_dns_zone
         temp = utils.import_object(FLAGS.floating_ip_dns_manager)
         self.floating_dns_manager = temp
         self.network_api = network_api.API()
@@ -1038,6 +1100,25 @@ class NetworkManager(manager.SchedulerDependentManager):
         raise exception.FixedIpNotFoundForSpecificInstance(
                                     instance_id=instance_id, ip=address)
 
+    def _validate_instance_zone_for_dns_domain(self, context, instance_id):
+        instance = self.db.instance_get(context, instance_id)
+        instance_zone = instance.get('availability_zone')
+        if not self.instance_dns_domain:
+            return True
+        instance_domain = self.instance_dns_domain
+        domainref = self.db.dnsdomain_get(context, instance_zone)
+        dns_zone = domainref.availability_zone
+        if dns_zone and (dns_zone != instance_zone):
+            LOG.warn(_('instance-dns-zone is |%(domain)s|, '
+                       'which is in availability zone |%(zone)s|. '
+                       'Instance |%(instance)s| is in zone |%(zone2)s|. '
+                       'No DNS record will be created.'),
+                     {'domain': instance_domain, 'zone': dns_zone,
+                       'instance': instance_id, 'zone2': instance_zone})
+            return False
+        else:
+            return True
+
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
         # TODO(vish): when this is called by compute, we can associate compute
@@ -1065,12 +1146,15 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         instance_ref = self.db.instance_get(context, instance_id)
         name = instance_ref['display_name']
-        uuid = instance_ref['uuid']
-        self.instance_dns_manager.create_entry(name, address,
-                                               "A", FLAGS.instance_dns_zone)
-        self.instance_dns_manager.create_entry(uuid, address,
-                                               "A", FLAGS.instance_dns_zone)
 
+        if self._validate_instance_zone_for_dns_domain(context, instance_id):
+            uuid = instance_ref['uuid']
+            self.instance_dns_manager.create_entry(name, address,
+                                                   "A",
+                                                   self.instance_dns_domain)
+            self.instance_dns_manager.create_entry(uuid, address,
+                                                   "A",
+                                                   self.instance_dns_domain)
         self._setup_network(context, network)
         return address
 
@@ -1084,8 +1168,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
 
-        for name in self.instance_dns_manager.get_entries_by_address(address):
-            self.instance_dns_manager.delete_entry(name)
+        if self._validate_instance_zone_for_dns_domain(context, instance_id):
+            for n in self.instance_dns_manager.get_entries_by_address(address):
+                self.instance_dns_manager.delete_entry(n)
 
         if FLAGS.force_dhcp_release:
             network = self._get_network_by_id(context,

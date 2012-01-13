@@ -324,6 +324,32 @@ def floating_ip_set_auto_assigned(context, address):
     """Set auto_assigned flag to floating ip"""
     return IMPL.floating_ip_set_auto_assigned(context, address)
 
+
+def dnsdomain_list(context):
+    """Get a list of all zones in our database, public and private."""
+    return IMPL.dnsdomain_list(context)
+
+
+def dnsdomain_register_for_zone(context, fqdomain, zone):
+    """Associated a DNS domain with an availability zone"""
+    return IMPL.dnsdomain_register_for_zone(context, fqdomain, zone)
+
+
+def dnsdomain_register_for_project(context, fqdomain, project):
+    """Associated a DNS domain with a project id"""
+    return IMPL.dnsdomain_register_for_project(context, fqdomain, project)
+
+
+def dnsdomain_unregister(context, fqdomain):
+    """Purge associations for the specified DNS zone"""
+    return IMPL.dnsdomain_unregister(context, fqdomain)
+
+
+def dnsdomain_get(context, fqdomain):
+    """Get the db record for the specified domain."""
+    return IMPL.dnsdomain_get(context, fqdomain)
+
+
 ####################
 
 
