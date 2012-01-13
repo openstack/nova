@@ -792,31 +792,10 @@ class Controller(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
+    @wsgi.action('confirmResize')
     @exception.novaclient_converter
     @scheduler_api.redirect_handler
-    def action(self, req, id, body):
-        """Multi-purpose method used to take actions on a server"""
-        _actions = {
-            'changePassword': self._action_change_password,
-            'reboot': self._action_reboot,
-            'resize': self._action_resize,
-            'confirmResize': self._action_confirm_resize,
-            'revertResize': self._action_revert_resize,
-            'rebuild': self._action_rebuild,
-            'createImage': self._action_create_image,
-        }
-
-        for key in body:
-            if key in _actions:
-                return _actions[key](body, req, id)
-            else:
-                msg = _("There is no such server action: %s") % (key,)
-                raise exc.HTTPBadRequest(explanation=msg)
-
-        msg = _("Invalid request body")
-        raise exc.HTTPBadRequest(explanation=msg)
-
-    def _action_confirm_resize(self, input_dict, req, id):
+    def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, id)
         try:
@@ -832,7 +811,13 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest()
         return exc.HTTPNoContent()
 
-    def _action_revert_resize(self, input_dict, req, id):
+    @wsgi.response(202)
+    @wsgi.serializers(xml=FullServerTemplate)
+    @wsgi.deserializers(xml=ActionDeserializer)
+    @wsgi.action('revertResize')
+    @exception.novaclient_converter
+    @scheduler_api.redirect_handler
+    def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, id)
         try:
@@ -848,10 +833,16 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
-    def _action_reboot(self, input_dict, req, id):
-        if 'reboot' in input_dict and 'type' in input_dict['reboot']:
+    @wsgi.response(202)
+    @wsgi.serializers(xml=FullServerTemplate)
+    @wsgi.deserializers(xml=ActionDeserializer)
+    @wsgi.action('reboot')
+    @exception.novaclient_converter
+    @scheduler_api.redirect_handler
+    def _action_reboot(self, req, id, body):
+        if 'reboot' in body and 'type' in body['reboot']:
             valid_reboot_types = ['HARD', 'SOFT']
-            reboot_type = input_dict['reboot']['type'].upper()
+            reboot_type = body['reboot']['type'].upper()
             if not valid_reboot_types.count(reboot_type):
                 msg = _("Argument 'type' for reboot is not HARD or SOFT")
                 LOG.exception(msg)
@@ -930,13 +921,19 @@ class Controller(wsgi.Controller):
 
         return common.get_id_from_href(flavor_ref)
 
-    def _action_change_password(self, input_dict, req, id):
+    @wsgi.response(202)
+    @wsgi.serializers(xml=FullServerTemplate)
+    @wsgi.deserializers(xml=ActionDeserializer)
+    @wsgi.action('changePassword')
+    @exception.novaclient_converter
+    @scheduler_api.redirect_handler
+    def _action_change_password(self, req, id, body):
         context = req.environ['nova.context']
-        if (not 'changePassword' in input_dict
-            or not 'adminPass' in input_dict['changePassword']):
+        if (not 'changePassword' in body
+            or not 'adminPass' in body['changePassword']):
             msg = _("No adminPass was specified")
             raise exc.HTTPBadRequest(explanation=msg)
-        password = input_dict['changePassword']['adminPass']
+        password = body['changePassword']['adminPass']
         if not isinstance(password, basestring) or password == '':
             msg = _("Invalid adminPass")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -956,10 +953,16 @@ class Controller(wsgi.Controller):
             LOG.debug(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
-    def _action_resize(self, input_dict, req, id):
+    @wsgi.response(202)
+    @wsgi.serializers(xml=FullServerTemplate)
+    @wsgi.deserializers(xml=ActionDeserializer)
+    @wsgi.action('resize')
+    @exception.novaclient_converter
+    @scheduler_api.redirect_handler
+    def _action_resize(self, req, id, body):
         """ Resizes a given instance to the flavor size requested """
         try:
-            flavor_ref = input_dict["resize"]["flavorRef"]
+            flavor_ref = body["resize"]["flavorRef"]
             if not flavor_ref:
                 msg = _("Resize request has invalid 'flavorRef' attribute.")
                 raise exc.HTTPBadRequest(explanation=msg)
@@ -969,10 +972,16 @@ class Controller(wsgi.Controller):
 
         return self._resize(req, id, flavor_ref)
 
-    def _action_rebuild(self, info, request, instance_id):
+    @wsgi.response(202)
+    @wsgi.serializers(xml=FullServerTemplate)
+    @wsgi.deserializers(xml=ActionDeserializer)
+    @wsgi.action('rebuild')
+    @exception.novaclient_converter
+    @scheduler_api.redirect_handler
+    def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes"""
         try:
-            body = info['rebuild']
+            body = body['rebuild']
         except (KeyError, TypeError):
             raise exc.HTTPBadRequest(_("Invalid request body"))
 
@@ -987,8 +996,8 @@ class Controller(wsgi.Controller):
         except (KeyError, TypeError):
             password = utils.generate_password(FLAGS.password_length)
 
-        context = request.environ['nova.context']
-        instance = self._get_server(context, instance_id)
+        context = req.environ['nova.context']
+        instance = self._get_server(context, id)
 
         attr_map = {
             'personality': 'files_to_inject',
@@ -1025,10 +1034,10 @@ class Controller(wsgi.Controller):
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
 
-        instance = self._get_server(context, instance_id)
+        instance = self._get_server(context, id)
 
         self._add_instance_faults(context, [instance])
-        view = self._view_builder.show(request, instance)
+        view = self._view_builder.show(req, instance)
 
         # Add on the adminPass attribute since the view doesn't do it
         view['server']['adminPass'] = password
@@ -1036,11 +1045,17 @@ class Controller(wsgi.Controller):
         robj = wsgi.ResponseObject(view)
         return self._add_location(robj)
 
+    @wsgi.response(202)
+    @wsgi.serializers(xml=FullServerTemplate)
+    @wsgi.deserializers(xml=ActionDeserializer)
+    @wsgi.action('createImage')
+    @exception.novaclient_converter
+    @scheduler_api.redirect_handler
     @common.check_snapshots_enabled
-    def _action_create_image(self, input_dict, req, instance_id):
+    def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']
-        entity = input_dict.get("createImage", {})
+        entity = body.get("createImage", {})
 
         try:
             image_name = entity["name"]
@@ -1054,7 +1069,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         # preserve link to server in image properties
-        server_ref = os.path.join(req.application_url, 'servers', instance_id)
+        server_ref = os.path.join(req.application_url, 'servers', id)
         props = {'instance_ref': server_ref}
 
         metadata = entity.get('metadata', {})
@@ -1065,7 +1080,7 @@ class Controller(wsgi.Controller):
             msg = _("Invalid metadata")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        instance = self._get_server(context, instance_id)
+        instance = self._get_server(context, id)
 
         try:
             image = self.compute_api.snapshot(context,

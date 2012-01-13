@@ -21,7 +21,7 @@ import json
 import webob
 from lxml import etree
 
-from nova.api.openstack  import compute
+from nova.api.openstack import compute
 from nova.api.openstack import extensions as base_extensions
 from nova.api.openstack.compute import extensions as compute_extensions
 from nova.api.openstack import wsgi
@@ -36,6 +36,7 @@ FLAGS = flags.FLAGS
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
 response_body = "Try to say this Mr. Knox, sir..."
+extension_body = "I am not a fox!"
 
 
 class StubController(object):
@@ -54,16 +55,60 @@ class StubController(object):
         raise webob.exc.HTTPNotFound()
 
 
+class StubActionController(wsgi.Controller):
+    def __init__(self, body):
+        self.body = body
+
+    @wsgi.action('fooAction')
+    def _action_foo(self, req, id, body):
+        return self.body
+
+
+class StubControllerExtension(base_extensions.ExtensionDescriptor):
+    name = 'twaadle'
+
+    def __init__(self):
+        pass
+
+
+class StubEarlyExtensionController(wsgi.Controller):
+    def __init__(self, body):
+        self.body = body
+
+    @wsgi.extends
+    def index(self, req):
+        yield self.body
+
+    @wsgi.extends(action='fooAction')
+    def _action_foo(self, req, id, body):
+        yield self.body
+
+
+class StubLateExtensionController(wsgi.Controller):
+    def __init__(self, body):
+        self.body = body
+
+    @wsgi.extends
+    def index(self, req, resp_obj):
+        return self.body
+
+    @wsgi.extends(action='fooAction')
+    def _action_foo(self, req, resp_obj, id, body):
+        return self.body
+
+
 class StubExtensionManager(object):
     """Provides access to Tweedle Beetles"""
 
     name = "Tweedle Beetle Extension"
     alias = "TWDLBETL"
 
-    def __init__(self, resource_ext=None, action_ext=None, request_ext=None):
+    def __init__(self, resource_ext=None, action_ext=None, request_ext=None,
+                 controller_ext=None):
         self.resource_ext = resource_ext
         self.action_ext = action_ext
         self.request_ext = request_ext
+        self.controller_ext = controller_ext
 
     def get_resources(self):
         resource_exts = []
@@ -82,6 +127,12 @@ class StubExtensionManager(object):
         if self.request_ext:
             request_extensions.append(self.request_ext)
         return request_extensions
+
+    def get_controller_extensions(self):
+        controller_extensions = []
+        if self.controller_ext:
+            controller_extensions.append(self.controller_ext)
+        return controller_extensions
 
 
 class ExtensionTestCase(test.TestCase):
@@ -411,7 +462,7 @@ class ActionExtensionTest(ExtensionTestCase):
         body = json.loads(response.body)
         expected = {
             "badRequest": {
-                "message": "There is no such server action: blah",
+                "message": "There is no such action: blah",
                 "code": 400
             }
         }
@@ -476,6 +527,84 @@ class RequestExtensionTest(ExtensionTestCase):
         print response_data
         self.assertEqual('newblue', response_data['flavor']['googoose'])
         self.assertEqual("Pig Bands!", response_data['big_bands'])
+
+
+class ControllerExtensionTest(ExtensionTestCase):
+    def test_controller_extension_early(self):
+        controller = StubController(response_body)
+        res_ext = base_extensions.ResourceExtension('tweedles', controller)
+        ext_controller = StubEarlyExtensionController(extension_body)
+        extension = StubControllerExtension()
+        cont_ext = base_extensions.ControllerExtension(extension, 'tweedles',
+                                                       ext_controller)
+        manager = StubExtensionManager(resource_ext=res_ext,
+                                       controller_ext=cont_ext)
+        app = compute.APIRouter(manager)
+        request = webob.Request.blank("/fake/tweedles")
+        response = request.get_response(app)
+        self.assertEqual(200, response.status_int)
+        self.assertEqual(extension_body, response.body)
+
+    def test_controller_extension_late(self):
+        # Need a dict for the body to convert to a ResponseObject
+        controller = StubController(dict(foo=response_body))
+        res_ext = base_extensions.ResourceExtension('tweedles', controller)
+
+        ext_controller = StubLateExtensionController(extension_body)
+        extension = StubControllerExtension()
+        cont_ext = base_extensions.ControllerExtension(extension, 'tweedles',
+                                                       ext_controller)
+
+        manager = StubExtensionManager(resource_ext=res_ext,
+                                       controller_ext=cont_ext)
+        app = compute.APIRouter(manager)
+        request = webob.Request.blank("/fake/tweedles")
+        response = request.get_response(app)
+        self.assertEqual(200, response.status_int)
+        self.assertEqual(extension_body, response.body)
+
+    def test_controller_action_extension_early(self):
+        controller = StubActionController(response_body)
+        actions = dict(action='POST')
+        res_ext = base_extensions.ResourceExtension('tweedles', controller,
+                                                    member_actions=actions)
+        ext_controller = StubEarlyExtensionController(extension_body)
+        extension = StubControllerExtension()
+        cont_ext = base_extensions.ControllerExtension(extension, 'tweedles',
+                                                       ext_controller)
+        manager = StubExtensionManager(resource_ext=res_ext,
+                                       controller_ext=cont_ext)
+        app = compute.APIRouter(manager)
+        request = webob.Request.blank("/fake/tweedles/foo/action")
+        request.method = 'POST'
+        request.headers['Content-Type'] = 'application/json'
+        request.body = json.dumps(dict(fooAction=True))
+        response = request.get_response(app)
+        self.assertEqual(200, response.status_int)
+        self.assertEqual(extension_body, response.body)
+
+    def test_controller_action_extension_late(self):
+        # Need a dict for the body to convert to a ResponseObject
+        controller = StubActionController(dict(foo=response_body))
+        actions = dict(action='POST')
+        res_ext = base_extensions.ResourceExtension('tweedles', controller,
+                                                    member_actions=actions)
+
+        ext_controller = StubLateExtensionController(extension_body)
+        extension = StubControllerExtension()
+        cont_ext = base_extensions.ControllerExtension(extension, 'tweedles',
+                                                       ext_controller)
+
+        manager = StubExtensionManager(resource_ext=res_ext,
+                                       controller_ext=cont_ext)
+        app = compute.APIRouter(manager)
+        request = webob.Request.blank("/fake/tweedles/foo/action")
+        request.method = 'POST'
+        request.headers['Content-Type'] = 'application/json'
+        request.body = json.dumps(dict(fooAction=True))
+        response = request.get_response(app)
+        self.assertEqual(200, response.status_int)
+        self.assertEqual(extension_body, response.body)
 
 
 class ExtensionsXMLSerializerTest(test.TestCase):

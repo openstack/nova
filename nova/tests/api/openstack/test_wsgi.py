@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+import inspect
 import json
 import webob
 
@@ -445,7 +446,7 @@ class ResourceTest(test.TestCase):
 
         controller = Controller()
         resource = wsgi.Resource(controller)
-        method = resource.get_method(None, 'index')
+        method, extensions = resource.get_method(None, 'index', None, '')
         actual = resource.dispatch(method, None, {'pants': 'off'})
         expected = 'off'
         self.assertEqual(actual, expected)
@@ -458,7 +459,68 @@ class ResourceTest(test.TestCase):
         controller = Controller()
         resource = wsgi.Resource(controller)
         self.assertRaises(AttributeError, resource.get_method,
-                          None, 'create')
+                          None, 'create', None, '')
+
+    def test_get_method_action_json(self):
+        class Controller(wsgi.Controller):
+            @wsgi.action('fooAction')
+            def _action_foo(self, req, id, body):
+                return body
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        method, extensions = resource.get_method(None, 'action',
+                                                 'application/json',
+                                                 '{"fooAction": true}')
+        self.assertEqual(controller._action_foo, method)
+
+    def test_get_method_action_xml(self):
+        class Controller(wsgi.Controller):
+            @wsgi.action('fooAction')
+            def _action_foo(self, req, id, body):
+                return body
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        method, extensions = resource.get_method(None, 'action',
+                                                 'application/xml',
+                                                 '<fooAction>true</fooAction>')
+        self.assertEqual(controller._action_foo, method)
+
+    def test_get_method_action_bad_body(self):
+        class Controller(wsgi.Controller):
+            @wsgi.action('fooAction')
+            def _action_foo(self, req, id, body):
+                return body
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        self.assertRaises(exception.MalformedRequestBody, resource.get_method,
+                          None, 'action', 'application/json', '{}')
+
+    def test_get_method_unknown_controller_action(self):
+        class Controller(wsgi.Controller):
+            @wsgi.action('fooAction')
+            def _action_foo(self, req, id, body):
+                return body
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        self.assertRaises(KeyError, resource.get_method,
+                          None, 'action', 'application/json',
+                          '{"barAction": true}')
+
+    def test_get_method_action_method(self):
+        class Controller():
+            def action(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        method, extensions = resource.get_method(None, 'action',
+                                                 'application/xml',
+                                                 '<fooAction>true</fooAction')
+        self.assertEqual(controller.action, method)
 
     def test_get_action_args(self):
         class Controller(object):
@@ -594,6 +656,287 @@ class ResourceTest(test.TestCase):
 
         obj = resource.deserialize(controller.index, 'application/xml', 'foo')
         self.assertEqual(obj, 'xml')
+
+    def test_register_actions(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        class ControllerExtended(wsgi.Controller):
+            @wsgi.action('fooAction')
+            def _action_foo(self, req, id, body):
+                return body
+
+            @wsgi.action('barAction')
+            def _action_bar(self, req, id, body):
+                return body
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        self.assertEqual({}, resource.wsgi_actions)
+
+        extended = ControllerExtended()
+        resource.register_actions(extended)
+        self.assertEqual({
+                'fooAction': extended._action_foo,
+                'barAction': extended._action_bar,
+                }, resource.wsgi_actions)
+
+    def test_register_extensions(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        class ControllerExtended(wsgi.Controller):
+            @wsgi.extends
+            def index(self, req, resp_obj, pants=None):
+                return None
+
+            @wsgi.extends(action='fooAction')
+            def _action_foo(self, req, resp, id, body):
+                return None
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+        self.assertEqual({}, resource.wsgi_extensions)
+        self.assertEqual({}, resource.wsgi_action_extensions)
+
+        extended = ControllerExtended()
+        resource.register_extensions(extended)
+        self.assertEqual({'index': [extended.index]}, resource.wsgi_extensions)
+        self.assertEqual({'fooAction': [extended._action_foo]},
+                         resource.wsgi_action_extensions)
+
+    def test_get_method_extensions(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        class ControllerExtended(wsgi.Controller):
+            @wsgi.extends
+            def index(self, req, resp_obj, pants=None):
+                return None
+
+        controller = Controller()
+        extended = ControllerExtended()
+        resource = wsgi.Resource(controller)
+        resource.register_extensions(extended)
+        method, extensions = resource.get_method(None, 'index', None, '')
+        self.assertEqual(method, controller.index)
+        self.assertEqual(extensions, [extended.index])
+
+    def test_get_method_action_extensions(self):
+        class Controller(wsgi.Controller):
+            def index(self, req, pants=None):
+                return pants
+
+            @wsgi.action('fooAction')
+            def _action_foo(self, req, id, body):
+                return body
+
+        class ControllerExtended(wsgi.Controller):
+            @wsgi.extends(action='fooAction')
+            def _action_foo(self, req, resp_obj, id, body):
+                return None
+
+        controller = Controller()
+        extended = ControllerExtended()
+        resource = wsgi.Resource(controller)
+        resource.register_extensions(extended)
+        method, extensions = resource.get_method(None, 'action',
+                                                 'application/json',
+                                                 '{"fooAction": true}')
+        self.assertEqual(method, controller._action_foo)
+        self.assertEqual(extensions, [extended._action_foo])
+
+    def test_pre_process_extensions_regular(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        called = []
+
+        def extension1(req, resp_obj):
+            called.append(1)
+            return None
+
+        def extension2(req, resp_obj):
+            called.append(2)
+            return None
+
+        extensions = [extension1, extension2]
+        response, post = resource.pre_process_extensions(extensions, None, {})
+        self.assertEqual(called, [])
+        self.assertEqual(response, None)
+        self.assertEqual(list(post), [extension2, extension1])
+
+    def test_pre_process_extensions_generator(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        called = []
+
+        def extension1(req):
+            called.append('pre1')
+            resp_obj = yield
+            called.append('post1')
+
+        def extension2(req):
+            called.append('pre2')
+            resp_obj = yield
+            called.append('post2')
+
+        extensions = [extension1, extension2]
+        response, post = resource.pre_process_extensions(extensions, None, {})
+        post = list(post)
+        self.assertEqual(called, ['pre1', 'pre2'])
+        self.assertEqual(response, None)
+        self.assertEqual(len(post), 2)
+        self.assertTrue(inspect.isgenerator(post[0]))
+        self.assertTrue(inspect.isgenerator(post[1]))
+
+        for gen in post:
+            try:
+                gen.send(None)
+            except StopIteration:
+                continue
+
+        self.assertEqual(called, ['pre1', 'pre2', 'post2', 'post1'])
+
+    def test_pre_process_extensions_generator_response(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        called = []
+
+        def extension1(req):
+            called.append('pre1')
+            yield 'foo'
+
+        def extension2(req):
+            called.append('pre2')
+
+        extensions = [extension1, extension2]
+        response, post = resource.pre_process_extensions(extensions, None, {})
+        self.assertEqual(called, ['pre1'])
+        self.assertEqual(response, 'foo')
+        self.assertEqual(post, [])
+
+    def test_post_process_extensions_regular(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        called = []
+
+        def extension1(req, resp_obj):
+            called.append(1)
+            return None
+
+        def extension2(req, resp_obj):
+            called.append(2)
+            return None
+
+        response = resource.post_process_extensions([extension2, extension1],
+                                                    None, None, {})
+        self.assertEqual(called, [2, 1])
+        self.assertEqual(response, None)
+
+    def test_post_process_extensions_regular_response(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        called = []
+
+        def extension1(req, resp_obj):
+            called.append(1)
+            return None
+
+        def extension2(req, resp_obj):
+            called.append(2)
+            return 'foo'
+
+        response = resource.post_process_extensions([extension2, extension1],
+                                                    None, None, {})
+        self.assertEqual(called, [2])
+        self.assertEqual(response, 'foo')
+
+    def test_post_process_extensions_generator(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        called = []
+
+        def extension1(req):
+            resp_obj = yield
+            called.append(1)
+
+        def extension2(req):
+            resp_obj = yield
+            called.append(2)
+
+        ext1 = extension1(None)
+        ext1.next()
+        ext2 = extension2(None)
+        ext2.next()
+
+        response = resource.post_process_extensions([ext2, ext1],
+                                                    None, None, {})
+
+        self.assertEqual(called, [2, 1])
+        self.assertEqual(response, None)
+
+    def test_post_process_extensions_generator_response(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        controller = Controller()
+        resource = wsgi.Resource(controller)
+
+        called = []
+
+        def extension1(req):
+            resp_obj = yield
+            called.append(1)
+
+        def extension2(req):
+            resp_obj = yield
+            called.append(2)
+            yield 'foo'
+
+        ext1 = extension1(None)
+        ext1.next()
+        ext2 = extension2(None)
+        ext2.next()
+
+        response = resource.post_process_extensions([ext2, ext1],
+                                                    None, None, {})
+
+        self.assertEqual(called, [2])
+        self.assertEqual(response, 'foo')
 
 
 class ResponseObjectTest(test.TestCase):

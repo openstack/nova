@@ -174,27 +174,13 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.UnsetAll()
         super(ServerActionsControllerTest, self).tearDown()
 
-    def test_server_bad_body(self):
-        body = {}
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
-
-    def test_server_unknown_action(self):
-        body = {'sockTheFox': {'fakekey': '1234'}}
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
-
     def test_server_change_password(self):
         mock_method = MockSetAdminPassword()
         self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
         body = {'changePassword': {'adminPass': '1234pass'}}
 
         req = fakes.HTTPRequest.blank(self.url)
-        self.controller.action(req, FAKE_UUID, body)
+        self.controller._action_change_password(req, FAKE_UUID, body)
 
         self.assertEqual(mock_method.instance_id, self.uuid)
         self.assertEqual(mock_method.password, '1234pass')
@@ -203,47 +189,53 @@ class ServerActionsControllerTest(test.TestCase):
         body = {'changePassword': {'adminPass': 1234}}
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_change_password,
+                          req, FAKE_UUID, body)
 
     def test_server_change_password_bad_request(self):
         body = {'changePassword': {'pass': '12345'}}
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_change_password,
+                          req, FAKE_UUID, body)
 
     def test_server_change_password_empty_string(self):
         body = {'changePassword': {'adminPass': ''}}
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_change_password,
+                          req, FAKE_UUID, body)
 
     def test_server_change_password_none(self):
         body = {'changePassword': {'adminPass': None}}
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_change_password,
+                          req, FAKE_UUID, body)
 
     def test_reboot_hard(self):
         body = dict(reboot=dict(type="HARD"))
         req = fakes.HTTPRequest.blank(self.url)
-        self.controller.action(req, FAKE_UUID, body)
+        self.controller._action_reboot(req, FAKE_UUID, body)
 
     def test_reboot_soft(self):
         body = dict(reboot=dict(type="SOFT"))
         req = fakes.HTTPRequest.blank(self.url)
-        self.controller.action(req, FAKE_UUID, body)
+        self.controller._action_reboot(req, FAKE_UUID, body)
 
     def test_reboot_incorrect_type(self):
         body = dict(reboot=dict(type="NOT_A_TYPE"))
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_reboot,
+                          req, FAKE_UUID, body)
 
     def test_reboot_missing_type(self):
         body = dict(reboot=dict())
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_reboot,
+                          req, FAKE_UUID, body)
 
     def test_reboot_not_found(self):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
@@ -251,7 +243,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = dict(reboot=dict(type="HARD"))
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller._action_reboot,
                           req, str(utils.gen_uuid()), body)
 
     def test_reboot_raises_conflict_on_invalid_state(self):
@@ -263,7 +256,8 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'reboot', fake_reboot)
 
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPConflict, self.controller.action,
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_reboot,
                           req, FAKE_UUID, body)
 
     def test_rebuild_accepted_minimum(self):
@@ -278,7 +272,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        robj = self.controller.action(req, FAKE_UUID, body)
+        robj = self.controller._action_rebuild(req, FAKE_UUID, body)
         body = robj.obj
 
         self.assertEqual(body['server']['image']['id'], '2')
@@ -300,7 +294,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body)
 
     def test_rebuild_accepted_with_metadata(self):
         metadata = {'new': 'metadata'}
@@ -316,7 +311,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body).obj
+        body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
 
         self.assertEqual(body['server']['metadata'], metadata)
 
@@ -330,7 +325,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body)
 
     def test_rebuild_bad_entity(self):
         body = {
@@ -341,7 +337,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body)
 
     def test_rebuild_bad_personality(self):
         body = {
@@ -356,7 +353,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body)
 
     def test_rebuild_personality(self):
         body = {
@@ -370,7 +368,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body).obj
+        body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
 
         self.assertTrue('personality' not in body['server'])
 
@@ -386,7 +384,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body).obj
+        body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
 
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertEqual(body['server']['adminPass'], 'asdf')
@@ -404,7 +402,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body)
 
     def test_rebuild_accessIP(self):
         attributes = {
@@ -430,7 +429,7 @@ class ServerActionsControllerTest(test.TestCase):
                 task_state=None, progress=0, **attributes).AndReturn(None)
         self.mox.ReplayAll()
 
-        self.controller.action(req, FAKE_UUID, body)
+        self.controller._action_rebuild(req, FAKE_UUID, body)
         self.mox.VerifyAll()
 
     def test_resize_server(self):
@@ -445,7 +444,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body)
+        body = self.controller._action_resize(req, FAKE_UUID, body)
 
         self.assertEqual(self.resize_called, True)
 
@@ -454,14 +453,16 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body)
 
     def test_resize_server_no_flavor_ref(self):
         body = dict(resize=dict(flavorRef=None))
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body)
 
     def test_resize_raises_conflict_on_invalid_state(self):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
@@ -472,7 +473,8 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'resize', fake_resize)
 
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPConflict, self.controller.action,
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_resize,
                           req, FAKE_UUID, body)
 
     def test_confirm_resize_server(self):
@@ -486,7 +488,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'confirm_resize', cr_mock)
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body)
+        body = self.controller._action_confirm_resize(req, FAKE_UUID, body)
 
         self.assertEqual(self.confirm_resize_called, True)
 
@@ -503,7 +505,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_confirm_resize,
+                          req, FAKE_UUID, body)
 
     def test_confirm_resize_raises_conflict_on_invalid_state(self):
         body = dict(confirmResize=None)
@@ -515,7 +518,8 @@ class ServerActionsControllerTest(test.TestCase):
                 fake_confirm_resize)
 
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPConflict, self.controller.action,
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_confirm_resize,
                           req, FAKE_UUID, body)
 
     def test_revert_resize_migration_not_found(self):
@@ -531,7 +535,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_revert_resize,
+                          req, FAKE_UUID, body)
 
     def test_revert_resize_server(self):
         body = dict(revertResize=None)
@@ -544,7 +549,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(nova.compute.api.API, 'revert_resize', revert_mock)
 
         req = fakes.HTTPRequest.blank(self.url)
-        body = self.controller.action(req, FAKE_UUID, body)
+        body = self.controller._action_revert_resize(req, FAKE_UUID, body)
 
         self.assertEqual(self.revert_resize_called, True)
 
@@ -558,7 +563,8 @@ class ServerActionsControllerTest(test.TestCase):
                 fake_revert_resize)
 
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPConflict, self.controller.action,
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_revert_resize,
                           req, FAKE_UUID, body)
 
     def test_create_image(self):
@@ -569,7 +575,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        response = self.controller.action(req, FAKE_UUID, body)
+        response = self.controller._action_create_image(req, FAKE_UUID, body)
 
         location = response.headers['Location']
         self.assertEqual('http://localhost/v2/fake/images/123', location)
@@ -589,7 +595,8 @@ class ServerActionsControllerTest(test.TestCase):
         }
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_create_image,
+                          req, FAKE_UUID, body)
 
     def test_create_image_with_metadata(self):
         body = {
@@ -600,7 +607,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        response = self.controller.action(req, FAKE_UUID, body)
+        response = self.controller._action_create_image(req, FAKE_UUID, body)
 
         location = response.headers['Location']
         self.assertEqual('http://localhost/v2/fake/images/123', location)
@@ -617,7 +624,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_create_image,
+                          req, FAKE_UUID, body)
 
     def test_create_image_no_name(self):
         body = {
@@ -625,7 +633,8 @@ class ServerActionsControllerTest(test.TestCase):
         }
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_create_image,
+                          req, FAKE_UUID, body)
 
     def test_create_image_bad_metadata(self):
         body = {
@@ -636,7 +645,8 @@ class ServerActionsControllerTest(test.TestCase):
         }
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_create_image,
+                          req, FAKE_UUID, body)
 
     def test_create_image_raises_conflict_on_invalid_state(self):
         def snapshot(*args, **kwargs):
@@ -651,7 +661,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller.action, req, FAKE_UUID, body)
+                          self.controller._action_create_image,
+                          req, FAKE_UUID, body)
 
 
 class TestServerActionXMLDeserializer(test.TestCase):
