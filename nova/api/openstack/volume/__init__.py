@@ -56,8 +56,10 @@ class APIRouter(base_wsgi.Router):
             ext_mgr = extensions.ExtensionManager()
 
         mapper = nova.api.openstack.ProjectMapper()
+        self.resources = {}
         self._setup_routes(mapper)
         self._setup_ext_routes(mapper, ext_mgr)
+        self._setup_extensions(ext_mgr)
         super(APIRouter, self).__init__(mapper)
 
     def _setup_ext_routes(self, mapper, ext_mgr):
@@ -66,13 +68,13 @@ class APIRouter(base_wsgi.Router):
         for resource in ext_mgr.get_resources():
             LOG.debug(_('Extended resource: %s'),
                       resource.collection)
-            if resource.serializer is None:
-                resource.serializer = serializer
 
+            wsgi_resource = wsgi.Resource(
+                resource.controller, resource.deserializer,
+                resource.serializer)
+            self.resources[resource.collection] = wsgi_resource
             kargs = dict(
-                controller=wsgi.Resource(
-                    resource.controller, resource.deserializer,
-                    resource.serializer),
+                controller=wsgi_resource,
                 collection=resource.collection_actions,
                 member=resource.member_actions)
 
@@ -81,19 +83,42 @@ class APIRouter(base_wsgi.Router):
 
             mapper.resource(resource.collection, resource.collection, **kargs)
 
+    def _setup_extensions(self, ext_mgr):
+        for extension in ext_mgr.get_controller_extensions():
+            ext_name = extension.extension.name
+            collection = extension.collection
+            controller = extension.controller
+
+            if collection not in self.resources:
+                LOG.warning(_('Extension %(ext_name)s: Cannot extend '
+                              'resource %(collection)s: No such resource') %
+                            locals())
+                continue
+
+            LOG.debug(_('Extension %(ext_name)s extending resource: '
+                        '%(collection)s') % locals())
+
+            resource = self.resources[collection]
+            resource.register_actions(controller)
+            resource.register_extensions(controller)
+
     def _setup_routes(self, mapper):
+        self.resources['versions'] = versions.create_resource()
         mapper.connect("versions", "/",
-                    controller=versions.create_resource(),
+                    controller=self.resources['versions'],
                     action='show')
 
         mapper.redirect("", "/")
 
+        self.resources['volumes'] = volumes.create_resource()
         mapper.resource("volume", "volumes",
-                        controller=volumes.create_resource(),
+                        controller=self.resources['volumes'],
                         collection={'detail': 'GET'})
 
+        self.resources['types'] = types.create_resource()
         mapper.resource("type", "types",
-                        controller=types.create_resource())
+                        controller=self.resources['types'])
 
+        self.resources['snapshots'] = snapshots.create_resource()
         mapper.resource("snapshot", "snapshots",
-                        controller=snapshots.create_resource())
+                        controller=self.resources['snapshots'])

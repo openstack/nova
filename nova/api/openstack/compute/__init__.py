@@ -67,8 +67,10 @@ class APIRouter(base_wsgi.Router):
             ext_mgr = extensions.ExtensionManager()
 
         mapper = nova.api.openstack.ProjectMapper()
+        self.resources = {}
         self._setup_routes(mapper)
         self._setup_ext_routes(mapper, ext_mgr)
+        self._setup_extensions(ext_mgr)
         super(APIRouter, self).__init__(mapper)
 
     def _setup_ext_routes(self, mapper, ext_mgr):
@@ -76,10 +78,12 @@ class APIRouter(base_wsgi.Router):
             LOG.debug(_('Extended resource: %s'),
                       resource.collection)
 
+            wsgi_resource = wsgi.Resource(
+                resource.controller, resource.deserializer,
+                resource.serializer)
+            self.resources[resource.collection] = wsgi_resource
             kargs = dict(
-                controller=wsgi.Resource(
-                    resource.controller, resource.deserializer,
-                    resource.serializer),
+                controller=wsgi_resource,
                 collection=resource.collection_actions,
                 member=resource.member_actions)
 
@@ -88,39 +92,66 @@ class APIRouter(base_wsgi.Router):
 
             mapper.resource(resource.collection, resource.collection, **kargs)
 
+    def _setup_extensions(self, ext_mgr):
+        for extension in ext_mgr.get_controller_extensions():
+            ext_name = extension.extension.name
+            collection = extension.collection
+            controller = extension.controller
+
+            if collection not in self.resources:
+                LOG.warning(_('Extension %(ext_name)s: Cannot extend '
+                              'resource %(collection)s: No such resource') %
+                            locals())
+                continue
+
+            LOG.debug(_('Extension %(ext_name)s extending resource: '
+                        '%(collection)s') % locals())
+
+            resource = self.resources[collection]
+            resource.register_actions(controller)
+            resource.register_extensions(controller)
+
     def _setup_routes(self, mapper):
+        self.resources['versions'] = versions.create_resource()
         mapper.connect("versions", "/",
-                    controller=versions.create_resource(),
+                    controller=self.resources['versions'],
                     action='show')
 
         mapper.redirect("", "/")
 
+        self.resources['consoles'] = consoles.create_resource()
         mapper.resource("console", "consoles",
-                    controller=consoles.create_resource(),
+                    controller=self.resources['consoles'],
                     parent_resource=dict(member_name='server',
                     collection_name='servers'))
 
+        self.resources['servers'] = servers.create_resource()
         mapper.resource("server", "servers",
-                        controller=servers.create_resource(),
+                        controller=self.resources['servers'],
                         collection={'detail': 'GET'},
                         member={'action': 'POST'})
 
-        mapper.resource("ip", "ips", controller=ips.create_resource(),
+        self.resources['ips'] = ips.create_resource()
+        mapper.resource("ip", "ips", controller=self.resources['ips'],
                         parent_resource=dict(member_name='server',
                                              collection_name='servers'))
 
+        self.resources['images'] = images.create_resource()
         mapper.resource("image", "images",
-                        controller=images.create_resource(),
+                        controller=self.resources['images'],
                         collection={'detail': 'GET'})
 
+        self.resources['limits'] = limits.create_resource()
         mapper.resource("limit", "limits",
-                        controller=limits.create_resource())
+                        controller=self.resources['limits'])
 
+        self.resources['flavors'] = flavors.create_resource()
         mapper.resource("flavor", "flavors",
-                        controller=flavors.create_resource(),
+                        controller=self.resources['flavors'],
                         collection={'detail': 'GET'})
 
-        image_metadata_controller = image_metadata.create_resource()
+        self.resources['image_metadata'] = image_metadata.create_resource()
+        image_metadata_controller = self.resources['image_metadata']
 
         mapper.resource("image_meta", "metadata",
                         controller=image_metadata_controller,
@@ -132,7 +163,8 @@ class APIRouter(base_wsgi.Router):
                        action='update_all',
                        conditions={"method": ['PUT']})
 
-        server_metadata_controller = server_metadata.create_resource()
+        self.resources['server_metadata'] = server_metadata.create_resource()
+        server_metadata_controller = self.resources['server_metadata']
 
         mapper.resource("server_meta", "metadata",
                         controller=server_metadata_controller,

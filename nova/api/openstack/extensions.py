@@ -97,6 +97,14 @@ class ExtensionDescriptor(object):
         request_exts = []
         return request_exts
 
+    def get_controller_extensions(self):
+        """List of extensions.ControllerExtension extension objects.
+
+        Controller extensions are used to extend existing controllers.
+        """
+        controller_exts = []
+        return controller_exts
+
     @classmethod
     def nsmap(cls):
         """Synthesize a namespace map from extension."""
@@ -441,6 +449,18 @@ class ExtensionManager(object):
                 pass
         return request_exts
 
+    def get_controller_extensions(self):
+        """Returns a list of ControllerExtension objects."""
+        controller_exts = []
+        for ext in self.extensions.values():
+            try:
+                controller_exts.extend(ext.get_controller_extensions())
+            except AttributeError:
+                # NOTE(Vek): Extensions aren't required to have
+                # controller extensions
+                pass
+        return controller_exts
+
     def _check_extension(self, extension):
         """Checks for required methods in extension objects."""
         try:
@@ -492,6 +512,20 @@ class ExtensionManager(object):
                            '%(exc)s') % locals())
 
 
+class ControllerExtension(object):
+    """Extend core controllers of nova OpenStack API.
+
+    Provide a way to extend existing nova OpenStack API core
+    controllers.
+    """
+
+    def __init__(self, extension, collection, controller):
+        self.extension = extension
+        self.collection = collection
+        self.controller = controller
+
+
+@utils.deprecated("Superseded by ControllerExtension")
 class RequestExtension(object):
     """Extend requests and responses of core nova OpenStack API resources.
 
@@ -507,6 +541,7 @@ class RequestExtension(object):
         self.pre_handler = pre_handler
 
 
+@utils.deprecated("Superseded by ControllerExtension")
 class ActionExtension(object):
     """Add custom actions to core nova OpenStack API resources."""
 
