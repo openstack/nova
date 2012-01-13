@@ -33,6 +33,7 @@ import kombu.connection
 from nova import context
 from nova import exception
 from nova import flags
+from nova import local
 from nova.rpc import common as rpc_common
 
 FLAGS = flags.FLAGS
@@ -695,6 +696,10 @@ class ProxyCallback(object):
         Example: {'method': 'echo', 'args': {'value': 42}}
 
         """
+        # It is important to clear the context here, because at this point
+        # the previous context is stored in local.store.context
+        if hasattr(local.store, 'context'):
+            del local.store.context
         LOG.debug(_('received %s') % message_data)
         ctxt = _unpack_context(message_data)
         method = message_data.get('method')
@@ -741,8 +746,9 @@ def _unpack_context(msg):
             value = msg.pop(key)
             context_dict[key[9:]] = value
     context_dict['msg_id'] = msg.pop('_msg_id', None)
-    LOG.debug(_('unpacked context: %s'), context_dict)
-    return RpcContext.from_dict(context_dict)
+    ctx = RpcContext.from_dict(context_dict)
+    LOG.debug(_('unpacked context: %s'), ctx.to_dict())
+    return ctx
 
 
 def _pack_context(msg, context):
