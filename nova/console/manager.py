@@ -17,7 +17,6 @@
 
 """Console Proxy Service."""
 
-import functools
 import socket
 
 from nova import exception

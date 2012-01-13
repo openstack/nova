@@ -13,7 +13,7 @@
 #    under the License.
 
 from sqlalchemy import MetaData
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean
 from sqlalchemy import Column, Table
 
 meta = MetaData()

@@ -20,7 +20,6 @@ import mox
 import os
 import re
 import shutil
-import sys
 import tempfile
 
 from xml.etree.ElementTree import fromstring as xml_to_tree

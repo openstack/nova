@@ -19,7 +19,6 @@ from webob import exc
 import webob
 
 from nova.api.openstack import common
-from nova.api.openstack.compute import servers
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception

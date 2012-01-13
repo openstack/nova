@@ -15,7 +15,6 @@
 
 """Stubouts, mocks and fixtures for the test suite"""
 
-import eventlet
 import json
 import random
 

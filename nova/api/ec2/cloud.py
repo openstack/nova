@@ -35,7 +35,6 @@ from nova.compute import instance_types
 from nova.api.ec2 import inst_state
 from nova import block_device
 from nova import compute
-from nova.compute import power_state
 from nova.compute import vm_states
 from nova import crypto
 from nova import db

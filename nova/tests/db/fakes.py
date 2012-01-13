@@ -18,12 +18,8 @@
 
 """Stubouts, mocks and fixtures for the test suite"""
 
-import time
-
 from nova import db
 from nova import exception
-from nova import test
-from nova import utils
 
 
 class FakeModel(object):

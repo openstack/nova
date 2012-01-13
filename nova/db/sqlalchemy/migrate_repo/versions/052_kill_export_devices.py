@@ -15,7 +15,7 @@
 #    under the License.
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer
-from sqlalchemy import MetaData, String, Table
+from sqlalchemy import MetaData, Table
 from nova import log as logging
 
 meta = MetaData()

@@ -19,11 +19,8 @@
 import gettext
 import glob
 import os
-import subprocess
-import sys
 
 from setuptools import find_packages
-from setuptools.command.sdist import sdist
 
 # In order to run the i18n commands for compiling and
 # installing message catalogs, we use DistUtilsExtra.

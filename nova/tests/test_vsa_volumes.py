@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
-
 from nova import exception
 from nova import flags
 from nova import vsa
 from nova import volume
-from nova import db
 from nova import context
 from nova import test
 from nova import log as logging
@@ -33,7 +30,6 @@ class VsaVolumesTestCase(test.TestCase):
 
     def setUp(self):
         super(VsaVolumesTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.vsa_api = vsa.API()
         self.volume_api = volume.API()
         self.context = context.get_admin_context()

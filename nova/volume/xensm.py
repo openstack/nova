@@ -12,10 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-import time
-import os
-
 from nova import exception
 from nova import flags
 from nova import log as logging

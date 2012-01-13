@@ -17,8 +17,6 @@
 
 from sqlalchemy import Column, Table, MetaData, Integer
 
-from nova import log as logging
-
 
 meta = MetaData()
 

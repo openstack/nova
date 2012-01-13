@@ -30,8 +30,6 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import instance_types
 from nova import network
-from nova import db
-from nova import quota
 from nova import exception
 from nova import flags
 from nova import log as logging

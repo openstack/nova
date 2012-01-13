@@ -19,10 +19,8 @@
 
 from webob import exc
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import db
 from nova import exception
 from nova.volume import volume_types
 

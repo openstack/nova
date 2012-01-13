@@ -22,7 +22,6 @@ XenServer hosts.
 """
 
 import os
-import subprocess
 import sys
 
 # This is written to Python 2.4, since that is what is available on XenServer

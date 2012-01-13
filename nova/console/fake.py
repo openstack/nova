@@ -17,8 +17,6 @@
 
 """Fake ConsoleProxy driver for tests."""
 
-from nova import exception
-
 
 class FakeConsoleProxy(object):
     """Fake ConsoleProxy driver."""

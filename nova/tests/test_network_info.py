@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from nova import exception
 from nova import log as logging
 from nova.network import model

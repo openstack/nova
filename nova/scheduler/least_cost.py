@@ -25,7 +25,6 @@ is then selected for provisioning.
 
 from nova import flags
 from nova import log as logging
-from nova import exception
 
 LOG = logging.getLogger('nova.scheduler.least_cost')
 

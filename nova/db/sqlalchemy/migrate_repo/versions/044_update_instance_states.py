@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sqlalchemy
 from sqlalchemy import MetaData, Table, Column, String
 
 from nova.compute import task_states

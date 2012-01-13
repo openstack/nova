@@ -31,7 +31,6 @@ from nova import block_device
 from nova import context
 from nova import exception
 from nova import test
-from nova import wsgi
 from nova.api import auth
 from nova.api import ec2
 from nova.api.ec2 import apirequest

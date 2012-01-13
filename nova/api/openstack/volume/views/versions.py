@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
 import os
 
 from nova.api.openstack.compute.views import versions as compute_views

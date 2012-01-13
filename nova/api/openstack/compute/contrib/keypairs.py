@@ -22,7 +22,6 @@ import shutil
 import tempfile
 
 import webob
-from webob import exc
 
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil

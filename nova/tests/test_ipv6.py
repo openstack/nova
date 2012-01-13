@@ -22,8 +22,6 @@ from nova import test
 
 LOG = logging.getLogger('nova.tests.test_ipv6')
 
-import sys
-
 
 class IPv6RFC2462TestCase(test.TestCase):
     """Unit tests for IPv6 rfc2462 backend operations."""

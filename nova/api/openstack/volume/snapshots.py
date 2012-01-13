@@ -19,16 +19,12 @@ from webob import exc
 import webob
 
 from nova.api.openstack import common
-from nova.api.openstack import extensions
-from nova.api.openstack.compute import servers
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import compute
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import volume
-from nova.volume import volume_types
 
 
 LOG = logging.getLogger("nova.api.openstack.volume.snapshots")

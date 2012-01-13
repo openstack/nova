@@ -17,7 +17,6 @@
 
 """XVP (Xenserver VNC Proxy) driver."""
 
-import fcntl
 import os
 import signal
 

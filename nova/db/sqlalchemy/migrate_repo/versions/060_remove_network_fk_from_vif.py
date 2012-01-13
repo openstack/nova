@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import Column, Integer, MetaData, Table
+from sqlalchemy import MetaData, Table
 from migrate import ForeignKeyConstraint
 
 from nova import log as logging

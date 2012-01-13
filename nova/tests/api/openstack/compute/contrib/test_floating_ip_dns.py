@@ -13,21 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-
 from lxml import etree
-import webob
 import urllib
 
-from nova.api.openstack.compute.contrib import floating_ips
 from nova.api.openstack.compute.contrib import floating_ip_dns
 from nova import context
 from nova import db
 from nova import network
-from nova import rpc
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import utils
 
 
 name = "arbitraryname"

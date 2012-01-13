@@ -22,7 +22,6 @@ import nova
 from nova import exception
 from nova import test
 from nova.scheduler import distributed_scheduler as dist
-from nova.scheduler import zone_manager
 from nova.tests.scheduler import fake_zone_manager as ds_fakes
 
 

@@ -24,7 +24,6 @@ import operator
 
 import M2Crypto
 
-from nova.compute import api as compute_api
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
 from nova import crypto
@@ -32,10 +31,8 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import rpc
 from nova.scheduler import api
 from nova.scheduler import driver
-from nova.scheduler import filters
 from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options
 from nova import utils

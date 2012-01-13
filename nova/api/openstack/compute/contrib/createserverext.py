@@ -17,7 +17,6 @@
 from nova.api.openstack import extensions
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
-from nova.api.openstack import wsgi
 
 
 class ViewBuilder(views.servers.ViewBuilder):

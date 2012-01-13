@@ -14,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import Column, Integer, MetaData, String, Table
+from sqlalchemy import MetaData, Table
 
 
 meta = MetaData()

@@ -24,7 +24,6 @@ from nova.api.openstack.compute.contrib import security_groups
 from nova.api.openstack import wsgi
 import nova.db
 from nova import exception
-from nova import utils
 from nova import test
 from nova.tests.api.openstack import fakes
 

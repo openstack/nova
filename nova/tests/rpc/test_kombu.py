@@ -19,7 +19,6 @@
 Unit Tests for remote procedure calls using kombu
 """
 
-from nova import context
 from nova import log as logging
 from nova import test
 from nova.rpc import impl_kombu

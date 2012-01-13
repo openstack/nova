@@ -17,7 +17,6 @@ from sqlalchemy import *
 from migrate import *
 
 from nova import log as logging
-from nova import utils
 
 
 meta = MetaData()

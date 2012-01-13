@@ -14,17 +14,12 @@
 #    under the License.
 
 import datetime
-import json
 
 from lxml import etree
-import webob
 
-import nova
 from nova.api.openstack.volume import volumes
-from nova.compute import instance_types
 from nova import flags
 from nova import test
-from nova.tests.api.openstack import fakes
 
 
 FLAGS = flags.FLAGS

@@ -15,9 +15,7 @@
 #    under the License.
 
 
-from nova import exception
 from nova import test
-from nova import utils
 from nova import version
 
 

@@ -18,7 +18,6 @@
 """Handles ConsoleProxy API requests."""
 
 from nova.db import base
-from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils

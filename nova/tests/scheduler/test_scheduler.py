@@ -21,7 +21,6 @@ Tests For Scheduler
 
 import datetime
 import mox
-import stubout
 
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
@@ -36,7 +35,6 @@ from nova import rpc
 from nova import utils
 from nova.scheduler import api
 from nova.scheduler import driver
-from nova.scheduler import zone_manager
 from nova.scheduler import manager
 from nova.scheduler.simple import SimpleScheduler
 from nova.compute import power_state

@@ -28,13 +28,11 @@ sys.dont_write_bytecode = True
 import imp
 nova_manage = imp.load_source('nova_manage.py', NOVA_MANAGE_PATH)
 sys.dont_write_bytecode = False
-import mox
 import stubout
 
 import StringIO
 from nova import context
 from nova import db
-from nova import exception
 from nova import test
 from nova.tests.db import fakes as db_fakes
 

@@ -21,8 +21,6 @@ Unit Tests for volume types extra specs code
 from nova import context
 from nova import db
 from nova import test
-from nova.db.sqlalchemy.session import get_session
-from nova.db.sqlalchemy import models
 
 
 class VolumeTypeExtraSpecsTestCase(test.TestCase):

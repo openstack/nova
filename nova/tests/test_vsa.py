@@ -17,10 +17,8 @@ import base64
 import stubout
 
 from xml.etree import ElementTree
-from xml.etree.ElementTree import Element, SubElement
 
 from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging

@@ -21,13 +21,11 @@
 Test WSGI basics and provide some helper functions for other WSGI tests.
 """
 
-import json
 from nova import test
 
 import routes
 import webob
 
-from nova import exception
 from nova import wsgi
 
 

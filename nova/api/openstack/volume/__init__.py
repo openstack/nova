@@ -20,7 +20,6 @@
 WSGI middleware for OpenStack Volume API.
 """
 
-import routes
 import webob.dec
 import webob.exc
 

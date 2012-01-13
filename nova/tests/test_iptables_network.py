@@ -17,8 +17,6 @@
 #    under the License.
 """Unit Tests for network code."""
 
-import os
-
 from nova import test
 from nova.network import linux_net
 

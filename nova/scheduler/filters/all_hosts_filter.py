@@ -14,7 +14,6 @@
 #    under the License.
 
 
-import nova.scheduler
 import abstract_filter
 
 

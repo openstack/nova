@@ -17,7 +17,6 @@
 
 import sqlalchemy
 from sqlalchemy import select, Column, ForeignKey, Integer, String
-from migrate import ForeignKeyConstraint
 
 from nova import log as logging
 

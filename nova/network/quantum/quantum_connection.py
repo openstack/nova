@@ -18,7 +18,6 @@
 from nova import flags
 from nova import log as logging
 from nova.network.quantum import client as quantum_client
-from nova import utils
 
 
 LOG = logging.getLogger("nova.network.quantum.quantum_connection")

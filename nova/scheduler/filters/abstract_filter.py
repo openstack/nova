@@ -14,9 +14,6 @@
 #    under the License.
 
 
-import nova.scheduler
-
-
 class AbstractHostFilter(object):
     """Base class for host filters."""
     def instance_type_to_filter(self, instance_type):

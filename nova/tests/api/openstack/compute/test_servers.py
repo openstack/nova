@@ -33,7 +33,6 @@ from nova.compute import instance_types
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.db
-from nova.db.sqlalchemy.models import InstanceActions
 from nova.db.sqlalchemy.models import InstanceMetadata
 from nova import flags
 import nova.image.fake

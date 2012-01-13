@@ -13,15 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
-import sys
-
 import nova
 from nova import log as logging
 import nova.notifier.api
 from nova.notifier.api import notify
-from nova.notifier import log_notifier
-from nova.notifier import no_op_notifier
+import nova.notifier.log_notifier
+import nova.notifier.no_op_notifier
 from nova.notifier import list_notifier
 from nova import test
 
@@ -32,7 +29,6 @@ class NotifierListTestCase(test.TestCase):
     def setUp(self):
         super(NotifierListTestCase, self).setUp()
         list_notifier._reset_drivers()
-        self.stubs = stubout.StubOutForTesting()
         # Mock log to add one to exception_count when log.exception is called
 
         def mock_exception(cls, *args):

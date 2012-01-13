@@ -3,7 +3,6 @@ Created on 2010/12/20
 
 @author: Nachi Ueno <ueno.nachi@lab.ntt.co.jp>
 '''
-import boto
 from boto.resultset import ResultSet
 from boto.ec2.instance import Reservation
 from boto.ec2.instance import Group

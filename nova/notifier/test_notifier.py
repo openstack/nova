@@ -13,10 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from nova import flags
-from nova import log as logging
 
 FLAGS = flags.FLAGS
 

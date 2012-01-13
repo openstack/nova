@@ -22,7 +22,6 @@ import base64
 import os
 
 import eventlet
-from eventlet import wsgi
 from eventlet import websocket
 
 import webob

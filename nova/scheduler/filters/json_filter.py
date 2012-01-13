@@ -17,7 +17,6 @@
 import json
 import operator
 
-import nova.scheduler
 from nova.scheduler.filters import abstract_filter
 
 

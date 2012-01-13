@@ -25,7 +25,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import manager
 from nova.network import manager
 from nova.network.quantum import quantum_connection
 from nova.network.quantum import melange_ipam_lib

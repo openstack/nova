@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mox
 import webob
 
 from nova.api.openstack.compute.contrib import deferred_delete

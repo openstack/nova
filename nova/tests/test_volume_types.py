@@ -19,12 +19,10 @@ Unit Tests for volume types code
 import time
 
 from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
-from nova import utils
 from nova.volume import volume_types
 from nova.db.sqlalchemy.session import get_session
 from nova.db.sqlalchemy import models

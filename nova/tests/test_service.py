@@ -26,12 +26,10 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import rpc
 from nova import test
 from nova import service
 from nova import manager
 from nova import wsgi
-from nova.compute import manager as compute_manager
 
 flags.DEFINE_string("fake_manager", "nova.tests.test_service.FakeManager",
                     "Manager for testing")

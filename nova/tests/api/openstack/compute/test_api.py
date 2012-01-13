@@ -24,7 +24,6 @@ from webob import Request
 
 from nova import test
 from nova.api import openstack as openstack_api
-from nova.api.openstack import compute
 from nova.api.openstack.compute import wsgi
 from nova.tests.api.openstack import fakes
 

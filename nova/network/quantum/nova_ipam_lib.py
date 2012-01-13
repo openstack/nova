@@ -23,8 +23,6 @@ from nova import flags
 from nova import ipv6
 from nova import log as logging
 from nova.network import manager
-from nova.network.quantum import melange_connection as melange
-from nova import utils
 
 
 LOG = logging.getLogger("nova.network.quantum.nova_ipam_lib")

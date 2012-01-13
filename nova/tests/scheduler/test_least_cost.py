@@ -16,7 +16,6 @@
 Tests For Least Cost functions.
 """
 from nova.scheduler import least_cost
-from nova.scheduler import zone_manager
 from nova import test
 from nova.tests.scheduler import fake_zone_manager
 

@@ -13,12 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
-
 import nova
 
 from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging

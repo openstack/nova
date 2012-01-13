@@ -16,8 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, MetaData
-from sqlalchemy import Table, Text
+from sqlalchemy import Column, Integer, MetaData, Table
 from nova import log as logging
 
 meta = MetaData()

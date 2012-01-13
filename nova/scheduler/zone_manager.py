@@ -18,7 +18,6 @@ ZoneManager oversees all communications with child Zones.
 """
 
 import datetime
-import thread
 import traceback
 import UserDict
 

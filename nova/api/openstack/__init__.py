@@ -25,7 +25,6 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
-from nova import flags
 from nova import log as logging
 from nova import wsgi as base_wsgi
 

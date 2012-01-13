@@ -22,9 +22,7 @@ import nova.db
 
 from nova import context
 from nova import exception
-from nova import rpc
 from nova import test
-from nova.compute import api as compute_api
 from nova.scheduler import distributed_scheduler
 from nova.scheduler import least_cost
 from nova.scheduler import zone_manager

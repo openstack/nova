@@ -19,14 +19,10 @@ Tests For ZoneManager
 import datetime
 import mox
 
-from nova import context
 from nova import db
 from nova import flags
-from nova import service
 from nova import test
-from nova import rpc
 from nova import utils
-from nova.auth import manager as auth_manager
 from nova.scheduler import zone_manager
 
 FLAGS = flags.FLAGS

@@ -15,14 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from datetime import datetime
-
-from lxml import etree
 
 from nova.api.openstack.compute import versions
 from nova.api.openstack.volume.views import versions as views_versions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 
 
 VERSIONS = {

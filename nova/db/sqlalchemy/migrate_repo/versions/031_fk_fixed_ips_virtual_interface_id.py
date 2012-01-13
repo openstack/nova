@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from sqlalchemy import *
 from migrate import *
 
 from nova import log as logging
-from nova import utils
 
 meta = MetaData()
 

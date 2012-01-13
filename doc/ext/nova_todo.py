@@ -2,7 +2,6 @@
 # This is a hack of the builtin todo extension, to make the todo_list more user friendly
 
 from sphinx.ext.todo import *
-from docutils.parsers.rst import directives
 import re
 
 def _(s):
@@ -22,12 +21,12 @@ def process_todo_nodes(app, doctree, fromdocname):
         env.todo_all_todos = []
 
 
-    # remove the item that was added in the constructor, since I'm tired of 
+    # remove the item that was added in the constructor, since I'm tired of
     # reading through docutils for the proper way to construct an empty list
     lists = []
     for i in xrange(5):
         lists.append(nodes.bullet_list("", nodes.Text('','')))
-        lists[i].remove(lists[i][0]) 
+        lists[i].remove(lists[i][0])
         lists[i]['classes'].append('todo_list')
 
     for node in doctree.traverse(todolist):
@@ -60,14 +59,14 @@ def process_todo_nodes(app, doctree, fromdocname):
             para['classes'].append('todo_link')
 
             todo_entry = todo_info['todo']
-                
+
             env.resolve_references(todo_entry, todo_info['docname'], app.builder)
 
             item = nodes.list_item('', para)
             todo_entry[1]['classes'].append('details')
 
             comment = todo_entry[1]
-        
+
             m = re.match(r"^P(\d)", comment.astext())
             priority = 5
             if m:

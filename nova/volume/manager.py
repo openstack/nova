@@ -38,8 +38,6 @@ intact.
 
 """
 
-import sys
-
 from nova import context
 from nova import exception
 from nova import flags

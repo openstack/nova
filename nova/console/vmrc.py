@@ -22,7 +22,6 @@ import json
 
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova.virt.vmwareapi import vim_util
 
 

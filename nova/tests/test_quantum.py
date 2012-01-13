@@ -15,22 +15,17 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import stubout
-
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from nova import exception
-from nova import ipv6
 from nova import log as logging
 from nova.network.quantum import manager as quantum_manager
 from nova.network.quantum import melange_connection
 from nova import test
 from nova import utils
 from nova.network import manager
-
-import mox
 
 LOG = logging.getLogger('nova.tests.quantum_network')
 

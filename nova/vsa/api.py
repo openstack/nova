@@ -26,7 +26,6 @@ For assistance and guidelines pls contact
 import sys
 
 from nova import compute
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging

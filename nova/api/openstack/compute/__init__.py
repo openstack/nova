@@ -20,7 +20,6 @@
 WSGI middleware for OpenStack API controllers.
 """
 
-import routes
 import webob.dec
 import webob.exc
 

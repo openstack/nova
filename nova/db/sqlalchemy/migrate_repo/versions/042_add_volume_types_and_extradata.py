@@ -16,7 +16,7 @@
 #    under the License.
 
 from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table
-from sqlalchemy import Text, Boolean, ForeignKey
+from sqlalchemy import Boolean, ForeignKey
 
 from nova import log as logging
 

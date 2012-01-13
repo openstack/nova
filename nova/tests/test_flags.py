@@ -21,7 +21,6 @@ import exceptions
 import os
 import tempfile
 
-from nova import exception
 from nova import flags
 from nova import test
 

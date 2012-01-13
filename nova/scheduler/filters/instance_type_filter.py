@@ -15,7 +15,6 @@
 
 import logging
 
-import nova.scheduler
 from nova.scheduler.filters import abstract_filter
 
 

@@ -19,7 +19,6 @@
 Unit Tests for remote procedure calls using carrot
 """
 
-from nova import context
 from nova import log as logging
 from nova.rpc import impl_carrot
 from nova.tests.rpc import common

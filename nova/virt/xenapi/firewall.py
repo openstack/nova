@@ -19,12 +19,9 @@
 
 import json
 
-from nova import context
-from nova import db
 from nova import flags
 from nova import log as logging
 from nova.virt.firewall import IptablesFirewallDriver
-from nova.virt import netutils
 
 
 LOG = logging.getLogger("nova.virt.xenapi.firewall")

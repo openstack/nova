@@ -18,7 +18,6 @@ import os
 import sys
 import StringIO
 import tempfile
-import unittest
 
 import stubout
 

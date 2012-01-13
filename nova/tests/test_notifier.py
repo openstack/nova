@@ -16,15 +16,9 @@
 import stubout
 
 import nova
-from nova import context
-from nova import flags
 from nova import log
-from nova import rpc
 import nova.notifier.api
 from nova.notifier.api import notify
-from nova.notifier import no_op_notifier
-from nova.notifier import rabbit_notifier
-from nova.rpc import impl_kombu
 from nova import test
 
 
