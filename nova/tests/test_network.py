@@ -26,7 +26,6 @@ from nova import rpc
 from nova import test
 from nova import utils
 from nova.network import manager as network_manager
-from nova.network import api as network_api
 from nova.tests import fake_network
 
 
