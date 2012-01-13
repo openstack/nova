@@ -821,7 +821,6 @@ class ComputeTestCase(BaseTestCase):
                           instance['uuid'])
         self.compute.terminate_instance(self.context, instance['uuid'])
 
-    @test.skip_test('test fails: lp892005')
     def test_instance_set_to_error_on_uncaught_exception(self):
         """Test that instance is set to error state when exception is raised"""
         instance = self._create_fake_instance()
@@ -850,7 +849,6 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance['uuid'])
 
-    @test.skip_test('test fails: lp892005')
     def test_network_is_deallocated_on_spawn_failure(self):
         """When a spawn fails the network must be deallocated"""
         instance = self._create_fake_instance()
