@@ -113,11 +113,11 @@ class Controller(wsgi.Controller):
         :retval a dict of key/value filters
         """
         filters = {}
-        for param in req.str_params:
+        for param in req.params:
             if param in SUPPORTED_FILTERS or param.startswith('property-'):
                 # map filter name or carry through if property-*
                 filter_name = SUPPORTED_FILTERS.get(param, param)
-                filters[filter_name] = req.str_params.get(param)
+                filters[filter_name] = req.params.get(param)
         return filters
 
     @wsgi.serializers(xml=ImageTemplate)

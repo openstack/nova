@@ -136,7 +136,7 @@ class BaseRequestHandler(object):
         return self.response
 
     def get_argument(self, arg, default):
-        return self.request.str_params.get(arg, default)
+        return self.request.params.get(arg, default)
 
     def set_header(self, header, value):
         self.response.headers[header] = value
