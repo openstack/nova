@@ -145,7 +145,8 @@ class VolumeController(object):
         LOG.audit(_("Delete volume with id: %s"), id, context=context)
 
         try:
-            self.volume_api.delete(context, volume_id=id)
+            volume = self.volume_api.get(context, id)
+            self.volume_api.delete(context, volume)
         except exception.NotFound:
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
@@ -191,10 +192,17 @@ class VolumeController(object):
 
         metadata = vol.get('metadata', None)
 
+        snapshot_id = vol.get('snapshot_id'),
+
+        if snapshot_id is not None:
+            snapshot = self.volume_api.get_snapshot(context, snapshot_id)
+        else:
+            snapshot = None
+
         new_volume = self.volume_api.create(context, size,
-                                            vol.get('snapshot_id'),
                                             vol.get('display_name'),
                                             vol.get('display_description'),
+                                            snapshot=snapshot,
                                             volume_type=vol_type,
                                             metadata=metadata)
 

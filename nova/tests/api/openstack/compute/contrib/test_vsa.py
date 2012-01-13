@@ -251,24 +251,25 @@ def stub_get_vsa_volume_type(self, context):
             'extra_specs': {'type': 'vsa_volume'}}
 
 
-def stub_volume_create(self, context, size, snapshot_id, name, description,
+def stub_volume_create(self, context, size, name, description, snapshot,
                        **param):
     LOG.debug(_("_create: param=%s"), size)
     vol = _get_default_volume_param()
     vol['size'] = size
     vol['display_name'] = name
     vol['display_description'] = description
-    vol['snapshot_id'] = snapshot_id
+    try:
+        vol['snapshot_id'] = snapshot['id']
+    except (KeyError, TypeError):
+        vol['snapshot_id'] = None
     return vol
 
 
-def stub_volume_update(self, context, **param):
-    LOG.debug(_("_volume_update: param=%s"), param)
+def stub_volume_update(self, context, *args, **param):
     pass
 
 
-def stub_volume_delete(self, context, **param):
-    LOG.debug(_("_volume_delete: param=%s"), param)
+def stub_volume_delete(self, context, *args, **param):
     pass
 
 

@@ -40,15 +40,18 @@ LOG = logging.getLogger('nova.volume')
 class API(base.Base):
     """API for interacting with the volume manager."""
 
-    def create(self, context, size, snapshot_id, name, description,
+    def create(self, context, size, name, description, snapshot=None,
                      volume_type=None, metadata=None, availability_zone=None):
-        if snapshot_id is not None:
-            snapshot = self.get_snapshot(context, snapshot_id)
+        if snapshot is not None:
             if snapshot['status'] != "available":
                 raise exception.ApiError(
                     _("Snapshot status must be available"))
             if not size:
                 size = snapshot['volume_size']
+
+            snapshot_id = snapshot['id']
+        else:
+            snapshot_id = None
 
         if quota.allowed_volumes(context, 1, size) < 1:
             pid = context.project_id
@@ -89,15 +92,16 @@ class API(base.Base):
         return volume
 
     # TODO(yamahata): eliminate dumb polling
-    def wait_creation(self, context, volume_id):
+    def wait_creation(self, context, volume):
+        volume_id = volume['id']
         while True:
             volume = self.get(context, volume_id)
             if volume['status'] != 'creating':
                 return
             greenthread.sleep(1)
 
-    def delete(self, context, volume_id):
-        volume = self.get(context, volume_id)
+    def delete(self, context, volume):
+        volume_id = volume['id']
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
         now = utils.utcnow()
@@ -109,8 +113,8 @@ class API(base.Base):
                  {"method": "delete_volume",
                   "args": {"volume_id": volume_id}})
 
-    def update(self, context, volume_id, fields):
-        self.db.volume_update(context, volume_id, fields)
+    def update(self, context, volume, fields):
+        self.db.volume_update(context, volume['id'], fields)
 
     def get(self, context, volume_id):
         rv = self.db.volume_get(context, volume_id)
@@ -165,72 +169,65 @@ class API(base.Base):
             return self.db.snapshot_get_all(context)
         return self.db.snapshot_get_all_by_project(context, context.project_id)
 
-    def check_attach(self, context, volume_id):
-        volume = self.get(context, volume_id)
+    def check_attach(self, context, volume):
         # TODO(vish): abstract status checking?
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
         if volume['attach_status'] == "attached":
             raise exception.ApiError(_("Volume is already attached"))
 
-    def check_detach(self, context, volume_id):
-        volume = self.get(context, volume_id)
+    def check_detach(self, context, volume):
         # TODO(vish): abstract status checking?
         if volume['status'] == "available":
             raise exception.ApiError(_("Volume is already detached"))
 
-    def remove_from_compute(self, context, instance_id, volume_id, host):
+    def remove_from_compute(self, context, volume, instance_id, host):
         """Remove volume from specified compute host."""
         rpc.call(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "remove_volume_connection",
                   "args": {'instance_id': instance_id,
-                           'volume_id': volume_id}})
+                           'volume_id': volume['id']}})
 
-    def attach(self, context, volume_id, instance_id, mountpoint):
-        volume = self.get(context, volume_id)
+    def attach(self, context, volume, instance_id, mountpoint):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
         return rpc.call(context, queue,
                         {"method": "attach_volume",
-                         "args": {"volume_id": volume_id,
+                         "args": {"volume_id": volume['id'],
                                   "instance_id": instance_id,
                                   "mountpoint": mountpoint}})
 
-    def detach(self, context, volume_id):
-        volume = self.get(context, volume_id)
+    def detach(self, context, volume):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
         return rpc.call(context, queue,
                  {"method": "detach_volume",
-                  "args": {"volume_id": volume_id}})
+                  "args": {"volume_id": volume['id']}})
 
-    def initialize_connection(self, context, volume_id, address):
-        volume = self.get(context, volume_id)
+    def initialize_connection(self, context, volume, address):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
         return rpc.call(context, queue,
                         {"method": "initialize_connection",
-                         "args": {"volume_id": volume_id,
+                         "args": {"volume_id": volume['id'],
                                   "address": address}})
 
-    def terminate_connection(self, context, volume_id, address):
-        volume = self.get(context, volume_id)
+    def terminate_connection(self, context, volume, address):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
         return rpc.call(context, queue,
                         {"method": "terminate_connection",
-                         "args": {"volume_id": volume_id,
+                         "args": {"volume_id": volume['id'],
                                   "address": address}})
 
-    def _create_snapshot(self, context, volume_id, name, description,
+    def _create_snapshot(self, context, volume, name, description,
                          force=False):
-        volume = self.get(context, volume_id)
         if ((not force) and (volume['status'] != "available")):
             raise exception.ApiError(_("Volume status must be available"))
 
         options = {
-            'volume_id': volume_id,
+            'volume_id': volume['id'],
             'user_id': context.user_id,
             'project_id': context.project_id,
             'status': "creating",
@@ -244,40 +241,39 @@ class API(base.Base):
                  FLAGS.scheduler_topic,
                  {"method": "create_snapshot",
                   "args": {"topic": FLAGS.volume_topic,
-                           "volume_id": volume_id,
+                           "volume_id": volume['id'],
                            "snapshot_id": snapshot['id']}})
         return snapshot
 
-    def create_snapshot(self, context, volume_id, name, description):
-        return self._create_snapshot(context, volume_id, name, description,
+    def create_snapshot(self, context, volume, name, description):
+        return self._create_snapshot(context, volume, name, description,
                                      False)
 
-    def create_snapshot_force(self, context, volume_id, name, description):
-        return self._create_snapshot(context, volume_id, name, description,
+    def create_snapshot_force(self, context, volume, name, description):
+        return self._create_snapshot(context, volume, name, description,
                                      True)
 
-    def delete_snapshot(self, context, snapshot_id):
-        snapshot = self.get_snapshot(context, snapshot_id)
+    def delete_snapshot(self, context, snapshot):
         if snapshot['status'] != "available":
             raise exception.ApiError(_("Snapshot status must be available"))
-        self.db.snapshot_update(context, snapshot_id, {'status': 'deleting'})
+        self.db.snapshot_update(context, snapshot['id'],
+                                {'status': 'deleting'})
         rpc.cast(context,
                  FLAGS.scheduler_topic,
                  {"method": "delete_snapshot",
                   "args": {"topic": FLAGS.volume_topic,
-                           "snapshot_id": snapshot_id}})
+                           "snapshot_id": snapshot['id']}})
 
-    def get_volume_metadata(self, context, volume_id):
+    def get_volume_metadata(self, context, volume):
         """Get all metadata associated with a volume."""
-        rv = self.db.volume_metadata_get(context, volume_id)
+        rv = self.db.volume_metadata_get(context, volume['id'])
         return dict(rv.iteritems())
 
-    def delete_volume_metadata(self, context, volume_id, key):
+    def delete_volume_metadata(self, context, volume, key):
         """Delete the given metadata item from an volume."""
-        self.db.volume_metadata_delete(context, volume_id, key)
+        self.db.volume_metadata_delete(context, volume['id'], key)
 
-    def update_volume_metadata(self, context, volume_id,
-                                 metadata, delete=False):
+    def update_volume_metadata(self, context, volume, metadata, delete=False):
         """Updates or creates volume metadata.
 
         If delete is True, metadata items that are not specified in the
@@ -287,10 +283,10 @@ class API(base.Base):
         if delete:
             _metadata = metadata
         else:
-            _metadata = self.get_volume_metadata(context, volume_id)
+            _metadata = self.get_volume_metadata(context, volume['id'])
             _metadata.update(metadata)
 
-        self.db.volume_metadata_update(context, volume_id, _metadata, True)
+        self.db.volume_metadata_update(context, volume['id'], _metadata, True)
         return _metadata
 
     def get_volume_metadata_value(self, volume, key):

@@ -278,7 +278,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
     def _check_volume_ownership(self, context, vsa_id, id):
         obj = self.object
         try:
-            volume_ref = self.volume_api.get(context, volume_id=id)
+            volume_ref = self.volume_api.get(context, id)
         except exception.NotFound:
             LOG.error(_("%(obj)s with ID %(id)s not found"), locals())
             raise
@@ -333,9 +333,9 @@ class VsaVolumeDriveController(volumes.VolumeController):
 
         new_volume = self.volume_api.create(context,
                             size,
-                            None,
                             vol.get('displayName'),
                             vol.get('displayDescription'),
+                            None,
                             volume_type=volume_type,
                             metadata=dict(from_vsa_id=str(vsa_id)))
 
@@ -371,7 +371,8 @@ class VsaVolumeDriveController(volumes.VolumeController):
                     locals(), context=context)
 
         try:
-            self.volume_api.update(context, volume_id=id, fields=changes)
+            volume = self.volume_api.get(context, id)
+            self.volume_api.update(context, volume, fields=changes)
         except exception.NotFound:
             raise exc.HTTPNotFound()
         return webob.Response(status_int=202)

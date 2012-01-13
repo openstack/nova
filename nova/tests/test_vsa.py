@@ -24,7 +24,6 @@ from nova import flags
 from nova import log as logging
 from nova import test
 from nova import vsa
-from nova import volume
 from nova.volume import volume_types
 from nova.vsa import utils as vsa_utils
 
@@ -40,7 +39,6 @@ class VsaTestCase(test.TestCase):
         super(VsaTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.vsa_api = vsa.API()
-        self.volume_api = volume.API()
 
         FLAGS.quota_volumes = 100
         FLAGS.quota_gigabytes = 10000

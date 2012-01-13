@@ -82,7 +82,8 @@ class SnapshotsController(object):
         LOG.audit(_("Delete snapshot with id: %s"), id, context=context)
 
         try:
-            self.volume_api.delete_snapshot(context, snapshot_id=id)
+            snapshot = self.volume_api.get_snapshot(context, id)
+            self.volume_api.delete_snapshot(context, snapshot)
         except exception.NotFound:
             return exc.HTTPNotFound()
         return webob.Response(status_int=202)
@@ -113,18 +114,19 @@ class SnapshotsController(object):
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
+        volume = self.volume_api.get(context, volume_id)
         force = snapshot.get('force', False)
-        LOG.audit(_("Create snapshot from volume %s"), volume_id,
-                context=context)
+        msg = _("Create snapshot from volume %s")
+        LOG.audit(msg, volume_id, context=context)
 
         if force:
             new_snapshot = self.volume_api.create_snapshot_force(context,
-                                        volume_id,
+                                        volume,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
         else:
             new_snapshot = self.volume_api.create_snapshot(context,
-                                        volume_id,
+                                        volume,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
 

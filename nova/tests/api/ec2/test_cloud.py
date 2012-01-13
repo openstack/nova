@@ -1735,6 +1735,7 @@ class CloudTestCase(test.TestCase):
 
         for snapshot_id in (ec2_snapshot1_id, ec2_snapshot2_id):
             self.cloud.delete_snapshot(self.context, snapshot_id)
+
         db.volume_destroy(self.context, vol['id'])
 
     def test_create_image(self):

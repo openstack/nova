@@ -136,7 +136,7 @@ class VsaManager(manager.SchedulerDependentManager):
                         locals())
             if status == 'available':
                 try:
-                    # self.volume_api.update(context, volume['id'],
+                    # self.volume_api.update(context, volume,
                     #                   dict(attach_status="attached"))
                     pass
                 except Exception as ex:

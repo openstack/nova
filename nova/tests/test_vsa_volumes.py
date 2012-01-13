@@ -56,7 +56,7 @@ class VsaVolumesTestCase(test.TestCase):
     def _default_volume_param(self):
         return {
             'size': 1,
-            'snapshot_id': None,
+            'snapshot': None,
             'name': 'Test volume name',
             'description': 'Test volume desc name',
             'volume_type': self.default_vol_type,
@@ -95,8 +95,10 @@ class VsaVolumesTestCase(test.TestCase):
                          'creating')
 
         self.volume_api.update(self.context,
-                    volume_ref['id'], {'status': 'available'})
-        self.volume_api.delete(self.context, volume_ref['id'])
+                               volume_ref,
+                               {'status': 'available'})
+        volume_ref = self.volume_api.get(self.context, volume_ref['id'])
+        self.volume_api.delete(self.context, volume_ref)
 
         vols3 = self._get_all_volumes_by_vsa()
         self.assertEqual(1, len(vols2))
@@ -110,10 +112,11 @@ class VsaVolumesTestCase(test.TestCase):
         volume_ref = self.volume_api.create(self.context, **volume_param)
 
         self.volume_api.update(self.context,
-                            volume_ref['id'], {'status': 'in-use'})
+                               volume_ref,
+                               {'status': 'in-use'})
         self.assertRaises(exception.ApiError,
                             self.volume_api.delete,
-                            self.context, volume_ref['id'])
+                            self.context, volume_ref)
 
     def test_vsa_volume_delete_vsa_with_volumes(self):
         """ Check volume deleton in different states. """

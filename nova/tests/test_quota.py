@@ -251,11 +251,7 @@ class QuotaTestCase(test.TestCase):
             volume_ids.append(volume_id)
         self.assertRaises(exception.QuotaError,
                           volume.API().create,
-                          self.context,
-                          size=10,
-                          snapshot_id=None,
-                          name='',
-                          description='')
+                          self.context, 10, '', '', None)
         for volume_id in volume_ids:
             db.volume_destroy(self.context, volume_id)
 
@@ -265,11 +261,7 @@ class QuotaTestCase(test.TestCase):
         volume_ids.append(volume_id)
         self.assertRaises(exception.QuotaError,
                           volume.API().create,
-                          self.context,
-                          size=10,
-                          snapshot_id=None,
-                          name='',
-                          description='')
+                          self.context, 10, '', '', None)
         for volume_id in volume_ids:
             db.volume_destroy(self.context, volume_id)
 

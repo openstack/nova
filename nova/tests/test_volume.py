@@ -30,7 +30,7 @@ from nova import log as logging
 from nova import rpc
 from nova import test
 from nova import utils
-from nova import volume
+import nova.volume.api
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.volume')
@@ -62,11 +62,12 @@ class VolumeTestCase(test.TestCase):
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
-        return db.volume_create(context.get_admin_context(), vol)['id']
+        return db.volume_create(context.get_admin_context(), vol)
 
     def test_create_delete_volume(self):
         """Test volume can be created and deleted."""
-        volume_id = self._create_volume()
+        volume = self._create_volume()
+        volume_id = volume['id']
         self.volume.create_volume(self.context, volume_id)
         self.assertEqual(volume_id, db.volume_get(context.get_admin_context(),
                          volume_id).id)
@@ -79,22 +80,24 @@ class VolumeTestCase(test.TestCase):
 
     def test_create_volume_from_snapshot(self):
         """Test volume can be created from a snapshot."""
-        volume_src_id = self._create_volume()
-        self.volume.create_volume(self.context, volume_src_id)
-        snapshot_id = self._create_snapshot(volume_src_id)
-        self.volume.create_snapshot(self.context, volume_src_id, snapshot_id)
-        volume_dst_id = self._create_volume(0, snapshot_id)
-        self.volume.create_volume(self.context, volume_dst_id, snapshot_id)
-        self.assertEqual(volume_dst_id, db.volume_get(
-                context.get_admin_context(),
-                volume_dst_id).id)
+        volume_src = self._create_volume()
+        self.volume.create_volume(self.context, volume_src['id'])
+        snapshot_id = self._create_snapshot(volume_src['id'])
+        self.volume.create_snapshot(self.context, volume_src['id'],
+                                    snapshot_id)
+        volume_dst = self._create_volume(0, snapshot_id)
+        self.volume.create_volume(self.context, volume_dst['id'], snapshot_id)
+        self.assertEqual(volume_dst['id'],
+                         db.volume_get(
+                             context.get_admin_context(),
+                             volume_dst['id']).id)
         self.assertEqual(snapshot_id, db.volume_get(
                 context.get_admin_context(),
-                volume_dst_id).snapshot_id)
+                volume_dst['id']).snapshot_id)
 
-        self.volume.delete_volume(self.context, volume_dst_id)
+        self.volume.delete_volume(self.context, volume_dst['id'])
         self.volume.delete_snapshot(self.context, snapshot_id)
-        self.volume.delete_volume(self.context, volume_src_id)
+        self.volume.delete_volume(self.context, volume_src['id'])
 
     def test_too_big_volume(self):
         """Ensure failure if a too large of a volume is requested."""
@@ -102,8 +105,8 @@ class VolumeTestCase(test.TestCase):
         #              volume_create
         return True
         try:
-            volume_id = self._create_volume('1001')
-            self.volume.create_volume(self.context, volume_id)
+            volume = self._create_volume('1001')
+            self.volume.create_volume(self.context, volume)
             self.fail("Should have thrown TypeError")
         except TypeError:
             pass
@@ -113,15 +116,15 @@ class VolumeTestCase(test.TestCase):
         vols = []
         total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
-            volume_id = self._create_volume()
-            self.volume.create_volume(self.context, volume_id)
-            vols.append(volume_id)
-        volume_id = self._create_volume()
+            volume = self._create_volume()
+            self.volume.create_volume(self.context, volume['id'])
+            vols.append(volume['id'])
+        volume = self._create_volume()
         self.assertRaises(db.NoMoreTargets,
                           self.volume.create_volume,
                           self.context,
-                          volume_id)
-        db.volume_destroy(context.get_admin_context(), volume_id)
+                          volume['id'])
+        db.volume_destroy(context.get_admin_context(), volume['id'])
         for volume_id in vols:
             self.volume.delete_volume(self.context, volume_id)
 
@@ -137,7 +140,8 @@ class VolumeTestCase(test.TestCase):
         inst['ami_launch_index'] = 0
         instance_id = db.instance_create(self.context, inst)['id']
         mountpoint = "/dev/sdf"
-        volume_id = self._create_volume()
+        volume = self._create_volume()
+        volume_id = volume['id']
         self.volume.create_volume(self.context, volume_id)
         if FLAGS.fake_tests:
             db.volume_attached(self.context, volume_id, instance_id,
@@ -190,8 +194,8 @@ class VolumeTestCase(test.TestCase):
             LOG.debug(_("Target %s allocated"), iscsi_target)
         total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
-            volume_id = self._create_volume()
-            d = self.volume.create_volume(self.context, volume_id)
+            volume = self._create_volume()
+            d = self.volume.create_volume(self.context, volume['id'])
             _check(d)
         for volume_id in volume_ids:
             self.volume.delete_volume(self.context, volume_id)
@@ -215,10 +219,10 @@ class VolumeTestCase(test.TestCase):
 
     def test_create_delete_snapshot(self):
         """Test snapshot can be created and deleted."""
-        volume_id = self._create_volume()
-        self.volume.create_volume(self.context, volume_id)
-        snapshot_id = self._create_snapshot(volume_id)
-        self.volume.create_snapshot(self.context, volume_id, snapshot_id)
+        volume = self._create_volume()
+        self.volume.create_volume(self.context, volume['id'])
+        snapshot_id = self._create_snapshot(volume['id'])
+        self.volume.create_snapshot(self.context, volume['id'], snapshot_id)
         self.assertEqual(snapshot_id,
                          db.snapshot_get(context.get_admin_context(),
                                          snapshot_id).id)
@@ -228,7 +232,7 @@ class VolumeTestCase(test.TestCase):
                           db.snapshot_get,
                           self.context,
                           snapshot_id)
-        self.volume.delete_volume(self.context, volume_id)
+        self.volume.delete_volume(self.context, volume['id'])
 
     def test_create_snapshot_force(self):
         """Test snapshot in use can be created forcibly."""
@@ -237,22 +241,23 @@ class VolumeTestCase(test.TestCase):
             pass
         self.stubs.Set(rpc, 'cast', fake_cast)
 
-        volume_id = self._create_volume()
-        self.volume.create_volume(self.context, volume_id)
-        db.volume_attached(self.context, volume_id, self.instance_id,
+        volume = self._create_volume()
+        self.volume.create_volume(self.context, volume['id'])
+        db.volume_attached(self.context, volume['id'], self.instance_id,
                            '/dev/sda1')
 
-        volume_api = volume.api.API()
+        volume_api = nova.volume.api.API()
+        volume = volume_api.get(self.context, volume['id'])
         self.assertRaises(exception.ApiError,
                           volume_api.create_snapshot,
-                          self.context, volume_id,
+                          self.context, volume,
                           'fake_name', 'fake_description')
         snapshot_ref = volume_api.create_snapshot_force(self.context,
-                                                        volume_id,
+                                                        volume,
                                                         'fake_name',
                                                         'fake_description')
         db.snapshot_destroy(self.context, snapshot_ref['id'])
-        db.volume_destroy(self.context, volume_id)
+        db.volume_destroy(self.context, volume['id'])
 
 
 class DriverTestCase(test.TestCase):

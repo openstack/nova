@@ -246,9 +246,9 @@ class API(base.Base):
 
                     vol_ref = self.volume_api.create(context,
                                     vol_size,
-                                    None,
                                     vol_name,
                                     vol['description'],
+                                    None,
                                     volume_type=vol_type,
                                     metadata=dict(to_vsa_id=str(vsa_id)),
                                     availability_zone=availability_zone)
@@ -349,7 +349,7 @@ class API(base.Base):
                 vol_name = volume['name']
                 LOG.info(_("VSA ID %(vsa_id)s: Deleting %(direction)s "\
                            "volume %(vol_name)s"), locals())
-                self.volume_api.delete(context, volume['id'])
+                self.volume_api.delete(context, volume)
             except exception.ApiError:
                 LOG.info(_("Unable to delete volume %s"), volume['name'])
                 if force_delete:
