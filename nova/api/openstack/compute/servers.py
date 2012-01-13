@@ -478,7 +478,8 @@ class Controller(wsgi.Controller):
             raise exc.HTTPRequestEntityTooLarge(explanation=expl,
                                                 headers={'Retry-After': 0})
         # if the original error is okay, just reraise it
-        raise error
+        raise exc.HTTPRequestEntityTooLarge(explanation=error.msg,
+                                            headers={'Retry-After': 0})
 
     def _validate_server_name(self, value):
         if not isinstance(value, basestring):
