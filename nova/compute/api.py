@@ -710,7 +710,7 @@ class API(base.Base):
                       "args": {"security_group_id": group_id}})
 
     def trigger_provider_fw_rules_refresh(self, context):
-        """Called when a rule is added to or removed from a security_group"""
+        """Called when a rule is added/removed from a provider firewall"""
 
         hosts = [x['host'] for (x, idx)
                            in self.db.service_get_all_compute_sorted(context)]

@@ -365,30 +365,69 @@ class AdminControllerTestCase(test.TestCase):
         hosts = self._ac.describe_hosts(self._c)['hosts']
         self.assertEqual('volume1', hosts[0]['hostname'])
 
-    def test_block_external_addresses(self):
+    def test_block_external_addresses_validate_output_for_valid_input(self):
         result = self._ac.block_external_addresses(self._c, '192.168.100.1/24')
         self.assertEqual('OK', result['status'])
         self.assertEqual('Added 3 rules', result['message'])
 
-    def test_block_external_addresses_already_existent_rule(self):
-        self._ac.block_external_addresses(self._c, '192.168.100.1/24')
-        self.assertRaises(exception.ApiError,
-                          self._ac.block_external_addresses,
-                          self._c, '192.168.100.1/24')
+    def test_block_external_addresses_validate_output_for_invalid_input(self):
+        result = self._ac.block_external_addresses(self._c, '12.10.10.256/24')
+        self.assertEqual('Failed', result['status'])
+        value = '0 rules added' in result['message']
+        self.assertEqual(value, True)
 
-    def test_describe_external_address_blocks(self):
-        self._ac.block_external_addresses(self._c, '192.168.100.1/24')
+    def test_block_external_addresses_already_existent_rule(self):
+        self._ac.block_external_addresses(self._c, '192.168.100.0/24')
+        result = self._ac.block_external_addresses(self._c, '192.168.100.0/24')
+        self.assertEqual('Failed', result['status'])
+        value = '0 rules added' in result['message']
+        self.assertEqual(value, True)
+
+    def test_describe_external_address_blocks_normalized_output(self):
+        self._ac.block_external_addresses(self._c, '192.168.100.11/24')
         self.assertEqual(
-                {'externalIpBlockInfo': [{'cidr': u'192.168.100.1/24'}]},
+                {'externalIpBlockInfo': [{'cidr': u'192.168.100.0/24'}]},
                 self._ac.describe_external_address_blocks(self._c))
 
-    def test_remove_external_address_block(self):
+    def test_describe_external_address_blocks_many_inputs(self):
+        self._ac.block_external_addresses(self._c, '192.168.100.11/24')
+        self._ac.block_external_addresses(self._c, '12.12.12.10/24')
+        self._ac.block_external_addresses(self._c, '18.18.18.0/24')
+        output1 = {'cidr': u'192.168.100.0/24'}
+        output2 = {'cidr': u'12.12.12.0/24'}
+        output3 = {'cidr': u'18.18.18.0/24'}
+        result = self._ac.describe_external_address_blocks(self._c)
+        result = sorted(result['externalIpBlockInfo'])
+        output = sorted([output1, output2, output3])
+        self.assertEqual(result, output)
+
+    def test_remove_external_address_block_existent_rule(self):
         self._ac.block_external_addresses(self._c, '192.168.100.1/24')
 
         result = self._ac.remove_external_address_block(self._c,
                                                         '192.168.100.1/24')
         self.assertEqual('OK', result['status'])
         self.assertEqual('Deleted 3 rules', result['message'])
+
+        result = self._ac.describe_external_address_blocks(self._c)
+        self.assertEqual([], result['externalIpBlockInfo'])
+
+    def test_remove_external_address_block_non_existent_rule(self):
+        result = self._ac.remove_external_address_block(self._c,
+                                                        '192.168.100.1/24')
+        self.assertEqual('Failed', result['status'])
+        value = '0 rules deleted' in result['message']
+        self.assertEqual(value, True)
+
+        result = self._ac.describe_external_address_blocks(self._c)
+        self.assertEqual([], result['externalIpBlockInfo'])
+
+    def test_remove_external_address_block_invalid_input(self):
+        result = self._ac.remove_external_address_block(self._c,
+                                                        '192.168.100/24')
+        self.assertEqual('Failed', result['status'])
+        value = '0 rules deleted' in result['message']
+        self.assertEqual(value, True)
 
         result = self._ac.describe_external_address_blocks(self._c)
         self.assertEqual([], result['externalIpBlockInfo'])

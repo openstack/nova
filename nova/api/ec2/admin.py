@@ -349,8 +349,15 @@ class AdminController(object):
         LOG.audit(_('Blocking traffic to all projects incoming from %s'),
                   cidr, context=context)
         cidr = urllib.unquote(cidr).decode()
-        # raise if invalid
-        netaddr.IPNetwork(cidr)
+        failed = {'status': 'Failed', 'message': ' 0 rules added'}
+        if not utils.is_valid_cidr(cidr):
+            msg = 'Improper input. Please provide a valid cidr: ' \
+                                                        'e.g. 121.12.10.11/24.'
+            failed['message'] = msg + failed['message']
+            return failed
+        #Normalizing cidr. e.g. '20.20.20.11/24' -> '20.20.20.0/24', so that
+        #db values stay in sync with filters' values (e.g. in iptables)
+        cidr = str(netaddr.IPNetwork(cidr).cidr)
         rule = {'cidr': cidr}
         tcp_rule = rule.copy()
         tcp_rule.update({'protocol': 'tcp', 'from_port': 1, 'to_port': 65535})
@@ -370,7 +377,9 @@ class AdminController(object):
             db.provider_fw_rule_create(context, icmp_rule)
             rules_added += 1
         if not rules_added:
-            raise exception.ApiError(_('Duplicate rule'))
+                msg = 'Duplicate Rule.'
+                failed['message'] = msg + failed['message']
+                return failed
         self.compute_api.trigger_provider_fw_rules_refresh(context)
         return {'status': 'OK', 'message': 'Added %s rules' % rules_added}
 
@@ -385,11 +394,25 @@ class AdminController(object):
     def remove_external_address_block(self, context, cidr):
         LOG.audit(_('Removing ip block from %s'), cidr, context=context)
         cidr = urllib.unquote(cidr).decode()
-        # raise if invalid
-        netaddr.IPNetwork(cidr)
+        # Catch the exception and LOG for improper or malicious inputs.
+        # Also return a proper status and message in that case
+        failed = {'status': 'Failed', 'message': ' 0 rules deleted'}
+        if not utils.is_valid_cidr(cidr):
+            msg = 'Improper input. Please provide a valid cidr: ' \
+                                                    'e.g. 121.12.10.11/24.'
+            failed['message'] = msg + failed['message']
+            return failed
+        #Normalizing cidr. e.g. '20.20.20.11/24' -> '20.20.20.0/24', so that
+        #db values stay in sync with filters' values (e.g. in iptables)
+        cidr = str(netaddr.IPNetwork(cidr).cidr)
         rules = db.provider_fw_rule_get_all_by_cidr(context, cidr)
-        for rule in rules:
-            db.provider_fw_rule_destroy(context, rule['id'])
-        if rules:
+
+        if not rules:
+            msg = 'No such CIDR currently blocked.'
+            failed['message'] = msg + failed['message']
+            return failed
+        else:
+            for rule in rules:
+                db.provider_fw_rule_destroy(context, rule['id'])
             self.compute_api.trigger_provider_fw_rules_refresh(context)
-        return {'status': 'OK', 'message': 'Deleted %s rules' % len(rules)}
+            return {'status': 'OK', 'message': 'Deleted %s rules' % len(rules)}

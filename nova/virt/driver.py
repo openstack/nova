@@ -380,7 +380,7 @@ class ComputeDriver(object):
             * another host 'H1' runs an instance 'i-1'
             * instance 'i-1' is a member of security group 'b'
 
-            When 'i-1' launches or terminates we will recieve the message
+            When 'i-1' launches or terminates we will receive the message
             to update members of group 'b', at which time we will make
             any changes needed to the rules for instance 'i-0' to allow
             or deny traffic coming from 'i-1', depending on if it is being
@@ -399,7 +399,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def refresh_provider_fw_rules(self, security_group_id):
+    def refresh_provider_fw_rules(self):
         """This triggers a firewall update based on database changes.
 
         When this is called, rules have either been added or removed from the

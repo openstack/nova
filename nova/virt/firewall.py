@@ -34,7 +34,7 @@ flags.DEFINE_bool('allow_same_net_traffic',
 class FirewallDriver(object):
     """ Firewall Driver base class.
 
-        Defines methos that any driver providing security groups
+        Defines methods that any driver providing security groups
         and provider fireall functionality should implement.
     """
     def prepare_instance_filter(self, instance, network_info):
@@ -129,12 +129,18 @@ class IptablesFirewallDriver(FirewallDriver):
         self.instances[instance['id']] = instance
         self.network_infos[instance['id']] = network_info
         self.add_filters_for_instance(instance)
+        LOG.debug(_('Filters added to the instance: %r'), instance)
+        self.refresh_provider_fw_rules()
+        LOG.debug(_('Provider Firewall Rules refreshed'))
         self.iptables.apply()
 
     def _create_filter(self, ips, chain_name):
         return ['-d %s -j $%s' % (ip, chain_name) for ip in ips]
 
     def _filters_for_instance(self, chain_name, network_info):
+        """Creates a rule corresponding to each ip that defines a
+             jump to the corresponding instance - chain for all the traffic
+             destined to that ip"""
         ips_v4 = [ip['ip'] for (_n, mapping) in network_info
                  for ip in mapping['ips']]
         ipv4_rules = self._create_filter(ips_v4, chain_name)
@@ -189,6 +195,10 @@ class IptablesFirewallDriver(FirewallDriver):
         # Allow established connections
         ipv4_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
         ipv6_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
+
+        # Pass through provider-wide drops
+        ipv4_rules += ['-j $provider']
+        ipv6_rules += ['-j $provider']
 
     def _do_dhcp_rules(self, ipv4_rules, network_info):
         dhcp_servers = [info['dhcp_server'] for (_n, info) in network_info]
@@ -345,3 +355,38 @@ class IptablesFirewallDriver(FirewallDriver):
         for instance in self.instances.values():
             self.remove_filters_for_instance(instance)
             self.add_filters_for_instance(instance)
+
+    def refresh_provider_fw_rules(self):
+        """See class:FirewallDriver: docs."""
+        self._do_refresh_provider_fw_rules()
+        self.iptables.apply()
+
+    @utils.synchronized('iptables', external=True)
+    def _do_refresh_provider_fw_rules(self):
+        """Internal, synchronized version of refresh_provider_fw_rules."""
+        self._purge_provider_fw_rules()
+        self._build_provider_fw_rules()
+
+    def _purge_provider_fw_rules(self):
+        """Remove all rules from the provider chains."""
+        self.iptables.ipv4['filter'].empty_chain('provider')
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].empty_chain('provider')
+
+    def _build_provider_fw_rules(self):
+        """Create all rules for the provider IP DROPs."""
+        self.iptables.ipv4['filter'].add_chain('provider')
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain('provider')
+        ipv4_rules, ipv6_rules = self._provider_rules()
+        for rule in ipv4_rules:
+            self.iptables.ipv4['filter'].add_rule('provider', rule)
+
+        if FLAGS.use_ipv6:
+            for rule in ipv6_rules:
+                self.iptables.ipv6['filter'].add_rule('provider', rule)
+
+    @staticmethod
+    def _provider_rules():
+        """Generate a list of rules from provider for IP4 & IP6."""
+        raise NotImplementedError()
