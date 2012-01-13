@@ -1069,10 +1069,7 @@ class Controller(wsgi.Controller):
             msg = _("Malformed createImage entity")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        # preserve link to server in image properties
-        server_ref = os.path.join(req.application_url, 'servers', id)
-        props = {'instance_ref': server_ref}
-
+        props = {}
         metadata = entity.get('metadata', {})
         common.check_img_metadata_quota_limit(context, metadata)
         try:

@@ -162,17 +162,13 @@ def stub_out_networking(stubs):
     stubs.Set(nova.flags, '_get_my_ip', get_my_ip)
 
 
-class stub_out_compute_api_snapshot(object):
-
-    def __init__(self, stubs):
-        self.stubs = stubs
-        self.extra_props_last_call = None
-        stubs.Set(nova.compute.API, 'snapshot', self.snapshot)
+def stub_out_compute_api_snapshot(stubs):
 
     def snapshot(self, context, instance, name, extra_properties=None):
-        self.extra_props_last_call = extra_properties
         return dict(id='123', status='ACTIVE', name=name,
                     properties=extra_properties)
+
+    stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
 class stub_out_compute_api_backup(object):

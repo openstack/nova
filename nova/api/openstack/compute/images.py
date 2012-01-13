@@ -24,6 +24,7 @@ from nova import exception
 from nova import flags
 import nova.image
 from nova import log
+import nova.utils
 
 
 LOG = log.getLogger('nova.api.openstack.compute.images')
@@ -33,7 +34,7 @@ SUPPORTED_FILTERS = {
     'name': 'name',
     'status': 'status',
     'changes-since': 'changes-since',
-    'server': 'property-instance_ref',
+    'server': 'property-instance_uuid',
     'type': 'property-image_type',
     'minRam': 'min_ram',
     'minDisk': 'min_disk',
@@ -118,6 +119,14 @@ class Controller(wsgi.Controller):
                 # map filter name or carry through if property-*
                 filter_name = SUPPORTED_FILTERS.get(param, param)
                 filters[filter_name] = req.params.get(param)
+
+        # ensure server filter is the instance uuid
+        filter_name = 'property-instance_uuid'
+        try:
+            filters[filter_name] = filters[filter_name].rsplit('/', 1)[1]
+        except (AttributeError, IndexError, KeyError):
+            pass
+
         return filters
 
     @wsgi.serializers(xml=ImageTemplate)
