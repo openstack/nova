@@ -1042,45 +1042,21 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.fake_instance.os_type = 'linux'
         self.fake_instance.architecture = 'x86-64'
 
-    def assert_disk_type(self, disk_type):
-        ctx = context.RequestContext('fake', 'fake')
-        fake_glance = glance_stubs.FakeGlance('')
-        image_meta = fake_glance.get_image_meta(self.fake_instance.image_ref)
-        dt = vm_utils.VMHelper.determine_disk_image_type(image_meta)
-        self.assertEqual(disk_type, dt)
+    def assert_disk_type(self, image_meta, expected_disk_type):
+        actual = vm_utils.VMHelper.determine_disk_image_type(image_meta)
+        self.assertEqual(expected_disk_type, actual)
 
-    def test_instance_disk(self):
-        """If a kernel is specified, the image type is DISK (aka machine)."""
-        self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_MACHINE
-        self.fake_instance.kernel_id = glance_stubs.FakeGlance.IMAGE_KERNEL
-        self.assert_disk_type(vm_utils.ImageType.DISK)
+    def test_machine(self):
+        image_meta = {'id': 'a', 'disk_format': 'ami'}
+        self.assert_disk_type(image_meta, vm_utils.ImageType.DISK)
 
-    def test_instance_disk_raw(self):
-        """
-        If the kernel isn't specified, and we're not using Glance, then
-        DISK_RAW is assumed.
-        """
-        self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_RAW
-        self.fake_instance.kernel_id = None
-        self.assert_disk_type(vm_utils.ImageType.DISK_RAW)
+    def test_raw(self):
+        image_meta = {'id': 'a', 'disk_format': 'raw'}
+        self.assert_disk_type(image_meta, vm_utils.ImageType.DISK_RAW)
 
-    def test_glance_disk_raw(self):
-        """
-        If we're using Glance, then defer to the image_type field, which in
-        this case will be 'raw'.
-        """
-        self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_RAW
-        self.fake_instance.kernel_id = None
-        self.assert_disk_type(vm_utils.ImageType.DISK_RAW)
-
-    def test_glance_disk_vhd(self):
-        """
-        If we're using Glance, then defer to the image_type field, which in
-        this case will be 'vhd'.
-        """
-        self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_VHD
-        self.fake_instance.kernel_id = None
-        self.assert_disk_type(vm_utils.ImageType.DISK_VHD)
+    def test_vhd(self):
+        image_meta = {'id': 'a', 'disk_format': 'vhd'}
+        self.assert_disk_type(image_meta, vm_utils.ImageType.DISK_VHD)
 
 
 class CompareVersionTestCase(test.TestCase):
