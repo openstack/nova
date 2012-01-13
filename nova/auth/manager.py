@@ -827,7 +827,7 @@ class AuthManager(object):
                    's3': 'http://%s:%s' % (s3_host, FLAGS.s3_port),
                    'os': '%s://%s:%s%s' % (FLAGS.osapi_scheme,
                                             ec2_host,
-                                            FLAGS.osapi_port,
+                                            FLAGS.osapi_compute_listen_port,
                                             FLAGS.osapi_path),
                    'user': user.name,
                    'nova': FLAGS.ca_file,

@@ -31,9 +31,9 @@ XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 def validate_schema(xml, schema_name):
     if isinstance(xml, str):
         xml = etree.fromstring(xml)
-    base_path = 'nova/api/openstack/v2/schemas/v1.1/'
+    base_path = 'nova/api/openstack/compute/schemas/v1.1/'
     if schema_name in ('atom', 'atom-link'):
-        base_path = 'nova/api/openstack/v2/schemas/'
+        base_path = 'nova/api/openstack/compute/schemas/'
     schema_path = os.path.join(utils.novadir(),
                                '%s%s.rng' % (base_path, schema_name))
     schema_doc = etree.parse(schema_path)
