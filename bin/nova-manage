@@ -980,7 +980,8 @@ class VmCommands(object):
                 instance['availability_zone'],
                 instance['launch_index'])
 
-    def _migration(self, ec2_id, dest, block_migration=False):
+    def _migration(self, ec2_id, dest, block_migration=False,
+                                       disk_over_commit=False):
         """Migrates a running instance to a new machine.
          :param ec2_id: instance id which comes from euca-describe-instance.
          :param dest: destination host name.
@@ -1007,7 +1008,8 @@ class VmCommands(object):
                   "args": {"instance_id": instance_id,
                            "dest": dest,
                            "topic": FLAGS.compute_topic,
-                           "block_migration": block_migration}})
+                           "block_migration": block_migration,
+                           "disk_over_commit": disk_over_commit}})
 
         print _('Migration of %s initiated.'
                'Check its progress using euca-describe-instances.') % ec2_id
@@ -1022,11 +1024,14 @@ class VmCommands(object):
 
     @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
     @args('--dest', dest='dest', metavar='<Destanation>',
-            help='destanation node')
-    def block_migration(self, ec2_id, dest):
+                           help='destanation node')
+    @args('--disk_over_commit', dest='disk_over_commit',
+                           metavar='<overcommit flag>',
+                           help='Allow overcommit (default Flase)')
+    def block_migration(self, ec2_id, dest, disk_over_commit=False):
         """Migrates a running instance to a new machine with storage data."""
 
-        self._migration(ec2_id, dest, True)
+        self._migration(ec2_id, dest, True, disk_over_commit)
 
 
 class ServiceCommands(object):
@@ -1091,8 +1096,11 @@ class ServiceCommands(object):
 
     @args('--host', dest='host', metavar='<host>', help='Host')
     def describe_resource(self, host):
-        """Describes cpu/memory/hdd info for host."""
+        """Describes cpu/memory/hdd info for host.
 
+        :param host: hostname.
+
+        """
         result = rpc.call(context.get_admin_context(),
                      FLAGS.scheduler_topic,
                      {"method": "show_host_resources",
@@ -1102,49 +1110,66 @@ class ServiceCommands(object):
             print _('An unexpected error has occurred.')
             print _('[Result]'), result
         else:
-            cpu = result['resource']['vcpus']
-            mem = result['resource']['memory_mb']
-            hdd = result['resource']['local_gb']
-            cpu_u = result['resource']['vcpus_used']
-            mem_u = result['resource']['memory_mb_used']
-            hdd_u = result['resource']['local_gb_used']
+            # Printing a total and used_now
+            # (NOTE)The host name width 16 characters
+            print '%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' % {"a": _('HOST'),
+                                                         "b": _('PROJECT'),
+                                                         "c": _('cpu'),
+                                                         "d": _('mem(mb)'),
+                                                         "e": _('hdd')}
+            print '%(a)-16s(total)%(b)26s%(c)8s%(d)8s' %\
+                              {"a": host,
+                               "b": result['resource']['vcpus'],
+                               "c": result['resource']['memory_mb'],
+                               "d": result['resource']['local_gb']}
 
+            print '%(a)-16s(used_now)%(b)23s%(c)8s%(d)8s' %\
+                              {"a": host,
+                               "b": result['resource']['vcpus_used'],
+                               "c": result['resource']['memory_mb_used'],
+                               "d": result['resource']['local_gb_used']}
+
+            # Printing a used_max
             cpu_sum = 0
             mem_sum = 0
             hdd_sum = 0
-            print 'HOST\t\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
-            print '%s(total)\t\t\t%s\t%s\t%s' % (host, cpu, mem, hdd)
-            print '%s(used_now)\t\t\t%s\t%s\t%s' % (host, cpu_u, mem_u, hdd_u)
-            for p_id, val in result['usage'].items():
+            ctxt = context.get_admin_context()
+            instance_refs = db.instance_get_all_by_host(ctxt, host)
+
+            project_ids = [i['project_id'] for i in instance_refs]
+            project_ids = list(set(project_ids))
+            usage = dict()
+            for project_id in project_ids:
+                vcpus = [i['vcpus'] for i in instance_refs \
+                    if i['project_id'] == project_id]
+
+                mem = [i['memory_mb']  for i in instance_refs \
+                    if i['project_id'] == project_id]
+
+                disk = [i['local_gb']  for i in instance_refs \
+                    if i['project_id'] == project_id]
+
+                usage[project_id] = {
+                                 'vcpus': reduce(lambda x, y: x + y, vcpus),
+                                 'memory_mb': reduce(lambda x, y: x + y, mem),
+                                 'local_gb': reduce(lambda x, y: x + y, disk)}
+
+            for p_id, val in usage.items():
                 cpu_sum += val['vcpus']
                 mem_sum += val['memory_mb']
                 hdd_sum += val['local_gb']
-            print '%s(used_max)\t\t\t%s\t%s\t%s' % (host, cpu_sum,
-                                                    mem_sum, hdd_sum)
+            print '%(a)-16s(used_max)%(b)23s%(c)8s%(d)8s' % {"a": host,
+                                                             "b": cpu_sum,
+                                                             "c": mem_sum,
+                                                             "d": hdd_sum}
 
-            for p_id, val in result['usage'].items():
-                print '%s\t\t%s\t\t%s\t%s\t%s' % (host,
-                                                  p_id,
-                                                  val['vcpus'],
-                                                  val['memory_mb'],
-                                                  val['local_gb'])
-
-    @args('--host', dest='host', metavar='<host>', help='Host')
-    def update_resource(self, host):
-        """Updates available vcpu/memory/disk info for host."""
-
-        ctxt = context.get_admin_context()
-        service_refs = db.service_get_all_by_host(ctxt, host)
-        if len(service_refs) <= 0:
-            raise exception.Invalid(_('%s does not exist.') % host)
-
-        service_refs = [s for s in service_refs if s['topic'] == 'compute']
-        if len(service_refs) <= 0:
-            raise exception.Invalid(_('%s is not compute node.') % host)
-
-        rpc.call(ctxt,
-                 db.queue_get_for(ctxt, FLAGS.compute_topic, host),
-                 {"method": "update_available_resource"})
+            for p_id, val in usage.items():
+                print '%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' %\
+                                                     {"a": host,
+                                                      "b": p_id,
+                                                      "c": val['vcpus'],
+                                                      "d": val['memory_mb'],
+                                                      "e": val['local_gb']}
 
 
 class HostCommands(object):

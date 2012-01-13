@@ -1663,6 +1663,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.update_available_resource(context, self.host)
 
+    def get_instance_disk_info(self, context, instance_name):
+        """Getting infomation of instance's current disk.
+
+        Implementation nova.virt.libvirt.connection.
+
+        :param context: security context
+        :param instance_name: instance name
+
+        """
+        return self.driver.get_instance_disk_info(instance_name)
+
     def pre_live_migration(self, context, instance_id, time=None,
                            block_migration=False, disk=None):
         """Preparations for live migration at dest host.
@@ -1735,7 +1746,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param dest: destination host
-        :param block_migration: if true, do block migration
+        :param block_migration: if true, prepare for block migration
 
         """
         # Get instance for error handling.
@@ -1751,8 +1762,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                            "args": {'instance_id': instance_id}})
 
             if block_migration:
-                disk = self.driver.get_instance_disk_info(context,
-                                                          instance_ref)
+                disk = self.driver.get_instance_disk_info(instance_ref.name)
             else:
                 disk = None
 
@@ -1790,7 +1800,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param ctxt: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param dest: destination host
-        :param block_migration: if true, do block migration
+        :param block_migration: if true, prepare for block migration
 
         """
 
@@ -1879,7 +1889,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
-        :param block_migration: block_migration
+        :param block_migration: if true, prepare for block migration
 
         """
         instance_ref = self.db.instance_get(context, instance_id)
@@ -1900,6 +1910,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param dest:
             This method is called from live migration src host.
             This param specifies destination host.
+        :param block_migration: if true, prepare for block migration
+
         """
         host = instance_ref['host']
         self._instance_update(context,
