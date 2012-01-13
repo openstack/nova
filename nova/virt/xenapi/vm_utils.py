@@ -705,35 +705,28 @@ class VMHelper(HelperBase):
         2. If we're not using Glance, then we need to deduce this based on
            whether a kernel_id is specified.
         """
-        def log_disk_format(image_type):
-            pretty_format = {ImageType.KERNEL: 'KERNEL',
-                             ImageType.RAMDISK: 'RAMDISK',
-                             ImageType.DISK: 'DISK',
-                             ImageType.DISK_RAW: 'DISK_RAW',
-                             ImageType.DISK_VHD: 'DISK_VHD',
-                             ImageType.DISK_ISO: 'DISK_ISO'}
-            disk_format = pretty_format[image_type]
-            image_ref = image_meta['id']
-            LOG.debug(_("Detected %(disk_format)s format for image "
-                        "%(image_ref)s") % locals())
+        disk_format = image_meta['disk_format']
 
-        def determine_from_image_meta():
-            glance_disk_format2nova_type = {
-                'ami': ImageType.DISK,
-                'aki': ImageType.KERNEL,
-                'ari': ImageType.RAMDISK,
-                'raw': ImageType.DISK_RAW,
-                'vhd': ImageType.DISK_VHD,
-                'iso': ImageType.DISK_ISO}
-            disk_format = image_meta['disk_format']
-            try:
-                return glance_disk_format2nova_type[disk_format]
-            except KeyError:
-                raise exception.InvalidDiskFormat(disk_format=disk_format)
+        disk_format_map = {
+            'ami': 'DISK',
+            'aki': 'KERNEL',
+            'ari': 'RAMDISK',
+            'raw': 'DISK_RAW',
+            'vhd': 'DISK_VHD',
+            'iso': 'DISK_ISO',
+        }
 
-        image_type = determine_from_image_meta()
+        try:
+            image_type_str = disk_format_map[disk_format]
+        except KeyError:
+            raise exception.InvalidDiskFormat(disk_format=disk_format)
 
-        log_disk_format(image_type)
+        image_type = getattr(ImageType, image_type_str)
+
+        image_ref = image_meta['id']
+        msg = _("Detected %(image_type_str)s format for image %(image_ref)s")
+        LOG.debug(msg % locals())
+
         return image_type
 
     @classmethod
