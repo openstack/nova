@@ -907,7 +907,7 @@ class NetworkCommands(object):
         net_manager.delete_network(context.get_admin_context(),
             fixed_range, uuid)
 
-    @args('--network', dest="fixed_range", metavar='<x.x.x.x/yy>',
+    @args('--fixed_range', dest="fixed_range", metavar='<x.x.x.x/yy>',
             help='Network to modify')
     @args('--project', dest="project", metavar='<project name>',
             help='Project name to associate')
