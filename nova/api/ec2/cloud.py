@@ -843,11 +843,14 @@ class CloudController(object):
             snapshot = None
             LOG.audit(_("Create volume of %s GB"), size, context=context)
 
+        availability_zone = kwargs.get('availability_zone', None)
+
         volume = self.volume_api.create(context,
                                         size,
                                         None,
                                         None,
-                                        snapshot)
+                                        snapshot,
+                                        availability_zone=availability_zone)
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.

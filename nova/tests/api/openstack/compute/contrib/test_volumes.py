@@ -22,13 +22,15 @@ import webob
 import nova
 from nova.api.openstack.compute.contrib import volumes
 from nova.compute import instance_types
+from nova import context
+import nova.db
 from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova import volume
 
 
 FLAGS = flags.FLAGS
-
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 IMAGE_UUID = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
@@ -89,6 +91,116 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual(_block_device_mapping_seen[0]['volume_id'], 1)
         self.assertEqual(_block_device_mapping_seen[0]['device_name'],
                 '/dev/vda')
+
+
+def return_volume(context, volume_id):
+    return {'id': volume_id}
+
+
+class VolumeApiTest(test.TestCase):
+
+    def setUp(self, test_obj=None):
+        super(VolumeApiTest, self).setUp()
+        fakes.FakeAuthManager.reset_fake_data()
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_auth(self.stubs)
+        self.stubs.Set(nova.db, 'volume_get', return_volume)
+
+        self.stubs.Set(volume.api.API, "delete", fakes.stub_volume_delete)
+        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get)
+        self.stubs.Set(volume.api.API, "get_all", fakes.stub_volume_get_all)
+
+        self.context = context.get_admin_context()
+        self.test_obj = test_obj if test_obj else "volume"
+
+    def tearDown(self):
+        super(VolumeApiTest, self).tearDown()
+
+    def test_volume_create(self):
+        self.stubs.Set(volume.api.API, "create", fakes.stub_volume_create)
+
+        vol = {"size": 100,
+               "display_name": "Volume Test Name",
+               "display_description": "Volume Test Desc",
+               "availability_zone": "zone1:host1"}
+        body = {self.test_obj: vol}
+        req = webob.Request.blank('/v2/fake/os-volumes')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        resp = req.get_response(fakes.wsgi_app())
+
+        if self.test_obj == "volume":
+            self.assertEqual(resp.status_int, 200)
+
+            resp_dict = json.loads(resp.body)
+            self.assertTrue(self.test_obj in resp_dict)
+            self.assertEqual(resp_dict[self.test_obj]['size'],
+                             vol['size'])
+            self.assertEqual(resp_dict[self.test_obj]['displayName'],
+                             vol['display_name'])
+            self.assertEqual(resp_dict[self.test_obj]['displayDescription'],
+                             vol['display_description'])
+            self.assertEqual(resp_dict[self.test_obj]['availabilityZone'],
+                             vol['availability_zone'])
+        else:
+            self.assertEqual(resp.status_int, 400)
+
+    def test_volume_create_no_body(self):
+        req = webob.Request.blank('/v2/fake/os-volumes')
+        req.method = 'POST'
+        req.body = json.dumps({})
+        req.headers['content-type'] = 'application/json'
+
+        resp = req.get_response(fakes.wsgi_app())
+        if self.test_obj == "volume":
+            self.assertEqual(resp.status_int, 422)
+        else:
+            self.assertEqual(resp.status_int, 400)
+
+    def test_volume_index(self):
+        req = webob.Request.blank('/v2/fake/os-volumes')
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 200)
+
+    def test_volume_detail(self):
+        req = webob.Request.blank('/v2/fake/os-volumes/detail')
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 200)
+
+    def test_volume_show(self):
+        req = webob.Request.blank('/v2/fake/os-volumes/123')
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 200)
+
+    def test_volume_show_no_volume(self):
+        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get_notfound)
+
+        req = webob.Request.blank('/v2/fake/os-volumes/456')
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 404)
+
+    def test_volume_delete(self):
+        req = webob.Request.blank('/v2/fake/os-volumes/123')
+        req.method = 'DELETE'
+        resp = req.get_response(fakes.wsgi_app())
+        if self.test_obj == "volume":
+            self.assertEqual(resp.status_int, 202)
+        else:
+            self.assertEqual(resp.status_int, 400)
+
+    def test_volume_delete_no_volume(self):
+        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get_notfound)
+
+        req = webob.Request.blank('/v2/fake/os-volumes/456')
+        req.method = 'DELETE'
+        resp = req.get_response(fakes.wsgi_app())
+        if self.test_obj == "volume":
+            self.assertEqual(resp.status_int, 404)
+        else:
+            self.assertEqual(resp.status_int, 400)
 
 
 class VolumeSerializerTest(test.TestCase):

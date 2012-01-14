@@ -228,21 +228,23 @@ class VolumeController(object):
 
         snapshot_id = volume.get('snapshot_id')
         if snapshot_id is not None:
-            snapshot = self.volume_api.get_snapshot(context, snapshot_id)
+            kwargs['snapshot'] = self.volume_api.get_snapshot(context,
+                                                              snapshot_id)
         else:
-            snapshot = None
+            kwargs['snapshot'] = None
+
+        kwargs['availability_zone'] = volume.get('availability_zone', None)
 
         new_volume = self.volume_api.create(context,
                                             size,
-                                            snapshot,
                                             volume.get('display_name'),
                                             volume.get('display_description'),
                                             **kwargs)
 
-        # Work around problem that instance is lazy-loaded...
-        new_volume = self.volume_api.get(context, new_volume['id'])
-
-        retval = _translate_volume_detail_view(context, new_volume)
+        # TODO(vish): Instance should be None at db layer instead of
+        #             trying to lazy load, but for now we turn it into
+        #             a dict to avoid an error.
+        retval = _translate_volume_detail_view(context, dict(new_volume))
 
         return {'volume': retval}
 

@@ -202,17 +202,22 @@ class VolumeController(object):
         else:
             snapshot = None
 
-        new_volume = self.volume_api.create(context, size,
+        availability_zone = vol.get('availability_zone', None)
+
+        new_volume = self.volume_api.create(context,
+                                            size,
                                             vol.get('display_name'),
                                             vol.get('display_description'),
                                             snapshot=snapshot,
                                             volume_type=vol_type,
-                                            metadata=metadata)
+                                            metadata=metadata,
+                                            availability_zone=availability_zone
+                                           )
 
-        # Work around problem that instance is lazy-loaded...
-        new_volume = self.volume_api.get(context, new_volume['id'])
-
-        retval = _translate_volume_detail_view(context, new_volume)
+        # TODO(vish): Instance should be None at db layer instead of
+        #             trying to lazy load, but for now we turn it into
+        #             a dict to avoid an error.
+        retval = _translate_volume_detail_view(context, dict(new_volume))
 
         return {'volume': retval}
 
