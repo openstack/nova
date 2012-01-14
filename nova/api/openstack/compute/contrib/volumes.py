@@ -192,7 +192,7 @@ class VolumeController(object):
 
         metadata = vol.get('metadata', None)
 
-        snapshot_id = vol.get('snapshot_id'),
+        snapshot_id = vol.get('snapshot_id')
 
         if snapshot_id is not None:
             snapshot = self.volume_api.get_snapshot(context, snapshot_id)
