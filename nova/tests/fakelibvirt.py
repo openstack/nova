@@ -433,7 +433,7 @@ class Connection(object):
         self._uri = uri
         self._vms = {}
         self._running_vms = {}
-        self._id_counter = 0
+        self._id_counter = 1  # libvirt reserves 0 for the hypervisor.
         self._nwfilters = {}
 
     def _add_filter(self, nwfilter):

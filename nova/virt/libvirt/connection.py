@@ -268,7 +268,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def list_instances(self):
         return [self._conn.lookupByID(x).name()
-                for x in self._conn.listDomainsID()]
+                for x in self._conn.listDomainsID()
+                if x != 0]  # We skip domains with ID 0 (hypervisors).
 
     @staticmethod
     def _map_to_instance_info(domain):

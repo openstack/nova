@@ -91,6 +91,9 @@ class FakeVirtDomain(object):
                 </domain>
             """
 
+    def name(self):
+        return "fake-domain %s" % self
+
     def snapshotCreateXML(self, *args):
         return FakeVirDomainSnapshot(self)
 
@@ -400,6 +403,17 @@ class LibvirtConnTestCase(test.TestCase):
     def test_xml_disk_bus_ide(self):
         self._check_xml_and_disk_bus({"disk_format": "iso"},
                                      "cdrom", "ide")
+
+    def test_list_instances(self):
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByID = self.fake_lookup
+        connection.LibvirtConnection._conn.listDomainsID = lambda: [0, 1]
+
+        self.mox.ReplayAll()
+        conn = connection.LibvirtConnection(False)
+        instances = conn.list_instances()
+        # Only one should be listed, since domain with ID 0 must be skiped
+        self.assertEquals(len(instances), 1)
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_in_ami_format(self):
