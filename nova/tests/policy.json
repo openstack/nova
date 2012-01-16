@@ -66,5 +66,27 @@
     "compute:delete": [],
     "compute:soft_delete": [],
     "compute:force_delete": [],
-    "compute:restore": []
+    "compute:restore": [],
+
+
+    "volume:create": [],
+    "volume:get": [],
+    "volume:get_all": [],
+    "volume:get_volume_metadata": [],
+    "volume:delete": [],
+    "volume:update": [],
+    "volume:delete_volume_metadata": [],
+    "volume:update_volume_metadata": [],
+
+    "volume:attach": [],
+    "volume:detach": [],
+    "volume:check_attach": [],
+    "volume:check_detach": [],
+    "volume:initialize_connection": [],
+    "volume:terminate_connection": [],
+
+    "volume:create_snapshot": [],
+    "volume:delete_snapshot": [],
+    "volume:get_snapshot": [],
+    "volume:get_all_snapshots": []
 }

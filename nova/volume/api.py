@@ -20,12 +20,14 @@
 Handles all requests relating to volumes.
 """
 
+import functools
 
 from eventlet import greenthread
 
 from nova import exception
 from nova import flags
 from nova import log as logging
+import nova.policy
 from nova import quota
 from nova import rpc
 from nova import utils
@@ -37,11 +39,36 @@ flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 LOG = logging.getLogger('nova.volume')
 
 
+def wrap_check_policy(func):
+    """Check policy corresponding to the wrapped methods prior to execution
+
+    This decorator requires the first 3 args of the wrapped function
+    to be (self, context, volume)
+    """
+    @functools.wraps(func)
+    def wrapped(self, context, target_obj, *args, **kwargs):
+        check_policy(context, func.__name__, target_obj)
+        return func(self, context, target_obj, *args, **kwargs)
+
+    return wrapped
+
+
+def check_policy(context, action, target_obj=None):
+    target = {
+        'project_id': context.project_id,
+        'user_id': context.user_id,
+    }
+    target.update(target_obj or {})
+    _action = 'volume:%s' % action
+    nova.policy.enforce(context, _action, target)
+
+
 class API(base.Base):
     """API for interacting with the volume manager."""
 
     def create(self, context, size, name, description, snapshot=None,
                      volume_type=None, metadata=None, availability_zone=None):
+        check_policy(context, 'create')
         if snapshot is not None:
             if snapshot['status'] != "available":
                 raise exception.ApiError(
@@ -100,6 +127,7 @@ class API(base.Base):
                 return
             greenthread.sleep(1)
 
+    @wrap_check_policy
     def delete(self, context, volume):
         volume_id = volume['id']
         if volume['status'] != "available":
@@ -113,14 +141,17 @@ class API(base.Base):
                  {"method": "delete_volume",
                   "args": {"volume_id": volume_id}})
 
+    @wrap_check_policy
     def update(self, context, volume, fields):
         self.db.volume_update(context, volume['id'], fields)
 
     def get(self, context, volume_id):
+        check_policy(context, 'get', {'id': volume_id})
         rv = self.db.volume_get(context, volume_id)
         return dict(rv.iteritems())
 
     def get_all(self, context, search_opts={}):
+        check_policy(context, 'get_all')
         if context.is_admin:
             volumes = self.db.volume_get_all(context)
         else:
@@ -161,14 +192,17 @@ class API(base.Base):
         return volumes
 
     def get_snapshot(self, context, snapshot_id):
+        check_policy(context, 'get_snapshot')
         rv = self.db.snapshot_get(context, snapshot_id)
         return dict(rv.iteritems())
 
     def get_all_snapshots(self, context):
+        check_policy(context, 'get_all_snapshots')
         if context.is_admin:
             return self.db.snapshot_get_all(context)
         return self.db.snapshot_get_all_by_project(context, context.project_id)
 
+    @wrap_check_policy
     def check_attach(self, context, volume):
         # TODO(vish): abstract status checking?
         if volume['status'] != "available":
@@ -176,6 +210,7 @@ class API(base.Base):
         if volume['attach_status'] == "attached":
             raise exception.ApiError(_("Volume is already attached"))
 
+    @wrap_check_policy
     def check_detach(self, context, volume):
         # TODO(vish): abstract status checking?
         if volume['status'] == "available":
@@ -189,6 +224,7 @@ class API(base.Base):
                   "args": {'instance_id': instance_id,
                            'volume_id': volume['id']}})
 
+    @wrap_check_policy
     def attach(self, context, volume, instance_id, mountpoint):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
@@ -198,6 +234,7 @@ class API(base.Base):
                                   "instance_id": instance_id,
                                   "mountpoint": mountpoint}})
 
+    @wrap_check_policy
     def detach(self, context, volume):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
@@ -205,6 +242,7 @@ class API(base.Base):
                  {"method": "detach_volume",
                   "args": {"volume_id": volume['id']}})
 
+    @wrap_check_policy
     def initialize_connection(self, context, volume, address):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
@@ -213,6 +251,7 @@ class API(base.Base):
                          "args": {"volume_id": volume['id'],
                                   "address": address}})
 
+    @wrap_check_policy
     def terminate_connection(self, context, volume, address):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
@@ -223,6 +262,8 @@ class API(base.Base):
 
     def _create_snapshot(self, context, volume, name, description,
                          force=False):
+        check_policy(context, 'create_snapshot')
+
         if ((not force) and (volume['status'] != "available")):
             raise exception.ApiError(_("Volume status must be available"))
 
@@ -253,6 +294,7 @@ class API(base.Base):
         return self._create_snapshot(context, volume, name, description,
                                      True)
 
+    @wrap_check_policy
     def delete_snapshot(self, context, snapshot):
         if snapshot['status'] != "available":
             raise exception.ApiError(_("Snapshot status must be available"))
@@ -264,15 +306,18 @@ class API(base.Base):
                   "args": {"topic": FLAGS.volume_topic,
                            "snapshot_id": snapshot['id']}})
 
+    @wrap_check_policy
     def get_volume_metadata(self, context, volume):
         """Get all metadata associated with a volume."""
         rv = self.db.volume_metadata_get(context, volume['id'])
         return dict(rv.iteritems())
 
+    @wrap_check_policy
     def delete_volume_metadata(self, context, volume, key):
         """Delete the given metadata item from an volume."""
         self.db.volume_metadata_delete(context, volume['id'], key)
 
+    @wrap_check_policy
     def update_volume_metadata(self, context, volume, metadata, delete=False):
         """Updates or creates volume metadata.
 
