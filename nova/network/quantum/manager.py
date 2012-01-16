@@ -97,11 +97,14 @@ class QuantumManager(manager.FlatManager):
         self.driver.ensure_metadata_ip()
         self.driver.metadata_forward()
 
-    def _get_nova_id(self, context):
+    def _get_nova_id(self, instance=None):
         # When creating the network we need to pass in an identifier for
         # this zone.  Some Quantum plugins need this information in order
         # to set up appropriate networking.
-        return FLAGS.node_availability_zone
+        if instance and instance['availability_zone']:
+            return instance['availability_zone']
+        else:
+            return FLAGS.node_availability_zone
 
     def get_all_networks(self):
         networks = []
@@ -138,7 +141,7 @@ class QuantumManager(manager.FlatManager):
                         " network for tenant '%(q_tenant_id)s' with "
                         "net-id '%(quantum_net_id)s'" % locals()))
         else:
-            nova_id = self._get_nova_id(context)
+            nova_id = self._get_nova_id()
             quantum_net_id = self.q_conn.create_network(q_tenant_id, label,
                                                         nova_id=nova_id)
 
@@ -282,7 +285,7 @@ class QuantumManager(manager.FlatManager):
             instance = db.instance_get(context, instance_id)
             instance_type = instance_types.get_instance_type(instance_type_id)
             rxtx_factor = instance_type['rxtx_factor']
-            nova_id = self._get_nova_id(context)
+            nova_id = self._get_nova_id(instance)
             q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
             # Tell the ipam library to allocate an IP
             ip = self.ipam.allocate_fixed_ip(context, project_id,
