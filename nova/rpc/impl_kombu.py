@@ -374,8 +374,8 @@ class Connection(object):
         """Handles reconnecting and re-establishing queues.
         Will retry up to self.max_retries number of times.
         self.max_retries = 0 means to retry forever.
-        Sleep between tries, starting at self.rabbit_retry_interval
-        seconds, backing off self.rabbit_retry_backoff number of seconds
+        Sleep between tries, starting at self.interval_start
+        seconds, backing off self.interval_stepping number of seconds
         each attempt.
         """
 
@@ -412,9 +412,9 @@ class Connection(object):
                 sys.exit(1)
 
             if attempt == 1:
-                sleep_time = self.rabbit_retry_interval or 1
+                sleep_time = self.interval_start or 1
             elif attempt > 1:
-                sleep_time += self.rabbit_retry_backoff
+                sleep_time += self.interval_stepping
             if self.interval_max:
                 sleep_time = min(sleep_time, self.interval_max)
 
