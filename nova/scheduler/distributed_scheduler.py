@@ -33,16 +33,13 @@ from nova import flags
 from nova import log as logging
 from nova.scheduler import api
 from nova.scheduler import driver
+from nova.scheduler import host_manager
 from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options
 from nova import utils
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_list('default_host_filters', ['InstanceTypeFilter'],
-        'Which filters to use for filtering hosts when not specified '
-        'in the request.')
-
 LOG = logging.getLogger('nova.scheduler.distributed_scheduler')
 
 
@@ -108,11 +105,11 @@ class DistributedScheduler(driver.Scheduler):
             weighted_host = weighted_hosts.pop(0)
 
             instance = None
-            if weighted_host.host:
-                instance = self._provision_resource_locally(elevated,
+            if weighted_host.zone:
+                instance = self._ask_child_zone_to_create_instance(elevated,
                                         weighted_host, request_spec, kwargs)
             else:
-                instance = self._ask_child_zone_to_create_instance(elevated,
+                instance = self._provision_resource_locally(elevated,
                                         weighted_host, request_spec, kwargs)
 
             if instance:
@@ -145,8 +142,8 @@ class DistributedScheduler(driver.Scheduler):
         host = hosts.pop(0)
 
         # Forward off to the host
-        driver.cast_to_host(context, 'compute', host.host, 'prep_resize',
-                            **kwargs)
+        driver.cast_to_compute_host(context, host.host_state.host,
+                'prep_resize', **kwargs)
 
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
@@ -167,7 +164,7 @@ class DistributedScheduler(driver.Scheduler):
                                     kwargs):
         """Create the requested resource in this Zone."""
         instance = self.create_instance_db_entry(context, request_spec)
-        driver.cast_to_compute_host(context, weighted_host.host,
+        driver.cast_to_compute_host(context, weighted_host.host_state.host,
                 'run_instance', instance_uuid=instance['uuid'], **kwargs)
         inst = driver.encode_instance(instance, local=True)
         # So if another instance is created, create_instance_db_entry will
@@ -189,7 +186,8 @@ class DistributedScheduler(driver.Scheduler):
             blob = wh_dict.get('blob', None)
             zone = wh_dict.get('zone', None)
             return least_cost.WeightedHost(wh_dict['weight'],
-                        host=host, blob=blob, zone=zone)
+                        host_state=host_manager.HostState(host, 'compute'),
+                        blob=blob, zone=zone)
 
         except M2Crypto.EVP.EVPError:
             raise InvalidBlob()
@@ -265,8 +263,8 @@ class DistributedScheduler(driver.Scheduler):
                         cooked_weight = offset + scale * raw_weight
 
                         weighted_hosts.append(least_cost.WeightedHost(
-                           host=None, weight=cooked_weight,
-                           zone=zone_id, blob=item['blob']))
+                               cooked_weight, zone=zone_id,
+                               blob=item['blob']))
                     except KeyError:
                         LOG.exception(_("Bad child zone scaling values "
                                 "for Zone: %(zone_id)s") % locals())
@@ -280,6 +278,17 @@ class DistributedScheduler(driver.Scheduler):
         """Fetch options dictionary. Broken out for testing."""
         return self.options.get_configuration()
 
+    def populate_filter_properties(self, request_spec, filter_properties):
+        """Stuff things into filter_properties.  Can be overriden in a
+        subclass to add more data.
+        """
+        try:
+            if request_spec['avoid_original_host']:
+                original_host = request_spec['instance_properties']['host']
+                filter_properties['ignore_hosts'].append(original_host)
+        except (KeyError, TypeError):
+            pass
+
     def _schedule(self, elevated, topic, request_spec, *args, **kwargs):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
@@ -288,6 +297,7 @@ class DistributedScheduler(driver.Scheduler):
             msg = _("Scheduler only understands Compute nodes (for now)")
             raise NotImplementedError(msg)
 
+        instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
         if not instance_type:
             msg = _("Scheduler only understands InstanceType-based" \
@@ -299,7 +309,13 @@ class DistributedScheduler(driver.Scheduler):
         ram_requirement_mb = instance_type['memory_mb']
         disk_requirement_gb = instance_type['local_gb']
 
-        options = self._get_configuration_options()
+        config_options = self._get_configuration_options()
+
+        filter_properties = {'config_options': config_options,
+                             'instance_type': instance_type,
+                             'ignore_hosts': []}
+
+        self.populate_filter_properties(request_spec, filter_properties)
 
         # Find our local list of acceptable hosts by repeatedly
         # filtering and weighing our options. Each time we choose a
@@ -307,33 +323,37 @@ class DistributedScheduler(driver.Scheduler):
         # selections can adjust accordingly.
 
         # unfiltered_hosts_dict is {host : ZoneManager.HostInfo()}
-        unfiltered_hosts_dict = self.zone_manager.get_all_host_data(elevated)
-        unfiltered_hosts = unfiltered_hosts_dict.items()
+        unfiltered_hosts_dict = self.host_manager.get_all_host_states(
+                elevated, topic)
+        hosts = unfiltered_hosts_dict.itervalues()
 
         num_instances = request_spec.get('num_instances', 1)
         selected_hosts = []
         for num in xrange(num_instances):
             # Filter local hosts based on requirements ...
-            filtered_hosts = self._filter_hosts(topic, request_spec,
-                    unfiltered_hosts, options)
-
-            if not filtered_hosts:
+            hosts = self.host_manager.filter_hosts(hosts,
+                    filter_properties)
+            if not hosts:
                 # Can't get any more locally.
                 break
 
-            LOG.debug(_("Filtered %(filtered_hosts)s") % locals())
+            LOG.debug(_("Filtered %(hosts)s") % locals())
 
             # weighted_host = WeightedHost() ... the best
             # host for the job.
+            # TODO(comstud): filter_properties will also be used for
+            # weighing and I plan fold weighing into the host manager
+            # in a future patch.  I'll address the naming of this
+            # variable at that time.
             weighted_host = least_cost.weighted_sum(cost_functions,
-                                                filtered_hosts, options)
+                    hosts, filter_properties)
             LOG.debug(_("Weighted %(weighted_host)s") % locals())
             selected_hosts.append(weighted_host)
 
             # Now consume the resources so the filter/weights
             # will change for the next instance.
-            weighted_host.hostinfo.consume_resources(disk_requirement_gb,
-                                        ram_requirement_mb)
+            weighted_host.host_state.consume_from_instance(
+                    instance_properties)
 
         # Next, tack on the host weights from the child zones
         if not request_spec.get('local_zone', False):
@@ -345,72 +365,6 @@ class DistributedScheduler(driver.Scheduler):
                                                     child_results, all_zones))
         selected_hosts.sort(key=operator.attrgetter('weight'))
         return selected_hosts[:num_instances]
-
-    def _get_filter_classes(self):
-        # Imported here to avoid circular imports
-        from nova.scheduler import filters
-
-        def get_itm(nm):
-            return getattr(filters, nm)
-
-        return [get_itm(itm) for itm in dir(filters)
-                if isinstance(get_itm(itm), type)
-                and issubclass(get_itm(itm), filters.AbstractHostFilter)
-                and get_itm(itm) is not filters.AbstractHostFilter]
-
-    def _choose_host_filters(self, filters=None):
-        """Since the caller may specify which filters to use we need
-        to have an authoritative list of what is permissible. This
-        function checks the filter names against a predefined set
-        of acceptable filters.
-        """
-        if not filters:
-            filters = FLAGS.default_host_filters
-        if not isinstance(filters, (list, tuple)):
-            filters = [filters]
-        good_filters = []
-        bad_filters = []
-        filter_classes = self._get_filter_classes()
-        for filter_name in filters:
-            found_class = False
-            for cls in filter_classes:
-                if cls.__name__ == filter_name:
-                    good_filters.append(cls())
-                    found_class = True
-                    break
-            if not found_class:
-                bad_filters.append(filter_name)
-        if bad_filters:
-            msg = ", ".join(bad_filters)
-            raise exception.SchedulerHostFilterNotFound(filter_name=msg)
-        return good_filters
-
-    def _filter_hosts(self, topic, request_spec, hosts, options):
-        """Filter the full host list. hosts = [(host, HostInfo()), ...].
-        This method returns a subset of hosts, in the same format."""
-        selected_filters = self._choose_host_filters()
-
-        # Filter out original host
-        try:
-            if request_spec['avoid_original_host']:
-                original_host = request_spec['instance_properties']['host']
-                hosts = [(h, hi) for h, hi in hosts if h != original_host]
-        except (KeyError, TypeError):
-            pass
-
-        # TODO(sandy): We're only using InstanceType-based specs
-        # currently. Later we'll need to snoop for more detailed
-        # host filter requests.
-        instance_type = request_spec.get("instance_type", None)
-        if instance_type is None:
-            # No way to select; return the specified hosts.
-            return hosts
-
-        for selected_filter in selected_filters:
-            query = selected_filter.instance_type_to_filter(instance_type)
-            hosts = selected_filter.filter_hosts(hosts, query, options)
-
-        return hosts
 
     def get_cost_functions(self, topic=None):
         """Returns a list of tuples containing weights and cost functions to

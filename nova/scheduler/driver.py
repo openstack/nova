@@ -21,22 +21,30 @@
 Scheduler base class that all Schedulers should inherit from
 """
 
+from nova.api.ec2 import ec2utils
+from nova.compute import api as compute_api
+from nova.compute import power_state
+from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
+from nova.scheduler import host_manager
+from nova.scheduler import zone_manager
 from nova import utils
-from nova.compute import api as compute_api
-from nova.compute import power_state
-from nova.compute import vm_states
-from nova.api.ec2 import ec2utils
 
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.driver')
 flags.DEFINE_integer('service_down_time', 60,
                      'maximum time since last check-in for up service')
+flags.DEFINE_string('scheduler_host_manager',
+        'nova.scheduler.host_manager.HostManager',
+        'The scheduler host manager class to use')
+flags.DEFINE_string('scheduler_zone_manager',
+        'nova.scheduler.zone_manager.ZoneManager',
+        'The scheduler zone manager class to use')
 flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
@@ -113,20 +121,43 @@ def encode_instance(instance, local=True):
     if local:
         return dict(id=instance['id'], _is_precooked=False)
     else:
-        instance['_is_precooked'] = True
-        return instance
+        inst = dict(instance)
+        inst['_is_precooked'] = True
+        return inst
 
 
 class Scheduler(object):
     """The base class that all Scheduler classes should inherit from."""
 
     def __init__(self):
-        self.zone_manager = None
+        self.zone_manager = utils.import_object(
+                FLAGS.scheduler_zone_manager)
+        self.host_manager = utils.import_object(
+                FLAGS.scheduler_host_manager)
         self.compute_api = compute_api.API()
 
-    def set_zone_manager(self, zone_manager):
-        """Called by the Scheduler Service to supply a ZoneManager."""
-        self.zone_manager = zone_manager
+    def get_host_list(self):
+        """Get a list of hosts from the HostManager."""
+        return self.host_manager.get_host_list()
+
+    def get_zone_list(self):
+        """Get a list of zones from the ZoneManager."""
+        return self.zone_manager.get_zone_list()
+
+    def get_service_capabilities(self):
+        """Get the normalized set of capabilities for the services
+        in this zone.
+        """
+        return self.host_manager.get_service_capabilities()
+
+    def update_service_capabilities(self, service_name, host, capabilities):
+        """Process a capability update from a service node."""
+        self.host_manager.update_service_capabilities(service_name,
+                host, capabilities)
+
+    def poll_child_zones(self, context):
+        """Poll child zones periodically to get status."""
+        return self.zone_manager.update(context)
 
     @staticmethod
     def service_is_up(service):
@@ -140,7 +171,7 @@ class Scheduler(object):
         """Return the list of hosts that have a running service for topic."""
 
         services = db.service_get_all_by_topic(context, topic)
-        return [service.host
+        return [service['host']
                 for service in services
                 if self.service_is_up(service)]
 
@@ -167,6 +198,10 @@ class Scheduler(object):
     def schedule(self, context, topic, method, *_args, **_kwargs):
         """Must override at least this method for scheduler to work."""
         raise NotImplementedError(_("Must implement a fallback schedule"))
+
+    def select(self, context, topic, method, *_args, **_kwargs):
+        """Must override this for zones to work."""
+        raise NotImplementedError(_("Must implement 'select' method"))
 
     def schedule_live_migration(self, context, instance_id, dest,
                                 block_migration=False,
@@ -232,7 +267,7 @@ class Scheduler(object):
         # to the instance.
         if len(instance_ref['volumes']) != 0:
             services = db.service_get_all_by_topic(context, 'volume')
-            if len(services) < 1 or  not self.service_is_up(services[0]):
+            if len(services) < 1 or not self.service_is_up(services[0]):
                 raise exception.VolumeServiceUnavailable()
 
         # Checking src host exists and compute node
@@ -302,6 +337,7 @@ class Scheduler(object):
                 reason = _("Block migration can not be used "
                            "with shared storage.")
                 raise exception.InvalidSharedStorage(reason=reason, path=dest)
+        # FIXME(comstud): See LP891756.
         except exception.FileNotFound:
             if not block_migration:
                 src = instance_ref['host']

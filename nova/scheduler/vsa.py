@@ -97,7 +97,7 @@ class VsaScheduler(simple.SimpleScheduler):
         return True
 
     def _get_service_states(self):
-        return self.zone_manager.service_states
+        return self.host_manager.service_states
 
     def _filter_hosts(self, topic, request_spec, host_list=None):
 

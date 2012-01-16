@@ -141,20 +141,3 @@ class SimpleScheduler(chance.ChanceScheduler):
                 return None
         msg = _("Is the appropriate service running?")
         raise exception.NoValidHost(reason=msg)
-
-    def schedule_set_network_host(self, context, *_args, **_kwargs):
-        """Picks a host that is up and has the fewest networks."""
-        elevated = context.elevated()
-
-        results = db.service_get_all_network_sorted(elevated)
-        for result in results:
-            (service, instance_count) = result
-            if instance_count >= FLAGS.max_networks:
-                msg = _("Not enough allocatable networks remaining")
-                raise exception.NoValidHost(reason=msg)
-            if self.service_is_up(service):
-                driver.cast_to_network_host(context, service['host'],
-                        'set_network_host', **_kwargs)
-                return None
-        msg = _("Is the appropriate service running?")
-        raise exception.NoValidHost(reason=msg)

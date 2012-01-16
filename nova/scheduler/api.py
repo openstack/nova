@@ -87,7 +87,20 @@ def zone_update(context, zone_id, data):
 
 def get_zone_capabilities(context):
     """Returns a dict of key, value capabilities for this zone."""
-    return _call_scheduler('get_zone_capabilities', context=context)
+
+    zone_capabs = {}
+
+    # First grab the capabilities of combined services.
+    service_capabs = _call_scheduler('get_service_capabilities', context)
+    for item, (min_value, max_value) in service_capabs.iteritems():
+        zone_capabs[item] = "%s,%s" % (min_value, max_value)
+
+    # Add the capabilities defined by FLAGS
+    caps = FLAGS.zone_capabilities
+    for cap in caps:
+        key, value = cap.split('=')
+        zone_capabs[key] = value
+    return zone_capabs
 
 
 def select(context, specs=None):

@@ -30,7 +30,6 @@ from nova import flags
 from nova import log as logging
 from nova import manager
 from nova import rpc
-from nova.scheduler import zone_manager
 from nova import utils
 
 LOG = logging.getLogger('nova.scheduler.manager')
@@ -44,11 +43,9 @@ class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
-        self.zone_manager = zone_manager.ZoneManager()
         if not scheduler_driver:
             scheduler_driver = FLAGS.scheduler_driver
         self.driver = utils.import_object(scheduler_driver)
-        self.driver.set_zone_manager(self.zone_manager)
         super(SchedulerManager, self).__init__(*args, **kwargs)
 
     def __getattr__(self, key):
@@ -58,29 +55,29 @@ class SchedulerManager(manager.Manager):
     @manager.periodic_task
     def _poll_child_zones(self, context):
         """Poll child zones periodically to get status."""
-        self.zone_manager.ping(context)
+        self.driver.poll_child_zones(context)
 
-    def get_host_list(self, context=None):
-        """Get a list of hosts from the ZoneManager."""
-        return self.zone_manager.get_host_list()
+    def get_host_list(self, context):
+        """Get a list of hosts from the HostManager."""
+        return self.driver.get_host_list()
 
-    def get_zone_list(self, context=None):
+    def get_zone_list(self, context):
         """Get a list of zones from the ZoneManager."""
-        return self.zone_manager.get_zone_list()
+        return self.driver.get_zone_list()
 
-    def get_zone_capabilities(self, context=None):
+    def get_service_capabilities(self, context):
         """Get the normalized set of capabilities for this zone."""
-        return self.zone_manager.get_zone_capabilities(context)
+        return self.driver.get_service_capabilities()
 
-    def update_service_capabilities(self, context=None, service_name=None,
-                                                host=None, capabilities=None):
+    def update_service_capabilities(self, context, service_name=None,
+            host=None, capabilities=None, **kwargs):
         """Process a capability update from a service node."""
-        if not capabilities:
+        if capabilities is None:
             capabilities = {}
-        self.zone_manager.update_service_capabilities(service_name,
-                            host, capabilities)
+        self.driver.update_service_capabilities(service_name, host,
+                capabilities)
 
-    def select(self, context=None, *args, **kwargs):
+    def select(self, context, *args, **kwargs):
         """Select a list of hosts best matching the provided specs."""
         return self.driver.select(context, *args, **kwargs)
 

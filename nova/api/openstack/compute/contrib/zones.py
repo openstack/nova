@@ -133,16 +133,12 @@ class Controller(object):
     def info(self, req):
         """Return name and capabilities for this zone."""
         context = req.environ['nova.context']
-        items = nova.scheduler.api.get_zone_capabilities(context)
-
-        zone = dict(name=FLAGS.zone_name)
-        caps = FLAGS.zone_capabilities
-        for cap in caps:
-            key, value = cap.split('=')
-            zone[key] = value
-        for item, (min_value, max_value) in items.iteritems():
-            zone[item] = "%s,%s" % (min_value, max_value)
-        return dict(zone=zone)
+        zone_capabs = nova.scheduler.api.get_zone_capabilities(context)
+        # NOTE(comstud): This should probably return, instead:
+        # {'zone': {'name': FLAGS.zone_name,
+        #           'capabilities': zone_capabs}}
+        zone_capabs['name'] = FLAGS.zone_name
+        return dict(zone=zone_capabs)
 
     @wsgi.serializers(xml=ZoneTemplate)
     def show(self, req, id):

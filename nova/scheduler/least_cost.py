@@ -47,38 +47,37 @@ class WeightedHost(object):
     This is an attempt to remove some of the ad-hoc dict structures
     previously used."""
 
-    def __init__(self, weight, host=None, blob=None, zone=None, hostinfo=None):
+    def __init__(self, weight, host_state=None, blob=None, zone=None):
         self.weight = weight
         self.blob = blob
-        self.host = host
         self.zone = zone
 
         # Local members. These are not returned outside of the Zone.
-        self.hostinfo = hostinfo
+        self.host_state = host_state
 
     def to_dict(self):
         x = dict(weight=self.weight)
         if self.blob:
             x['blob'] = self.blob
-        if self.host:
-            x['host'] = self.host
+        if self.host_state:
+            x['host'] = self.host_state.host
         if self.zone:
             x['zone'] = self.zone
         return x
 
 
-def noop_cost_fn(host_info, options=None):
+def noop_cost_fn(host_state, weighing_properties):
     """Return a pre-weight cost of 1 for each host"""
     return 1
 
 
-def compute_fill_first_cost_fn(host_info, options=None):
+def compute_fill_first_cost_fn(host_state, weighing_properties):
     """More free ram = higher weight. So servers will less free
     ram will be preferred."""
-    return host_info.free_ram_mb
+    return host_state.free_ram_mb
 
 
-def weighted_sum(weighted_fns, host_list, options):
+def weighted_sum(weighted_fns, host_states, weighing_properties):
     """Use the weighted-sum method to compute a score for an array of objects.
     Normalize the results of the objective-functions so that the weights are
     meaningful regardless of objective-function's range.
@@ -86,7 +85,8 @@ def weighted_sum(weighted_fns, host_list, options):
     host_list - [(host, HostInfo()), ...]
     weighted_fns - list of weights and functions like:
         [(weight, objective-functions), ...]
-    options is an arbitrary dict of values.
+    weighing_properties is an arbitrary dict of values that can influence
+        weights.
 
     Returns a single WeightedHost object which represents the best
     candidate.
@@ -96,8 +96,8 @@ def weighted_sum(weighted_fns, host_list, options):
     # One row per host. One column per function.
     scores = []
     for weight, fn in weighted_fns:
-        scores.append([fn(host_info, options) for hostname, host_info
-                                                                in host_list])
+        scores.append([fn(host_state, weighing_properties)
+                for host_state in host_states])
 
     # Adjust the weights in the grid by the functions weight adjustment
     # and sum them up to get a final list of weights.
@@ -106,16 +106,16 @@ def weighted_sum(weighted_fns, host_list, options):
         adjusted_scores.append([weight * score for score in row])
 
     # Now, sum down the columns to get the final score. Column per host.
-    final_scores = [0.0] * len(host_list)
+    final_scores = [0.0] * len(host_states)
     for row in adjusted_scores:
         for idx, col in enumerate(row):
             final_scores[idx] += col
 
-    # Super-impose the hostinfo into the scores so
+    # Super-impose the host_state into the scores so
     # we don't lose it when we sort.
-    final_scores = [(final_scores[idx], host_tuple)
-                    for idx, host_tuple in enumerate(host_list)]
+    final_scores = [(final_scores[idx], host_state)
+            for idx, host_state in enumerate(host_states)]
 
     final_scores = sorted(final_scores)
-    weight, (host, hostinfo) = final_scores[0]  # Lowest score is the winner!
-    return WeightedHost(weight, host=host, hostinfo=hostinfo)
+    weight, host_state = final_scores[0]  # Lowest score is the winner!
+    return WeightedHost(weight, host_state=host_state)

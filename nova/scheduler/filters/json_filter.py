@@ -86,18 +86,11 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         'and': _and,
     }
 
-    def instance_type_to_filter(self, instance_type):
-        """Convert instance_type into JSON filter object."""
-        required_ram = instance_type['memory_mb']
-        required_disk = instance_type['local_gb']
-        query = ['and',
-                ['>=', '$compute.host_memory_free', required_ram],
-                ['>=', '$compute.disk_available', required_disk]]
-        return json.dumps(query)
-
-    def _parse_string(self, string, host, hostinfo):
+    def _parse_string(self, string, host_state):
         """Strings prefixed with $ are capability lookups in the
-        form '$service.capability[.subcap*]'.
+        form '$variable' where 'variable' is an attribute in the
+        HostState class.  If $variable is a dictionary, you may
+        use: $variable.dictkey
         """
         if not string:
             return None
@@ -105,18 +98,16 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
             return string
 
         path = string[1:].split(".")
-        services = dict(compute=hostinfo.compute, network=hostinfo.network,
-                        volume=hostinfo.volume)
-        service = services.get(path[0], None)
-        if not service:
+        obj = getattr(host_state, path[0], None)
+        if obj is None:
             return None
         for item in path[1:]:
-            service = service.get(item, None)
-            if not service:
+            obj = obj.get(item, None)
+            if obj is None:
                 return None
-        return service
+        return obj
 
-    def _process_filter(self, query, host, hostinfo):
+    def _process_filter(self, query, host_state):
         """Recursively parse the query structure."""
         if not query:
             return True
@@ -125,30 +116,31 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         cooked_args = []
         for arg in query[1:]:
             if isinstance(arg, list):
-                arg = self._process_filter(arg, host, hostinfo)
+                arg = self._process_filter(arg, host_state)
             elif isinstance(arg, basestring):
-                arg = self._parse_string(arg, host, hostinfo)
+                arg = self._parse_string(arg, host_state)
             if arg is not None:
                 cooked_args.append(arg)
         result = method(self, cooked_args)
         return result
 
-    def filter_hosts(self, host_list, query, options):
+    def host_passes(self, host_state, filter_properties):
         """Return a list of hosts that can fulfill the requirements
         specified in the query.
         """
-        expanded = json.loads(query)
-        filtered_hosts = []
-        for host, hostinfo in host_list:
-            if not hostinfo:
-                continue
-            if hostinfo.compute and not hostinfo.compute.get("enabled", True):
-                # Host is disabled
-                continue
-            result = self._process_filter(expanded, host, hostinfo)
-            if isinstance(result, list):
-                # If any succeeded, include the host
-                result = any(result)
-            if result:
-                filtered_hosts.append((host, hostinfo))
-        return filtered_hosts
+        capabilities = host_state.capabilities or {}
+        if not capabilities.get("enabled", True):
+            return False
+
+        query = filter_properties.get('query', None)
+        if not query:
+            return True
+
+        result = self._process_filter(json.loads(query), host_state)
+        if isinstance(result, list):
+            # If any succeeded, include the host
+            result = any(result)
+        if result:
+            # Filter it out.
+            return True
+        return False
