@@ -266,6 +266,20 @@ class FakeLDAP(object):
                 values.remove(v)
             values = store.hset(key, k, _to_json(values))
 
+    def modrdn_s(self, dn, newrdn):
+        oldobj = self.search_s(dn, SCOPE_BASE)
+        if not oldobj:
+            raise NO_SUCH_OBJECT()
+        newdn = "%s,%s" % (newrdn, dn.partition(',')[2])
+        newattrs = oldobj[0][1]
+
+        modlist = []
+        for attrtype in newattrs.keys():
+            modlist.append((attrtype, newattrs[attrtype]))
+
+        self.add_s(newdn, modlist)
+        self.delete_s(dn)
+
     def search_s(self, dn, scope, query=None, fields=None):
         """Search for all matching objects under dn using the query.
 
@@ -283,9 +297,13 @@ class FakeLDAP(object):
             raise NotImplementedError(str(scope))
         store = Store.instance()
         if scope == SCOPE_BASE:
-            keys = ["%s%s" % (self.__prefix, dn)]
+            pattern = "%s%s" % (self.__prefix, dn)
+            keys = store.keys(pattern)
         else:
             keys = store.keys("%s*%s" % (self.__prefix, dn))
+
+        if not keys:
+            raise NO_SUCH_OBJECT()
 
         objects = []
         for key in keys:
@@ -301,9 +319,6 @@ class FakeLDAP(object):
                 attrs = dict([(k, v) for k, v in attrs.iteritems()
                               if not fields or k in fields])
                 objects.append((key[len(self.__prefix):], attrs))
-            # pylint: enable=E1103
-        if objects == []:
-            raise NO_SUCH_OBJECT()
         return objects
 
     @property
