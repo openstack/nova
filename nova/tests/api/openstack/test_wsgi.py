@@ -993,7 +993,7 @@ class ResponseObjectTest(test.TestCase):
     def test_get_serializer(self):
         robj = wsgi.ResponseObject({}, json='json', xml='xml', atom='atom')
         for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
-            serializer = robj.get_serializer(content_type)
+            _mtype, serializer = robj.get_serializer(content_type)
             self.assertEqual(serializer, mtype)
 
     def test_get_serializer_defaults(self):
@@ -1002,8 +1002,8 @@ class ResponseObjectTest(test.TestCase):
         for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
             self.assertRaises(exception.InvalidContentType,
                               robj.get_serializer, content_type)
-            serializer = robj.get_serializer(content_type,
-                                             default_serializers)
+            _mtype, serializer = robj.get_serializer(content_type,
+                                                     default_serializers)
             self.assertEqual(serializer, mtype)
 
     def test_serialize(self):
