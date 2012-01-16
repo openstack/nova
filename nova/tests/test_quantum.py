@@ -424,3 +424,74 @@ class QuantumNovaMACGenerationTestCase(QuantumNovaTestCase):
                         project_id=project_id,
                         requested_networks=requested_networks)
         self.assertEqual(nw_info[0][1]['mac'], fake_mac)
+
+
+class QuantumNovaPortSecurityTestCase(QuantumNovaTestCase):
+    def test_port_securty(self):
+        self.flags(use_melange_mac_generation=True)
+        self.flags(quantum_use_port_security=True)
+        fake_mac = "ab:cd:ef:ab:cd:ef"
+        self.stubs.Set(melange_connection.MelangeConnection, "create_vif",
+                       lambda w, x, y, z: fake_mac)
+        project_id = "fake_project1"
+        ctx = context.RequestContext('user1', project_id)
+        self._create_network(networks[0])
+
+        net_ids = self.net_man.q_conn.get_networks_for_tenant(project_id)
+        requested_networks = [(net_id, None) for net_id in net_ids['networks']]
+
+        instance_ref = db.api.instance_create(ctx,
+                                    {"project_id": project_id})
+        oldfunc = self.net_man.q_conn.create_and_attach_port
+
+        # Make sure we get the appropriate mac set in allowed_address_pairs
+        # if port security is enabled.
+        def _instrumented_create_and_attach_port(tenant_id, net_id,
+                                                 interface_id, **kwargs):
+            self.assertTrue('allowed_address_pairs' in kwargs.keys())
+            pairs = kwargs['allowed_address_pairs']
+            self.assertTrue(pairs[0]['mac_address'] == fake_mac)
+            self.net_man.q_conn.create_and_attach_port = oldfunc
+            return oldfunc(tenant_id, net_id, interface_id, **kwargs)
+        self.net_man.q_conn.create_and_attach_port = \
+            _instrumented_create_and_attach_port
+        nw_info = self.net_man.allocate_for_instance(ctx,
+                        instance_id=instance_ref['id'], host="",
+                        instance_type_id=instance_ref['instance_type_id'],
+                        project_id=project_id,
+                        requested_networks=requested_networks)
+        self.assertEqual(nw_info[0][1]['mac'], fake_mac)
+
+    def test_port_securty_negative(self):
+        self.flags(use_melange_mac_generation=True)
+        self.flags(quantum_use_port_security=False)
+        fake_mac = "ab:cd:ef:ab:cd:ef"
+        self.stubs.Set(melange_connection.MelangeConnection, "create_vif",
+                       lambda w, x, y, z: fake_mac)
+        project_id = "fake_project1"
+        ctx = context.RequestContext('user1', project_id)
+        self._create_network(networks[0])
+
+        net_ids = self.net_man.q_conn.get_networks_for_tenant(project_id)
+        requested_networks = [(net_id, None) for net_id in net_ids['networks']]
+
+        instance_ref = db.api.instance_create(ctx,
+                                    {"project_id": project_id})
+        oldfunc = self.net_man.q_conn.create_and_attach_port
+
+        # Make sure no pairs are passed in if port security is turned off
+        def _instrumented_create_and_attach_port(tenant_id, net_id,
+                                                 interface_id, **kwargs):
+            self.assertTrue('allowed_address_pairs' in kwargs.keys())
+            pairs = kwargs['allowed_address_pairs']
+            self.assertTrue(len(pairs) == 0)
+            self.net_man.q_conn.create_and_attach_port = oldfunc
+            return oldfunc(tenant_id, net_id, interface_id, **kwargs)
+        self.net_man.q_conn.create_and_attach_port = \
+            _instrumented_create_and_attach_port
+        nw_info = self.net_man.allocate_for_instance(ctx,
+                        instance_id=instance_ref['id'], host="",
+                        instance_type_id=instance_ref['instance_type_id'],
+                        project_id=project_id,
+                        requested_networks=requested_networks)
+        self.assertEqual(nw_info[0][1]['mac'], fake_mac)
