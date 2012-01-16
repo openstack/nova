@@ -603,6 +603,8 @@ class ResponseObject(object):
         self._default_code = 200
         self._code = code
         self._headers = {}
+        self.serializer = None
+        self.media_type = None
 
     def __getitem__(self, key):
         """Retrieves a header with the given name."""
@@ -651,11 +653,30 @@ class ResponseObject(object):
         try:
             mtype = _MEDIA_TYPE_MAP.get(content_type, content_type)
             if mtype in self.serializers:
-                return self.serializers[mtype]
+                return mtype, self.serializers[mtype]
             else:
-                return default_serializers[mtype]
+                return mtype, default_serializers[mtype]
         except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
+
+    def preserialize(self, content_type, default_serializers=None):
+        """Prepares the serializer that will be used to serialize.
+
+        Determines the serializer that will be used and prepares an
+        instance of it for later call.  This allows the serializer to
+        be accessed by extensions for, e.g., template extension.
+        """
+
+        mtype, serializer = self.get_serializer(content_type,
+                                                default_serializers)
+        self.media_type = mtype
+        self.serializer = serializer()
+
+    def attach(self, **kwargs):
+        """Attach slave templates to serializers."""
+
+        if self.media_type in kwargs:
+            self.serializer.attach(kwargs[self.media_type])
 
     def serialize(self, request, content_type, default_serializers=None):
         """Serializes the wrapped object.
@@ -664,7 +685,12 @@ class ResponseObject(object):
         webob.Response object.
         """
 
-        serializer = self.get_serializer(content_type, default_serializers)()
+        if self.serializer:
+            serializer = self.serializer
+        else:
+            _mtype, _serializer = self.get_serializer(content_type,
+                                                      default_serializers)
+            serializer = _serializer()
 
         response = webob.Response()
         response.status_int = self.code
@@ -1030,6 +1056,14 @@ class Resource(wsgi.Application):
 
             # Run post-processing extensions
             if resp_obj:
+                # Do a preserialize to set up the response object
+                serializers = getattr(meth, 'wsgi_serializers', {})
+                resp_obj._bind_method_serializers(serializers)
+                if hasattr(meth, 'wsgi_code'):
+                    resp_obj._default_code = meth.wsgi_code
+                resp_obj.preserialize(accept, self.default_serializers)
+
+                # Process post-processing extensions
                 response = self.post_process_extensions(post, resp_obj,
                                                         request, action_args)
 
@@ -1040,11 +1074,6 @@ class Resource(wsgi.Application):
                                                          accept,
                                                          action=action)
                 else:
-                    serializers = getattr(meth, 'wsgi_serializers', {})
-                    resp_obj._bind_method_serializers(serializers)
-                    if hasattr(meth, 'wsgi_code'):
-                        resp_obj._default_code = meth.wsgi_code
-
                     response = resp_obj.serialize(request, accept,
                                                   self.default_serializers)
 
