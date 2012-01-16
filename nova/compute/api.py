@@ -1418,16 +1418,6 @@ class API(base.Base):
                                    instance_uuid,
                                    params=dict(address=address))
 
-    #TODO(tr3buchet): how to run this in the correct zone?
-    def add_network_to_project(self, context, project_id):
-        """Force adds a network to the project."""
-        # this will raise if zone doesn't know about project so the decorator
-        # can catch it and pass it down
-        self.db.project_get(context, project_id)
-
-        # didn't raise so this is the correct zone
-        self.network_api.add_network_to_project(context, project_id)
-
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
                                     vm_states.RESCUED],
