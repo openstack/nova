@@ -76,6 +76,9 @@ flags.DEFINE_string('credential_rc_file', '%src',
 flags.DEFINE_string('auth_driver', 'nova.auth.dbdriver.DbDriver',
                     'Driver that auth manager uses')
 
+flags.DECLARE('osapi_compute_listen_port', 'nova.service')
+
+
 LOG = logging.getLogger('nova.auth.manager')
 
 
