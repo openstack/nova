@@ -22,35 +22,29 @@ from nova import compute
 from nova import exception
 from nova import log as logging
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 
 
 LOG = logging.getLogger('nova.api.openstack.compute.contrib.console_output')
 
 
-class Console_output(extensions.ExtensionDescriptor):
-    """Console log output support, with tailing ability."""
-
-    name = "Console_output"
-    alias = "os-console-output"
-    namespace = "http://docs.openstack.org/compute/ext/" \
-                "os-console-output/api/v2"
-    updated = "2011-12-08T00:00:00+00:00"
-
-    def __init__(self, ext_mgr):
+class ConsoleOutputController(wsgi.Controller):
+    def __init__(self, *args, **kwargs):
+        super(ConsoleOutputController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
-        super(Console_output, self).__init__(ext_mgr)
 
-    def get_console_output(self, input_dict, req, server_id):
+    @wsgi.action('os-getConsoleOutput')
+    def get_console_output(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
 
         try:
-            instance = self.compute_api.routing_get(context, server_id)
+            instance = self.compute_api.routing_get(context, id)
         except exception.NotFound:
             raise webob.exc.HTTPNotFound(_('Instance not found'))
 
         try:
-            length = input_dict['os-getConsoleOutput'].get('length')
+            length = body['os-getConsoleOutput'].get('length')
         except (TypeError, KeyError):
             raise webob.exc.HTTPBadRequest(_('Malformed request body'))
 
@@ -65,9 +59,17 @@ class Console_output(extensions.ExtensionDescriptor):
 
         return {'output': output}
 
-    def get_actions(self):
-        """Return the actions the extension adds, as required by contract."""
-        actions = [extensions.ActionExtension("servers", "os-getConsoleOutput",
-                                              self.get_console_output)]
 
-        return actions
+class Console_output(extensions.ExtensionDescriptor):
+    """Console log output support, with tailing ability."""
+
+    name = "Console_output"
+    alias = "os-console-output"
+    namespace = "http://docs.openstack.org/compute/ext/" \
+                "os-console-output/api/v2"
+    updated = "2011-12-08T00:00:00+00:00"
+
+    def get_controller_extensions(self):
+        controller = ConsoleOutputController()
+        extension = extensions.ControllerExtension(self, 'servers', controller)
+        return [extension]

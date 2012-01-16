@@ -580,9 +580,9 @@ class ExtensionsXMLSerializer(xmlutil.XMLTemplateSerializer):
 
 def wrap_errors(fn):
     """Ensure errors are not passed along."""
-    def wrapped(*args):
+    def wrapped(*args, **kwargs):
         try:
-            return fn(*args)
+            return fn(*args, **kwargs)
         except Exception, e:
             raise webob.exc.HTTPInternalServerError()
     return wrapped

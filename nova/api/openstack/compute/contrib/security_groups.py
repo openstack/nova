@@ -497,23 +497,17 @@ class SecurityGroupRulesController(SecurityGroupController):
         return webob.Response(status_int=202)
 
 
-class Security_groups(extensions.ExtensionDescriptor):
-    """Security group support"""
-
-    name = "SecurityGroups"
-    alias = "security_groups"
-    namespace = "http://docs.openstack.org/compute/ext/securitygroups/api/v1.1"
-    updated = "2011-07-21T00:00:00+00:00"
-
-    def __init__(self, ext_mgr):
+class SecurityGroupActionController(wsgi.Controller):
+    def __init__(self, *args, **kwargs):
+        super(SecurityGroupActionController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
-        super(Security_groups, self).__init__(ext_mgr)
 
-    def _addSecurityGroup(self, input_dict, req, instance_id):
+    @wsgi.action('addSecurityGroup')
+    def _addSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
 
         try:
-            body = input_dict['addSecurityGroup']
+            body = body['addSecurityGroup']
             group_name = body['name']
         except TypeError:
             msg = _("Missing parameter dict")
@@ -527,7 +521,7 @@ class Security_groups(extensions.ExtensionDescriptor):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
-            instance = self.compute_api.get(context, instance_id)
+            instance = self.compute_api.get(context, id)
             self.compute_api.add_security_group(context, instance, group_name)
         except exception.SecurityGroupNotFound as exp:
             raise exc.HTTPNotFound(explanation=unicode(exp))
@@ -538,11 +532,12 @@ class Security_groups(extensions.ExtensionDescriptor):
 
         return webob.Response(status_int=202)
 
-    def _removeSecurityGroup(self, input_dict, req, instance_id):
+    @wsgi.action('removeSecurityGroup')
+    def _removeSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
 
         try:
-            body = input_dict['removeSecurityGroup']
+            body = body['removeSecurityGroup']
             group_name = body['name']
         except TypeError:
             msg = _("Missing parameter dict")
@@ -556,7 +551,7 @@ class Security_groups(extensions.ExtensionDescriptor):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
-            instance = self.compute_api.get(context, instance_id)
+            instance = self.compute_api.get(context, id)
             self.compute_api.remove_security_group(context, instance,
                                                    group_name)
         except exception.SecurityGroupNotFound as exp:
@@ -568,15 +563,19 @@ class Security_groups(extensions.ExtensionDescriptor):
 
         return webob.Response(status_int=202)
 
-    def get_actions(self):
-        """Return the actions the extensions adds"""
-        actions = [
-                extensions.ActionExtension("servers", "addSecurityGroup",
-                                           self._addSecurityGroup),
-                extensions.ActionExtension("servers", "removeSecurityGroup",
-                                           self._removeSecurityGroup)
-                   ]
-        return actions
+
+class Security_groups(extensions.ExtensionDescriptor):
+    """Security group support"""
+
+    name = "SecurityGroups"
+    alias = "security_groups"
+    namespace = "http://docs.openstack.org/compute/ext/securitygroups/api/v1.1"
+    updated = "2011-07-21T00:00:00+00:00"
+
+    def get_controller_extensions(self):
+        controller = SecurityGroupActionController()
+        extension = extensions.ControllerExtension(self, 'servers', controller)
+        return [extension]
 
     def get_resources(self):
         resources = []
