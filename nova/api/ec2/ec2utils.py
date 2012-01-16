@@ -20,8 +20,9 @@ import re
 
 from nova import exception
 from nova import flags
-from nova import ipv6
 from nova import log as logging
+from nova import network
+from nova.network import model as network_model
 
 
 FLAGS = flags.FLAGS
@@ -64,34 +65,67 @@ def image_ec2_id(image_id, image_type='ami'):
         return "ami-00000000"
 
 
+def get_ip_info_for_instance_from_cache(instance):
+    if (not instance.get('info_cache') or
+        not instance['info_cache'].get('network_info')):
+        # NOTE(jkoelker) Raising ValueError so that we trigger the
+        #                fallback lookup
+        raise ValueError
+
+    cached_info = instance['info_cache']['network_info']
+    nw_info = network_model.NetworkInfo.hydrate(cached_info)
+    ip_info = dict(fixed_ips=[], fixed_ip6s=[], floating_ips=[])
+
+    for vif in nw_info:
+        vif_fixed_ips = vif.fixed_ips()
+
+        fixed_ips = [ip['address']
+                     for ip in vif_fixed_ips if ip['version'] == 4]
+        fixed_ip6s = [ip['address']
+                      for ip in vif_fixed_ips if ip['version'] == 6]
+        floating_ips = [ip['address']
+                        for ip in vif.floating_ips()]
+        ip_info['fixed_ips'].extend(fixed_ips)
+        ip_info['fixed_ip6s'].extend(fixed_ip6s)
+        ip_info['floating_ips'].extend(floating_ips)
+
+    return ip_info
+
+
+def get_ip_for_instance_from_nwinfo(context, instance):
+    # NOTE(jkoelker) When the network_api starts returning the model, this
+    #                can be refactored out into the above function
+    network_api = network.API()
+
+    def _get_floaters(ip):
+        return network_api.get_floating_ips_by_fixed_address(context, ip)
+
+    ip_info = dict(fixed_ips=[], fixed_ip6s=[], floating_ips=[])
+    nw_info = network_api.get_instance_nw_info(context, instance)
+
+    for _net, info in nw_info:
+        for ip in info['ips']:
+            ip_info['fixed_ips'].append(ip['ip'])
+            floaters = _get_floaters(ip['ip'])
+            if floaters:
+                ip_info['floating_ips'].extend(floaters)
+        if 'ip6s' in info:
+            for ip in info['ip6s']:
+                ip_info['fixed_ip6s'].append(ip['ip'])
+    return ip_info
+
+
 def get_ip_info_for_instance(context, instance):
     """Return a list of all fixed IPs for an instance"""
 
-    ip_info = dict(fixed_ips=[], fixed_ip6s=[], floating_ips=[])
-
-    fixed_ips = instance['fixed_ips']
-    for fixed_ip in fixed_ips:
-        fixed_addr = fixed_ip['address']
-        network = fixed_ip.get('network')
-        vif = fixed_ip.get('virtual_interface')
-        if not network or not vif:
-            name = instance['name']
-            ip = fixed_ip['address']
-            LOG.warn(_("Instance %(name)s has stale IP "
-                    "address: %(ip)s (no network or vif)") % locals())
-            continue
-        cidr_v6 = network.get('cidr_v6')
-        if FLAGS.use_ipv6 and cidr_v6:
-            ipv6_addr = ipv6.to_global(cidr_v6, vif['address'],
-                    network['project_id'])
-            if ipv6_addr not in ip_info['fixed_ip6s']:
-                ip_info['fixed_ip6s'].append(ipv6_addr)
-
-        for floating_ip in fixed_ip.get('floating_ips', []):
-            float_addr = floating_ip['address']
-            ip_info['floating_ips'].append(float_addr)
-        ip_info['fixed_ips'].append(fixed_addr)
-    return ip_info
+    try:
+        return get_ip_info_for_instance_from_cache(instance)
+    except (ValueError, KeyError, AttributeError):
+        # NOTE(jkoelker) If the json load (ValueError) or the
+        #                sqlalchemy FK (KeyError, AttributeError)
+        #                fail fall back to calling out to he
+        #                network api
+        return get_ip_for_instance_from_nwinfo(context, instance)
 
 
 def get_availability_zone_by_host(services, host):

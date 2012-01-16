@@ -58,32 +58,42 @@ class AjaxProxyManager(manager.SchedulerDependentManager):
         return None
 
 
-def get_fake_fixed_ips():
-    vif = {'address': 'aa:bb:cc:dd:ee:ff'}
-    network = {'label': 'private',
-               'project_id': 'fake',
-               'cidr_v6': 'fe80:b33f::/64'}
-    floating_ips = [{'address': '1.2.3.4'},
-                    {'address': '5.6.7.8'}]
-    fixed_ip1 = {'address': '192.168.0.3',
-                 'floating_ips': floating_ips,
-                 'virtual_interface': vif,
-                 'network': network}
-    fixed_ip2 = {'address': '192.168.0.4',
-                 'network': network}
-    return [fixed_ip1, fixed_ip2]
+def get_fake_cache():
+    def _ip(ip, fixed=True, floats=None):
+        ip_dict = {'address': ip, 'type': 'fixed'}
+        if not fixed:
+            ip_dict['type'] = 'floating'
+        if fixed and floats:
+            ip_dict['floating_ips'] = [_ip(f, fixed=False) for f in floats]
+        return ip_dict
+
+    info = [{'address': 'aa:bb:cc:dd:ee:ff',
+             'id': 1,
+             'network': {'bridge': 'br0',
+                         'id': 1,
+                         'label': 'private',
+                         'subnets': [{'cidr': '192.168.0.0/24',
+                                      'ips': [_ip('192.168.0.3',
+                                                  floats=['1.2.3.4',
+                                                          '5.6.7.8']),
+                                              _ip('192.168.0.4')]}]}}]
+    if FLAGS.use_ipv6:
+        ipv6_addr = 'fe80:b33f::a8bb:ccff:fedd:eeff'
+        info[0]['network']['subnets'].append({'cidr': 'fe80:b33f::/64',
+                                              'ips': [_ip(ipv6_addr)]})
+    return info
 
 
-def get_instances_with_fixed_ips(orig_func, *args, **kwargs):
-    """Kludge fixed_ips into instance(s) without having to create DB
+def get_instances_with_cached_ips(orig_func, *args, **kwargs):
+    """Kludge the cache into instance(s) without having to create DB
     entries
     """
     instances = orig_func(*args, **kwargs)
     if isinstance(instances, list):
         for instance in instances:
-            instance['fixed_ips'] = get_fake_fixed_ips()
+            instance['info_cache'] = {'network_info': get_fake_cache()}
     else:
-        instances['fixed_ips'] = get_fake_fixed_ips()
+        instances['info_cache'] = {'network_info': get_fake_cache()}
     return instances
 
 
@@ -136,7 +146,7 @@ class CloudTestCase(test.TestCase):
         orig_func = getattr(self.cloud.compute_api, func_name)
 
         def fake_get(*args, **kwargs):
-            return get_instances_with_fixed_ips(orig_func, *args, **kwargs)
+            return get_instances_with_cached_ips(orig_func, *args, **kwargs)
         self.stubs.Set(self.cloud.compute_api, func_name, fake_get)
 
     def _create_key(self, name):
@@ -177,7 +187,6 @@ class CloudTestCase(test.TestCase):
 
     def test_release_address(self):
         address = "10.10.10.10"
-        allocate = self.cloud.allocate_address
         db.floating_ip_create(self.context,
                               {'address': address,
                                'pool': 'nova',

@@ -183,7 +183,7 @@ class RPCAllocateFixedIP(object):
         """Sits in between _allocate_fixed_ips and allocate_fixed_ip to
         perform network lookup on the far side of rpc.
         """
-        network = self.db.network_get(context, network_id)
+        network = self._get_network_by_id(context, network_id)
         return self.allocate_fixed_ip(context, instance_id, network, **kwargs)
 
 
@@ -264,8 +264,11 @@ class FloatingIP(object):
         # add to kwargs so we can pass to super to save a db lookup there
         kwargs['fixed_ips'] = fixed_ips
         for fixed_ip in fixed_ips:
+            fixed_id = fixed_ip['id']
+            floating_ips = self.db.floating_ip_get_by_fixed_ip_id(context,
+                                                                  fixed_id)
             # disassociate floating ips related to fixed_ip
-            for floating_ip in fixed_ip.floating_ips:
+            for floating_ip in floating_ips:
                 address = floating_ip['address']
                 self.disassociate_floating_ip(context, address, True)
                 # deallocate if auto_assigned
@@ -348,11 +351,14 @@ class FloatingIP(object):
         fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_address)
 
         # send to correct host, unless i'm the correct host
-        if fixed_ip['network']['multi_host']:
+        network = self._get_network_by_id(context.elevated(),
+                                          fixed_ip['network_id'])
+        if network['multi_host']:
             instance = self.db.instance_get(context, fixed_ip['instance_id'])
             host = instance['host']
         else:
-            host = fixed_ip['network']['host']
+            host = network['host']
+
         interface = floating_ip['interface']
         if host == self.host:
             # i'm the correct host
@@ -403,11 +409,13 @@ class FloatingIP(object):
         fixed_ip = self.db.fixed_ip_get(context, floating_ip['fixed_ip_id'])
 
         # send to correct host, unless i'm the correct host
-        if fixed_ip['network']['multi_host']:
+        network = self._get_network_by_id(context, fixed_ip['network_id'])
+        if network['multi_host']:
             instance = self.db.instance_get(context, fixed_ip['instance_id'])
             host = instance['host']
         else:
-            host = fixed_ip['network']['host']
+            host = network['host']
+
         interface = floating_ip['interface']
         if host == self.host:
             # i'm the correct host
@@ -597,7 +605,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             if vif['instance_id'] is None:
                 continue
 
-            network = self.db.network_get(context, vif['network_id'])
+            network = self._get_network_by_id(context, vif['network_id'])
             fixed_ipv6 = None
             if network['cidr_v6'] is not None:
                 fixed_ipv6 = ipv6.to_global(network['cidr_v6'],
@@ -609,7 +617,10 @@ class NetworkManager(manager.SchedulerDependentManager):
                 results.append({'instance_id': vif['instance_id'],
                                 'ip': fixed_ipv6})
 
-            for fixed_ip in vif['fixed_ips']:
+            vif_id = vif['id']
+            fixed_ips = self.db.fixed_ips_by_virtual_interface(context,
+                                                               vif_id)
+            for fixed_ip in fixed_ips:
                 if not fixed_ip or not fixed_ip['address']:
                     continue
                 if fixed_ip['address'] == fixed_ip_filter:
@@ -643,7 +654,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                 a non-vlan instance should connect to
         if requested_networks is not None and len(requested_networks) != 0:
             network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
-            networks = self.db.network_get_all_by_uuids(context, network_uuids)
+            networks = self.network_get_all_by_uuids(context, network_uuids)
         else:
             try:
                 networks = self.db.network_get_all(context)
@@ -722,7 +733,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         # a vif has an address, instance_id, and network_id
         # it is also joined to the instance and network given by those IDs
         for vif in vifs:
-            network = self.db.network_get(context, vif['network_id'])
+            network = self._get_network_by_id(context, vif['network_id'])
 
             if network is None:
                 continue
@@ -809,7 +820,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         for an instance"""
         nw_info = network_model.NetworkInfo()
         for vif in vifs:
-            network = self.db.network_get(context, vif['network_id'])
+            network = self._get_network_by_id(context, vif['network_id'])
             subnets = self._get_subnets_from_network(network)
 
             # if rxtx_cap data are not set everywhere, set to none
@@ -968,7 +979,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):
         """Adds a fixed ip to an instance from specified network."""
-        networks = [self.db.network_get(context, network_id)]
+        networks = [self._get_network_by_id(context, network_id)]
         self._allocate_fixed_ips(context, instance_id, host, networks)
 
     def remove_fixed_ip_from_instance(self, context, instance_id, address):
@@ -1023,8 +1034,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                 {'allocated': False,
                                  'virtual_interface_id': None})
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        instance_ref = fixed_ip_ref['instance']
-        instance_id = instance_ref['id']
+        instance_id = fixed_ip_ref['instance_id']
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
 
@@ -1032,17 +1042,19 @@ class NetworkManager(manager.SchedulerDependentManager):
             self.instance_dns_manager.delete_entry(name)
 
         if FLAGS.force_dhcp_release:
-            dev = self.driver.get_dev(fixed_ip_ref['network'])
+            network = self._get_network_by_id(context,
+                                              fixed_ip_ref['network_id'])
+            dev = self.driver.get_dev(network)
             vif = self.db.virtual_interface_get_by_instance_and_network(
-                    context, instance_ref['id'], fixed_ip_ref['network']['id'])
+                    context, instance_id, network['id'])
             self.driver.release_dhcp(dev, address, vif['address'])
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
         LOG.debug(_('Leased IP |%(address)s|'), locals(), context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
-        instance = fixed_ip['instance']
-        if not instance:
+
+        if fixed_ip['instance_id'] is None:
             raise exception.Error(_('IP %s leased that is not associated') %
                                   address)
         now = utils.utcnow()
@@ -1058,8 +1070,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Called by dhcp-bridge when ip is released."""
         LOG.debug(_('Released IP |%(address)s|'), locals(), context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
-        instance = fixed_ip['instance']
-        if not instance:
+
+        if fixed_ip['instance_id'] is None:
             raise exception.Error(_('IP %s released that is not associated') %
                                   address)
         if not fixed_ip['leased']:
@@ -1230,7 +1242,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def _create_fixed_ips(self, context, network_id):
         """Create all fixed ips for network."""
-        network = self.db.network_get(context, network_id)
+        network = self._get_network_by_id(context, network_id)
         # NOTE(vish): Should these be properties of the network as opposed
         #             to properties of the manager class?
         bottom_reserved = self._bottom_reserved_ips
@@ -1279,11 +1291,16 @@ class NetworkManager(manager.SchedulerDependentManager):
 
                 fixed_ip_ref = self.db.fixed_ip_get_by_address(context,
                                                                address)
-                if fixed_ip_ref['network']['uuid'] != network_uuid:
+                network = self._get_network_by_id(context,
+                                                  fixed_ip_ref['network_id'])
+                if network['uuid'] != network_uuid:
                     raise exception.FixedIpNotFoundForNetwork(address=address,
                                             network_uuid=network_uuid)
-                if fixed_ip_ref['instance'] is not None:
+                if fixed_ip_ref['instance_id'] is not None:
                     raise exception.FixedIpAlreadyInUse(address=address)
+
+    def _get_network_by_id(self, context, network_id):
+        return self.db.network_get(context, network_id)
 
     def _get_networks_by_uuids(self, context, network_uuids):
         return self.db.network_get_all_by_uuids(context, network_uuids)
@@ -1309,6 +1326,11 @@ class NetworkManager(manager.SchedulerDependentManager):
     def disassociate_network(self, context, network_uuid):
         network = self.get_network(context, network_uuid)
         self.db.network_disassociate(context, network['id'])
+
+    def get_fixed_ip(self, context, id):
+        """Return a fixed ip"""
+        fixed = self.db.fixed_ip_get(context, id)
+        return dict(fixed.iteritems())
 
 
 class FlatManager(NetworkManager):
@@ -1406,6 +1428,10 @@ class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                 gateway = utils.get_my_linklocal(dev)
                 self.db.network_update(context, network_ref['id'],
                                        {'gateway_v6': gateway})
+
+    def _get_network_by_id(self, context, network_id):
+        return NetworkManager._get_network_by_id(self, context.elevated(),
+                                                 network_id)
 
 
 class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):

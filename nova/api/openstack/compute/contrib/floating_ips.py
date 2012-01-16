@@ -68,7 +68,7 @@ def _translate_floating_ip_view(floating_ip):
     except (TypeError, KeyError):
         result['fixed_ip'] = None
     try:
-        result['instance_id'] = floating_ip['fixed_ip']['instance']['uuid']
+        result['instance_id'] = floating_ip['instance']['uuid']
     except (TypeError, KeyError):
         result['instance_id'] = None
     return {'floating_ip': result}
@@ -83,8 +83,34 @@ class FloatingIPController(object):
     """The Floating IPs API controller for the OpenStack API."""
 
     def __init__(self):
+        self.compute_api = compute.API()
         self.network_api = network.API()
         super(FloatingIPController, self).__init__()
+
+    def _get_fixed_ip(self, context, fixed_ip_id):
+        if fixed_ip_id is None:
+            return None
+        try:
+            return self.network_api.get_fixed_ip(context, fixed_ip_id)
+        except exception.FixedIpNotFound:
+            return None
+
+    def _get_instance(self, context, instance_id):
+        return self.compute_api.get(context, instance_id)
+
+    def _set_metadata(self, context, floating_ip):
+        fixed_ip_id = floating_ip['fixed_ip_id']
+        floating_ip['fixed_ip'] = self._get_fixed_ip(context,
+                                                     fixed_ip_id)
+        instance_id = None
+        if floating_ip['fixed_ip']:
+            instance_id = floating_ip['fixed_ip']['instance_id']
+
+        if instance_id:
+            floating_ip['instance'] = self._get_instance(context,
+                                                         instance_id)
+        else:
+            floating_ip['instance'] = None
 
     @wsgi.serializers(xml=FloatingIPTemplate)
     def show(self, req, id):
@@ -96,6 +122,8 @@ class FloatingIPController(object):
         except exception.NotFound:
             raise webob.exc.HTTPNotFound()
 
+        self._set_metadata(context, floating_ip)
+
         return _translate_floating_ip_view(floating_ip)
 
     @wsgi.serializers(xml=FloatingIPsTemplate)
@@ -104,6 +132,9 @@ class FloatingIPController(object):
         context = req.environ['nova.context']
 
         floating_ips = self.network_api.get_floating_ips_by_project(context)
+
+        for floating_ip in floating_ips:
+            self._set_metadata(context, floating_ip)
 
         return _translate_floating_ips_view(floating_ips)
 
@@ -134,7 +165,7 @@ class FloatingIPController(object):
         context = req.environ['nova.context']
         floating_ip = self.network_api.get_floating_ip(context, id)
 
-        if floating_ip.get('fixed_ip'):
+        if floating_ip.get('fixed_ip_id'):
             self.network_api.disassociate_floating_ip(context,
                                                       floating_ip['address'])
 
@@ -207,7 +238,7 @@ class Floating_ips(extensions.ExtensionDescriptor):
 
         floating_ip = self.network_api.get_floating_ip_by_address(context,
                                                                   address)
-        if floating_ip.get('fixed_ip'):
+        if floating_ip.get('fixed_ip_id'):
             try:
                 self.network_api.disassociate_floating_ip(context, address)
             except exception.NotAuthorized, e:

@@ -71,6 +71,36 @@ class FakeNetworkManager(network_manager.NetworkManager):
     """
 
     class FakeDB:
+        vifs = [{'id': 0,
+                 'instance_id': 0,
+                 'network_id': 1,
+                 'address': 'DC:AD:BE:FF:EF:01'},
+                {'id': 1,
+                 'instance_id': 20,
+                 'network_id': 21,
+                 'address': 'DC:AD:BE:FF:EF:02'},
+                {'id': 2,
+                 'instance_id': 30,
+                 'network_id': 31,
+                 'address': 'DC:AD:BE:FF:EF:03'}]
+
+        floating_ips = [dict(address='172.16.1.1',
+                             fixed_ip_id=100),
+                        dict(address='172.16.1.2',
+                             fixed_ip_id=200),
+                        dict(address='173.16.1.2',
+                             fixed_ip_id=210)]
+
+        fixed_ips = [dict(id=100,
+                          address='172.16.0.1',
+                          virtual_interface_id=0),
+                     dict(id=200,
+                          address='172.16.0.2',
+                          virtual_interface_id=1),
+                     dict(id=210,
+                          address='173.16.0.2',
+                          virtual_interface_id=2)]
+
         def fixed_ip_get_by_instance(self, context, instance_id):
             return [dict(address='10.0.0.0'), dict(address='10.0.0.1'),
                     dict(address='10.0.0.2')]
@@ -96,26 +126,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
             return True
 
         def virtual_interface_get_all(self, context):
-            floats = [{'address': '172.16.1.1'},
-                      {'address': '172.16.1.2'},
-                      {'address': '173.16.1.2'}]
-
-            vifs = [{'instance_id': 0,
-                     'network_id': 1,
-                     'address': 'DC:AD:BE:FF:EF:01',
-                     'fixed_ips': [{'address': '172.16.0.1',
-                                    'floating_ips': [floats[0]]}]},
-                    {'instance_id': 20,
-                     'network_id': 21,
-                     'address': 'DC:AD:BE:FF:EF:02',
-                     'fixed_ips': [{'address': '172.16.0.2',
-                                    'floating_ips': [floats[1]]}]},
-                    {'instance_id': 30,
-                     'network_id': 31,
-                     'address': 'DC:AD:BE:FF:EF:03',
-                     'fixed_ips': [{'address': '173.16.0.2',
-                                    'floating_ips': [floats[2]]}]}]
-            return vifs
+            return self.vifs
 
         def instance_get_id_to_uuid_mapping(self, context, ids):
             # NOTE(jkoelker): This is just here until we can rely on UUIDs
@@ -123,6 +134,10 @@ class FakeNetworkManager(network_manager.NetworkManager):
             for id in ids:
                 mapping[id] = str(utils.gen_uuid())
             return mapping
+
+        def fixed_ips_by_virtual_interface(self, context, vif_id):
+            return [ip for ip in self.fixed_ips
+                    if ip['virtual_interface_id'] == vif_id]
 
     def __init__(self):
         self.db = self.FakeDB()
@@ -285,3 +300,15 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
             self.project_id = 1
 
     return network.get_instance_nw_info(FakeContext(), 0, 0, 0, None)
+
+
+def stub_out_nw_api_get_instance_nw_info(stubs, func=None):
+    import nova.network
+
+    def get_instance_nw_info(self, context, instance):
+        return [(None, {'label': 'public',
+                       'ips': [{'ip': '192.168.0.3'}],
+                                'ip6s': []})]
+    if func is None:
+        func = get_instance_nw_info
+    stubs.Set(nova.network.API, 'get_instance_nw_info', func)

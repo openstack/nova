@@ -35,7 +35,7 @@ class ViewBuilder(common.ViewBuilder):
         """Return a dictionary describing an IP address."""
         return {
             "version": ip["version"],
-            "addr": ip["addr"],
+            "addr": ip["address"],
         }
 
     def show(self, network, label):

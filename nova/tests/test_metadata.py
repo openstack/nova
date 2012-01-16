@@ -76,16 +76,12 @@ class MetadataTestCase(test.TestCase):
         def instance_get_list(*args, **kwargs):
             return [self.instance]
 
-        def floating_get(*args, **kwargs):
-            return '99.99.99.99'
-
         self.stubs.Set(network.API, 'get_instance_nw_info',
                 fake_get_instance_nw_info)
         self.stubs.Set(network.API, 'get_floating_ips_by_fixed_address',
                 fake_get_floating_ips_by_fixed_address)
         self.stubs.Set(api, 'instance_get', instance_get)
         self.stubs.Set(api, 'instance_get_all_by_filters', instance_get_list)
-        self.stubs.Set(api, 'instance_get_floating_address', floating_get)
         self.app = handler.MetadataRequestHandler()
         network_manager = fake_network.FakeNetworkManager()
         self.stubs.Set(self.app.compute_api.network_api,
