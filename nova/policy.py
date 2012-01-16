@@ -25,6 +25,8 @@ from nova import utils
 FLAGS = flags.FLAGS
 flags.DEFINE_string('policy_file', 'policy.json',
                     _('JSON file representing policy'))
+flags.DEFINE_string('policy_default_rule', 'default',
+                    _('Rule checked when requested rule is not found'))
 
 _POLICY_PATH = None
 _POLICY_CACHE = {}
@@ -48,7 +50,8 @@ def init():
 
 
 def _set_brain(data):
-    policy.set_brain(policy.HttpBrain.load_json(data))
+    default_rule = FLAGS.policy_default_rule
+    policy.set_brain(policy.HttpBrain.load_json(data, default_rule))
 
 
 def enforce(context, action, target):
@@ -69,10 +72,11 @@ def enforce(context, action, target):
 
     """
     init()
+
     match_list = ('rule:%s' % action,)
-    target_dict = target
-    credentials_dict = context.to_dict()
+    credentials = context.to_dict()
+
     try:
-        policy.enforce(match_list, target_dict, credentials_dict)
+        policy.enforce(match_list, target, credentials)
     except policy.NotAuthorized:
         raise exception.PolicyNotAuthorized(action=action)

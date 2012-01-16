@@ -104,13 +104,14 @@ def enforce(match_list, target_dict, credentials_dict):
 class Brain(object):
     """Implements policy checking."""
     @classmethod
-    def load_json(cls, data):
+    def load_json(cls, data, default_rule=None):
         """Init a brain using json instead of a rules dictionary."""
         rules_dict = json.loads(data)
-        return cls(rules=rules_dict)
+        return cls(rules=rules_dict, default_rule=default_rule)
 
-    def __init__(self, rules=None):
+    def __init__(self, rules=None, default_rule=None):
         self.rules = rules or {}
+        self.default_rule = default_rule
 
     def add_rule(self, key, match):
         self.rules[key] = match
@@ -154,7 +155,11 @@ class Brain(object):
         try:
             new_match_list = self.rules[match]
         except KeyError:
-            return False
+            if self.default_rule and match != self.default_rule:
+                new_match_list = ('rule:%s' % self.default_rule,)
+            else:
+                return False
+
         return self.check(new_match_list, target_dict, cred_dict)
 
     def _check_role(self, match, target_dict, cred_dict):
