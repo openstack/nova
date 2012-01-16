@@ -1145,6 +1145,7 @@ class ServersControllerTest(test.TestCase):
                 'display_name': 'server_test',
             }
             self.assertEqual(params, filtered_dict)
+            filtered_dict['uuid'] = id
             return filtered_dict
 
         self.stubs.Set(nova.db, 'instance_update', server_update)

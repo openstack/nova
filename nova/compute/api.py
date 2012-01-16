@@ -568,6 +568,20 @@ class API(base.Base):
                           "requested_networks": requested_networks,
                           "filter_properties": filter_properties}})
 
+    def _check_create_policies(self, context, availability_zone,
+            requested_networks, block_device_mapping):
+        """Check policies for create()."""
+        target = {'project_id': context.project_id,
+                  'user_id': context.user_id,
+                  'availability_zone': availability_zone}
+        check_policy(context, 'create', target)
+
+        if requested_networks:
+            check_policy(context, 'create:attach_network', target)
+
+        if block_device_mapping:
+            check_policy(context, 'create:attach_volume', target)
+
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
                min_count=None, max_count=None,
@@ -588,16 +602,9 @@ class API(base.Base):
         could be 'None' or a list of instance dicts depending on if
         we waited for information from the scheduler or not.
         """
-        target = {'project_id': context.project_id,
-                  'user_id': context.user_id,
-                  'availability_zone': availability_zone}
-        check_policy(context, 'create', target)
 
-        if requested_networks:
-            check_policy(context, 'create:attach_network', target)
-
-        if block_device_mapping:
-            check_policy(context, 'create:attach_volume', target)
+        self._check_create_policies(context, availability_zone,
+                requested_networks, block_device_mapping)
 
         # We can create the DB entry for the instance here if we're
         # only going to create 1 instance and we're in a single
@@ -848,20 +855,28 @@ class API(base.Base):
         else:
             LOG.warning(_("No host for instance %s, deleting immediately"),
                         instance["uuid"])
-            self.db.instance_destroy(context, instance['id'])
+            try:
+                self.db.instance_destroy(context, instance['id'])
+            except exception.InstanceNotFound:
+                # NOTE(comstud): Race condition.  Instance already gone.
+                pass
 
     def _delete(self, context, instance):
         host = instance['host']
-        if host:
-            self.update(context,
-                        instance,
-                        task_state=task_states.DELETING,
-                        progress=0)
+        try:
+            if host:
+                self.update(context,
+                            instance,
+                            task_state=task_states.DELETING,
+                            progress=0)
 
-            self._cast_compute_message('terminate_instance', context,
-                                       instance)
-        else:
-            self.db.instance_destroy(context, instance['id'])
+                self._cast_compute_message('terminate_instance', context,
+                                           instance)
+            else:
+                self.db.instance_destroy(context, instance['id'])
+        except exception.InstanceNotFound:
+            # NOTE(comstud): Race condition.  Instance already gone.
+            pass
 
     # NOTE(jerdfelt): The API implies that only ACTIVE and ERROR are
     # allowed but the EC2 API appears to allow from RESCUED and STOPPED

@@ -272,19 +272,31 @@ class NotifyPublisher(Publisher):
 class Connection(object):
     """Connection object."""
 
-    def __init__(self):
+    def __init__(self, server_params=None):
         self.session = None
         self.consumers = {}
         self.consumer_thread = None
 
-        self.broker = FLAGS.qpid_hostname + ":" + FLAGS.qpid_port
+        if server_params is None:
+            server_params = {}
+
+        default_params = dict(hostname=FLAGS.qpid_hostname,
+                port=FLAGS.qpid_port,
+                username=FLAGS.qpid_username,
+                password=FLAGS.qpid_password)
+
+        params = server_params
+        for key in default_params.keys():
+            params.setdefault(key, default_params[key])
+
+        self.broker = params['hostname'] + ":" + str(params['port'])
         # Create the connection - this does not open the connection
         self.connection = qpid.messaging.Connection(self.broker)
 
         # Check if flags are set and if so set them for the connection
         # before we call open
-        self.connection.username = FLAGS.qpid_username
-        self.connection.password = FLAGS.qpid_password
+        self.connection.username = params['username']
+        self.connection.password = params['password']
         self.connection.sasl_mechanisms = FLAGS.qpid_sasl_mechanisms
         self.connection.reconnect = FLAGS.qpid_reconnect
         self.connection.reconnect_timeout = FLAGS.qpid_reconnect_timeout
@@ -474,10 +486,10 @@ class Connection(object):
         """Create a consumer that calls a method in a proxy object"""
         if fanout:
             consumer = FanoutConsumer(self.session, topic,
-                                rpc_amqp.ProxyCallback(proxy, Connection.pool))
+                    rpc_amqp.ProxyCallback(proxy, Connection.pool))
         else:
             consumer = TopicConsumer(self.session, topic,
-                                rpc_amqp.ProxyCallback(proxy, Connection.pool))
+                    rpc_amqp.ProxyCallback(proxy, Connection.pool))
         self._register_consumer(consumer)
         return consumer
 
@@ -508,6 +520,18 @@ def cast(context, topic, msg):
 def fanout_cast(context, topic, msg):
     """Sends a message on a fanout exchange without waiting for a response."""
     return rpc_amqp.fanout_cast(context, topic, msg, Connection.pool)
+
+
+def cast_to_server(context, server_params, topic, msg):
+    """Sends a message on a topic to a specific server."""
+    return rpc_amqp.cast_to_server(context, server_params, topic, msg,
+            Connection.pool)
+
+
+def fanout_cast_to_server(context, server_params, topic, msg):
+    """Sends a message on a fanout exchange to a specific server."""
+    return rpc_amqp.fanout_cast_to_server(context, server_params, topic,
+            msg, Connection.pool)
 
 
 def notify(context, topic, msg):

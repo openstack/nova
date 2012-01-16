@@ -19,12 +19,15 @@
 Unit Tests for remote procedure calls using kombu
 """
 
+from nova import context
+from nova import flags
 from nova import log as logging
 from nova import test
+from nova.rpc import amqp as rpc_amqp
 from nova.rpc import impl_kombu
 from nova.tests.rpc import common
 
-
+FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
@@ -98,6 +101,61 @@ class RpcKombuTestCase(common._BaseRpcTestCase):
         conn.close()
 
         self.assertEqual(self.received_message, message)
+
+    def test_cast_interface_uses_default_options(self):
+        """Test kombu rpc.cast"""
+
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+
+        class MyConnection(impl_kombu.Connection):
+            def __init__(myself, *args, **kwargs):
+                super(MyConnection, myself).__init__(*args, **kwargs)
+                self.assertEqual(myself.params,
+                        {'hostname': FLAGS.rabbit_host,
+                         'userid': FLAGS.rabbit_userid,
+                         'password': FLAGS.rabbit_password,
+                         'port': FLAGS.rabbit_port,
+                         'virtual_host': FLAGS.rabbit_virtual_host,
+                         'transport': 'memory'})
+
+            def topic_send(_context, topic, msg):
+                pass
+
+        MyConnection.pool = rpc_amqp.Pool(connection_cls=MyConnection)
+        self.stubs.Set(impl_kombu, 'Connection', MyConnection)
+
+        impl_kombu.cast(ctxt, 'fake_topic', {'msg': 'fake'})
+
+    def test_cast_to_server_uses_server_params(self):
+        """Test kombu rpc.cast"""
+
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+
+        server_params = {'username': 'fake_username',
+                         'password': 'fake_password',
+                         'hostname': 'fake_hostname',
+                         'port': 31337,
+                         'virtual_host': 'fake_virtual_host'}
+
+        class MyConnection(impl_kombu.Connection):
+            def __init__(myself, *args, **kwargs):
+                super(MyConnection, myself).__init__(*args, **kwargs)
+                self.assertEqual(myself.params,
+                        {'hostname': server_params['hostname'],
+                         'userid': server_params['username'],
+                         'password': server_params['password'],
+                         'port': server_params['port'],
+                         'virtual_host': server_params['virtual_host'],
+                         'transport': 'memory'})
+
+            def topic_send(_context, topic, msg):
+                pass
+
+        MyConnection.pool = rpc_amqp.Pool(connection_cls=MyConnection)
+        self.stubs.Set(impl_kombu, 'Connection', MyConnection)
+
+        impl_kombu.cast_to_server(ctxt, server_params,
+                'fake_topic', {'msg': 'fake'})
 
     @test.skip_test("kombu memory transport seems buggy with fanout queues "
             "as this test passes when you use rabbit (fake_rabbit=False)")
