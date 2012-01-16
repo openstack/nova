@@ -168,35 +168,35 @@ class NovaLogger(logging.Logger):
 
     def log(self, lvl, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        super(NovaLogger, self).log(lvl, msg, *args, **kwargs)
+        logging.Logger.log(self, lvl, msg, *args, **kwargs)
 
     def debug(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        super(NovaLogger, self).debug(msg, *args, **kwargs)
+        logging.Logger.debug(self, msg, *args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        super(NovaLogger, self).info(msg, *args, **kwargs)
+        logging.Logger.info(self, msg, *args, **kwargs)
 
     def warn(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        super(NovaLogger, self).warn(msg, *args, **kwargs)
+        logging.Logger.warn(self, msg, *args, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        super(NovaLogger, self).warning(msg, *args, **kwargs)
+        logging.Logger.warning(self, msg, *args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        super(NovaLogger, self).error(msg, *args, **kwargs)
+        logging.Logger.error(self, msg, *args, **kwargs)
 
     def critical(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        super(NovaLogger, self).critical(msg, *args, **kwargs)
+        logging.Logger.critical(self, msg, *args, **kwargs)
 
     def fatal(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        super(NovaLogger, self).fatal(msg, *args, **kwargs)
+        logging.Logger.fatal(self, msg, *args, **kwargs)
 
     def audit(self, msg, *args, **kwargs):
         """Shortcut for our AUDIT level."""
