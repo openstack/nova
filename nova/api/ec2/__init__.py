@@ -421,7 +421,7 @@ class Executor(wsgi.Application):
             return resp
 
     def _error(self, req, context, code, message):
-        LOG.error("%s: %s", code, message, context=context)
+        LOG.error(_('%(code)s: %(message)s') % locals())
         resp = webob.Response()
         resp.status = 400
         resp.headers['Content-Type'] = 'text/xml'
