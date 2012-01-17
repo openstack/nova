@@ -99,9 +99,6 @@ libvirt_opts = [
                default='',
                help='Override the default libvirt URI '
                     '(which is dependent on libvirt_type)'),
-    cfg.BoolOpt('use_cow_images',
-                default=True,
-                help='Whether to use cow images'),
     cfg.StrOpt('cpuinfo_xml_template',
                default=utils.abspath('virt/cpuinfo.xml.template'),
                help='CpuInfo XML Template (Used only live migration now)'),

@@ -315,6 +315,22 @@ class VMHelper(HelperBase):
         return vdi_ref
 
     @classmethod
+    def copy_vdi(cls, session, sr_ref, vdi_to_copy_ref):
+        """Copy a VDI and return the new VDIs reference."""
+        vdi_ref = session.call_xenapi('VDI.copy', vdi_to_copy_ref, sr_ref)
+        LOG.debug(_('Copied VDI %(vdi_ref)s from VDI '
+                    '%(vdi_to_copy_ref)s on %(sr_ref)s.') % locals())
+        return vdi_ref
+
+    @classmethod
+    def clone_vdi(cls, session, vdi_to_clone_ref):
+        """Clones a VDI and return the new VDIs reference."""
+        vdi_ref = session.call_xenapi('VDI.clone', vdi_to_clone_ref)
+        LOG.debug(_('Cloned VDI %(vdi_ref)s from VDI '
+                    '%(vdi_to_clone_ref)s') % locals())
+        return vdi_ref
+
+    @classmethod
     def set_vdi_name_label(cls, session, vdi_uuid, name_label):
         vdi_ref = session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
         session.call_xenapi("VDI.set_name_label", vdi_ref, name_label)
@@ -353,11 +369,11 @@ class VMHelper(HelperBase):
         LOG.debug(_('Created snapshot %(template_vm_ref)s from'
                 ' VM %(vm_ref)s.') % locals())
 
-        parent_uuid = _wait_for_vhd_coalesce(
+        parent_uuid, base_uuid = _wait_for_vhd_coalesce(
             session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
 
-        #TODO(sirp): we need to assert only one parent, not parents two deep
-        template_vdi_uuids = {'image': parent_uuid,
+        template_vdi_uuids = {'base': base_uuid,
+                              'image': parent_uuid,
                               'snap': template_vdi_uuid}
         return template_vm_ref, template_vdi_uuids
 
@@ -372,6 +388,15 @@ class VMHelper(HelperBase):
         sr_rec = session.call_xenapi("SR.get_record", sr_ref)
         sr_uuid = sr_rec["uuid"]
         return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
+
+    @classmethod
+    def find_cached_image(cls, session, image_id, sr_ref):
+        """Returns the vdi-ref of the cached image."""
+        for vdi_ref, vdi_rec in _get_all_vdis_in_sr(session, sr_ref):
+            if ('image-id' in vdi_rec['other_config'] and
+                vdi_rec['other_config']['image-id'] == image_id):
+                    return vdi_ref
+        return None
 
     @classmethod
     def upload_image(cls, context, session, instance, vdi_uuids, image_id):
@@ -545,6 +570,108 @@ class VMHelper(HelperBase):
         return vdi_ref
 
     @classmethod
+    def create_kernel_image(cls, context, session, instance, image, user_id,
+                            project_id, image_type):
+        """Creates kernel/ramdisk file from the image stored in the cache.
+        If the image is not present in the cache, it streams it from glance.
+
+        Returns: A list of dictionaries that describe VDIs
+        """
+        filename = ""
+        if FLAGS.cache_images:
+            args = {}
+            args['cached-image'] = image
+            args['new-image-uuid'] = str(uuid.uuid4())
+            task = session.async_call_plugin('glance', "create_kernel_ramdisk",
+                                              args)
+            filename = session.wait_for_task(task, instance.id)
+
+        if filename == "":
+            return cls.fetch_image(context, session, instance, image,
+                                   user_id, project_id, image_type)
+        else:
+            return [dict(vdi_type=ImageType.to_string(image_type),
+                         vdi_uuid=None,
+                         file=filename)]
+
+    @classmethod
+    def create_image(cls, context, session, instance, image, user_id,
+                     project_id, image_type):
+        """Creates VDI from the image stored in the local cache. If the image
+        is not present in the cache, it streams it from glance.
+
+        Returns: A list of dictionaries that describe VDIs
+        """
+        if FLAGS.cache_images == False or image_type == ImageType.DISK_ISO:
+            # If caching is disabled, we do not have to keep a copy of the
+            # image. Fetch the image from glance.
+            return cls.fetch_image(context, session,
+                instance, instance.image_ref,
+                instance.user_id, instance.project_id,
+                image_type)
+
+        sr_ref = cls.safe_find_sr(session)
+        sr_type = session.call_xenapi('SR.get_record', sr_ref)["type"]
+        vdi_return_list = []
+
+        if FLAGS.use_cow_images and sr_type != "ext":
+            LOG.warning(_("Fast cloning is only supported on default local SR "
+                          "of type ext. SR on this system was found to be of "
+                          "type %(sr_type)s. Ignoring the cow flag.")
+                          % locals())
+
+        vdi_ref = cls.find_cached_image(session, image, sr_ref)
+        if vdi_ref is None:
+            vdis = cls.fetch_image(context, session, instance, image, user_id,
+                                   project_id, image_type)
+            vdi_ref = session.call_xenapi('VDI.get_by_uuid',
+                                          vdis[0]['vdi_uuid'])
+            session.call_xenapi('VDI.add_to_other_config',
+                                vdi_ref, "image-id", str(image))
+            session.call_xenapi('VDI.set_name_label',
+                                vdi_ref, "Cached glance image")
+
+            for vdi in vdis:
+                if vdi["vdi_type"] == "swap":
+                    session.call_xenapi('VDI.add_to_other_config',
+                                        vdi_ref, "swap-disk",
+                                        str(vdi['vdi_uuid']))
+
+        if FLAGS.use_cow_images and sr_type == 'ext':
+            new_vdi_ref = cls.clone_vdi(session, vdi_ref)
+        else:
+            new_vdi_ref = cls.copy_vdi(session, sr_ref, vdi_ref)
+
+        # Set the name label for the image we just created and remove image id
+        # field from other-config.
+        session.call_xenapi('VDI.set_name_label', new_vdi_ref, instance.name)
+        session.call_xenapi('VDI.remove_from_other_config',
+                            new_vdi_ref, "image-id")
+
+        vdi_return_list.append(dict(
+            vdi_type=("os" if image_type == ImageType.DISK_VHD
+                      else ImageType.to_string(image_type)),
+            vdi_uuid=session.call_xenapi('VDI.get_uuid', new_vdi_ref),
+            file=None))
+
+        # Create a swap disk if the glance image had one associated with it.
+        vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+        if 'swap-disk' in vdi_rec['other_config']:
+            swap_disk_uuid = vdi_rec['other_config']['swap-disk']
+            swap_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
+                                               swap_disk_uuid)
+            new_swap_vdi_ref = cls.copy_vdi(session, sr_ref, swap_vdi_ref)
+            new_swap_vdi_uuid = session.call_xenapi('VDI.get_uuid',
+                                                    new_swap_vdi_ref)
+            session.call_xenapi('VDI.set_name_label', new_swap_vdi_ref,
+                                instance.name + "-swap")
+            vdi_return_list.append(dict(vdi_type="swap",
+                vdi_uuid=new_swap_vdi_uuid,
+                file=None))
+
+        return vdi_return_list
+
+    @classmethod
     def fetch_image(cls, context, session, instance, image, user_id,
                     project_id, image_type):
         """Fetch image from glance based on image type.
@@ -575,7 +702,7 @@ class VMHelper(HelperBase):
         # which does not have the `uuid` module. To work around this,
         # we generate the uuids here (under Python 2.6+) and
         # pass them as arguments
-        uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
+        uuid_stack = [str(uuid.uuid4()) for i in xrange(3)]
 
         glance_host, glance_port = glance.pick_glance_api_server()
         params = {'image_id': image,
@@ -712,6 +839,8 @@ class VMHelper(HelperBase):
                 args['vdi-ref'] = vdi_ref
                 # Let the plugin copy the correct number of bytes.
                 args['image-size'] = str(vdi_size)
+                if FLAGS.cache_images:
+                    args['cached-image'] = image
                 task = session.async_call_plugin('glance', fn, args)
                 filename = session.wait_for_task(task, instance['uuid'])
                 # Remove the VDI as it is not needed anymore.
@@ -1156,6 +1285,15 @@ def integrate_series(data, col, start, until=None):
     return total.quantize(Decimal('1.0000'))
 
 
+def _get_all_vdis_in_sr(session, sr_ref):
+    for vdi_ref in session.call_xenapi('SR.get_VDIs', sr_ref):
+        try:
+            vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+            yield vdi_ref, vdi_rec
+        except VMHelper.XenAPI.Failure:
+            continue
+
+
 #TODO(sirp): This code comes from XS5.6 pluginlib.py, we should refactor to
 # use that implmenetation
 def get_vhd_parent(session, vdi_rec):
@@ -1208,10 +1346,35 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
             * parent_vhd
                 snapshot
 
-    Atter coalesce:
+    After coalesce:
         * parent_vhd
             snapshot
     """
+    def _another_child_vhd():
+        if not original_parent_uuid:
+            return False
+
+        # Search for any other vdi which parents to original parent and is not
+        # in the active vm/instance vdi chain.
+        vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
+        parent_vdi_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        for ref, rec in _get_all_vdis_in_sr(session, sr_ref):
+            if ((rec['uuid'] != vdi_uuid) and
+               (rec['uuid'] != parent_vdi_uuid) and
+               (rec['sm_config'].get('vhd-parent') == original_parent_uuid)):
+                # Found another vhd which too parents to original parent.
+                return True
+        # Found no other vdi with the same parent.
+        return False
+
+    # Check if original parent has any other child. If so, coalesce will
+    # not take place.
+    if _another_child_vhd():
+        parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
+        base_uuid = get_vhd_parent_uuid(session, parent_ref)
+        return parent_uuid, base_uuid
+
     max_attempts = FLAGS.xenapi_vhd_coalesce_max_attempts
     for i in xrange(max_attempts):
         VMHelper.scan_sr(session, instance, sr_ref)
@@ -1221,7 +1384,9 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
                     " %(original_parent_uuid)s, waiting for coalesce...")
                     % locals())
         else:
-            return parent_uuid
+            parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
+            base_uuid = get_vhd_parent_uuid(session, parent_ref)
+            return parent_uuid, base_uuid
 
         greenthread.sleep(FLAGS.xenapi_vhd_coalesce_poll_interval)
 

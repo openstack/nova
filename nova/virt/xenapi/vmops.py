@@ -186,7 +186,7 @@ class VMOps(object):
 
     def _create_disks(self, context, instance, image_meta):
         disk_image_type = VMHelper.determine_disk_image_type(image_meta)
-        vdis = VMHelper.fetch_image(context, self._session,
+        vdis = VMHelper.create_image(context, self._session,
                 instance, instance.image_ref,
                 instance.user_id, instance.project_id,
                 disk_image_type)
@@ -279,11 +279,11 @@ class VMOps(object):
         ramdisk = None
         try:
             if instance.kernel_id:
-                kernel = VMHelper.fetch_image(context, self._session,
+                kernel = VMHelper.create_kernel_image(context, self._session,
                         instance, instance.kernel_id, instance.user_id,
                         instance.project_id, vm_utils.ImageType.KERNEL)[0]
             if instance.ramdisk_id:
-                ramdisk = VMHelper.fetch_image(context, self._session,
+                ramdisk = VMHelper.create_kernel_image(context, self._session,
                         instance, instance.ramdisk_id, instance.user_id,
                         instance.project_id, vm_utils.ImageType.RAMDISK)[0]
 
