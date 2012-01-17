@@ -1169,6 +1169,17 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['accessIPv4'], '0.0.0.0')
 
+    def test_update_server_access_ipv4_bad_format(self):
+        self.stubs.Set(nova.db, 'instance_get',
+                return_server_with_attributes(access_ipv4='0.0.0.0'))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        body = {'server': {'accessIPv4': 'bad_format'}}
+        req.body = json.dumps(body)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                            req, FAKE_UUID, body)
+
     def test_update_server_access_ipv6(self):
         self.stubs.Set(nova.db, 'instance_get',
                 return_server_with_attributes(access_ipv6='beef::0123'))
@@ -1181,6 +1192,17 @@ class ServersControllerTest(test.TestCase):
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['accessIPv6'], 'beef::0123')
+
+    def test_update_server_access_ipv6_bad_format(self):
+        self.stubs.Set(nova.db, 'instance_get',
+                return_server_with_attributes(access_ipv6='beef::0123'))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        body = {'server': {'accessIPv6': 'bad_format'}}
+        req.body = json.dumps(body)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                            req, FAKE_UUID, body)
 
     def test_update_server_adminPass_ignored(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
@@ -1205,6 +1227,80 @@ class ServersControllerTest(test.TestCase):
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['name'], 'server_test')
+
+    def test_rebuild_instance_with_access_ipv4_bad_format(self):
+
+        def fake_get_instance(*args, **kwargs):
+            return fakes.stub_instance(1, vm_state=vm_states.ACTIVE)
+
+        self.stubs.Set(nova.db, 'instance_get', fake_get_instance)
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        access_ipv4 = 'bad_format'
+        access_ipv6 = 'fead::1234'
+        body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': image_href,
+                'accessIPv4': access_ipv4,
+                'accessIPv6': access_ipv6,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller._action_rebuild, req, 1, body)
+
+    def test_rebuild_instance_with_access_ipv6_bad_format(self):
+
+        def fake_get_instance(*args, **kwargs):
+            return fakes.stub_instance(1, vm_state=vm_states.ACTIVE)
+
+        self.stubs.Set(nova.db, 'instance_get', fake_get_instance)
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        access_ipv4 = '1.2.3.4'
+        access_ipv6 = 'bad_format'
+        body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': image_href,
+                'accessIPv4': access_ipv4,
+                'accessIPv6': access_ipv6,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller._action_rebuild, req, 1, body)
 
     def test_get_all_server_details(self):
         expected_flavor = {
@@ -1636,6 +1732,74 @@ class ServersControllerCreateTest(test.TestCase):
         server = res['server']
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(FAKE_UUID, server['id'])
+
+    def test_create_instance_bad_format_access_ip_v4(self):
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/fake/flavors/3'
+        access_ipv4 = 'bad_format'
+        access_ipv6 = 'fead::1234'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'accessIPv4': access_ipv4,
+                'accessIPv6': access_ipv6,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                            req, body)
+
+    def test_create_instance_bad_format_access_ip_v6(self):
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/fake/flavors/3'
+        access_ipv4 = '1.2.3.4'
+        access_ipv6 = 'bad_format'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'accessIPv4': access_ipv4,
+                'accessIPv6': access_ipv6,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                            req, body)
 
     def test_create_instance(self):
         # proper local hrefs must start with 'http://localhost/v2/'
