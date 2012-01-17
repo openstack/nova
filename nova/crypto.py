@@ -104,10 +104,21 @@ def fetch_ca(project_id=None, chain=True):
     return buffer
 
 
-def generate_fingerprint(public_key):
-    (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f', public_key)
+def _generate_fingerprint(public_key_file):
+    (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f', public_key_file)
     fingerprint = out.split(' ')[1]
     return fingerprint
+
+
+def generate_fingerprint(public_key):
+    tmpdir = tempfile.mkdtemp()
+    try:
+        pubfile = os.path.join(tmpdir, 'temp.pub')
+        with open(pubfile, 'w') as f:
+            f.write(public_key)
+        return _generate_fingerprint(pubfile)
+    finally:
+        shutil.rmtree(tmpdir)
 
 
 def generate_key_pair(bits=1024):
@@ -117,7 +128,7 @@ def generate_key_pair(bits=1024):
     keyfile = os.path.join(tmpdir, 'temp')
     utils.execute('ssh-keygen', '-q', '-b', bits, '-N', '',
                   '-t', 'rsa', '-f', keyfile)
-    fingerprint = generate_fingerprint('%s.pub' % (keyfile))
+    fingerprint = _generate_fingerprint('%s.pub' % (keyfile))
     private_key = open(keyfile).read()
     public_key = open(keyfile + '.pub').read()
 

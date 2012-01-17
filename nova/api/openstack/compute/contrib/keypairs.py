@@ -92,12 +92,7 @@ class KeypairController(object):
 
         # import if public_key is sent
         if 'public_key' in params:
-            tmpdir = tempfile.mkdtemp()
-            fn = os.path.join(tmpdir, 'import.pub')
-            with open(fn, 'w') as pub:
-                pub.write(params['public_key'])
-            fingerprint = crypto.generate_fingerprint(fn)
-            shutil.rmtree(tmpdir)
+            fingerprint = crypto.generate_fingerprint(params['public_key'])
             keypair['public_key'] = params['public_key']
             keypair['fingerprint'] = fingerprint
         else:
