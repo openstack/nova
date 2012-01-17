@@ -226,12 +226,22 @@ class RequestHeadersDeserializerTest(test.TestCase):
 class ResponseHeadersSerializerTest(test.TestCase):
     def test_request_id(self):
         serializer = wsgi.ResponseHeadersSerializer()
+
         context = nova.context.get_admin_context()
         req = webob.Request.blank('/', environ={'nova.context': context})
         res = webob.Response(request=req)
         serializer.serialize(res, {}, 'foo')
-        self.assertTrue(
-            utils.is_uuid_like(res.headers['X-Compute-Request-Id']))
+        h1 = res.headers.get('X-Compute-Request-Id')
+        self.assertTrue(h1)
+
+        context = nova.context.get_admin_context()
+        req = webob.Request.blank('/', environ={'nova.context': context})
+        res = webob.Response(request=req)
+        serializer.serialize(res, {}, 'foo')
+        h2 = res.headers.get('X-Compute-Request-Id')
+        self.assertTrue(h2)
+
+        self.assertNotEqual(h1, h2)
 
 
 class JSONSerializer(object):
