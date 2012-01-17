@@ -41,7 +41,6 @@ class ImageMetaDataTest(test.TestCase):
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
         'id': '1',
-        'location': 'file:///var/lib/glance/images/1',
         'is_public': True,
         'deleted_at': None,
         'properties': {
@@ -57,7 +56,6 @@ class ImageMetaDataTest(test.TestCase):
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
         'id': '2',
-        'location': 'file:///var/lib/glance/images/2',
         'is_public': True,
         'deleted_at': None,
         'properties': {
@@ -73,7 +71,6 @@ class ImageMetaDataTest(test.TestCase):
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
         'id': '3',
-        'location': 'file:///var/lib/glance/images/2',
         'is_public': True,
         'deleted_at': None,
         'properties': {},
