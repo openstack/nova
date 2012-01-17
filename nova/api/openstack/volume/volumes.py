@@ -34,6 +34,34 @@ LOG = logging.getLogger("nova.api.openstack.volume.volumes")
 FLAGS = flags.FLAGS
 
 
+def _translate_attachment_detail_view(_context, vol):
+    """Maps keys for attachment details view."""
+
+    d = _translate_attachment_summary_view(_context, vol)
+
+    # No additional data / lookups at the moment
+
+    return d
+
+
+def _translate_attachment_summary_view(_context, vol):
+    """Maps keys for attachment summary view."""
+    d = {}
+
+    volume_id = vol['id']
+
+    # NOTE(justinsb): We use the volume id as the id of the attachment object
+    d['id'] = volume_id
+
+    d['volumeId'] = volume_id
+    if vol.get('instance'):
+        d['serverId'] = vol['instance']['uuid']
+    if vol.get('mountpoint'):
+        d['device'] = vol['mountpoint']
+
+    return d
+
+
 def _translate_volume_detail_view(context, vol):
     """Maps keys for volumes details view."""
 

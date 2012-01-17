@@ -16,13 +16,94 @@
 import datetime
 
 from lxml import etree
+import webob
 
-from nova.api.openstack.volume import volumes
 from nova import flags
 from nova import test
+from nova.api.openstack.volume import volumes
+from nova.tests.api.openstack import fakes
+from nova.volume import api as volume_api
 
 
 FLAGS = flags.FLAGS
+
+
+def stub_volume(id):
+    return {'id': id,
+            'user_id': 'fakeuser',
+            'project_id': 'fakeproject',
+            'host': 'fakehost',
+            'size': 1,
+            'availability_zone': 'fakeaz',
+            'instance': {'uuid': 'fakeuuid'},
+            'mountpoint': '/',
+            'status': 'fakestatus',
+            'attach_status': 'attached',
+            'display_name': 'displayname',
+            'display_description': 'displaydesc',
+            'created_at': datetime.datetime(1, 1, 1, 1, 1, 1),
+            'snapshot_id': None,
+            'volume_type_id': 'fakevoltype',
+            'volume_type': {'name': 'vol_type_name'}}
+
+
+def stub_volume_get_all(context, search_opts=None):
+    return [stub_volume(1)]
+
+
+class VolumeTest(test.TestCase):
+    def setUp(self):
+        super(VolumeTest, self).setUp()
+        self.controller = volumes.VolumeController()
+
+    def tearDown(self):
+        super(VolumeTest, self).tearDown()
+
+    def test_volume_list(self):
+        self.stubs.Set(volume_api.API, 'get_all',
+                       stub_volume_get_all)
+
+        req = fakes.HTTPRequest.blank('/v1/volumes')
+        res_dict = self.controller.index(req)
+        expected = {'volumes': [{'status': 'fakestatus',
+                                 'displayDescription': 'displaydesc',
+                                 'availabilityZone': 'fakeaz',
+                                 'displayName': 'displayname',
+                                 'attachments': [{'device': '/',
+                                                  'serverId': 'fakeuuid',
+                                                  'id': 1,
+                                                  'volumeId': 1}],
+                                 'volumeType': 'vol_type_name',
+                                 'snapshotId': None,
+                                 'metadata': {},
+                                 'id': 1,
+                                 'createdAt': datetime.datetime(1, 1, 1,
+                                                                1, 1, 1),
+                                 'size': 1}]}
+        self.assertEqual(res_dict, expected)
+
+    def test_volume_list_detail(self):
+        self.stubs.Set(volume_api.API, 'get_all',
+                       stub_volume_get_all)
+
+        req = fakes.HTTPRequest.blank('/v1/volumes/detail')
+        res_dict = self.controller.index(req)
+        expected = {'volumes': [{'status': 'fakestatus',
+                                 'displayDescription': 'displaydesc',
+                                 'availabilityZone': 'fakeaz',
+                                 'displayName': 'displayname',
+                                 'attachments': [{'device': '/',
+                                                  'serverId': 'fakeuuid',
+                                                  'id': 1,
+                                                  'volumeId': 1}],
+                                 'volumeType': 'vol_type_name',
+                                 'snapshotId': None,
+                                 'metadata': {},
+                                 'id': 1,
+                                 'createdAt': datetime.datetime(1, 1, 1,
+                                                                1, 1, 1),
+                                 'size': 1}]}
+        self.assertEqual(res_dict, expected)
 
 
 class VolumeSerializerTest(test.TestCase):
