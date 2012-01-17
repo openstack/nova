@@ -1794,8 +1794,8 @@ def network_get_all_by_uuids(context, network_uuids, project_id=None):
                 break
         if not found:
             if project_id:
-                raise exception.NetworkNotFoundForProject(network_uuid=uuid,
-                                              project_id=context.project_id)
+                raise exception.NetworkNotFoundForProject(
+                      network_uuid=network_uuid, project_id=context.project_id)
             raise exception.NetworkNotFound(network_id=network_uuid)
 
     return result
