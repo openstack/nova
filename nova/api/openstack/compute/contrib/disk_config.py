@@ -16,51 +16,18 @@
 
 """Disk Config extension."""
 
-from xml.dom import minidom
-
 from webob import exc
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import compute
 from nova import db
-from nova import log as logging
 from nova import utils
-
-LOG = logging.getLogger('nova.api.openstack.contrib.disk_config')
 
 ALIAS = 'RAX-DCF'
 XMLNS_DCF = "http://docs.rackspacecloud.com/servers/api/ext/diskConfig/v1.0"
-
-
-class ServerDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        root.set('{%s}diskConfig' % XMLNS_DCF, '%s:diskConfig' % ALIAS)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
-
-
-class ServersDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('{%s}diskConfig' % XMLNS_DCF, '%s:diskConfig' % ALIAS)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
-
-
-class ImageDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('image')
-        root.set('{%s}diskConfig' % XMLNS_DCF, '%s:diskConfig' % ALIAS)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
-
-
-class ImagesDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('images')
-        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
-        elem.set('{%s}diskConfig' % XMLNS_DCF, '%s:diskConfig' % ALIAS)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
+API_DISK_CONFIG = "%s:diskConfig" % ALIAS
+INTERNAL_DISK_CONFIG = "auto_disk_config"
 
 
 def disk_config_to_api(value):
@@ -73,8 +40,130 @@ def disk_config_from_api(value):
     elif value == 'MANUAL':
         return False
     else:
-        msg = _("RAX-DCF:diskConfig must be either 'MANUAL' or 'AUTO'.")
+        msg = _("%s must be either 'MANUAL' or 'AUTO'." % API_DISK_CONFIG)
         raise exc.HTTPBadRequest(explanation=msg)
+
+
+class ImageDiskConfigTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('image')
+        root.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
+        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
+
+
+class ImagesDiskConfigTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('images')
+        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
+        elem.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
+        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
+
+
+class ImageDiskConfigController(wsgi.Controller):
+    def _add_disk_config(self, context, images):
+        for image in images:
+            metadata = image['metadata']
+            if INTERNAL_DISK_CONFIG in metadata:
+                raw_value = metadata[INTERNAL_DISK_CONFIG]
+                value = utils.bool_from_str(raw_value)
+                image[API_DISK_CONFIG] = disk_config_to_api(value)
+
+    @wsgi.extends
+    def show(self, req, resp_obj, id):
+        if 'image' in resp_obj.obj:
+            context = req.environ['nova.context']
+            resp_obj.attach(xml=ImageDiskConfigTemplate())
+            image = resp_obj.obj['image']
+            self._add_disk_config(context, [image])
+
+    @wsgi.extends
+    def detail(self, req, resp_obj):
+        if 'images' in resp_obj.obj:
+            context = req.environ['nova.context']
+            resp_obj.attach(xml=ImagesDiskConfigTemplate())
+            images = resp_obj.obj['images']
+            self._add_disk_config(context, images)
+
+
+class ServerDiskConfigTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('server')
+        root.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
+        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
+
+
+class ServersDiskConfigTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('servers')
+        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
+        elem.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
+        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
+
+
+class ServerDiskConfigController(wsgi.Controller):
+    def _add_disk_config(self, context, servers):
+        # Filter out any servers that already have the key set (most likely
+        # from a remote zone)
+        servers = [s for s in servers if API_DISK_CONFIG not in s]
+
+        # Get DB information for servers
+        uuids = [server['id'] for server in servers]
+        db_servers = db.instance_get_all_by_filters(context, {'uuid': uuids})
+        db_servers_by_uuid = dict((s['uuid'], s) for s in db_servers)
+
+        for server in servers:
+            db_server = db_servers_by_uuid.get(server['id'])
+            if db_server:
+                value = db_server[INTERNAL_DISK_CONFIG]
+                server[API_DISK_CONFIG] = disk_config_to_api(value)
+
+    def _show(self, req, resp_obj):
+        if 'server' in resp_obj.obj:
+            context = req.environ['nova.context']
+            resp_obj.attach(xml=ServerDiskConfigTemplate())
+            server = resp_obj.obj['server']
+            self._add_disk_config(context, [server])
+
+    @wsgi.extends
+    def show(self, req, resp_obj, id):
+        self._show(req, resp_obj)
+
+    @wsgi.extends
+    def detail(self, req, resp_obj):
+        if 'servers' in resp_obj.obj:
+            context = req.environ['nova.context']
+            resp_obj.attach(xml=ServersDiskConfigTemplate())
+            servers = resp_obj.obj['servers']
+            self._add_disk_config(context, servers)
+
+    def _set_disk_config(self, dict_):
+        if API_DISK_CONFIG in dict_:
+            api_value = dict_[API_DISK_CONFIG]
+            internal_value = disk_config_from_api(api_value)
+            dict_[INTERNAL_DISK_CONFIG] = internal_value
+
+    @wsgi.extends
+    def create(self, req, body):
+        self._set_disk_config(body['server'])
+        resp_obj = (yield)
+        self._show(req, resp_obj)
+
+    @wsgi.extends
+    def update(self, req, id, body):
+        self._set_disk_config(body['server'])
+        resp_obj = (yield)
+        self._show(req, resp_obj)
+
+    @wsgi.extends(action='rebuild')
+    def _action_rebuild(self, req, id, body):
+        self._set_disk_config(body['rebuild'])
+        resp_obj = (yield)
+        self._show(req, resp_obj)
+
+    @wsgi.extends(action='resize')
+    def _action_resize(self, req, id, body):
+        self._set_disk_config(body['resize'])
+        yield
 
 
 class Disk_config(extensions.ExtensionDescriptor):
@@ -85,116 +174,11 @@ class Disk_config(extensions.ExtensionDescriptor):
     namespace = XMLNS_DCF
     updated = "2011-09-27:00:00+00:00"
 
-    API_DISK_CONFIG = "%s:diskConfig" % ALIAS
-    INTERNAL_DISK_CONFIG = "auto_disk_config"
+    def get_controller_extensions(self):
+        servers_extension = extensions.ControllerExtension(
+                self, 'servers', ServerDiskConfigController())
 
-    def __init__(self, ext_mgr):
-        super(Disk_config, self).__init__(ext_mgr)
-        self.compute_api = compute.API()
+        images_extension = extensions.ControllerExtension(
+                self, 'images', ImageDiskConfigController())
 
-    def _extract_resource_from_body(self, res, body,
-            singular, singular_template, plural, plural_template):
-        """Returns a list of the given resources from the request body.
-
-        The templates passed in are used for XML serialization.
-        """
-        template = res.environ.get('nova.template')
-        if plural in body:
-            resources = body[plural]
-            if template:
-                template.attach(plural_template)
-        elif singular in body:
-            resources = [body[singular]]
-            if template:
-                template.attach(singular_template)
-        else:
-            resources = []
-
-        return resources
-
-    def _GET_servers(self, req, res, body):
-        context = req.environ['nova.context']
-
-        servers = self._extract_resource_from_body(res, body,
-            singular='server', singular_template=ServerDiskConfigTemplate(),
-            plural='servers', plural_template=ServersDiskConfigTemplate())
-
-        # Filter out any servers that already have the key set (most likely
-        # from a remote zone)
-        servers = filter(lambda s: self.API_DISK_CONFIG not in s, servers)
-
-        # Get DB information for servers
-        uuids = [server['id'] for server in servers]
-        db_servers = db.instance_get_all_by_filters(context, {'uuid': uuids})
-        db_servers = dict([(s['uuid'], s) for s in db_servers])
-
-        for server in servers:
-            db_server = db_servers.get(server['id'])
-            if db_server:
-                value = db_server[self.INTERNAL_DISK_CONFIG]
-                server[self.API_DISK_CONFIG] = disk_config_to_api(value)
-
-        return res
-
-    def _GET_images(self, req, res, body):
-        images = self._extract_resource_from_body(res, body,
-            singular='image', singular_template=ImageDiskConfigTemplate(),
-            plural='images', plural_template=ImagesDiskConfigTemplate())
-
-        for image in images:
-            metadata = image['metadata']
-
-            if self.INTERNAL_DISK_CONFIG in metadata:
-                raw_value = metadata[self.INTERNAL_DISK_CONFIG]
-                value = utils.bool_from_str(raw_value)
-                image[self.API_DISK_CONFIG] = disk_config_to_api(value)
-
-        return res
-
-    def _POST_servers(self, req, res, body):
-        return self._GET_servers(req, res, body)
-
-    def _pre_POST_servers(self, req):
-        # NOTE(sirp): deserialization currently occurs *after* pre-processing
-        # extensions are called. Until extensions are refactored so that
-        # deserialization occurs earlier, we have to perform the
-        # deserialization ourselves.
-        content_type = req.content_type
-
-        if 'xml' in content_type:
-            node = minidom.parseString(req.body)
-            server = node.getElementsByTagName('server')[0]
-            api_value = server.getAttribute(self.API_DISK_CONFIG)
-            if api_value:
-                value = disk_config_from_api(api_value)
-                server.setAttribute(self.INTERNAL_DISK_CONFIG, str(value))
-                req.body = str(node.toxml())
-        else:
-            body = utils.loads(req.body)
-            server = body['server']
-            api_value = server.get(self.API_DISK_CONFIG)
-            if api_value:
-                value = disk_config_from_api(api_value)
-                server[self.INTERNAL_DISK_CONFIG] = value
-                req.body = utils.dumps(body)
-
-    def _pre_PUT_servers(self, req):
-        return self._pre_POST_servers(req)
-
-    def get_request_extensions(self):
-        ReqExt = extensions.RequestExtension
-        return [
-            ReqExt(method='GET',
-                   url_route='/:(project_id)/servers/:(id)',
-                   handler=self._GET_servers),
-            ReqExt(method='POST',
-                   url_route='/:(project_id)/servers',
-                   handler=self._POST_servers,
-                   pre_handler=self._pre_POST_servers),
-            ReqExt(method='PUT',
-                   url_route='/:(project_id)/servers/:(id)',
-                   pre_handler=self._pre_PUT_servers),
-            ReqExt(method='GET',
-                   url_route='/:(project_id)/images/:(id)',
-                   handler=self._GET_images)
-        ]
+        return [servers_extension, images_extension]

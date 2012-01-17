@@ -1346,7 +1346,7 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
                           task_state=[None])
     @scheduler_api.reroute_compute("resize")
-    def resize(self, context, instance, flavor_id=None):
+    def resize(self, context, instance, flavor_id=None, **kwargs):
         """Resize (ie, migrate) a running instance.
 
         If flavor_id is None, the process is considered a migration, keeping
@@ -1379,7 +1379,8 @@ class API(base.Base):
         self.update(context,
                     instance,
                     vm_state=vm_states.RESIZING,
-                    task_state=task_states.RESIZE_PREP)
+                    task_state=task_states.RESIZE_PREP,
+                    **kwargs)
 
         request_spec = {
             'instance_type': new_instance_type,
