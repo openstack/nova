@@ -96,7 +96,7 @@ class ImagesControllerTest(test.TestCase):
                     }],
                 },
                 "metadata": {
-                    "instance_ref": server_href,
+                    "instance_uuid": server_uuid,
                     "user_id": "fake",
                 },
                 "links": [{
@@ -430,7 +430,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '124',
             'name': 'queued snapshot',
             'metadata': {
-                u'instance_ref': server_href,
+                u'instance_uuid': server_uuid,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -468,7 +468,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '125',
             'name': 'saving snapshot',
             'metadata': {
-                u'instance_ref': server_href,
+                u'instance_uuid': server_uuid,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -506,7 +506,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '126',
             'name': 'active snapshot',
             'metadata': {
-                u'instance_ref': server_href,
+                u'instance_uuid': server_uuid,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -544,7 +544,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '127',
             'name': 'killed snapshot',
             'metadata': {
-                u'instance_ref': server_href,
+                u'instance_uuid': server_uuid,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -582,7 +582,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '128',
             'name': 'deleted snapshot',
             'metadata': {
-                u'instance_ref': server_href,
+                u'instance_uuid': server_uuid,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -620,7 +620,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '129',
             'name': 'pending_delete snapshot',
             'metadata': {
-                u'instance_ref': server_href,
+                u'instance_uuid': server_uuid,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
@@ -721,7 +721,7 @@ class ImagesControllerTest(test.TestCase):
             'id': '124',
             'name': 'queued snapshot',
             'metadata': {
-                u'instance_ref': server_href,
+                u'instance_uuid': server_uuid,
                 u'user_id': u'fake',
             },
             'updated': NOW_API_FORMAT,
