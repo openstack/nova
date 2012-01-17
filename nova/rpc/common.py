@@ -45,7 +45,9 @@ class RemoteError(exception.NovaException):
         self.exc_type = exc_type
         self.value = value
         self.traceback = traceback
-        super(RemoteError, self).__init__(**self.__dict__)
+        super(RemoteError, self).__init__(exc_type=exc_type,
+                                          value=value,
+                                          traceback=traceback)
 
 
 class Connection(object):
