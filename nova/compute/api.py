@@ -1849,10 +1849,14 @@ class AggregateAPI(base.Base):
                                       "args": {"aggregate_id": aggregate_id,
                                                "host": host}, })
             return self.get_aggregate(context, aggregate_id)
-        elif aggregate.operational_state == aggregate_states.DISMISSED:
-            raise exception.InvalidAggregateAction(action='add host',
-                                                   aggregate_id=aggregate_id,
-                                                   reason='aggregate deleted')
+        else:
+            invalid = {aggregate_states.CHANGING: 'setup in progress',
+                       aggregate_states.DISMISSED: 'aggregate deleted', }
+            if aggregate.operational_state in invalid.keys():
+                raise exception.\
+                    InvalidAggregateAction(action='remove host',
+                            aggregate_id=aggregate_id,
+                            reason=invalid[aggregate.operational_state])
 
     def _get_aggregate_info(self, context, aggregate):
         """Builds a dictionary with aggregate props, metadata and hosts."""

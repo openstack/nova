@@ -3213,6 +3213,19 @@ class ComputeAPIAggrTestCase(test.TestCase):
                           self.api.remove_host_from_aggregate, self.context,
                           aggr['id'], 'fake_host')
 
+    def test_remove_host_from_aggregate_invalid_changing_status(self):
+        """Ensure InvalidAggregateAction is raised when aggregate is
+        changing."""
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', 'fake_zone')
+        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
+        # let's mock the fact that the aggregate is changing!
+        status = {'operational_state': aggregate_states.CHANGING}
+        db.aggregate_update(self.context, aggr['id'], status)
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.remove_host_from_aggregate, self.context,
+                          aggr['id'], 'fake_host')
+
     def test_remove_host_from_aggregate_raise_not_found(self):
         """Ensure ComputeHostNotFound is raised when removing invalid host."""
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
