@@ -633,6 +633,17 @@ class ServerActionsControllerTest(test.TestCase):
                           self.controller._action_create_image,
                           req, FAKE_UUID, body)
 
+    def test_create_image_blank_name(self):
+        body = {
+            'createImage': {
+                'name': '',
+            }
+        }
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_create_image,
+                          req, FAKE_UUID, body)
+
     def test_create_image_bad_metadata(self):
         body = {
             'createImage': {
