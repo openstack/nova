@@ -205,8 +205,7 @@ class FloatingIP(object):
                 # NOTE(vish): The False here is because we ignore the case
                 #             that the ip is already bound.
                 self.driver.bind_floating_ip(floating_ip['address'],
-                                             floating_ip['interface'],
-                                             False)
+                                             floating_ip['interface'])
                 self.driver.ensure_floating_forward(floating_ip['address'],
                                                     fixed_address)
 

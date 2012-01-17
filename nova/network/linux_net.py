@@ -433,11 +433,11 @@ def init_host(ip_range=None):
     iptables_manager.apply()
 
 
-def bind_floating_ip(floating_ip, device, check_exit_code=True):
+def bind_floating_ip(floating_ip, device):
     """Bind ip to public interface."""
     _execute('ip', 'addr', 'add', str(floating_ip) + '/32',
              'dev', device,
-             run_as_root=True, check_exit_code=check_exit_code)
+             run_as_root=True, check_exit_code=[0, 254])
     if FLAGS.send_arp_for_ha:
         _execute('arping', '-U', floating_ip,
                  '-A', '-I', device,
@@ -447,14 +447,15 @@ def bind_floating_ip(floating_ip, device, check_exit_code=True):
 def unbind_floating_ip(floating_ip, device):
     """Unbind a public ip from public interface."""
     _execute('ip', 'addr', 'del', str(floating_ip) + '/32',
-             'dev', device, run_as_root=True)
+             'dev', device,
+             run_as_root=True, check_exit_code=[0, 254])
 
 
 def ensure_metadata_ip():
     """Sets up local metadata ip."""
     _execute('ip', 'addr', 'add', '169.254.169.254/32',
              'scope', 'link', 'dev', 'lo',
-             run_as_root=True, check_exit_code=False)
+             run_as_root=True, check_exit_code=[0, 254])
 
 
 def ensure_vpn_forward(public_ip, port, private_ip):
@@ -523,17 +524,17 @@ def initialize_gateway_device(dev, network_ref):
                             fields[-1] == dev:
                 gateway = fields[1]
                 _execute('route', 'del', 'default', 'gw', gateway,
-                         'dev', dev, check_exit_code=False,
-                         run_as_root=True)
+                         'dev', dev, run_as_root=True,
+                         check_exit_code=[0, 7])
         for ip_params in old_ip_params:
             _execute(*_ip_bridge_cmd('del', ip_params, dev),
-                        run_as_root=True)
+                        run_as_root=True, check_exit_code=[0, 254])
         for ip_params in new_ip_params:
             _execute(*_ip_bridge_cmd('add', ip_params, dev),
-                        run_as_root=True)
+                        run_as_root=True, check_exit_code=[0, 254])
         if gateway:
             _execute('route', 'add', 'default', 'gw', gateway,
-                        run_as_root=True)
+                     run_as_root=True, check_exit_code=[0, 7])
         if FLAGS.send_arp_for_ha:
             _execute('arping', '-U', network_ref['dhcp_server'],
                       '-A', '-I', dev,
@@ -1016,8 +1017,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                                 fields[-1] == interface:
                     old_gateway = fields[1]
                     _execute('route', 'del', 'default', 'gw', old_gateway,
-                             'dev', interface, check_exit_code=False,
-                             run_as_root=True)
+                             'dev', interface, run_as_root=True,
+                             check_exit_code=[0, 7])
             out, err = _execute('ip', 'addr', 'show', 'dev', interface,
                                 'scope', 'global', run_as_root=True)
             for line in out.split('\n'):
@@ -1025,12 +1026,12 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 if fields and fields[0] == 'inet':
                     params = fields[1:-1]
                     _execute(*_ip_bridge_cmd('del', params, fields[-1]),
-                                run_as_root=True)
+                                run_as_root=True, check_exit_code=[0, 254])
                     _execute(*_ip_bridge_cmd('add', params, bridge),
-                                run_as_root=True)
+                                run_as_root=True, check_exit_code=[0, 254])
             if old_gateway:
                 _execute('route', 'add', 'default', 'gw', old_gateway,
-                            run_as_root=True)
+                         run_as_root=True, check_exit_code=[0, 7])
 
             if (err and err != "device %s is already a member of a bridge;"
                      "can't enslave it to bridge %s.\n" % (interface, bridge)):
