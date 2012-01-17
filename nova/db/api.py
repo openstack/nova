@@ -290,6 +290,11 @@ def floating_ip_fixed_ip_associate(context, floating_address,
                                                host)
 
 
+def floating_ip_get_all(context):
+    """Get all floating ips."""
+    return IMPL.floating_ip_get_all(context)
+
+
 def floating_ip_get_all_by_host(context, host):
     """Get all floating ips by host."""
     return IMPL.floating_ip_get_all_by_host(context, host)
