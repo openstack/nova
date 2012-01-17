@@ -146,9 +146,10 @@ class API(base.Base):
         self.db.volume_update(context, volume['id'], fields)
 
     def get(self, context, volume_id):
-        check_policy(context, 'get', {'id': volume_id})
         rv = self.db.volume_get(context, volume_id)
-        return dict(rv.iteritems())
+        volume = dict(rv.iteritems())
+        check_policy(context, 'get', volume)
+        return volume
 
     def get_all(self, context, search_opts={}):
         check_policy(context, 'get_all')
@@ -262,7 +263,7 @@ class API(base.Base):
 
     def _create_snapshot(self, context, volume, name, description,
                          force=False):
-        check_policy(context, 'create_snapshot')
+        check_policy(context, 'create_snapshot', volume)
 
         if ((not force) and (volume['status'] != "available")):
             raise exception.ApiError(_("Volume status must be available"))

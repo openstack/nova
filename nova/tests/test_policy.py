@@ -25,6 +25,7 @@ from nova.common import policy as common_policy
 from nova import context
 from nova import exception
 from nova import flags
+import nova.common.policy
 from nova import policy
 from nova import test
 
@@ -137,3 +138,40 @@ class PolicyTestCase(test.TestCase):
     def test_early_OR_enforcement(self):
         action = "example:early_or_success"
         policy.enforce(self.context, action, self.target)
+
+
+class DefaultPolicyTestCase(test.TestCase):
+
+    def setUp(self):
+        super(DefaultPolicyTestCase, self).setUp()
+        policy.reset()
+        policy.init()
+
+        self.rules = {
+            "default": [],
+            "example:exist": [["false:false"]]
+        }
+
+        self._set_brain('default')
+
+        self.context = context.RequestContext('fake', 'fake')
+
+    def _set_brain(self, default_rule):
+        brain = nova.common.policy.HttpBrain(self.rules, default_rule)
+        nova.common.policy.set_brain(brain)
+
+    def tearDown(self):
+        super(DefaultPolicyTestCase, self).setUp()
+        policy.reset()
+
+    def test_policy_called(self):
+        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+                self.context, "example:exist", {})
+
+    def test_not_found_policy_calls_default(self):
+        policy.enforce(self.context, "example:noexist", {})
+
+    def test_default_not_found(self):
+        self._set_brain("default_noexist")
+        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+                self.context, "example:noexist", {})
