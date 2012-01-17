@@ -884,3 +884,28 @@ class WillNotSchedule(NovaException):
 class QuotaError(ApiError):
     """Quota Exceeded."""
     pass
+
+
+class AggregateNotFound(NotFound):
+    message = _("Aggregate %(aggregate_id)s could not be found.")
+
+
+class AggregateNameExists(Duplicate):
+    message = _("Aggregate %(aggregate_name)s already exists.")
+
+
+class AggregateHostNotFound(NotFound):
+    message = _("Aggregate %(aggregate_id)s has no host %(host)s.")
+
+
+class AggregateMetadataNotFound(NotFound):
+    message = _("Aggregate %(aggregate_id)s has no metadata with "
+                "key %(metadata_key)s.")
+
+
+class AggregateHostConflict(Duplicate):
+    message = _("Host %(host)s already member of another aggregate.")
+
+
+class AggregateHostExists(Duplicate):
+    message = _("Aggregate %(aggregate_id)s already has host %(host)s.")

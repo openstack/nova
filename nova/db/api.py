@@ -1741,6 +1741,65 @@ def sm_volume_get_all(context):
 ####################
 
 
+def aggregate_create(context, values, metadata=None):
+    """Create a new aggregate with metadata."""
+    return IMPL.aggregate_create(context, values, metadata)
+
+
+def aggregate_get(context, aggregate_id, read_deleted='no'):
+    """Get a specific aggregate by id."""
+    return IMPL.aggregate_get(context, aggregate_id, read_deleted)
+
+
+def aggregate_update(context, aggregate_id, values):
+    """Update the attributes of an aggregates. If values contains a metadata
+    key, it updates the aggregate metadata too."""
+    return IMPL.aggregate_update(context, aggregate_id, values)
+
+
+def aggregate_delete(context, aggregate_id):
+    """Delete an aggregate."""
+    return IMPL.aggregate_delete(context, aggregate_id)
+
+
+def aggregate_get_all(context, read_deleted='yes'):
+    """Get all aggregates."""
+    return IMPL.aggregate_get_all(context, read_deleted)
+
+
+def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False):
+    """Add/update metadata. If set_delete=True, it adds only."""
+    IMPL.aggregate_metadata_add(context, aggregate_id, metadata, set_delete)
+
+
+def aggregate_metadata_get(context, aggregate_id, read_deleted='no'):
+    """Get metadata for the specified aggregate."""
+    return IMPL.aggregate_metadata_get(context, aggregate_id, read_deleted)
+
+
+def aggregate_metadata_delete(context, aggregate_id, key):
+    """Delete the given metadata key."""
+    IMPL.aggregate_metadata_delete(context, aggregate_id, key)
+
+
+def aggregate_host_add(context, aggregate_id, host):
+    """Add host to the aggregate."""
+    IMPL.aggregate_host_add(context, aggregate_id, host)
+
+
+def aggregate_host_get_all(context, aggregate_id, read_deleted='yes'):
+    """Get hosts for the specified aggregate."""
+    return IMPL.aggregate_host_get_all(context, aggregate_id, read_deleted)
+
+
+def aggregate_host_delete(context, aggregate_id, host):
+    """Delete the given host from the aggregate."""
+    IMPL.aggregate_host_delete(context, aggregate_id, host)
+
+
+####################
+
+
 def instance_fault_create(context, values):
     """Create a new Instance Fault."""
     return IMPL.instance_fault_create(context, values)

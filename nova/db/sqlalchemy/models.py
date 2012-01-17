@@ -849,6 +849,42 @@ class Zone(BASE, NovaBase):
     weight_scale = Column(Float(), default=1.0)
 
 
+class Aggregate(BASE, NovaBase):
+    """Represents a cluster of hosts that exists in this zone."""
+    __tablename__ = 'aggregates'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), unique=True)
+    operational_state = Column(String(255), nullable=False)
+    availability_zone = Column(String(255), nullable=False)
+
+
+class AggregateHost(BASE, NovaBase):
+    """Represents a host that is member of an aggregate."""
+    __tablename__ = 'aggregate_hosts'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    host = Column(String(255), unique=True)
+    aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
+    aggregate = relationship(Aggregate, backref=backref('aggregates'),
+                             foreign_keys=aggregate_id,
+                             primaryjoin='and_('
+                                  'AggregateHost.aggregate_id == Aggregate.id,'
+                                  'AggregateHost.deleted == False)')
+
+
+class AggregateMetadata(BASE, NovaBase):
+    """Represents a metadata key/value pair for an aggregate."""
+    __tablename__ = 'aggregate_metadata'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255), nullable=False)
+    value = Column(String(255), nullable=False)
+    aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
+    aggregate = relationship(Aggregate, backref="metadata",
+                             foreign_keys=aggregate_id,
+                             primaryjoin='and_('
+                              'AggregateMetadata.aggregate_id == Aggregate.id,'
+                              'AggregateMetadata.deleted == False)')
+
+
 class AgentBuild(BASE, NovaBase):
     """Represents an agent build."""
     __tablename__ = 'agent_builds'
