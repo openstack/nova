@@ -31,19 +31,19 @@ name2 = "anotherarbitraryname"
 testaddress = '10.0.0.66'
 testaddress2 = '10.0.0.67'
 
-zone = "example.org"
-zone2 = "example.net"
+domain = "example.org"
+domain2 = "example.net"
 floating_ip_id = '1'
 
 
-def _quote_zone(zone):
+def _quote_domain(domain):
     """
-    Zone names tend to have .'s in them.  Urllib doesn't quote dots,
+    Domain names tend to have .'s in them.  Urllib doesn't quote dots,
     but Routes tends to choke on them, so we need an extra level of
     by-hand quoting here.  This function needs to duplicate the one in
     python-novaclient/novaclient/v1_1/floating_ip_dns.py
     """
-    return urllib.quote(zone.replace('.', '%2E'))
+    return urllib.quote(domain.replace('.', '%2E'))
 
 
 def network_api_get_floating_ip(self, context, id):
@@ -51,7 +51,7 @@ def network_api_get_floating_ip(self, context, id):
             'fixed_ip': None}
 
 
-def network_get_dns_zones(self, context):
+def network_get_dns_domains(self, context):
     return [{'domain': 'example.org', 'scope': 'public'},
             {'domain': 'example.com', 'scope': 'public',
              'project': 'project1'},
@@ -59,25 +59,25 @@ def network_get_dns_zones(self, context):
              'availability_zone': 'avzone'}]
 
 
-def network_get_dns_entries_by_address(self, context, address, zone):
+def network_get_dns_entries_by_address(self, context, address, domain):
     return [name, name2]
 
 
-def network_get_dns_entries_by_name(self, context, address, zone):
+def network_get_dns_entries_by_name(self, context, address, domain):
     return [testaddress]
 
 
-def network_add_dns_entry(self, context, address, name, dns_type, zone):
+def network_add_dns_entry(self, context, address, name, dns_type, domain):
     return {'dns_entry': {'ip': testaddress,
                           'name': name,
                           'type': dns_type,
-                          'zone': zone}}
+                          'domain': domain}}
 
 
-def network_modify_dns_entry(self, context, address, name, zone):
+def network_modify_dns_entry(self, context, address, name, domain):
     return {'dns_entry': {'name': name,
                           'ip': address,
-                          'zone': zone}}
+                          'domain': domain}}
 
 
 class FloatingIpDNSTest(test.TestCase):
@@ -93,8 +93,8 @@ class FloatingIpDNSTest(test.TestCase):
 
     def setUp(self):
         super(FloatingIpDNSTest, self).setUp()
-        self.stubs.Set(network.api.API, "get_dns_zones",
-                       network_get_dns_zones)
+        self.stubs.Set(network.api.API, "get_dns_domains",
+                       network_get_dns_domains)
         self.stubs.Set(network.api.API, "get_dns_entries_by_address",
                        network_get_dns_entries_by_address)
         self.stubs.Set(network.api.API, "get_dns_entries_by_name",
@@ -117,10 +117,10 @@ class FloatingIpDNSTest(test.TestCase):
         self._delete_floating_ip()
         super(FloatingIpDNSTest, self).tearDown()
 
-    def test_dns_zones_list(self):
+    def test_dns_domains_list(self):
         req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns')
         res_dict = self.domain_controller.index(req)
-        entries = res_dict['zone_entries']
+        entries = res_dict['domain_entries']
         self.assertTrue(entries)
         self.assertEqual(entries[0]['domain'], "example.org")
         self.assertFalse(entries[0]['project'])
@@ -137,27 +137,27 @@ class FloatingIpDNSTest(test.TestCase):
         params = "?%s" % urllib.urlencode(qparams) if qparams else ""
 
         req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s/entries%s'
-                                      % (_quote_zone(zone), params))
-        entries = self.entry_controller.index(req, _quote_zone(zone))
+                                      % (_quote_domain(domain), params))
+        entries = self.entry_controller.index(req, _quote_domain(domain))
 
         self.assertEqual(len(entries['dns_entries']), 2)
         self.assertEqual(entries['dns_entries'][0]['name'],
                          name)
         self.assertEqual(entries['dns_entries'][1]['name'],
                          name2)
-        self.assertEqual(entries['dns_entries'][0]['zone'],
-                         zone)
+        self.assertEqual(entries['dns_entries'][0]['domain'],
+                         domain)
 
     def test_get_dns_entries_by_name(self):
         req = fakes.HTTPRequest.blank(
               '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_zone(zone), name))
-        entry = self.entry_controller.show(req, _quote_zone(zone), name)
+              (_quote_domain(domain), name))
+        entry = self.entry_controller.show(req, _quote_domain(domain), name)
 
         self.assertEqual(entry['dns_entry']['ip'],
                          testaddress)
-        self.assertEqual(entry['dns_entry']['zone'],
-                         zone)
+        self.assertEqual(entry['dns_entry']['domain'],
+                         domain)
 
     def test_create_entry(self):
         body = {'dns_entry':
@@ -165,43 +165,43 @@ class FloatingIpDNSTest(test.TestCase):
                   'dns_type': 'A'}}
         req = fakes.HTTPRequest.blank(
               '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_zone(zone), name))
-        entry = self.entry_controller.update(req, _quote_zone(zone),
+              (_quote_domain(domain), name))
+        entry = self.entry_controller.update(req, _quote_domain(domain),
                                              name, body)
         self.assertEqual(entry['dns_entry']['ip'], testaddress)
 
     def test_create_domain(self):
         req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
-                                      _quote_zone(zone))
-        body = {'zone_entry':
+                                      _quote_domain(domain))
+        body = {'domain_entry':
                 {'scope': 'private',
                  'project': 'testproject'}}
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.domain_controller.update,
-                          req, _quote_zone(zone), body)
+                          req, _quote_domain(domain), body)
 
-        body = {'zone_entry':
+        body = {'domain_entry':
                 {'scope': 'public',
                  'availability_zone': 'zone1'}}
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.domain_controller.update,
-                          req, _quote_zone(zone), body)
+                          req, _quote_domain(domain), body)
 
-        body = {'zone_entry':
+        body = {'domain_entry':
                 {'scope': 'public',
                  'project': 'testproject'}}
-        entry = self.domain_controller.update(req, _quote_zone(zone), body)
-        self.assertEqual(entry['zone_entry']['domain'], zone)
-        self.assertEqual(entry['zone_entry']['scope'], 'public')
-        self.assertEqual(entry['zone_entry']['project'], 'testproject')
+        entry = self.domain_controller.update(req, _quote_domain(domain), body)
+        self.assertEqual(entry['domain_entry']['domain'], domain)
+        self.assertEqual(entry['domain_entry']['scope'], 'public')
+        self.assertEqual(entry['domain_entry']['project'], 'testproject')
 
-        body = {'zone_entry':
+        body = {'domain_entry':
                 {'scope': 'private',
                  'availability_zone': 'zone1'}}
-        entry = self.domain_controller.update(req, _quote_zone(zone), body)
-        self.assertEqual(entry['zone_entry']['domain'], zone)
-        self.assertEqual(entry['zone_entry']['scope'], 'private')
-        self.assertEqual(entry['zone_entry']['availability_zone'], 'zone1')
+        entry = self.domain_controller.update(req, _quote_domain(domain), body)
+        self.assertEqual(entry['domain_entry']['domain'], domain)
+        self.assertEqual(entry['domain_entry']['scope'], 'private')
+        self.assertEqual(entry['domain_entry']['availability_zone'], 'zone1')
 
     def test_delete_entry(self):
         self.called = False
@@ -218,11 +218,12 @@ class FloatingIpDNSTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(
               '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_zone(zone), name))
-        entries = self.entry_controller.delete(req, _quote_zone(zone), name)
+              (_quote_domain(domain), name))
+        entries = self.entry_controller.delete(req, _quote_domain(domain),
+                                               name)
 
         self.assertTrue(self.called)
-        self.assertEquals(self.deleted_domain, zone)
+        self.assertEquals(self.deleted_domain, domain)
         self.assertEquals(self.deleted_name, name)
 
     def test_delete_domain(self):
@@ -238,49 +239,49 @@ class FloatingIpDNSTest(test.TestCase):
                        network_delete_dns_domain)
 
         req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
-                                      _quote_zone(zone))
-        entries = self.domain_controller.delete(req, _quote_zone(zone))
+                                      _quote_domain(domain))
+        entries = self.domain_controller.delete(req, _quote_domain(domain))
 
         self.assertTrue(self.called)
-        self.assertEquals(self.deleted_domain, zone)
+        self.assertEquals(self.deleted_domain, domain)
 
     def test_modify(self):
         body = {'dns_entry':
                  {'ip': testaddress2,
                   'dns_type': 'A'}}
         req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' % (zone, name))
-        entry = self.entry_controller.update(req, zone, name, body)
+              '/v2/123/os-floating-ip-dns/%s/entries/%s' % (domain, name))
+        entry = self.entry_controller.update(req, domain, name, body)
 
         self.assertEqual(entry['dns_entry']['ip'], testaddress2)
 
 
 class FloatingIpDNSSerializerTest(test.TestCase):
-    def test_zones_serializer(self):
-        serializer = floating_ip_dns.ZonesTemplate()
+    def test_domains(self):
+        serializer = floating_ip_dns.DomainsTemplate()
         text = serializer.serialize(dict(
-                zone_entries=[
-                    dict(zone=zone, scope='public', project='testproject'),
-                    dict(zone=zone2, scope='private',
+                domain_entries=[
+                    dict(domain=domain, scope='public', project='testproject'),
+                    dict(domain=domain2, scope='private',
                          availability_zone='avzone')]))
 
         tree = etree.fromstring(text)
-        self.assertEqual('zone_entries', tree.tag)
+        self.assertEqual('domain_entries', tree.tag)
         self.assertEqual(2, len(tree))
-        self.assertEqual(zone, tree[0].get('zone'))
-        self.assertEqual(zone2, tree[1].get('zone'))
+        self.assertEqual(domain, tree[0].get('domain'))
+        self.assertEqual(domain2, tree[1].get('domain'))
         self.assertEqual('avzone', tree[1].get('availability_zone'))
 
-    def test_zone_serializer(self):
-        serializer = floating_ip_dns.ZoneTemplate()
+    def test_domain_serializer(self):
+        serializer = floating_ip_dns.DomainTemplate()
         text = serializer.serialize(dict(
-                zone_entry=dict(zone=zone,
-                                scope='public',
-                                project='testproject')))
+                domain_entry=dict(domain=domain,
+                                  scope='public',
+                                  project='testproject')))
 
         tree = etree.fromstring(text)
-        self.assertEqual('zone_entry', tree.tag)
-        self.assertEqual(zone, tree.get('zone'))
+        self.assertEqual('domain_entry', tree.tag)
+        self.assertEqual(domain, tree.get('domain'))
         self.assertEqual('testproject', tree.get('project'))
 
     def test_entries_serializer(self):
@@ -289,11 +290,11 @@ class FloatingIpDNSSerializerTest(test.TestCase):
                 dns_entries=[
                     dict(ip=testaddress,
                          type='A',
-                         zone=zone,
+                         domain=domain,
                          name=name),
                     dict(ip=testaddress2,
                          type='C',
-                         zone=zone,
+                         domain=domain,
                          name=name2)]))
 
         tree = etree.fromstring(text)
@@ -303,11 +304,11 @@ class FloatingIpDNSSerializerTest(test.TestCase):
         self.assertEqual('dns_entry', tree[1].tag)
         self.assertEqual(testaddress, tree[0].get('ip'))
         self.assertEqual('A', tree[0].get('type'))
-        self.assertEqual(zone, tree[0].get('zone'))
+        self.assertEqual(domain, tree[0].get('domain'))
         self.assertEqual(name, tree[0].get('name'))
         self.assertEqual(testaddress2, tree[1].get('ip'))
         self.assertEqual('C', tree[1].get('type'))
-        self.assertEqual(zone, tree[1].get('zone'))
+        self.assertEqual(domain, tree[1].get('domain'))
         self.assertEqual(name2, tree[1].get('name'))
 
     def test_entry_serializer(self):
@@ -316,12 +317,12 @@ class FloatingIpDNSSerializerTest(test.TestCase):
                 dns_entry=dict(
                     ip=testaddress,
                     type='A',
-                    zone=zone,
+                    domain=domain,
                     name=name)))
 
         tree = etree.fromstring(text)
 
         self.assertEqual('dns_entry', tree.tag)
         self.assertEqual(testaddress, tree.get('ip'))
-        self.assertEqual(zone, tree.get('zone'))
+        self.assertEqual(domain, tree.get('domain'))
         self.assertEqual(name, tree.get('name'))

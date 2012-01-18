@@ -41,7 +41,7 @@ class MiniDNS(object):
             f.write("#  minidns\n\n\n")
             f.close()
 
-    def get_zones(self):
+    def get_domains(self):
         entries = []
         infile = open(self.filename, 'r')
         for line in infile:
@@ -51,26 +51,26 @@ class MiniDNS(object):
         infile.close()
         return entries
 
-    def qualify(self, name, zone):
-        if zone:
-            qualified = "%s.%s" % (name, zone)
+    def qualify(self, name, domain):
+        if domain:
+            qualified = "%s.%s" % (name, domain)
         else:
             qualified = name
 
         return qualified
 
-    def create_entry(self, name, address, type, dnszone):
+    def create_entry(self, name, address, type, domain):
 
         if type.lower() != 'a':
             raise exception.InvalidInput(_("This driver only supports "
                                            "type 'a'"))
 
-        if self.get_entries_by_name(name, dnszone):
-            raise exception.FloatingIpDNSExists(name=name, zone=dnszone)
+        if self.get_entries_by_name(name, domain):
+            raise exception.FloatingIpDNSExists(name=name, domain=domain)
 
         outfile = open(self.filename, 'a+')
         outfile.write("%s   %s   %s\n" %
-            (address, self.qualify(name, dnszone), type))
+            (address, self.qualify(name, domain), type))
         outfile.close()
 
     def parse_line(self, line):
@@ -88,14 +88,14 @@ class MiniDNS(object):
                 entry['domain'] = entry['name'].partition('.')[2]
             return entry
 
-    def delete_entry(self, name, dnszone=""):
+    def delete_entry(self, name, domain):
         deleted = False
         infile = open(self.filename, 'r')
         outfile = tempfile.NamedTemporaryFile('w', delete=False)
         for line in infile:
             entry = self.parse_line(line)
             if ((not entry) or
-                entry['name'] != self.qualify(name, dnszone).lower()):
+                entry['name'] != self.qualify(name, domain).lower()):
                 outfile.write(line)
             else:
                 deleted = True
@@ -105,9 +105,9 @@ class MiniDNS(object):
         if not deleted:
             raise exception.NotFound
 
-    def modify_address(self, name, address, dnszone):
+    def modify_address(self, name, address, domain):
 
-        if not self.get_entries_by_name(name, dnszone):
+        if not self.get_entries_by_name(name, domain):
             raise exception.NotFound
 
         infile = open(self.filename, 'r')
@@ -115,34 +115,34 @@ class MiniDNS(object):
         for line in infile:
             entry = self.parse_line(line)
             if (entry and
-                entry['name'].lower() == self.qualify(name, dnszone).lower()):
+                entry['name'].lower() == self.qualify(name, domain).lower()):
                 outfile.write("%s   %s   %s\n" %
-                    (address, self.qualify(name, dnszone), entry['type']))
+                    (address, self.qualify(name, domain), entry['type']))
             else:
                 outfile.write(line)
         infile.close()
         outfile.close()
         shutil.move(outfile.name, self.filename)
 
-    def get_entries_by_address(self, address, dnszone=""):
+    def get_entries_by_address(self, address, domain=""):
         entries = []
         infile = open(self.filename, 'r')
         for line in infile:
             entry = self.parse_line(line)
             if entry and entry['address'].lower() == address.lower():
-                if entry['name'].lower().endswith(dnszone.lower()):
-                    domain_index = entry['name'].lower().find(dnszone.lower())
+                if entry['name'].lower().endswith(domain.lower()):
+                    domain_index = entry['name'].lower().find(domain.lower())
                     entries.append(entry['name'][0:domain_index - 1])
         infile.close()
         return entries
 
-    def get_entries_by_name(self, name, dnszone=""):
+    def get_entries_by_name(self, name, domain=""):
         entries = []
         infile = open(self.filename, 'r')
         for line in infile:
             entry = self.parse_line(line)
             if (entry and
-                entry['name'].lower() == self.qualify(name, dnszone).lower()):
+                entry['name'].lower() == self.qualify(name, domain).lower()):
                 entries.append(entry['address'])
         infile.close()
         return entries
@@ -152,7 +152,7 @@ class MiniDNS(object):
 
     def create_domain(self, fqdomain):
         if self.get_entries_by_name(fqdomain, ''):
-            raise exception.FloatingIpDNSExists(name=fqdomain, zone='')
+            raise exception.FloatingIpDNSExists(name=fqdomain, domain='')
 
         outfile = open(self.filename, 'a+')
         outfile.write("%s   %s   %s\n" %

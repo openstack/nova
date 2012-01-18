@@ -104,7 +104,8 @@ class DNSEntry(object):
         if name.endswith(z):
             dequalified = name[0:name.rfind(z)]
         else:
-            LOG.warn("Unable to dequalify.  %s is not in %s.\n" % (name, zone))
+            LOG.warn("Unable to dequalify.  %s is not in %s.\n" % (name,
+                                                        self.qualified_domain))
             dequalified = None
 
         return dequalified
@@ -134,20 +135,20 @@ class DomainEntry(DNSEntry):
         return soa
 
     @classmethod
-    def create_domain(cls, lobj, fqdomain):
+    def create_domain(cls, lobj, domain):
         """Create a new domain entry, and return an object that wraps it."""
-        entry = cls._get_tuple_for_domain(lobj, fqdomain)
+        entry = cls._get_tuple_for_domain(lobj, domain)
         if entry:
-            raise exception.FloatingIpDNSExists(name=fqdomain, zone="")
+            raise exception.FloatingIpDNSExists(name=domain, domain="")
 
-        newdn = "dc=%s,%s" % (fqdomain, flags.FLAGS.ldap_dns_base_dn)
+        newdn = "dc=%s,%s" % (domain, flags.FLAGS.ldap_dns_base_dn)
         attrs = {'objectClass': ['domainrelatedobject', 'dnsdomain',
                                  'domain', 'dcobject', 'top'],
                  'sOARecord': [cls._soa()],
-                 'associatedDomain': [fqdomain],
-                 'dc': fqdomain}
+                 'associatedDomain': [domain],
+                 'dc': domain}
         lobj.add_s(newdn, create_modlist(attrs))
-        return DomainEntry(lobj, fqdomain)
+        return DomainEntry(lobj, domain)
 
     def __init__(self, ldap_object, domain):
         super(DomainEntry, self).__init__(ldap_object)
@@ -194,7 +195,7 @@ class DomainEntry(DNSEntry):
     def add_entry(self, name, address):
         if self.subentry_with_name(name):
             raise exception.FloatingIpDNSExists(name=name,
-                                                zone=self.qualified_domain)
+                                                domain=self.qualified_domain)
 
         entries = self.subentries_with_ip(address)
         if entries:
@@ -289,24 +290,24 @@ class LdapDNS(object):
         self.lobj.simple_bind_s(flags.FLAGS.ldap_dns_user,
                                 flags.FLAGS.ldap_dns_password)
 
-    def get_zones(self):
-        return flags.FLAGS.floating_ip_dns_zones
+    def get_domains(self):
+        return flags.FLAGS.floating_ip_dns_domains
 
-    def create_entry(self, name, address, type, dnszone):
+    def create_entry(self, name, address, type, domain):
         if type.lower() != 'a':
             raise exception.InvalidInput(_("This driver only supports "
                                            "type 'a' entries."))
 
-        dEntry = DomainEntry(self.lobj, dnszone)
+        dEntry = DomainEntry(self.lobj, domain)
         dEntry.add_entry(name, address)
 
-    def delete_entry(self, name, dnszone):
-        dEntry = DomainEntry(self.lobj, dnszone)
+    def delete_entry(self, name, domain):
+        dEntry = DomainEntry(self.lobj, domain)
         dEntry.remove_entry(name)
 
-    def get_entries_by_address(self, address, dnszone):
+    def get_entries_by_address(self, address, domain):
         try:
-            dEntry = DomainEntry(self.lobj, dnszone)
+            dEntry = DomainEntry(self.lobj, domain)
         except exception.NotFound:
             return []
         entries = dEntry.subentries_with_ip(address)
@@ -315,25 +316,25 @@ class LdapDNS(object):
             names.extend(entry.names)
         return names
 
-    def get_entries_by_name(self, name, dnszone):
+    def get_entries_by_name(self, name, domain):
         try:
-            dEntry = DomainEntry(self.lobj, dnszone)
+            dEntry = DomainEntry(self.lobj, domain)
         except exception.NotFound:
             return []
         nEntry = dEntry.subentry_with_name(name)
         if nEntry:
             return [nEntry.ip]
 
-    def modify_address(self, name, address, dnszone):
-        dEntry = DomainEntry(self.lobj, dnszone)
+    def modify_address(self, name, address, domain):
+        dEntry = DomainEntry(self.lobj, domain)
         nEntry = dEntry.subentry_with_name(name)
         nEntry.modify_address(name, address)
 
-    def create_domain(self, fqdomain):
-        DomainEntry.create_domain(self.lobj, fqdomain)
+    def create_domain(self, domain):
+        DomainEntry.create_domain(self.lobj, domain)
 
-    def delete_domain(self, fqdomain):
-        dEntry = DomainEntry(self.lobj, fqdomain)
+    def delete_domain(self, domain):
+        dEntry = DomainEntry(self.lobj, domain)
         dEntry.delete()
 
     def delete_dns_file(self):

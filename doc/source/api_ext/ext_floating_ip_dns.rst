@@ -90,40 +90,40 @@ Get a list of registered DNS Domains published by the DNS drivers:
         GET /v1.1/<tenant_id>/os-floating-ip-dns/
 
     # Sample Response:
-    {'zone_entries' : [
+    {'domain_entries' : [
       {'domain': 'domain1.example.org', 'scope': 'public', 'project': 'proj1'}
       {'domain': 'domain2.example.net', 'scope': 'public', 'project': 'proj2'}
       {'domain': 'example.net', 'scope': 'public', 'project': ''}
-      {'domain': 'example.internal', 'scope': 'private', 'zone': 'zone1'}]}
+      {'domain': 'example.internal', 'scope': 'private', 'availability_zone': 'zone1'}]}
 
 
 Create or modify a DNS domain:
 
-        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<zone>
+        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<domain>
 
     # Sample body, public domain:
-     {'zone_entry' :
+     {'domain_entry' :
        {'scope': 'public',
         'project' : 'project1'}}
 
     # Sample body, public (projectless) domain:
-     {'zone_entry' :
+     {'domain_entry' :
        {'scope': 'public'}}
 
     # Sample Response, public domain (success):
-     {'zone_entry' :
-       {'zone': 'domain1.example.org',
+     {'domain_entry' :
+       {'domain': 'domain1.example.org',
         'scope': 'public',
         'project': 'project1'}}
 
     # Sample body, private domain:
-     {'zone_entry' :
+     {'domain_entry' :
        {'scope': 'private',
-        'availability_zone': 'zone1'}}
+        'availability_domain': 'zone1'}}
 
     # Sample Response, private domain (success):
-     {'zone_entry' :
-       {'zone': 'domain1.private',
+     {'domain_entry' :
+       {'domain': 'domain1.private',
         'scope': 'private',
         'availability_zone': 'zone1'}}
 
@@ -141,7 +141,7 @@ DELETE /v1.1/<tenant_id>/os-floating-ip-dns/<domain>
 
 Create or modify a DNS entry:
 
-        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<zone>/entries/<name>
+        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries/<name>
 
     # Sample body:
     { 'dns_entry' :
@@ -162,7 +162,7 @@ Find unique DNS entry for a given domain and name:
     { 'dns_entry' :
       { 'ip' : '192.168.53.11',
         'type' : 'A',
-        'zone' : <domain>,
+        'domain' : <domain>,
         'name' : <name> }}
 
 
@@ -174,11 +174,11 @@ Find DNS entries for a given domain and ip:
     { 'dns_entries' : [
       { 'ip' : <ip>,
         'type' : 'A',
-        'zone' : <domain>,
+        'domain' : <domain>,
         'name' : 'example1' }
       { 'ip' : <ip>,
         'type' : 'A',
-        'zone' : <domain>,
+        'domain' : <domain>,
         'name' : 'example2' }]}
 
 

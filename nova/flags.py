@@ -370,7 +370,7 @@ DEFINE_string('console_manager', 'nova.console.manager.ConsoleProxyManager',
 DEFINE_string('instance_dns_manager',
               'nova.network.dns_driver.DNSDriver',
               'DNS Manager for instance IPs')
-DEFINE_string('instance_dns_zone', '',
+DEFINE_string('instance_dns_domain', '',
               'DNS Zone for instance IPs')
 DEFINE_string('floating_ip_dns_manager',
               'nova.network.dns_driver.DNSDriver',
