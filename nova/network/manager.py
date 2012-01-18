@@ -355,6 +355,10 @@ class FloatingIP(object):
             floating_address = floating_ip['address']
             raise exception.FloatingIpAssociated(address=floating_address)
 
+        # clean up any associated DNS entries
+        self._delete_all_entries_for_ip(context,
+                                       floating_ip['address'])
+
         self.db.floating_ip_deallocate(context, address)
 
     @wrap_check_policy
@@ -549,6 +553,15 @@ class FloatingIP(object):
     @wrap_check_policy
     def delete_dns_entry(self, context, dns_name, dns_zone):
         self.floating_dns_manager.delete_entry(dns_name, dns_zone)
+
+    def _delete_all_entries_for_ip(self, context, address):
+        domain_list = self.get_dns_zones(context)
+        for domain in domain_list:
+            names = self.get_dns_entries_by_address(context,
+                                                    address,
+                                                    domain['domain'])
+            for name in names:
+                self.delete_dns_entry(context, name, domain['domain'])
 
     @wrap_check_policy
     def get_dns_entries_by_address(self, context, address, dns_zone):

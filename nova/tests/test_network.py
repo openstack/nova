@@ -1365,6 +1365,50 @@ class FloatingIPTestCase(test.TestCase):
                                                        entryname, domain1)
         self.assertFalse(entries)
 
+    def test_delete_all_by_ip(self):
+        domain1 = "example.org"
+        domain2 = "example.com"
+        address = "10.10.10.10"
+        name1 = "foo"
+        name2 = "bar"
+
+        def fake_domains(context):
+            return [{'domain': 'example.org', 'scope': 'public'},
+                    {'domain': 'example.com', 'scope': 'public'},
+                    {'domain': 'test.example.org', 'scope': 'public'}]
+
+        self.stubs.Set(self.network, 'get_dns_zones', fake_domains)
+
+        context_admin = context.RequestContext('testuser', 'testproject',
+                                              is_admin=True)
+
+        self.network.create_public_dns_domain(context_admin, domain1,
+                                              'testproject')
+        self.network.create_public_dns_domain(context_admin, domain2,
+                                              'fakeproject')
+
+        domains = self.network.get_dns_zones(self.context)
+        for domain in domains:
+            self.network.add_dns_entry(self.context, address,
+                                       name1, "A", domain['domain'])
+            self.network.add_dns_entry(self.context, address,
+                                       name2, "A", domain['domain'])
+            entries = self.network.get_dns_entries_by_address(self.context,
+                                                              address,
+                                                              domain['domain'])
+            self.assertEquals(len(entries), 2)
+
+        self.network._delete_all_entries_for_ip(self.context, address)
+
+        for domain in domains:
+            entries = self.network.get_dns_entries_by_address(self.context,
+                                                              address,
+                                                              domain['domain'])
+            self.assertFalse(entries)
+
+        self.network.delete_dns_domain(context_admin, domain1)
+        self.network.delete_dns_domain(context_admin, domain2)
+
 
 class NetworkPolicyTestCase(test.TestCase):
     def setUp(self):
