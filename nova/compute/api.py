@@ -1255,12 +1255,20 @@ class API(base.Base):
                                    instance['uuid'],
                                    params={'reboot_type': reboot_type})
 
+    def _validate_image_href(self, context, image_href):
+        """Throws an ImageNotFound exception if image_href does not exist."""
+        (image_service, image_id) = nova.image.get_image_service(context,
+                                                                 image_href)
+        image_service.show(context, image_id)
+
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
                           task_state=[None, task_states.RESIZE_VERIFY])
     @scheduler_api.reroute_compute("rebuild")
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
         """Rebuild the given instance with the provided attributes."""
+
+        self._validate_image_href(context, image_href)
 
         files_to_inject = kwargs.pop('files_to_inject', [])
         self._check_injected_file_quota(context, files_to_inject)
