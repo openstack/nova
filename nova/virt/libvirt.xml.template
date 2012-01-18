@@ -166,8 +166,8 @@
             <target port='0'/>
         </serial>
 
-#if $getVar('vncserver_host', False)
-        <graphics type='vnc' port='-1' autoport='yes' keymap='${vnc_keymap}' listen='${vncserver_host}'/>
+#if $getVar('vncserver_listen', False)
+        <graphics type='vnc' port='-1' autoport='yes' keymap='${vnc_keymap}' listen='${vncserver_listen}'/>
 #end if
     </devices>
 </domain>

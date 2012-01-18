@@ -30,8 +30,12 @@ flags.DEFINE_string('xvpvncproxy_base_url',
                    'http://127.0.0.1:6081/console',
                    'location of nova xvp vnc console proxy, \
                     in the form "http://127.0.0.1:6081/console"')
-flags.DEFINE_string('vncserver_host', '127.0.0.1',
-                    'the host interface on which vnc server should listen')
+flags.DEFINE_string('vncserver_listen', '127.0.0.1',
+                    'Ip address on which instance vncservers\
+                     should listen')
+flags.DEFINE_string('vncserver_proxyclient_address', '127.0.0.1',
+                    'the address to which proxy clients \
+                    (like nova-xvpvncproxy) should connect')
 flags.DEFINE_bool('vnc_enabled', True,
                   'enable vnc related features')
 flags.DEFINE_string('vnc_keymap', 'en-us',

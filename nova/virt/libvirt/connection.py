@@ -78,6 +78,7 @@ LOG = logging.getLogger('nova.virt.libvirt_conn')
 
 FLAGS = flags.FLAGS
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
+flags.DECLARE('vncserver_proxyclient_address', 'nova.vnc')
 # TODO(vish): These flags should probably go into a shared location
 flags.DEFINE_string('rescue_image_id', None, 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', None, 'Rescue aki image')
@@ -782,7 +783,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     return graphic.getAttribute('port')
 
         port = get_vnc_port_for_instance(instance['name'])
-        host = instance['host']
+        host = FLAGS.vncserver_proxyclient_address
 
         return {'host': host, 'port': port, 'internal_access_path': None}
 
@@ -1186,7 +1187,7 @@ class LibvirtConnection(driver.ComputeDriver):
             xml_info['config_drive'] = xml_info['basepath'] + "/disk.config"
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
-            xml_info['vncserver_host'] = FLAGS.vncserver_host
+            xml_info['vncserver_listen'] = FLAGS.vncserver_listen
             xml_info['vnc_keymap'] = FLAGS.vnc_keymap
         if not rescue:
             if instance['kernel_id']:

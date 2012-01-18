@@ -126,6 +126,16 @@ Important Options
 -----------------
 * :option:`--vnc_enabled=[True|False]` - defaults to True. If this flag is
   not set your instances will launch without vnc support.
-* :option:`--vncserver_host=[instance vncserver host]` - defaults to 127.0.0.1
+* :option:`--vncserver_listen` - defaults to 127.0.0.1
   This is the address that vncservers will bind, and should be overridden in
   production deployments as a private address.  Applies to libvirt only.
+  For multi-host libvirt  deployments this should be set to a host
+  management ip on the same network as the proxies.
+* :option:`--vncserver_proxyclient_address` - defaults to 127.0.0.1
+  This is the address that nova will instruct proxies to use when connecting to
+  to instance vncservers.
+  For all-in-one xen server domU deployments this can be set to 169.254.0.1.
+  For multi-host xen server domU deployments this can be set to a dom0
+  management ip on the same network as the proxies.
+  For multi-host libvirt  deployments this can be set to a host
+  management ip on the same network as the proxies.
