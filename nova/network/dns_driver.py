@@ -31,10 +31,10 @@ class DNSDriver(object):
     def modify_address(self, _name, _address, _domain):
         pass
 
-    def get_entries_by_address(self, _address, _domain=""):
+    def get_entries_by_address(self, _address, _domain):
         return []
 
-    def get_entries_by_name(self, _name, _domain=""):
+    def get_entries_by_name(self, _name, _domain):
         return []
 
     def create_domain(self, _fqdomain):

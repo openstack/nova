@@ -1185,8 +1185,10 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                                    instance_id)
 
         if self._validate_instance_zone_for_dns_domain(context, instance_id):
-            for n in self.instance_dns_manager.get_entries_by_address(address):
-                self.instance_dns_manager.delete_entry(n)
+            for n in self.instance_dns_manager.get_entries_by_address(address,
+                                                     self.instance_dns_domain):
+                self.instance_dns_manager.delete_entry(n,
+                                                      self.instance_dns_domain)
 
         if FLAGS.force_dhcp_release:
             network = self._get_network_by_id(context,
