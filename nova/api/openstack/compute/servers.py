@@ -1105,15 +1105,10 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         entity = body.get("createImage", {})
 
-        try:
-            image_name = entity["name"]
+        image_name = entity.get("name")
 
-        except KeyError:
+        if not image_name:
             msg = _("createImage entity requires name attribute")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        except TypeError:
-            msg = _("Malformed createImage entity")
             raise exc.HTTPBadRequest(explanation=msg)
 
         props = {}
