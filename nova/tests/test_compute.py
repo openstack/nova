@@ -31,6 +31,7 @@ import nova
 import nova.common.policy
 from nova import compute
 import nova.compute.api
+from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
@@ -3009,6 +3010,216 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.inject_file(self.context, instance,
                                      "/tmp/test", "File Contents")
         db.instance_destroy(self.context, instance['id'])
+
+
+def fake_rpc_method(context, topic, msg, do_cast=True):
+    pass
+
+
+def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
+                                                             'fake_host2'],
+                                             'avail_zone2': ['fake_host3'], }):
+    for avail_zone, hosts in values.iteritems():
+        for host in hosts:
+            db.service_create(context,
+                              {'host': host,
+                               'binary': 'nova-compute',
+                               'topic': 'compute',
+                               'report_count': 0,
+                               'availability_zone': avail_zone})
+    return values
+
+
+class ComputeAPIAggrTestCase(test.TestCase):
+
+    def setUp(self):
+        super(ComputeAPIAggrTestCase, self).setUp()
+        self.api = compute.AggregateAPI()
+        self.context = context.get_admin_context()
+        self.stubs.Set(rpc, 'call', fake_rpc_method)
+        self.stubs.Set(rpc, 'cast', fake_rpc_method)
+
+    def tearDown(self):
+        super(ComputeAPIAggrTestCase, self).tearDown()
+
+    def test_update_aggregate_metadata(self):
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_availability_zone')
+        metadata = {'foo_key1': 'foo_value1',
+                    'foo_key2': 'foo_value2', }
+        aggr = self.api.update_aggregate_metadata(self.context, aggr['id'],
+                                                  metadata)
+        metadata['foo_key1'] = None
+        expected = self.api.update_aggregate_metadata(self.context,
+                                             aggr['id'], metadata)
+        self.assertDictMatch(expected['metadata'], {'foo_key2': 'foo_value2'})
+
+    def test_delete_aggregate(self):
+        """Ensure we can delete an aggregate."""
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_availability_zone')
+        self.api.delete_aggregate(self.context, aggr['id'])
+        expected = db.aggregate_get(self.context, aggr['id'],
+                                    read_deleted='yes')
+        self.assertNotEqual(aggr['operational_state'],
+                            expected['operational_state'])
+
+    def test_delete_non_empty_aggregate(self):
+        """Ensure InvalidAggregateAction is raised when non empty aggregate."""
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_availability_zone')
+        _create_service_entries(self.context,
+                                {'fake_availability_zone': ['fake_host']})
+        self.api.add_host_to_aggregate(self.context, aggr['id'], 'fake_host')
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.delete_aggregate, self.context, aggr['id'])
+
+    def test_add_host_to_aggregate(self):
+        """Ensure we can add a host to an aggregate."""
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', fake_zone)
+        aggr = self.api.add_host_to_aggregate(self.context,
+                                              aggr['id'], fake_host)
+        self.assertEqual(aggr['operational_state'], aggregate_states.CHANGING)
+
+    def test_add_host_to_aggregate_multiple(self):
+        """Ensure we can add multiple hosts to an aggregate."""
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', fake_zone)
+        # let's mock the fact that the aggregate is active already!
+        status = {'operational_state': aggregate_states.ACTIVE}
+        db.aggregate_update(self.context, aggr['id'], status)
+        for host in values[fake_zone]:
+            aggr = self.api.add_host_to_aggregate(self.context,
+                                                  aggr['id'], host)
+        self.assertEqual(len(aggr['hosts']), len(values[fake_zone]))
+        self.assertEqual(aggr['operational_state'],
+                         aggregate_states.ACTIVE)
+
+    def test_add_host_to_aggregate_invalid_changing_status(self):
+        """Ensure InvalidAggregateAction is raised when adding host while
+        aggregate is not ready."""
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', fake_zone)
+        aggr = self.api.add_host_to_aggregate(self.context,
+                                              aggr['id'], fake_host)
+        self.assertEqual(aggr['operational_state'],
+                             aggregate_states.CHANGING)
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.add_host_to_aggregate, self.context,
+                          aggr['id'], fake_host)
+
+    def test_add_host_to_aggregate_invalid_dismissed_status(self):
+        """Ensure InvalidAggregateAction is raised when aggregate is
+        deleted."""
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', 'fake_zone')
+        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
+        # let's mock the fact that the aggregate is dismissed!
+        status = {'operational_state': aggregate_states.DISMISSED}
+        db.aggregate_update(self.context, aggr['id'], status)
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.add_host_to_aggregate, self.context,
+                          aggr['id'], 'fake_host')
+
+    def test_add_host_to_aggregate_invalid_error_status(self):
+        """Ensure InvalidAggregateAction is raised when aggregate is
+        in error."""
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', 'fake_zone')
+        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
+        # let's mock the fact that the aggregate is in error!
+        status = {'operational_state': aggregate_states.ERROR}
+        db.aggregate_update(self.context, aggr['id'], status)
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.add_host_to_aggregate, self.context,
+                          aggr['id'], 'fake_host')
+
+    def test_add_host_to_aggregate_zones_mismatch(self):
+        """Ensure InvalidAggregateAction is raised when zones don't match."""
+        _create_service_entries(self.context, {'fake_zoneX': ['fake_host']})
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', 'fake_zoneY')
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.add_host_to_aggregate,
+                          self.context, aggr['id'], 'fake_host')
+
+    def test_add_host_to_aggregate_raise_not_found(self):
+        """Ensure ComputeHostNotFound is raised when adding invalid host."""
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_availability_zone')
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.api.add_host_to_aggregate,
+                          self.context, aggr['id'], 'invalid_host')
+
+    def test_remove_host_from_aggregate_active(self):
+        """Ensure we can remove a host from an aggregate."""
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', fake_zone)
+        # let's mock the fact that the aggregate is active already!
+        status = {'operational_state': aggregate_states.ACTIVE}
+        db.aggregate_update(self.context, aggr['id'], status)
+        for host in values[fake_zone]:
+            aggr = self.api.add_host_to_aggregate(self.context,
+                                                  aggr['id'], host)
+        expected = self.api.remove_host_from_aggregate(self.context,
+                                                       aggr['id'],
+                                                       values[fake_zone][0])
+        self.assertEqual(len(aggr['hosts']) - 1, len(expected['hosts']))
+        self.assertEqual(expected['operational_state'],
+                         aggregate_states.ACTIVE)
+
+    def test_remove_host_from_aggregate_error(self):
+        """Ensure we can remove a host from an aggregate even if in error."""
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', fake_zone)
+        # let's mock the fact that the aggregate is ready!
+        status = {'operational_state': aggregate_states.ACTIVE}
+        db.aggregate_update(self.context, aggr['id'], status)
+        for host in values[fake_zone]:
+            aggr = self.api.add_host_to_aggregate(self.context,
+                                                  aggr['id'], host)
+        # let's mock the fact that the aggregate is in error!
+        status = {'operational_state': aggregate_states.ERROR}
+        expected = self.api.remove_host_from_aggregate(self.context,
+                                                       aggr['id'],
+                                                       values[fake_zone][0])
+        self.assertEqual(len(aggr['hosts']) - 1, len(expected['hosts']))
+        self.assertEqual(expected['operational_state'],
+                         aggregate_states.ACTIVE)
+
+    def test_remove_host_from_aggregate_invalid_dismissed_status(self):
+        """Ensure InvalidAggregateAction is raised when aggregate is
+        deleted."""
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate', 'fake_zone')
+        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
+        # let's mock the fact that the aggregate is dismissed!
+        status = {'operational_state': aggregate_states.DISMISSED}
+        db.aggregate_update(self.context, aggr['id'], status)
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.remove_host_from_aggregate, self.context,
+                          aggr['id'], 'fake_host')
+
+    def test_remove_host_from_aggregate_raise_not_found(self):
+        """Ensure ComputeHostNotFound is raised when removing invalid host."""
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_availability_zone')
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.api.remove_host_from_aggregate,
+                          self.context, aggr['id'], 'invalid_host')
 
 
 class ComputePolicyTestCase(BaseTestCase):
