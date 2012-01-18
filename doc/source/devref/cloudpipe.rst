@@ -126,7 +126,7 @@ You also will need to terminate the dnsmasq running for the user (make sure you 
 
 Now you should be able to re-run the vpn::
 
-    nova-manage vpn run <project_id>
+    nova-manage vpn run --project <project> --user <user>
 
 
 Logging into Cloudpipe VPN
