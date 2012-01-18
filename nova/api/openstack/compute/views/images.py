@@ -50,11 +50,13 @@ class ViewBuilder(common.ViewBuilder):
             "links": self._get_links(request, image["id"]),
         }
 
-        server_ref = image.get("properties", {}).get("instance_ref")
+        instance_uuid = image.get("properties", {}).get("instance_uuid")
 
-        if server_ref is not None:
+        if instance_uuid is not None:
+            server_ref = os.path.join(request.application_url, 'servers',
+                                      instance_uuid)
             image_dict["server"] = {
-                "id": common.get_id_from_href(server_ref),
+                "id": instance_uuid,
                 "links": [{
                     "rel": "self",
                     "href": server_ref,

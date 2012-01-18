@@ -229,9 +229,6 @@ class CreateBackupTests(test.TestCase):
         response = request.get_response(self.app)
 
         self.assertTrue(response.headers['Location'])
-        instance_ref = self.backup_stubs.extra_props_last_call['instance_ref']
-        expected_server_location = 'http://localhost/v2/servers/%s' % self.uuid
-        self.assertEqual(expected_server_location, instance_ref)
 
     def test_create_backup_raises_conflict_on_invalid_state(self):
         body = {
