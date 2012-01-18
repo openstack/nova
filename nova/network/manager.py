@@ -295,10 +295,12 @@ class FloatingIP(object):
             # disassociate floating ips related to fixed_ip
             for floating_ip in floating_ips:
                 address = floating_ip['address']
-                self.disassociate_floating_ip(context, address, True)
+                self.disassociate_floating_ip(context, address,
+                                              affect_auto_assigned=True)
                 # deallocate if auto_assigned
                 if floating_ip['auto_assigned']:
-                    self.release_floating_ip(context, address, True)
+                    self.deallocate_floating_ip(context, address,
+                                                affect_auto_assigned=True)
 
         # call the next inherited class's deallocate_for_instance()
         # which is currently the NetworkManager version
