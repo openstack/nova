@@ -306,6 +306,7 @@ class QuantumManager(manager.FlatManager):
                 self.enable_dhcp(context, quantum_net_id, network_ref,
                     vif_rec, project_id)
         return self.get_instance_nw_info(context, instance_id,
+                                         instance['uuid'],
                                          instance_type_id, host)
 
     def enable_dhcp(self, context, quantum_net_id, network_ref, vif_rec,
@@ -390,8 +391,8 @@ class QuantumManager(manager.FlatManager):
 
         return self.db.virtual_interface_create(context, vif)
 
-    def get_instance_nw_info(self, context, instance_id,
-                                instance_type_id, host):
+    def get_instance_nw_info(self, context, instance_id, instance_uuid,
+                                            instance_type_id, host):
         """This method is used by compute to fetch all network data
            that should be used when creating the VM.
 
