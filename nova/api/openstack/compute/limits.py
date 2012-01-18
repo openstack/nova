@@ -17,7 +17,7 @@
 Module dedicated functions/classes dealing with rate limiting requests.
 """
 
-from collections import defaultdict
+import collections
 import copy
 import httplib
 import json
@@ -283,7 +283,7 @@ class Limiter(object):
         @param limits: List of `Limit` objects
         """
         self.limits = copy.deepcopy(limits)
-        self.levels = defaultdict(lambda: copy.deepcopy(limits))
+        self.levels = collections.defaultdict(lambda: copy.deepcopy(limits))
 
         # Pick up any per-user limit information
         for key, value in kwargs.items():
