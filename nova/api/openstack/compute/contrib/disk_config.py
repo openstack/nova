@@ -24,8 +24,8 @@ from nova.api.openstack import xmlutil
 from nova import db
 from nova import utils
 
-ALIAS = 'RAX-DCF'
-XMLNS_DCF = "http://docs.rackspacecloud.com/servers/api/ext/diskConfig/v1.0"
+ALIAS = 'OS-DCF'
+XMLNS_DCF = "http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
 API_DISK_CONFIG = "%s:diskConfig" % ALIAS
 INTERNAL_DISK_CONFIG = "auto_disk_config"
 
