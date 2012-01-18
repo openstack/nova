@@ -34,9 +34,8 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 import boto
 import nova
-from boto.ec2.connection import EC2Connection
+import boto.ec2.connection
 import euca2ools
-from euca2ools import Euca2ool, InstanceValidationError, Util
 
 usage_string = """
 Retrieves a url to an ajax console terminal
@@ -53,7 +52,7 @@ OPTIONAL PARAMETERS
 
 
 # This class extends boto to add AjaxConsole functionality
-class NovaEC2Connection(EC2Connection):
+class NovaEC2Connection(boto.ec2.connection.EC2Connection):
 
     def get_ajax_console(self, instance_id):
         """
@@ -104,12 +103,12 @@ euca2ools.EC2Connection = NovaEC2Connection
 
 def usage(status=1):
     print usage_string
-    Util().usage()
+    euca2ools.Util().usage()
     sys.exit(status)
 
 
 def version():
-    print Util().version()
+    print euca2ools.Util().version()
     sys.exit()
 
 
@@ -125,7 +124,7 @@ def display_ajax_console_output(console_output):
 
 def main():
     try:
-        euca = Euca2ool()
+        euca = euca2ools.Euca2ool()
     except Exception, e:
         print e
         usage()
@@ -147,7 +146,7 @@ def main():
     if instance_id:
         try:
             euca.validate_instance_id(instance_id)
-        except InstanceValidationError:
+        except euca2ools.InstanceValidationError:
             print 'Invalid instance id'
             sys.exit(1)
 

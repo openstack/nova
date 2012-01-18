@@ -60,7 +60,7 @@ import glob
 import json
 import math
 import netaddr
-from optparse import OptionParser
+import optparse
 import os
 import StringIO
 import sys
@@ -2355,7 +2355,7 @@ def main():
     options = getattr(fn, 'options', [])
 
     usage = "%%prog %s %s <args> [options]" % (category, action)
-    parser = OptionParser(usage=usage)
+    parser = optparse.OptionParser(usage=usage)
     for ar, kw in options:
         parser.add_option(*ar, **kw)
     (opts, fn_args) = parser.parse_args(argv)
