@@ -1478,3 +1478,79 @@ class InstanceDNSTestCase(test.TestCase):
                           self.network.delete_dns_domain, self.context,
                           domain1)
         self.network.delete_dns_domain(context_admin, domain1)
+
+
+zone1 = "example.org"
+zone2 = "example.com"
+
+
+class LdapDNSTestCase(test.TestCase):
+    """Tests nova.network.ldapdns.LdapDNS"""
+    def setUp(self):
+        super(LdapDNSTestCase, self).setUp()
+        temp = utils.import_object('nova.network.ldapdns.FakeLdapDNS')
+        self.driver = temp
+        self.driver.create_domain(zone1)
+        self.driver.create_domain(zone2)
+
+    def tearDown(self):
+        super(LdapDNSTestCase, self).tearDown()
+        self.driver.delete_domain(zone1)
+        self.driver.delete_domain(zone2)
+
+    def test_ldap_dns_zones(self):
+        flags.FLAGS.floating_ip_dns_zones = [zone1, zone2]
+
+        zones = self.driver.get_zones()
+        self.assertEqual(len(zones), 2)
+        self.assertEqual(zones[0], zone1)
+        self.assertEqual(zones[1], zone2)
+
+    def test_ldap_dns_create_conflict(self):
+        address1 = "10.10.10.11"
+        name1 = "foo"
+        name2 = "bar"
+
+        self.driver.create_entry(name1, address1, "A", zone1)
+
+        self.assertRaises(exception.FloatingIpDNSExists,
+                          self.driver.create_entry,
+                          name1, address1, "A", zone1)
+
+    def test_ldap_dns_create_and_get(self):
+        address1 = "10.10.10.11"
+        name1 = "foo"
+        name2 = "bar"
+        entries = self.driver.get_entries_by_address(address1, zone1)
+        self.assertFalse(entries)
+
+        self.driver.create_entry(name1, address1, "A", zone1)
+        self.driver.create_entry(name2, address1, "A", zone1)
+        entries = self.driver.get_entries_by_address(address1, zone1)
+        self.assertEquals(len(entries), 2)
+        self.assertEquals(entries[0], name1)
+        self.assertEquals(entries[1], name2)
+
+        entries = self.driver.get_entries_by_name(name1, zone1)
+        self.assertEquals(len(entries), 1)
+        self.assertEquals(entries[0], address1)
+
+    def test_ldap_dns_delete(self):
+        address1 = "10.10.10.11"
+        name1 = "foo"
+        name2 = "bar"
+
+        self.driver.create_entry(name1, address1, "A", zone1)
+        self.driver.create_entry(name2, address1, "A", zone1)
+        entries = self.driver.get_entries_by_address(address1, zone1)
+        self.assertEquals(len(entries), 2)
+
+        self.driver.delete_entry(name1, zone1)
+        entries = self.driver.get_entries_by_address(address1, zone1)
+        LOG.debug("entries: %s" % entries)
+        self.assertEquals(len(entries), 1)
+        self.assertEquals(entries[0], name2)
+
+        self.assertRaises(exception.NotFound,
+                          self.driver.delete_entry,
+                          name1, zone1)
