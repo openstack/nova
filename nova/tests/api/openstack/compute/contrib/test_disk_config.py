@@ -35,6 +35,9 @@ stub_instance = fakes.stub_instance
 FLAGS = flags.FLAGS
 
 
+API_DISK_CONFIG = 'OS-DCF:diskConfig'
+
+
 def instance_addresses(context, instance_id):
     return None
 
@@ -123,8 +126,8 @@ class DiskConfigTestCase(test.TestCase):
         self.app = app
 
     def assertDiskConfig(self, dict_, value):
-        self.assert_('RAX-DCF:diskConfig' in dict_)
-        self.assertEqual(dict_['RAX-DCF:diskConfig'], value)
+        self.assert_(API_DISK_CONFIG in dict_)
+        self.assertEqual(dict_[API_DISK_CONFIG], value)
 
     def test_show_server(self):
         req = fakes.HTTPRequest.blank(
@@ -181,7 +184,7 @@ class DiskConfigTestCase(test.TestCase):
                   'name': 'server_test',
                   'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
                   'flavorRef': '1',
-                  'RAX-DCF:diskConfig': 'AUTO'
+                  API_DISK_CONFIG: 'AUTO'
                }}
 
         req.body = utils.dumps(body)
@@ -197,7 +200,7 @@ class DiskConfigTestCase(test.TestCase):
                   'name': 'server_test',
                   'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
                   'flavorRef': '1',
-                  'RAX-DCF:diskConfig': 'MANUAL'
+                  API_DISK_CONFIG: 'MANUAL'
                }}
 
         req.body = utils.dumps(body)
@@ -243,10 +246,11 @@ class DiskConfigTestCase(test.TestCase):
             '/fake/servers/%s' % MANUAL_INSTANCE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
-        body = {'server': {'RAX-DCF:diskConfig': 'server_test'}}
+        body = {'server': {API_DISK_CONFIG: 'server_test'}}
         req.body = utils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
-        expected_msg = '{"badRequest": {"message": "RAX-DCF:diskConfig must'\
-                       ' be either \'MANUAL\' or \'AUTO\'.", "code": 400}}'
+        expected_msg = ('{"badRequest": {"message": "%s must be either'
+                        ' \'MANUAL\' or \'AUTO\'.", "code": 400}}' %
+                        API_DISK_CONFIG)
         self.assertEqual(res.body, expected_msg)
