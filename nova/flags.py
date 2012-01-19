@@ -275,6 +275,7 @@ DEFINE_integer('glance_num_retries', 0,
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '$my_ip', 's3 host (for infrastructure)')
 DEFINE_string('s3_dmz', '$my_ip', 's3 dmz ip (for instances)')
+DEFINE_string('cert_topic', 'cert', 'the topic cert nodes listen on')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
 DEFINE_string('console_topic', 'console',
               'the topic console proxy nodes listen on')
@@ -367,6 +368,8 @@ DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
               'Manager for compute')
 DEFINE_string('console_manager', 'nova.console.manager.ConsoleProxyManager',
               'Manager for console proxy')
+DEFINE_string('cert_manager', 'nova.cert.manager.CertManager',
+              'Manager for cert')
 DEFINE_string('instance_dns_manager',
               'nova.network.dns_driver.DNSDriver',
               'DNS Manager for instance IPs')

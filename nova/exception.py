@@ -179,6 +179,10 @@ class NovaException(Exception):
         super(NovaException, self).__init__(message)
 
 
+class DecryptionFailure(NovaException):
+    message = _("Failed to decrypt text")
+
+
 class ImagePaginationFailed(NovaException):
     message = _("Failed to paginate through images from image service")
 

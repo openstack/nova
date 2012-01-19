@@ -60,28 +60,11 @@ class CloudpipeController(object):
 
     def setup(self):
         """Ensure the keychains and folders exist."""
-        # TODO(todd): this was copyed from api.ec2.cloud
-        # FIXME(ja): this should be moved to a nova-manage command,
-        # if not setup throw exceptions instead of running
-        # Create keys folder, if it doesn't exist
+        # NOTE(vish): One of the drawbacks of doing this in the api is
+        #             the keys will only be on the api node that launched
+        #             the cloudpipe.
         if not os.path.exists(FLAGS.keys_path):
             os.makedirs(FLAGS.keys_path)
-        # Gen root CA, if we don't have one
-        root_ca_path = os.path.join(FLAGS.ca_path, FLAGS.ca_file)
-        if not os.path.exists(root_ca_path):
-            genrootca_sh_path = os.path.join(os.path.dirname(__file__),
-                                             os.path.pardir,
-                                             os.path.pardir,
-                                             'CA',
-                                             'genrootca.sh')
-
-            start = os.getcwd()
-            if not os.path.exists(FLAGS.ca_path):
-                os.makedirs(FLAGS.ca_path)
-            os.chdir(FLAGS.ca_path)
-            # TODO(vish): Do this with M2Crypto instead
-            utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
-            os.chdir(start)
 
     def _get_cloudpipe_for_project(self, context, project_id):
         """Get the cloudpipe instance for a project ID."""

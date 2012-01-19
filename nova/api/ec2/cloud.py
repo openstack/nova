@@ -205,34 +205,9 @@ class CloudController(object):
         self.volume_api = volume.API()
         self.compute_api = compute.API(network_api=self.network_api,
                                        volume_api=self.volume_api)
-        self.setup()
 
     def __str__(self):
         return 'CloudController'
-
-    def setup(self):
-        """ Ensure the keychains and folders exist. """
-        # FIXME(ja): this should be moved to a nova-manage command,
-        # if not setup throw exceptions instead of running
-        # Create keys folder, if it doesn't exist
-        if not os.path.exists(FLAGS.keys_path):
-            os.makedirs(FLAGS.keys_path)
-        # Gen root CA, if we don't have one
-        root_ca_path = os.path.join(FLAGS.ca_path, FLAGS.ca_file)
-        if not os.path.exists(root_ca_path):
-            genrootca_sh_path = os.path.join(os.path.dirname(__file__),
-                                             os.path.pardir,
-                                             os.path.pardir,
-                                             'CA',
-                                             'genrootca.sh')
-
-            start = os.getcwd()
-            if not os.path.exists(FLAGS.ca_path):
-                os.makedirs(FLAGS.ca_path)
-            os.chdir(FLAGS.ca_path)
-            # TODO(vish): Do this with M2Crypto instead
-            utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
-            os.chdir(start)
 
     def _get_image_state(self, image):
         # NOTE(vish): fallback status if image_state isn't set
