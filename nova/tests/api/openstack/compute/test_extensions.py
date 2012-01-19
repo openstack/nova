@@ -144,7 +144,6 @@ class ExtensionTestCase(test.TestCase):
         if fox not in ext_list:
             ext_list.append(fox)
             self.flags(osapi_compute_extension=ext_list)
-        compute_extensions.ExtensionManager.reset()
 
 
 class ExtensionControllerTest(ExtensionTestCase):
@@ -189,10 +188,8 @@ class ExtensionControllerTest(ExtensionTestCase):
 
     def test_list_extensions_json(self):
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/fake/extensions")
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(200, response.status_int)
 
         # Make sure we have all the extensions.
@@ -218,10 +215,8 @@ class ExtensionControllerTest(ExtensionTestCase):
 
     def test_get_extension_json(self):
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/fake/extensions/FOXNSOX")
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(200, response.status_int)
 
         data = json.loads(response.body)
@@ -235,18 +230,15 @@ class ExtensionControllerTest(ExtensionTestCase):
 
     def test_get_non_existing_extension_json(self):
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/fake/extensions/4")
-        response = request.get_response(ext_midware)
+        response = request.get_response(app)
         self.assertEqual(404, response.status_int)
 
     def test_list_extensions_xml(self):
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/fake/extensions")
         request.accept = "application/xml"
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         print response.body
 
@@ -270,11 +262,9 @@ class ExtensionControllerTest(ExtensionTestCase):
 
     def test_get_extension_xml(self):
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/fake/extensions/FOXNSOX")
         request.accept = "application/xml"
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         xml = response.body
         print xml
@@ -297,10 +287,8 @@ class ResourceExtensionTest(ExtensionTestCase):
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
         app = compute.APIRouter(manager)
-        ext_midware = compute_extensions.ExtensionMiddleware(app, manager)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/blah")
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(404, response.status_int)
 
     def test_get_resources(self):
@@ -308,10 +296,8 @@ class ResourceExtensionTest(ExtensionTestCase):
                                   StubController(response_body))
         manager = StubExtensionManager(res_ext)
         app = compute.APIRouter(manager)
-        ext_midware = compute_extensions.ExtensionMiddleware(app, manager)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/fake/tweedles")
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
 
@@ -320,10 +306,8 @@ class ResourceExtensionTest(ExtensionTestCase):
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
         app = compute.APIRouter(manager)
-        ext_midware = compute_extensions.ExtensionMiddleware(app, manager)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/fake/tweedles")
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
 
@@ -332,11 +316,9 @@ class ResourceExtensionTest(ExtensionTestCase):
                                   StubController(response_body))
         manager = StubExtensionManager(res_ext)
         app = compute.APIRouter(manager)
-        ext_midware = compute_extensions.ExtensionMiddleware(app, manager)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/fake/tweedles")
         request.method = "POST"
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(400, response.status_int)
         self.assertEqual('application/json', response.content_type)
         body = json.loads(response.body)
@@ -353,10 +335,8 @@ class ResourceExtensionTest(ExtensionTestCase):
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
         app = compute.APIRouter(manager)
-        ext_midware = compute_extensions.ExtensionMiddleware(app, manager)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/fake/tweedles/1")
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(404, response.status_int)
         self.assertEqual('application/json', response.content_type)
         body = json.loads(response.body)
@@ -393,10 +373,8 @@ class ExtensionManagerTest(ExtensionTestCase):
 
     def test_get_resources(self):
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank("/fake/foxnsocks")
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
 
@@ -404,8 +382,7 @@ class ExtensionManagerTest(ExtensionTestCase):
         # Don't need the serialization middleware here because we're
         # not testing any serialization
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ext_mgr = ext_midware.ext_mgr
+        ext_mgr = compute_extensions.ExtensionManager()
         ext_mgr.register(InvalidExtension())
         self.assertTrue('FOXNSOX' in ext_mgr.extensions)
         self.assertTrue('THIRD' not in ext_mgr.extensions)
@@ -413,8 +390,7 @@ class ExtensionManagerTest(ExtensionTestCase):
     def test_admin_extensions(self):
         self.flags(allow_admin_api=True)
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ext_mgr = ext_midware.ext_mgr
+        ext_mgr = compute_extensions.ExtensionManager()
         ext_mgr.register(AdminExtension())
         self.assertTrue('FOXNSOX' in ext_mgr.extensions)
         self.assertTrue('ADMIN' in ext_mgr.extensions)
@@ -422,8 +398,7 @@ class ExtensionManagerTest(ExtensionTestCase):
     def test_admin_extensions_no_admin_api(self):
         self.flags(allow_admin_api=False)
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ext_mgr = ext_midware.ext_mgr
+        ext_mgr = compute_extensions.ExtensionManager()
         ext_mgr.register(AdminExtension())
         self.assertTrue('FOXNSOX' in ext_mgr.extensions)
         self.assertTrue('ADMIN' not in ext_mgr.extensions)
@@ -433,13 +408,11 @@ class ActionExtensionTest(ExtensionTestCase):
 
     def _send_server_action_request(self, url, body):
         app = compute.APIRouter()
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
         request = webob.Request.blank(url)
         request.method = 'POST'
         request.content_type = 'application/json'
         request.body = json.dumps(body)
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         return response
 
     def test_extended_action(self):
@@ -494,35 +467,30 @@ class ActionExtensionTest(ExtensionTestCase):
 class RequestExtensionTest(ExtensionTestCase):
 
     def test_get_resources_with_stub_mgr(self):
+        class GooGoose(wsgi.Controller):
+            @wsgi.extends
+            def show(self, req, resp_obj, id):
+                # only handle JSON responses
+                resp_obj.obj['flavor']['googoose'] = req.GET.get('chewing')
 
-        def _req_handler(req, res, body):
-            # only handle JSON responses
-            body['flavor']['googoose'] = req.GET.get('chewing')
-            return res
+        req_ext = base_extensions.ControllerExtension(
+            StubControllerExtension(), 'flavors', GooGoose())
 
-        req_ext = base_extensions.RequestExtension('GET',
-                                                   '/v2/fake/flavors/:(id)',
-                                                   _req_handler)
-
-        manager = StubExtensionManager(None, None, req_ext)
-        app = fakes.wsgi_app(serialization=base_wsgi.Middleware)
-        ext_midware = compute_extensions.ExtensionMiddleware(app, manager)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
+        manager = StubExtensionManager(None, None, None, req_ext)
+        app = fakes.wsgi_app(ext_mgr=manager)
         request = webob.Request.blank("/v2/fake/flavors/1?chewing=bluegoo")
         request.environ['api.version'] = '2'
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
         self.assertEqual('bluegoo', response_data['flavor']['googoose'])
 
     def test_get_resources_with_mgr(self):
 
-        app = fakes.wsgi_app(serialization=base_wsgi.Middleware)
-        ext_midware = compute_extensions.ExtensionMiddleware(app)
-        ser_midware = wsgi.LazySerializationMiddleware(ext_midware)
+        app = fakes.wsgi_app()
         request = webob.Request.blank("/v2/fake/flavors/1?chewing=newblue")
         request.environ['api.version'] = '2'
-        response = request.get_response(ser_midware)
+        response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
         print response_data
@@ -611,7 +579,7 @@ class ControllerExtensionTest(ExtensionTestCase):
 class ExtensionsXMLSerializerTest(test.TestCase):
 
     def test_serialize_extension(self):
-        serializer = base_extensions.ExtensionsXMLSerializer()
+        serializer = base_extensions.ExtensionTemplate()
         data = {'extension': {
           'name': 'ext1',
           'namespace': 'http://docs.rack.com/servers/api/ext/pie/v1.0',
@@ -625,7 +593,7 @@ class ExtensionsXMLSerializerTest(test.TestCase):
                      'type': 'application/vnd.sun.wadl+xml',
                      'href': 'http://docs.rack.com/servers/api/ext/cs.wadl'}]}}
 
-        xml = serializer.serialize(data, 'show')
+        xml = serializer.serialize(data)
         print xml
         root = etree.XML(xml)
         ext_dict = data['extension']
@@ -644,7 +612,7 @@ class ExtensionsXMLSerializerTest(test.TestCase):
         xmlutil.validate_schema(root, 'extension')
 
     def test_serialize_extensions(self):
-        serializer = base_extensions.ExtensionsXMLSerializer()
+        serializer = base_extensions.ExtensionsTemplate()
         data = {"extensions": [{
                 "name": "Public Image Extension",
                 "namespace": "http://foo.com/api/ext/pie/v1.0",
@@ -670,7 +638,7 @@ class ExtensionsXMLSerializerTest(test.TestCase):
                              "type": "application/vnd.sun.wadl+xml",
                              "href": "http://foo.com/api/ext/cs-cbs.wadl"}]}]}
 
-        xml = serializer.serialize(data, 'index')
+        xml = serializer.serialize(data)
         print xml
         root = etree.XML(xml)
         ext_elems = root.findall('{0}extension'.format(NS))

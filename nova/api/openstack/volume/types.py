@@ -25,26 +25,6 @@ from nova import exception
 from nova.volume import volume_types
 
 
-class VolumeTypesController(object):
-    """ The volume types API controller for the Openstack API """
-
-    def index(self, req):
-        """ Returns the list of volume types """
-        context = req.environ['nova.context']
-        return volume_types.get_all_types(context)
-
-    def show(self, req, id):
-        """ Return a single volume type item """
-        context = req.environ['nova.context']
-
-        try:
-            vol_type = volume_types.get_volume_type(context, id)
-        except exception.NotFound or exception.ApiError:
-            raise exc.HTTPNotFound()
-
-        return {'volume_type': vol_type}
-
-
 def make_voltype(elem):
     elem.set('id')
     elem.set('name')
@@ -68,20 +48,27 @@ class VolumeTypesTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class VolumeTypesSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return VolumeTypesTemplate()
+class VolumeTypesController(object):
+    """ The volume types API controller for the Openstack API """
 
-    def default(self):
-        return VolumeTypeTemplate()
+    @wsgi.serializers(xml=VolumeTypesTemplate)
+    def index(self, req):
+        """ Returns the list of volume types """
+        context = req.environ['nova.context']
+        return volume_types.get_all_types(context)
+
+    @wsgi.serializers(xml=VolumeTypeTemplate)
+    def show(self, req, id):
+        """ Return a single volume type item """
+        context = req.environ['nova.context']
+
+        try:
+            vol_type = volume_types.get_volume_type(context, id)
+        except exception.NotFound or exception.ApiError:
+            raise exc.HTTPNotFound()
+
+        return {'volume_type': vol_type}
 
 
 def create_resource():
-    body_serializers = {
-        'application/xml': VolumeTypesSerializer(),
-        }
-    serializer = wsgi.ResponseSerializer(body_serializers)
-
-    deserializer = wsgi.RequestDeserializer()
-
-    return wsgi.Resource(VolumeTypesController(), serializer=serializer)
+    return wsgi.Resource(VolumeTypesController())

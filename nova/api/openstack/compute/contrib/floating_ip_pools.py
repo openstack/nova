@@ -37,20 +37,6 @@ def _translate_floating_ip_pools_view(pools):
     }
 
 
-class FloatingIPPoolsController(object):
-    """The Floating IP Pool API controller for the OpenStack API."""
-
-    def __init__(self):
-        self.network_api = network.API()
-        super(FloatingIPPoolsController, self).__init__()
-
-    def index(self, req):
-        """Return a list of pools."""
-        context = req.environ['nova.context']
-        pools = self.network_api.get_floating_ip_pools(context)
-        return _translate_floating_ip_pools_view(pools)
-
-
 def make_float_ip(elem):
     elem.set('name')
 
@@ -72,9 +58,19 @@ class FloatingIPPoolsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class FloatingIPPoolsSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return FloatingIPPoolsTemplate()
+class FloatingIPPoolsController(object):
+    """The Floating IP Pool API controller for the OpenStack API."""
+
+    def __init__(self):
+        self.network_api = network.API()
+        super(FloatingIPPoolsController, self).__init__()
+
+    @wsgi.serializers(xml=FloatingIPPoolsTemplate)
+    def index(self, req):
+        """Return a list of pools."""
+        context = req.environ['nova.context']
+        pools = self.network_api.get_floating_ip_pools(context)
+        return _translate_floating_ip_pools_view(pools)
 
 
 class Floating_ip_pools(extensions.ExtensionDescriptor):
@@ -89,15 +85,8 @@ class Floating_ip_pools(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        body_serializers = {
-            'application/xml': FloatingIPPoolsSerializer(),
-            }
-
-        serializer = wsgi.ResponseSerializer(body_serializers)
-
         res = extensions.ResourceExtension('os-floating-ip-pools',
                          FloatingIPPoolsController(),
-                         serializer=serializer,
                          member_actions={})
         resources.append(res)
 

@@ -123,9 +123,7 @@ class CreateBackupTests(test.TestCase):
         self.backup_stubs = fakes.stub_out_compute_api_backup(self.stubs)
 
         self.flags(allow_admin_api=True)
-        router = compute_api.APIRouter()
-        ext_middleware = extensions.ExtensionMiddleware(router)
-        self.app = wsgi.LazySerializationMiddleware(ext_middleware)
+        self.app = compute_api.APIRouter()
 
         self.uuid = utils.gen_uuid()
 

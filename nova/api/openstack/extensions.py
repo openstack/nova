@@ -79,24 +79,6 @@ class ExtensionDescriptor(object):
         resources = []
         return resources
 
-    def get_actions(self):
-        """List of extensions.ActionExtension extension objects.
-
-        Actions are verbs callable from the API.
-
-        """
-        actions = []
-        return actions
-
-    def get_request_extensions(self):
-        """List of extensions.RequestExtension extension objects.
-
-        Request extensions are used to handle custom request data.
-
-        """
-        request_exts = []
-        return request_exts
-
     def get_controller_extensions(self):
         """List of extensions.ControllerExtension extension objects.
 
@@ -122,92 +104,6 @@ class ExtensionDescriptor(object):
         """Synthesize element and attribute names."""
 
         return '{%s}%s' % (cls.namespace, name)
-
-
-class ActionExtensionController(object):
-    def __init__(self, application):
-        self.application = application
-        self.action_handlers = {}
-
-    def add_action(self, action_name, handler):
-        self.action_handlers[action_name] = handler
-
-    def action(self, req, id, body):
-        for action_name, handler in self.action_handlers.iteritems():
-            if action_name in body:
-                return handler(body, req, id)
-        # no action handler found (bump to downstream application)
-        res = self.application
-        return res
-
-
-class ActionExtensionResource(wsgi.Resource):
-
-    def __init__(self, application):
-        controller = ActionExtensionController(application)
-        wsgi.Resource.__init__(self, controller,
-                               serializer=wsgi.ResponseSerializer(),
-                               deserializer=wsgi.RequestDeserializer())
-
-    def add_action(self, action_name, handler):
-        self.controller.add_action(action_name, handler)
-
-
-class RequestExtensionController(object):
-
-    def __init__(self, application):
-        self.application = application
-        self.handlers = []
-        self.pre_handlers = []
-
-    def add_handler(self, handler):
-        self.handlers.append(handler)
-
-    def add_pre_handler(self, pre_handler):
-        self.pre_handlers.append(pre_handler)
-
-    def process(self, req, *args, **kwargs):
-        for pre_handler in self.pre_handlers:
-            pre_handler(req)
-
-        res = req.get_response(self.application)
-        res.environ = req.environ
-
-        # Don't call extensions if the main application returned an
-        # unsuccessful status
-        successful = 200 <= res.status_int < 400
-        if not successful:
-            return res
-
-        # Deserialize the response body, if any
-        body = None
-        if res.body:
-            body = utils.loads(res.body)
-
-        # currently request handlers are un-ordered
-        for handler in self.handlers:
-            res = handler(req, res, body)
-
-        # Reserialize the response body
-        if body is not None:
-            res.body = utils.dumps(body)
-
-        return res
-
-
-class RequestExtensionResource(wsgi.Resource):
-
-    def __init__(self, application):
-        controller = RequestExtensionController(application)
-        wsgi.Resource.__init__(self, controller,
-                               serializer=wsgi.ResponseSerializer(),
-                               deserializer=wsgi.RequestDeserializer())
-
-    def add_handler(self, handler):
-        self.controller.add_handler(handler)
-
-    def add_pre_handler(self, pre_handler):
-        self.controller.add_pre_handler(pre_handler)
 
 
 def make_ext(elem):
@@ -281,106 +177,16 @@ class ExtensionsResource(wsgi.Resource):
         raise webob.exc.HTTPNotFound()
 
 
+@utils.deprecated("The extension middleware is no longer necessary.")
 class ExtensionMiddleware(base_wsgi.Middleware):
-    """Extensions middleware for WSGI."""
-    @classmethod
-    def factory(cls, global_config, **local_config):
-        """Paste factory."""
-        def _factory(app):
-            return cls(app, **local_config)
-        return _factory
+    """Extensions middleware for WSGI.
 
-    def _action_ext_resources(self, application, ext_mgr, mapper):
-        """Return a dict of ActionExtensionResource-s by collection."""
-        action_resources = {}
-        for action in ext_mgr.get_actions():
-            if not action.collection in action_resources.keys():
-                resource = ActionExtensionResource(application)
-                mapper.connect("/:(project_id)/%s/:(id)/action.:(format)" %
-                                action.collection,
-                                action='action',
-                                controller=resource,
-                                conditions=dict(method=['POST']))
-                mapper.connect("/:(project_id)/%s/:(id)/action" %
-                                action.collection,
-                                action='action',
-                                controller=resource,
-                                conditions=dict(method=['POST']))
-                action_resources[action.collection] = resource
+    Provided only for backwards compatibility with existing
+    api-paste.ini files.  This middleware will be removed in future
+    versions of nova.
+    """
 
-        return action_resources
-
-    def _request_ext_resources(self, application, ext_mgr, mapper):
-        """Returns a dict of RequestExtensionResource-s by collection."""
-        request_ext_resources = {}
-        for req_ext in ext_mgr.get_request_extensions():
-            if not req_ext.key in request_ext_resources.keys():
-                resource = RequestExtensionResource(application)
-                mapper.connect(req_ext.url_route + '.:(format)',
-                                action='process',
-                                controller=resource,
-                                conditions=req_ext.conditions)
-
-                mapper.connect(req_ext.url_route,
-                                action='process',
-                                controller=resource,
-                                conditions=req_ext.conditions)
-                request_ext_resources[req_ext.key] = resource
-
-        return request_ext_resources
-
-    def __init__(self, application, ext_mgr=None):
-
-        if ext_mgr is None:
-            ext_mgr = ExtensionManager()
-        self.ext_mgr = ext_mgr
-
-        mapper = nova.api.openstack.ProjectMapper()
-
-        # extended actions
-        action_resources = self._action_ext_resources(application, ext_mgr,
-                                                        mapper)
-        for action in ext_mgr.get_actions():
-            LOG.debug(_('Extended action: %s'), action.action_name)
-            resource = action_resources[action.collection]
-            resource.add_action(action.action_name, action.handler)
-
-        # extended requests
-        req_controllers = self._request_ext_resources(application, ext_mgr,
-                                                      mapper)
-        for request_ext in ext_mgr.get_request_extensions():
-            LOG.debug(_('Extended request: %s'), request_ext.key)
-            controller = req_controllers[request_ext.key]
-            if request_ext.handler:
-                controller.add_handler(request_ext.handler)
-            if request_ext.pre_handler:
-                controller.add_pre_handler(request_ext.pre_handler)
-
-        self._router = routes.middleware.RoutesMiddleware(self._dispatch,
-                                                          mapper)
-
-        super(ExtensionMiddleware, self).__init__(application)
-
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        """Route the incoming request with router."""
-        req.environ['extended.app'] = self.application
-        return self._router
-
-    @staticmethod
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def _dispatch(req):
-        """Dispatch the request.
-
-        Returns the routed WSGI app's response or defers to the extended
-        application.
-
-        """
-        match = req.environ['wsgiorg.routing_args'][1]
-        if not match:
-            return req.environ['extended.app']
-        app = match['controller']
-        return app
+    pass
 
 
 class ExtensionManager(object):
@@ -390,12 +196,6 @@ class ExtensionManager(object):
     example extension implementation.
 
     """
-
-    _ext_mgr = None
-
-    @classmethod
-    def reset(cls):
-        cls._ext_mgr = None
 
     def register(self, ext):
         # Do nothing if the extension doesn't check out
@@ -424,30 +224,6 @@ class ExtensionManager(object):
                 # extensions
                 pass
         return resources
-
-    def get_actions(self):
-        """Returns a list of ActionExtension objects."""
-        actions = []
-        for ext in self.extensions.values():
-            try:
-                actions.extend(ext.get_actions())
-            except AttributeError:
-                # NOTE(dprince): Extension aren't required to have action
-                # extensions
-                pass
-        return actions
-
-    def get_request_extensions(self):
-        """Returns a list of RequestExtension objects."""
-        request_exts = []
-        for ext in self.extensions.values():
-            try:
-                request_exts.extend(ext.get_request_extensions())
-            except AttributeError:
-                # NOTE(dprince): Extension aren't required to have request
-                # extensions
-                pass
-        return request_exts
 
     def get_controller_extensions(self):
         """Returns a list of ControllerExtension objects."""
@@ -525,32 +301,6 @@ class ControllerExtension(object):
         self.controller = controller
 
 
-@utils.deprecated("Superseded by ControllerExtension")
-class RequestExtension(object):
-    """Extend requests and responses of core nova OpenStack API resources.
-
-    Provide a way to add data to responses and handle custom request data
-    that is sent to core nova OpenStack API controllers.
-
-    """
-    def __init__(self, method, url_route, handler=None, pre_handler=None):
-        self.url_route = url_route
-        self.handler = handler
-        self.conditions = dict(method=[method])
-        self.key = "%s-%s" % (method, url_route)
-        self.pre_handler = pre_handler
-
-
-@utils.deprecated("Superseded by ControllerExtension")
-class ActionExtension(object):
-    """Add custom actions to core nova OpenStack API resources."""
-
-    def __init__(self, collection, action_name, handler):
-        self.collection = collection
-        self.action_name = action_name
-        self.handler = handler
-
-
 class ResourceExtension(object):
     """Add top level resources to the OpenStack API in nova."""
 
@@ -568,14 +318,6 @@ class ResourceExtension(object):
         self.member_actions = member_actions
         self.deserializer = deserializer
         self.serializer = serializer
-
-
-class ExtensionsXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return ExtensionsTemplate()
-
-    def show(self):
-        return ExtensionTemplate()
 
 
 def wrap_errors(fn):

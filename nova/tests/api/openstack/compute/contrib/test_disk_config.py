@@ -120,10 +120,7 @@ class DiskConfigTestCase(test.TestCase):
 
         self.stubs.Set(nova.db, 'instance_create', fake_instance_create)
 
-        app = compute.APIRouter()
-        app = extensions.ExtensionMiddleware(app)
-        app = wsgi.LazySerializationMiddleware(app)
-        self.app = app
+        self.app = compute.APIRouter()
 
     def assertDiskConfig(self, dict_, value):
         self.assert_(API_DISK_CONFIG in dict_)

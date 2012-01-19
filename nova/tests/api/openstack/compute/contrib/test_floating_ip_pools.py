@@ -56,12 +56,12 @@ class FloatingIpPoolTest(test.TestCase):
 
 class FloatingIpPoolSerializerTest(test.TestCase):
     def test_index_serializer(self):
-        serializer = floating_ip_pools.FloatingIPPoolsSerializer()
+        serializer = floating_ip_pools.FloatingIPPoolsTemplate()
         text = serializer.serialize(dict(
                 floating_ip_pools=[
                     dict(name='nova'),
                     dict(name='other')
-                ]), 'index')
+                ]))
 
         tree = etree.fromstring(text)
 

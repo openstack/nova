@@ -130,14 +130,6 @@ class KeypairController(object):
         return {'keypairs': rval}
 
 
-class KeypairsSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return KeypairsTemplate()
-
-    def default(self):
-        return KeypairTemplate()
-
-
 class Keypairs(extensions.ExtensionDescriptor):
     """Keypair Support"""
 

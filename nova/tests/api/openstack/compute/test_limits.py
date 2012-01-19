@@ -81,8 +81,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.controller = wsgi.LazySerializationMiddleware(
-            limits.create_resource())
+        self.controller = limits.create_resource()
         self.maxDiff = None
 
     def _get_index_request(self, accept_header="application/json"):

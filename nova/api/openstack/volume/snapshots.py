@@ -57,6 +57,32 @@ def _translate_snapshot_summary_view(context, vol):
     return d
 
 
+def make_snapshot(elem):
+    elem.set('id')
+    elem.set('status')
+    elem.set('size')
+    elem.set('createdAt')
+    elem.set('displayName')
+    elem.set('displayDescription')
+    elem.set('volumeId')
+
+
+class SnapshotTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('snapshot', selector='snapshot')
+        make_snapshot(root)
+        return xmlutil.MasterTemplate(root, 1)
+
+
+class SnapshotsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('snapshots')
+        elem = xmlutil.SubTemplateElement(root, 'snapshot',
+                                          selector='snapshots')
+        make_snapshot(elem)
+        return xmlutil.MasterTemplate(root, 1)
+
+
 class SnapshotsController(object):
     """The Volumes API controller for the OpenStack API."""
 
@@ -64,6 +90,7 @@ class SnapshotsController(object):
         self.volume_api = volume.API()
         super(SnapshotsController, self).__init__()
 
+    @wsgi.serializers(xml=SnapshotTemplate)
     def show(self, req, id):
         """Return data about the given snapshot."""
         context = req.environ['nova.context']
@@ -88,10 +115,12 @@ class SnapshotsController(object):
             return exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
+    @wsgi.serializers(xml=SnapshotsTemplate)
     def index(self, req):
         """Returns a summary list of snapshots."""
         return self._items(req, entity_maker=_translate_snapshot_summary_view)
 
+    @wsgi.serializers(xml=SnapshotsTemplate)
     def detail(self, req):
         """Returns a detailed list of snapshots."""
         return self._items(req, entity_maker=_translate_snapshot_detail_view)
@@ -105,6 +134,7 @@ class SnapshotsController(object):
         res = [entity_maker(context, snapshot) for snapshot in limited_list]
         return {'snapshots': res}
 
+    @wsgi.serializers(xml=SnapshotTemplate)
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']
@@ -135,47 +165,5 @@ class SnapshotsController(object):
         return {'snapshot': retval}
 
 
-def make_snapshot(elem):
-    elem.set('id')
-    elem.set('status')
-    elem.set('size')
-    elem.set('createdAt')
-    elem.set('displayName')
-    elem.set('displayDescription')
-    elem.set('volumeId')
-
-
-class SnapshotTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('snapshot', selector='snapshot')
-        make_snapshot(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class SnapshotsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('snapshots')
-        elem = xmlutil.SubTemplateElement(root, 'snapshot',
-                                          selector='snapshots')
-        make_snapshot(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class SnapshotSerializer(xmlutil.XMLTemplateSerializer):
-    def default(self):
-        return SnapshotTemplate()
-
-    def index(self):
-        return SnapshotsTemplate()
-
-    def detail(self):
-        return SnapshotsTemplate()
-
-
 def create_resource():
-    body_serializers = {
-        'application/xml': SnapshotSerializer(),
-    }
-    serializer = wsgi.ResponseSerializer(body_serializers)
-
-    return wsgi.Resource(SnapshotsController(), serializer=serializer)
+    return wsgi.Resource(SnapshotsController())

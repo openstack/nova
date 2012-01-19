@@ -48,13 +48,11 @@ class ServerDiagnosticsTest(test.TestCase):
         self.compute_api = nova.compute.API()
 
         self.router = compute.APIRouter()
-        ext_middleware = extensions.ExtensionMiddleware(self.router)
-        self.app = wsgi.LazySerializationMiddleware(ext_middleware)
 
     def test_get_diagnostics(self):
         uuid = nova.utils.gen_uuid()
         req = fakes.HTTPRequest.blank('/fake/servers/%s/diagnostics' % uuid)
-        res = req.get_response(self.app)
+        res = req.get_response(self.router)
         output = json.loads(res.body)
         self.assertEqual(output, {'data': 'Some diagnostic info'})
 

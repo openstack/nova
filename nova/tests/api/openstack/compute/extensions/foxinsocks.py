@@ -18,12 +18,46 @@
 import webob.exc
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 
 
 class FoxInSocksController(object):
 
     def index(self, req):
         return "Try to say this Mr. Knox, sir..."
+
+
+class FoxInSocksServerControllerExtension(wsgi.Controller):
+    @wsgi.action('add_tweedle')
+    def _add_tweedle(self, req, id, body):
+
+        return "Tweedle Beetle Added."
+
+    @wsgi.action('delete_tweedle')
+    def _delete_tweedle(self, req, id, body):
+
+        return "Tweedle Beetle Deleted."
+
+    @wsgi.action('fail')
+    def _fail(self, req, id, body):
+
+        raise webob.exc.HTTPBadRequest(explanation='Tweedle fail')
+
+
+class FoxInSocksFlavorGooseControllerExtension(wsgi.Controller):
+    @wsgi.extends
+    def show(self, req, resp_obj, id):
+        #NOTE: This only handles JSON responses.
+        # You can use content type header to test for XML.
+        resp_obj.obj['flavor']['googoose'] = req.GET.get('chewing')
+
+
+class FoxInSocksFlavorBandsControllerExtension(wsgi.Controller):
+    @wsgi.extends
+    def show(self, req, resp_obj, id):
+        #NOTE: This only handles JSON responses.
+        # You can use content type header to test for XML.
+        resp_obj.obj['big_bands'] = 'Pig Bands!'
 
 
 class Foxinsocks(extensions.ExtensionDescriptor):
@@ -44,50 +78,17 @@ class Foxinsocks(extensions.ExtensionDescriptor):
         resources.append(resource)
         return resources
 
-    def get_actions(self):
-        actions = []
-        actions.append(extensions.ActionExtension('servers', 'add_tweedle',
-                                                    self._add_tweedle))
-        actions.append(extensions.ActionExtension('servers', 'delete_tweedle',
-                                                    self._delete_tweedle))
-        actions.append(extensions.ActionExtension('servers', 'fail',
-                                                    self._fail))
-        return actions
+    def get_controller_extensions(self):
+        extension_list = []
 
-    def get_request_extensions(self):
-        request_exts = []
+        extension_set = [
+            (FoxInSocksServerControllerExtension, 'servers'),
+            (FoxInSocksFlavorGooseControllerExtension, 'flavors'),
+            (FoxInSocksFlavorBandsControllerExtension, 'flavors'),
+            ]
+        for klass, collection in extension_set:
+            controller = klass()
+            ext = extensions.ControllerExtension(self, collection, controller)
+            extension_list.append(ext)
 
-        def _goose_handler(req, res, body):
-            #NOTE: This only handles JSON responses.
-            # You can use content type header to test for XML.
-            body['flavor']['googoose'] = req.GET.get('chewing')
-            return res
-
-        req_ext1 = extensions.RequestExtension('GET',
-                                     '/v2/:(project_id)/flavors/:(id)',
-                                     _goose_handler)
-        request_exts.append(req_ext1)
-
-        def _bands_handler(req, res, body):
-            #NOTE: This only handles JSON responses.
-            # You can use content type header to test for XML.
-            body['big_bands'] = 'Pig Bands!'
-            return res
-
-        req_ext2 = extensions.RequestExtension('GET',
-                                     '/v2/:(project_id)/flavors/:(id)',
-                                     _bands_handler)
-        request_exts.append(req_ext2)
-        return request_exts
-
-    def _add_tweedle(self, input_dict, req, id):
-
-        return "Tweedle Beetle Added."
-
-    def _delete_tweedle(self, input_dict, req, id):
-
-        return "Tweedle Beetle Deleted."
-
-    def _fail(self, input_dict, req, id):
-
-        raise webob.exc.HTTPBadRequest(explanation='Tweedle fail')
+        return extension_list
