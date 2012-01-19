@@ -508,54 +508,55 @@ class FloatingIP(object):
         scope = domainref.scope
         if scope == 'private':
             av_zone = domainref.availability_zone
-            this_zone = {'domain': domain,
+            this_domain = {'domain': domain,
                          'scope': scope,
                          'availability_zone': av_zone}
         else:
             project = domainref.project_id
-            this_zone = {'domain': domain,
+            this_domain = {'domain': domain,
                          'scope': scope,
                          'project': project}
-        return this_zone
+        return this_domain
 
     @wrap_check_policy
-    def get_dns_zones(self, context):
-        zones = []
+    def get_dns_domains(self, context):
+        domains = []
 
-        db_zone_list = self.db.dnsdomain_list(context)
-        floating_driver_zone_list = self.floating_dns_manager.get_zones()
-        instance_driver_zone_list = self.instance_dns_manager.get_zones()
+        db_domain_list = self.db.dnsdomain_list(context)
+        floating_driver_domain_list = self.floating_dns_manager.get_domains()
+        instance_driver_domain_list = self.instance_dns_manager.get_domains()
 
-        for db_zone in db_zone_list:
-            if (db_zone in floating_driver_zone_list or
-                db_zone in instance_driver_zone_list):
-                    zone_entry = self._prepare_domain_entry(context, db_zone)
-                    if zone_entry:
-                        zones.append(zone_entry)
+        for db_domain in db_domain_list:
+            if (db_domain in floating_driver_domain_list or
+                db_domain in instance_driver_domain_list):
+                    domain_entry = self._prepare_domain_entry(context,
+                                                              db_domain)
+                    if domain_entry:
+                        domains.append(domain_entry)
             else:
                 LOG.warn(_('Database inconsistency: DNS domain |%s| is '
                          'registered in the Nova db but not visible to '
                          'either the floating or instance DNS driver. It '
-                         'will be ignored.'), db_zone)
+                         'will be ignored.'), db_domain)
 
-        return zones
-
-    @wrap_check_policy
-    def add_dns_entry(self, context, address, dns_name, dns_type, dns_zone):
-        self.floating_dns_manager.create_entry(dns_name, address,
-                                               dns_type, dns_zone)
+        return domains
 
     @wrap_check_policy
-    def modify_dns_entry(self, context, address, dns_name, dns_zone):
-        self.floating_dns_manager.modify_address(dns_name, address,
-                                                 dns_zone)
+    def add_dns_entry(self, context, address, name, dns_type, domain):
+        self.floating_dns_manager.create_entry(name, address,
+                                               dns_type, domain)
 
     @wrap_check_policy
-    def delete_dns_entry(self, context, dns_name, dns_zone):
-        self.floating_dns_manager.delete_entry(dns_name, dns_zone)
+    def modify_dns_entry(self, context, address, name, domain):
+        self.floating_dns_manager.modify_address(name, address,
+                                                 domain)
+
+    @wrap_check_policy
+    def delete_dns_entry(self, context, name, domain):
+        self.floating_dns_manager.delete_entry(name, domain)
 
     def _delete_all_entries_for_ip(self, context, address):
-        domain_list = self.get_dns_zones(context)
+        domain_list = self.get_dns_domains(context)
         for domain in domain_list:
             names = self.get_dns_entries_by_address(context,
                                                     address,
@@ -564,42 +565,42 @@ class FloatingIP(object):
                 self.delete_dns_entry(context, name, domain['domain'])
 
     @wrap_check_policy
-    def get_dns_entries_by_address(self, context, address, dns_zone):
+    def get_dns_entries_by_address(self, context, address, domain):
         return self.floating_dns_manager.get_entries_by_address(address,
-                                                                dns_zone)
+                                                                domain)
 
     @wrap_check_policy
-    def get_dns_entries_by_name(self, context, name, dns_zone):
+    def get_dns_entries_by_name(self, context, name, domain):
         return self.floating_dns_manager.get_entries_by_name(name,
-                                                             dns_zone)
+                                                             domain)
 
     @wrap_check_policy
-    def create_private_dns_domain(self, context, fqdomain, zone):
-        self.db.dnsdomain_register_for_zone(context, fqdomain, zone)
+    def create_private_dns_domain(self, context, domain, av_zone):
+        self.db.dnsdomain_register_for_zone(context, domain, av_zone)
         try:
-            self.instance_dns_manager.create_domain(fqdomain)
+            self.instance_dns_manager.create_domain(domain)
         except exception.FloatingIpDNSExists:
             LOG.warn(_('Domain |%(domain)s| already exists, '
-                       'changing zone to |%(zone)s|.'),
-                     {'domain': fqdomain, 'zone': zone})
+                       'changing zone to |%(av_zone)s|.'),
+                     {'domain': domain, 'av_zone': av_zone})
 
     @wrap_check_policy
-    def create_public_dns_domain(self, context, fqdomain, project):
-        self.db.dnsdomain_register_for_project(context, fqdomain, project)
+    def create_public_dns_domain(self, context, domain, project):
+        self.db.dnsdomain_register_for_project(context, domain, project)
         try:
-            self.floating_dns_manager.create_domain(fqdomain)
+            self.floating_dns_manager.create_domain(domain)
         except exception.FloatingIpDNSExists:
             LOG.warn(_('Domain |%(domain)s| already exists, '
                        'changing project to |%(project)s|.'),
-                     {'domain': fqdomain, 'project': project})
+                     {'domain': domain, 'project': project})
 
     @wrap_check_policy
-    def delete_dns_domain(self, context, fqdomain):
-        self.db.dnsdomain_unregister(context, fqdomain)
-        self.floating_dns_manager.delete_domain(fqdomain)
+    def delete_dns_domain(self, context, domain):
+        self.db.dnsdomain_unregister(context, domain)
+        self.floating_dns_manager.delete_domain(domain)
 
-    def _get_project_for_domain(self, context, fqdomain):
-        return self.db.dnsdomain_project(context, fqdomain)
+    def _get_project_for_domain(self, context, domain):
+        return self.db.dnsdomain_project(context, domain)
 
 
 class NetworkManager(manager.SchedulerDependentManager):
@@ -629,7 +630,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.driver = utils.import_object(network_driver)
         temp = utils.import_object(FLAGS.instance_dns_manager)
         self.instance_dns_manager = temp
-        self.instance_dns_domain = FLAGS.instance_dns_zone
+        self.instance_dns_domain = FLAGS.instance_dns_domain
         temp = utils.import_object(FLAGS.floating_ip_dns_manager)
         self.floating_dns_manager = temp
         self.network_api = network_api.API()

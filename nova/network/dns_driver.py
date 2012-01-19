@@ -19,22 +19,22 @@ class DNSDriver(object):
     def __init__(self):
         pass
 
-    def get_zones(self):
+    def get_domains(self):
         return []
 
-    def create_entry(self, _name, _address, _type, _dnszone):
+    def create_entry(self, _name, _address, _type, _domain):
         pass
 
-    def delete_entry(self, _name, _dnszone=""):
+    def delete_entry(self, _name, _domain):
         pass
 
-    def modify_address(self, _name, _address, _dnszone):
+    def modify_address(self, _name, _address, _domain):
         pass
 
-    def get_entries_by_address(self, _address, _dnszone=""):
+    def get_entries_by_address(self, _address, _domain=""):
         return []
 
-    def get_entries_by_name(self, _name, _dnszone=""):
+    def get_entries_by_name(self, _name, _domain=""):
         return []
 
     def create_domain(self, _fqdomain):

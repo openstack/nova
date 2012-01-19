@@ -117,7 +117,7 @@
     "network:add_network_to_project": [],
     "network:get_instance_nw_info": [],
 
-    "network:get_dns_zones": [],
+    "network:get_dns_domains": [],
     "network:add_dns_entry": [],
     "network:modify_dns_entry": [],
     "network:delete_dns_entry": [],

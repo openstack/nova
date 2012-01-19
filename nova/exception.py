@@ -557,7 +557,7 @@ class FloatingIpNotFound(NotFound):
 
 
 class FloatingIpDNSExists(Invalid):
-    message = _("The DNS entry %(name)s already exists in zone %(zone)s.")
+    message = _("The DNS entry %(name)s already exists in domain %(domain)s.")
 
 
 class FloatingIpNotFoundForAddress(FloatingIpNotFound):

@@ -230,71 +230,71 @@ class API(base.Base):
                         {'method': 'get_instance_uuids_by_ip_filter',
                          'args': args})
 
-    def get_dns_zones(self, context):
-        """Returns a list of available dns zones.
+    def get_dns_domains(self, context):
+        """Returns a list of available dns domains.
         These can be used to create DNS entries for floating ips.
         """
         return rpc.call(context,
                         FLAGS.network_topic,
-                        {'method': 'get_dns_zones'})
+                        {'method': 'get_dns_domains'})
 
-    def add_dns_entry(self, context, address, name, dns_type, zone):
+    def add_dns_entry(self, context, address, name, dns_type, domain):
         """Create specified DNS entry for address"""
         args = {'address': address,
-                'dns_name': name,
+                'name': name,
                 'dns_type': dns_type,
-                'dns_zone': zone}
+                'domain': domain}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'add_dns_entry',
                          'args': args})
 
-    def modify_dns_entry(self, context, name, address, dns_zone):
+    def modify_dns_entry(self, context, name, address, domain):
         """Create specified DNS entry for address"""
         args = {'address': address,
-                'dns_name': name,
-                'dns_zone': dns_zone}
+                'name': name,
+                'domain': domain}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'modify_dns_entry',
                          'args': args})
 
-    def delete_dns_entry(self, context, name, zone):
+    def delete_dns_entry(self, context, name, domain):
         """Delete the specified dns entry."""
-        args = {'dns_name': name, 'dns_zone': zone}
+        args = {'name': name, 'domain': domain}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'delete_dns_entry',
                          'args': args})
 
-    def delete_dns_domain(self, context, fqdomain):
+    def delete_dns_domain(self, context, domain):
         """Delete the specified dns domain."""
-        args = {'fqdomain': fqdomain}
+        args = {'domain': domain}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'delete_dns_domain',
                          'args': args})
 
-    def get_dns_entries_by_address(self, context, address, zone):
-        """Get entries for address and zone"""
-        args = {'address': address, 'dns_zone': zone}
+    def get_dns_entries_by_address(self, context, address, domain):
+        """Get entries for address and domain"""
+        args = {'address': address, 'domain': domain}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_dns_entries_by_address',
                          'args': args})
 
-    def get_dns_entries_by_name(self, context, name, zone):
-        """Get entries for name and zone"""
-        args = {'name': name, 'dns_zone': zone}
+    def get_dns_entries_by_name(self, context, name, domain):
+        """Get entries for name and domain"""
+        args = {'name': name, 'domain': domain}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_dns_entries_by_name',
                          'args': args})
 
-    def create_private_dns_domain(self, context, fqdomain, availability_zone):
+    def create_private_dns_domain(self, context, domain, availability_zone):
         """Create a private DNS domain with nova availability zone."""
-        args = {'fqdomain': fqdomain, 'zone': availability_zone}
+        args = {'domain': domain, 'av_zone': availability_zone}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'create_private_dns_domain',
                          'args': args})
 
-    def create_public_dns_domain(self, context, fqdomain, project=None):
+    def create_public_dns_domain(self, context, domain, project=None):
         """Create a private DNS domain with optional nova project."""
-        args = {'fqdomain': fqdomain, 'project': project}
+        args = {'domain': domain, 'project': project}
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'create_public_dns_domain',
                          'args': args})
