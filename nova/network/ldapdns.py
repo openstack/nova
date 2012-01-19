@@ -93,6 +93,17 @@ class DNSEntry(object):
                      (domain, entry))
         return entry[0]
 
+    @classmethod
+    def _get_all_domains(cls, lobj):
+        entries = lobj.search_s(flags.FLAGS.ldap_dns_base_dn,
+                                ldap.SCOPE_SUBTREE, "(sOARecord=*)")
+        domains = []
+        for entry in entries:
+            domain = entry[1].get('associatedDomain')
+            if domain:
+                domains.append(domain[0])
+        return domains
+
     def _set_tuple(self, tuple):
         self.ldap_tuple = tuple
 
@@ -291,7 +302,7 @@ class LdapDNS(object):
                                 flags.FLAGS.ldap_dns_password)
 
     def get_domains(self):
-        return flags.FLAGS.floating_ip_dns_domains
+        return DomainEntry._get_all_domains(self.lobj)
 
     def create_entry(self, name, address, type, domain):
         if type.lower() != 'a':
