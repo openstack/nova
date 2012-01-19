@@ -124,7 +124,7 @@ class MiniDNS(object):
         outfile.close()
         shutil.move(outfile.name, self.filename)
 
-    def get_entries_by_address(self, address, domain=""):
+    def get_entries_by_address(self, address, domain):
         entries = []
         infile = open(self.filename, 'r')
         for line in infile:
@@ -136,7 +136,7 @@ class MiniDNS(object):
         infile.close()
         return entries
 
-    def get_entries_by_name(self, name, domain=""):
+    def get_entries_by_name(self, name, domain):
         entries = []
         infile = open(self.filename, 'r')
         for line in infile:
