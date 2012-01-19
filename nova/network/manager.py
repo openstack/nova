@@ -903,6 +903,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                 network,
                                                 network['host'])
             info = {
+                'net_uuid': network['uuid'],
                 'label': network['label'],
                 'gateway': network['gateway'],
                 'dhcp_server': dhcp_server,
