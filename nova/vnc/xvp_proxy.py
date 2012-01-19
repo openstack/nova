@@ -18,8 +18,6 @@
 
 """Eventlet WSGI Services to proxy VNC for XCP protocol."""
 
-import base64
-import os
 import socket
 import webob
 
@@ -103,7 +101,7 @@ class XCPVNCProxy(object):
         sockets['client'] = client
         sockets['server'] = server
 
-    def proxy_connection(self, req, connect_info):
+    def proxy_connection(self, req, connect_info, start_response):
         """Spawn bi-directional vnc proxy."""
         sockets = {}
         t0 = eventlet.spawn(self.handshake, req, connect_info, sockets)
@@ -149,7 +147,7 @@ class XCPVNCProxy(object):
                                [('content-type', 'text/html')])
                 return "Not Authorized"
 
-            self.proxy_connection(req, connect_info)
+            return self.proxy_connection(req, connect_info, start_response)
         except Exception as e:
             LOG.audit(_("Unexpected error: %s"), e)
 
