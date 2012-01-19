@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from datetime import datetime
+import datetime
 
 from lxml import etree
 
@@ -117,7 +117,7 @@ class AtomSerializer(wsgi.XMLDictSerializer):
     def _get_most_recent_update(self, versions):
         recent = None
         for version in versions:
-            updated = datetime.strptime(version['updated'],
+            updated = datetime.datetime.strptime(version['updated'],
                                         '%Y-%m-%dT%H:%M:%SZ')
             if not recent:
                 recent = updated

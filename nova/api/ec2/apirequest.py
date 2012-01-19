@@ -24,7 +24,7 @@ import datetime
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
 
-from nova.api.ec2.admin import AdminController
+from nova.api.ec2 import admin
 from nova.api.ec2 import ec2utils
 from nova import exception
 from nova import flags
@@ -59,8 +59,8 @@ class APIRequest(object):
         try:
             # Raise NotImplemented exception for Admin specific request if
             # admin flag is set to false in nova.conf
-            if (isinstance(self.controller, AdminController) and
-                          (not FLAGS.allow_ec2_admin_api)):
+            if (isinstance(self.controller, admin.AdminController)
+                          and (not FLAGS.allow_ec2_admin_api)):
                 ## Raise InvalidRequest exception for EC2 Admin interface ##
                 LOG.exception("Unsupported API request")
                 raise exception.InvalidRequest()
