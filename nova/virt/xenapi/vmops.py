@@ -232,7 +232,7 @@ class VMOps(object):
 
         except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
             LOG.exception(_("instance %s: Failed to spawn"),
-                          instance.id, exc_info=sys.exc_info())
+                          instance.uuid, exc_info=sys.exc_info())
             LOG.debug(_('Instance %s failed to spawn - performing clean-up'),
                       instance.id)
             self._handle_spawn_error(vdis, spawn_error)
