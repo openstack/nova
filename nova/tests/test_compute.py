@@ -520,6 +520,22 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
+    def test_set_admin_password_bad_state(self):
+        """Test setting password while instance is rebuilding."""
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['uuid'])
+        db.instance_update(self.context, instance['uuid'], {
+            "power_state": power_state.NOSTATE,
+        })
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+
+        self.assertEqual(instance['power_state'], power_state.NOSTATE)
+        self.assertRaises(exception.Error,
+                          self.compute.set_admin_password,
+                          self.context,
+                          instance['uuid'])
+        self.compute.terminate_instance(self.context, instance['uuid'])
+
     def test_set_admin_password_driver_error(self):
         """Ensure error is raised admin password set"""
 
