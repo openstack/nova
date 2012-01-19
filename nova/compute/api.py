@@ -839,9 +839,9 @@ class API(base.Base):
     # allowed but the EC2 API appears to allow from RESCUED and STOPPED
     # too
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.BUILDING,
                                     vm_states.ERROR, vm_states.RESCUED,
-                                    vm_states.STOPPED])
+                                    vm_states.SHUTOFF, vm_states.STOPPED])
     @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance):
         """Terminate an instance."""
