@@ -49,16 +49,14 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 gettext.install('nova', unicode=1)
-
-
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+import nova.compute.utils
 
-from nova.compute.utils import notify_usage_exists
 
 FLAGS = flags.FLAGS
 
@@ -74,4 +72,4 @@ if __name__ == '__main__':
                                                         end)
     print "%s instances" % len(instances)
     for instance_ref in instances:
-        notify_usage_exists(instance_ref)
+        nova.compute.utils.notify_usage_exists(instance_ref)
