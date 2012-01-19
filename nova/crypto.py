@@ -69,11 +69,6 @@ flags.DEFINE_string('project_cert_subject',
                     'OU=NovaDev/CN=project-ca-%s-%s',
                     _('Subject for certificate for projects, '
                     '%s for project, timestamp'))
-flags.DEFINE_string('vpn_cert_subject',
-                    '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
-                    'OU=NovaDev/CN=project-vpn-%s-%s',
-                    _('Subject for certificate for vpns, '
-                    '%s for project, timestamp'))
 
 
 def ca_folder(project_id=None):
@@ -90,18 +85,11 @@ def key_path(project_id=None):
     return os.path.join(ca_folder(project_id), FLAGS.key_file)
 
 
-def fetch_ca(project_id=None, chain=True):
+def fetch_ca(project_id=None):
     if not FLAGS.use_project_ca:
         project_id = None
-    buffer = ''
-    if project_id:
-        with open(ca_path(project_id), 'r') as cafile:
-            buffer += cafile.read()
-        if not chain:
-            return buffer
-    with open(ca_path(None), 'r') as cafile:
-        buffer += cafile.read()
-    return buffer
+    with open(ca_path(project_id), 'r') as cafile:
+        return cafile.read()
 
 
 def _generate_fingerprint(public_key_file):
@@ -201,11 +189,6 @@ def _project_cert_subject(project_id):
     return FLAGS.project_cert_subject % (project_id, utils.isotime())
 
 
-def _vpn_cert_subject(project_id):
-    """Helper to generate user cert subject."""
-    return FLAGS.vpn_cert_subject % (project_id, utils.isotime())
-
-
 def _user_cert_subject(user_id, project_id):
     """Helper to generate user cert subject."""
     return FLAGS.user_cert_subject % (project_id, user_id, utils.isotime())
@@ -246,26 +229,21 @@ def _ensure_project_folder(project_id):
 
 def generate_vpn_files(project_id):
     project_folder = ca_folder(project_id)
-    csr_fn = os.path.join(project_folder, 'server.csr')
+    key_fn = os.path.join(project_folder, 'server.key')
     crt_fn = os.path.join(project_folder, 'server.crt')
 
-    genvpn_sh_path = os.path.join(os.path.dirname(__file__),
-                                  'CA',
-                                  'genvpn.sh')
     if os.path.exists(crt_fn):
         return
-    _ensure_project_folder(project_id)
-    start = os.getcwd()
-    os.chdir(ca_folder())
-    # TODO(vish): the shell scripts could all be done in python
-    utils.execute('sh', genvpn_sh_path,
-                  project_id, _vpn_cert_subject(project_id))
-    with open(csr_fn, 'r') as csrfile:
-        csr_text = csrfile.read()
-    (serial, signed_csr) = sign_csr(csr_text, project_id)
+    # NOTE(vish): The 2048 is to maintain compatibility with the old script.
+    #             We are using "project-vpn" as the user_id for the cert
+    #             even though that user may not really exist. Ultimately
+    #             this will be changed to be launched by a real user.  At
+    #             that point we will can delete this helper method.
+    key, csr = generate_x509_cert('project-vpn', project_id, 2048)
+    with open(key_fn, 'f') as keyfile:
+        keyfile.write(key)
     with open(crt_fn, 'w') as crtfile:
-        crtfile.write(signed_csr)
-    os.chdir(start)
+        crtfile.write(csr)
 
 
 def sign_csr(csr_text, project_id=None):
