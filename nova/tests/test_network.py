@@ -1502,12 +1502,10 @@ class LdapDNSTestCase(test.TestCase):
         self.driver.delete_domain(domain2)
 
     def test_ldap_dns_domains(self):
-        flags.FLAGS.floating_ip_dns_domains = [domain1, domain2]
-
         domains = self.driver.get_domains()
         self.assertEqual(len(domains), 2)
-        self.assertEqual(domains[0], domain1)
-        self.assertEqual(domains[1], domain2)
+        self.assertIn(domain1, domains)
+        self.assertIn(domain2, domains)
 
     def test_ldap_dns_create_conflict(self):
         address1 = "10.10.10.11"

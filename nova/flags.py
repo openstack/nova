@@ -375,9 +375,6 @@ DEFINE_string('instance_dns_domain', '',
 DEFINE_string('floating_ip_dns_manager',
               'nova.network.dns_driver.DNSDriver',
               'DNS Manager for floating IPs')
-DEFINE_multistring('floating_ip_dns_zones', '',
-                   'DNS zones for floating IPs.'
-                   'e.g. "example.org"')
 DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
               'Manager for network')
 DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
