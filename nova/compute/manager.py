@@ -1985,7 +1985,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         block_device_info = \
             self._get_instance_volume_block_device_info(context, instance_id)
         self.driver.destroy(instance_ref, network_info,
-                            block_device_info, True)
+                            block_device_info)
 
     @manager.periodic_task
     def _poll_rebooting_instances(self, context):
