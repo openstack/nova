@@ -255,15 +255,11 @@ class _AuthManagerBaseTestCase(test.TestCase):
             _key, cert_str = crypto.generate_x509_cert(user.id, project.id)
             LOG.debug(cert_str)
 
-            full_chain = crypto.fetch_ca(project_id=project.id, chain=True)
-            int_cert = crypto.fetch_ca(project_id=project.id, chain=False)
+            int_cert = crypto.fetch_ca(project_id=project.id)
             cloud_cert = crypto.fetch_ca()
-            LOG.debug("CA chain:\n\n =====\n%s\n\n=====", full_chain)
             signed_cert = X509.load_cert_string(cert_str)
-            chain_cert = X509.load_cert_string(full_chain)
             int_cert = X509.load_cert_string(int_cert)
             cloud_cert = X509.load_cert_string(cloud_cert)
-            self.assertTrue(signed_cert.verify(chain_cert.get_pubkey()))
             self.assertTrue(signed_cert.verify(int_cert.get_pubkey()))
 
             if not FLAGS.use_project_ca:
