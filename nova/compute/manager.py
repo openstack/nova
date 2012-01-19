@@ -913,7 +913,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             if instance_state != expected_state:
                 self._instance_update(context, instance_id, task_state=None)
-                raise exception.Error(_('Instance is not running'))
+                raise exception.Error(_('Failed to set admin password. '
+                                      'Instance %s is not running'),
+                                      instance_ref["uuid"])
             else:
                 try:
                     self.driver.set_admin_password(instance_ref, new_pass)
