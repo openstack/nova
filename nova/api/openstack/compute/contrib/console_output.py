@@ -26,6 +26,7 @@ from nova.api.openstack import wsgi
 
 
 LOG = logging.getLogger('nova.api.openstack.compute.contrib.console_output')
+authorize = extensions.extension_authorizer('compute', 'console_output')
 
 
 class ConsoleOutputController(wsgi.Controller):
@@ -37,6 +38,7 @@ class ConsoleOutputController(wsgi.Controller):
     def get_console_output(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             instance = self.compute_api.routing_get(context, id)
@@ -54,8 +56,6 @@ class ConsoleOutputController(wsgi.Controller):
                                                          length)
         except exception.ApiError, e:
             raise webob.exc.HTTPBadRequest(explanation=e.message)
-        except exception.NotAuthorized, e:
-            raise webob.exc.HTTPUnauthorized()
 
         return {'output': output}
 

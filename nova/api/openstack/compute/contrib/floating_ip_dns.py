@@ -27,6 +27,7 @@ from nova import network
 
 
 LOG = logging.getLogger('nova.api.openstack.compute.contrib.floating_ip_dns')
+authorize = extensions.extension_authorizer('compute', 'floating_ip_dns')
 
 
 def make_dns_entry(elem):
@@ -138,6 +139,7 @@ class FloatingIPDNSDomainController(object):
     def index(self, req):
         """Return a list of available DNS domains."""
         context = req.environ['nova.context']
+        authorize(context)
         domains = self.network_api.get_dns_domains(context)
         domainlist = [_create_domain_entry(domain['domain'],
                                          domain.get('scope'),
@@ -151,6 +153,7 @@ class FloatingIPDNSDomainController(object):
     def update(self, req, id, body):
         """Add or modify domain entry"""
         context = req.environ['nova.context']
+        authorize(context)
         fqdomain = _unquote_domain(id)
         try:
             entry = body['domain_entry']
@@ -185,6 +188,7 @@ class FloatingIPDNSDomainController(object):
     def delete(self, req, id):
         """Delete the domain identified by id. """
         context = req.environ['nova.context']
+        authorize(context)
         params = req.str_GET
         domain = _unquote_domain(id)
 
@@ -210,6 +214,7 @@ class FloatingIPDNSEntryController(object):
     def show(self, req, domain_id, id):
         """Return the DNS entry that corresponds to domain_id and id."""
         context = req.environ['nova.context']
+        authorize(context)
         domain = _unquote_domain(domain_id)
         name = id
 
@@ -222,6 +227,7 @@ class FloatingIPDNSEntryController(object):
     def index(self, req, domain_id):
         """Return a list of dns entries for the specified domain and ip."""
         context = req.environ['nova.context']
+        authorize(context)
         params = req.GET
         floating_ip = params.get('ip')
         domain = _unquote_domain(domain_id)
@@ -241,6 +247,7 @@ class FloatingIPDNSEntryController(object):
     def update(self, req, domain_id, id, body):
         """Add or modify dns entry"""
         context = req.environ['nova.context']
+        authorize(context)
         domain = _unquote_domain(domain_id)
         name = id
         try:
@@ -268,6 +275,7 @@ class FloatingIPDNSEntryController(object):
     def delete(self, req, domain_id, id):
         """Delete the entry identified by req and id. """
         context = req.environ['nova.context']
+        authorize(context)
         domain = _unquote_domain(domain_id)
         name = id
 

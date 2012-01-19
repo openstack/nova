@@ -79,7 +79,6 @@ class AdminActionsTest(test.TestCase):
         super(AdminActionsTest, self).setUp()
         self.stubs.Set(compute.API, 'get', fake_compute_api_get)
         self.UUID = utils.gen_uuid()
-        self.flags(allow_admin_api=True)
         for _method in self._methods:
             self.stubs.Set(compute.API, _method, fake_compute_api)
 
@@ -122,8 +121,9 @@ class CreateBackupTests(test.TestCase):
         self.stubs.Set(compute.API, 'get', fake_compute_api_get)
         self.backup_stubs = fakes.stub_out_compute_api_backup(self.stubs)
 
-        self.flags(allow_admin_api=True)
-        self.app = compute_api.APIRouter()
+        router = compute_api.APIRouter()
+        ext_middleware = extensions.ExtensionMiddleware(router)
+        self.app = wsgi.LazySerializationMiddleware(ext_middleware)
 
         self.uuid = utils.gen_uuid()
 

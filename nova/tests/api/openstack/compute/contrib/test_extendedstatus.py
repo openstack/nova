@@ -41,7 +41,6 @@ class ExtendedStatusTest(test.TestCase):
         self.uuid = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
         self.url = '/v2/fake/servers/%s' % self.uuid
         fakes.stub_out_nw_api(self.stubs)
-        self.flags(allow_admin_api=True)
         self.stubs.Set(compute.api.API, 'routing_get', fake_compute_get)
 
     def _make_request(self):

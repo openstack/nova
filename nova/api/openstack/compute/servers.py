@@ -1170,7 +1170,7 @@ def create_resource():
 
 def remove_invalid_options(context, search_options, allowed_search_options):
     """Remove search options that are not valid for non-admin API/context"""
-    if FLAGS.allow_admin_api and context.is_admin:
+    if context.is_admin:
         # Allow all options
         return
     # Otherwise, strip out all unknown options

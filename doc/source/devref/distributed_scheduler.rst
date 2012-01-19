@@ -164,14 +164,12 @@ All this Zone and Distributed Scheduler stuff can seem a little daunting to conf
 
 ::
 
-  --allow_admin_api=true
   --enable_zone_routing=true
   --zone_name=zone1
   --build_plan_encryption_key=c286696d887c9aa0611bbb3e2025a45b
   --scheduler_driver=nova.scheduler.base_scheduler.BaseScheduler
   --default_host_filter=nova.scheduler.filters.AllHostsFilter
 
-`--allow_admin_api` must be set for OS API to enable the new `/zones/*` commands.
 `--enable_zone_routing` must be set for OS API commands such as `create()`, `pause()` and `delete()` to get routed from Zone to Zone when looking for instances. 
 `--zone_name` is only required in child Zones. The default Zone name is `nova`, but you may want to name your child Zones something useful. Duplicate Zone names are not an issue.
 `build_plan_encryption_key` is the SHA-256 key for encrypting/decrypting the Host information when it leaves a Zone. Be sure to change this key for each Zone you create. Do not duplicate keys.

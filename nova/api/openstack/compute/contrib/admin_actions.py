@@ -30,6 +30,7 @@ from nova.scheduler import api as scheduler_api
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.admin_actions")
+authorize = extensions.extension_authorizer('compute', 'admin_actions')
 
 
 class AdminActionsController(wsgi.Controller):
@@ -45,6 +46,7 @@ class AdminActionsController(wsgi.Controller):
     def _pause(self, req, id, body):
         """Permit Admins to pause the server"""
         ctxt = req.environ['nova.context']
+        authorize(ctxt)
         try:
             server = self.compute_api.get(ctxt, id)
             self.compute_api.pause(ctxt, server)
@@ -63,6 +65,7 @@ class AdminActionsController(wsgi.Controller):
     def _unpause(self, req, id, body):
         """Permit Admins to unpause the server"""
         ctxt = req.environ['nova.context']
+        authorize(ctxt)
         try:
             server = self.compute_api.get(ctxt, id)
             self.compute_api.unpause(ctxt, server)
@@ -81,6 +84,7 @@ class AdminActionsController(wsgi.Controller):
     def _suspend(self, req, id, body):
         """Permit admins to suspend the server"""
         context = req.environ['nova.context']
+        authorize(context)
         try:
             server = self.compute_api.get(context, id)
             self.compute_api.suspend(context, server)
@@ -99,6 +103,7 @@ class AdminActionsController(wsgi.Controller):
     def _resume(self, req, id, body):
         """Permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
+        authorize(context)
         try:
             server = self.compute_api.get(context, id)
             self.compute_api.resume(context, server)
@@ -117,6 +122,7 @@ class AdminActionsController(wsgi.Controller):
     def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host"""
         context = req.environ['nova.context']
+        authorize(context)
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.resize(req.environ['nova.context'], instance)
@@ -134,6 +140,7 @@ class AdminActionsController(wsgi.Controller):
     def _reset_network(self, req, id, body):
         """Permit admins to reset networking on an server"""
         context = req.environ['nova.context']
+        authorize(context)
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.reset_network(context, instance)
@@ -149,6 +156,7 @@ class AdminActionsController(wsgi.Controller):
     def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server"""
         context = req.environ['nova.context']
+        authorize(context)
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.inject_network_info(context, instance)
@@ -166,6 +174,7 @@ class AdminActionsController(wsgi.Controller):
     def _lock(self, req, id, body):
         """Permit admins to lock a server"""
         context = req.environ['nova.context']
+        authorize(context)
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.lock(context, instance)
@@ -183,6 +192,7 @@ class AdminActionsController(wsgi.Controller):
     def _unlock(self, req, id, body):
         """Permit admins to lock a server"""
         context = req.environ['nova.context']
+        authorize(context)
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.unlock(context, instance)
@@ -207,6 +217,7 @@ class AdminActionsController(wsgi.Controller):
 
         """
         context = req.environ["nova.context"]
+        authorize(context)
 
         try:
             entity = body["createBackup"]
@@ -273,7 +284,6 @@ class Admin_actions(extensions.ExtensionDescriptor):
     alias = "os-admin-actions"
     namespace = "http://docs.openstack.org/compute/ext/admin-actions/api/v1.1"
     updated = "2011-09-20T00:00:00+00:00"
-    admin_only = True
 
     def get_controller_extensions(self):
         controller = AdminActionsController()

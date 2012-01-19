@@ -36,9 +36,11 @@ from nova import log as logging
 from nova import vsa
 from nova import volume
 
-FLAGS = flags.FLAGS
 
+FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.vsa")
+authorize = extensions.extension_authorizer('compute',
+        'virtual_storage_arrays')
 
 
 def _vsa_view(context, vsa, details=False, instances=None):
@@ -124,6 +126,7 @@ class VsaController(object):
     def _items(self, req, details):
         """Return summary or detailed list of VSAs."""
         context = req.environ['nova.context']
+        authorize(context)
         vsas = self.vsa_api.get_all(context)
         limited_list = common.limited(vsas, req)
 
@@ -147,6 +150,7 @@ class VsaController(object):
     def show(self, req, id):
         """Return data about the given VSA."""
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             vsa = self.vsa_api.get(context, vsa_id=id)
@@ -160,6 +164,7 @@ class VsaController(object):
     def create(self, req, body):
         """Create a new VSA."""
         context = req.environ['nova.context']
+        authorize(context)
 
         if not body or 'vsa' not in body:
             LOG.debug(_("No body provided"), context=context)
@@ -193,6 +198,7 @@ class VsaController(object):
     def delete(self, req, id):
         """Delete a VSA."""
         context = req.environ['nova.context']
+        authorize(context)
 
         LOG.audit(_("Delete VSA with id: %s"), id, context=context)
 
@@ -206,6 +212,7 @@ class VsaController(object):
         auto or manually associate an IP to VSA
         """
         context = req.environ['nova.context']
+        authorize(context)
 
         if body is None:
             ip = 'auto'
@@ -234,6 +241,7 @@ class VsaController(object):
         auto or manually associate an IP to VSA
         """
         context = req.environ['nova.context']
+        authorize(context)
 
         if body is None:
             ip = 'auto'
@@ -293,6 +301,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
     def _items(self, req, vsa_id, details):
         """Return summary or detailed list of volumes for particular VSA."""
         context = req.environ['nova.context']
+        authorize(context)
 
         vols = self.volume_api.get_all(context,
                 search_opts={'metadata': {self.direction: str(vsa_id)}})
@@ -317,6 +326,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
         """Create a new volume from VSA."""
         LOG.audit(_("Create. vsa_id=%(vsa_id)s, body=%(body)s"), locals())
         context = req.environ['nova.context']
+        authorize(context)
 
         if not body:
             raise exc.HTTPUnprocessableEntity()
@@ -345,6 +355,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
     def update(self, req, vsa_id, id, body):
         """Update a volume."""
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             self._check_volume_ownership(context, vsa_id, id)
@@ -380,6 +391,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
     def delete(self, req, vsa_id, id):
         """Delete a volume."""
         context = req.environ['nova.context']
+        authorize(context)
 
         LOG.audit(_("Delete. vsa_id=%(vsa_id)s, id=%(id)s"), locals())
 
@@ -395,6 +407,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
     def show(self, req, vsa_id, id):
         """Return data about the given volume."""
         context = req.environ['nova.context']
+        authorize(context)
 
         LOG.audit(_("Show. vsa_id=%(vsa_id)s, id=%(id)s"), locals())
 

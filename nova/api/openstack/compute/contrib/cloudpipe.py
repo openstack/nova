@@ -32,6 +32,7 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.cloudpipe")
+authorize = extensions.extension_authorizer('compute', 'cloudpipe')
 
 
 class CloudpipeTemplate(xmlutil.TemplateBuilder):
@@ -120,6 +121,7 @@ class CloudpipeController(object):
         """
 
         ctxt = req.environ['nova.context']
+        authorize(ctxt)
         params = body.get('cloudpipe', {})
         project_id = params.get('project_id', ctxt.project_id)
         instance = self._get_cloudpipe_for_project(ctxt, project_id)
@@ -137,8 +139,9 @@ class CloudpipeController(object):
 
     @wsgi.serializers(xml=CloudpipesTemplate)
     def index(self, req):
-        """Show admins the list of running cloudpipe instances."""
+        """List running cloudpipe instances."""
         context = req.environ['nova.context']
+        authorize(context)
         vpns = []
         # TODO(todd): could use compute_api.get_all with admin context?
         for project in self.auth_manager.get_projects():
@@ -162,7 +165,6 @@ class Cloudpipe(extensions.ExtensionDescriptor):
     alias = "os-cloudpipe"
     namespace = "http://docs.openstack.org/compute/ext/cloudpipe/api/v1.1"
     updated = "2011-12-16T00:00:00+00:00"
-    admin_only = True
 
     def get_resources(self):
         resources = []

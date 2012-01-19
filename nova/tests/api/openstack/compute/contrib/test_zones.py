@@ -95,7 +95,6 @@ def zone_select(context, specs):
 class ZonesTest(test.TestCase):
     def setUp(self):
         super(ZonesTest, self).setUp()
-        self.flags(verbose=True, allow_admin_api=True)
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
 

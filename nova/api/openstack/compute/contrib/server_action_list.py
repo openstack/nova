@@ -23,6 +23,7 @@ from nova import exception
 
 
 sa_nsmap = {None: wsgi.XMLNS_V11}
+authorize = extensions.extension_authorizer('compute', 'server_action_list')
 
 
 class ServerActionsTemplate(xmlutil.TemplateBuilder):
@@ -39,6 +40,7 @@ class ServerActionListController(object):
     @wsgi.serializers(xml=ServerActionsTemplate)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
+        authorize(context)
         compute_api = compute.API()
 
         try:
@@ -66,7 +68,6 @@ class Server_action_list(extensions.ExtensionDescriptor):
     namespace = "http://docs.openstack.org/compute/ext/" \
                 "server-actions-list/api/v1.1"
     updated = "2011-12-21T00:00:00+00:00"
-    admin_only = True
 
     def get_resources(self):
         parent_def = {'member_name': 'server', 'collection_name': 'servers'}

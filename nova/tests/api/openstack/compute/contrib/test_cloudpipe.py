@@ -107,7 +107,6 @@ class CloudpipeTest(test.TestCase):
 
     def setUp(self):
         super(CloudpipeTest, self).setUp()
-        self.flags(allow_admin_api=True)
         self.app = fakes.wsgi_app()
         inner_app = compute.APIRouter()
         self.context = context.RequestContext('fake', 'fake', is_admin=True)

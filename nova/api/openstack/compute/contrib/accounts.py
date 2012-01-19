@@ -26,6 +26,7 @@ from nova import log as logging
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.api.openstack.compute.contrib.accounts')
+authorize = extensions.extension_authorizer('compute', 'accounts')
 
 
 class AccountTemplate(xmlutil.TemplateBuilder):
@@ -51,23 +52,18 @@ class Controller(object):
     def __init__(self):
         self.manager = manager.AuthManager()
 
-    def _check_admin(self, context):
-        """We cannot depend on the db layer to check for admin access
-           for the auth manager, so we do it here"""
-        if not context.is_admin:
-            raise exception.AdminRequired()
-
     def index(self, req):
         raise webob.exc.HTTPNotImplemented()
 
     @wsgi.serializers(xml=AccountTemplate)
     def show(self, req, id):
         """Return data about the given account id"""
+        authorize(req.environ['nova.context'])
         account = self.manager.get_project(id)
         return dict(account=_translate_keys(account))
 
     def delete(self, req, id):
-        self._check_admin(req.environ['nova.context'])
+        authorize(req.environ['nova.context'])
         self.manager.delete_project(id)
         return {}
 
@@ -79,7 +75,7 @@ class Controller(object):
     @wsgi.serializers(xml=AccountTemplate)
     def update(self, req, id, body):
         """This is really create or update."""
-        self._check_admin(req.environ['nova.context'])
+        authorize(req.environ['nova.context'])
         description = body['account'].get('description')
         manager = body['account'].get('manager')
         try:
@@ -97,11 +93,8 @@ class Accounts(extensions.ExtensionDescriptor):
     alias = "os-accounts"
     namespace = "http://docs.openstack.org/compute/ext/accounts/api/v1.1"
     updated = "2011-12-23T00:00:00+00:00"
-    admin_only = True
 
     def get_resources(self):
         #TODO(bcwaldon): This should be prefixed with 'os-'
-        res = extensions.ResourceExtension('accounts',
-                                           Controller())
-
+        res = extensions.ResourceExtension('accounts', Controller())
         return [res]

@@ -34,6 +34,7 @@ import nova.scheduler.api
 
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.zones")
 FLAGS = flags.FLAGS
+authorize = extensions.extension_authorizer('compute', 'zones')
 
 
 class CapabilitySelector(object):
@@ -117,6 +118,7 @@ class Controller(object):
     @wsgi.serializers(xml=ZonesTemplate)
     def index(self, req):
         """Return all zones in brief"""
+        authorize(req.environ['nova.context'])
         # Ask the ZoneManager in the Scheduler for most recent data,
         # or fall-back to the database ...
         items = nova.scheduler.api.get_zone_list(req.environ['nova.context'])
@@ -133,6 +135,7 @@ class Controller(object):
     def info(self, req):
         """Return name and capabilities for this zone."""
         context = req.environ['nova.context']
+        authorize(context)
         zone_capabs = nova.scheduler.api.get_zone_capabilities(context)
         # NOTE(comstud): This should probably return, instead:
         # {'zone': {'name': FLAGS.zone_name,
@@ -143,13 +146,15 @@ class Controller(object):
     @wsgi.serializers(xml=ZoneTemplate)
     def show(self, req, id):
         """Return data about the given zone id"""
-        zone_id = int(id)
         context = req.environ['nova.context']
+        authorize(context)
+        zone_id = int(id)
         zone = nova.scheduler.api.zone_get(context, zone_id)
         return dict(zone=_scrub_zone(zone))
 
     def delete(self, req, id):
         """Delete a child zone entry."""
+        authorize(req.environ['nova.context'])
         zone_id = int(id)
         nova.scheduler.api.zone_delete(req.environ['nova.context'], zone_id)
         return {}
@@ -159,6 +164,7 @@ class Controller(object):
     def create(self, req, body):
         """Create a child zone entry."""
         context = req.environ['nova.context']
+        authorize(context)
         zone = nova.scheduler.api.zone_create(context, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
@@ -166,6 +172,7 @@ class Controller(object):
     def update(self, req, id, body):
         """Update a child zone entry."""
         context = req.environ['nova.context']
+        authorize(context)
         zone_id = int(id)
         zone = nova.scheduler.api.zone_update(context, zone_id, body["zone"])
         return dict(zone=_scrub_zone(zone))
@@ -175,9 +182,10 @@ class Controller(object):
     def select(self, req, body):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
-        ctx = req.environ['nova.context']
+        context = req.environ['nova.context']
+        authorize(context)
         specs = json.loads(body)
-        build_plan = nova.scheduler.api.select(ctx, specs=specs)
+        build_plan = nova.scheduler.api.select(context, specs=specs)
         cooked = self._scrub_build_plan(build_plan)
         return {"weights": cooked}
 
@@ -205,7 +213,6 @@ class Zones(extensions.ExtensionDescriptor):
     alias = "os-zones"
     namespace = "http://docs.openstack.org/compute/ext/zones/api/v1.1"
     updated = "2011-09-21T00:00:00+00:00"
-    admin_only = True
 
     def get_resources(self):
         #NOTE(bcwaldon): This resource should be prefixed with 'os-'

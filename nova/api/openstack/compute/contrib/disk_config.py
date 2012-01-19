@@ -28,6 +28,7 @@ ALIAS = 'OS-DCF'
 XMLNS_DCF = "http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
 API_DISK_CONFIG = "%s:diskConfig" % ALIAS
 INTERNAL_DISK_CONFIG = "auto_disk_config"
+authorize = extensions.soft_extension_authorizer('compute', 'disk_config')
 
 
 def disk_config_to_api(value):
@@ -70,16 +71,16 @@ class ImageDiskConfigController(wsgi.Controller):
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
-        if 'image' in resp_obj.obj:
-            context = req.environ['nova.context']
+        context = req.environ['nova.context']
+        if 'image' in resp_obj.obj and authorize(context):
             resp_obj.attach(xml=ImageDiskConfigTemplate())
             image = resp_obj.obj['image']
             self._add_disk_config(context, [image])
 
     @wsgi.extends
     def detail(self, req, resp_obj):
-        if 'images' in resp_obj.obj:
-            context = req.environ['nova.context']
+        context = req.environ['nova.context']
+        if 'images' in resp_obj.obj and authorize(context):
             resp_obj.attach(xml=ImagesDiskConfigTemplate())
             images = resp_obj.obj['images']
             self._add_disk_config(context, images)
@@ -102,13 +103,14 @@ class ServersDiskConfigTemplate(xmlutil.TemplateBuilder):
 
 class ServerDiskConfigController(wsgi.Controller):
     def _add_disk_config(self, context, servers):
-        # Filter out any servers that already have the key set (most likely
-        # from a remote zone)
+        # Filter out any servers that already have the key set
+        # (most likely from a remote zone)
         servers = [s for s in servers if API_DISK_CONFIG not in s]
 
         # Get DB information for servers
         uuids = [server['id'] for server in servers]
-        db_servers = db.instance_get_all_by_filters(context, {'uuid': uuids})
+        db_servers = db.instance_get_all_by_filters(context,
+                                                    {'uuid': uuids})
         db_servers_by_uuid = dict((s['uuid'], s) for s in db_servers)
 
         for server in servers:
@@ -117,21 +119,22 @@ class ServerDiskConfigController(wsgi.Controller):
                 value = db_server[INTERNAL_DISK_CONFIG]
                 server[API_DISK_CONFIG] = disk_config_to_api(value)
 
-    def _show(self, req, resp_obj):
+    def _show(self, context, resp_obj):
         if 'server' in resp_obj.obj:
-            context = req.environ['nova.context']
             resp_obj.attach(xml=ServerDiskConfigTemplate())
             server = resp_obj.obj['server']
             self._add_disk_config(context, [server])
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
-        self._show(req, resp_obj)
+        context = req.environ['nova.context']
+        if authorize(context):
+            self._show(context, resp_obj)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
-        if 'servers' in resp_obj.obj:
-            context = req.environ['nova.context']
+        context = req.environ['nova.context']
+        if 'servers' in resp_obj.obj and authorize(context):
             resp_obj.attach(xml=ServersDiskConfigTemplate())
             servers = resp_obj.obj['servers']
             self._add_disk_config(context, servers)
@@ -144,26 +147,34 @@ class ServerDiskConfigController(wsgi.Controller):
 
     @wsgi.extends
     def create(self, req, body):
-        self._set_disk_config(body['server'])
-        resp_obj = (yield)
-        self._show(req, resp_obj)
+        context = req.environ['nova.context']
+        if authorize(context):
+            self._set_disk_config(body['server'])
+            resp_obj = (yield)
+            self._show(context, resp_obj)
 
     @wsgi.extends
     def update(self, req, id, body):
-        self._set_disk_config(body['server'])
-        resp_obj = (yield)
-        self._show(req, resp_obj)
+        context = req.environ['nova.context']
+        if authorize(context):
+            self._set_disk_config(body['server'])
+            resp_obj = (yield)
+            self._show(context, resp_obj)
 
     @wsgi.extends(action='rebuild')
     def _action_rebuild(self, req, id, body):
-        self._set_disk_config(body['rebuild'])
-        resp_obj = (yield)
-        self._show(req, resp_obj)
+        context = req.environ['nova.context']
+        if authorize(context):
+            self._set_disk_config(body['rebuild'])
+            resp_obj = (yield)
+            self._show(context, resp_obj)
 
     @wsgi.extends(action='resize')
     def _action_resize(self, req, id, body):
-        self._set_disk_config(body['resize'])
-        yield
+        context = req.environ['nova.context']
+        if authorize(context):
+            self._set_disk_config(body['resize'])
+            yield
 
 
 class Disk_config(extensions.ExtensionDescriptor):

@@ -27,6 +27,7 @@ from nova import log as logging
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.api.openstack.users')
+authorize = extensions.extension_authorizer('compute', 'users')
 
 
 def make_user(elem):
@@ -65,15 +66,10 @@ class Controller(object):
     def __init__(self):
         self.manager = manager.AuthManager()
 
-    def _check_admin(self, context):
-        """We cannot depend on the db layer to check for admin access
-           for the auth manager, so we do it here"""
-        if not context.is_admin:
-            raise exception.AdminRequired()
-
     @wsgi.serializers(xml=UsersTemplate)
     def index(self, req):
         """Return all users in brief"""
+        authorize(req.environ['nova.context'])
         users = self.manager.get_users()
         users = common.limited(users, req)
         users = [_translate_keys(user) for user in users]
@@ -87,6 +83,7 @@ class Controller(object):
     @wsgi.serializers(xml=UserTemplate)
     def show(self, req, id):
         """Return data about the given user id"""
+        authorize(req.environ['nova.context'])
 
         #NOTE(justinsb): The drivers are a little inconsistent in how they
         #  deal with "NotFound" - some throw, some return None.
@@ -101,13 +98,13 @@ class Controller(object):
         return dict(user=_translate_keys(user))
 
     def delete(self, req, id):
-        self._check_admin(req.environ['nova.context'])
+        authorize(req.environ['nova.context'])
         self.manager.delete_user(id)
         return {}
 
     @wsgi.serializers(xml=UserTemplate)
     def create(self, req, body):
-        self._check_admin(req.environ['nova.context'])
+        authorize(req.environ['nova.context'])
         is_admin = body['user'].get('admin') in ('T', 'True', True)
         name = body['user'].get('name')
         access = body['user'].get('access')
@@ -117,7 +114,7 @@ class Controller(object):
 
     @wsgi.serializers(xml=UserTemplate)
     def update(self, req, id, body):
-        self._check_admin(req.environ['nova.context'])
+        authorize(req.environ['nova.context'])
         is_admin = body['user'].get('admin')
         if is_admin is not None:
             is_admin = is_admin in ('T', 'True', True)
@@ -134,7 +131,6 @@ class Users(extensions.ExtensionDescriptor):
     alias = "os-users"
     namespace = "http://docs.openstack.org/compute/ext/users/api/v1.1"
     updated = "2011-08-08T00:00:00+00:00"
-    admin_only = True
 
     def get_resources(self):
         coll_actions = {'detail': 'GET'}

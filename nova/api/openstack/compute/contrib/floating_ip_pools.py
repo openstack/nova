@@ -22,6 +22,7 @@ from nova import network
 
 
 LOG = logging.getLogger('nova.api.openstack.compute.contrib.floating_ip_pools')
+authorize = extensions.extension_authorizer('compute', 'floating_ip_pools')
 
 
 def _translate_floating_ip_view(pool):
@@ -69,6 +70,7 @@ class FloatingIPPoolsController(object):
     def index(self, req):
         """Return a list of pools."""
         context = req.environ['nova.context']
+        authorize(context)
         pools = self.network_api.get_floating_ip_pools(context)
         return _translate_floating_ip_pools_view(pools)
 

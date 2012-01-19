@@ -27,6 +27,9 @@ from nova import exception
 from nova.volume import volume_types
 
 
+authorize = extensions.extension_authorizer('compute', 'volumetypes')
+
+
 def make_voltype(elem):
     elem.set('id')
     elem.set('name')
@@ -57,12 +60,14 @@ class VolumeTypesController(object):
     def index(self, req):
         """ Returns the list of volume types """
         context = req.environ['nova.context']
+        authorize(context)
         return volume_types.get_all_types(context)
 
     @wsgi.serializers(xml=VolumeTypeTemplate)
     def create(self, req, body):
         """Creates a new volume type."""
         context = req.environ['nova.context']
+        authorize(context)
 
         if not body or body == "":
             raise exc.HTTPUnprocessableEntity()
@@ -91,6 +96,7 @@ class VolumeTypesController(object):
     def show(self, req, id):
         """ Return a single volume type item """
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             vol_type = volume_types.get_volume_type(context, id)
@@ -102,6 +108,7 @@ class VolumeTypesController(object):
     def delete(self, req, id):
         """ Deletes an existing volume type """
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             vol_type = volume_types.get_volume_type(context, id)
@@ -155,12 +162,14 @@ class VolumeTypeExtraSpecsController(object):
     def index(self, req, vol_type_id):
         """ Returns the list of extra specs for a given volume type """
         context = req.environ['nova.context']
+        authorize(context)
         return self._get_extra_specs(context, vol_type_id)
 
     @wsgi.serializers(xml=VolumeTypeExtraSpecsTemplate)
     def create(self, req, vol_type_id, body):
-        self._check_body(body)
         context = req.environ['nova.context']
+        authorize(context)
+        self._check_body(body)
         specs = body.get('extra_specs')
         try:
             db.volume_type_extra_specs_update_or_create(context,
@@ -172,8 +181,9 @@ class VolumeTypeExtraSpecsController(object):
 
     @wsgi.serializers(xml=VolumeTypeExtraSpecTemplate)
     def update(self, req, vol_type_id, id, body):
-        self._check_body(body)
         context = req.environ['nova.context']
+        authorize(context)
+        self._check_body(body)
         if not id in body:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
@@ -193,6 +203,7 @@ class VolumeTypeExtraSpecsController(object):
     def show(self, req, vol_type_id, id):
         """ Return a single extra spec item """
         context = req.environ['nova.context']
+        authorize(context)
         specs = self._get_extra_specs(context, vol_type_id)
         if id in specs['extra_specs']:
             return {id: specs['extra_specs'][id]}
@@ -202,6 +213,7 @@ class VolumeTypeExtraSpecsController(object):
     def delete(self, req, vol_type_id, id):
         """ Deletes an existing extra spec """
         context = req.environ['nova.context']
+        authorize(context)
         db.volume_type_extra_specs_delete(context, vol_type_id, id)
 
     def _handle_quota_error(self, error):

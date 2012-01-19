@@ -26,18 +26,12 @@ def fake_init(self):
     self.manager = fakes.FakeAuthManager()
 
 
-def fake_admin_check(self, req):
-    return True
-
-
 class UsersTest(test.TestCase):
     def setUp(self):
         super(UsersTest, self).setUp()
-        self.flags(verbose=True, allow_admin_api=True)
+        self.flags(verbose=True)
         self.stubs.Set(users.Controller, '__init__',
                        fake_init)
-        self.stubs.Set(users.Controller, '_check_admin',
-                       fake_admin_check)
         fakes.FakeAuthManager.clear_fakes()
         fakes.FakeAuthManager.projects = dict(testacct=Project('testacct',
                                                                'testacct',

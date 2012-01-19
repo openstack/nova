@@ -40,7 +40,6 @@ class ServerDiagnosticsTest(test.TestCase):
 
     def setUp(self):
         super(ServerDiagnosticsTest, self).setUp()
-        self.flags(allow_admin_api=True)
         self.flags(verbose=True)
         self.stubs.Set(nova.compute.API, 'get_diagnostics',
                        fake_get_diagnostics)

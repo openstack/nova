@@ -26,6 +26,9 @@ from nova import db
 from nova import exception
 
 
+authorize = extensions.extension_authorizer('compute', 'flavorextraspecs')
+
+
 class ExtraSpecsTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         return xmlutil.MasterTemplate(xmlutil.make_flat_dict('extra_specs'), 1)
@@ -50,12 +53,14 @@ class FlavorExtraSpecsController(object):
     def index(self, req, flavor_id):
         """ Returns the list of extra specs for a givenflavor """
         context = req.environ['nova.context']
+        authorize(context)
         return self._get_extra_specs(context, flavor_id)
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
     def create(self, req, flavor_id, body):
-        self._check_body(body)
         context = req.environ['nova.context']
+        authorize(context)
+        self._check_body(body)
         specs = body.get('extra_specs')
         try:
             db.instance_type_extra_specs_update_or_create(context,
@@ -67,8 +72,9 @@ class FlavorExtraSpecsController(object):
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
     def update(self, req, flavor_id, id, body):
-        self._check_body(body)
         context = req.environ['nova.context']
+        authorize(context)
+        self._check_body(body)
         if not id in body:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
@@ -88,6 +94,7 @@ class FlavorExtraSpecsController(object):
     def show(self, req, flavor_id, id):
         """ Return a single extra spec item """
         context = req.environ['nova.context']
+        authorize(context)
         specs = self._get_extra_specs(context, flavor_id)
         if id in specs['extra_specs']:
             return {id: specs['extra_specs'][id]}
@@ -97,6 +104,7 @@ class FlavorExtraSpecsController(object):
     def delete(self, req, flavor_id, id):
         """ Deletes an existing extra spec """
         context = req.environ['nova.context']
+        authorize(context)
         db.instance_type_extra_specs_delete(context, flavor_id, id)
 
     def _handle_quota_error(self, error):

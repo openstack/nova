@@ -25,6 +25,7 @@ from nova import network
 
 LOG = logging.getLogger("nova.api.openstack.compute."
                         "contrib.virtual_interfaces")
+authorize = extensions.extension_authorizer('compute', 'virtual_interfaces')
 
 
 vif_nsmap = {None: wsgi.XMLNS_V11}
@@ -68,6 +69,7 @@ class ServerVirtualInterfaceController(object):
     @wsgi.serializers(xml=VirtualInterfaceTemplate)
     def index(self, req, server_id):
         """Returns the list of VIFs for a given instance."""
+        authorize(req.environ['nova.context'])
         return self._items(req, server_id,
                            entity_maker=_translate_vif_summary_view)
 

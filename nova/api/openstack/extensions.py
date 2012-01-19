@@ -16,8 +16,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import os
 import routes
+
 import webob.dec
 import webob.exc
 
@@ -27,13 +29,12 @@ from nova.api.openstack import xmlutil
 from nova import exception
 from nova import flags
 from nova import log as logging
+import nova.policy
 from nova import utils
 from nova import wsgi as base_wsgi
 
 
 LOG = logging.getLogger('nova.api.openstack.extensions')
-
-
 FLAGS = flags.FLAGS
 
 
@@ -60,10 +61,6 @@ class ExtensionDescriptor(object):
     # The timestamp when the extension was last updated, e.g.,
     # '2011-01-22T13:25:27-06:00'
     updated = None
-
-    # This attribute causes the extension to load only when
-    # the admin api is enabled
-    admin_only = False
 
     def __init__(self, ext_mgr):
         """Register extension with the extension manager."""
@@ -246,13 +243,8 @@ class ExtensionManager(object):
                       ' '.join(extension.__doc__.strip().split()))
             LOG.debug(_('Ext namespace: %s'), extension.namespace)
             LOG.debug(_('Ext updated: %s'), extension.updated)
-            LOG.debug(_('Ext admin_only: %s'), extension.admin_only)
         except AttributeError as ex:
             LOG.exception(_("Exception loading extension: %s"), unicode(ex))
-            return False
-
-        # Don't load admin api extensions if the admin api isn't enabled
-        if not FLAGS.allow_admin_api and extension.admin_only:
             return False
 
         return True
@@ -384,3 +376,22 @@ def load_standard_extensions(ext_mgr, logger, path, package):
 
         # Update the list of directories we'll explore...
         dirnames[:] = subdirs
+
+
+def extension_authorizer(api_name, extension_name):
+    def authorize(context):
+        action = '%s_extension:%s' % (api_name, extension_name)
+        nova.policy.enforce(context, action, {})
+    return authorize
+
+
+def soft_extension_authorizer(api_name, extension_name):
+    hard_authorize = extension_authorizer(api_name, extension_name)
+
+    def authorize(context):
+        try:
+            hard_authorize(context)
+            return True
+        except exception.NotAuthorized:
+            return False
+    return authorize

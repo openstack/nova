@@ -28,6 +28,7 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.rescue")
+authorize = exts.extension_authorizer('compute', 'rescue')
 
 
 class RescueController(wsgi.Controller):
@@ -47,6 +48,7 @@ class RescueController(wsgi.Controller):
     def _rescue(self, req, id, body):
         """Rescue an instance."""
         context = req.environ["nova.context"]
+        authorize(context)
 
         if body['rescue'] and 'adminPass' in body['rescue']:
             password = body['rescue']['adminPass']
@@ -62,6 +64,7 @@ class RescueController(wsgi.Controller):
     def _unrescue(self, req, id, body):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
+        authorize(context)
         instance = self._get_instance(context, id)
         self.compute_api.unrescue(context, instance)
         return webob.Response(status_int=202)

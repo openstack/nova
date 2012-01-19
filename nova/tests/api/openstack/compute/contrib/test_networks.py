@@ -92,7 +92,6 @@ class NetworksTest(test.TestCase):
 
     def setUp(self):
         super(NetworksTest, self).setUp()
-        self.flags(allow_admin_api=True)
         self.fake_network_api = FakeNetworkAPI()
         self.controller = networks.NetworkController(self.fake_network_api)
         fakes.stub_out_networking(self.stubs)

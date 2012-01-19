@@ -861,7 +861,6 @@ class ServersControllerTest(test.TestCase):
             return [fakes.stub_instance(100, uuid=server_uuid)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
-        self.flags(allow_admin_api=False)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers?image=12345')
         servers = self.controller.index(req)['servers']
@@ -878,7 +877,6 @@ class ServersControllerTest(test.TestCase):
 
         self.stubs.Set(nova.db, 'instance_get_all_by_filters',
                        fake_get_all)
-        self.flags(allow_admin_api=True)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers?tenant_id=fake',
                                       use_admin_context=True)
@@ -897,7 +895,6 @@ class ServersControllerTest(test.TestCase):
             return [fakes.stub_instance(100, uuid=server_uuid)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
-        self.flags(allow_admin_api=False)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers?flavor=12345')
         servers = self.controller.index(req)['servers']
@@ -915,7 +912,6 @@ class ServersControllerTest(test.TestCase):
             return [fakes.stub_instance(100, uuid=server_uuid)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
-        self.flags(allow_admin_api=False)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers?status=active')
         servers = self.controller.index(req)['servers']
@@ -925,8 +921,8 @@ class ServersControllerTest(test.TestCase):
 
     def test_get_servers_invalid_status(self):
         """Test getting servers by invalid status"""
-        self.flags(allow_admin_api=False)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers?status=unknown')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?status=unknown',
+                                      use_admin_context=False)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
 
     def test_get_servers_allows_name(self):
@@ -939,7 +935,6 @@ class ServersControllerTest(test.TestCase):
             return [fakes.stub_instance(100, uuid=server_uuid)]
 
         self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
-        self.flags(allow_admin_api=False)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers?name=whee.*')
         servers = self.controller.index(req)['servers']
@@ -972,47 +967,11 @@ class ServersControllerTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/servers?%s' % params)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
 
-    def test_get_servers_unknown_or_admin_options1(self):
-        """Test getting servers by admin-only or unknown options.
-        This tests when admin_api is off.  Make sure the admin and
-        unknown options are stripped before they get to
-        compute_api.get_all()
+    def test_get_servers_admin_filters_as_user(self):
+        """Test getting servers by admin-only or unknown options when
+        context is not admin. Make sure the admin and unknown options
+        are stripped before they get to compute_api.get_all()
         """
-
-        self.flags(allow_admin_api=False)
-
-        server_uuid = str(utils.gen_uuid())
-
-        def fake_get_all(compute_self, context, search_opts=None):
-            self.assertNotEqual(search_opts, None)
-            # Allowed by user
-            self.assertTrue('name' in search_opts)
-            self.assertTrue('status' in search_opts)
-            # Allowed only by admins with admin API on
-            self.assertFalse('ip' in search_opts)
-            self.assertFalse('unknown_option' in search_opts)
-            return [fakes.stub_instance(100, uuid=server_uuid)]
-
-        self.stubs.Set(nova.compute.API, 'get_all', fake_get_all)
-
-        query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = fakes.HTTPRequest.blank('/v2/fake/servers?%s' % query_str,
-                                      use_admin_context=True)
-        res = self.controller.index(req)
-
-        servers = res['servers']
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]['id'], server_uuid)
-
-    def test_get_servers_unknown_or_admin_options2(self):
-        """Test getting servers by admin-only or unknown options.
-        This tests when admin_api is on, but context is a user.
-        Make sure the admin and unknown options are stripped before
-        they get to compute_api.get_all()
-        """
-
-        self.flags(allow_admin_api=True)
-
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None):
@@ -1035,14 +994,10 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
-    def test_get_servers_unknown_or_admin_options3(self):
-        """Test getting servers by admin-only or unknown options.
-        This tests when admin_api is on and context is admin.
-        All options should be passed through to compute_api.get_all()
+    def test_get_servers_admin_options_as_admin(self):
+        """Test getting servers by admin-only or unknown options when
+        context is admin. All options should be passed
         """
-
-        self.flags(allow_admin_api=True)
-
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None):
@@ -1069,8 +1024,6 @@ class ServersControllerTest(test.TestCase):
         """Test getting servers by ip with admin_api enabled and
         admin context
         """
-        self.flags(allow_admin_api=True)
-
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None):
@@ -1092,8 +1045,6 @@ class ServersControllerTest(test.TestCase):
         """Test getting servers by ip6 with admin_api enabled and
         admin context
         """
-        self.flags(allow_admin_api=True)
-
         server_uuid = str(utils.gen_uuid())
 
         def fake_get_all(compute_self, context, search_opts=None):

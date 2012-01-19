@@ -88,7 +88,6 @@ class SimpleTenantUsageTest(test.TestCase):
         self.alt_user_context = context.RequestContext('fakeadmin_0',
                                                       'faketenant_1',
                                                        is_admin=False)
-        FLAGS.allow_admin_api = True
 
     def test_verify_index(self):
         req = webob.Request.blank(
