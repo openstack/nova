@@ -33,4 +33,5 @@ InstanceType filter.
 from abstract_filter import AbstractHostFilter
 from all_hosts_filter import AllHostsFilter
 from compute_filter import ComputeFilter
+from core_filter import CoreFilter
 from json_filter import JsonFilter
