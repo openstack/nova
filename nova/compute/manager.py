@@ -33,6 +33,7 @@ terminating it.
 
 """
 
+import contextlib
 import functools
 import os
 import socket
@@ -1004,7 +1005,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._get_instance_nw_info(context, instance_ref)
         image_meta = _get_image_meta(context, instance_ref['image_ref'])
 
-        self.driver.rescue(context, instance_ref, network_info, image_meta)
+        with self.error_out_instance_on_exception(context, instance_uuid):
+            self.driver.rescue(context, instance_ref, network_info, image_meta)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -1024,7 +1026,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         network_info = self._get_instance_nw_info(context, instance_ref)
 
-        self.driver.unrescue(instance_ref, network_info)
+        with self.error_out_instance_on_exception(context, instance_uuid):
+            self.driver.unrescue(instance_ref, network_info)
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
@@ -2184,3 +2187,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                         raise Exception(_("Unrecognized value '%(action)s'"
                                           " for FLAGS.running_deleted_"
                                           "instance_action"), locals())
+
+    @contextlib.contextmanager
+    def error_out_instance_on_exception(self, context, instance_uuid):
+        try:
+            yield
+        except Exception, error:
+            with utils.save_and_reraise_exception():
+                msg = _('%s. Setting instance vm_state to ERROR')
+                LOG.error(msg % error)
+                self._instance_update(context,
+                                      instance_uuid,
+                                      vm_state=vm_states.ERROR,
+                                      task_state=None)
