@@ -467,3 +467,5 @@ DEFINE_boolean('allow_ec2_admin_api', False, 'Enable/Disable EC2 Admin API')
 
 DEFINE_integer('service_down_time', 60,
         'maximum time since last check-in for up service')
+DEFINE_string('default_schedule_zone', None,
+              'zone to use when user doesnt specify one')

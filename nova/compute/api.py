@@ -284,6 +284,20 @@ class API(base.Base):
         root_device_name = block_device.properties_root_device_name(
             image['properties'])
 
+        # NOTE(vish): We have a legacy hack to allow admins to specify hosts
+        #             via az using az:host. It might be nice to expose an
+        #             api to specify specific hosts to force onto, but for
+        #             now it just supports this legacy hack.
+        host = None
+        if availability_zone:
+            availability_zone, _x, host = availability_zone.partition(':')
+        if not availability_zone:
+            availability_zone = FLAGS.default_schedule_zone
+        if context.is_admin and host:
+            filter_properties = {'force_hosts': [host]}
+        else:
+            filter_properties = {}
+
         base_options = {
             'reservation_id': reservation_id,
             'image_ref': image_href,
@@ -343,7 +357,8 @@ class API(base.Base):
                 availability_zone, injected_files,
                 admin_password, image,
                 num_instances, requested_networks,
-                block_device_mapping, security_group)
+                block_device_mapping, security_group,
+                filter_properties)
 
         if create_instance_here:
             return ([instance], reservation_id)
@@ -516,7 +531,8 @@ class API(base.Base):
             num_instances,
             requested_networks,
             block_device_mapping,
-            security_group):
+            security_group,
+            filter_properties):
         """Send a run_instance request to the schedulers for processing."""
 
         pid = context.project_id
@@ -524,8 +540,6 @@ class API(base.Base):
 
         LOG.debug(_("Sending create to scheduler for %(pid)s/%(uid)s's") %
                 locals())
-
-        filter_properties = {}
 
         request_spec = {
             'image': image,

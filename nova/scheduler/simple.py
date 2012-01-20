@@ -35,8 +35,6 @@ flags.DEFINE_integer("max_gigabytes", 10000,
                      "maximum number of volume gigabytes to allow per host")
 flags.DEFINE_integer("max_networks", 1000,
                      "maximum number of networks to allow per host")
-flags.DEFINE_string('default_schedule_zone', None,
-                    'zone to use when user doesnt specify one')
 flags.DEFINE_list('isolated_images', [], 'Images to run on isolated host')
 flags.DEFINE_list('isolated_hosts', [], 'Host reserved for specific images')
 flags.DEFINE_boolean('skip_isolated_core_check', True,

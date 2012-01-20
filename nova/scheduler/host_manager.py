@@ -117,6 +117,9 @@ class HostState(object):
 
         if self.host in filter_properties.get('ignore_hosts', []):
             return False
+        force_hosts = filter_properties.get('force_hosts', [])
+        if force_hosts:
+            return self.host in force_hosts
         for filter_fn in filter_fns:
             if not filter_fn(self, filter_properties):
                 return False
