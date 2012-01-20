@@ -53,9 +53,9 @@ class HostFiltersTestCase(test.TestCase):
                  'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
-    def test_compute_filter_fails_on_memory(self):
+    def test_ram_filter_fails_on_memory(self):
         self._stub_service_is_up(True)
-        filt_cls = filters.ComputeFilter()
+        filt_cls = filters.RamFilter()
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         capabilities = {'enabled': True}
         service = {'disabled': False}
