@@ -1000,11 +1000,19 @@ class VMOps(object):
             LOG.exception(exc)
 
     def _find_rescue_vbd_ref(self, vm_ref, rescue_vm_ref):
-        """Find and return the rescue VM's vbd_ref.
+        """Find and return the rescue VM's vbd_ref."""
+        vbd_refs = self._session.call_xenapi("VM.get_VBDs", vm_ref)
 
-        We use the second VBD here because swap is first with the root file
-        system coming in second."""
-        vbd_ref = self._session.call_xenapi("VM.get_VBDs", vm_ref)[1]
+        if len(vbd_refs) == 0:
+            raise Exception(_("Unable to find VBD for VM"))
+        elif len(vbd_refs) == 1:
+            # If we only have one VBD, assume it's the root fs
+            vbd_ref = vbd_refs[0]
+        else:
+            # If we have more than one VBD, swap will be first by convention
+            # with the root fs coming second
+            vbd_ref = vbd_refs[1]
+
         vdi_ref = self._session.call_xenapi("VBD.get_record", vbd_ref)["VDI"]
 
         return VolumeHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref,
