@@ -584,6 +584,10 @@ class NoFloatingIpsDefined(NotFound):
     message = _("Zero floating ips exist.")
 
 
+class NoFloatingIpInterface(NotFound):
+    message = _("Interface %(interface)s not found.")
+
+
 class KeypairNotFound(NotFound):
     message = _("Keypair %(name)s not found for user %(user_id)s")
 

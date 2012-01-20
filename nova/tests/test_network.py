@@ -636,6 +636,23 @@ class VlanNetworkTestCase(test.TestCase):
         def fake7(*args, **kwargs):
             self.local = True
 
+        def fake8(*args, **kwargs):
+            raise exception.ProcessExecutionError('',
+                    'Cannot find device "em0"\n')
+
+        # raises because interface doesn't exist
+        self.stubs.Set(self.network.db,
+                       'floating_ip_fixed_ip_associate',
+                       fake1)
+        self.stubs.Set(self.network.db, 'floating_ip_disassociate', fake1)
+        self.stubs.Set(self.network.driver, 'bind_floating_ip', fake8)
+        self.assertRaises(exception.NoFloatingIpInterface,
+                          self.network._associate_floating_ip,
+                          ctxt,
+                          mox.IgnoreArg(),
+                          mox.IgnoreArg(),
+                          mox.IgnoreArg())
+
         self.stubs.Set(self.network, '_floating_ip_owned_by_project', fake1)
 
         # raises because floating_ip is already associated to a fixed_ip
