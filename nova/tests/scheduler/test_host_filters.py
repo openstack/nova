@@ -17,6 +17,7 @@ Tests For Scheduler Host Filters.
 
 import json
 
+from nova import context
 from nova.scheduler import filters
 from nova import test
 from nova.tests.scheduler import fakes
@@ -457,3 +458,29 @@ class HostFiltersTestCase(test.TestCase):
         host = fakes.FakeHostState('host1', 'compute',
                 {'vcpus_total': 4, 'vcpus_used': 8})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    @staticmethod
+    def _make_zone_request(zone, is_admin=False):
+        ctxt = context.RequestContext('fake', 'fake', is_admin=is_admin)
+        return {
+            'context': ctxt,
+            'request_spec': {
+                'instance_properties': {
+                    'availability_zone': zone
+                }
+            }
+        }
+
+    def test_availability_zone_filter_same(self):
+        filt_cls = filters.AvailabilityZoneFilter()
+        service = {'availability_zone': 'nova'}
+        request = self._make_zone_request('nova')
+        host = fakes.FakeHostState('host1', 'compute', {'service': service})
+        self.assertTrue(filt_cls.host_passes(host, request))
+
+    def test_availability_zone_filter_different(self):
+        filt_cls = filters.AvailabilityZoneFilter()
+        service = {'availability_zone': 'nova'}
+        request = self._make_zone_request('bad')
+        host = fakes.FakeHostState('host1', 'compute', {'service': service})
+        self.assertFalse(filt_cls.host_passes(host, request))

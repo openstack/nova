@@ -32,7 +32,11 @@ flags.DEFINE_integer('reserved_host_disk_mb', 0,
         'Amount of disk in MB to reserve for host/dom0')
 flags.DEFINE_integer('reserved_host_memory_mb', 512,
         'Amount of memory in MB to reserve for host/dom0')
-flags.DEFINE_list('default_host_filters', ['RamFilter', 'ComputeFilter'],
+flags.DEFINE_list('default_host_filters', [
+            'AvailabilityZoneFilter',
+            'RamFilter',
+            'ComputeFilter',
+        ],
         'Which filters to use for filtering hosts when not specified '
         'in the request.')
 
