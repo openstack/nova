@@ -234,7 +234,8 @@ class DistributedSchedulerTestCase(test.TestCase):
 
     def test_schedule_local_zone(self):
         """Test to make sure _schedule makes no call out to zones if
-        local_zone in the request spec is True."""
+        local_zone_only in the filter_properties is True.
+        """
 
         self.next_weight = 1.0
 
@@ -259,11 +260,11 @@ class DistributedSchedulerTestCase(test.TestCase):
                         'instance_type': {'memory_mb': 512, 'local_gb': 512},
                         'instance_properties': {'project_id': 1,
                                                 'memory_mb': 512,
-                                                'local_gb': 512},
-                        'local_zone': True}
+                                                'local_gb': 512}}
+        filter_properties = {'local_zone_only': True}
         self.mox.ReplayAll()
         weighted_hosts = sched._schedule(fake_context, 'compute',
-                                         request_spec)
+                request_spec, filter_properties=filter_properties)
         self.mox.VerifyAll()
         self.assertEquals(len(weighted_hosts), 10)
         for weighted_host in weighted_hosts:
@@ -300,32 +301,3 @@ class DistributedSchedulerTestCase(test.TestCase):
         hostinfo.update_from_compute_node(dict(memory_mb=1000,
                 local_gb=0))
         self.assertEquals(1000 - 128, fn(hostinfo, {}))
-
-    def test_populate_filter_properties(self):
-        request_spec = {'instance_properties': {}}
-        fixture = fakes.FakeDistributedScheduler()
-        filter_properties = {'ignore_hosts': []}
-        fixture.populate_filter_properties(request_spec, filter_properties)
-        self.assertEqual(len(filter_properties['ignore_hosts']), 0)
-
-        # No original host results in not ignoring
-        request_spec = {'instance_properties': {},
-                        'avoid_original_host': True}
-        fixture = fakes.FakeDistributedScheduler()
-        fixture.populate_filter_properties(request_spec, filter_properties)
-        self.assertEqual(len(filter_properties['ignore_hosts']), 0)
-
-        # Original host but avoid is False should not ignore it
-        request_spec = {'instance_properties': {'host': 'foo'},
-                        'avoid_original_host': False}
-        fixture = fakes.FakeDistributedScheduler()
-        fixture.populate_filter_properties(request_spec, filter_properties)
-        self.assertEqual(len(filter_properties['ignore_hosts']), 0)
-
-        # Original host but avoid is True should ignore it
-        request_spec = {'instance_properties': {'host': 'foo'},
-                        'avoid_original_host': True}
-        fixture = fakes.FakeDistributedScheduler()
-        fixture.populate_filter_properties(request_spec, filter_properties)
-        self.assertEqual(len(filter_properties['ignore_hosts']), 1)
-        self.assertEqual(filter_properties['ignore_hosts'][0], 'foo')

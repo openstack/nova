@@ -525,11 +525,12 @@ class API(base.Base):
         LOG.debug(_("Sending create to scheduler for %(pid)s/%(uid)s's") %
                 locals())
 
+        filter_properties = {}
+
         request_spec = {
             'image': image,
             'instance_properties': base_options,
             'instance_type': instance_type,
-            'filter': None,
             'blob': zone_blob,
             'num_instances': num_instances,
             'block_device_mapping': block_device_mapping,
@@ -543,7 +544,8 @@ class API(base.Base):
                           "request_spec": request_spec,
                           "admin_password": admin_password,
                           "injected_files": injected_files,
-                          "requested_networks": requested_networks}})
+                          "requested_networks": requested_networks,
+                          "filter_properties": filter_properties}})
 
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
@@ -1391,13 +1393,14 @@ class API(base.Base):
                     **kwargs)
 
         request_spec = {
-            'instance_type': new_instance_type,
-            'filter': None,
-            'num_instances': 1,
-            'instance_properties': instance,
-            'avoid_original_host': not FLAGS.allow_resize_to_same_host,
-            'local_zone': True,
-            }
+                'instance_type': new_instance_type,
+                'num_instances': 1,
+                'instance_properties': instance}
+
+        filter_properties = {'local_zone_only': True, 'ignore_hosts': []}
+
+        if not FLAGS.allow_resize_to_same_host:
+            filter_properties['ignore_hosts'].append(instance['host'])
 
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
@@ -1405,7 +1408,8 @@ class API(base.Base):
                               "instance_uuid": instance['uuid'],
                               "update_db": False,
                               "instance_type_id": new_instance_type['id'],
-                              "request_spec": request_spec}})
+                              "request_spec": request_spec,
+                              "filter_properties": filter_properties}})
 
     @wrap_check_policy
     @scheduler_api.reroute_compute("add_fixed_ip")

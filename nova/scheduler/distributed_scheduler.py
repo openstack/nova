@@ -282,12 +282,7 @@ class DistributedScheduler(driver.Scheduler):
         """Stuff things into filter_properties.  Can be overriden in a
         subclass to add more data.
         """
-        try:
-            if request_spec['avoid_original_host']:
-                original_host = request_spec['instance_properties']['host']
-                filter_properties['ignore_hosts'].append(original_host)
-        except (KeyError, TypeError):
-            pass
+        pass
 
     def _schedule(self, elevated, topic, request_spec, *args, **kwargs):
         """Returns a list of hosts that meet the required specs,
@@ -311,9 +306,9 @@ class DistributedScheduler(driver.Scheduler):
 
         config_options = self._get_configuration_options()
 
-        filter_properties = {'config_options': config_options,
-                             'instance_type': instance_type,
-                             'ignore_hosts': []}
+        filter_properties = kwargs.get('filter_properties', {})
+        filter_properties.update({'config_options': config_options,
+                                  'instance_type': instance_type})
 
         self.populate_filter_properties(request_spec, filter_properties)
 
@@ -356,7 +351,7 @@ class DistributedScheduler(driver.Scheduler):
                     instance_properties)
 
         # Next, tack on the host weights from the child zones
-        if not request_spec.get('local_zone', False):
+        if not filter_properties.get('local_zone_only', False):
             json_spec = json.dumps(request_spec)
             all_zones = self._zone_get_all(elevated)
             child_results = self._call_zone_method(elevated, "select",
