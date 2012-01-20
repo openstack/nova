@@ -83,6 +83,10 @@ class QuantumManager(manager.FlatManager):
         super(QuantumManager, self).__init__(*args, **kwargs)
 
     def init_host(self):
+        # Don't call into self.driver (linux_net) unless dhcp is enabled
+        if not FLAGS.quantum_use_dhcp:
+            return
+
         # Initialize forwarding rules for anything specified in
         # FLAGS.fixed_range()
         self.driver.init_host()
@@ -152,7 +156,7 @@ class QuantumManager(manager.FlatManager):
             cidr_v6, dns1, dns2)
 
         # Initialize forwarding if gateway is set
-        if gateway:
+        if gateway and FLAGS.quantum_use_dhcp:
             self.driver.add_snat_rule(cidr)
 
         return [{'uuid': quantum_net_id}]
@@ -192,8 +196,9 @@ class QuantumManager(manager.FlatManager):
         self.ipam.delete_subnets_by_net_id(context, quantum_net_id,
                 project_id)
         # Get rid of dnsmasq
-        dev = self._generate_gw_dev(quantum_net_id)
-        self.driver.kill_dhcp(dev)
+        if FLAGS.quantum_use_dhcp:
+            dev = self._generate_gw_dev(quantum_net_id)
+            self.driver.kill_dhcp(dev)
 
     def allocate_for_instance(self, context, **kwargs):
         """Called by compute when it is creating a new VM.
