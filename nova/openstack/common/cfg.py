@@ -663,7 +663,7 @@ class OptGroup(object):
             self.title = title
         self.help = help
 
-        self._opts = {}  # dict of dicts of {opt:, override:, default:)
+        self._opts = {}  # dict of dicts of (opt:, override:, default:)
         self._optparse_group = None
 
     def _register_opt(self, opt):
