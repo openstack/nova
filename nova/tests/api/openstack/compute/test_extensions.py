@@ -173,6 +173,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Multinic",
             "Quotas",
             "Rescue",
+            "SchedulerHints",
             "SecurityGroups",
             "ServerActionList",
             "ServerDiagnostics",

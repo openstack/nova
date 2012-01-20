@@ -179,7 +179,7 @@ class API(base.Base):
                reservation_id, access_ip_v4, access_ip_v6,
                requested_networks, config_drive,
                block_device_mapping, auto_disk_config,
-               create_instance_here=False):
+               create_instance_here=False, scheduler_hints=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation."""
@@ -297,6 +297,8 @@ class API(base.Base):
             filter_properties = {'force_hosts': [host]}
         else:
             filter_properties = {}
+
+        filter_properties['scheduler_hints'] = scheduler_hints
 
         base_options = {
             'reservation_id': reservation_id,
@@ -571,7 +573,7 @@ class API(base.Base):
                reservation_id=None, block_device_mapping=None,
                access_ip_v4=None, access_ip_v6=None,
                requested_networks=None, config_drive=None,
-               auto_disk_config=None):
+               auto_disk_config=None, scheduler_hints=None):
         """
         Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
@@ -610,7 +612,8 @@ class API(base.Base):
                                reservation_id, access_ip_v4, access_ip_v6,
                                requested_networks, config_drive,
                                block_device_mapping, auto_disk_config,
-                               create_instance_here=create_instance_here)
+                               create_instance_here=create_instance_here,
+                               scheduler_hints=scheduler_hints)
 
         if create_instance_here or instances is None:
             return (instances, reservation_id)

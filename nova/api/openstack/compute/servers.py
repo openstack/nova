@@ -709,6 +709,7 @@ class Controller(wsgi.Controller):
             min_count = max_count
 
         auto_disk_config = server_dict.get('auto_disk_config')
+        scheduler_hints = server_dict.get('scheduler_hints', {})
 
         try:
             inst_type = \
@@ -735,7 +736,8 @@ class Controller(wsgi.Controller):
                             availability_zone=availability_zone,
                             config_drive=config_drive,
                             block_device_mapping=block_device_mapping,
-                            auto_disk_config=auto_disk_config)
+                            auto_disk_config=auto_disk_config,
+                            scheduler_hints=scheduler_hints)
         except exception.QuotaError as error:
             self._handle_quota_error(error)
         except exception.InstanceTypeMemoryTooSmall as error:
