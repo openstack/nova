@@ -1399,3 +1399,11 @@ def _showwarning(message, category, filename, lineno, file=None, line=None):
 
 # Install our warnings handler
 warnings.showwarning = _showwarning
+
+
+def service_is_up(service):
+    """Check whether a service is up based on last heartbeat."""
+    last_heartbeat = service['updated_at'] or service['created_at']
+    # Timestamps in DB are UTC.
+    elapsed = total_seconds(utcnow() - last_heartbeat)
+    return abs(elapsed) <= FLAGS.service_down_time

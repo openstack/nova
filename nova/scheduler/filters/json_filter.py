@@ -128,13 +128,12 @@ class JsonFilter(abstract_filter.AbstractHostFilter):
         """Return a list of hosts that can fulfill the requirements
         specified in the query.
         """
-        capabilities = host_state.capabilities or {}
-        if not capabilities.get("enabled", True):
-            return False
-
         query = filter_properties.get('query', None)
         if not query:
             return True
+
+        # NOTE(comstud): Not checking capabilities or service for
+        # enabled/disabled so that a provided json filter can decide
 
         result = self._process_filter(json.loads(query), host_state)
         if isinstance(result, list):

@@ -15,6 +15,7 @@
 
 from nova import log as logging
 from nova.scheduler.filters import abstract_filter
+from nova import utils
 
 
 LOG = logging.getLogger('nova.scheduler.filter.compute_filter')
@@ -48,8 +49,11 @@ class ComputeFilter(abstract_filter.AbstractHostFilter):
         instance_type = filter_properties.get('instance_type')
         if host_state.topic != 'compute' or not instance_type:
             return True
-        capabilities = host_state.capabilities or {}
+        capabilities = host_state.capabilities
+        service = host_state.service
 
+        if not utils.service_is_up(service) or service['disabled']:
+            return False
         if not self._basic_ram_filter(host_state, instance_type):
             return False
         if not capabilities.get("enabled", True):

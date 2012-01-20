@@ -26,6 +26,7 @@ from nova import flags
 from nova import exception
 from nova.scheduler import driver
 from nova.scheduler import chance
+from nova import utils
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer("max_cores", 16,
@@ -57,7 +58,7 @@ class SimpleScheduler(chance.ChanceScheduler):
 
         if host and context.is_admin:
             service = db.service_get_by_args(elevated, host, 'nova-compute')
-            if not self.service_is_up(service):
+            if not utils.service_is_up(service):
                 raise exception.WillNotSchedule(host=host)
             return host
 
@@ -79,7 +80,7 @@ class SimpleScheduler(chance.ChanceScheduler):
                     instance_cores + instance_opts['vcpus'] > FLAGS.max_cores:
                 msg = _("Not enough allocatable CPU cores remaining")
                 raise exception.NoValidHost(reason=msg)
-            if self.service_is_up(service):
+            if utils.service_is_up(service) and not service['disabled']:
                 return service['host']
         msg = _("Is the appropriate service running?")
         raise exception.NoValidHost(reason=msg)
@@ -120,7 +121,7 @@ class SimpleScheduler(chance.ChanceScheduler):
             zone, _x, host = availability_zone.partition(':')
         if host and context.is_admin:
             service = db.service_get_by_args(elevated, host, 'nova-volume')
-            if not self.service_is_up(service):
+            if not utils.service_is_up(service):
                 raise exception.WillNotSchedule(host=host)
             driver.cast_to_volume_host(context, host, 'create_volume',
                     volume_id=volume_id, **_kwargs)
@@ -135,7 +136,7 @@ class SimpleScheduler(chance.ChanceScheduler):
             if volume_gigabytes + volume_ref['size'] > FLAGS.max_gigabytes:
                 msg = _("Not enough allocatable volume gigabytes remaining")
                 raise exception.NoValidHost(reason=msg)
-            if self.service_is_up(service):
+            if utils.service_is_up(service) and not service['disabled']:
                 driver.cast_to_volume_host(context, service['host'],
                         'create_volume', volume_id=volume_id, **_kwargs)
                 return None

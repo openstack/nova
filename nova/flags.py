@@ -464,3 +464,6 @@ DEFINE_integer('zombie_instance_updated_at_window', 172800,
                'being cleaned up.')
 
 DEFINE_boolean('allow_ec2_admin_api', False, 'Enable/Disable EC2 Admin API')
+
+DEFINE_integer('service_down_time', 60,
+        'maximum time since last check-in for up service')

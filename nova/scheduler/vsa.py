@@ -215,7 +215,7 @@ class VsaScheduler(simple.SimpleScheduler):
             zone, _x, host = availability_zone.partition(':')
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-volume')
-            if not self.service_is_up(service):
+            if service['disabled'] or not utils.service_is_up(service):
                 raise exception.WillNotSchedule(host=host)
 
             return host

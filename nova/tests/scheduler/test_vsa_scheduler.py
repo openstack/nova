@@ -197,7 +197,7 @@ class VsaSchedulerTestCase(test.TestCase):
         scheduled_volume = {'id': volume_id, 'host': values['host']}
 
     def _fake_service_get_by_args(self, context, host, binary):
-        return "service"
+        return {'host': 'fake_host', 'disabled': False}
 
     def _fake_service_is_up_True(self, service):
         return True
@@ -386,7 +386,7 @@ class VsaSchedulerTestCase(test.TestCase):
 
         self.stubs.Set(nova.db,
                         'service_get_by_args', self._fake_service_get_by_args)
-        self.stubs.Set(self.sched,
+        self.stubs.Set(utils,
                         'service_is_up', self._fake_service_is_up_False)
 
         self.assertRaises(exception.WillNotSchedule,
@@ -395,7 +395,7 @@ class VsaSchedulerTestCase(test.TestCase):
                                 request_spec,
                                 availability_zone="nova:host_5")
 
-        self.stubs.Set(self.sched,
+        self.stubs.Set(utils,
                         'service_is_up', self._fake_service_is_up_True)
 
         self.sched.schedule_create_volumes(self.context,
@@ -462,7 +462,7 @@ class VsaSchedulerTestCase(test.TestCase):
         self.stubs.Set(nova.db, 'volume_get', _fake_volume_get_az)
         self.stubs.Set(nova.db,
                         'service_get_by_args', self._fake_service_get_by_args)
-        self.stubs.Set(self.sched,
+        self.stubs.Set(utils,
                         'service_is_up', self._fake_service_is_up_True)
 
         self.sched.schedule_create_volume(self.context,

@@ -1,5 +1,4 @@
-# Copyright 2011 OpenStack LLC.
-# All Rights Reserved.
+# Copyright 2011 OpenStack LLC.  # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -21,6 +20,7 @@ import json
 from nova.scheduler import filters
 from nova import test
 from nova.tests.scheduler import fakes
+from nova import utils
 
 
 class HostFiltersTestCase(test.TestCase):
@@ -37,64 +37,102 @@ class HostFiltersTestCase(test.TestCase):
         host = fakes.FakeHostState('host1', 'compute', {})
         self.assertTrue(filt_cls.host_passes(host, {}))
 
+    def _stub_service_is_up(self, ret_value):
+        def fake_service_is_up(service):
+            return ret_value
+        self.stubs.Set(utils, 'service_is_up', fake_service_is_up)
+
     def test_compute_filter_passes(self):
+        self._stub_service_is_up(True)
         filt_cls = filters.ComputeFilter()
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         capabilities = {'enabled': True}
+        service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
-                {'free_ram_mb': 1024, 'capabilities': capabilities})
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_compute_filter_fails_on_memory(self):
+        self._stub_service_is_up(True)
         filt_cls = filters.ComputeFilter()
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         capabilities = {'enabled': True}
+        service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
-                {'free_ram_mb': 1023, 'capabilities': capabilities})
+                {'free_ram_mb': 1023, 'capabilities': capabilities,
+                 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
-    def test_compute_filter_fails_on_disabled(self):
+    def test_compute_filter_fails_on_service_disabled(self):
+        self._stub_service_is_up(True)
         filt_cls = filters.ComputeFilter()
         filter_properties = {'instance_type': {'memory_mb': 1024}}
-        capabilities = {'enabled': False}
+        capabilities = {'enabled': True}
+        service = {'disabled': True}
         host = fakes.FakeHostState('host1', 'compute',
-                {'free_ram_mb': 1024, 'capabilities': capabilities})
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_compute_filter_fails_on_service_down(self):
+        self._stub_service_is_up(False)
+        filt_cls = filters.ComputeFilter()
+        filter_properties = {'instance_type': {'memory_mb': 1024}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_compute_filter_passes_on_volume(self):
+        self._stub_service_is_up(True)
         filt_cls = filters.ComputeFilter()
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         capabilities = {'enabled': False}
+        service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'volume',
-                {'free_ram_mb': 1024, 'capabilities': capabilities})
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_compute_filter_passes_on_no_instance_type(self):
+        self._stub_service_is_up(True)
         filt_cls = filters.ComputeFilter()
         filter_properties = {}
         capabilities = {'enabled': False}
+        service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
-                {'free_ram_mb': 1024, 'capabilities': capabilities})
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_compute_filter_passes_extra_specs(self):
+        self._stub_service_is_up(True)
         filt_cls = filters.ComputeFilter()
         extra_specs = {'opt1': 1, 'opt2': 2}
         capabilities = {'enabled': True, 'opt1': 1, 'opt2': 2}
+        service = {'disabled': False}
         filter_properties = {'instance_type': {'memory_mb': 1024,
                                                'extra_specs': extra_specs}}
         host = fakes.FakeHostState('host1', 'compute',
-                {'free_ram_mb': 1024, 'capabilities': capabilities})
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_compute_filter_fails_extra_specs(self):
+        self._stub_service_is_up(True)
         filt_cls = filters.ComputeFilter()
         extra_specs = {'opt1': 1, 'opt2': 3}
         capabilities = {'enabled': True, 'opt1': 1, 'opt2': 2}
+        service = {'disabled': False}
         filter_properties = {'instance_type': {'memory_mb': 1024,
                                                'extra_specs': extra_specs}}
         host = fakes.FakeHostState('host1', 'compute',
-                {'free_ram_mb': 1024, 'capabilities': capabilities})
+                {'free_ram_mb': 1024, 'capabilities': capabilities,
+                 'service': service})
+
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_json_filter_passes(self):
@@ -156,11 +194,15 @@ class HostFiltersTestCase(test.TestCase):
                  'capabilities': capabilities})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
-    def test_json_filter_fails_on_disabled(self):
+    def test_json_filter_fails_on_caps_disabled(self):
         filt_cls = filters.JsonFilter()
+        json_query = json.dumps(
+                ['and', ['>=', '$free_ram_mb', 1024],
+                        ['>=', '$free_disk_mb', 200 * 1024],
+                        '$capabilities.enabled'])
         filter_properties = {'instance_type': {'memory_mb': 1024,
                                                'local_gb': 200},
-                             'query': self.json_query}
+                             'query': json_query}
         capabilities = {'enabled': False}
         host = fakes.FakeHostState('host1', 'compute',
                 {'free_ram_mb': 1024,
@@ -168,10 +210,40 @@ class HostFiltersTestCase(test.TestCase):
                  'capabilities': capabilities})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
+    def test_json_filter_fails_on_service_disabled(self):
+        filt_cls = filters.JsonFilter()
+        json_query = json.dumps(
+                ['and', ['>=', '$free_ram_mb', 1024],
+                        ['>=', '$free_disk_mb', 200 * 1024],
+                        ['not', '$service.disabled']])
+        filter_properties = {'instance_type': {'memory_mb': 1024,
+                                               'local_gb': 200},
+                             'query': json_query}
+        capabilities = {'enabled': True}
+        service = {'disabled': True}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024,
+                 'free_disk_mb': 200 * 1024,
+                 'capabilities': capabilities})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_json_filter_passes(self):
+        filt_cls = filters.JsonFilter()
+        filter_properties = {'instance_type': {'memory_mb': 1024,
+                                               'local_gb': 200},
+                             'query': self.json_query}
+        capabilities = {'enabled': True}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': 1024,
+                 'free_disk_mb': 200 * 1024,
+                 'capabilities': capabilities})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
     def test_json_filter_happy_day(self):
         """Test json filter more thoroughly"""
         filt_cls = filters.JsonFilter()
         raw = ['and',
+                  '$capabilities.enabled',
                   ['=', '$capabilities.opt1', 'match'],
                   ['or',
                       ['and',
@@ -184,50 +256,62 @@ class HostFiltersTestCase(test.TestCase):
 
         # Passes
         capabilities = {'enabled': True, 'opt1': 'match'}
+        service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
                 {'free_ram_mb': 10,
                  'free_disk_mb': 200,
-                 'capabilities': capabilities})
+                 'capabilities': capabilities,
+                 'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
         # Passes
         capabilities = {'enabled': True, 'opt1': 'match'}
+        service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
                 {'free_ram_mb': 40,
                  'free_disk_mb': 400,
-                 'capabilities': capabilities})
+                 'capabilities': capabilities,
+                 'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
-        # Failes due to disabled
+        # Failes due to caps disabled
         capabilities = {'enabled': False, 'opt1': 'match'}
+        service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'instance_type',
                 {'free_ram_mb': 40,
                  'free_disk_mb': 400,
-                 'capabilities': capabilities})
+                 'capabilities': capabilities,
+                 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
         # Fails due to being exact memory/disk we don't want
         capabilities = {'enabled': True, 'opt1': 'match'}
+        service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
                 {'free_ram_mb': 30,
                  'free_disk_mb': 300,
-                 'capabilities': capabilities})
+                 'capabilities': capabilities,
+                 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
         # Fails due to memory lower but disk higher
         capabilities = {'enabled': True, 'opt1': 'match'}
+        service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
                 {'free_ram_mb': 20,
                  'free_disk_mb': 400,
-                 'capabilities': capabilities})
+                 'capabilities': capabilities,
+                 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
         # Fails due to capabilities 'opt1' not equal
         capabilities = {'enabled': True, 'opt1': 'no-match'}
+        service = {'enabled': True}
         host = fakes.FakeHostState('host1', 'compute',
                 {'free_ram_mb': 20,
                  'free_disk_mb': 400,
-                 'capabilities': capabilities})
+                 'capabilities': capabilities,
+                 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_json_filter_basic_operators(self):

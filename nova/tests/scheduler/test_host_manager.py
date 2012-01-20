@@ -264,6 +264,12 @@ class HostManagerTestCase(test.TestCase):
         self.mox.VerifyAll()
 
         self.assertEqual(len(host_states), 4)
+        # Check that .service is set properly
+        for i in xrange(4):
+            compute_node = fakes.COMPUTE_NODES[i]
+            host = compute_node['service']['host']
+            self.assertEqual(host_states[host].service,
+                    compute_node['service'])
         self.assertEqual(host_states['host1'].free_ram_mb, 0)
         # 511GB
         self.assertEqual(host_states['host1'].free_disk_mb, 523264)

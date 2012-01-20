@@ -23,10 +23,14 @@ from nova.scheduler import zone_manager
 
 
 COMPUTE_NODES = [
-        dict(id=1, local_gb=1024, memory_mb=1024, service=dict(host='host1')),
-        dict(id=2, local_gb=2048, memory_mb=2048, service=dict(host='host2')),
-        dict(id=3, local_gb=4096, memory_mb=4096, service=dict(host='host3')),
-        dict(id=4, local_gb=8192, memory_mb=8192, service=dict(host='host4')),
+        dict(id=1, local_gb=1024, memory_mb=1024,
+                service=dict(host='host1', disabled=False)),
+        dict(id=2, local_gb=2048, memory_mb=2048,
+                service=dict(host='host2', disabled=True)),
+        dict(id=3, local_gb=4096, memory_mb=4096,
+                service=dict(host='host3', disabled=False)),
+        dict(id=4, local_gb=8192, memory_mb=8192,
+                service=dict(host='host4', disabled=False)),
         # Broken entry
         dict(id=5, local_gb=1024, memory_mb=1024, service=None),
 ]

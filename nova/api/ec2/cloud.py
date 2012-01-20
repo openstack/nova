@@ -50,7 +50,6 @@ from nova import volume
 
 FLAGS = flags.FLAGS
 flags.DECLARE('dhcp_domain', 'nova.network.manager')
-flags.DECLARE('service_down_time', 'nova.scheduler.driver')
 
 LOG = logging.getLogger("nova.api.ec2.cloud")
 
@@ -290,8 +289,7 @@ class CloudController(object):
             hsvcs = [service for service in services \
                      if service['host'] == host]
             for svc in hsvcs:
-                delta = now - (svc['updated_at'] or svc['created_at'])
-                alive = (delta.seconds <= FLAGS.service_down_time)
+                alive = utils.service_is_up(svc)
                 art = (alive and ":-)") or "XXX"
                 active = 'enabled'
                 if svc['disabled']:
