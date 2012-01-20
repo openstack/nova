@@ -1081,6 +1081,9 @@ class Controller(wsgi.Controller):
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
+        except exception.ImageNotFound as error:
+            msg = _("Cannot find image for rebuild")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         instance = self._get_server(context, id)
 

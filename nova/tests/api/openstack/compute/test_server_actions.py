@@ -158,6 +158,7 @@ class ServerActionsControllerTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
+        fakes.stub_out_image_service(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
         self.context = context.RequestContext(1, None)
@@ -167,6 +168,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.flags(allow_instance_snapshots=True)
         self.uuid = FAKE_UUID
         self.url = '/v2/fake/servers/%s/action' % self.uuid
+        self._image_href = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
 
         self.controller = servers.Controller()
 
@@ -267,7 +269,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "imageRef": "http://localhost/images/2",
+                "imageRef": self._image_href,
             },
         }
 
@@ -305,7 +307,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "imageRef": "http://localhost/images/2",
+                "imageRef": self._image_href,
                 "metadata": metadata,
             },
         }
@@ -318,7 +320,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_accepted_with_bad_metadata(self):
         body = {
             "rebuild": {
-                "imageRef": "http://localhost/images/2",
+                "imageRef": self._image_href,
                 "metadata": "stack",
             },
         }
@@ -331,7 +333,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_bad_entity(self):
         body = {
             "rebuild": {
-                "imageId": 2,
+                "imageId": self._image_href,
             },
         }
 
@@ -343,7 +345,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_bad_personality(self):
         body = {
             "rebuild": {
-                "imageRef": "http://localhost/images/2",
+                "imageRef": self._image_href,
                 "personality": [{
                     "path": "/path/to/file",
                     "contents": "INVALID b64",
@@ -359,7 +361,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_personality(self):
         body = {
             "rebuild": {
-                "imageRef": "http://localhost/images/2",
+                "imageRef": self._image_href,
                 "personality": [{
                     "path": "/path/to/file",
                     "contents": base64.b64encode("Test String"),
@@ -378,7 +380,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "imageRef": "http://localhost/images/2",
+                "imageRef": self._image_href,
                 "adminPass": "asdf",
             },
         }
@@ -396,12 +398,23 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "imageRef": "http://localhost/images/2",
+                "imageRef": self._image_href,
             },
         }
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body)
+
+    def test_rebuild_with_bad_image(self):
+        body = {
+            "rebuild": {
+                "imageRef": "foo",
+            },
+        }
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
                           req, FAKE_UUID, body)
 
@@ -413,7 +426,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "imageRef": "http://localhost/images/2",
+                "imageRef": self._image_href,
                 "accessIPv4": "172.19.0.1",
                 "accessIPv6": "fe80::1",
             },
@@ -424,7 +437,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url)
         context = req.environ['nova.context']
         update(context, mox.IgnoreArg(),
-                image_ref='http://localhost/images/2',
+                image_ref=self._image_href,
                 vm_state=vm_states.REBUILDING,
                 task_state=None, progress=0, **attributes).AndReturn(None)
         self.mox.ReplayAll()
