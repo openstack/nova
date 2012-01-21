@@ -344,7 +344,7 @@ class Scheduler(object):
         # Checking original host( where instance was launched at) exists.
         try:
             oservice_refs = db.service_get_all_compute_by_host(context,
-                                           instance_ref['launched_on'])
+                                           instance_ref['host'])
         except exception.NotFound:
             raise exception.SourceHostUnavailable()
         oservice_ref = oservice_refs[0]['compute_node'][0]
@@ -406,7 +406,6 @@ class Scheduler(object):
         :param dest: destination host
 
         """
-
         # Getting total available memory of host
         avail = self._get_compute_info(context, dest, 'memory_mb')
 
@@ -466,7 +465,7 @@ class Scheduler(object):
                                               instance_ref['host'])
             ret = rpc.call(context, topic,
                            {"method": 'get_instance_disk_info',
-                            "args": {'instance_name': instance_ref.name}})
+                            "args": {'instance_name': instance_ref['name']}})
             disk_infos = utils.loads(ret)
         except rpc.RemoteError:
             LOG.exception(_("host %(dest)s is not compatible with "

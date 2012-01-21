@@ -645,3 +645,37 @@ class DeprecationTest(test.TestCase):
 
         # Make sure that did *not* generate a warning
         self.assertEqual(self.warn, None)
+
+    def test_service_is_up(self):
+        fts_func = datetime.datetime.fromtimestamp
+        fake_now = 1000
+        down_time = 5
+
+        self.flags(service_down_time=down_time)
+        self.mox.StubOutWithMock(utils, 'utcnow')
+
+        # Up (equal)
+        utils.utcnow().AndReturn(fts_func(fake_now))
+        service = {'updated_at': fts_func(fake_now - down_time),
+                   'created_at': fts_func(fake_now - down_time)}
+        self.mox.ReplayAll()
+        result = utils.service_is_up(service)
+        self.assertTrue(result)
+
+        self.mox.ResetAll()
+        # Up
+        utils.utcnow().AndReturn(fts_func(fake_now))
+        service = {'updated_at': fts_func(fake_now - down_time + 1),
+                   'created_at': fts_func(fake_now - down_time + 1)}
+        self.mox.ReplayAll()
+        result = utils.service_is_up(service)
+        self.assertTrue(result)
+
+        self.mox.ResetAll()
+        # Down
+        utils.utcnow().AndReturn(fts_func(fake_now))
+        service = {'updated_at': fts_func(fake_now - down_time - 1),
+                   'created_at': fts_func(fake_now - down_time - 1)}
+        self.mox.ReplayAll()
+        result = utils.service_is_up(service)
+        self.assertFalse(result)
