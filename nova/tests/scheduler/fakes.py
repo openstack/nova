@@ -94,6 +94,11 @@ class FakeHostState(host_manager.HostState):
             setattr(self, key, val)
 
 
+class FakeComputeAPI(object):
+    def create_db_entry_for_new_instance(self, *args, **kwargs):
+        pass
+
+
 def mox_host_manager_db_calls(mox, context):
     mox.StubOutWithMock(db, 'compute_node_get_all')
     mox.StubOutWithMock(db, 'instance_get_all')
