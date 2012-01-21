@@ -23,17 +23,18 @@ from nova.scheduler import chance
 class ChanceSchedulerTestCase(test.TestCase):
     """Test case for Chance Scheduler."""
 
-    def test_filter_hosts_avoid(self):
+    def test_filter_hosts_avoid_matches(self):
         """Test to make sure _filter_hosts() filters original hosts if
         avoid_original_host is True."""
 
         sched = chance.ChanceScheduler()
 
         hosts = ['host1', 'host2', 'host3']
-        request_spec = dict(instance_properties=dict(host='host2'),
-                            avoid_original_host=True)
+        request_spec = dict(instance_properties=dict(host='host2'))
+        filter_properties = {'ignore_hosts': ['host2']}
 
-        filtered = sched._filter_hosts(request_spec, hosts)
+        filtered = sched._filter_hosts(request_spec, hosts,
+                filter_properties=filter_properties)
         self.assertEqual(filtered, ['host1', 'host3'])
 
     def test_filter_hosts_no_avoid(self):
@@ -43,8 +44,9 @@ class ChanceSchedulerTestCase(test.TestCase):
         sched = chance.ChanceScheduler()
 
         hosts = ['host1', 'host2', 'host3']
-        request_spec = dict(instance_properties=dict(host='host2'),
-                            avoid_original_host=False)
+        request_spec = dict(instance_properties=dict(host='host2'))
+        filter_properties = {'ignore_hosts': []}
 
-        filtered = sched._filter_hosts(request_spec, hosts)
+        filtered = sched._filter_hosts(request_spec, hosts,
+                filter_properties=filter_properties)
         self.assertEqual(filtered, hosts)

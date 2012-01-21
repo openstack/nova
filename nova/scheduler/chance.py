@@ -30,17 +30,12 @@ from nova.scheduler import driver
 class ChanceScheduler(driver.Scheduler):
     """Implements Scheduler as a random node selector."""
 
-    def _filter_hosts(self, request_spec, hosts):
+    def _filter_hosts(self, request_spec, hosts, **kwargs):
         """Filter a list of hosts based on request_spec."""
 
-        # Filter out excluded host
-        try:
-            if request_spec['avoid_original_host']:
-                original_host = request_spec['instance_properties']['host']
-                hosts = [host for host in hosts if host != original_host]
-        except (KeyError, TypeError):
-            pass
-
+        filter_properties = kwargs.get('filter_properties', {})
+        ignore_hosts = filter_properties.get('ignore_hosts', [])
+        hosts = [host for host in hosts if host not in ignore_hosts]
         return hosts
 
     def _schedule(self, context, topic, request_spec, **kwargs):
@@ -52,7 +47,7 @@ class ChanceScheduler(driver.Scheduler):
             msg = _("Is the appropriate service running?")
             raise exception.NoValidHost(reason=msg)
 
-        hosts = self._filter_hosts(request_spec, hosts)
+        hosts = self._filter_hosts(request_spec, hosts, **kwargs)
         if not hosts:
             msg = _("Could not find another compute")
             raise exception.NoValidHost(reason=msg)
