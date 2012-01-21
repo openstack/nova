@@ -469,3 +469,5 @@ DEFINE_integer('service_down_time', 60,
         'maximum time since last check-in for up service')
 DEFINE_string('default_schedule_zone', None,
               'zone to use when user doesnt specify one')
+DEFINE_list('isolated_images', [], 'Images to run on isolated host')
+DEFINE_list('isolated_hosts', [], 'Host reserved for specific images')
