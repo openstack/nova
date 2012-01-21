@@ -100,13 +100,6 @@ class SimpleScheduler(chance.ChanceScheduler):
             del request_spec['instance_properties']['uuid']
         return instances
 
-    def schedule_start_instance(self, context, instance_id, *_args, **_kwargs):
-        instance_ref = db.instance_get(context, instance_id)
-        host = self._schedule_instance(context, instance_ref,
-                *_args, **_kwargs)
-        driver.cast_to_compute_host(context, host, 'start_instance',
-                instance_id=instance_id, **_kwargs)
-
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""
         elevated = context.elevated()

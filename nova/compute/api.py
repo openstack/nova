@@ -948,11 +948,7 @@ class API(base.Base):
         # TODO(yamahata): injected_files isn't supported right now.
         #                 It is used only for osapi. not for ec2 api.
         #                 availability_zone isn't used by run_instance.
-        rpc.cast(context,
-                 FLAGS.scheduler_topic,
-                 {"method": "start_instance",
-                  "args": {"topic": FLAGS.compute_topic,
-                           "instance_uuid": instance_uuid}})
+        self._cast_compute_message('start_instance', context, instance)
 
     #NOTE(bcwaldon): no policy check here since it should be rolled in to
     # search_opts in get_all

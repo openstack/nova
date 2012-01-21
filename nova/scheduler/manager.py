@@ -105,28 +105,26 @@ class SchedulerManager(manager.Manager):
             with utils.save_and_reraise_exception():
                 self._set_instance_error(method, context, ex, *args, **kwargs)
 
-    # NOTE (David Subiros) : If the exception is raised during run_instance
-    #                        method, we may or may not have an instance_id
     def _set_instance_error(self, method, context, ex, *args, **kwargs):
         """Sets VM to Error state"""
         LOG.warning(_("Failed to schedule_%(method)s: %(ex)s") % locals())
-        if method != "start_instance" and method != "run_instance":
+        # FIXME(comstud): Re-factor this somehow.  Not sure this belongs
+        # in the scheduler manager like this.  Needs to support more than
+        # run_instance
+        if method != "run_instance":
             return
-        # FIXME(comstud): Clean this up after fully on UUIDs.
-        instance_id = kwargs.get('instance_uuid', kwargs.get('instance_id'))
-        if not instance_id:
-            # FIXME(comstud): We should make this easier.  run_instance
-            # only sends a request_spec, and an instance may or may not
-            # have been created in the API (or scheduler) already.  If it
-            # was created, there's a 'uuid' set in the instance_properties
-            # of the request_spec.
-            request_spec = kwargs.get('request_spec', {})
-            properties = request_spec.get('instance_properties', {})
-            instance_id = properties.get('uuid', {})
-        if instance_id:
-            LOG.warning(_("Setting instance %(instance_id)s to "
+        # FIXME(comstud): We should make this easier.  run_instance
+        # only sends a request_spec, and an instance may or may not
+        # have been created in the API (or scheduler) already.  If it
+        # was created, there's a 'uuid' set in the instance_properties
+        # of the request_spec.
+        request_spec = kwargs.get('request_spec', {})
+        properties = request_spec.get('instance_properties', {})
+        instance_uuid = properties.get('uuid', {})
+        if instance_uuid:
+            LOG.warning(_("Setting instance %(instance_uuid)s to "
                     "ERROR state.") % locals())
-            db.instance_update(context, instance_id,
+            db.instance_update(context, instance_uuid,
                     {'vm_state': vm_states.ERROR})
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
