@@ -1003,8 +1003,12 @@ class API(base.Base):
         filters = {}
 
         def _remap_flavor_filter(flavor_id):
-            instance_type = instance_types.get_instance_type_by_flavor_id(
-                    flavor_id)
+            try:
+                instance_type = instance_types.get_instance_type_by_flavor_id(
+                        flavor_id)
+            except exception.FlavorNotFound:
+                raise ValueError()
+
             filters['instance_type_id'] = instance_type['id']
 
         def _remap_fixed_ip_filter(fixed_ip):
@@ -1037,7 +1041,13 @@ class API(base.Base):
                 if isinstance(remap_object, basestring):
                     filters[remap_object] = value
                 else:
-                    remap_object(value)
+                    try:
+                        remap_object(value)
+
+                    # We already know we can't match the filter, so
+                    # return an empty list
+                    except ValueError:
+                        return []
 
         local_zone_only = search_opts.get('local_zone_only', False)
 
