@@ -397,8 +397,8 @@ class QuantumNovaMACGenerationTestCase(QuantumNovaTestCase):
     def test_local_mac_address_creation(self):
         self.flags(use_melange_mac_generation=False)
         fake_mac = "ab:cd:ef:ab:cd:ef"
-        self.stubs.Set(manager.FlatManager, "generate_mac_address",
-                       lambda x: fake_mac)
+        self.stubs.Set(utils, "generate_mac_address",
+                       lambda: fake_mac)
         project_id = "fake_project1"
         ctx = context.RequestContext('user1', project_id)
         self._create_network(networks[0])
