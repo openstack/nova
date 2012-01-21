@@ -748,9 +748,9 @@ def dnsdomain_register_for_project(context, fqdomain, project):
 def dnsdomain_unregister(context, fqdomain):
     session = get_session()
     with session.begin():
-        domain_ref = _dnsdomain_get(context, session, fqdomain)
-        if domain_ref:
-            domain_ref.delete(session=session)
+        session.query(models.DNSDomain).\
+                     filter_by(domain=fqdomain).\
+                     delete()
 
 
 @require_context
