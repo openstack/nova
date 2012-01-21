@@ -949,7 +949,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
         context = self.context.elevated()
         instance = self._create_fake_instance()
-        self.compute.prep_resize(context, instance['uuid'], 1)
+        self.compute.prep_resize(context, instance['uuid'], 1,
+                                 filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
         try:
@@ -975,7 +976,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
         context = self.context.elevated()
         instance = self._create_fake_instance()
-        self.compute.prep_resize(context, instance['uuid'], 1)
+        self.compute.prep_resize(context, instance['uuid'], 1,
+                                 filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
 
@@ -997,7 +999,8 @@ class ComputeTestCase(BaseTestCase):
         test_notifier.NOTIFICATIONS = []
 
         db.instance_update(self.context, instance_uuid, {'host': 'foo'})
-        self.compute.prep_resize(context, instance_uuid, 1)
+        self.compute.prep_resize(context, instance_uuid, 1,
+                                 filter_properties={})
         db.migration_get_by_instance_and_status(context,
                                                 instance_uuid,
                                                 'pre-migrating')
@@ -1050,7 +1053,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, instance_uuid)
         db.instance_update(self.context, instance_uuid, {'host': 'foo'})
-        self.compute.prep_resize(context, instance_uuid, 1)
+        self.compute.prep_resize(context, instance_uuid, 1,
+                                 filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance_uuid, 'pre-migrating')
 
@@ -1071,7 +1075,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_uuid)
         db.instance_update(self.context, instance_uuid,
                            {'host': 'foo'})
-        self.compute.prep_resize(context, instance_uuid, 1)
+        self.compute.prep_resize(context, instance_uuid, 1,
+                                 filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance_uuid, 'pre-migrating')
         self.compute.resize_instance(context, instance_uuid,
@@ -1103,7 +1108,8 @@ class ComputeTestCase(BaseTestCase):
 
         new_instance_type_ref = db.instance_type_get_by_flavor_id(context, 3)
         self.compute.prep_resize(context, inst_ref['uuid'],
-                                 new_instance_type_ref['id'])
+                                 new_instance_type_ref['id'],
+                                 filter_properties={})
 
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
@@ -1160,7 +1166,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, inst_ref['uuid'])
         db.instance_update(self.context, inst_ref['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, inst_ref['uuid'], 1)
+        self.compute.prep_resize(context, inst_ref['uuid'], 1,
+                                 filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
         self.assertRaises(Exception, self.compute.resize_instance,
