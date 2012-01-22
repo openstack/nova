@@ -38,12 +38,6 @@ class ComputeFilter(abstract_filter.AbstractHostFilter):
                 return False
         return True
 
-    def _basic_ram_filter(self, host_state, instance_type):
-        """Only return hosts with sufficient available RAM."""
-        requested_ram = instance_type['memory_mb']
-        free_ram_mb = host_state.free_ram_mb
-        return free_ram_mb >= requested_ram
-
     def host_passes(self, host_state, filter_properties):
         """Return a list of hosts that can create instance_type."""
         instance_type = filter_properties.get('instance_type')
@@ -53,8 +47,6 @@ class ComputeFilter(abstract_filter.AbstractHostFilter):
         service = host_state.service
 
         if not utils.service_is_up(service) or service['disabled']:
-            return False
-        if not self._basic_ram_filter(host_state, instance_type):
             return False
         if not capabilities.get("enabled", True):
             return False
