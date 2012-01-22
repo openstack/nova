@@ -150,10 +150,6 @@ def fake_compute_api(cls, req, id):
     return True
 
 
-def find_host(self, context, instance_id):
-    return "nova"
-
-
 class MockSetAdminPassword(object):
     def __init__(self):
         self.instance_id = None
@@ -1564,7 +1560,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.db, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
-        self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
     def _test_create_instance(self):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'

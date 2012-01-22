@@ -147,6 +147,7 @@ class BaseTestCase(test.TestCase):
         inst['launch_time'] = '10'
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
+        inst['host'] = 'fake_host'
         type_id = instance_types.get_instance_type_by_name(type_name)['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
@@ -3024,6 +3025,10 @@ class ComputePolicyTestCase(BaseTestCase):
 
     def test_wrapped_method(self):
         instance = self._create_fake_instance()
+        # Reset this to None for this policy check. If it's set, it
+        # tries to do a compute_api.update() and we're not testing for
+        # that here.
+        instance['host'] = None
         self.compute.run_instance(self.context, instance['uuid'])
 
         # force delete to fail
