@@ -1797,20 +1797,17 @@ class LibvirtConnection(driver.ComputeDriver):
         # if image has kernel and ramdisk, just download
         # following normal way.
         if instance_ref['kernel_id']:
-            user = manager.AuthManager().get_user(instance_ref['user_id'])
-            project = manager.AuthManager().get_project(
-                instance_ref['project_id'])
             libvirt_utils.fetch_image(nova_context.get_admin_context(),
                               os.path.join(instance_dir, 'kernel'),
                               instance_ref['kernel_id'],
-                              user,
-                              project)
+                              instance_ref['user_id'],
+                              instance_ref['project_id'])
             if instance_ref['ramdisk_id']:
                 libvirt_utils.fetch_image(nova_context.get_admin_context(),
                                   os.path.join(instance_dir, 'ramdisk'),
                                   instance_ref['ramdisk_id'],
-                                  user,
-                                  project)
+                                  instance_ref['user_id'],
+                                  instance_ref['project_id'])
 
     def post_live_migration_at_destination(self, ctxt,
                                            instance_ref,
