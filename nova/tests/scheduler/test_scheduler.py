@@ -231,34 +231,6 @@ class SchedulerManagerTestCase(test.TestCase):
         self.manager.run_instance(self.context, self.topic,
                 *self.fake_args, **self.fake_kwargs)
 
-    def test_start_instance_exception_puts_instance_in_error_state(self):
-        """Test that an NoValidHost exception for start_instance puts
-        the instance in ERROR state and eats the exception.
-        """
-
-        fake_instance_id = 'fake-instance-id'
-        self.fake_kwargs['instance_id'] = fake_instance_id
-
-        # Make sure the method exists that we're going to test call
-        def stub_method(*args, **kwargs):
-            pass
-
-        setattr(self.manager.driver, 'schedule_start_instance', stub_method)
-
-        self.mox.StubOutWithMock(self.manager.driver,
-                'schedule_start_instance')
-        self.mox.StubOutWithMock(db, 'instance_update')
-
-        self.manager.driver.schedule_start_instance(self.context,
-                *self.fake_args, **self.fake_kwargs).AndRaise(
-                        exception.NoValidHost(reason=""))
-        db.instance_update(self.context, fake_instance_id,
-                {'vm_state': vm_states.ERROR})
-
-        self.mox.ReplayAll()
-        self.manager.start_instance(self.context, self.topic,
-                *self.fake_args, **self.fake_kwargs)
-
 
 class SchedulerTestCase(test.TestCase):
     """Test case for base scheduler driver class"""

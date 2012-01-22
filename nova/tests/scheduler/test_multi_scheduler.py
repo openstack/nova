@@ -31,7 +31,10 @@ class FakeComputeScheduler(driver.Scheduler):
     def schedule_run_instance(self, *args, **kwargs):
         pass
 
-    def schedule_start_instance(self, *args, **kwargs):
+    def schedule_live_migration(self, *args, **kwargs):
+        pass
+
+    def schedule_prep_resize(self, *args, **kwargs):
         pass
 
     def schedule(self, *args, **kwargs):
@@ -76,7 +79,7 @@ class MultiDriverTestCase(test_scheduler.SchedulerTestCase):
         compute_driver = mgr.drivers['compute']
         volume_driver = mgr.drivers['volume']
 
-        test_methods = {compute_driver: ['run_instance', 'start_instance'],
+        test_methods = {compute_driver: ['run_instance', 'prep_resize'],
                         volume_driver: ['create_volume', 'create_volumes']}
 
         for driver, methods in test_methods.iteritems():
