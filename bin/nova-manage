@@ -2215,7 +2215,9 @@ class ConfigCommands(object):
         pass
 
     def list(self):
-        print FLAGS.FlagsIntoString()
+        for key, value in FLAGS.FlagValuesDict().iteritems():
+            if value is not None:
+                print '%s = %s' % (key, value)
 
 
 class GetLogCommands(object):
