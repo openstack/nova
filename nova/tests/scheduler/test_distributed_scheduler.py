@@ -260,7 +260,8 @@ class DistributedSchedulerTestCase(test.TestCase):
                         'instance_type': {'memory_mb': 512, 'local_gb': 512},
                         'instance_properties': {'project_id': 1,
                                                 'memory_mb': 512,
-                                                'local_gb': 512}}
+                                                'local_gb': 512,
+                                                'vcpus': 1}}
         filter_properties = {'local_zone_only': True}
         self.mox.ReplayAll()
         weighted_hosts = sched._schedule(fake_context, 'compute',
@@ -299,5 +300,5 @@ class DistributedSchedulerTestCase(test.TestCase):
         self.assertEquals(weight, 1.0)
         hostinfo = host_manager.HostState('host', 'compute')
         hostinfo.update_from_compute_node(dict(memory_mb=1000,
-                local_gb=0))
+                local_gb=0, vcpus=1))
         self.assertEquals(1000 - 128, fn(hostinfo, {}))

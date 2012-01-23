@@ -415,3 +415,25 @@ class HostFiltersTestCase(test.TestCase):
         raw = ['=', '$foo', 2, 2]
         filter_properties = {'query': json.dumps(raw)}
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_core_filter_passes(self):
+        filt_cls = filters.CoreFilter()
+        filter_properties = {'instance_type': {'vcpus': 1}}
+        self.flags(cpu_allocation_ratio=2)
+        host = fakes.FakeHostState('host1', 'compute',
+                {'vcpus_total': 4, 'vcpus_used': 7})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_core_filter_fails_safe(self):
+        filt_cls = filters.CoreFilter()
+        filter_properties = {'instance_type': {'vcpus': 1}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_core_filter_fails(self):
+        filt_cls = filters.CoreFilter()
+        filter_properties = {'instance_type': {'vcpus': 1}}
+        self.flags(cpu_allocation_ratio=2)
+        host = fakes.FakeHostState('host1', 'compute',
+                {'vcpus_total': 4, 'vcpus_used': 8})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
