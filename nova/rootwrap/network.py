@@ -62,8 +62,11 @@ filterlist = [
 
     # nova/network/linux_net.py: 'kill', '-9', pid
     # nova/network/linux_net.py: 'kill', '-HUP', pid
+    filters.KillFilter("/bin/kill", "root",
+                       ['-9', '-HUP'], ['/usr/sbin/dnsmasq']),
+
     # nova/network/linux_net.py: 'kill', pid
-    filters.CommandFilter("/bin/kill", "root"),
+    filters.KillFilter("/bin/kill", "root", [''], ['/usr/sbin/radvd']),
 
     # nova/network/linux_net.py: dnsmasq call
     filters.DnsmasqFilter("/usr/sbin/dnsmasq", "root"),
