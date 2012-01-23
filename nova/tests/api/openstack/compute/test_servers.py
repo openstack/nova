@@ -1637,6 +1637,46 @@ class ServersControllerCreateTest(test.TestCase):
         reservation_id = res['reservation_id']
         self.assertEqual(reservation_id, "myresid")
 
+    def test_create_instance_image_ref_is_bookmark(self):
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/fake/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/fake/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = self.controller.create(req, body).obj
+
+        server = res['server']
+        self.assertEqual(FAKE_UUID, server['id'])
+
+    def test_create_instance_image_ref_is_invalid(self):
+        image_uuid = 'this_is_not_a_valid_uuid'
+        image_href = 'http://localhost/fake/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/fake/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, body)
+
     def test_create_instance_no_key_pair(self):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
         self._test_create_instance()
