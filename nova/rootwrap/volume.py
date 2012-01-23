@@ -16,32 +16,32 @@
 #    under the License.
 
 
-from nova.rootwrap.filters import CommandFilter
+from nova.rootwrap import filters
 
-filters = [
+filterlist = [
     # nova/volume/iscsi.py: iscsi_helper '--op' ...
-    CommandFilter("/usr/sbin/ietadm", "root"),
-    CommandFilter("/usr/sbin/tgtadm", "root"),
+    filters.CommandFilter("/usr/sbin/ietadm", "root"),
+    filters.CommandFilter("/usr/sbin/tgtadm", "root"),
 
     # nova/volume/driver.py: 'vgs', '--noheadings', '-o', 'name'
-    CommandFilter("/sbin/vgs", "root"),
+    filters.CommandFilter("/sbin/vgs", "root"),
 
     # nova/volume/driver.py: 'lvcreate', '-L', sizestr, '-n', volume_name,..
     # nova/volume/driver.py: 'lvcreate', '-L', ...
-    CommandFilter("/sbin/lvcreate", "root"),
+    filters.CommandFilter("/sbin/lvcreate", "root"),
 
     # nova/volume/driver.py: 'dd', 'if=%s' % srcstr, 'of=%s' % deststr,...
-    CommandFilter("/bin/dd", "root"),
+    filters.CommandFilter("/bin/dd", "root"),
 
     # nova/volume/driver.py: 'lvremove', '-f', "%s/%s" % ...
-    CommandFilter("/sbin/lvremove", "root"),
+    filters.CommandFilter("/sbin/lvremove", "root"),
 
     # nova/volume/driver.py: 'lvdisplay', '--noheading', '-C', '-o', 'Attr',..
-    CommandFilter("/sbin/lvdisplay", "root"),
+    filters.CommandFilter("/sbin/lvdisplay", "root"),
 
     # nova/volume/driver.py: 'iscsiadm', '-m', 'discovery', '-t',...
     # nova/volume/driver.py: 'iscsiadm', '-m', 'node', '-T', ...
-    CommandFilter("/sbin/iscsiadm", "root"),
+    filters.CommandFilter("/sbin/iscsiadm", "root"),
 
     # nova/volume/driver.py:'/var/lib/zadara/bin/zadara_sncfg', *
     # sudoers does not allow zadara_sncfg yet

@@ -16,9 +16,9 @@
 #    under the License.
 
 
-from nova.rootwrap.filters import CommandFilter, DnsmasqFilter
+from nova.rootwrap import filters
 
-filters = [
+filterlist = [
     # nova/network/linux_net.py: 'ip', 'addr', 'add', str(floating_ip)+'/32'i..
     # nova/network/linux_net.py: 'ip', 'addr', 'del', str(floating_ip)+'/32'..
     # nova/network/linux_net.py: 'ip', 'addr', 'add', '169.254.169.254/32',..
@@ -35,19 +35,19 @@ filters = [
     # nova/network/linux_net.py: 'ip', 'addr', 'show', 'dev', interface, ..
     # nova/network/linux_net.py: 'ip', 'link', 'set', dev, "address", ..
     # nova/network/linux_net.py: 'ip', 'link', 'set', dev, 'up'
-    CommandFilter("/sbin/ip", "root"),
+    filters.CommandFilter("/sbin/ip", "root"),
 
     # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd,), '-t', ...
-    CommandFilter("/sbin/iptables-save", "root"),
-    CommandFilter("/sbin/ip6tables-save", "root"),
+    filters.CommandFilter("/sbin/iptables-save", "root"),
+    filters.CommandFilter("/sbin/ip6tables-save", "root"),
 
     # nova/network/linux_net.py: 'ip[6]tables-restore' % (cmd,)
-    CommandFilter("/sbin/iptables-restore", "root"),
-    CommandFilter("/sbin/ip6tables-restore", "root"),
+    filters.CommandFilter("/sbin/iptables-restore", "root"),
+    filters.CommandFilter("/sbin/ip6tables-restore", "root"),
 
     # nova/network/linux_net.py: 'arping', '-U', floating_ip, '-A', '-I', ...
     # nova/network/linux_net.py: 'arping', '-U', network_ref['dhcp_server'],..
-    CommandFilter("/usr/bin/arping", "root"),
+    filters.CommandFilter("/usr/bin/arping", "root"),
 
     # nova/network/linux_net.py: 'route', '-n'
     # nova/network/linux_net.py: 'route', 'del', 'default', 'gw'
@@ -55,29 +55,29 @@ filters = [
     # nova/network/linux_net.py: 'route', '-n'
     # nova/network/linux_net.py: 'route', 'del', 'default', 'gw', old_gw, ..
     # nova/network/linux_net.py: 'route', 'add', 'default', 'gw', old_gateway
-    CommandFilter("/sbin/route", "root"),
+    filters.CommandFilter("/sbin/route", "root"),
 
     # nova/network/linux_net.py: 'dhcp_release', dev, address, mac_address
-    CommandFilter("/usr/bin/dhcp_release", "root"),
+    filters.CommandFilter("/usr/bin/dhcp_release", "root"),
 
     # nova/network/linux_net.py: 'kill', '-9', pid
     # nova/network/linux_net.py: 'kill', '-HUP', pid
     # nova/network/linux_net.py: 'kill', pid
-    CommandFilter("/bin/kill", "root"),
+    filters.CommandFilter("/bin/kill", "root"),
 
     # nova/network/linux_net.py: dnsmasq call
-    DnsmasqFilter("/usr/sbin/dnsmasq", "root"),
+    filters.DnsmasqFilter("/usr/sbin/dnsmasq", "root"),
 
     # nova/network/linux_net.py: 'radvd', '-C', '%s' % _ra_file(dev, 'conf'),..
-    CommandFilter("/usr/sbin/radvd", "root"),
+    filters.CommandFilter("/usr/sbin/radvd", "root"),
 
     # nova/network/linux_net.py: 'brctl', 'addbr', bridge
     # nova/network/linux_net.py: 'brctl', 'setfd', bridge, 0
     # nova/network/linux_net.py: 'brctl', 'stp', bridge, 'off'
     # nova/network/linux_net.py: 'brctl', 'addif', bridge, interface
-    CommandFilter("/sbin/brctl", "root"),
-    CommandFilter("/usr/sbin/brctl", "root"),
+    filters.CommandFilter("/sbin/brctl", "root"),
+    filters.CommandFilter("/usr/sbin/brctl", "root"),
 
     # nova/network/linux_net.py: 'ovs-vsctl', ....
-    CommandFilter("/usr/bin/ovs-vsctl", "root"),
+    filters.CommandFilter("/usr/bin/ovs-vsctl", "root"),
     ]
