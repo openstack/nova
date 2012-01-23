@@ -41,6 +41,10 @@ class CommandFilter(object):
             return ['sudo', '-u', self.run_as, self.exec_path] + userargs[1:]
         return [self.exec_path] + userargs[1:]
 
+    def get_environment(self, userargs):
+        """Returns specific environment to set, None if none"""
+        return None
+
 
 class RegExpFilter(CommandFilter):
     """Command filter doing regexp matching for every argument"""
@@ -77,4 +81,10 @@ class DnsmasqFilter(CommandFilter):
         return False
 
     def get_command(self, userargs):
-        return userargs[0:2] + [self.exec_path] + userargs[3:]
+        return [self.exec_path] + userargs[3:]
+
+    def get_environment(self, userargs):
+        env = os.environ.copy()
+        env['FLAGFILE'] = userargs[0].split('=')[-1]
+        env['NETWORK_ID'] = userargs[1].split('=')[-1]
+        return env
