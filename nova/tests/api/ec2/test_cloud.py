@@ -28,6 +28,7 @@ from M2Crypto import RSA
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
+from nova.common import cfg
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context
@@ -43,12 +44,15 @@ from nova import test
 from nova import utils
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.cloud')
 
+ajax_proxy_manager_opt = \
+    cfg.StrOpt('ajax_proxy_manager',
+               default='nova.tests.api.ec2.test_cloud.AjaxProxyManager',
+               help='')
 
-flags.DEFINE_string('ajax_proxy_manager',
-        'nova.tests.api.ec2.test_cloud.AjaxProxyManager', '')
+FLAGS = flags.FLAGS
+FLAGS.add_option(ajax_proxy_manager_opt)
 
 
 class AjaxProxyManager(manager.SchedulerDependentManager):

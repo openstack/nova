@@ -22,6 +22,7 @@ import signal
 
 from Cheetah import Template
 
+from nova.common import cfg
 from nova import context
 from nova import db
 from nova import exception
@@ -30,22 +31,26 @@ from nova import log as logging
 from nova import utils
 
 
+xvp_opts = [
+    cfg.StrOpt('console_xvp_conf_template',
+               default=utils.abspath('console/xvp.conf.template'),
+               help='XVP conf template'),
+    cfg.StrOpt('console_xvp_conf',
+               default='/etc/xvp.conf',
+               help='generated XVP conf file'),
+    cfg.StrOpt('console_xvp_pid',
+               default='/var/run/xvp.pid',
+               help='XVP master process pid file'),
+    cfg.StrOpt('console_xvp_log',
+               default='/var/log/xvp.log',
+               help='XVP log file'),
+    cfg.IntOpt('console_xvp_multiplex_port',
+               default=5900,
+               help='port for XVP to multiplex VNC connections on'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('console_xvp_conf_template',
-                    utils.abspath('console/xvp.conf.template'),
-                    'XVP conf template')
-flags.DEFINE_string('console_xvp_conf',
-                    '/etc/xvp.conf',
-                    'generated XVP conf file')
-flags.DEFINE_string('console_xvp_pid',
-                    '/var/run/xvp.pid',
-                    'XVP master process pid file')
-flags.DEFINE_string('console_xvp_log',
-                    '/var/log/xvp.log',
-                    'XVP log file')
-flags.DEFINE_integer('console_xvp_multiplex_port',
-                     5900,
-                     'port for XVP to multiplex VNC connections on')
+FLAGS.add_options(xvp_opts)
 
 
 class XVPConsoleProxy(object):

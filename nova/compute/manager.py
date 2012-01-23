@@ -45,6 +45,7 @@ from eventlet import greenthread
 
 from nova import block_device
 import nova.context
+from nova.common import cfg
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
@@ -64,40 +65,53 @@ from nova import vnc
 from nova import volume
 
 
+compute_opts = [
+    cfg.StrOpt('instances_path',
+               default='$state_path/instances',
+               help='where instances are stored on disk'),
+    cfg.StrOpt('compute_driver',
+               default='nova.virt.connection.get_connection',
+               help='Driver to use for controlling virtualization'),
+    cfg.StrOpt('console_host',
+               default=socket.gethostname(),
+               help='Console proxy host to use to connect '
+                    'to instances on this host.'),
+    cfg.IntOpt('live_migration_retry_count',
+               default=30,
+               help="Number of 1 second retries needed in live_migration"),
+    cfg.IntOpt("reboot_timeout",
+               default=0,
+               help="Automatically hard reboot an instance if it has been "
+                    "stuck in a rebooting state longer than N seconds. "
+                    "Set to 0 to disable."),
+    cfg.IntOpt("rescue_timeout",
+               default=0,
+               help="Automatically unrescue an instance after N seconds. "
+                    "Set to 0 to disable."),
+    cfg.IntOpt("resize_confirm_window",
+               default=0,
+               help="Automatically confirm resizes after N seconds. "
+                    "Set to 0 to disable."),
+    cfg.IntOpt('host_state_interval',
+               default=120,
+               help='Interval in seconds for querying the host status'),
+    cfg.IntOpt("running_deleted_instance_timeout",
+               default=0,
+               help="Number of seconds after being deleted when a running "
+                    "instance should be considered eligible for cleanup."),
+    cfg.IntOpt("running_deleted_instance_poll_interval",
+               default=30,
+               help="Number of periodic scheduler ticks to wait between "
+                    "runs of the cleanup task."),
+    cfg.StrOpt("running_deleted_instance_action",
+               default="noop",
+               help="Action to take if a running deleted instance is detected."
+                    "Valid options are 'noop', 'log' and 'reap'. "
+                    "Set to 'noop' to disable."),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('instances_path', '$state_path/instances',
-                    'where instances are stored on disk')
-flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
-                    'Driver to use for controlling virtualization')
-flags.DEFINE_string('console_host', socket.gethostname(),
-                    'Console proxy host to use to connect to instances on'
-                    'this host.')
-flags.DEFINE_integer('live_migration_retry_count', 30,
-                     "Retry count needed in live_migration."
-                     " sleep 1 sec for each count")
-flags.DEFINE_integer("reboot_timeout", 0,
-                     "Automatically hard reboot an instance if it has been "
-                     "stuck in a rebooting state longer than N seconds."
-                     " Set to 0 to disable.")
-flags.DEFINE_integer("rescue_timeout", 0,
-                     "Automatically unrescue an instance after N seconds."
-                     " Set to 0 to disable.")
-flags.DEFINE_integer("resize_confirm_window", 0,
-                     "Automatically confirm resizes after N seconds."
-                     " Set to 0 to disable.")
-flags.DEFINE_integer('host_state_interval', 120,
-                     'Interval in seconds for querying the host status')
-flags.DEFINE_integer("running_deleted_instance_timeout", 0,
-                     "Number of seconds after being deleted when a"
-                     " still-running instance should be considered"
-                     " eligible for cleanup.")
-flags.DEFINE_integer("running_deleted_instance_poll_interval", 30,
-                     "Number of periodic scheduler ticks to wait between"
-                     " runs of the cleanup task.")
-flags.DEFINE_string("running_deleted_instance_action", "noop",
-                     "Action to take if a running deleted instance is"
-                     " detected. Valid options are 'noop', 'log', and"
-                     " 'reap'. Set to 'noop' to disable.")
+FLAGS.add_options(compute_opts)
 
 LOG = logging.getLogger('nova.compute.manager')
 

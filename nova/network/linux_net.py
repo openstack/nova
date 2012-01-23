@@ -24,6 +24,7 @@ import inspect
 import netaddr
 import os
 
+from nova.common import cfg
 from nova import db
 from nova import exception
 from nova import flags
@@ -39,37 +40,56 @@ def _bin_file(script):
     return os.path.abspath(os.path.join(__file__, '../../../bin', script))
 
 
+linux_net_opts = [
+    cfg.StrOpt('dhcpbridge_flagfile',
+               default='/etc/nova/nova-dhcpbridge.conf',
+               help='location of flagfile for dhcpbridge'),
+    cfg.StrOpt('networks_path',
+               default='$state_path/networks',
+               help='Location to keep network config files'),
+    cfg.StrOpt('public_interface',
+               default='eth0',
+               help='Interface for public IP addresses'),
+    cfg.StrOpt('network_device_mtu',
+               default=None,
+               help='MTU setting for vlan'),
+    cfg.StrOpt('dhcpbridge',
+               default=_bin_file('nova-dhcpbridge'),
+               help='location of nova-dhcpbridge'),
+    cfg.StrOpt('routing_source_ip',
+               default='$my_ip',
+               help='Public IP of network host'),
+    cfg.IntOpt('dhcp_lease_time',
+               default=120,
+               help='Lifetime of a DHCP lease in seconds'),
+    cfg.StrOpt('dns_server',
+               default=None,
+               help='if set, uses specific dns server for dnsmasq'),
+    cfg.StrOpt('dmz_cidr',
+               default='10.128.0.0/24',
+               help='dmz range that should be accepted'),
+    cfg.StrOpt('dnsmasq_config_file',
+               default="",
+               help='Override the default dnsmasq settings with this file'),
+    cfg.StrOpt('linuxnet_interface_driver',
+               default='nova.network.linux_net.LinuxBridgeInterfaceDriver',
+               help='Driver used to create ethernet devices.'),
+    cfg.StrOpt('linuxnet_ovs_integration_bridge',
+               default='br-int',
+               help='Name of Open vSwitch bridge used with linuxnet'),
+    cfg.BoolOpt('send_arp_for_ha',
+                default=False,
+                help='send gratuitous ARPs for HA setup'),
+    cfg.BoolOpt('use_single_default_gateway',
+                default=False,
+                help='Use single default gateway. Only first nic of vm will '
+                     'get default gateway from dhcp server'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('dhcpbridge_flagfile',
-                    '/etc/nova/nova-dhcpbridge.conf',
-                    'location of flagfile for dhcpbridge')
-flags.DEFINE_string('networks_path', '$state_path/networks',
-                    'Location to keep network config files')
-flags.DEFINE_string('public_interface', 'eth0',
-                    'Interface for public IP addresses')
-flags.DEFINE_string('network_device_mtu', None, 'MTU setting for vlan')
-flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
-                        'location of nova-dhcpbridge')
-flags.DEFINE_string('routing_source_ip', '$my_ip',
-                    'Public IP of network host')
-flags.DEFINE_integer('dhcp_lease_time', 120,
-                     'Lifetime of a DHCP lease in seconds')
-flags.DEFINE_string('dns_server', None,
-                    'if set, uses specific dns server for dnsmasq')
-flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
-                    'dmz range that should be accepted')
-flags.DEFINE_string('dnsmasq_config_file', "",
-                    'Override the default dnsmasq settings with this file')
-flags.DEFINE_string('linuxnet_interface_driver',
-                    'nova.network.linux_net.LinuxBridgeInterfaceDriver',
-                    'Driver used to create ethernet devices.')
-flags.DEFINE_string('linuxnet_ovs_integration_bridge',
-                    'br-int', 'Name of Open vSwitch bridge used with linuxnet')
-flags.DEFINE_bool('send_arp_for_ha', False,
-                  'send gratuitous ARPs for HA setup')
-flags.DEFINE_bool('use_single_default_gateway',
-                   False, 'Use single default gateway. Only first nic of vm'
-                          ' will get default gateway from dhcp server')
+FLAGS.add_options(linux_net_opts)
+
+
 binary_name = os.path.basename(inspect.stack()[-1][1])
 
 

@@ -26,6 +26,7 @@ import paramiko
 
 from xml.etree import ElementTree
 
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -34,27 +35,40 @@ from nova.utils import ssh_execute
 from nova.volume.driver import ISCSIDriver
 
 LOG = logging.getLogger("nova.volume.driver")
+
+san_opts = [
+    cfg.BoolOpt('san_thin_provision',
+                default='true',
+                help='Use thin provisioning for SAN volumes?'),
+    cfg.StrOpt('san_ip',
+               default='',
+               help='IP address of SAN controller'),
+    cfg.StrOpt('san_login',
+               default='admin',
+               help='Username for SAN controller'),
+    cfg.StrOpt('san_password',
+               default='',
+               help='Password for SAN controller'),
+    cfg.StrOpt('san_private_key',
+               default='',
+               help='Filename of private key to use for SSH authentication'),
+    cfg.StrOpt('san_clustername',
+               default='',
+               help='Cluster name to use for creating volumes'),
+    cfg.IntOpt('san_ssh_port',
+               default=22,
+               help='SSH port to use with SAN'),
+    cfg.BoolOpt('san_is_local',
+                default='false',
+                help='Execute commands locally instead of over SSH; '
+                     'use if the volume service is running on the SAN device'),
+    cfg.StrOpt('san_zfs_volume_base',
+               default='rpool/',
+               help='The ZFS path under which to create zvols for volumes.'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_boolean('san_thin_provision', 'true',
-                     'Use thin provisioning for SAN volumes?')
-flags.DEFINE_string('san_ip', '',
-                    'IP address of SAN controller')
-flags.DEFINE_string('san_login', 'admin',
-                    'Username for SAN controller')
-flags.DEFINE_string('san_password', '',
-                    'Password for SAN controller')
-flags.DEFINE_string('san_private_key', '',
-                    'Filename of private key to use for SSH authentication')
-flags.DEFINE_string('san_clustername', '',
-                    'Cluster name to use for creating volumes')
-flags.DEFINE_integer('san_ssh_port', 22,
-                    'SSH port to use with SAN')
-flags.DEFINE_boolean('san_is_local', 'false',
-                     'Execute commands locally instead of over SSH; '
-                     'use if the volume service is running on the SAN device')
-flags.DEFINE_string('san_zfs_volume_base',
-                    'rpool/',
-                    'The ZFS path under which to create zvols for volumes.')
+FLAGS.add_options(san_opts)
 
 
 class SanISCSIDriver(ISCSIDriver):

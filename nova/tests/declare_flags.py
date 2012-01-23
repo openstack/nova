@@ -16,8 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.common import cfg
 from nova import flags
 
 FLAGS = flags.FLAGS
-
-flags.DEFINE_integer('answer', 42, 'test flag')
+FLAGS.add_option(cfg.IntOpt('answer', default=42, help='test flag'))

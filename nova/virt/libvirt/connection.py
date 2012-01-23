@@ -54,6 +54,7 @@ from xml.etree import ElementTree
 
 from nova.auth import manager
 from nova import block_device
+from nova.common import cfg
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova import context as nova_context
@@ -75,70 +76,84 @@ Template = None
 
 LOG = logging.getLogger('nova.virt.libvirt_conn')
 
+libvirt_opts = [
+    cfg.StrOpt('rescue_image_id',
+               default=None,
+               help='Rescue ami image'),
+    cfg.StrOpt('rescue_kernel_id',
+               default=None,
+               help='Rescue aki image'),
+    cfg.StrOpt('rescue_ramdisk_id',
+               default=None,
+               help='Rescue ari image'),
+    cfg.StrOpt('libvirt_xml_template',
+               default=utils.abspath('virt/libvirt.xml.template'),
+               help='Libvirt XML Template'),
+    cfg.StrOpt('libvirt_type',
+               default='kvm',
+               help='Libvirt domain type (valid options are: '
+                    'kvm, lxc, qemu, uml, xen)'),
+    cfg.StrOpt('libvirt_uri',
+               default='',
+               help='Override the default libvirt URI '
+                    '(which is dependent on libvirt_type)'),
+    cfg.BoolOpt('use_cow_images',
+                default=True,
+                help='Whether to use cow images'),
+    cfg.StrOpt('ajaxterm_portrange',
+               default='10000-12000',
+               help='Range of ports that ajaxterm should try to bind'),
+    cfg.StrOpt('cpuinfo_xml_template',
+               default=utils.abspath('virt/cpuinfo.xml.template'),
+               help='CpuInfo XML Template (Used only live migration now)'),
+    cfg.StrOpt('live_migration_uri',
+               default="qemu+tcp://%s/system",
+               help='Define protocol used by live_migration feature'),
+    cfg.StrOpt('live_migration_flag',
+               default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER',
+               help='Define live migration behavior.'),
+    cfg.StrOpt('block_migration_flag',
+               default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_NON_SHARED_INC',
+               help='Define block migration behavior.'),
+    cfg.IntOpt('live_migration_bandwidth',
+               default=0,
+               help='Define live migration behavior'),
+    cfg.StrOpt('snapshot_image_format',
+               default=None,
+               help='Snapshot image format (valid options are : '
+                    'raw, qcow2, vmdk, vdi). '
+                    'Defaults to same as source image'),
+    cfg.StrOpt('libvirt_vif_type',
+               default='bridge',
+               help='Type of VIF to create.'),
+    cfg.StrOpt('libvirt_vif_driver',
+               default='nova.virt.libvirt.vif.LibvirtBridgeDriver',
+               help='The libvirt VIF driver to configure the VIFs.'),
+    cfg.ListOpt('libvirt_volume_drivers',
+                default=[
+                  'iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
+                  'local=nova.virt.libvirt.volume.LibvirtVolumeDriver',
+                  'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
+                  'rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
+                  'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver'
+                  ],
+                help='Libvirt handlers for remote volumes.'),
+    cfg.BoolOpt('libvirt_use_virtio_for_bridges',
+                default=False,
+                help='Use virtio for bridge interfaces'),
+    cfg.StrOpt('libvirt_disk_prefix',
+               default=None,
+               help='Override the default disk prefix for the devices attached'
+                    ' to a server, which is dependent on libvirt_type. '
+                    '(valid options are: sd, xvd, uvd, vd)'),
+    ]
 
 FLAGS = flags.FLAGS
+FLAGS.add_options(libvirt_opts)
+
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 flags.DECLARE('vncserver_proxyclient_address', 'nova.vnc')
-# TODO(vish): These flags should probably go into a shared location
-flags.DEFINE_string('rescue_image_id', None, 'Rescue ami image')
-flags.DEFINE_string('rescue_kernel_id', None, 'Rescue aki image')
-flags.DEFINE_string('rescue_ramdisk_id', None, 'Rescue ari image')
-flags.DEFINE_string('libvirt_xml_template',
-                    utils.abspath('virt/libvirt.xml.template'),
-                    'Libvirt XML Template')
-flags.DEFINE_string('libvirt_type',
-                    'kvm',
-                    'Libvirt domain type (valid options are: '
-                    'kvm, lxc, qemu, uml, xen)')
-flags.DEFINE_string('libvirt_uri',
-                    '',
-                    'Override the default libvirt URI (which is dependent'
-                    ' on libvirt_type)')
-flags.DEFINE_bool('use_cow_images',
-                  True,
-                  'Whether to use cow images')
-flags.DEFINE_string('ajaxterm_portrange',
-                    '10000-12000',
-                    'Range of ports that ajaxterm should randomly try to bind')
-flags.DEFINE_string('cpuinfo_xml_template',
-                    utils.abspath('virt/cpuinfo.xml.template'),
-                    'CpuInfo XML Template (Used only live migration now)')
-flags.DEFINE_string('live_migration_uri',
-                    "qemu+tcp://%s/system",
-                    'Define protocol used by live_migration feature')
-flags.DEFINE_string('live_migration_flag',
-                    "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER",
-                    'Define live migration behavior.')
-flags.DEFINE_string('block_migration_flag',
-                    "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, "
-                    "VIR_MIGRATE_NON_SHARED_INC",
-                    'Define block migration behavior.')
-flags.DEFINE_integer('live_migration_bandwidth', 0,
-                    'Define live migration behavior')
-flags.DEFINE_string('snapshot_image_format', None,
-                    'Snapshot image format (valid options are : '
-                    'raw, qcow2, vmdk, vdi).'
-                    'Defaults to same as source image')
-flags.DEFINE_string('libvirt_vif_type', 'bridge',
-                    'Type of VIF to create.')
-flags.DEFINE_string('libvirt_vif_driver',
-                    'nova.virt.libvirt.vif.LibvirtBridgeDriver',
-                    'The libvirt VIF driver to configure the VIFs.')
-flags.DEFINE_list('libvirt_volume_drivers',
-                  ['iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
-                   'local=nova.virt.libvirt.volume.LibvirtVolumeDriver',
-                   'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
-                   'rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
-                   'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver'],
-                  'Libvirt handlers for remote volumes.')
-flags.DEFINE_bool('libvirt_use_virtio_for_bridges',
-                  False,
-                  'Use virtio for bridge interfaces')
-flags.DEFINE_string('libvirt_disk_prefix',
-                    None,
-                    'Override the default disk prefix for the devices '
-                    'attached to a server, which is dependent on '
-                    'libvirt_type. (valid options are: sd, xvd, uvd, vd)')
 
 
 def get_connection(read_only):

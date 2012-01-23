@@ -18,25 +18,33 @@
 
 """Module for VNC Proxying."""
 
+from nova.common import cfg
 from nova import flags
 
 
+vnc_opts = [
+    cfg.StrOpt('novncproxy_base_url',
+               default='http://127.0.0.1:6080/vnc_auto.html',
+               help='location of vnc console proxy, in the form '
+                    '"http://127.0.0.1:6080/vnc_auto.html"'),
+    cfg.StrOpt('xvpvncproxy_base_url',
+               default='http://127.0.0.1:6081/console',
+               help='location of nova xvp vnc console proxy, in the form '
+                    '"http://127.0.0.1:6081/console"'),
+    cfg.StrOpt('vncserver_listen',
+               default='127.0.0.1',
+               help='Ip address on which instance vncserversshould listen'),
+    cfg.StrOpt('vncserver_proxyclient_address',
+               default='127.0.0.1',
+               help='the address to which proxy clients '
+                    '(like nova-xvpvncproxy) should connect'),
+    cfg.BoolOpt('vnc_enabled',
+                default=True,
+                help='enable vnc related features'),
+    cfg.StrOpt('vnc_keymap',
+               default='en-us',
+               help='keymap for vnc'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('novncproxy_base_url',
-                   'http://127.0.0.1:6080/vnc_auto.html',
-                   'location of vnc console proxy, \
-                    in the form "http://127.0.0.1:6080/vnc_auto.html"')
-flags.DEFINE_string('xvpvncproxy_base_url',
-                   'http://127.0.0.1:6081/console',
-                   'location of nova xvp vnc console proxy, \
-                    in the form "http://127.0.0.1:6081/console"')
-flags.DEFINE_string('vncserver_listen', '127.0.0.1',
-                    'Ip address on which instance vncservers\
-                     should listen')
-flags.DEFINE_string('vncserver_proxyclient_address', '127.0.0.1',
-                    'the address to which proxy clients \
-                    (like nova-xvpvncproxy) should connect')
-flags.DEFINE_bool('vnc_enabled', True,
-                  'enable vnc related features')
-flags.DEFINE_string('vnc_keymap', 'en-us',
-                   'keymap for vnc')
+FLAGS.add_options(vnc_opts)

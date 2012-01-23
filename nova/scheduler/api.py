@@ -22,6 +22,7 @@ import functools
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
 
+from nova.common import cfg
 from nova import db
 from nova import exception
 from nova import flags
@@ -31,10 +32,14 @@ from nova import utils
 
 from eventlet import greenpool
 
+
+enable_zone_routing_opt = \
+    cfg.BoolOpt('enable_zone_routing',
+                default=False,
+                help='When True, routing to child zones will occur.')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_bool('enable_zone_routing',
-    False,
-    'When True, routing to child zones will occur.')
+FLAGS.add_option(enable_zone_routing_opt)
 
 LOG = logging.getLogger('nova.scheduler.api')
 

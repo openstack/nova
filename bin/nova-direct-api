@@ -35,6 +35,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
 
+from nova.common import cfg
 from nova import compute
 from nova import flags
 from nova import log as logging
@@ -46,9 +47,17 @@ from nova import wsgi
 from nova.api import direct
 
 
+direct_api_opts = [
+    cfg.IntOpt('direct_port',
+               default=8001,
+               help='Direct API port'),
+    cfg.StrOpt('direct_host',
+               default='0.0.0.0',
+               help='Direct API host'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('direct_port', 8001, 'Direct API port')
-flags.DEFINE_string('direct_host', '0.0.0.0', 'Direct API host')
+FLAGS.add_options(direct_api_opts)
 
 
 # An example of an API that only exposes read-only methods.

@@ -17,6 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.common import cfg
 from nova import context
 from nova import db
 from nova import flags
@@ -24,11 +25,16 @@ from nova import log as logging
 from nova import utils
 from nova.virt import netutils
 
+
 LOG = logging.getLogger("nova.virt.firewall")
+
+allow_same_net_traffic_opt = \
+    cfg.BoolOpt('allow_same_net_traffic',
+                default=True,
+                help='Whether to allow network traffic from same network')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_bool('allow_same_net_traffic',
-                  True,
-                  'Whether to allow network traffic from same network')
+FLAGS.add_option(allow_same_net_traffic_opt)
 
 
 class FirewallDriver(object):

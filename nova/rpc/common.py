@@ -19,6 +19,7 @@
 
 import copy
 
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -26,10 +27,16 @@ from nova import log as logging
 
 LOG = logging.getLogger('nova.rpc')
 
-flags.DEFINE_integer('rpc_thread_pool_size', 1024,
-                             'Size of RPC thread pool')
-flags.DEFINE_integer('rpc_conn_pool_size', 30,
-                             'Size of RPC connection pool')
+rpc_opts = [
+    cfg.IntOpt('rpc_thread_pool_size',
+               default=1024,
+               help='Size of RPC thread pool'),
+    cfg.IntOpt('rpc_conn_pool_size',
+               default=30,
+               help='Size of RPC connection pool'),
+    ]
+
+flags.FLAGS.add_options(rpc_opts)
 
 
 class RemoteError(exception.NovaException):

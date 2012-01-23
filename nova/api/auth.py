@@ -21,16 +21,21 @@ Common Auth Middleware.
 import webob.dec
 import webob.exc
 
+from nova.common import cfg
 from nova import context
 from nova import flags
 from nova import log as logging
 from nova import wsgi
 
 
-FLAGS = flags.FLAGS
-flags.DEFINE_boolean('use_forwarded_for', False,
-                     'Treat X-Forwarded-For as the canonical remote address. '
+use_forwarded_for_opt = \
+    cfg.BoolOpt('use_forwarded_for',
+                default=False,
+                help='Treat X-Forwarded-For as the canonical remote address. '
                      'Only enable this if you have a sanitizing proxy.')
+
+FLAGS = flags.FLAGS
+FLAGS.add_option(use_forwarded_for_opt)
 
 
 class InjectContext(wsgi.Middleware):

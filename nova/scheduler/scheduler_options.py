@@ -24,14 +24,18 @@ import datetime
 import json
 import os
 
+from nova.common import cfg
 from nova import flags
 from nova import log as logging
 
 
+scheduler_json_config_location_opt = \
+    cfg.StrOpt('scheduler_json_config_location',
+               default='',
+               help='Absolute path to scheduler configuration JSON file.')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('scheduler_json_config_location',
-        '',
-        'Absolute path to scheduler configuration JSON file.')
+FLAGS.add_option(scheduler_json_config_location_opt)
 
 LOG = logging.getLogger('nova.scheduler.scheduler_options')
 

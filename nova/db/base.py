@@ -18,13 +18,18 @@
 
 """Base class for classes that need modular database access."""
 
+from nova.common import cfg
 from nova import utils
 from nova import flags
 
 
+db_driver_opt = \
+    cfg.StrOpt('db_driver',
+               default='nova.db',
+               help='driver to use for database access')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('db_driver', 'nova.db',
-                    'driver to use for database access')
+FLAGS.add_option(db_driver_opt)
 
 
 class Base(object):

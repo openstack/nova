@@ -43,24 +43,35 @@ these objects be simple dictionaries.
 
 """
 
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import utils
 
 
+db_opts = [
+    cfg.StrOpt('db_backend',
+               default='sqlalchemy',
+               help='The backend to use for db'),
+    cfg.BoolOpt('enable_new_services',
+                default=True,
+                help='Services to be added to the available pool on create'),
+    cfg.StrOpt('instance_name_template',
+               default='instance-%08x',
+               help='Template string to be used to generate instance names'),
+    cfg.StrOpt('volume_name_template',
+               default='volume-%08x',
+               help='Template string to be used to generate instance names'),
+    cfg.StrOpt('snapshot_name_template',
+               default='snapshot-%08x',
+               help='Template string to be used to generate snapshot names'),
+    cfg.StrOpt('vsa_name_template',
+               default='vsa-%08x',
+               help='Template string to be used to generate VSA names'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('db_backend', 'sqlalchemy',
-                    'The backend to use for db')
-flags.DEFINE_boolean('enable_new_services', True,
-                     'Services to be added to the available pool on create')
-flags.DEFINE_string('instance_name_template', 'instance-%08x',
-                    'Template string to be used to generate instance names')
-flags.DEFINE_string('volume_name_template', 'volume-%08x',
-                    'Template string to be used to generate instance names')
-flags.DEFINE_string('snapshot_name_template', 'snapshot-%08x',
-                    'Template string to be used to generate snapshot names')
-flags.DEFINE_string('vsa_name_template', 'vsa-%08x',
-                    'Template string to be used to generate VSA names')
+FLAGS.add_options(db_opts)
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
                            sqlalchemy='nova.db.sqlalchemy.api')

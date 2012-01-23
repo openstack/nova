@@ -70,6 +70,7 @@ from eventlet import queue
 from eventlet import tpool
 from eventlet import timeout
 
+from nova.common import cfg
 from nova import context
 from nova import db
 from nova import exception
@@ -84,69 +85,74 @@ from nova.virt.xenapi.volumeops import VolumeOps
 
 LOG = logging.getLogger("nova.virt.xenapi")
 
+xenapi_opts = [
+    cfg.StrOpt('xenapi_connection_url',
+               default=None,
+               help='URL for connection to XenServer/Xen Cloud Platform. '
+                    'Required if connection_type=xenapi.'),
+    cfg.StrOpt('xenapi_connection_username',
+               default='root',
+               help='Username for connection to XenServer/Xen Cloud Platform. '
+                    'Used only if connection_type=xenapi.'),
+    cfg.StrOpt('xenapi_connection_password',
+               default=None,
+               help='Password for connection to XenServer/Xen Cloud Platform. '
+                    'Used only if connection_type=xenapi.'),
+    cfg.IntOpt('xenapi_connection_concurrent',
+               default=5,
+               help='Maximum number of concurrent XenAPI connections. '
+                    'Used only if connection_type=xenapi.'),
+    cfg.FloatOpt('xenapi_task_poll_interval',
+                 default=0.5,
+                 help='The interval used for polling of remote tasks '
+                      '(Async.VM.start, etc). '
+                      'Used only if connection_type=xenapi.'),
+    cfg.FloatOpt('xenapi_vhd_coalesce_poll_interval',
+                 default=5.0,
+                 help='The interval used for polling of coalescing vhds. '
+                      'Used only if connection_type=xenapi.'),
+    cfg.IntOpt('xenapi_vhd_coalesce_max_attempts',
+               default=5,
+               help='Max number of times to poll for VHD to coalesce. '
+                    'Used only if connection_type=xenapi.'),
+    cfg.StrOpt('xenapi_agent_path',
+               default='usr/sbin/xe-update-networking',
+               help='Specifies the path in which the xenapi guest agent '
+                    'should be located. If the agent is present, network '
+                    'configuration is not injected into the image. '
+                    'Used if connection_type=xenapi and flat_injected=True'),
+    cfg.StrOpt('xenapi_sr_base_path',
+               default='/var/run/sr-mount',
+               help='Base path to the storage repository'),
+    cfg.BoolOpt('xenapi_log_instance_actions',
+                default=False,
+                help='Log all instance calls to XenAPI in the database.'),
+    cfg.StrOpt('target_host',
+               default=None,
+               help='iSCSI Target Host'),
+    cfg.StrOpt('target_port',
+               default='3260',
+               help='iSCSI Target Port, 3260 Default'),
+    cfg.StrOpt('iqn_prefix',
+               default='iqn.2010-10.org.openstack',
+               help='IQN Prefix'),
+    # NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick,
+    # when we pull support for it, we should remove this
+    cfg.BoolOpt('xenapi_remap_vbd_dev',
+                default=False,
+                help='Used to enable the remapping of VBD dev '
+                     '(Works around an issue in Ubuntu Maverick)'),
+    cfg.StrOpt('xenapi_remap_vbd_dev_prefix',
+               default='sd',
+               help='Specify prefix to remap VBD dev to '
+                    '(ex. /dev/xvdb -> /dev/sdb)'),
+    cfg.IntOpt('xenapi_login_timeout',
+               default=10,
+               help='Timeout in seconds for XenAPI login.'),
+    ]
 
 FLAGS = flags.FLAGS
-
-flags.DEFINE_string('xenapi_connection_url',
-                    None,
-                    'URL for connection to XenServer/Xen Cloud Platform.'
-                    ' Required if connection_type=xenapi.')
-flags.DEFINE_string('xenapi_connection_username',
-                    'root',
-                    'Username for connection to XenServer/Xen Cloud Platform.'
-                    ' Used only if connection_type=xenapi.')
-flags.DEFINE_string('xenapi_connection_password',
-                    None,
-                    'Password for connection to XenServer/Xen Cloud Platform.'
-                    ' Used only if connection_type=xenapi.')
-flags.DEFINE_integer('xenapi_connection_concurrent',
-                     5,
-                     'Maximum number of concurrent XenAPI connections.'
-                     ' Used only if connection_type=xenapi.')
-flags.DEFINE_float('xenapi_task_poll_interval',
-                   0.5,
-                   'The interval used for polling of remote tasks '
-                   '(Async.VM.start, etc). Used only if '
-                   'connection_type=xenapi.')
-flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
-                   5.0,
-                   'The interval used for polling of coalescing vhds.'
-                   '  Used only if connection_type=xenapi.')
-flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
-                     5,
-                     'Max number of times to poll for VHD to coalesce.'
-                     '  Used only if connection_type=xenapi.')
-flags.DEFINE_string('xenapi_agent_path',
-                    'usr/sbin/xe-update-networking',
-                    'Specifies the path in which the xenapi guest agent'
-                    '  should be located. If the agent is present,'
-                    '  network configuration is not injected into the image'
-                    '  Used only if connection_type=xenapi.'
-                    '  and flat_injected=True')
-flags.DEFINE_string('xenapi_sr_base_path', '/var/run/sr-mount',
-                    'Base path to the storage repository')
-flags.DEFINE_bool('xenapi_log_instance_actions', False,
-                  'Log all instance calls to XenAPI in the database.')
-flags.DEFINE_string('target_host',
-                    None,
-                    'iSCSI Target Host')
-flags.DEFINE_string('target_port',
-                    '3260',
-                    'iSCSI Target Port, 3260 Default')
-flags.DEFINE_string('iqn_prefix',
-                    'iqn.2010-10.org.openstack',
-                    'IQN Prefix')
-# NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick, when we pull
-# support for it, we should remove this
-flags.DEFINE_bool('xenapi_remap_vbd_dev', False,
-                  'Used to enable the remapping of VBD dev '
-                  '(Works around an issue in Ubuntu Maverick)')
-flags.DEFINE_string('xenapi_remap_vbd_dev_prefix', 'sd',
-                    'Specify prefix to remap VBD dev to '
-                    '(ex. /dev/xvdb -> /dev/sdb)')
-flags.DEFINE_integer('xenapi_login_timeout',
-                     10,
-                     'Timeout in seconds for XenAPI login.')
+FLAGS.add_options(xenapi_opts)
 
 
 def get_connection(_):

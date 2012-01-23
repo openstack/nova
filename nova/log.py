@@ -38,40 +38,52 @@ import sys
 import traceback
 
 import nova
+from nova.common import cfg
 from nova import flags
 from nova import local
 from nova import version
 
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string('logging_context_format_string',
-                    '%(asctime)s %(levelname)s %(name)s '
-                    '[%(request_id)s %(user_id)s '
-                    '%(project_id)s] %(message)s',
-                    'format string to use for log messages with context')
-flags.DEFINE_string('logging_default_format_string',
-                    '%(asctime)s %(levelname)s %(name)s [-] '
-                    '%(message)s',
-                    'format string to use for log messages without context')
-flags.DEFINE_string('logging_debug_format_suffix',
-                    'from (pid=%(process)d) %(funcName)s'
-                    ' %(pathname)s:%(lineno)d',
-                    'data to append to log format when level is DEBUG')
-flags.DEFINE_string('logging_exception_prefix',
-                    '(%(name)s): TRACE: ',
-                    'prefix each line of exception output with this format')
-flags.DEFINE_list('default_log_levels',
-                  ['amqplib=WARN',
-                   'sqlalchemy=WARN',
-                   'boto=WARN',
-                   'suds=INFO',
-                   'eventlet.wsgi.server=WARN'],
-                  'list of logger=LEVEL pairs')
-flags.DEFINE_bool('use_syslog', False, 'output to syslog')
-flags.DEFINE_bool('publish_errors', False, 'publish error events')
-flags.DEFINE_string('logfile', None, 'output to named file')
-flags.DEFINE_bool('use_stderr', True, 'log to standard error')
+log_opts = [
+    cfg.StrOpt('logging_context_format_string',
+               default='%(asctime)s %(levelname)s %(name)s [%(request_id)s '
+                       '%(user_id)s %(project_id)s] %(message)s',
+               help='format string to use for log messages with context'),
+    cfg.StrOpt('logging_default_format_string',
+               default='%(asctime)s %(levelname)s %(name)s [-] %(message)s',
+               help='format string to use for log messages without context'),
+    cfg.StrOpt('logging_debug_format_suffix',
+               default='from (pid=%(process)d) %(funcName)s '
+                       '%(pathname)s:%(lineno)d',
+               help='data to append to log format when level is DEBUG'),
+    cfg.StrOpt('logging_exception_prefix',
+               default='(%(name)s): TRACE: ',
+               help='prefix each line of exception output with this format'),
+    cfg.ListOpt('default_log_levels',
+                default=[
+                  'amqplib=WARN',
+                  'sqlalchemy=WARN',
+                  'boto=WARN',
+                  'suds=INFO',
+                  'eventlet.wsgi.server=WARN'
+                  ],
+                help='list of logger=LEVEL pairs'),
+    cfg.BoolOpt('use_syslog',
+                default=False,
+                help='output to syslog'),
+    cfg.BoolOpt('publish_errors',
+                default=False,
+                help='publish error events'),
+    cfg.StrOpt('logfile',
+               default=None,
+               help='output to named file'),
+    cfg.BoolOpt('use_stderr',
+                default=True,
+                help='log to standard error'),
+    ]
 
+FLAGS = flags.FLAGS
+FLAGS.add_options(log_opts)
 
 # A list of things we want to replicate from logging.
 # levels

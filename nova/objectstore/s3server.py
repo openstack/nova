@@ -44,15 +44,20 @@ import urllib
 import routes
 import webob
 
+from nova.common import cfg
 from nova import flags
 from nova import log as logging
 from nova import utils
 from nova import wsgi
 
 
+buckets_path_opt = \
+    cfg.StrOpt('buckets_path',
+               default='$state_path/buckets',
+               help='path to s3 buckets')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('buckets_path', '$state_path/buckets',
-                    'path to s3 buckets')
+FLAGS.add_option(buckets_path_opt)
 
 
 def get_wsgi_server():

@@ -37,6 +37,7 @@ import M2Crypto
 
 gettext.install('nova', unicode=1)
 
+from nova.common import cfg
 from nova import context
 from nova import db
 from nova import exception
@@ -46,30 +47,39 @@ from nova import log as logging
 
 LOG = logging.getLogger("nova.crypto")
 
+crypto_opts = [
+    cfg.StrOpt('ca_file',
+               default='cacert.pem',
+               help=_('Filename of root CA')),
+    cfg.StrOpt('key_file',
+               default=os.path.join('private', 'cakey.pem'),
+               help=_('Filename of private key')),
+    cfg.StrOpt('crl_file',
+               default='crl.pem',
+               help=_('Filename of root Certificate Revocation List')),
+    cfg.StrOpt('keys_path',
+               default='$state_path/keys',
+               help=_('Where we keep our keys')),
+    cfg.StrOpt('ca_path',
+               default='$state_path/CA',
+               help=_('Where we keep our root CA')),
+    cfg.BoolOpt('use_project_ca',
+                default=False,
+                help=_('Should we use a CA for each project?')),
+    cfg.StrOpt('user_cert_subject',
+               default='/C=US/ST=California/O=OpenStack/'
+                       'OU=NovaDev/CN=%.16s-%.16s-%s',
+               help=_('Subject for certificate for users, %s for '
+                      'project, user, timestamp')),
+    cfg.StrOpt('project_cert_subject',
+               default='/C=US/ST=California/O=OpenStack/'
+                       'OU=NovaDev/CN=project-ca-%.16s-%s',
+               help=_('Subject for certificate for projects, %s for '
+                      'project, timestamp')),
+    ]
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('ca_file', 'cacert.pem', _('Filename of root CA'))
-flags.DEFINE_string('key_file',
-                    os.path.join('private', 'cakey.pem'),
-                    _('Filename of private key'))
-flags.DEFINE_string('crl_file', 'crl.pem',
-                    _('Filename of root Certificate Revocation List'))
-flags.DEFINE_string('keys_path', '$state_path/keys',
-                    _('Where we keep our keys'))
-flags.DEFINE_string('ca_path', '$state_path/CA',
-                    _('Where we keep our root CA'))
-flags.DEFINE_boolean('use_project_ca', False,
-                     _('Should we use a CA for each project?'))
-flags.DEFINE_string('user_cert_subject',
-                    '/C=US/ST=California/O=OpenStack/'
-                    'OU=NovaDev/CN=%.16s-%.16s-%s',
-                    _('Subject for certificate for users, '
-                    '%s for project, user, timestamp'))
-flags.DEFINE_string('project_cert_subject',
-                    '/C=US/ST=California/O=OpenStack/'
-                    'OU=NovaDev/CN=project-ca-%.16s-%s',
-                    _('Subject for certificate for projects, '
-                    '%s for project, timestamp'))
+FLAGS.add_options(crypto_opts)
 
 
 def ca_folder(project_id=None):

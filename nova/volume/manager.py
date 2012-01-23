@@ -38,6 +38,7 @@ intact.
 
 """
 
+from nova.common import cfg
 from nova import context
 from nova import exception
 from nova import flags
@@ -49,16 +50,24 @@ from nova.volume import volume_types
 
 
 LOG = logging.getLogger('nova.volume.manager')
+
+volume_manager_opts = [
+    cfg.StrOpt('storage_availability_zone',
+               default='nova',
+               help='availability zone of this service'),
+    cfg.StrOpt('volume_driver',
+               default='nova.volume.driver.ISCSIDriver',
+               help='Driver to use for volume creation'),
+    cfg.BoolOpt('use_local_volumes',
+                default=True,
+                help='if True, will not discover local volumes'),
+    cfg.BoolOpt('volume_force_update_capabilities',
+                default=False,
+                help='if True will force update capabilities on each check'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('storage_availability_zone',
-                    'nova',
-                    'availability zone of this service')
-flags.DEFINE_string('volume_driver', 'nova.volume.driver.ISCSIDriver',
-                    'Driver to use for volume creation')
-flags.DEFINE_boolean('use_local_volumes', True,
-                     'if True, will not discover local volumes')
-flags.DEFINE_boolean('volume_force_update_capabilities', False,
-                     'if True will force update capabilities on each check')
+FLAGS.add_options(volume_manager_opts)
 
 
 class VolumeManager(manager.SchedulerDependentManager):

@@ -19,15 +19,21 @@
 
 """VIF drivers for XenAPI."""
 
+from nova.common import cfg
 from nova import flags
 from nova import log as logging
 from nova.virt.vif import VIFDriver
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
 
+
+xenapi_ovs_integration_bridge_opt = \
+    cfg.StrOpt('xenapi_ovs_integration_bridge',
+               default='xapi1',
+               help='Name of Integration Bridge used by Open vSwitch')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('xenapi_ovs_integration_bridge', 'xapi1',
-                'Name of Integration Bridge used by Open vSwitch')
+FLAGS.add_option(xenapi_ovs_integration_bridge_opt)
 
 LOG = logging.getLogger("nova.virt.xenapi.vif")
 

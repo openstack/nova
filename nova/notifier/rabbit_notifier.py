@@ -16,14 +16,18 @@
 
 import nova.context
 
+from nova.common import cfg
 from nova import flags
 from nova import rpc
 
 
-FLAGS = flags.FLAGS
+notification_topic_opt = \
+    cfg.StrOpt('notification_topic',
+               default='notifications',
+               help='RabbitMQ topic used for Nova notifications')
 
-flags.DEFINE_string('notification_topic', 'notifications',
-                    'RabbitMQ topic used for Nova notifications')
+FLAGS = flags.FLAGS
+FLAGS.add_option(notification_topic_opt)
 
 
 def notify(message):

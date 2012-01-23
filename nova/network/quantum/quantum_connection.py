@@ -15,25 +15,28 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.common import cfg
 from nova import flags
 from nova import log as logging
 from nova.network.quantum import client as quantum_client
 
 
 LOG = logging.getLogger("nova.network.quantum.quantum_connection")
+
+quantum_opts = [
+    cfg.StrOpt('quantum_connection_host',
+               default='127.0.0.1',
+               help='HOST for connecting to quantum'),
+    cfg.StrOpt('quantum_connection_port',
+               default='9696',
+               help='PORT for connecting to quantum'),
+    cfg.StrOpt('quantum_default_tenant_id',
+               default="default",
+               help='Default tenant id when creating quantum networks'),
+    ]
+
 FLAGS = flags.FLAGS
-
-flags.DEFINE_string('quantum_connection_host',
-                    '127.0.0.1',
-                    'HOST for connecting to quantum')
-
-flags.DEFINE_string('quantum_connection_port',
-                    '9696',
-                    'PORT for connecting to quantum')
-
-flags.DEFINE_string('quantum_default_tenant_id',
-                    "default",
-                    'Default tenant id when creating quantum networks')
+FLAGS.add_options(quantum_opts)
 
 
 class QuantumClientConnection(object):

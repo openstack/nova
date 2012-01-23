@@ -30,6 +30,7 @@ import uuid
 from eventlet import greenthread
 import M2Crypto
 
+from nova.common import cfg
 from nova.compute import api as compute
 from nova.compute import power_state
 from nova import context as nova_context
@@ -49,21 +50,28 @@ VMHelper = vm_utils.VMHelper
 XenAPI = None
 LOG = logging.getLogger("nova.virt.xenapi.vmops")
 
+xenapi_vmops_opts = [
+    cfg.IntOpt('agent_version_timeout',
+               default=300,
+               help='number of seconds to wait for agent '
+                    'to be fully operational'),
+    cfg.IntOpt('xenapi_running_timeout',
+               default=60,
+               help='number of seconds to wait for instance '
+                    'to go to running state'),
+    cfg.StrOpt('xenapi_vif_driver',
+               default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
+               help='The XenAPI VIF driver using XenServer Network APIs.'),
+    cfg.BoolOpt('xenapi_generate_swap',
+                default=False,
+                help='Whether to generate swap '
+                     '(False means fetching it from OVA)'),
+    ]
+
 FLAGS = flags.FLAGS
+FLAGS.add_options(xenapi_vmops_opts)
+
 flags.DECLARE('vncserver_proxyclient_address', 'nova.vnc')
-flags.DEFINE_integer('agent_version_timeout', 300,
-                     'number of seconds to wait for agent to be fully '
-                     'operational')
-flags.DEFINE_integer('xenapi_running_timeout', 60,
-                     'number of seconds to wait for instance to go to '
-                     'running state')
-flags.DEFINE_string('xenapi_vif_driver',
-                    'nova.virt.xenapi.vif.XenAPIBridgeDriver',
-                    'The XenAPI VIF driver using XenServer Network APIs.')
-flags.DEFINE_bool('xenapi_generate_swap',
-                  False,
-                  'Whether to generate swap (False means fetching it'
-                  ' from OVA)')
 
 
 RESIZE_TOTAL_STEPS = 5

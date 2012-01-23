@@ -32,6 +32,7 @@ from nova.api.ec2 import ec2utils
 from nova.api.ec2 import faults
 from nova.api import validator
 from nova.auth import manager
+from nova.common import cfg
 from nova import context
 from nova import exception
 from nova import flags
@@ -39,17 +40,27 @@ from nova import log as logging
 from nova import utils
 from nova import wsgi
 
-FLAGS = flags.FLAGS
+
 LOG = logging.getLogger("nova.api")
-flags.DEFINE_integer('lockout_attempts', 5,
-                     'Number of failed auths before lockout.')
-flags.DEFINE_integer('lockout_minutes', 15,
-                     'Number of minutes to lockout if triggered.')
-flags.DEFINE_integer('lockout_window', 15,
-                     'Number of minutes for lockout window.')
-flags.DEFINE_string('keystone_ec2_url',
-                    'http://localhost:5000/v2.0/ec2tokens',
-                    'URL to get token from ec2 request.')
+
+ec2_opts = [
+    cfg.IntOpt('lockout_attempts',
+               default=5,
+               help='Number of failed auths before lockout.'),
+    cfg.IntOpt('lockout_minutes',
+               default=15,
+               help='Number of minutes to lockout if triggered.'),
+    cfg.IntOpt('lockout_window',
+               default=15,
+               help='Number of minutes for lockout window.'),
+    cfg.StrOpt('keystone_ec2_url',
+               default='http://localhost:5000/v2.0/ec2tokens',
+               help='URL to get token from ec2 request.'),
+    ]
+
+FLAGS = flags.FLAGS
+FLAGS.add_options(ec2_opts)
+
 flags.DECLARE('use_forwarded_for', 'nova.api.auth')
 
 

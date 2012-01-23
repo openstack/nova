@@ -31,6 +31,7 @@ import eventlet
 
 from nova import rpc
 import nova.db.api
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import image
@@ -40,13 +41,21 @@ from nova.api.ec2 import ec2utils
 
 
 LOG = logging.getLogger("nova.image.s3")
+
+s3_opts = [
+    cfg.StrOpt('image_decryption_dir',
+               default='/tmp',
+               help='parent dir for tempdir used for image decryption'),
+    cfg.StrOpt('s3_access_key',
+               default='notchecked',
+               help='access key to use for s3 server for images'),
+    cfg.StrOpt('s3_secret_key',
+               default='notchecked',
+               help='secret key to use for s3 server for images'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('image_decryption_dir', '/tmp',
-                    'parent dir for tempdir used for image decryption')
-flags.DEFINE_string('s3_access_key', 'notchecked',
-                    'access key to use for s3 server for images')
-flags.DEFINE_string('s3_secret_key', 'notchecked',
-                    'secret key to use for s3 server for images')
+FLAGS.add_options(s3_opts)
 
 
 class S3ImageService(object):

@@ -22,6 +22,7 @@ import os
 import sys
 import time
 
+from nova.common import cfg
 from nova import flags
 from nova import log as logging
 from nova import manager
@@ -29,12 +30,18 @@ from nova import utils
 
 
 LOG = logging.getLogger('nova.consoleauth')
+
+consoleauth_opts = [
+    cfg.IntOpt('console_token_ttl',
+               default=600,
+               help='How many seconds before deleting tokens'),
+    cfg.StrOpt('consoleauth_manager',
+               default='nova.consoleauth.manager.ConsoleAuthManager',
+               help='Manager for console auth'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('console_token_ttl', 600,
-                     'How many seconds before deleting tokens')
-flags.DEFINE_string('consoleauth_manager',
-                    'nova.consoleauth.manager.ConsoleAuthManager',
-                    'Manager for console auth')
+FLAGS.add_options(consoleauth_opts)
 
 
 class ConsoleAuthManager(manager.Manager):

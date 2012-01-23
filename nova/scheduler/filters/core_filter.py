@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.common import cfg
 from nova import flags
 from nova import log as logging
 from nova.scheduler.filters import abstract_filter
@@ -22,9 +23,13 @@ from nova.scheduler.filters import abstract_filter
 
 LOG = logging.getLogger('nova.scheduler.filter.core_filter')
 
+cpu_allocation_ratio_opt = \
+    cfg.FloatOpt('cpu_allocation_ratio',
+             default=16.0,
+               help='Virtual CPU to Physical CPU allocation ratio')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_float('cpu_allocation_ratio', 16.0,
-             'Virtual CPU to Physical CPU allocation ratio')
+FLAGS.add_option(cpu_allocation_ratio_opt)
 
 
 class CoreFilter(abstract_filter.AbstractHostFilter):
