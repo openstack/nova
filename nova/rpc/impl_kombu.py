@@ -700,7 +700,7 @@ class ProxyCallback(object):
         # the previous context is stored in local.store.context
         if hasattr(local.store, 'context'):
             del local.store.context
-        LOG.debug(_('received %s') % message_data)
+        rpc_common._safe_log(LOG.debug, _('received %s'), message_data)
         ctxt = _unpack_context(message_data)
         method = message_data.get('method')
         args = message_data.get('args', {})
