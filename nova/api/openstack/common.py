@@ -426,12 +426,6 @@ class MetadataXMLDeserializer(wsgi.XMLDeserializer):
         return {'body': {'meta': metadata_item}}
 
 
-class MetadataHeadersSerializer(wsgi.ResponseHeadersSerializer):
-
-    def delete(self, response, data):
-        response.status_int = 204
-
-
 metadata_nsmap = {None: xmlutil.XMLNS_V11}
 
 
@@ -457,26 +451,6 @@ class MetadataTemplate(xmlutil.TemplateBuilder):
         elem.set('key', 0)
         elem.text = 1
         return xmlutil.MasterTemplate(root, 1, nsmap=metadata_nsmap)
-
-
-class MetadataXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return MetadataTemplate()
-
-    def create(self):
-        return MetadataTemplate()
-
-    def update_all(self):
-        return MetadataTemplate()
-
-    def show(self):
-        return MetaItemTemplate()
-
-    def update(self):
-        return MetaItemTemplate()
-
-    def default(self):
-        return xmlutil.MasterTemplate(None, 1)
 
 
 def check_snapshots_enabled(f):

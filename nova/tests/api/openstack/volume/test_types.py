@@ -123,10 +123,6 @@ class VolumeTypesApiTest(test.TestCase):
 
 
 class VolumeTypesSerializerTest(test.TestCase):
-    def setUp(self):
-        super(VolumeTypesSerializerTest, self).setUp()
-        self.serializer = types.VolumeTypesSerializer()
-
     def _verify_volume_type(self, vtype, tree):
         self.assertEqual('volume_type', tree.tag)
         self.assertEqual(vtype['name'], tree.get('name'))
@@ -142,9 +138,11 @@ class VolumeTypesSerializerTest(test.TestCase):
         self.assertEqual(len(seen), 0)
 
     def test_index_serializer(self):
+        serializer = types.VolumeTypesTemplate()
+
         # Just getting some input data
         vtypes = return_volume_types_get_all_types(None)
-        text = self.serializer.serialize(vtypes, 'index')
+        text = serializer.serialize(vtypes)
 
         print text
         tree = etree.fromstring(text)
@@ -157,8 +155,10 @@ class VolumeTypesSerializerTest(test.TestCase):
             self._verify_volume_type(vtypes[name], child)
 
     def test_voltype_serializer(self):
+        serializer = types.VolumeTypeTemplate()
+
         vtype = stub_volume_type(1)
-        text = self.serializer.serialize(dict(volume_type=vtype))
+        text = serializer.serialize(dict(volume_type=vtype))
 
         print text
         tree = etree.fromstring(text)

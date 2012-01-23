@@ -195,20 +195,6 @@ class Controller(object):
         return cooked
 
 
-class ZonesXMLSerializer(xmlutil.XMLTemplateSerializer):
-    def index(self):
-        return ZonesTemplate()
-
-    def detail(self):
-        return ZonesTemplate()
-
-    def select(self):
-        return WeightsTemplate()
-
-    def default(self):
-        return ZoneTemplate()
-
-
 class Zones(extensions.ExtensionDescriptor):
     """Enables zones-related functionality such as adding child zones,
     listing child zones, getting the capabilities of the local zone,

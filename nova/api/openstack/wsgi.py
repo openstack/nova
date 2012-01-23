@@ -216,104 +216,6 @@ class MetadataXMLDeserializer(XMLDeserializer):
         return metadata
 
 
-class RequestHeadersDeserializer(ActionDispatcher):
-    """Default request headers deserializer"""
-
-    def deserialize(self, request, action):
-        return self.dispatch(request, action=action)
-
-    def default(self, request):
-        return {}
-
-
-class RequestDeserializer(object):
-    """Break up a Request object into more useful pieces."""
-
-    def __init__(self, body_deserializers=None, headers_deserializer=None):
-        self.body_deserializers = {
-            'application/xml': XMLDeserializer(),
-            'application/json': JSONDeserializer(),
-        }
-        self.body_deserializers.update(body_deserializers or {})
-
-        self.headers_deserializer = headers_deserializer or \
-                                        RequestHeadersDeserializer()
-
-    def deserialize(self, request):
-        """Extract necessary pieces of the request.
-
-        :param request: Request object
-        :returns tuple of expected controller action name, dictionary of
-                 keyword arguments to pass to the controller, the expected
-                 content type of the response
-
-        """
-        action_args = self.get_action_args(request.environ)
-        action = action_args.pop('action', None)
-
-        action_args.update(self.deserialize_headers(request, action))
-        action_args.update(self.deserialize_body(request, action))
-
-        accept = self.get_expected_content_type(request)
-
-        return (action, action_args, accept)
-
-    def deserialize_headers(self, request, action):
-        return self.headers_deserializer.deserialize(request, action)
-
-    def deserialize_body(self, request, action):
-        try:
-            content_type = request.get_content_type()
-        except exception.InvalidContentType:
-            LOG.debug(_("Unrecognized Content-Type provided in request"))
-            return {}
-
-        if content_type is None:
-            LOG.debug(_("No Content-Type provided in request"))
-            return {}
-
-        if not len(request.body) > 0:
-            LOG.debug(_("Empty body provided in request"))
-            return {}
-
-        try:
-            deserializer = self.get_body_deserializer(content_type)
-        except exception.InvalidContentType:
-            LOG.debug(_("Unable to deserialize body as provided Content-Type"))
-            raise
-
-        return deserializer.deserialize(request.body, action)
-
-    def get_body_deserializer(self, content_type):
-        try:
-            ctype = _CONTENT_TYPE_MAP.get(content_type, content_type)
-            return self.body_deserializers[ctype]
-        except (KeyError, TypeError):
-            raise exception.InvalidContentType(content_type=content_type)
-
-    def get_expected_content_type(self, request):
-        return request.best_match_content_type()
-
-    def get_action_args(self, request_environment):
-        """Parse dictionary created by routes library."""
-        try:
-            args = request_environment['wsgiorg.routing_args'][1].copy()
-        except Exception:
-            return {}
-
-        try:
-            del args['controller']
-        except KeyError:
-            pass
-
-        try:
-            del args['format']
-        except KeyError:
-            pass
-
-        return args
-
-
 class DictSerializer(ActionDispatcher):
     """Default request body serialization"""
 
@@ -435,104 +337,16 @@ class XMLDictSerializer(DictSerializer):
         return etree.tostring(root, encoding='UTF-8', xml_declaration=True)
 
 
-class ResponseHeadersSerializer(ActionDispatcher):
-    """Default response headers serialization"""
-
-    def serialize(self, response, data, action):
-        self.dispatch(response, data, action=action)
-        context = response.request.environ.get('nova.context')
-        if context:
-            response.headers['X-Compute-Request-Id'] = context.request_id
-
-    def default(self, response, data):
-        response.status_int = 200
-
-
-class ResponseSerializer(object):
-    """Encode the necessary pieces into a response object"""
-
-    def __init__(self, body_serializers=None, headers_serializer=None):
-        self.body_serializers = {
-            'application/xml': XMLDictSerializer(),
-            'application/json': JSONDictSerializer(),
-        }
-        self.body_serializers.update(body_serializers or {})
-
-        self.headers_serializer = headers_serializer or \
-                                    ResponseHeadersSerializer()
-
-    def serialize(self, request, response_data, content_type,
-                  action='default'):
-        """Serialize a dict into a string and wrap in a wsgi.Request object.
-
-        :param response_data: dict produced by the Controller
-        :param content_type: expected mimetype of serialized response body
-
-        """
-        response = webob.Response(request=request)
-        self.serialize_headers(response, response_data, action)
-        self.serialize_body(request, response, response_data, content_type,
-                            action)
-        return response
-
-    def serialize_headers(self, response, data, action):
-        self.headers_serializer.serialize(response, data, action)
-
-    def serialize_body(self, request, response, data, content_type, action):
-        response.headers['Content-Type'] = content_type
-        if data is not None:
-            serializer = self.get_body_serializer(content_type)
-            lazy_serialize = request.environ.get('nova.lazy_serialize', False)
-            if lazy_serialize:
-                response.body = utils.dumps(data)
-                request.environ['nova.serializer'] = serializer
-                request.environ['nova.action'] = action
-                if (hasattr(serializer, 'get_template') and
-                    'nova.template' not in request.environ):
-
-                    template = serializer.get_template(action)
-                    request.environ['nova.template'] = template
-            else:
-                response.body = serializer.serialize(data, action)
-
-    def get_body_serializer(self, content_type):
-        try:
-            ctype = _CONTENT_TYPE_MAP.get(content_type, content_type)
-            return self.body_serializers[ctype]
-        except (KeyError, TypeError):
-            raise exception.InvalidContentType(content_type=content_type)
-
-
+@utils.deprecated("The lazy serialization middleware is no longer necessary.")
 class LazySerializationMiddleware(wsgi.Middleware):
-    """Lazy serialization middleware."""
-    @webob.dec.wsgify(RequestClass=Request)
-    def __call__(self, req):
-        # Request lazy serialization
-        req.environ['nova.lazy_serialize'] = True
+    """Lazy serialization middleware.
 
-        response = req.get_response(self.application)
+    Provided only for backwards compatibility with existing
+    api-paste.ini files.  This middleware will be removed in future
+    versions of nova.
+    """
 
-        # See if we're using the simple serialization driver
-        simple_serial = req.environ.get('nova.simple_serial')
-        if simple_serial is not None:
-            body_obj = utils.loads(response.body)
-            response.body = simple_serial.serialize(body_obj)
-            return response
-
-        # See if there's a serializer...
-        serializer = req.environ.get('nova.serializer')
-        if serializer is None:
-            return response
-
-        # OK, build up the arguments for the serialize() method
-        kwargs = dict(action=req.environ['nova.action'])
-        if 'nova.template' in req.environ:
-            kwargs['template'] = req.environ['nova.template']
-
-        # Re-serialize the body
-        response.body = serializer.serialize(utils.loads(response.body),
-                                             **kwargs)
-        return response
+    pass
 
 
 def serializers(**serializers):
@@ -698,20 +512,7 @@ class ResponseObject(object):
             response.headers[hdr] = value
         response.headers['Content-Type'] = content_type
         if self.obj is not None:
-            # TODO(Vek): When lazy serialization is retired, so can
-            #            this inner 'if'...
-            lazy_serialize = request.environ.get('nova.lazy_serialize', False)
-            if lazy_serialize:
-                response.body = utils.dumps(self.obj)
-                request.environ['nova.simple_serial'] = serializer
-                # NOTE(Vek): Temporary ugly hack to support xml
-                #            templates in extensions, until we can
-                #            fold extensions into Resource and do away
-                #            with lazy serialization...
-                if _MEDIA_TYPE_MAP.get(content_type) == 'xml':
-                    request.environ['nova.template'] = serializer
-            else:
-                response.body = serializer.serialize(self.obj)
+            response.body = serializer.serialize(self.obj)
 
         return response
 

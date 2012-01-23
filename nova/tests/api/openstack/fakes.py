@@ -50,7 +50,7 @@ class Context(object):
 
 
 class FakeRouter(wsgi.Router):
-    def __init__(self):
+    def __init__(self, ext_mgr=None):
         pass
 
     @webob.dec.wsgify
@@ -74,10 +74,9 @@ def fake_wsgi(self, req):
 
 
 def wsgi_app(inner_app_v2=None, fake_auth=True, fake_auth_context=None,
-        serialization=os_wsgi.LazySerializationMiddleware,
-        use_no_auth=False):
+        use_no_auth=False, ext_mgr=None):
     if not inner_app_v2:
-        inner_app_v2 = compute.APIRouter()
+        inner_app_v2 = compute.APIRouter(ext_mgr)
 
     if fake_auth:
         if fake_auth_context is not None:
@@ -85,19 +84,13 @@ def wsgi_app(inner_app_v2=None, fake_auth=True, fake_auth_context=None,
         else:
             ctxt = context.RequestContext('fake', 'fake', auth_token=True)
         api_v2 = openstack_api.FaultWrapper(api_auth.InjectContext(ctxt,
-              limits.RateLimitingMiddleware(
-                  serialization(
-                      extensions.ExtensionMiddleware(inner_app_v2)))))
+              limits.RateLimitingMiddleware(inner_app_v2)))
     elif use_no_auth:
         api_v2 = openstack_api.FaultWrapper(auth.NoAuthMiddleware(
-              limits.RateLimitingMiddleware(
-                  serialization(
-                      extensions.ExtensionMiddleware(inner_app_v2)))))
+              limits.RateLimitingMiddleware(inner_app_v2)))
     else:
         api_v2 = openstack_api.FaultWrapper(auth.AuthMiddleware(
-              limits.RateLimitingMiddleware(
-                  serialization(
-                      extensions.ExtensionMiddleware(inner_app_v2)))))
+              limits.RateLimitingMiddleware(inner_app_v2)))
 
     mapper = urlmap.URLMap()
     mapper['/v2'] = api_v2

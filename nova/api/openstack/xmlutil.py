@@ -858,48 +858,6 @@ class TemplateBuilder(object):
         raise NotImplementedError(_("subclasses must implement construct()!"))
 
 
-class XMLTemplateSerializer(wsgi.ActionDispatcher):
-    """Template-based XML serializer.
-
-    Data serializer that uses templates to perform its serialization.
-    """
-
-    def get_template(self, action='default'):
-        """Retrieve the template to use for serialization."""
-
-        return self.dispatch(action=action)
-
-    def serialize(self, data, action='default', template=None):
-        """Serialize data.
-
-        :param data: The data to serialize.
-        :param action: The action, for identifying the template to
-                       use.  If no template is provided,
-                       get_template() will be called with this action
-                       to retrieve the template.
-        :param template: The template to use in serialization.
-        """
-
-        # No template provided, look one up
-        if template is None:
-            template = self.get_template(action)
-
-        # Still couldn't find a template; try the base
-        # XMLDictSerializer
-        if template is None:
-            serial = wsgi.XMLDictSerializer()
-            return serial.serialize(data, action=action)
-
-        # Serialize the template
-        return template.serialize(data, encoding='UTF-8',
-                                  xml_declaration=True)
-
-    def default(self):
-        """Retrieve the default template to use."""
-
-        return None
-
-
 def make_links(parent, selector=None):
     """
     Attach an Atom <links> element to the parent.
