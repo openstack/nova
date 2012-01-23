@@ -18,7 +18,6 @@ Tests For Distributed Scheduler.
 
 import json
 
-from nova.compute import api as compute_api
 from nova import context
 from nova import db
 from nova import exception
@@ -165,32 +164,36 @@ class DistributedSchedulerTestCase(test.TestCase):
         a non-admin context.  DB actions should work."""
         self.was_admin = False
 
-        def fake_schedule(context, *args, **kwargs):
+        def fake_get(context, *args, **kwargs):
             # make sure this is called with admin context, even though
             # we're using user context below
             self.was_admin = context.is_admin
-            return []
+            return {}
 
         sched = fakes.FakeDistributedScheduler()
-        self.stubs.Set(sched, '_schedule', fake_schedule)
+        self.stubs.Set(sched.host_manager, 'get_all_host_states', fake_get)
 
         fake_context = context.RequestContext('user', 'project')
 
+        request_spec = {'instance_type': {'memory_mb': 1, 'local_gb': 1},
+                        'instance_properties': {'project_id': 1}}
         self.assertRaises(exception.NoValidHost, sched.schedule_run_instance,
-                          fake_context, {})
+                          fake_context, request_spec)
         self.assertTrue(self.was_admin)
 
     def test_schedule_bad_topic(self):
         """Parameter checking."""
         sched = fakes.FakeDistributedScheduler()
-        self.assertRaises(NotImplementedError, sched._schedule, None, "foo",
-                          {})
+        fake_context = context.RequestContext('user', 'project')
+        self.assertRaises(NotImplementedError, sched._schedule, fake_context,
+                          "foo", {})
 
     def test_schedule_no_instance_type(self):
         """Parameter checking."""
         sched = fakes.FakeDistributedScheduler()
         request_spec = {'instance_properties': {}}
-        self.assertRaises(NotImplementedError, sched._schedule, None,
+        fake_context = context.RequestContext('user', 'project')
+        self.assertRaises(NotImplementedError, sched._schedule, fake_context,
                           "compute", request_spec=request_spec)
 
     def test_schedule_happy_day(self):

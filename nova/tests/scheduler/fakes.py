@@ -16,6 +16,8 @@
 Fakes For Scheduler tests.
 """
 
+import mox
+
 from nova import db
 from nova.scheduler import distributed_scheduler
 from nova.scheduler import host_manager
@@ -99,9 +101,9 @@ class FakeComputeAPI(object):
         pass
 
 
-def mox_host_manager_db_calls(mox, context):
-    mox.StubOutWithMock(db, 'compute_node_get_all')
-    mox.StubOutWithMock(db, 'instance_get_all')
+def mox_host_manager_db_calls(mock, context):
+    mock.StubOutWithMock(db, 'compute_node_get_all')
+    mock.StubOutWithMock(db, 'instance_get_all')
 
-    db.compute_node_get_all(context).AndReturn(COMPUTE_NODES)
-    db.instance_get_all(context).AndReturn(INSTANCES)
+    db.compute_node_get_all(mox.IgnoreArg()).AndReturn(COMPUTE_NODES)
+    db.instance_get_all(mox.IgnoreArg()).AndReturn(INSTANCES)

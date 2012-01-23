@@ -92,7 +92,7 @@ class DistributedScheduler(driver.Scheduler):
             weighted_hosts.append(self._make_weighted_host_from_blob(blob))
         else:
             # No plan ... better make one.
-            weighted_hosts = self._schedule(elevated, "compute", request_spec,
+            weighted_hosts = self._schedule(context, "compute", request_spec,
                                         *args, **kwargs)
 
         if not weighted_hosts:
@@ -135,7 +135,7 @@ class DistributedScheduler(driver.Scheduler):
         instance_type = db.instance_type_get(elevated, instance_type_id)
 
         # Now let's grab a possibility
-        hosts = self._schedule(elevated, 'compute', request_spec,
+        hosts = self._schedule(context, 'compute', request_spec,
                                *args, **kwargs)
         if not hosts:
             raise exception.NoValidHost(reason=_(""))
@@ -151,8 +151,7 @@ class DistributedScheduler(driver.Scheduler):
         internal zone information will be encrypted so as not to reveal
         anything about our inner layout.
         """
-        elevated = context.elevated()
-        weighted_hosts = self._schedule(elevated, "compute", request_spec,
+        weighted_hosts = self._schedule(context, "compute", request_spec,
                 *args, **kwargs)
         return [weighted_host.to_dict() for weighted_host in weighted_hosts]
 
@@ -284,10 +283,11 @@ class DistributedScheduler(driver.Scheduler):
         """
         pass
 
-    def _schedule(self, elevated, topic, request_spec, *args, **kwargs):
+    def _schedule(self, context, topic, request_spec, *args, **kwargs):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
+        elevated = context.elevated()
         if topic != "compute":
             msg = _("Scheduler only understands Compute nodes (for now)")
             raise NotImplementedError(msg)
@@ -300,17 +300,16 @@ class DistributedScheduler(driver.Scheduler):
             raise NotImplementedError(msg)
 
         cost_functions = self.get_cost_functions()
-
-        ram_requirement_mb = instance_type['memory_mb']
-        disk_requirement_gb = instance_type['local_gb']
-
         config_options = self._get_configuration_options()
 
         filter_properties = kwargs.get('filter_properties', {})
-        filter_properties.update({'config_options': config_options,
+        filter_properties.update({'context': context,
+                                  'request_spec': request_spec,
+                                  'config_options': config_options,
                                   'instance_type': instance_type})
 
-        self.populate_filter_properties(request_spec, filter_properties)
+        self.populate_filter_properties(request_spec,
+                                        filter_properties)
 
         # Find our local list of acceptable hosts by repeatedly
         # filtering and weighing our options. Each time we choose a
