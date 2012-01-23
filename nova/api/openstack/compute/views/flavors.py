@@ -47,16 +47,21 @@ class ViewBuilder(common.ViewBuilder):
 
     def index(self, request, flavors):
         """Return the 'index' view of flavors."""
-        def _get_flavors(request, flavors):
-            for _, flavor in flavors.iteritems():
-                yield self.basic(request, flavor)["flavor"]
-
-        return dict(flavors=list(_get_flavors(request, flavors)))
+        return self._list_view(self.basic, request, flavors)
 
     def detail(self, request, flavors):
         """Return the 'detail' view of flavors."""
-        def _get_flavors(request, flavors):
-            for _, flavor in flavors.iteritems():
-                yield self.show(request, flavor)["flavor"]
+        return self._list_view(self.show, request, flavors)
 
-        return dict(flavors=list(_get_flavors(request, flavors)))
+    def _list_view(self, func, request, flavors):
+        """Provide a view for a list of flavors."""
+        flavor_list = [func(request, flavor)["flavor"] for flavor in flavors]
+        flavors_links = self._get_collection_links(request,
+                                                   flavors,
+                                                   "flavorid")
+        flavors_dict = dict(flavors=flavor_list)
+
+        if flavors_links:
+            flavors_dict["flavors_links"] = flavors_links
+
+        return flavors_dict
