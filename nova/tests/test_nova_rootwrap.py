@@ -52,11 +52,13 @@ class RootwrapTestCase(test.TestCase):
         self.assertTrue(filtermatch is None)
 
     def test_DnsmasqFilter(self):
-        usercmd = ['FLAGFILE=A', 'NETWORK_ID="foo bar"', 'dnsmasq', 'foo']
+        usercmd = ['FLAGFILE=A', 'NETWORK_ID=foobar', 'dnsmasq', 'foo']
         f = filters.DnsmasqFilter("/usr/bin/dnsmasq", "root")
         self.assertTrue(f.match(usercmd))
-        self.assertEqual(f.get_command(usercmd),
-            ['FLAGFILE=A', 'NETWORK_ID="foo bar"', '/usr/bin/dnsmasq', 'foo'])
+        self.assertEqual(f.get_command(usercmd), ['/usr/bin/dnsmasq', 'foo'])
+        env = f.get_environment(usercmd)
+        self.assertEqual(env.get('FLAGFILE'), 'A')
+        self.assertEqual(env.get('NETWORK_ID'), 'foobar')
 
     def test_skips(self):
         # Check that all filters are skipped and that the last matches

@@ -65,7 +65,8 @@ if __name__ == '__main__':
         obj = subprocess.Popen(filtermatch.get_command(userargs),
                                stdin=sys.stdin,
                                stdout=sys.stdout,
-                               stderr=sys.stderr)
+                               stderr=sys.stderr,
+                               env=filtermatch.get_environment(userargs))
         sys.exit(obj.returncode)
 
     print "Unauthorized command: %s" % ' '.join(userargs)
