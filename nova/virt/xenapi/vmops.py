@@ -930,8 +930,9 @@ class VMOps(object):
         resp = self._make_agent_call('key_init', instance, '', key_init_args)
         # Successful return code from key_init is 'D0'
         if resp['returncode'] != 'D0':
-            LOG.error(_('Failed to exchange keys: %(resp)r') % locals())
-            return None
+            msg = _('Failed to exchange keys: %(resp)r') % locals()
+            LOG.error(msg)
+            raise Exception(msg)
         # Some old versions of the Windows agent have a trailing \\r\\n
         # (ie CRLF escaped) for some reason. Strip that off.
         agent_pub = int(resp['message'].replace('\\r\\n', ''))
@@ -945,8 +946,9 @@ class VMOps(object):
         resp = self._make_agent_call('password', instance, '', password_args)
         # Successful return code from password is '0'
         if resp['returncode'] != '0':
-            LOG.error(_('Failed to update password: %(resp)r') % locals())
-            return None
+            msg = _('Failed to update password: %(resp)r') % locals()
+            LOG.error(msg)
+            raise Exception(msg)
         return resp['message']
 
     def inject_file(self, instance, path, contents):
