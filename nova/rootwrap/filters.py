@@ -88,3 +88,37 @@ class DnsmasqFilter(CommandFilter):
         env['FLAGFILE'] = userargs[0].split('=')[-1]
         env['NETWORK_ID'] = userargs[1].split('=')[-1]
         return env
+
+
+class KillFilter(CommandFilter):
+    """Specific filter for the kill calls.
+       1st argument is a list of accepted signals (emptystring means no signal)
+       2nd argument is a list of accepted affected executables.
+
+       This filter relies on /proc to accurately determine affected
+       executable, so it will only work on procfs-capable systems (not OSX).
+    """
+
+    def match(self, userargs):
+        if len(userargs) == 3:
+            signal = userargs.pop(1)
+            if signal not in self.args[0]:
+                # Requested signal not in accepted list
+                return False
+        else:
+            if len(userargs) != 2:
+                # Incorrect number of arguments
+                return False
+            if '' not in self.args[0]:
+                # No signal, but list doesn't include empty string
+                return False
+        pid = userargs[1]
+        try:
+            command = os.readlink("/proc/%d/exe" % pid)
+            if command not in self.args[1]:
+                # Affected executable not in accepted list
+                return False
+        except:
+            # Incorrect PID
+            return False
+        return True

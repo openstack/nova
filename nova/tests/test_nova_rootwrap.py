@@ -14,6 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+import subprocess
+
 from nova.rootwrap import filters
 from nova.rootwrap import wrapper
 from nova import test
@@ -59,6 +62,36 @@ class RootwrapTestCase(test.TestCase):
         env = f.get_environment(usercmd)
         self.assertEqual(env.get('FLAGFILE'), 'A')
         self.assertEqual(env.get('NETWORK_ID'), 'foobar')
+
+    @test.skip_if(not os.path.exists("/proc/%d" % os.getpid()),
+                  "Test requires /proc filesystem (procfs)")
+    def test_KillFilter(self):
+        p = subprocess.Popen(["/bin/sleep", "5"])
+        f = filters.KillFilter("/bin/kill", "root",
+                               ["-ALRM"],
+                               ["/bin/sleep"])
+        usercmd = ['kill', '-9', p.pid]
+        # Incorrect signal should fail
+        self.assertFalse(f.match(usercmd))
+        usercmd = ['kill', p.pid]
+        # Providing no signal should fail
+        self.assertFalse(f.match(usercmd))
+
+        f = filters.KillFilter("/bin/kill", "root",
+                               ["-9", ""],
+                               ["/bin/sleep"])
+        usercmd = ['kill', '-9', os.getpid()]
+        # Our own PID does not match /bin/sleep, so it should fail
+        self.assertFalse(f.match(usercmd))
+        usercmd = ['kill', '-9', 999999]
+        # Nonexistant PID should fail
+        self.assertFalse(f.match(usercmd))
+        usercmd = ['kill', p.pid]
+        # Providing no signal should work
+        self.assertTrue(f.match(usercmd))
+        usercmd = ['kill', '-9', p.pid]
+        # Providing -9 signal should work
+        self.assertTrue(f.match(usercmd))
 
     def test_skips(self):
         # Check that all filters are skipped and that the last matches
