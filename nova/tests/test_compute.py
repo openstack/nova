@@ -774,7 +774,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
         self.compute.add_fixed_ip_to_instance(self.context, instance_uuid, 1)
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_remove_fixed_ip_usage_notification(self):
@@ -796,7 +796,7 @@ class ComputeTestCase(BaseTestCase):
                                                    instance_uuid,
                                                    1)
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_run_instance_usage_notification(self):
@@ -804,11 +804,14 @@ class ComputeTestCase(BaseTestCase):
         inst_ref = self._create_fake_instance()
         instance_uuid = inst_ref['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['event_type'], 'compute.instance.create.start')
+        # The last event is the one with the sugar in it.
+        msg = test_notifier.NOTIFICATIONS[1]
         self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.create')
+        self.assertEquals(msg['event_type'], 'compute.instance.create.end')
         payload = msg['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
@@ -832,14 +835,16 @@ class ComputeTestCase(BaseTestCase):
         test_notifier.NOTIFICATIONS = []
         self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.exists')
 
         msg = test_notifier.NOTIFICATIONS[1]
         self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.delete')
+        self.assertEquals(msg['event_type'], 'compute.instance.delete.start')
+        msg1 = test_notifier.NOTIFICATIONS[2]
+        self.assertEquals(msg1['event_type'], 'compute.instance.delete.end')
         payload = msg['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
@@ -1006,10 +1011,14 @@ class ComputeTestCase(BaseTestCase):
                                                 instance_uuid,
                                                 'pre-migrating')
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['event_type'],
+                          'compute.instance.resize.prep.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg['event_type'],
+                          'compute.instance.resize.prep.end')
         self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.resize.prep')
         payload = msg['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)

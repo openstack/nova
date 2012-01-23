@@ -489,8 +489,8 @@ class ToPrimitiveTestCase(test.TestCase):
         ret = utils.to_primitive(x)
         self.assertEquals(len(ret), 3)
         self.assertTrue(ret[0].startswith(u"<module 'datetime' from "))
-        self.assertTrue(ret[1].startswith(u'<function foo at 0x'))
-        self.assertEquals(ret[2], u'<built-in function dir>')
+        self.assertTrue(ret[1].startswith('<function foo at 0x'))
+        self.assertEquals(ret[2], '<built-in function dir>')
 
 
 class MonkeyPatchTestCase(test.TestCase):
