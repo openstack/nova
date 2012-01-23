@@ -33,7 +33,7 @@ def load_filters():
         try:
             __import__(modulename)
             module = sys.modules[modulename]
-            filters = filters + module.filters
+            filters = filters + module.filterlist
         except ImportError:
             # It's OK to have missing filters, since filter modules are
             # shipped with specific nodes rather than with python-nova
