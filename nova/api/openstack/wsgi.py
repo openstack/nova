@@ -884,15 +884,19 @@ class Resource(wsgi.Application):
             else:
                 meth = getattr(self.controller, action)
         except AttributeError as ex:
-            if action != 'action' or not self.wsgi_actions:
+            if (not self.wsgi_actions or
+                action not in ['action', 'create', 'delete']):
                 # Propagate the error
                 raise
         else:
             return meth, self.wsgi_extensions.get(action, [])
 
-        # OK, it's an action; figure out which action...
-        mtype = _MEDIA_TYPE_MAP.get(content_type)
-        action_name = self.action_peek[mtype](body)
+        if action == 'action':
+            # OK, it's an action; figure out which action...
+            mtype = _MEDIA_TYPE_MAP.get(content_type)
+            action_name = self.action_peek[mtype](body)
+        else:
+            action_name = action
 
         # Look up the action method
         return (self.wsgi_actions[action_name],
@@ -908,6 +912,9 @@ def action(name):
     """Mark a function as an action.
 
     The given name will be taken as the action key in the body.
+
+    This is also overloaded to allow extensions to provide
+    non-extending definitions of create and delete operations.
     """
 
     def decorator(func):

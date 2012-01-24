@@ -516,6 +516,35 @@ class ResourceTest(test.TestCase):
         self.assertEqual(method, controller._action_foo)
         self.assertEqual(extensions, [extended._action_foo])
 
+    def test_get_method_action_whitelist_extensions(self):
+        class Controller(wsgi.Controller):
+            def index(self, req, pants=None):
+                return pants
+
+        class ControllerExtended(wsgi.Controller):
+            @wsgi.action('create')
+            def _create(self, req, body):
+                pass
+
+            @wsgi.action('delete')
+            def _delete(self, req, id):
+                pass
+
+        controller = Controller()
+        extended = ControllerExtended()
+        resource = wsgi.Resource(controller)
+        resource.register_actions(extended)
+
+        method, extensions = resource.get_method(None, 'create',
+                                                 'application/json',
+                                                 '{"create": true}')
+        self.assertEqual(method, extended._create)
+        self.assertEqual(extensions, [])
+
+        method, extensions = resource.get_method(None, 'delete', None, None)
+        self.assertEqual(method, extended._delete)
+        self.assertEqual(extensions, [])
+
     def test_pre_process_extensions_regular(self):
         class Controller(object):
             def index(self, req, pants=None):
