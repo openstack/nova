@@ -604,21 +604,14 @@ class Resource(wsgi.Application):
 
     """
 
-    def __init__(self, controller, deserializer=None, serializer=None,
-                 action_peek=None, **deserializers):
+    def __init__(self, controller, action_peek=None, **deserializers):
         """
         :param controller: object that implement methods created by routes lib
-        :param deserializer: object that can serialize the output of a
-                             controller into a webob response
-        :param serializer: object that can deserialize a webob request
-                           into necessary pieces
         :param action_peek: dictionary of routines for peeking into an action
                             request body to determine the desired action
         """
 
         self.controller = controller
-        self.deserializer = deserializer
-        self.serializer = serializer
 
         default_deserializers = dict(xml=XMLDeserializer,
                                      json=JSONDeserializer)
@@ -811,9 +804,7 @@ class Resource(wsgi.Application):
 
         # Now, deserialize the request body...
         try:
-            if self.deserializer is not None:
-                contents = self.deserializer.deserialize_body(request, action)
-            elif content_type is not None:
+            if content_type:
                 contents = self.deserialize(meth, content_type, body)
             else:
                 contents = {}
@@ -869,14 +860,8 @@ class Resource(wsgi.Application):
                                                         request, action_args)
 
             if resp_obj and not response:
-                if self.serializer:
-                    response = self.serializer.serialize(request,
-                                                         resp_obj.obj,
-                                                         accept,
-                                                         action=action)
-                else:
-                    response = resp_obj.serialize(request, accept,
-                                                  self.default_serializers)
+                response = resp_obj.serialize(request, accept,
+                                              self.default_serializers)
 
         try:
             msg_dict = dict(url=request.url, status=response.status_int)
