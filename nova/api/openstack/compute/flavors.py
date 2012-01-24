@@ -18,6 +18,7 @@
 import webob
 
 from nova.api.openstack.compute.views import flavors as flavors_view
+from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import instance_types
@@ -72,13 +73,15 @@ class Controller(wsgi.Controller):
     def index(self, req):
         """Return all flavors in brief."""
         flavors = self._get_flavors(req)
-        return self._view_builder.index(req, flavors)
+        limited_flavors = common.limited_by_marker(flavors.values(), req)
+        return self._view_builder.index(req, limited_flavors)
 
     @wsgi.serializers(xml=FlavorsTemplate)
     def detail(self, req):
         """Return all flavors in detail."""
         flavors = self._get_flavors(req)
-        return self._view_builder.detail(req, flavors)
+        limited_flavors = common.limited_by_marker(flavors.values(), req)
+        return self._view_builder.detail(req, limited_flavors)
 
     @wsgi.serializers(xml=FlavorTemplate)
     def show(self, req, id):

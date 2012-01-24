@@ -18,11 +18,14 @@
 from lxml import etree
 import webob
 
+import urlparse
+
 from nova.api.openstack.compute import flavors
 from nova.api.openstack import xmlutil
 import nova.compute.instance_types
 from nova import exception
 from nova import test
+from nova import utils
 from nova.tests.api.openstack import fakes
 
 
@@ -164,6 +167,84 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
+    def test_get_flavor_detail_with_limit(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail?limit=1')
+        response = self.controller.index(req)
+        response_list = response["flavors"]
+        response_links = response["flavors_links"]
+
+        alternate = "%s/fake/flavors/%s"
+
+        expected_flavors = [
+            {
+                "id": "1",
+                "name": "flavor 1",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v2/fake/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/flavors/1",
+                    },
+                ],
+            },
+        ]
+        self.assertEqual(response_list, expected_flavors)
+        self.assertEqual(response_links[0]['rel'], 'next')
+
+        href_parts = urlparse.urlparse(response_links[0]['href'])
+        self.assertEqual('/v2/fake/flavors', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertDictMatch({'limit': ['1'], 'marker': ['1']}, params)
+
+    def test_get_flavor_with_limit(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors?limit=2')
+        response = self.controller.index(req)
+        response_list = response["flavors"]
+        response_links = response["flavors_links"]
+
+        alternate = "%s/fake/flavors/%s"
+
+        expected_flavors = [
+            {
+                "id": "1",
+                "name": "flavor 1",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v2/fake/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/flavors/1",
+                    },
+                ],
+            },
+            {
+                "id": "2",
+                "name": "flavor 2",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v2/fake/flavors/2",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/flavors/2",
+                    },
+                ],
+            }
+        ]
+        self.assertEqual(response_list, expected_flavors)
+        self.assertEqual(response_links[0]['rel'], 'next')
+
+        href_parts = urlparse.urlparse(response_links[0]['href'])
+        self.assertEqual('/v2/fake/flavors', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertDictMatch({'limit': ['2'], 'marker': ['2']}, params)
+
     def test_get_flavor_list_detail(self):
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail')
         flavor = self.controller.detail(req)
@@ -222,6 +303,7 @@ class FlavorsTest(test.TestCase):
 
     def test_get_flavor_list_filter_min_ram(self):
         """Flavor lists may be filtered by minRam"""
+        self.maxDiff = None
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?minRam=512')
         flavor = self.controller.index(req)
         expected = {
