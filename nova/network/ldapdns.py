@@ -157,7 +157,7 @@ class DomainEntry(DNSEntry):
                                  'domain', 'dcobject', 'top'],
                  'sOARecord': [cls._soa()],
                  'associatedDomain': [domain],
-                 'dc': domain}
+                 'dc': [domain]}
         lobj.add_s(newdn, create_modlist(attrs))
         return DomainEntry(lobj, domain)
 
@@ -224,7 +224,7 @@ class DomainEntry(DNSEntry):
                                      'domain', 'dcobject', 'top'],
                      'aRecord': [address],
                      'associatedDomain': [self._qualify(name)],
-                     'dc': name}
+                     'dc': [name]}
             self.lobj.add_s(newdn, create_modlist(attrs))
             return self.subentry_with_name(name)
         self.update_soa()
@@ -257,7 +257,7 @@ class HostEntry(DNSEntry):
                 # We just removed the rdn, so we need to move this entry.
                 names.remove(self._qualify(name))
                 newrdn = "dc=%s" % self._dequalify(names[0])
-                self.lobj.modrdn_s(self.dn, newrdn)
+                self.lobj.modrdn_s(self.dn, [newrdn])
         else:
             # We should delete the entire record.
             self.lobj.delete_s(self.dn)
@@ -360,5 +360,5 @@ class FakeLdapDNS(LdapDNS):
         attrs = {'objectClass': ['domainrelatedobject', 'dnsdomain',
                                  'domain', 'dcobject', 'top'],
                  'associateddomain': ['root'],
-                 'dc': 'root'}
+                 'dc': ['root']}
         self.lobj.add_s(flags.FLAGS.ldap_dns_base_dn, create_modlist(attrs))
