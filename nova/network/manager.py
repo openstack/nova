@@ -226,10 +226,15 @@ class FloatingIP(object):
         for floating_ip in floating_ips:
             if floating_ip.get('fixed_ip', None):
                 fixed_address = floating_ip['fixed_ip']['address']
-                # NOTE(vish): The False here is because we ignore the case
-                #             that the ip is already bound.
-                self.driver.bind_floating_ip(floating_ip['address'],
-                                             floating_ip['interface'])
+                interface = floating_ip['interface']
+                try:
+                    self.driver.bind_floating_ip(floating_ip['address'],
+                                                 interface)
+                except exception.ProcessExecutionError:
+                    msg = _('Interface %(interface)s not found' % locals())
+                    LOG.debug(msg)
+                    raise exception.NoFloatingIpInterface(interface=interface)
+
                 self.driver.ensure_floating_forward(floating_ip['address'],
                                                     fixed_address)
 
@@ -415,8 +420,18 @@ class FloatingIP(object):
                                                floating_address,
                                                fixed_address,
                                                self.host)
-        # gogo driver time
-        self.driver.bind_floating_ip(floating_address, interface)
+        try:
+            # gogo driver time
+            self.driver.bind_floating_ip(floating_address, interface)
+        except exception.ProcessExecutionError as e:
+            fixed_address = self.db.floating_ip_disassociate(context,
+                                                             floating_address)
+            if "Cannot find device" in str(e):
+                msg = _('Interface %(interface)s not found' % locals())
+                LOG.error(msg)
+                raise exception.NoFloatingIpInterface(interface=interface)
+            raise
+
         self.driver.ensure_floating_forward(floating_address, fixed_address)
 
     @wrap_check_policy

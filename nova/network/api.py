@@ -123,7 +123,7 @@ class API(base.Base):
 
         ensures floating ip is allocated to the project in context
         """
-        rpc.cast(context,
+        rpc.call(context,
                  FLAGS.network_topic,
                  {'method': 'associate_floating_ip',
                   'args': {'floating_address': floating_address,

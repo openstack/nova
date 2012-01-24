@@ -212,6 +212,9 @@ class FloatingIPActionController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=e.message)
         except exception.NotAuthorized, e:
             raise webob.exc.HTTPUnauthorized()
+        except rpc.RemoteError:
+            msg = _("Associate floating ip failed")
+            raise webob.exc.HTTPInternalServerError(explanation=msg)
 
         return webob.Response(status_int=202)
 
