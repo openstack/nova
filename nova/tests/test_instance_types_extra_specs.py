@@ -29,7 +29,8 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         values = dict(name="cg1.4xlarge",
                       memory_mb=22000,
                       vcpus=8,
-                      local_gb=1690,
+                      root_gb=1690,
+                      ephemeral_gb=2000,
                       flavorid=105)
         specs = dict(cpu_arch="x86_64",
                         cpu_model="Nehalem",

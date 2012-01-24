@@ -267,7 +267,8 @@ class HostFiltersTestCase(test.TestCase):
     def test_json_filter_passes(self):
         filt_cls = filters.JsonFilter()
         filter_properties = {'instance_type': {'memory_mb': 1024,
-                                               'local_gb': 200},
+                                               'root_gb': 200,
+                                               'ephemeral_gb': 0},
                              'query': self.json_query}
         capabilities = {'enabled': True}
         host = fakes.FakeHostState('host1', 'compute',
@@ -279,7 +280,8 @@ class HostFiltersTestCase(test.TestCase):
     def test_json_filter_passes_with_no_query(self):
         filt_cls = filters.JsonFilter()
         filter_properties = {'instance_type': {'memory_mb': 1024,
-                                               'local_gb': 200}}
+                                               'root_gb': 200,
+                                               'ephemeral_gb': 0}}
         capabilities = {'enabled': True}
         host = fakes.FakeHostState('host1', 'compute',
                 {'free_ram_mb': 0,
@@ -290,7 +292,8 @@ class HostFiltersTestCase(test.TestCase):
     def test_json_filter_fails_on_memory(self):
         filt_cls = filters.JsonFilter()
         filter_properties = {'instance_type': {'memory_mb': 1024,
-                                               'local_gb': 200},
+                                               'root_gb': 200,
+                                               'ephemeral_gb': 0},
                              'query': self.json_query}
         capabilities = {'enabled': True}
         host = fakes.FakeHostState('host1', 'compute',
@@ -302,7 +305,8 @@ class HostFiltersTestCase(test.TestCase):
     def test_json_filter_fails_on_disk(self):
         filt_cls = filters.JsonFilter()
         filter_properties = {'instance_type': {'memory_mb': 1024,
-                                               'local_gb': 200},
+                                               'root_gb': 200,
+                                               'ephemeral_gb': 0},
                              'query': self.json_query}
         capabilities = {'enabled': True}
         host = fakes.FakeHostState('host1', 'compute',
@@ -318,7 +322,8 @@ class HostFiltersTestCase(test.TestCase):
                         ['>=', '$free_disk_mb', 200 * 1024],
                         '$capabilities.enabled'])
         filter_properties = {'instance_type': {'memory_mb': 1024,
-                                               'local_gb': 200},
+                                               'root_gb': 200,
+                                               'ephemeral_gb': 0},
                              'query': json_query}
         capabilities = {'enabled': False}
         host = fakes.FakeHostState('host1', 'compute',

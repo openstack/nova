@@ -104,7 +104,7 @@ class Controller(wsgi.Controller):
 
         if 'minDisk' in req.params:
             try:
-                filters['min_local_gb'] = int(req.params['minDisk'])
+                filters['min_root_gb'] = int(req.params['minDisk'])
             except ValueError:
                 pass  # ignore bogus values per spec
 

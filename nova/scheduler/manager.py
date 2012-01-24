@@ -169,17 +169,21 @@ class SchedulerManager(manager.Manager):
         project_ids = [i['project_id'] for i in instance_refs]
         project_ids = list(set(project_ids))
         for project_id in project_ids:
-            vcpus = [i['vcpus'] for i in instance_refs \
-                if i['project_id'] == project_id]
+            vcpus = [i['vcpus'] for i in instance_refs
+                     if i['project_id'] == project_id]
 
-            mem = [i['memory_mb']  for i in instance_refs \
-                if i['project_id'] == project_id]
+            mem = [i['memory_mb'] for i in instance_refs
+                   if i['project_id'] == project_id]
 
-            disk = [i['local_gb']  for i in instance_refs \
-                if i['project_id'] == project_id]
+            root = [i['root_gb'] for i in instance_refs
+                    if i['project_id'] == project_id]
 
-            usage[project_id] = {'vcpus': reduce(lambda x, y: x + y, vcpus),
-                                 'memory_mb': reduce(lambda x, y: x + y, mem),
-                                 'local_gb': reduce(lambda x, y: x + y, disk)}
+            ephemeral = [i['ephemeral_gb'] for i in instance_refs
+                         if i['project_id'] == project_id]
+
+            usage[project_id] = {'vcpus': sum(vcpus),
+                                 'memory_mb': sum(mem),
+                                 'root_gb': sum(root),
+                                 'ephemeral_gb': sum(ephemeral)}
 
         return {'resource': resource, 'usage': usage}

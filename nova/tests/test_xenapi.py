@@ -107,7 +107,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'image_ref': 1,
                   'kernel_id': 2,
                   'ramdisk_id': 3,
-                  'local_gb': 20,
+                  'root_gb': 20,
                   'instance_type_id': '3',  # m1.large
                   'os_type': 'linux',
                   'architecture': 'x86-64'}
@@ -414,7 +414,7 @@ class XenAPIVMTestCase(test.TestCase):
                       'image_ref': image_ref,
                       'kernel_id': kernel_id,
                       'ramdisk_id': ramdisk_id,
-                      'local_gb': 20,
+                      'root_gb': 20,
                       'instance_type_id': instance_type_id,
                       'os_type': os_type,
                       'hostname': hostname,
@@ -700,7 +700,7 @@ class XenAPIVMTestCase(test.TestCase):
             'image_ref': 1,
             'kernel_id': 2,
             'ramdisk_id': 3,
-            'local_gb': 20,
+            'root_gb': 20,
             'instance_type_id': '3',  # m1.large
             'os_type': 'linux',
             'architecture': 'x86-64'}
@@ -797,7 +797,7 @@ class XenAPIMigrateInstance(test.TestCase):
                   'image_ref': 1,
                   'kernel_id': None,
                   'ramdisk_id': None,
-                  'local_gb': 5,
+                  'root_gb': 5,
                   'instance_type_id': '3',  # m1.large
                   'os_type': 'linux',
                   'architecture': 'x86-64'}
@@ -874,7 +874,7 @@ class XenAPIMigrateInstance(test.TestCase):
             self.fake_finish_revert_migration_called = True
 
         self.stubs.Set(stubs.FakeSessionForMigrationTests,
-                "VDI_resize_online", fake_vdi_resize)
+                       "VDI_resize_online", fake_vdi_resize)
         self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
         self.stubs.Set(vmops.VMOps, 'finish_revert_migration',
                        fake_finish_revert_migration)
@@ -889,7 +889,7 @@ class XenAPIMigrateInstance(test.TestCase):
                            'gateway_v6': 'dead:beef::1',
                            'ip6s': [{'enabled': '1',
                                      'ip': 'dead:beef::dcad:beff:feef:0',
-                                           'netmask': '64'}],
+                                     'netmask': '64'}],
                            'ips': [{'enabled': '1',
                                     'ip': '192.168.0.100',
                                     'netmask': '255.255.255.0'}],
@@ -917,9 +917,9 @@ class XenAPIMigrateInstance(test.TestCase):
         def fake_vdi_resize(*args, **kwargs):
             self.called = True
 
-        self.stubs.Set(stubs.FakeSessionForMigrationTests,
-                "VDI_resize_online", fake_vdi_resize)
         self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
+        self.stubs.Set(stubs.FakeSessionForMigrationTests,
+                       "VDI_resize_online", fake_vdi_resize)
 
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
@@ -949,14 +949,14 @@ class XenAPIMigrateInstance(test.TestCase):
         tiny_type_id = \
                 instance_types.get_instance_type_by_name('m1.tiny')['id']
         self.instance_values.update({'instance_type_id': tiny_type_id,
-                                     'local_gb': 0})
+                                     'root_gb': 0})
         instance = db.instance_create(self.context, self.instance_values)
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
 
         self.stubs.Set(stubs.FakeSessionForMigrationTests,
-                "VDI_resize_online", fake_vdi_resize)
+                       "VDI_resize_online", fake_vdi_resize)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
@@ -1157,7 +1157,7 @@ class XenAPIAutoDiskConfigTestCase(test.TestCase):
                   'image_ref': 1,
                   'kernel_id': 2,
                   'ramdisk_id': 3,
-                  'local_gb': 20,
+                  'root_gb': 20,
                   'instance_type_id': '3',  # m1.large
                   'os_type': 'linux',
                   'architecture': 'x86-64'}
@@ -1224,6 +1224,87 @@ class XenAPIAutoDiskConfigTestCase(test.TestCase):
                        fake_get_partitions)
 
         self.assertIsPartitionCalled(True)
+
+
+class XenAPIGenerateLocal(test.TestCase):
+    """Test generating of local disks, like swap and ephemeral"""
+    def setUp(self):
+        super(XenAPIGenerateLocal, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        self.flags(target_host='127.0.0.1',
+                   xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',
+                   xenapi_generate_swap=True,
+                   firewall_driver='nova.virt.xenapi.firewall.'
+                                   'Dom0IptablesFirewallDriver')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        db_fakes.stub_out_db_instance_api(self.stubs)
+        xenapi_fake.reset()
+        self.conn = xenapi_conn.get_connection(False)
+
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+
+        self.instance_values = {'id': 1,
+                  'project_id': self.project_id,
+                  'user_id': self.user_id,
+                  'image_ref': 1,
+                  'kernel_id': 2,
+                  'ramdisk_id': 3,
+                  'root_gb': 20,
+                  'instance_type_id': '3',  # m1.large
+                  'os_type': 'linux',
+                  'architecture': 'x86-64'}
+
+        self.context = context.RequestContext(self.user_id, self.project_id)
+
+        @classmethod
+        def fake_create_vbd(cls, session, vm_ref, vdi_ref, userdevice,
+                            bootable=True):
+            pass
+
+        self.stubs.Set(volume_utils.VolumeHelper,
+                       "create_vbd",
+                       fake_create_vbd)
+
+    def assertCalled(self, instance):
+        disk_image_type = vm_utils.ImageType.DISK_VHD
+        vm_ref = "blah"
+        first_vdi_ref = "blah"
+        vdis = ["blah"]
+
+        self.called = False
+        self.conn._vmops._attach_disks(instance, disk_image_type,
+                                       vm_ref, first_vdi_ref, vdis)
+        self.assertTrue(self.called)
+
+    def test_generate_swap(self):
+        """Test swap disk generation."""
+        instance = db.instance_create(self.context, self.instance_values)
+        instance = db.instance_update(self.context, instance['id'],
+                                      {'instance_type_id': 5})
+
+        @classmethod
+        def fake_generate_swap(cls, *args, **kwargs):
+            self.called = True
+        self.stubs.Set(vm_utils.VMHelper, 'generate_swap',
+                       fake_generate_swap)
+
+        self.assertCalled(instance)
+
+    def test_generate_ephemeral(self):
+        """Test ephemeral disk generation."""
+        instance = db.instance_create(self.context, self.instance_values)
+        instance = db.instance_update(self.context, instance['id'],
+                                      {'instance_type_id': 4})
+
+        @classmethod
+        def fake_generate_ephemeral(cls, *args):
+            self.called = True
+        self.stubs.Set(vm_utils.VMHelper, 'generate_ephemeral',
+                       fake_generate_ephemeral)
+
+        self.assertCalled(instance)
 
 
 class XenAPIBWUsageTestCase(test.TestCase):

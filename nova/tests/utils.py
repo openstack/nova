@@ -41,7 +41,8 @@ def get_test_instance_type(context=None):
     test_instance_type = {'name': 'kinda.big',
                           'memory_mb': 2048,
                           'vcpus': 4,
-                          'local_gb': 40,
+                          'root_gb': 40,
+                          'ephemeral_gb': 80,
                           'swap': 1024}
 
     instance_type_ref = nova.db.instance_type_create(context,
@@ -57,6 +58,7 @@ def get_test_instance(context=None):
                      'basepath': '/some/path',
                      'bridge_name': 'br100',
                      'vcpus': 2,
+                     'root_gb': 10,
                      'project_id': 'fake',
                      'bridge': 'br101',
                      'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',

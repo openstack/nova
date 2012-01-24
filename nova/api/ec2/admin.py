@@ -89,7 +89,7 @@ def instance_dict(inst):
     return {'name': inst['name'],
             'memory_mb': inst['memory_mb'],
             'vcpus': inst['vcpus'],
-            'disk_gb': inst['local_gb'],
+            'disk_gb': inst['root_gb'],
             'flavor_id': inst['flavorid']}
 
 

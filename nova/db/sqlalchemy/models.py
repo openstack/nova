@@ -223,7 +223,8 @@ class Instance(BASE, NovaBase):
 
     memory_mb = Column(Integer)
     vcpus = Column(Integer)
-    local_gb = Column(Integer)
+    root_gb = Column(Integer)
+    ephemeral_gb = Column(Integer)
 
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
@@ -256,7 +257,7 @@ class Instance(BASE, NovaBase):
     uuid = Column(String(36))
 
     root_device_name = Column(String(255))
-    default_local_device = Column(String(255), nullable=True)
+    default_ephemeral_device = Column(String(255), nullable=True)
     default_swap_device = Column(String(255), nullable=True)
     config_drive = Column(String(255))
 
@@ -339,7 +340,8 @@ class InstanceTypes(BASE, NovaBase):
     name = Column(String(255), unique=True)
     memory_mb = Column(Integer)
     vcpus = Column(Integer)
-    local_gb = Column(Integer)
+    root_gb = Column(Integer)
+    ephemeral_gb = Column(Integer)
     flavorid = Column(String(255), unique=True)
     swap = Column(Integer, nullable=False, default=0)
     rxtx_factor = Column(Float, nullable=False, default=1)

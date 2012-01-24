@@ -68,13 +68,14 @@ class InstanceTypeTestCase(test.TestCase):
         original_list = instance_types.get_all_types()
 
         # create new type and make sure values stick
-        inst_type = instance_types.create(name, 256, 1, 120, flavorid)
+        inst_type = instance_types.create(name, 256, 1, 120, 100, flavorid)
         inst_type_id = inst_type['id']
         self.assertEqual(inst_type['flavorid'], flavorid)
         self.assertEqual(inst_type['name'], name)
         self.assertEqual(inst_type['memory_mb'], 256)
         self.assertEqual(inst_type['vcpus'], 1)
-        self.assertEqual(inst_type['local_gb'], 120)
+        self.assertEqual(inst_type['root_gb'], 120)
+        self.assertEqual(inst_type['ephemeral_gb'], 100)
         self.assertEqual(inst_type['swap'], 0)
         self.assertEqual(inst_type['rxtx_factor'], 1)
 
@@ -108,22 +109,23 @@ class InstanceTypeTestCase(test.TestCase):
     def test_invalid_create_args_should_fail(self):
         """Ensures that instance type creation fails with invalid args"""
         invalid_sigs = [
-            (('Zero memory', 0, 1, 10, 'flavor1'), {}),
-            (('Negative memory', -256, 1, 10, 'flavor1'), {}),
-            (('Non-integer memory', 'asdf', 1, 10, 'flavor1'), {}),
+            (('Zero memory', 0, 1, 10, 20, 'flavor1'), {}),
+            (('Negative memory', -256, 1, 10, 20, 'flavor1'), {}),
+            (('Non-integer memory', 'asdf', 1, 10, 20, 'flavor1'), {}),
 
-            (('Zero vcpus', 256, 0, 10, 'flavor1'), {}),
-            (('Negative vcpus', 256, -1, 10, 'flavor1'), {}),
-            (('Non-integer vcpus', 256, 'a', 10, 'flavor1'), {}),
+            (('Zero vcpus', 256, 0, 10, 20, 'flavor1'), {}),
+            (('Negative vcpus', 256, -1, 10, 20, 'flavor1'), {}),
+            (('Non-integer vcpus', 256, 'a', 10, 20, 'flavor1'), {}),
 
-            (('Negative storage', 256, 1, -1, 'flavor1'), {}),
-            (('Non-integer storage', 256, 1, 'a', 'flavor1'), {}),
+            (('Negative storage', 256, 1, -1, 20, 'flavor1'), {}),
+            (('Non-integer storage', 256, 1, 'a', 20, 'flavor1'), {}),
 
-            (('Negative swap', 256, 1, 10, 'flavor1'), {'swap': -1}),
-            (('Non-integer swap', 256, 1, 10, 'flavor1'), {'swap': -1}),
+            (('Negative swap', 256, 1, 10, 20, 'flavor1'), {'swap': -1}),
+            (('Non-integer swap', 256, 1, 10, 20, 'flavor1'), {'swap': -1}),
 
-            (('Negative rxtx_factor', 256, 1, 10, 'f1'), {'rxtx_factor': -1}),
-            (('Non-integer rxtx_factor', 256, 1, 10, 'f1'),
+            (('Negative rxtx_factor', 256, 1, 10, 20, 'f1'),
+                 {'rxtx_factor': -1}),
+            (('Non-integer rxtx_factor', 256, 1, 10, 20, 'f1'),
                  {'rxtx_factor': "d"}),
         ]
 
@@ -140,18 +142,18 @@ class InstanceTypeTestCase(test.TestCase):
     def test_duplicate_names_fail(self):
         """Ensures that name duplicates raise ApiError"""
         name = 'some_name'
-        instance_types.create(name, 256, 1, 120, 'flavor1')
+        instance_types.create(name, 256, 1, 120, 200, 'flavor1')
         self.assertRaises(exception.ApiError,
                           instance_types.create,
-                          name, "256", 1, 120, 'flavor2')
+                          name, "256", 1, 120, 200, 'flavor2')
 
     def test_duplicate_flavorids_fail(self):
         """Ensures that flavorid duplicates raise ApiError"""
         flavorid = 'flavor1'
-        instance_types.create('name one', 256, 1, 120, flavorid)
+        instance_types.create('name one', 256, 1, 120, 200, flavorid)
         self.assertRaises(exception.ApiError,
                           instance_types.create,
-                          'name two', 256, 1, 120, flavorid)
+                          'name two', 256, 1, 120, 200, flavorid)
 
     def test_will_not_destroy_with_no_name(self):
         """Ensure destroy sad path of no name raises error"""
@@ -239,14 +241,14 @@ class InstanceTypeFilteringTest(test.TestCase):
         expected = ['m1.large', 'm1.medium', 'm1.small', 'm1.xlarge']
         self.assertFilterResults(filters, expected)
 
-    def test_min_local_gb_filter(self):
+    def test_min_root_gb_filter(self):
         """Exclude everything but large and xlarge which have >= 80 GB"""
-        filters = dict(min_local_gb=80)
+        filters = dict(min_root_gb=80)
         expected = ['m1.large', 'm1.xlarge']
         self.assertFilterResults(filters, expected)
 
-    def test_min_memory_mb_AND_local_gb_filter(self):
+    def test_min_memory_mb_AND_root_gb_filter(self):
         """Exclude everything but large and xlarge which have >= 80 GB"""
-        filters = dict(min_memory_mb=16384, min_local_gb=80)
+        filters = dict(min_memory_mb=16384, min_root_gb=80)
         expected = ['m1.xlarge']
         self.assertFilterResults(filters, expected)

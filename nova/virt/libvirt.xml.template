@@ -79,11 +79,11 @@
             <target dev='${root_device}' bus='${root_disk_bus}'/>
         </disk>
         #end if
-        #if $getVar('local_device', False)
+        #if $getVar('ephemeral_device', False)
             <disk type='file'>
                 <driver type='${driver_type}'/>
                 <source file='${basepath}/disk.local'/>
-                <target dev='${local_device}' bus='${ephemeral_disk_bus}'/>
+                <target dev='${ephemeral_device}' bus='${ephemeral_disk_bus}'/>
             </disk>
         #end if
         #for $eph in $ephemerals

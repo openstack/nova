@@ -303,7 +303,8 @@ class LibvirtConnTestCase(test.TestCase):
                      'project_id': 'fake',
                      'bridge': 'br101',
                      'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                     'local_gb': 20,
+                     'root_gb': 10,
+                     'ephemeral_gb': 20,
                      'instance_type_id': '5'}  # m1.small
 
     def create_fake_libvirt_mock(self, **kwargs):
@@ -1625,7 +1626,8 @@ class NWFilterTestCase(test.TestCase):
         inst['name'] = 'm1.small'
         inst['memory_mb'] = '1024'
         inst['vcpus'] = '1'
-        inst['local_gb'] = '20'
+        inst['root_gb'] = '10'
+        inst['ephemeral_gb'] = '20'
         inst['flavorid'] = '1'
         inst['swap'] = '2048'
         inst['rxtx_factor'] = 1

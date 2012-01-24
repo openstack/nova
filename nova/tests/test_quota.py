@@ -91,13 +91,13 @@ class QuotaTestCase(test.TestCase):
 
     def _get_instance_type(self, name):
         instance_types = {
-            'm1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1),
-            'm1.small': dict(memory_mb=2048, vcpus=1, local_gb=20, flavorid=2),
+            'm1.tiny': dict(memory_mb=512, vcpus=1, root_gb=0, flavorid=1),
+            'm1.small': dict(memory_mb=2048, vcpus=1, root_gb=20, flavorid=2),
             'm1.medium':
-                dict(memory_mb=4096, vcpus=2, local_gb=40, flavorid=3),
-            'm1.large': dict(memory_mb=8192, vcpus=4, local_gb=80, flavorid=4),
+                dict(memory_mb=4096, vcpus=2, root_gb=40, flavorid=3),
+            'm1.large': dict(memory_mb=8192, vcpus=4, root_gb=80, flavorid=4),
             'm1.xlarge':
-                dict(memory_mb=16384, vcpus=8, local_gb=160, flavorid=5)}
+                dict(memory_mb=16384, vcpus=8, root_gb=160, flavorid=5)}
         return instance_types[name]
 
     def test_quota_overrides(self):

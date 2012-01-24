@@ -151,6 +151,8 @@ class BaseTestCase(test.TestCase):
         type_id = instance_types.get_instance_type_by_name(type_name)['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
+        inst['root_gb'] = 0
+        inst['ephemeral_gb'] = 0
         inst.update(params)
         return db.instance_create(self.context, inst)
 
@@ -168,7 +170,8 @@ class BaseTestCase(test.TestCase):
         inst['name'] = 'm1.small'
         inst['memory_mb'] = '1024'
         inst['vcpus'] = '1'
-        inst['local_gb'] = '20'
+        inst['root_gb'] = '20'
+        inst['ephemeral_gb'] = '10'
         inst['flavorid'] = '1'
         inst['swap'] = '2048'
         inst['rxtx_factor'] = 1
@@ -1458,7 +1461,7 @@ class ComputeAPITestCase(BaseTestCase):
         """Test an instance type with too little disk space"""
 
         inst_type = instance_types.get_default_instance_type()
-        inst_type['local_gb'] = 1
+        inst_type['root_gb'] = 1
 
         def fake_show(*args):
             img = copy(self.fake_image)
@@ -1470,7 +1473,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.compute_api.create, self.context, inst_type, None)
 
         # Now increase the inst_type disk space and make sure all is fine.
-        inst_type['local_gb'] = 2
+        inst_type['root_gb'] = 2
         (refs, resv_id) = self.compute_api.create(self.context,
                 inst_type, None)
         db.instance_destroy(self.context, refs[0]['id'])
@@ -1479,7 +1482,7 @@ class ComputeAPITestCase(BaseTestCase):
         """Test an instance type with just enough ram and disk space"""
 
         inst_type = instance_types.get_default_instance_type()
-        inst_type['local_gb'] = 2
+        inst_type['root_gb'] = 2
         inst_type['memory_mb'] = 2
 
         def fake_show(*args):
@@ -1497,7 +1500,7 @@ class ComputeAPITestCase(BaseTestCase):
         """Test an instance type with no min_ram or min_disk"""
 
         inst_type = instance_types.get_default_instance_type()
-        inst_type['local_gb'] = 1
+        inst_type['root_gb'] = 1
         inst_type['memory_mb'] = 1
 
         def fake_show(*args):
@@ -1951,7 +1954,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 
         instance = self._create_fake_instance()
-        inst_params = {'local_gb': 2, 'memory_mb': 256}
+        inst_params = {'root_gb': 2, 'memory_mb': 256}
         instance['instance_type'].update(inst_params)
 
         image = self.compute_api.snapshot(self.context, instance, 'snap1',
@@ -2777,12 +2780,12 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_volume_size(self):
-        local_size = 2
+        ephemeral_size = 2
         swap_size = 3
-        inst_type = {'local_gb': local_size, 'swap': swap_size}
+        inst_type = {'ephemeral_gb': ephemeral_size, 'swap': swap_size}
         self.assertEqual(self.compute_api._volume_size(inst_type,
-                                                          'ephemeral0'),
-                         local_size)
+                                                       'ephemeral0'),
+                         ephemeral_size)
         self.assertEqual(self.compute_api._volume_size(inst_type,
                                                        'ephemeral1'),
                          0)

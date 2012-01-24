@@ -432,12 +432,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         instance_type_id = instance['instance_type_id']
         instance_type = instance_types.get_instance_type(instance_type_id)
-        allowed_size_gb = instance_type['local_gb']
+        allowed_size_gb = instance_type['root_gb']
 
-        # NOTE(jk0): Since libvirt uses local_gb as a secondary drive, we
-        # need to handle potential situations where local_gb is 0. This is
-        # the default for m1.tiny.
-        if allowed_size_gb == 0:
+        # NOTE(johannes): root_gb is allowed to be 0 for legacy reasons
+        # since libvirt interpreted the value differently than other
+        # drivers. A value of 0 means don't check size.
+        if not allowed_size_gb:
             return image_meta
 
         allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
@@ -1111,7 +1111,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                               memory_mb=instance_type['memory_mb'],
                               host=migration_ref['source_compute'],
                               vcpus=instance_type['vcpus'],
-                              local_gb=instance_type['local_gb'],
+                              root_gb=instance_type['root_gb'],
+                              ephemeral_gb=instance_type['ephemeral_gb'],
                               instance_type_id=instance_type['id'])
 
         self.driver.finish_revert_migration(instance_ref)
@@ -1238,7 +1239,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                    dict(instance_type_id=instance_type['id'],
                         memory_mb=instance_type['memory_mb'],
                         vcpus=instance_type['vcpus'],
-                        local_gb=instance_type['local_gb']))
+                        root_gb=instance_type['root_gb'],
+                        ephemeral_gb=instance_type['ephemeral_gb']))
             resize_instance = True
 
         instance_ref = self.db.instance_get_by_uuid(context,

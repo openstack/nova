@@ -167,15 +167,18 @@ class SchedulerManagerTestCase(test.TestCase):
         instances = [{'project_id': 'project1',
                       'vcpus': 1,
                       'memory_mb': 128,
-                      'local_gb': 128},
+                      'root_gb': 128,
+                      'ephemeral_gb': 0},
                      {'project_id': 'project1',
                       'vcpus': 2,
                       'memory_mb': 256,
-                      'local_gb': 384},
+                      'root_gb': 384,
+                      'ephemeral_gb': 0},
                      {'project_id': 'project2',
                       'vcpus': 2,
                       'memory_mb': 256,
-                      'local_gb': 256}]
+                      'root_gb': 256,
+                      'ephemeral_gb': 0}]
 
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
@@ -188,15 +191,17 @@ class SchedulerManagerTestCase(test.TestCase):
         result = self.manager.show_host_resources(self.context, host)
         expected = {'usage': {'project1': {'memory_mb': 384,
                                            'vcpus': 3,
-                                           'local_gb': 512},
+                                           'root_gb': 512,
+                                           'ephemeral_gb': 0},
                               'project2': {'memory_mb': 256,
                                            'vcpus': 2,
-                                           'local_gb': 256}},
-                    'resource': {'vcpus_used': 2,
+                                           'root_gb': 256,
+                                           'ephemeral_gb': 0}},
+                    'resource': {'vcpus': 4,
+                                 'vcpus_used': 2,
+                                 'local_gb': 1024,
                                  'local_gb_used': 512,
                                  'memory_mb': 1024,
-                                 'vcpus': 4,
-                                 'local_gb': 1024,
                                  'memory_mb_used': 512}}
         self.assertDictMatch(result, expected)
 
@@ -358,7 +363,8 @@ class SchedulerTestCase(test.TestCase):
                 'volumes': [volume1, volume2],
                 'power_state': power_state.RUNNING,
                 'memory_mb': 1024,
-                'local_gb': 1024}
+                'root_gb': 1024,
+                'ephemeral_gb': 0}
 
     def test_live_migration_basic(self):
         """Test basic schedule_live_migration functionality"""
