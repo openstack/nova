@@ -29,6 +29,7 @@ from nova import flags
 
 
 FLAGS = flags.FLAGS
+authorize = extensions.extension_authorizer('compute', 'simple_tenant_usage')
 
 
 def make_usage(elem):
@@ -211,6 +212,7 @@ class SimpleTenantUsageController(object):
     def index(self, req):
         """Retrive tenant_usage for all tenants"""
         context = req.environ['nova.context']
+        authorize(context)
 
         if not context.is_admin:
             return webob.Response(status_int=403)
@@ -227,6 +229,7 @@ class SimpleTenantUsageController(object):
         """Retrive tenant_usage for a specified tenant"""
         tenant_id = id
         context = req.environ['nova.context']
+        authorize(context)
 
         if not context.is_admin:
             if tenant_id != context.project_id:
@@ -253,7 +256,6 @@ class Simple_tenant_usage(extensions.ExtensionDescriptor):
     namespace = "http://docs.openstack.org/compute/ext/" \
                 "os-simple-tenant-usage/api/v1.1"
     updated = "2011-08-19T00:00:00+00:00"
-    admin_only = True
 
     def get_resources(self):
         resources = []

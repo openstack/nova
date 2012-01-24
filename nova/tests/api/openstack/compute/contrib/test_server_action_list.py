@@ -47,7 +47,6 @@ class ServerActionsTest(test.TestCase):
 
     def setUp(self):
         super(ServerActionsTest, self).setUp()
-        self.flags(allow_admin_api=True)
         self.flags(verbose=True)
         self.stubs.Set(nova.compute.API, 'get_actions', fake_get_actions)
         self.stubs.Set(nova.compute.API, 'get', fake_instance_get)

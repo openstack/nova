@@ -23,6 +23,7 @@ from nova import exception
 from nova.scheduler import api as scheduler_api
 
 
+authorize = extensions.extension_authorizer('compute', 'server_diagnostics')
 sd_nsmap = {None: wsgi.XMLNS_V11}
 
 
@@ -41,6 +42,7 @@ class ServerDiagnosticsController(object):
     @scheduler_api.redirect_handler
     def index(self, req, server_id):
         context = req.environ["nova.context"]
+        authorize(context)
         compute_api = compute.API()
         try:
             instance = compute_api.get(context, id)
@@ -58,7 +60,6 @@ class Server_diagnostics(extensions.ExtensionDescriptor):
     namespace = "http://docs.openstack.org/compute/ext/" \
                 "server-diagnostics/api/v1.1"
     updated = "2011-12-21T00:00:00+00:00"
-    admin_only = True
 
     def get_resources(self):
         parent_def = {'member_name': 'server', 'collection_name': 'servers'}

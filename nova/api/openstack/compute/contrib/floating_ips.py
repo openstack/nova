@@ -30,6 +30,7 @@ from nova import rpc
 
 
 LOG = logging.getLogger('nova.api.openstack.compute.contrib.floating_ips')
+authorize = extensions.extension_authorizer('compute', 'floating_ips')
 
 
 def make_float_ip(elem):
@@ -116,6 +117,7 @@ class FloatingIPController(object):
     def show(self, req, id):
         """Return data about the given floating ip."""
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             floating_ip = self.network_api.get_floating_ip(context, id)
@@ -130,6 +132,7 @@ class FloatingIPController(object):
     def index(self, req):
         """Return a list of floating ips allocated to a project."""
         context = req.environ['nova.context']
+        authorize(context)
 
         floating_ips = self.network_api.get_floating_ips_by_project(context)
 
@@ -141,6 +144,7 @@ class FloatingIPController(object):
     @wsgi.serializers(xml=FloatingIPTemplate)
     def create(self, req, body=None):
         context = req.environ['nova.context']
+        authorize(context)
 
         pool = None
         if body and 'pool' in body:
@@ -163,6 +167,7 @@ class FloatingIPController(object):
 
     def delete(self, req, id):
         context = req.environ['nova.context']
+        authorize(context)
         floating_ip = self.network_api.get_floating_ip(context, id)
 
         if floating_ip.get('fixed_ip_id'):
@@ -188,6 +193,7 @@ class FloatingIPActionController(wsgi.Controller):
     def _add_floating_ip(self, req, id, body):
         """Associate floating_ip to an instance."""
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             address = body['addFloatingIp']['address']
@@ -213,6 +219,7 @@ class FloatingIPActionController(wsgi.Controller):
     def _remove_floating_ip(self, req, id, body):
         """Dissociate floating_ip from an instance."""
         context = req.environ['nova.context']
+        authorize(context)
 
         try:
             address = body['removeFloatingIp']['address']

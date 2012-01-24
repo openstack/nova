@@ -18,6 +18,7 @@
 import webob
 
 from nova.api.openstack.compute.contrib import deferred_delete
+import nova.context
 from nova import compute
 from nova import exception
 from nova import test
@@ -34,7 +35,7 @@ class DeferredDeleteExtensionTest(test.TestCase):
         self.extension = deferred_delete.DeferredDeleteController()
         self.fake_input_dict = {}
         self.fake_uuid = 'fake_uuid'
-        self.fake_context = 'fake_context'
+        self.fake_context = nova.context.RequestContext('fake', 'fake')
         self.fake_req = FakeRequest(self.fake_context)
 
     def test_force_delete(self):

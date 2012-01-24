@@ -31,6 +31,9 @@ from nova import db
 from nova import exception
 
 
+authorize = extensions.extension_authorizer('compute', 'keypairs')
+
+
 class KeypairTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         return xmlutil.MasterTemplate(xmlutil.make_flat_dict('keypair'), 1)
@@ -77,6 +80,7 @@ class KeypairController(object):
         """
 
         context = req.environ['nova.context']
+        authorize(context)
         params = body['keypair']
         name = params['name']
 
@@ -109,6 +113,7 @@ class KeypairController(object):
         Delete a keypair with a given name
         """
         context = req.environ['nova.context']
+        authorize(context)
         db.key_pair_destroy(context, context.user_id, id)
         return webob.Response(status_int=202)
 
@@ -118,6 +123,7 @@ class KeypairController(object):
         List of keypairs for a user
         """
         context = req.environ['nova.context']
+        authorize(context)
         key_pairs = db.key_pair_get_all_by_user(context, context.user_id)
         rval = []
         for key_pair in key_pairs:

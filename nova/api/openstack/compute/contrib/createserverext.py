@@ -19,13 +19,18 @@ from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
 
 
+authorize = extensions.soft_extension_authorizer('compute', 'createserverext')
+
+
 class ViewBuilder(views.servers.ViewBuilder):
     """Adds security group output when viewing server details."""
 
     def show(self, request, instance):
         """Detailed view of a single instance."""
         server = super(ViewBuilder, self).show(request, instance)
-        server["server"]["security_groups"] = self._get_groups(instance)
+        context = request.environ['nova.context']
+        if authorize(context):
+            server["server"]["security_groups"] = self._get_groups(instance)
         return server
 
     def _get_groups(self, instance):

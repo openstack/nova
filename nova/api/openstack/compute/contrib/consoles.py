@@ -24,6 +24,7 @@ from nova.api.openstack import wsgi
 
 
 LOG = logging.getLogger('nova.api.openstack.compute.contrib.console')
+authorize = extensions.extension_authorizer('compute', 'consoles')
 
 
 class ConsolesController(wsgi.Controller):
@@ -35,6 +36,7 @@ class ConsolesController(wsgi.Controller):
     def get_vnc_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
+        authorize(context)
 
         console_type = body['os-getVNCConsole'].get('type')
 

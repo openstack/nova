@@ -27,6 +27,7 @@ from nova import log as logging
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.extendedstatus")
+authorize = extensions.soft_extension_authorizer('compute', 'extended_status')
 
 
 class ExtendedStatusController(wsgi.Controller):
@@ -48,34 +49,34 @@ class ExtendedStatusController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
+        if authorize(context):
+            # Attach our slave template to the response object
+            resp_obj.attach(xml=ExtendedStatusTemplate())
 
-        # Attach our slave template to the response object
-        resp_obj.attach(xml=ExtendedStatusTemplate())
-
-        try:
-            self._get_and_extend_one(context, id, resp_obj.obj['server'])
-        except exception.NotFound:
-            explanation = _("Server not found.")
-            raise exc.HTTPNotFound(explanation=explanation)
+            try:
+                self._get_and_extend_one(context, id, resp_obj.obj['server'])
+            except exception.NotFound:
+                explanation = _("Server not found.")
+                raise exc.HTTPNotFound(explanation=explanation)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
+        if authorize(context):
+            # Attach our slave template to the response object
+            resp_obj.attach(xml=ExtendedStatusesTemplate())
 
-        # Attach our slave template to the response object
-        resp_obj.attach(xml=ExtendedStatusesTemplate())
-
-        for server in list(resp_obj.obj['servers']):
-            try:
-                self._get_and_extend_one(context, server['id'], server)
-            except exception.NotFound:
-                # NOTE(dtroyer): A NotFound exception at this point
-                # happens because a delete was in progress and the
-                # server that was present in the original call to
-                # compute.api.get_all() is no longer present.
-                # Delete it from the response and move on.
-                resp_obj.obj['servers'].remove(server)
-                continue
+            for server in list(resp_obj.obj['servers']):
+                try:
+                    self._get_and_extend_one(context, server['id'], server)
+                except exception.NotFound:
+                    # NOTE(dtroyer): A NotFound exception at this point
+                    # happens because a delete was in progress and the
+                    # server that was present in the original call to
+                    # compute.api.get_all() is no longer present.
+                    # Delete it from the response and move on.
+                    resp_obj.obj['servers'].remove(server)
+                    continue
 
 
 class Extended_status(extensions.ExtensionDescriptor):
@@ -86,7 +87,6 @@ class Extended_status(extensions.ExtensionDescriptor):
     namespace = "http://docs.openstack.org/compute/ext/" \
                 "extended_status/api/v1.1"
     updated = "2011-11-03T00:00:00+00:00"
-    admin_only = True
 
     def get_controller_extensions(self):
         controller = ExtendedStatusController()

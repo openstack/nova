@@ -28,6 +28,7 @@ import nova.network.api
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.api.openstack.compute.contrib.networks')
+authorize = extensions.extension_authorizer('compute', 'networks')
 
 
 def network_dict(network):
@@ -65,6 +66,7 @@ class NetworkController(object):
 
     def _disassociate(self, request, network_id, body):
         context = request.environ['nova.context']
+        authorize(context)
         LOG.debug(_("Disassociating network with id %s" % network_id))
         try:
             self.network_api.disassociate(context, network_id)
@@ -74,12 +76,14 @@ class NetworkController(object):
 
     def index(self, req):
         context = req.environ['nova.context']
+        authorize(context)
         networks = self.network_api.get_all(context)
         result = [network_dict(net_ref) for net_ref in networks]
         return  {'networks': result}
 
     def show(self, req, id):
         context = req.environ['nova.context']
+        authorize(context)
         LOG.debug(_("Showing network with id %s") % id)
         try:
             network = self.network_api.get(context, id)
@@ -89,6 +93,7 @@ class NetworkController(object):
 
     def delete(self, req, id):
         context = req.environ['nova.context']
+        authorize(context)
         LOG.info(_("Deleting network with id %s") % id)
         try:
             self.network_api.delete(context, id)
@@ -107,7 +112,6 @@ class Networks(extensions.ExtensionDescriptor):
     alias = "os-networks"
     namespace = "http://docs.openstack.org/compute/ext/networks/api/v1.1"
     updated = "2011-12-23 00:00:00"
-    admin_only = True
 
     def get_resources(self):
         member_actions = {'action': 'POST'}

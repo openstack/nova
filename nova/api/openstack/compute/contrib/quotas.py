@@ -25,6 +25,9 @@ from nova import exception
 from nova import quota
 
 
+authorize = extensions.extension_authorizer('compute', 'quotas')
+
+
 quota_resources = ['metadata_items', 'injected_file_content_bytes',
         'volumes', 'gigabytes', 'ram', 'floating_ips', 'instances',
         'injected_files', 'cores']
@@ -57,6 +60,7 @@ class QuotaSetsController(object):
     @wsgi.serializers(xml=QuotaTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
+        authorize(context)
         try:
             db.sqlalchemy.api.authorize_project_context(context, id)
             return self._format_quota_set(id,
@@ -67,6 +71,7 @@ class QuotaSetsController(object):
     @wsgi.serializers(xml=QuotaTemplate)
     def update(self, req, id, body):
         context = req.environ['nova.context']
+        authorize(context)
         project_id = id
         for key in body['quota_set'].keys():
             if key in quota_resources:
@@ -80,6 +85,7 @@ class QuotaSetsController(object):
         return {'quota_set': quota.get_project_quotas(context, project_id)}
 
     def defaults(self, req, id):
+        authorize(req.environ['nova.context'])
         return self._format_quota_set(id, quota._get_default_quotas())
 
 

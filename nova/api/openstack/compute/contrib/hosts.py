@@ -31,6 +31,7 @@ from nova.scheduler import api as scheduler_api
 
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.hosts")
 FLAGS = flags.FLAGS
+authorize = extensions.extension_authorizer('compute', 'hosts')
 
 
 class HostIndexTemplate(xmlutil.TemplateBuilder):
@@ -112,12 +113,14 @@ class HostController(object):
 
     @wsgi.serializers(xml=HostIndexTemplate)
     def index(self, req):
+        authorize(req.environ['nova.context'])
         return {'hosts': _list_hosts(req)}
 
     @wsgi.serializers(xml=HostUpdateTemplate)
     @wsgi.deserializers(xml=HostDeserializer)
     @check_host
     def update(self, req, id, body):
+        authorize(req.environ['nova.context'])
         for raw_key, raw_val in body.iteritems():
             key = raw_key.lower().strip()
             val = raw_val.lower().strip()
@@ -149,6 +152,7 @@ class HostController(object):
     def _host_power_action(self, req, host, action):
         """Reboots, shuts down or powers up the host."""
         context = req.environ['nova.context']
+        authorize(context)
         try:
             result = self.compute_api.host_power_action(context, host=host,
                     action=action)
@@ -176,7 +180,6 @@ class Hosts(extensions.ExtensionDescriptor):
     alias = "os-hosts"
     namespace = "http://docs.openstack.org/compute/ext/hosts/api/v1.1"
     updated = "2011-06-29T00:00:00+00:00"
-    admin_only = True
 
     def get_resources(self):
         resources = [extensions.ResourceExtension('os-hosts',

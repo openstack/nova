@@ -55,8 +55,6 @@ Zone administrative operations are usually done using python-novaclient_
 
 .. _python-novaclient: https://github.com/rackspace/python-novaclient
 
-In order to use the Zone operations, be sure to enable administrator operations in OpenStack API by setting the `--allow_admin_api=true` flag.
-
 Finally you need to enable Zone Forwarding. This will be used by the Distributed Scheduler initiative currently underway. Set `--enable_zone_routing=true` to enable this feature.
 
 Find out about this Zone

@@ -29,18 +29,12 @@ def fake_init(self):
     self.manager = fakes.FakeAuthManager()
 
 
-def fake_admin_check(self, req):
-    return True
-
-
 class AccountsTest(test.TestCase):
     def setUp(self):
         super(AccountsTest, self).setUp()
-        self.flags(verbose=True, allow_admin_api=True)
+        self.flags(verbose=True)
         self.stubs.Set(accounts.Controller, '__init__',
                        fake_init)
-        self.stubs.Set(accounts.Controller, '_check_admin',
-                       fake_admin_check)
         fakes.FakeAuthManager.clear_fakes()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)

@@ -26,6 +26,7 @@ from nova import log as logging
 
 
 LOG = logging.getLogger("nova.api.openstack.compute.contrib.deferred-delete")
+authorize = extensions.extension_authorizer('compute', 'deferred_delete')
 
 
 class DeferredDeleteController(wsgi.Controller):
@@ -36,8 +37,8 @@ class DeferredDeleteController(wsgi.Controller):
     @wsgi.action('restore')
     def _restore(self, req, id, body):
         """Restore a previously deleted instance."""
-
         context = req.environ["nova.context"]
+        authorize(context)
         instance = self.compute_api.get(context, id)
         try:
             self.compute_api.restore(context, instance)
@@ -49,8 +50,8 @@ class DeferredDeleteController(wsgi.Controller):
     @wsgi.action('forceDelete')
     def _force_delete(self, req, id, body):
         """Force delete of instance before deferred cleanup."""
-
         context = req.environ["nova.context"]
+        authorize(context)
         instance = self.compute_api.get(context, id)
         try:
             self.compute_api.force_delete(context, instance)
