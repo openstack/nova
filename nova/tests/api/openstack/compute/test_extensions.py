@@ -176,6 +176,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "SecurityGroups",
             "ServerActionList",
             "ServerDiagnostics",
+            "ServerStartStop",
             "SimpleTenantUsage",
             "Users",
             "VSAs",
