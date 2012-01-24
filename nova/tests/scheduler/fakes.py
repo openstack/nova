@@ -19,6 +19,8 @@ Fakes For Scheduler tests.
 import mox
 
 from nova import db
+from nova.compute import instance_types
+from nova.compute import vm_states
 from nova.scheduler import distributed_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import zone_manager
@@ -94,6 +96,33 @@ class FakeHostState(host_manager.HostState):
         super(FakeHostState, self).__init__(host, topic)
         for (key, val) in attribute_dict.iteritems():
             setattr(self, key, val)
+
+
+class FakeInstance(object):
+    def __init__(self, context=None, params=None, type_name='m1.tiny'):
+        """Create a test instance. Returns uuid"""
+        self.context = context
+
+        i = self._create_fake_instance(params, type_name=type_name)
+        self.uuid = i['uuid']
+
+    def _create_fake_instance(self, params=None, type_name='m1.tiny'):
+        """Create a test instance"""
+        if not params:
+            params = {}
+
+        inst = {}
+        inst['vm_state'] = vm_states.ACTIVE
+        inst['image_ref'] = 1
+        inst['reservation_id'] = 'r-fakeres'
+        inst['launch_time'] = '10'
+        inst['user_id'] = 'fake'
+        inst['project_id'] = 'fake'
+        type_id = instance_types.get_instance_type_by_name(type_name)['id']
+        inst['instance_type_id'] = type_id
+        inst['ami_launch_index'] = 0
+        inst.update(params)
+        return db.instance_create(self.context, inst)
 
 
 class FakeComputeAPI(object):

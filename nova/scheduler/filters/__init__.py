@@ -31,8 +31,11 @@ InstanceType filter.
 """
 
 from abstract_filter import AbstractHostFilter
-from availability_zone_filter import AvailabilityZoneFilter
+from affinity_filter import DifferentHostFilter
+from affinity_filter import SameHostFilter
+from affinity_filter import SimpleCIDRAffinityFilter
 from all_hosts_filter import AllHostsFilter
+from availability_zone_filter import AvailabilityZoneFilter
 from isolated_hosts_filter import IsolatedHostsFilter
 from compute_filter import ComputeFilter
 from core_filter import CoreFilter
