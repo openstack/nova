@@ -40,7 +40,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         values['extra_specs'] = specs
         ref = db.instance_type_create(self.context,
                                           values)
-        self.instance_type_id = ref.id
+        self.instance_type_id = ref["id"]
 
     def tearDown(self):
         # Remove the instance type from the database

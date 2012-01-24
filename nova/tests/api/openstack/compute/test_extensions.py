@@ -162,6 +162,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "ExtendedStatus",
             "FlavorExtraSpecs",
             "FlavorExtraData",
+            "FlavorManage",
             "Floating_ips",
             "Floating_ip_dns",
             "Floating_ip_pools",

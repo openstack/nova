@@ -3365,13 +3365,13 @@ def instance_type_create(context, values):
         instance_type_ref.save()
     except Exception, e:
         raise exception.DBError(e)
-    return instance_type_ref
+    return _dict_with_extra_specs(instance_type_ref)
 
 
 def _dict_with_extra_specs(inst_type_query):
-    """Takes an instance OR volume type query returned by sqlalchemy
-    and returns it as a dictionary, converting the extra_specs
-    entry from a list of dicts:
+    """Takes an instance, volume, or instance type query returned
+    by sqlalchemy and returns it as a dictionary, converting the
+    extra_specs entry from a list of dicts:
 
     'extra_specs' : [{'key': 'k1', 'value': 'v1', ...}, ...]
 
