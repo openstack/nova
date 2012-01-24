@@ -247,6 +247,10 @@ class InvalidCidr(Invalid):
     message = _("Invalid cidr %(cidr)s.")
 
 
+class InvalidRPCConnectionReuse(Invalid):
+    message = _("Invalid reuse of an RPC connection.")
+
+
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
