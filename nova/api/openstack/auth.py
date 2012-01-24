@@ -240,11 +240,9 @@ class AuthMiddleware(base_wsgi.Middleware):
             token_dict = {}
             token_dict['token_hash'] = token_hash
             token_dict['cdn_management_url'] = ''
-            os_url = req.url
-            token_dict['server_management_url'] = os_url.strip('/')
-            version = common.get_version_from_href(os_url)
-            if version in ('1.1', '2'):
-                token_dict['server_management_url'] += '/' + project_id
+            os_url = req.url.strip('/')
+            os_url += '/' + project_id
+            token_dict['server_management_url'] = os_url
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id
             token = self.db.auth_token_create(ctxt, token_dict)

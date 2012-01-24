@@ -250,10 +250,10 @@ def get_version_from_href(href):
     """Returns the api version in the href.
 
     Returns the api version in the href.
-    If no version is found, 1.0 is returned
+    If no version is found, '2' is returned
 
     Given: 'http://www.nova.com/123'
-    Returns: '1.0'
+    Returns: '2'
 
     Given: 'http://www.nova.com/v1.1'
     Returns: '1.1'
