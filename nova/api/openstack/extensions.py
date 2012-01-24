@@ -305,8 +305,7 @@ class ResourceExtension(object):
     """Add top level resources to the OpenStack API in nova."""
 
     def __init__(self, collection, controller, parent=None,
-                 collection_actions=None, member_actions=None,
-                 deserializer=None, serializer=None):
+                 collection_actions=None, member_actions=None):
         if not collection_actions:
             collection_actions = {}
         if not member_actions:
@@ -316,8 +315,6 @@ class ResourceExtension(object):
         self.parent = parent
         self.collection_actions = collection_actions
         self.member_actions = member_actions
-        self.deserializer = deserializer
-        self.serializer = serializer
 
 
 def wrap_errors(fn):
