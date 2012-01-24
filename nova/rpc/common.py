@@ -23,6 +23,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 
+
 LOG = logging.getLogger('nova.rpc')
 
 flags.DEFINE_integer('rpc_thread_pool_size', 1024,
