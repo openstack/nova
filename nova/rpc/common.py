@@ -107,7 +107,10 @@ class Connection(object):
 
 def _safe_log(log_func, msg, msg_data):
     """Sanitizes the msg_data field before logging."""
-    SANITIZE = {'set_admin_password': ('new_pass',)}
+    SANITIZE = {
+                'set_admin_password': ('new_pass',),
+                'run_instance': ('admin_password',),
+               }
     method = msg_data['method']
     if method in SANITIZE:
         msg_data = copy.deepcopy(msg_data)
