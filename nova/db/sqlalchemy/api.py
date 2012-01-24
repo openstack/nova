@@ -193,6 +193,48 @@ def model_query(context, *args, **kwargs):
     return query
 
 
+def exact_filter(query, model, filters, legal_keys):
+    """Applies exact match filtering to a query.
+
+    Returns the updated query.  Modifies filters argument to remove
+    filters consumed.
+
+    :param query: query to apply filters to
+    :param model: model object the query applies to, for IN-style
+                  filtering
+    :param filters: dictionary of filters; values that are lists,
+                    tuples, sets, or frozensets cause an 'IN' test to
+                    be performed, while exact matching ('==' operator)
+                    is used for other values
+    :param legal_keys: list of keys to apply exact filtering to
+    """
+
+    filter_dict = {}
+
+    # Walk through all the keys
+    for key in legal_keys:
+        # Skip ones we're not filtering on
+        if key not in filters:
+            continue
+
+        # OK, filtering on this key; what value do we search for?
+        value = filters.pop(key)
+
+        if isinstance(value, (list, tuple, set, frozenset)):
+            # Looking for values in a list; apply to query directly
+            column_attr = getattr(model, key)
+            query = query.filter(column_attr.in_(value))
+        else:
+            # OK, simple exact match; save for later
+            filter_dict[key] = value
+
+    # Apply simple exact matches
+    if filter_dict:
+        query = query.filter_by(**filter_dict)
+
+    return query
+
+
 ###################
 
 
@@ -1465,18 +1507,6 @@ def instance_get_all_by_filters(context, filters):
             return True
         return False
 
-    def _exact_match_filter(query, column, value):
-        """Do exact match against a column.  value to match can be a list
-        so you can match any value in the list.
-        """
-        if isinstance(value, list) or isinstance(value, set):
-            column_attr = getattr(models.Instance, column)
-            return query.filter(column_attr.in_(value))
-        else:
-            filter_dict = {}
-            filter_dict[column] = value
-            return query.filter_by(**filter_dict)
-
     session = get_session()
     query_prefix = session.query(models.Instance).\
             options(joinedload('info_cache')).\
@@ -1518,14 +1548,9 @@ def instance_get_all_by_filters(context, filters):
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
             'vm_state', 'instance_type_id', 'uuid']
 
-    query_filters = [key for key in filters.iterkeys()
-            if key in exact_match_filter_names]
-
-    for filter_name in query_filters:
-        # Do the matching and remove the filter from the dictionary
-        # so we don't try it again below..
-        query_prefix = _exact_match_filter(query_prefix, filter_name,
-                filters.pop(filter_name))
+    # Filter the query
+    query_prefix = exact_filter(query_prefix, models.Instance,
+                                filters, exact_match_filter_names)
 
     instances = query_prefix.all()
     if not instances:
@@ -3657,18 +3682,6 @@ def bw_usage_get_by_instance(context, instance_id, start_period):
 def bw_usage_get_all_by_filters(context, filters):
     """Return bandwidth usage that matches all filters."""
 
-    def _exact_match_filter(query, column, value):
-        """Do exact match against a column. value to match can be a list
-        so you can match any value in the list.
-        """
-        if isinstance(value, list) or isinstance(value, set):
-            column_attr = getattr(models.BandwidthUsage, column)
-            return query.filter(column_attr.in_(value))
-        else:
-            filter_dict = {}
-            filter_dict[column] = value
-            return query.filter_by(**filter_dict)
-
     session = get_session()
     query_prefix = session.query(models.BandwidthUsage).\
             order_by(desc(models.BandwidthUsage.created_at))
@@ -3681,14 +3694,9 @@ def bw_usage_get_all_by_filters(context, filters):
     exact_match_filter_names = ["instance_id", "network_label",
             "start_period", "last_refreshed", "bw_in", "bw_out"]
 
-    query_filters = [key for key in filters.iterkeys()
-            if key in exact_match_filter_names]
-
-    for filter_name in query_filters:
-        # Do the matching and remove the filter from the dictionary
-        # so we don't try it again below..
-        query_prefix = _exact_match_filter(query_prefix, filter_name,
-                filters.pop(filter_name))
+    # Filter the query
+    query_prefix = exact_filter(query_prefix, models.BandwidthUsage,
+                                filters, exact_match_filter_names)
 
     return query_prefix.all()
 
