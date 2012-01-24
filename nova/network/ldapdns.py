@@ -62,12 +62,27 @@ flags.DEFINE_string('ldap_dns_soa_minimum',
                     'Statement of Authority')
 
 
+def utf8(instring):
+    if type(instring) == unicode:
+        try:
+            return instring.encode('utf8')
+        except UnicodeError, AttributeError:
+            LOG.warn(_('Unable to encode %s as utf8. Discarding.') % val)
+            return None
+    else:
+        return instring
+
+
 # Importing ldap.modlist breaks the tests for some reason,
 #  so this is an abbreviated version of a function from
 #  there.
 def create_modlist(newattrs):
     modlist = []
     for attrtype in newattrs.keys():
+        utf8_vals = []
+        for val in newattrs[attrtype]:
+            utf8_vals.append(utf8(val))
+        newattrs[attrtype] = utf8_vals
         modlist.append((attrtype, newattrs[attrtype]))
     return modlist
 
@@ -85,7 +100,7 @@ class DNSEntry(object):
     @classmethod
     def _get_tuple_for_domain(cls, lobj, domain):
         entry = lobj.search_s(flags.FLAGS.ldap_dns_base_dn, ldap.SCOPE_SUBTREE,
-                              "(associatedDomain=%s)" % domain)
+                              "(associatedDomain=%s)" % utf8(domain))
         if not entry:
             return None
         if len(entry) > 1:
@@ -143,7 +158,7 @@ class DomainEntry(DNSEntry):
                  flags.FLAGS.ldap_dns_soa_retry,
                  flags.FLAGS.ldap_dns_soa_expiry,
                  flags.FLAGS.ldap_dns_soa_minimum)
-        return soa
+        return utf8(soa)
 
     @classmethod
     def create_domain(cls, lobj, domain):
@@ -187,7 +202,7 @@ class DomainEntry(DNSEntry):
     def subentry_with_name(self, name):
         entry = self.lobj.search_s(self.dn, ldap.SCOPE_SUBTREE,
                                    "(associatedDomain=%s.%s)" %
-                                     (name, self.qualified_domain))
+                                     (utf8(name), utf8(self.qualified_domain)))
         if entry:
             return HostEntry(self, entry[0])
         else:
@@ -195,7 +210,7 @@ class DomainEntry(DNSEntry):
 
     def subentries_with_ip(self, ip):
         entries = self.lobj.search_s(self.dn, ldap.SCOPE_SUBTREE,
-                                   "(aRecord=%s)" % ip)
+                                   "(aRecord=%s)" % utf8(ip))
         objs = []
         for entry in entries:
             if 'associatedDomain' in entry[1]:
@@ -215,7 +230,8 @@ class DomainEntry(DNSEntry):
             existingdn = entries[0].dn
             self.lobj.modify_s(existingdn, [(ldap.MOD_ADD,
                                             'associatedDomain',
-                                             self._qualify(name))])
+                                             utf8(self._qualify(name)))])
+
             return self.subentry_with_name(name)
         else:
             # We need to create an entirely new entry.
@@ -252,7 +268,7 @@ class HostEntry(DNSEntry):
         if len(names) > 1:
             # We just have to remove the requested domain.
             self.lobj.modify_s(self.dn, [(ldap.MOD_DELETE, 'associatedDomain',
-                                         self._qualify(name))])
+                                        self._qualify(utf8(name)))])
             if (self.rdn[1] == name):
                 # We just removed the rdn, so we need to move this entry.
                 names.remove(self._qualify(name))
@@ -268,7 +284,7 @@ class HostEntry(DNSEntry):
             raise exception.NotFound()
         if len(names) == 1:
             self.lobj.modify_s(self.dn, [(ldap.MOD_REPLACE, 'aRecord',
-                                         [address])])
+                                         [utf8(address)])])
         else:
             self.remove_name(name)
             parent.add_entry(name, address)
