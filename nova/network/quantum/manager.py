@@ -52,7 +52,7 @@ flags.DEFINE_bool('quantum_use_port_security', False,
                   'Whether or not to enable port security')
 
 
-class QuantumManager(manager.FlatManager):
+class QuantumManager(manager.FloatingIP, manager.FlatManager):
     """NetworkManager class that communicates with a Quantum service
        via a web services API to provision VM network connectivity.
 
@@ -90,6 +90,10 @@ class QuantumManager(manager.FlatManager):
         # Initialize forwarding rules for anything specified in
         # FLAGS.fixed_range()
         self.driver.init_host()
+        # Initialize floating ip support (only works for nova ipam currently)
+        if FLAGS.quantum_ipam_lib == 'nova.network.quantum.nova_ipam_lib':
+            LOG.debug("Initializing FloatingIP support")
+            self.init_host_floating_ips()
         # Set up all the forwarding rules for any network that has a
         # gateway set.
         networks = self.get_all_networks()
