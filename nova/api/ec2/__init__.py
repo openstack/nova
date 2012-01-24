@@ -185,14 +185,27 @@ class EC2Token(wsgi.Middleware):
         # Not part of authentication args
         auth_params.pop('Signature')
 
-        # Authenticate the request.
-        creds = {'ec2Credentials': {'access': access,
-                                    'signature': signature,
-                                    'host': req.host,
-                                    'verb': req.method,
-                                    'path': req.path,
-                                    'params': auth_params,
-                                   }}
+        if "ec2" in FLAGS.keystone_ec2_url:
+            LOG.warning("Configuration setting for keystone_ec2_url needs "
+                        "to be updated to /tokens only. The /ec2 prefix is "
+                        "being deprecated")
+            # Authenticate the request.
+            creds = {'ec2Credentials': {'access': access,
+                                        'signature': signature,
+                                        'host': req.host,
+                                        'verb': req.method,
+                                        'path': req.path,
+                                        'params': auth_params,
+                                       }}
+        else:
+            # Authenticate the request.
+            creds = {'auth': {'OS-KSEC2:ec2Credentials': {'access': access,
+                                        'signature': signature,
+                                        'host': req.host,
+                                        'verb': req.method,
+                                        'path': req.path,
+                                        'params': auth_params,
+                                       }}}
         creds_json = utils.dumps(creds)
         headers = {'Content-Type': 'application/json'}
 
