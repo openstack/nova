@@ -85,22 +85,13 @@ class FlavorManageTest(test.TestCase):
         super(FlavorManageTest, self).tearDown()
 
     def test_delete(self):
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/flavor/delete/1234',
-              use_admin_context=True)
-
+        req = fakes.HTTPRequest.blank('/v2/123/flavors/1234')
         res = self.controller._delete(req, id)
         self.assertEqual(res.status_int, 202)
 
+        # subsequent delete should fail
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller._delete, req, "failtest")
-
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/flavor/delete/1234',
-              use_admin_context=False)
-
-        res = self.controller._delete(req, id)
-        self.assertEqual(res.status_int, 403)
 
     def test_create(self):
         body = {
@@ -115,16 +106,7 @@ class FlavorManageTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/flavor/create/',
-              use_admin_context=True)
-
+        req = fakes.HTTPRequest.blank('/v2/123/flavors')
         res = self.controller._create(req, body)
         for key in body["flavor"]:
             self.assertEquals(res["flavor"][key], body["flavor"][key])
-
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/flavor/create/',
-              use_admin_context=False)
-        res = self.controller._create(req, body)
-        self.assertEqual(res.status_int, 403)
