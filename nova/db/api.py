@@ -1535,6 +1535,11 @@ def bw_usage_get_by_instance(context, instance_id, start_period):
     return IMPL.bw_usage_get_by_instance(context, instance_id, start_period)
 
 
+def bw_usage_get_all_by_filters(context, filters):
+    """Return bandwidth usage that matches all filters."""
+    return IMPL.bw_usage_get_all_by_filters(context, filters)
+
+
 def bw_usage_update(context,
                     instance_id,
                     network_label,
