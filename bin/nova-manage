@@ -1138,43 +1138,23 @@ class ServiceCommands(object):
             cpu_sum = 0
             mem_sum = 0
             hdd_sum = 0
-            ctxt = context.get_admin_context()
-            instance_refs = db.instance_get_all_by_host(ctxt, host)
-
-            project_ids = [i['project_id'] for i in instance_refs]
-            project_ids = list(set(project_ids))
-            usage = dict()
-            for project_id in project_ids:
-                vcpus = [i['vcpus'] for i in instance_refs \
-                    if i['project_id'] == project_id]
-
-                mem = [i['memory_mb']  for i in instance_refs \
-                    if i['project_id'] == project_id]
-
-                disk = [i['local_gb']  for i in instance_refs \
-                    if i['project_id'] == project_id]
-
-                usage[project_id] = {
-                                 'vcpus': reduce(lambda x, y: x + y, vcpus),
-                                 'memory_mb': reduce(lambda x, y: x + y, mem),
-                                 'local_gb': reduce(lambda x, y: x + y, disk)}
-
-            for p_id, val in usage.items():
+            for p_id, val in result['usage'].items():
                 cpu_sum += val['vcpus']
                 mem_sum += val['memory_mb']
-                hdd_sum += val['local_gb']
+                hdd_sum += val['root_gb']
+                hdd_sum += val['ephemeral_gb']
             print '%(a)-16s(used_max)%(b)23s%(c)8s%(d)8s' % {"a": host,
                                                              "b": cpu_sum,
                                                              "c": mem_sum,
                                                              "d": hdd_sum}
 
-            for p_id, val in usage.items():
-                print '%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' %\
-                                                     {"a": host,
-                                                      "b": p_id,
-                                                      "c": val['vcpus'],
-                                                      "d": val['memory_mb'],
-                                                      "e": val['local_gb']}
+            for p_id, val in result['usage'].items():
+                print '%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' % {
+                        "a": host,
+                        "b": p_id,
+                        "c": val['vcpus'],
+                        "d": val['memory_mb'],
+                        "e": val['root_gb'] + val['ephemeral_gb']}
 
 
 class HostCommands(object):
@@ -1755,29 +1735,32 @@ class InstanceTypeCommands(object):
 
     def _print_instance_types(self, name, val):
         deleted = ('', ', inactive')[val["deleted"] == 1]
-        print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
-            "Swap: %sMB, RXTX Factor: %s") % (
-            name, val["memory_mb"], val["vcpus"], val["local_gb"],
-            val["flavorid"], val["swap"], val["rxtx_factor"])
+        print ("%s: Memory: %sMB, VCPUS: %s, Root: %sGB, Ephemeral: %sGb, "
+            "FlavorID: %s, Swap: %sMB, RXTX Factor: %s") % (
+            name, val["memory_mb"], val["vcpus"], val["root_gb"],
+            val["ephemeral_gb"], val["flavorid"], val["swap"],
+            val["rxtx_factor"])
 
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
     @args('--memory', dest='memory', metavar='<memory size>',
             help='Memory size')
     @args('--cpu', dest='vcpus', metavar='<num cores>', help='Number cpus')
-    @args('--local_gb', dest='local_gb', metavar='<local_gb>',
-            help='local_gb')
+    @args('--root_gb', dest='root_gb', metavar='<root_gb>',
+            help='Root disk size')
+    @args('--ephemeral_gb', dest='ephemeral_gb', metavar='<ephemeral_gb>',
+            help='Ephemeral disk size')
     @args('--flavor', dest='flavorid', metavar='<flavor  id>',
             help='Flavor ID')
     @args('--swap', dest='swap', metavar='<swap>', help='Swap')
     @args('--rxtx_factor', dest='rxtx_factor', metavar='<rxtx_factor>',
             help='rxtx_factor')
-    def create(self, name, memory, vcpus, local_gb, flavorid,
+    def create(self, name, memory, vcpus, root_gb, ephemeral_gb, flavorid,
                swap=0, rxtx_factor=1):
         """Creates instance types / flavors"""
         try:
-            instance_types.create(name, memory, vcpus, local_gb,
-                                  flavorid, swap, rxtx_factor)
+            instance_types.create(name, memory, vcpus, root_gb,
+                                  ephemeral_gb, flavorid, swap, rxtx_factor)
         except exception.InvalidInput, e:
             print "Must supply valid parameters to create instance_type"
             print e
