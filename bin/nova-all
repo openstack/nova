@@ -65,7 +65,7 @@ if __name__ == '__main__':
     except (Exception, SystemExit):
         logging.exception(_('Failed to load %s') % 'objectstore-wsgi')
     for binary in ['nova-xvpvncproxy', 'nova-compute', 'nova-volume',
-                   'nova-network', 'nova-scheduler', 'nova-vsa']:
+                   'nova-network', 'nova-scheduler', 'nova-vsa', 'nova-cert']:
         try:
             servers.append(service.Service.create(binary=binary))
         except (Exception, SystemExit):

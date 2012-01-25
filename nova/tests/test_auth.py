@@ -16,7 +16,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from M2Crypto import X509
 import unittest
 
 from nova import crypto
@@ -244,28 +243,6 @@ class _AuthManagerBaseTestCase(test.TestCase):
                 self.assertFalse(self.manager.has_role(user, 'developer',
                                                        project))
                 self.assertFalse(self.manager.is_project_member(user, project))
-
-    def test_can_generate_x509(self):
-        # NOTE(todd): this doesn't assert against the auth manager
-        #             so it probably belongs in crypto_unittest
-        #             but I'm leaving it where I found it.
-        with user_and_project_generator(self.manager) as (user, project):
-            # NOTE(vish): Setup runs genroot.sh if it hasn't been run
-            cloud.CloudController().setup()
-            _key, cert_str = crypto.generate_x509_cert(user.id, project.id)
-            LOG.debug(cert_str)
-
-            int_cert = crypto.fetch_ca(project_id=project.id)
-            cloud_cert = crypto.fetch_ca()
-            signed_cert = X509.load_cert_string(cert_str)
-            int_cert = X509.load_cert_string(int_cert)
-            cloud_cert = X509.load_cert_string(cloud_cert)
-            self.assertTrue(signed_cert.verify(int_cert.get_pubkey()))
-
-            if not FLAGS.use_project_ca:
-                self.assertTrue(signed_cert.verify(cloud_cert.get_pubkey()))
-            else:
-                self.assertFalse(signed_cert.verify(cloud_cert.get_pubkey()))
 
     def test_adding_role_to_project_is_ignored_unless_added_to_user(self):
         with user_and_project_generator(self.manager) as (user, project):

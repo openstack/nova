@@ -39,6 +39,7 @@ gettext.install('nova', unicode=1)
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 
@@ -85,11 +86,31 @@ def key_path(project_id=None):
     return os.path.join(ca_folder(project_id), FLAGS.key_file)
 
 
+def crl_path(project_id=None):
+    return os.path.join(ca_folder(project_id), FLAGS.crl_file)
+
+
 def fetch_ca(project_id=None):
     if not FLAGS.use_project_ca:
         project_id = None
     with open(ca_path(project_id), 'r') as cafile:
         return cafile.read()
+
+
+def ensure_ca_filesystem():
+    """Ensure the CA filesystem exists."""
+    ca_dir = ca_folder()
+    if not os.path.exists(ca_path()):
+        genrootca_sh_path = os.path.join(os.path.dirname(__file__),
+                                         'CA',
+                                         'genrootca.sh')
+
+        start = os.getcwd()
+        if not os.path.exists(ca_dir):
+            os.makedirs(ca_dir)
+        os.chdir(ca_dir)
+        utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
+        os.chdir(start)
 
 
 def _generate_fingerprint(public_key_file):
@@ -146,6 +167,29 @@ def ssl_pub_to_ssh_pub(ssl_public_key, name='root', suffix='nova'):
 
     b64_blob = base64.b64encode(key_data)
     return '%s %s %s@%s\n' % (key_type, b64_blob, name, suffix)
+
+
+def fetch_crl(project_id):
+    """Get crl file for project."""
+    if not FLAGS.use_project_ca:
+        project_id = None
+    with open(crl_path(project_id), 'r') as crlfile:
+        return crlfile.read()
+
+
+def decrypt_text(project_id, text):
+    private_key = key_path(project_id)
+    if not os.path.exists(private_key):
+        raise exception.ProjectNotFound(project_id=project_id)
+    try:
+        dec, _err = utils.execute('openssl',
+                                 'rsautl',
+                                 '-decrypt',
+                                 '-inkey', '%s' % private_key,
+                                 process_input=text)
+        return dec
+    except exception.ProcessExecutionError:
+        raise exception.DecryptionFailure()
 
 
 def revoke_cert(project_id, file_name):
