@@ -98,6 +98,10 @@ class DistributedScheduler(driver.Scheduler):
         if not weighted_hosts:
             raise exception.NoValidHost(reason=_(""))
 
+        # NOTE(comstud): Make sure we do not pass this through.  It
+        # contains an instance of RpcContext that cannot be serialized.
+        kwargs.pop('filter_properties', None)
+
         instances = []
         for num in xrange(num_instances):
             if not weighted_hosts:
@@ -140,6 +144,10 @@ class DistributedScheduler(driver.Scheduler):
         if not hosts:
             raise exception.NoValidHost(reason=_(""))
         host = hosts.pop(0)
+
+        # NOTE(comstud): Make sure we do not pass this through.  It
+        # contains an instance of RpcContext that cannot be serialized.
+        kwargs.pop('filter_properties', None)
 
         # Forward off to the host
         driver.cast_to_compute_host(context, host.host_state.host,
