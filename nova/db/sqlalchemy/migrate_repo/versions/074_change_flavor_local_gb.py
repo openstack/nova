@@ -70,13 +70,22 @@ def upgrade_other(instances, instance_types):
                               ephemeral_gb=0).execute()
 
 
-def upgrade(migrate_engine):
-    if not FLAGS.connection_type:
-        raise exception.Error("Need connection_type specified to run "
-                              "migration")
+def check_instance_presence(migrate_engine, instances_table):
+    result = migrate_engine.execute(instances_table.select().limit(1))
+    return result.fetchone() is not None
 
+
+def upgrade(migrate_engine):
     meta.bind = migrate_engine
     instances = _get_table('instances')
+
+    data_present = check_instance_presence(migrate_engine, instances)
+
+    if data_present and not FLAGS.connection_type:
+        msg = ("Found instance records in database. You must specify "
+               "connection_type to run migration migration")
+        raise exception.Error(msg)
+
     instance_types = _get_table('instance_types')
 
     for table in (instances, instance_types):
