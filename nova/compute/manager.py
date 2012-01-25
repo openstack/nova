@@ -728,7 +728,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.injected_files = kwargs.get('injected_files', [])
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
-        bd_mapping = self._setup_block_device_mapping(context, instance)
+        bd_mapping = self._setup_block_device_mapping(context, instance)[2]
 
         self._instance_update(context,
                               instance_uuid,
