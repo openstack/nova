@@ -328,7 +328,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                              'mount_device':
                                              bdm['device_name']})
 
-        return (swap, ephemerals, block_device_mapping)
+        return {
+            'root_device_name': instance['root_device_name'],
+            'swap': swap,
+            'ephemerals': ephemerals,
+            'block_device_mapping': block_device_mapping
+        }
 
     def _is_instance_terminated(self, instance_uuid):
         """Instance in DELETING task state or not found in DB"""
@@ -492,16 +497,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.BUILDING,
                               task_state=task_states.BLOCK_DEVICE_MAPPING)
         try:
-            mapping = self._setup_block_device_mapping(context, instance)
-            swap, ephemerals, block_device_mapping = mapping
+            return self._setup_block_device_mapping(context, instance)
         except Exception:
             msg = _("Instance %s failed block device setup")
             LOG.exception(msg % instance['uuid'])
             raise
-        return {'root_device_name': instance['root_device_name'],
-                'swap': swap,
-                'ephemerals': ephemerals,
-                'block_device_mapping': block_device_mapping}
 
     def _spawn(self, context, instance, image_meta, network_info,
                block_device_info, injected_files, admin_pass):
@@ -728,7 +728,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.injected_files = kwargs.get('injected_files', [])
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
-        bd_mapping = self._setup_block_device_mapping(context, instance)[2]
+        device_info = self._setup_block_device_mapping(context, instance)
 
         self._instance_update(context,
                               instance_uuid,
@@ -741,7 +741,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         image_meta = _get_image_meta(context, instance['image_ref'])
 
         self.driver.spawn(context, instance, image_meta,
-                          network_info, bd_mapping)
+                          network_info, device_info)
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
