@@ -1641,3 +1641,72 @@ class XenAPIDom0IptablesFirewallTestCase(test.TestCase):
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                       if rule.chain == 'provider']
         self.assertEqual(1, len(rules))
+
+
+class XenAPISRSelectionTestCase(test.TestCase):
+    """Unit tests for testing we find the right SR."""
+    def setUp(self):
+        super(XenAPISRSelectionTestCase, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        stubs.stub_out_get_target(self.stubs)
+        xenapi_fake.reset()
+
+    def tearDown(self):
+        super(XenAPISRSelectionTestCase, self).tearDown()
+        self.stubs.UnsetAll()
+
+    def test_safe_find_sr_raise_exception(self):
+        """Ensure StorageRepositoryNotFound is raise when wrong filter."""
+        self.flags(sr_matching_filter='yadayadayada')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
+        helper = vm_utils.VMHelper
+        helper.XenAPI = session.get_imported_xenapi()
+        self.assertRaises(exception.StorageRepositoryNotFound,
+                          helper.safe_find_sr, session)
+
+    def test_safe_find_sr_local_storage(self):
+        """Ensure the default local-storage is found."""
+        self.flags(sr_matching_filter='other-config:i18n-key=local-storage')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
+        helper = vm_utils.VMHelper
+        helper.XenAPI = session.get_imported_xenapi()
+        host_ref = xenapi_fake.get_all('host')[0]
+        local_sr = xenapi_fake.\
+                    create_sr(name_label='Fake Storage',
+                              type='lvm',
+                              other_config={'i18n-original-value-name_label':
+                                            'Local storage',
+                                            'i18n-key': 'local-storage'},
+                              host_ref=host_ref)
+        expected = helper.safe_find_sr(session)
+        self.assertEqual(local_sr, expected)
+
+    def test_safe_find_sr_by_other_criteria(self):
+        """Ensure the SR is found when using a different filter."""
+        self.flags(sr_matching_filter='other-config:my_fake_sr=true')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
+        helper = vm_utils.VMHelper
+        helper.XenAPI = session.get_imported_xenapi()
+        host_ref = xenapi_fake.get_all('host')[0]
+        local_sr = xenapi_fake.\
+                    create_sr(name_label='Fake Storage',
+                              type='lvm',
+                              other_config={'my_fake_sr': 'true'},
+                              host_ref=host_ref)
+        expected = helper.safe_find_sr(session)
+        self.assertEqual(local_sr, expected)
+
+    def test_safe_find_sr_default(self):
+        """Ensure the default SR is found regardless of other-config."""
+        self.flags(sr_matching_filter='default-sr:true')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
+        helper = vm_utils.VMHelper
+        pool_ref = xenapi_fake.create_pool('')
+        helper.XenAPI = session.get_imported_xenapi()
+        expected = helper.safe_find_sr(session)
+        self.assertEqual(session.call_xenapi('pool.get_default_SR', pool_ref),
+                         expected)

@@ -58,6 +58,15 @@ xenapi_vm_utils_opts = [
     cfg.IntOpt('max_kernel_ramdisk_size',
                default=16 * 1024 * 1024,
                help='maximum size in bytes of kernel or ramdisk images'),
+    cfg.StrOpt('sr_matching_filter',
+               default='other-config:i18n-key=local-storage',
+               help='Filter for finding the SR to be used to install guest '
+                    'instances on. The default value is the Local Storage in '
+                    'default XenServer/XCP installations. To select an SR '
+                    'with a different matching criteria, you could set it to '
+                    'other-config:my_favorite_sr=true. On the other hand, to '
+                    'fall back on the Default SR, as displayed by XenCenter, '
+                    'set this flag to: default-sr:true'),
     ]
 
 FLAGS = flags.FLAGS
@@ -965,15 +974,34 @@ class VMHelper(HelperBase):
     def find_sr(cls, session):
         """Return the storage repository to hold VM images"""
         host = session.get_xenapi_host()
+        try:
+            tokens = FLAGS.sr_matching_filter.split(':')
+            filter_criteria = tokens[0]
+            filter_pattern = tokens[1]
+        except IndexError:
+            # oops, flag is invalid
+            LOG.warning(_("Flag sr_matching_filter '%s' does not respect "
+                          "formatting convention"), FLAGS.sr_matching_filter)
+            return None
 
-        for sr_ref, sr_rec in cls.get_all_refs_and_recs(session, 'SR'):
-            if not ('i18n-key' in sr_rec['other_config'] and
-                    sr_rec['other_config']['i18n-key'] == 'local-storage'):
-                continue
-            for pbd_ref in sr_rec['PBDs']:
-                pbd_rec = cls.get_rec(session, 'PBD', pbd_ref)
-                if pbd_rec and pbd_rec['host'] == host:
-                    return sr_ref
+        if filter_criteria == 'other-config':
+            key, value = filter_pattern.split('=', 1)
+            for sr_ref, sr_rec in cls.get_all_refs_and_recs(session, 'SR'):
+                if not (key in sr_rec['other_config'] and
+                        sr_rec['other_config'][key] == value):
+                    continue
+                for pbd_ref in sr_rec['PBDs']:
+                    pbd_rec = cls.get_rec(session, 'PBD', pbd_ref)
+                    if pbd_rec and pbd_rec['host'] == host:
+                        return sr_ref
+        elif filter_criteria == 'default-sr' and filter_pattern == 'true':
+            pool_ref = session.call_xenapi('pool.get_all')[0]
+            return session.call_xenapi('pool.get_default_SR', pool_ref)
+        # No SR found!
+        LOG.warning(_("XenAPI is unable to find a Storage Repository to "
+                      "install guest instances on. Please check your "
+                      "configuration and/or configure the flag "
+                      "'sr_matching_filter'"))
         return None
 
     @classmethod
