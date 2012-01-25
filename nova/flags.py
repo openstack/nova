@@ -226,22 +226,6 @@ def DECLARE(name, module_string, flag_values=FLAGS):
         raise UnrecognizedFlag('%s not defined by %s' % (name, module_string))
 
 
-def DEFINE_flag(flag):
-    pass
-
-
-class HelpFlag:
-    pass
-
-
-class HelpshortFlag:
-    pass
-
-
-class HelpXMLFlag:
-    pass
-
-
 def _get_my_ip():
     """Returns the actual ip of the local machine."""
     try:

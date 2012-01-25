@@ -384,12 +384,6 @@ def serve(*servers):
 
 
 def wait():
-    # After we've loaded up all our dynamic bits, check
-    # whether we should print help
-    flags.DEFINE_flag(flags.HelpFlag())
-    flags.DEFINE_flag(flags.HelpshortFlag())
-    flags.DEFINE_flag(flags.HelpXMLFlag())
-    FLAGS.ParseNewFlags()
     logging.debug(_('Full set of FLAGS:'))
     for flag in FLAGS:
         flag_get = FLAGS.get(flag, None)
