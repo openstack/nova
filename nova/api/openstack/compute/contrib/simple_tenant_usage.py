@@ -29,7 +29,10 @@ from nova import flags
 
 
 FLAGS = flags.FLAGS
-authorize = extensions.extension_authorizer('compute', 'simple_tenant_usage')
+authorize_show = extensions.extension_authorizer('compute',
+                                                 'simple_tenant_usage:show')
+authorize_list = extensions.extension_authorizer('compute',
+                                                 'simple_tenant_usage:list')
 
 
 def make_usage(elem):
@@ -110,8 +113,6 @@ class SimpleTenantUsageController(object):
                                                      period_start,
                                                      period_stop,
                                                      tenant_id)
-        from nova import log as logging
-        logging.info(instances)
         rval = {}
         flavors = {}
 
@@ -212,10 +213,8 @@ class SimpleTenantUsageController(object):
     def index(self, req):
         """Retrive tenant_usage for all tenants"""
         context = req.environ['nova.context']
-        authorize(context)
 
-        if not context.is_admin:
-            return webob.Response(status_int=403)
+        authorize_list(context)
 
         (period_start, period_stop, detailed) = self._get_datetime_range(req)
         usages = self._tenant_usages_for_period(context,
@@ -229,11 +228,8 @@ class SimpleTenantUsageController(object):
         """Retrive tenant_usage for a specified tenant"""
         tenant_id = id
         context = req.environ['nova.context']
-        authorize(context)
 
-        if not context.is_admin:
-            if tenant_id != context.project_id:
-                return webob.Response(status_int=403)
+        authorize_show(context, {'project_id': tenant_id})
 
         (period_start, period_stop, ignore) = self._get_datetime_range(req)
         usage = self._tenant_usages_for_period(context,
