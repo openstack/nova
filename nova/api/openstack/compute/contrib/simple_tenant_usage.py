@@ -159,7 +159,7 @@ class SimpleTenantUsageController(object):
             else:
                 delta = now - info['started_at']
 
-            info['uptime'] = delta.days * 24 * 60 + delta.seconds
+            info['uptime'] = delta.days * 24 * 3600 + delta.seconds
 
             if not info['tenant_id'] in rval:
                 summary = {}

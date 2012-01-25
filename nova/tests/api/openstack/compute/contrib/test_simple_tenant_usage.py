@@ -162,6 +162,9 @@ class SimpleTenantUsageTest(test.TestCase):
         servers = usage['server_usages']
         self.assertEqual(len(usage['server_usages']), SERVERS)
         for j in xrange(SERVERS):
+            delta = STOP - START
+            uptime = delta.days * 24 * 3600 + delta.seconds
+            self.assertEqual(int(servers[j]['uptime']), uptime)
             self.assertEqual(int(servers[j]['hours']), HOURS)
 
     def test_verify_show_cant_view_other_tenant(self):
