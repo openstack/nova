@@ -61,13 +61,13 @@ flags.DEFINE_string('ca_path', '$state_path/CA',
 flags.DEFINE_boolean('use_project_ca', False,
                      _('Should we use a CA for each project?'))
 flags.DEFINE_string('user_cert_subject',
-                    '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
-                    'OU=NovaDev/CN=%s-%s-%s',
+                    '/C=US/ST=California/O=OpenStack/'
+                    'OU=NovaDev/CN=%.16s-%.16s-%s',
                     _('Subject for certificate for users, '
                     '%s for project, user, timestamp'))
 flags.DEFINE_string('project_cert_subject',
-                    '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
-                    'OU=NovaDev/CN=project-ca-%s-%s',
+                    '/C=US/ST=California/O=OpenStack/'
+                    'OU=NovaDev/CN=project-ca-%.16s-%s',
                     _('Subject for certificate for projects, '
                     '%s for project, timestamp'))
 
