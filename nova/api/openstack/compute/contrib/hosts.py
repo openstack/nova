@@ -53,6 +53,7 @@ class HostUpdateTemplate(xmlutil.TemplateBuilder):
         root = xmlutil.TemplateElement('host')
         root.set('host')
         root.set('status')
+        root.set('maintenance_mode')
 
         return xmlutil.MasterTemplate(root, 1)
 
@@ -128,14 +129,17 @@ class HostController(object):
             # settings may follow.
             if key == "status":
                 if val[:6] in ("enable", "disabl"):
-                    return self._set_enabled_status(req, id,
-                            enabled=(val.startswith("enable")))
+                    enabled = val.startswith("enable")
                 else:
                     explanation = _("Invalid status: '%s'") % raw_val
                     raise webob.exc.HTTPBadRequest(explanation=explanation)
+            elif key == "maintenance_mode":
+                raise webob.exc.HTTPNotImplemented
             else:
                 explanation = _("Invalid update setting: '%s'") % raw_key
                 raise webob.exc.HTTPBadRequest(explanation=explanation)
+
+        return self._set_enabled_status(req, id, enabled=enabled)
 
     def _set_enabled_status(self, req, host, enabled):
         """Sets the specified host's ability to accept new instances."""

@@ -93,6 +93,18 @@ class HostTestCase(test.TestCase):
         result_c2 = self.controller.update(self.req, "host_c2", body=en_body)
         self.assertEqual(result_c2["status"], "disabled")
 
+    def test_enable_maintainance_mode(self):
+        body = {"maintenance_mode": "enable"}
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          self.controller.update,
+                          self.req, "host_c1", body=body)
+
+    def test_disable_maintainance_mode_and_enable(self):
+        body = {"status": "enable", "maintenance_mode": "disable"}
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          self.controller.update,
+                          self.req, "host_c1", body=body)
+
     def test_host_startup(self):
         result = self.controller.startup(self.req, "host_c1")
         self.assertEqual(result["power_action"], "startup")
@@ -112,6 +124,11 @@ class HostTestCase(test.TestCase):
 
     def test_bad_update_key(self):
         bad_body = {"crazy": "bad"}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                self.req, "host_c1", body=bad_body)
+
+    def test_bad_update_key_and_correct_udpate_key(self):
+        bad_body = {"status": "disable", "crazy": "bad"}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                 self.req, "host_c1", body=bad_body)
 
@@ -140,8 +157,32 @@ class HostSerializerTest(test.TestCase):
             self.assertEqual(HOST_LIST[i]['service'],
                              tree[i].get('service'))
 
-    def test_update_serializer(self):
+    def test_update_serializer_with_status(self):
         exemplar = dict(host='host_c1', status='enabled')
+        serializer = os_hosts.HostUpdateTemplate()
+        text = serializer.serialize(exemplar)
+
+        tree = etree.fromstring(text)
+
+        self.assertEqual('host', tree.tag)
+        for key, value in exemplar.items():
+            self.assertEqual(value, tree.get(key))
+
+    def test_update_serializer_with_maintainance_mode(self):
+        exemplar = dict(host='host_c1', maintenance_mode='enabled')
+        serializer = os_hosts.HostUpdateTemplate()
+        text = serializer.serialize(exemplar)
+
+        tree = etree.fromstring(text)
+
+        self.assertEqual('host', tree.tag)
+        for key, value in exemplar.items():
+            self.assertEqual(value, tree.get(key))
+
+    def test_update_serializer_with_maintainance_mode_and_status(self):
+        exemplar = dict(host='host_c1',
+                        maintenance_mode='enabled',
+                        status='enabled')
         serializer = os_hosts.HostUpdateTemplate()
         text = serializer.serialize(exemplar)
 
