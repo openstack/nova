@@ -443,6 +443,9 @@ class XenAPIConnection(driver.ComputeDriver):
         """
         return self._vmops.refresh_security_group_members(security_group_id)
 
+    def refresh_provider_fw_rules(self):
+        return self._vmops.refresh_provider_fw_rules()
+
     def update_host_status(self):
         """Update the status info of the host, and return those values
             to the calling program."""

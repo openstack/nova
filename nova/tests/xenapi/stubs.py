@@ -32,7 +32,6 @@ def stubout_firewall_driver(stubs, conn):
         return
 
     vmops = conn._vmops
-    stubs.Set(vmops.firewall_driver, 'setup_basic_filtering', fake_none)
     stubs.Set(vmops.firewall_driver, 'prepare_instance_filter', fake_none)
     stubs.Set(vmops.firewall_driver, 'instance_filter_exists', fake_none)
 

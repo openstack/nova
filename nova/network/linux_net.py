@@ -303,16 +303,17 @@ class IptablesManager(object):
 
         for cmd, tables in s:
             for table in tables:
-                current_table, _ = self.execute('%s-save' % (cmd,),
-                                                '-t', '%s' % (table,),
-                                                run_as_root=True,
-                                                attempts=5)
+                current_table, _err = self.execute('%s-save' % (cmd,),
+                                                   '-t', '%s' % (table,),
+                                                   run_as_root=True,
+                                                   attempts=5)
                 current_lines = current_table.split('\n')
                 new_filter = self._modify_rules(current_lines,
                                                 tables[table])
                 self.execute('%s-restore' % (cmd,), run_as_root=True,
                              process_input='\n'.join(new_filter),
                              attempts=5)
+        LOG.debug(_("IPTablesManager.apply completed with success"))
 
     def _modify_rules(self, current_lines, table, binary=None):
         unwrapped_chains = table.unwrapped_chains

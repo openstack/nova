@@ -19,8 +19,12 @@
 
 import json
 
+
+from nova import context
 from nova import flags
 from nova import log as logging
+from nova.db import api as db
+from nova.virt import netutils
 from nova.virt.firewall import IptablesFirewallDriver
 
 
@@ -65,3 +69,55 @@ class Dom0IptablesFirewallDriver(IptablesFirewallDriver):
             #  No multiport needed for XS!
             return ['--dport', '%s:%s' % (rule.from_port,
                                            rule.to_port)]
+
+    @staticmethod
+    def _provider_rules():
+        """Generate a list of rules from provider for IP4 & IP6.
+        Note: We could not use the common code from virt.firewall because
+        XS doesn't accept the '-m multiport' option"""
+
+        ctxt = context.get_admin_context()
+        ipv4_rules = []
+        ipv6_rules = []
+        rules = db.provider_fw_rule_get_all(ctxt)
+        for rule in rules:
+            LOG.debug(_('Adding provider rule: %s'), rule['cidr'])
+            version = netutils.get_ip_version(rule['cidr'])
+            if version == 4:
+                fw_rules = ipv4_rules
+            else:
+                fw_rules = ipv6_rules
+
+            protocol = rule['protocol']
+            if version == 6 and protocol == 'icmp':
+                protocol = 'icmpv6'
+
+            args = ['-p', protocol, '-s', rule['cidr']]
+
+            if protocol in ['udp', 'tcp']:
+                if rule['from_port'] == rule['to_port']:
+                    args += ['--dport', '%s' % (rule['from_port'],)]
+                else:
+                    args += ['--dport', '%s:%s' % (rule['from_port'],
+                                                    rule['to_port'])]
+            elif protocol == 'icmp':
+                icmp_type = rule['from_port']
+                icmp_code = rule['to_port']
+
+                if icmp_type == -1:
+                    icmp_type_arg = None
+                else:
+                    icmp_type_arg = '%s' % icmp_type
+                    if not icmp_code == -1:
+                        icmp_type_arg += '/%s' % icmp_code
+
+                if icmp_type_arg:
+                    if version == 4:
+                        args += ['-m', 'icmp', '--icmp-type',
+                                 icmp_type_arg]
+                    elif version == 6:
+                        args += ['-m', 'icmp6', '--icmpv6-type',
+                                 icmp_type_arg]
+            args += ['-j DROP']
+            fw_rules += [' '.join(args)]
+        return ipv4_rules, ipv6_rules

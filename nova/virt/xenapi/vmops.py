@@ -1744,6 +1744,9 @@ class VMOps(object):
         """ recreates security group rules for every instance """
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
+    def refresh_provider_fw_rules(self):
+        self.firewall_driver.refresh_provider_fw_rules()
+
     def unfilter_instance(self, instance_ref, network_info):
         """Removes filters for each VIF of the specified instance."""
         self.firewall_driver.unfilter_instance(instance_ref,

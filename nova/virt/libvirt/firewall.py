@@ -259,7 +259,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                 LOG.debug(_('The nwfilter(%(instance_filter_name)s) '
                             'for %(instance_name)s is not found.') % locals())
 
-        instance_secgroup_filter_name =\
+        instance_secgroup_filter_name = \
             '%s-secgroup' % (self._instance_filter_name(instance))
 
         try:
@@ -486,52 +486,9 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
             LOG.info(_('Attempted to unfilter instance %s which is not '
                      'filtered'), instance['id'])
 
-    def _do_basic_rules(self, ipv4_rules, ipv6_rules, network_info):
-        # Always drop invalid packets
-        ipv4_rules += ['-m state --state ' 'INVALID -j DROP']
-        ipv6_rules += ['-m state --state ' 'INVALID -j DROP']
-
-        # Allow established connections
-        ipv4_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
-        ipv6_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
-
-        # Pass through provider-wide drops
-        ipv4_rules += ['-j $provider']
-        ipv6_rules += ['-j $provider']
-
     def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists"""
         return self.nwfilter.instance_filter_exists(instance, network_info)
-
-    def refresh_provider_fw_rules(self):
-        """See class:FirewallDriver: docs."""
-        self._do_refresh_provider_fw_rules()
-        self.iptables.apply()
-
-    @utils.synchronized('iptables', external=True)
-    def _do_refresh_provider_fw_rules(self):
-        """Internal, synchronized version of refresh_provider_fw_rules."""
-        self._purge_provider_fw_rules()
-        self._build_provider_fw_rules()
-
-    def _purge_provider_fw_rules(self):
-        """Remove all rules from the provider chains."""
-        self.iptables.ipv4['filter'].empty_chain('provider')
-        if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].empty_chain('provider')
-
-    def _build_provider_fw_rules(self):
-        """Create all rules for the provider IP DROPs."""
-        self.iptables.ipv4['filter'].add_chain('provider')
-        if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].add_chain('provider')
-        ipv4_rules, ipv6_rules = self._provider_rules()
-        for rule in ipv4_rules:
-            self.iptables.ipv4['filter'].add_rule('provider', rule)
-
-        if FLAGS.use_ipv6:
-            for rule in ipv6_rules:
-                self.iptables.ipv6['filter'].add_rule('provider', rule)
 
     @staticmethod
     def _provider_rules():

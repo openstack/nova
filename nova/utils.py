@@ -1075,12 +1075,12 @@ def monkey_patch():
             if isinstance(module_data[key], pyclbr.Class):
                 clz = import_class("%s.%s" % (module, key))
                 for method, func in inspect.getmembers(clz, inspect.ismethod):
-                    setattr(clz, method,\
+                    setattr(clz, method,
                         decorator("%s.%s.%s" % (module, key, method), func))
             # set the decorator for the function
             if isinstance(module_data[key], pyclbr.Function):
                 func = import_class("%s.%s" % (module, key))
-                setattr(sys.modules[module], key,\
+                setattr(sys.modules[module], key,
                     decorator("%s.%s" % (module, key), func))
 
 
