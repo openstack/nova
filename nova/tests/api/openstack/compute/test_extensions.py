@@ -153,6 +153,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         self.ext_list = [
             "Accounts",
             "AdminActions",
+            "Certificates",
             "Cloudpipe",
             "Console_output",
             "Consoles",
