@@ -22,6 +22,8 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import simple_tenant_usage
+from nova import policy
+from nova.common import policy as common_policy
 from nova.compute import api
 from nova import context
 from nova import flags
@@ -133,18 +135,6 @@ class SimpleTenantUsageTest(test.TestCase):
             for j in xrange(SERVERS):
                 self.assertEqual(int(servers[j]['hours']), HOURS)
 
-    def test_verify_index_fails_for_nonadmin(self):
-        req = webob.Request.blank(
-                    '/v2/faketenant_0/os-simple-tenant-usage?'
-                    'detailed=1&start=%s&end=%s' %
-                    (START.isoformat(), STOP.isoformat()))
-        req.method = "GET"
-        req.headers["content-type"] = "application/json"
-
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.user_context))
-        self.assertEqual(res.status_int, 403)
-
     def test_verify_show(self):
         req = webob.Request.blank(
                   '/v2/faketenant_0/os-simple-tenant-usage/'
@@ -175,9 +165,18 @@ class SimpleTenantUsageTest(test.TestCase):
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.alt_user_context))
-        self.assertEqual(res.status_int, 403)
+        rules = {
+            "compute_extension:simple_tenant_usage:show":
+                [["role:admin"], ["project_id:%(project_id)s"]]
+        }
+        common_policy.set_brain(common_policy.HttpBrain(rules))
+
+        try:
+            res = req.get_response(fakes.wsgi_app(
+                                   fake_auth_context=self.alt_user_context))
+            self.assertEqual(res.status_int, 403)
+        finally:
+            policy.reset()
 
 
 class SimpleTenantUsageSerializerTest(test.TestCase):
