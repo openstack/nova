@@ -204,7 +204,7 @@ class ResourceTest(test.TestCase):
         req = webob.Request.blank('/tests')
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
-        self.assertEqual(response.status_int, 401)
+        self.assertEqual(response.status_int, 403)
 
     def test_dispatch(self):
         class Controller(object):
