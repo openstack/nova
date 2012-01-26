@@ -120,11 +120,7 @@ class CreateBackupTests(test.TestCase):
 
         self.stubs.Set(compute.API, 'get', fake_compute_api_get)
         self.backup_stubs = fakes.stub_out_compute_api_backup(self.stubs)
-
-        router = compute_api.APIRouter()
-        ext_middleware = extensions.ExtensionMiddleware(router)
-        self.app = wsgi.LazySerializationMiddleware(ext_middleware)
-
+        self.app = compute_api.APIRouter()
         self.uuid = utils.gen_uuid()
 
     def _get_request(self, body):
