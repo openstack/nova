@@ -174,18 +174,6 @@ class ExtensionsResource(wsgi.Resource):
         raise webob.exc.HTTPNotFound()
 
 
-@utils.deprecated("The extension middleware is no longer necessary.")
-class ExtensionMiddleware(base_wsgi.Middleware):
-    """Extensions middleware for WSGI.
-
-    Provided only for backwards compatibility with existing
-    api-paste.ini files.  This middleware will be removed in future
-    versions of nova.
-    """
-
-    pass
-
-
 class ExtensionManager(object):
     """Load extensions from the configured extension path.
 

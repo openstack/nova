@@ -32,13 +32,8 @@ class SchedulerHintsTestCase(test.TestCase):
 
     def setUp(self):
         super(SchedulerHintsTestCase, self).setUp()
-
         self.fake_instance = fakes.stub_instance(1, uuid=UUID)
-
-        app = compute.APIRouter()
-        app = extensions.ExtensionMiddleware(app)
-        app = wsgi.LazySerializationMiddleware(app)
-        self.app = app
+        self.app = compute.APIRouter()
 
     def test_create_server_without_hints(self):
 

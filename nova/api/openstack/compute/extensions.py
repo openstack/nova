@@ -31,14 +31,3 @@ class ExtensionManager(base_extensions.ExtensionManager):
         self.cls_list = FLAGS.osapi_compute_extension
         self.extensions = {}
         self._load_extensions()
-
-
-class ExtensionMiddleware(base_extensions.ExtensionMiddleware):
-    """Extensions middleware for WSGI.
-
-    Provided only for backwards compatibility with existing
-    api-paste.ini files.  This middleware will be removed in future
-    versions of nova.
-    """
-
-    pass
