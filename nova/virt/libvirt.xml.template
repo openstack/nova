@@ -1,4 +1,5 @@
 <domain type='${type}'>
+    <uuid>${uuid}</uuid>
     <name>${name}</name>
     <memory>${memory_kb}</memory>
     <os>

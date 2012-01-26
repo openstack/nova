@@ -389,6 +389,10 @@ class LibvirtConnTestCase(test.TestCase):
         self._check_xml_and_uri(instance_data, expect_kernel=True,
                                 expect_ramdisk=True, rescue=True)
 
+    def test_xml_uuid(self):
+        instance_data = dict(self.test_instance)
+        self._check_xml_and_uuid(instance_data)
+
     def test_lxc_container_and_uri(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
@@ -661,6 +665,18 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(tree.find('./devices/disk').get('device'),
                          device_type)
         self.assertEqual(tree.find('./devices/disk/target').get('bus'), bus)
+
+    def _check_xml_and_uuid(self, image_meta):
+        user_context = context.RequestContext(self.user_id, self.project_id)
+        instance_ref = db.instance_create(user_context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+
+        xml = connection.LibvirtConnection(True).to_xml(instance_ref,
+                                                        network_info,
+                                                        image_meta)
+        tree = xml_to_tree(xml)
+        self.assertEqual(tree.find('./uuid').text,
+                         instance_ref['uuid'])
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):

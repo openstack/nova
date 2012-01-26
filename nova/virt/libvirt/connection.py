@@ -1134,6 +1134,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
+                    'uuid': instance['uuid'],
                     'basepath': os.path.join(FLAGS.instances_path,
                                              instance['name']),
                     'memory_kb': inst_type['memory_mb'] * 1024,
