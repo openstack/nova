@@ -573,7 +573,7 @@ class ResourceExceptionHandler(object):
 
         if isinstance(ex_value, exception.NotAuthorized):
             msg = unicode(ex_value)
-            raise Fault(webob.exc.HTTPUnauthorized(explanation=msg))
+            raise Fault(webob.exc.HTTPForbidden(explanation=msg))
         elif isinstance(ex_value, TypeError):
             LOG.exception(ex_value)
             raise Fault(webob.exc.HTTPBadRequest())

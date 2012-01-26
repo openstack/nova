@@ -174,7 +174,7 @@ class SimpleTenantUsageTest(test.TestCase):
         try:
             res = req.get_response(fakes.wsgi_app(
                                    fake_auth_context=self.alt_user_context))
-            self.assertEqual(res.status_int, 401)
+            self.assertEqual(res.status_int, 403)
         finally:
             policy.reset()
 
