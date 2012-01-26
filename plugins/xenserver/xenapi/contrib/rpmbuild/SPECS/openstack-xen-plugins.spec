@@ -31,7 +31,6 @@ rm -rf $RPM_BUILD_ROOT
 /etc/xapi.d/plugins/agent
 /etc/xapi.d/plugins/glance
 /etc/xapi.d/plugins/migration
-/etc/xapi.d/plugins/objectstore
 /etc/xapi.d/plugins/pluginlib_nova.py
 /etc/xapi.d/plugins/xenhost
 /etc/xapi.d/plugins/xenstore.py

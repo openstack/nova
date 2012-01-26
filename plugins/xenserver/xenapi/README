@@ -1,6 +1,16 @@
-This directory contains files that are required for the XenAPI support.  They
-should be installed in the XenServer / Xen Cloud Platform domain 0.
+This directory contains files that are required for the XenAPI support.
+They should be installed in the XenServer / Xen Cloud Platform dom0.
 
-Also, you need to
+If you install them manually, you will need to ensure that the newly
+added files are executable. You can do this by running the following
+command (from dom0):
 
-chmod u+x /etc/xapi.d/plugins/objectstore
+chmod a+x /etc/xapi.d/plugins/*
+
+Otherwise, you can build an rpm as detailed in:
+
+$NOVA_ROOT/plugins/xenserver/xenapi/contrib/
+
+and install the rpm by running the following command (from dom0):
+
+rpm -i openstack-xen-plugins.rpm
