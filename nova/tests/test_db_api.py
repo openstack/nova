@@ -304,7 +304,7 @@ class AggregateDBApiTestCase(test.TestCase):
     def test_aggregate_create(self):
         """Ensure aggregate can be created with no metadata."""
         result = _create_aggregate(metadata=None)
-        self.assertEqual(result['operational_state'], 'building')
+        self.assertEqual(result['operational_state'], 'created')
 
     def test_aggregate_create_raise_exist_exc(self):
         """Ensure aggregate names are distinct."""
@@ -475,6 +475,17 @@ class AggregateDBApiTestCase(test.TestCase):
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
         expected = db.aggregate_host_get_all(ctxt, result.id)
         self.assertEqual(_get_fake_aggr_hosts(), expected)
+
+    def test_aggregate_host_add_deleted(self):
+        """Ensure we can add a host that was previously deleted."""
+        ctxt = context.get_admin_context()
+        result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
+        host = _get_fake_aggr_hosts()[0]
+        db.aggregate_host_delete(ctxt, result.id, host)
+        db.aggregate_host_add(ctxt, result.id, host)
+        expected = db.aggregate_host_get_all(ctxt, result.id,
+                                             read_deleted='no')
+        self.assertEqual(len(expected), 1)
 
     def test_aggregate_host_add_duplicate_raise_conflict(self):
         """Ensure we cannot add host to distinct aggregates."""

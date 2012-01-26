@@ -261,6 +261,11 @@ class InvalidParameterValue(Invalid):
     message = _("%(err)s")
 
 
+class InvalidAggregateAction(Invalid):
+    message = _("Cannot perform action '%(action)s' on aggregate "
+                "%(aggregate_id)s. Reason: %(reason)s.")
+
+
 class InstanceInvalidState(Invalid):
     message = _("Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot "
                 "%(method)s while the instance is in this state.")

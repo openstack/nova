@@ -17,3 +17,4 @@
 #    under the License.
 
 from nova.compute.api import API
+from nova.compute.api import AggregateAPI

@@ -2207,3 +2207,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       instance_uuid,
                                       vm_state=vm_states.ERROR,
                                       task_state=None)
+
+    def add_aggregate_host(self, context, aggregate_id, host):
+        """Adds a host to a physical hypervisor pool."""
+        raise NotImplementedError()
+
+    def remove_aggregate_host(self, context, aggregate_id, host):
+        """Removes a host from a physical hypervisor pool."""
+        raise NotImplementedError()

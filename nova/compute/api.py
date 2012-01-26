@@ -17,7 +17,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Handles all requests relating to instances (guest vms)."""
+"""Handles all requests relating to compute resources (e.g. guest vms,
+networking and storage of vms, and compute hosts on which they run)."""
 
 import functools
 import re
@@ -27,6 +28,7 @@ import novaclient
 import webob.exc
 
 from nova import block_device
+from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
@@ -1740,3 +1742,129 @@ class API(base.Base):
 
         uuids = [instance['uuid'] for instance in instances]
         return self.db.instance_fault_get_by_instance_uuids(context, uuids)
+
+
+class AggregateAPI(base.Base):
+    """Sub-set of the Compute Manager API for managing host aggregates."""
+    def __init__(self, **kwargs):
+        super(AggregateAPI, self).__init__(**kwargs)
+
+    def create_aggregate(self, context, aggregate_name, availability_zone):
+        """Creates the model for the aggregate."""
+        values = {"name": aggregate_name,
+                  "availability_zone": availability_zone}
+        aggregate = self.db.aggregate_create(context, values)
+        return dict(aggregate.iteritems())
+
+    def get_aggregate(self, context, aggregate_id):
+        """Get an aggregate by id."""
+        aggregate = self.db.aggregate_get(context, aggregate_id)
+        return self._get_aggregate_info(context, aggregate)
+
+    def get_aggregate_list(self, context):
+        """Get all the aggregates for this zone."""
+        aggregates = self.db.aggregate_get_all(context, read_deleted="no")
+        return [self._get_aggregate_info(context, a) for a in aggregates]
+
+    def update_aggregate(self, context, aggregate_id, values):
+        """Update the properties of an aggregate."""
+        aggregate = self.db.aggregate_update(context, aggregate_id, values)
+        return self._get_aggregate_info(context, aggregate)
+
+    def update_aggregate_metadata(self, context, aggregate_id, metadata):
+        """Updates the aggregate metadata.
+
+        If a key is set to None, it gets removed from the aggregate metadata.
+        """
+        # As a first release of the host aggregates blueprint, this call is
+        # pretty dumb, in the sense that interacts only with the model.
+        # In later releasses, updating metadata may trigger virt actions like
+        # the setup of shared storage, or more generally changes to the
+        # underlying hypervisor pools.
+        for key in metadata.keys():
+            if not metadata[key]:
+                try:
+                    self.db.aggregate_metadata_delete(context,
+                                                      aggregate_id, key)
+                    metadata.pop(key)
+                except exception.AggregateMetadataNotFound, e:
+                    LOG.warn(e.message)
+        self.db.aggregate_metadata_add(context, aggregate_id, metadata)
+        return self.get_aggregate(context, aggregate_id)
+
+    def delete_aggregate(self, context, aggregate_id):
+        """Deletes the aggregate."""
+        hosts = self.db.aggregate_host_get_all(context, aggregate_id,
+                                               read_deleted="no")
+        if len(hosts) > 0:
+            raise exception.InvalidAggregateAction(action='delete',
+                                                   aggregate_id=aggregate_id,
+                                                   reason='not empty')
+        values = {'operational_state': aggregate_states.DISMISSED}
+        self.db.aggregate_update(context, aggregate_id, values)
+        self.db.aggregate_delete(context, aggregate_id)
+
+    def add_host_to_aggregate(self, context, aggregate_id, host):
+        """Adds the host to an aggregate."""
+        # validates the host; ComputeHostNotFound is raised if invalid
+        service = self.db.service_get_all_compute_by_host(context, host)[0]
+        # add host, and reflects action in the aggregate operational state
+        aggregate = self.db.aggregate_get(context, aggregate_id)
+        if aggregate.operational_state in [aggregate_states.CREATED,
+                                           aggregate_states.ACTIVE]:
+            if service.availability_zone != aggregate.availability_zone:
+                raise exception.\
+                    InvalidAggregateAction(action='add host',
+                                           aggregate_id=aggregate_id,
+                                           reason='availibility zone mismatch')
+            self.db.aggregate_host_add(context, aggregate_id, host)
+            if aggregate.operational_state == aggregate_states.CREATED:
+                values = {'operational_state': aggregate_states.CHANGING}
+                self.db.aggregate_update(context, aggregate_id, values)
+            queue = self.db.queue_get_for(context, service.topic, host)
+            rpc.cast(context, queue, {"method": "add_aggregate_host",
+                                      "args": {"aggregate_id": aggregate_id,
+                                               "host": host}, })
+            return self.get_aggregate(context, aggregate_id)
+        else:
+            invalid = {aggregate_states.CHANGING: 'setup in progress',
+                       aggregate_states.DISMISSED: 'aggregate deleted',
+                       aggregate_states.ERROR: 'aggregate in error', }
+            if aggregate.operational_state in invalid.keys():
+                raise exception.\
+                    InvalidAggregateAction(action='add host',
+                            aggregate_id=aggregate_id,
+                            reason=invalid[aggregate.operational_state])
+
+    def remove_host_from_aggregate(self, context, aggregate_id, host):
+        """Removes host from the aggregate."""
+        # validates the host; ComputeHostNotFound is raised if invalid
+        service = self.db.service_get_all_compute_by_host(context, host)[0]
+        aggregate = self.db.aggregate_get(context, aggregate_id)
+        if aggregate.operational_state in [aggregate_states.ACTIVE,
+                                           aggregate_states.ERROR]:
+            self.db.aggregate_host_delete(context, aggregate_id, host)
+            queue = self.db.queue_get_for(context, service.topic, host)
+            rpc.cast(context, queue, {"method": "remove_aggregate_host",
+                                      "args": {"aggregate_id": aggregate_id,
+                                               "host": host}, })
+            return self.get_aggregate(context, aggregate_id)
+        else:
+            invalid = {aggregate_states.CHANGING: 'setup in progress',
+                       aggregate_states.DISMISSED: 'aggregate deleted', }
+            if aggregate.operational_state in invalid.keys():
+                raise exception.\
+                    InvalidAggregateAction(action='remove host',
+                            aggregate_id=aggregate_id,
+                            reason=invalid[aggregate.operational_state])
+
+    def _get_aggregate_info(self, context, aggregate):
+        """Builds a dictionary with aggregate props, metadata and hosts."""
+        metadata = self.db.aggregate_metadata_get(context, aggregate.id)
+        hosts = self.db.aggregate_host_get_all(context, aggregate.id,
+                                               read_deleted="no")
+
+        result = dict(aggregate.iteritems())
+        result["metadata"] = metadata
+        result["hosts"] = hosts
+        return result
