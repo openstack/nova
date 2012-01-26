@@ -472,7 +472,8 @@ def _get_host_utilization(context, host, ram_mb, disk_gb):
     work = 0
     for instance in instances:
         free_ram_mb -= instance.memory_mb
-        free_disk_gb -= instance.local_gb
+        free_disk_gb -= instance.root_gb
+        free_disk_gb -= instance.ephemeral_gb
         if instance.vm_state in [vm_states.BUILDING, vm_states.REBUILDING,
                                  vm_states.MIGRATING, vm_states.RESIZING]:
             work += 1
