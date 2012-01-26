@@ -364,6 +364,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                                          instance['uuid'],
                                          instance_type_id, host)
 
+    @utils.synchronized('quantum-enable-dhcp')
     def enable_dhcp(self, context, quantum_net_id, network_ref, vif_rec,
             project_id):
         LOG.info("Using DHCP for network: %s" % network_ref['label'])
