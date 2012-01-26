@@ -352,4 +352,4 @@ def notify(context, topic, msg):
     LOG.debug(_('Sending notification on %s...'), topic)
     pack_context(msg, context)
     with ConnectionContext() as conn:
-        conn.notify_send(topic, msg, durable=True)
+        conn.notify_send(topic, msg)
