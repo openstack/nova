@@ -42,6 +42,10 @@ class FaultWrapper(base_wsgi.Middleware):
         except Exception as ex:
             LOG.exception(_("Caught error: %s"), unicode(ex))
             exc = webob.exc.HTTPInternalServerError()
+            # NOTE(johannes): We leave the explanation empty here on
+            # purpose. It could possibly have sensitive information
+            # that should not be returned back to the user. See
+            # bugs 868360 and 874472
             return wsgi.Fault(exc)
 
 
