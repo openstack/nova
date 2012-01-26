@@ -129,6 +129,8 @@ class DistributedSchedulerTestCase(test.TestCase):
             return least_cost.WeightedHost(1, zone='x', blob='y')
 
         def _fake_provision_resource_locally(*args, **kwargs):
+            # Tests that filter_properties is stripped
+            self.assertNotIn('filter_properties', kwargs)
             self.locally_called = True
             return 1
 
@@ -152,7 +154,8 @@ class DistributedSchedulerTestCase(test.TestCase):
             }
 
         fake_context = context.RequestContext('user', 'project')
-        instances = sched.schedule_run_instance(fake_context, request_spec)
+        instances = sched.schedule_run_instance(fake_context, request_spec,
+                filter_properties={})
         self.assertTrue(instances)
         self.assertFalse(self.schedule_called)
         self.assertTrue(self.from_blob_called)
