@@ -446,11 +446,6 @@ class Scheduler(object):
         # if disk_over_commit is True,
         #  otherwise virtual disk size < available disk size.
 
-        # Refresh compute_nodes table
-        topic = db.queue_get_for(context, FLAGS.compute_topic, dest)
-        rpc.call(context, topic,
-                 {"method": "update_available_resource"})
-
         # Getting total available disk of host
         available_gb = self._get_compute_info(context,
                                               dest, 'disk_available_least')

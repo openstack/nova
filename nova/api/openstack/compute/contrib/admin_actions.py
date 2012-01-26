@@ -272,6 +272,43 @@ class AdminActionsController(wsgi.Controller):
         resp.headers['Location'] = image_ref
         return resp
 
+    @wsgi.action('os-migrateLive')
+    @exception.novaclient_converter
+    @scheduler_api.redirect_handler
+    def _migrate_live(self, req, id, body):
+        """Permit admins to (live) migrate a server to a new host"""
+        context = req.environ["nova.context"]
+        # Expected to use AuthMiddleware.
+        # Otherwise, non-admin user can use live migration
+        if not context.is_admin:
+            msg = _("Live migration is admin only functionality")
+            raise exc.HTTPForbidden(explanation=msg)
+
+        try:
+            block_migration = body["os-migrateLive"]["block_migration"]
+            disk_over_commit = body["os-migrateLive"]["disk_over_commit"]
+            host = body["os-migrateLive"]["host"]
+        except (TypeError, KeyError):
+            msg = _("host and block_migration must be specified.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            instance = self.compute_api.get(context, id)
+            result = scheduler_api.live_migration(context,
+                                                  block_migration,
+                                                  disk_over_commit,
+                                                  instance["id"],
+                                                  host,
+                                                  topic=FLAGS.compute_topic)
+        except Exception, e:
+            msg = _("Live migration of instance %(id)s to host %(host)s"
+                    " failed") % locals()
+            LOG.exception(msg)
+            # Return messages from scheduler
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        return webob.Response(status_int=202)
+
 
 class Admin_actions(extensions.ExtensionDescriptor):
     """Enable admin-only server actions

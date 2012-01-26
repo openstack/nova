@@ -446,10 +446,6 @@ class SchedulerTestCase(test.TestCase):
         db.instance_get_all_by_host(self.context, dest).AndReturn(
                 [dict(memory_mb=256), dict(memory_mb=512)])
         # assert_compute_node_has_enough_disk()
-        db.queue_get_for(self.context, FLAGS.compute_topic,
-                dest).AndReturn('dest_queue1')
-        rpc.call(self.context, 'dest_queue1',
-                {'method': 'update_available_resource'})
         self.driver._get_compute_info(self.context, dest,
                 'disk_available_least').AndReturn(1025)
         db.queue_get_for(self.context, FLAGS.compute_topic,
@@ -698,10 +694,6 @@ class SchedulerTestCase(test.TestCase):
                 instance, dest)
 
         # Not enough disk
-        db.queue_get_for(self.context, FLAGS.compute_topic,
-                dest).AndReturn('dest_queue')
-        rpc.call(self.context, 'dest_queue',
-                {'method': 'update_available_resource'})
         self.driver._get_compute_info(self.context, dest,
                 'disk_available_least').AndReturn(1023)
         db.queue_get_for(self.context, FLAGS.compute_topic,

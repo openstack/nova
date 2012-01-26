@@ -17,11 +17,14 @@ from lxml import etree
 import webob.exc
 
 from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
 from nova.api.openstack.compute.contrib import hosts as os_hosts
+from nova.compute import power_state
+from nova.compute import vm_states
 from nova.scheduler import api as scheduler_api
 
 
@@ -50,6 +53,35 @@ def stub_set_host_enabled(context, host, enabled):
 
 def stub_host_power_action(context, host, action):
     return action
+
+
+def _create_instance(**kwargs):
+    """Create a test instance"""
+    ctxt = context.get_admin_context()
+    return db.instance_create(ctxt, _create_instance_dict(**kwargs))
+
+
+def _create_instance_dict(**kwargs):
+    """Create a dictionary for a test instance"""
+    inst = {}
+    inst['image_ref'] = 'cedef40a-ed67-4d10-800e-17455edce175'
+    inst['reservation_id'] = 'r-fakeres'
+    inst['user_id'] = kwargs.get('user_id', 'admin')
+    inst['project_id'] = kwargs.get('project_id', 'fake')
+    inst['instance_type_id'] = '1'
+    if 'host' in kwargs:
+        inst['host'] = kwargs.get('host')
+    inst['vcpus'] = kwargs.get('vcpus', 1)
+    inst['memory_mb'] = kwargs.get('memory_mb', 20)
+    inst['root_gb'] = kwargs.get('root_gb', 30)
+    inst['ephemeral_gb'] = kwargs.get('ephemeral_gb', 30)
+    inst['vm_state'] = kwargs.get('vm_state', vm_states.ACTIVE)
+    inst['power_state'] = kwargs.get('power_state', power_state.RUNNING)
+    inst['task_state'] = kwargs.get('task_state', None)
+    inst['availability_zone'] = kwargs.get('availability_zone', None)
+    inst['ami_launch_index'] = 0
+    inst['launched_on'] = kwargs.get('launched_on', 'dummy')
+    return inst
 
 
 class FakeRequest(object):
@@ -135,6 +167,102 @@ class HostTestCase(test.TestCase):
     def test_bad_host(self):
         self.assertRaises(exception.HostNotFound, self.controller.update,
                 self.req, "bogus_host_name", body={"status": "disable"})
+
+    def test_show_forbidden(self):
+        self.req.environ["nova.context"].is_admin = False
+        dest = 'dummydest'
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self.controller.show,
+                          self.req, dest)
+        self.req.environ["nova.context"].is_admin = True
+
+    def test_show_host_not_exist(self):
+        """A host given as an argument does not exists."""
+        self.req.environ["nova.context"].is_admin = True
+        dest = 'dummydest'
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show,
+                          self.req, dest)
+
+    def _dic_is_equal(self, dic1, dic2, keys=None):
+        """Compares 2 dictionary contents(Helper method)"""
+        if not keys:
+            keys = ['vcpus', 'memory_mb', 'local_gb',
+                    'vcpus_used', 'memory_mb_used', 'local_gb_used']
+
+        for key in keys:
+            if not (dic1[key] == dic2[key]):
+                return False
+        return True
+
+    def _create_compute_service(self):
+        """Create compute-manager(ComputeNode and Service record)."""
+        ctxt = context.get_admin_context()
+        dic = {'host': 'dummy', 'binary': 'nova-compute', 'topic': 'compute',
+               'report_count': 0, 'availability_zone': 'dummyzone'}
+        s_ref = db.service_create(ctxt, dic)
+
+        dic = {'service_id': s_ref['id'],
+               'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
+               'vcpus_used': 16, 'memory_mb_used': 32, 'local_gb_used': 10,
+               'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
+               'cpu_info': ''}
+        db.compute_node_create(ctxt, dic)
+
+        return db.service_get(ctxt, s_ref['id'])
+
+    def test_show_no_project(self):
+        """No instance are running on the given host."""
+        ctxt = context.get_admin_context()
+        s_ref = self._create_compute_service()
+
+        result = self.controller.show(self.req, s_ref['host'])
+
+        # result checking
+        c1 = ('resource' in result['host'] and
+              'usage' in result['host'])
+        compute_node = s_ref['compute_node'][0]
+        c2 = self._dic_is_equal(result['host']['resource'],
+                                compute_node)
+        c3 = result['host']['usage'] == {}
+        self.assertTrue(c1 and c2 and c3)
+        db.service_destroy(ctxt, s_ref['id'])
+
+    def test_show_works_correctly(self):
+        """show() works correctly as expected."""
+        ctxt = context.get_admin_context()
+        s_ref = self._create_compute_service()
+        i_ref1 = _create_instance(project_id='p-01', host=s_ref['host'])
+        i_ref2 = _create_instance(project_id='p-02', vcpus=3,
+                                       host=s_ref['host'])
+
+        result = self.controller.show(self.req, s_ref['host'])
+
+        c1 = ('resource' in result['host'] and
+              'usage' in result['host'])
+        compute_node = s_ref['compute_node'][0]
+        c2 = self._dic_is_equal(result['host']['resource'],
+                                compute_node)
+        c3 = result['host']['usage'].keys() == ['p-01', 'p-02']
+        keys = ['vcpus', 'memory_mb']
+        c4 = self._dic_is_equal(
+                 result['host']['usage']['p-01'], i_ref1, keys)
+        disk = i_ref2['root_gb'] + i_ref2['ephemeral_gb']
+        if result['host']['usage']['p-01']['local_gb'] == disk:
+            c6 = True
+        else:
+            c6 = False
+        c5 = self._dic_is_equal(
+                 result['host']['usage']['p-02'], i_ref2, keys)
+        if result['host']['usage']['p-02']['local_gb'] == disk:
+            c7 = True
+        else:
+            c7 = False
+        self.assertTrue(c1 and c2 and c3 and c4 and c5 and c6 and c7)
+
+        db.service_destroy(ctxt, s_ref['id'])
+        db.instance_destroy(ctxt, i_ref1['id'])
+        db.instance_destroy(ctxt, i_ref2['id'])
 
 
 class HostSerializerTest(test.TestCase):

@@ -419,3 +419,15 @@ def redirect_handler(f):
                 raise e.results
             return e.results
     return new_f
+
+
+def live_migration(context, block_migration, disk_over_commit,
+                   instance_id, dest, topic):
+    """Migrate a server to a new host"""
+    params = {"instance_id": instance_id,
+              "dest": dest,
+              "topic": topic,
+              "block_migration": block_migration,
+              "disk_over_commit": disk_over_commit}
+    return _call_scheduler("live_migration", context=context,
+                           params=params)

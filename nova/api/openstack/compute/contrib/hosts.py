@@ -23,6 +23,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.api.openstack import extensions
 from nova import compute
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -80,6 +81,15 @@ class HostDeserializer(wsgi.XMLDeserializer):
             updates[child.tagName] = self.extract_text(child)
 
         return dict(body=updates)
+
+
+class HostShowTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('host', selector='host')
+        root.set('resource')
+        root.set('usage')
+
+        return xmlutil.MasterTemplate(root, 1)
 
 
 def _list_hosts(req, service=None):
@@ -175,6 +185,72 @@ class HostController(object):
     @wsgi.serializers(xml=HostActionTemplate)
     def reboot(self, req, id):
         return self._host_power_action(req, host=id, action="reboot")
+
+    @wsgi.serializers(xml=HostShowTemplate)
+    def show(self, req, id):
+        """Shows the physical/usage resource given by hosts.
+
+        :param context: security context
+        :param host: hostname
+        :returns:
+            {'host': {'resource':D1, 'usage':{proj_id1:D2,..}}}
+
+            'resource' shows "available" and "in-use" vcpus, memory and disk.
+            'usage' shows "in-use" vcpus, memory and disk per project.
+
+            D1: {'vcpus': 16, 'memory_mb': 2048, 'local_gb': 2048,
+                 'vcpus_used': 12, 'memory_mb_used': 10240,
+                 'local_gb_used': 64}
+            D2: {'vcpus': 1, 'memory_mb': 2048, 'local_gb': 20}
+        """
+        host = id
+        context = req.environ['nova.context']
+        # Expected to use AuthMiddleware.
+        # Otherwise, non-admin user can use describe-resource
+        if not context.is_admin:
+            msg = _("Describe-resource is admin only functionality")
+            raise webob.exc.HTTPForbidden(explanation=msg)
+
+        # Getting compute node info and related instances info
+        try:
+            compute_ref = db.service_get_all_compute_by_host(context, host)
+            compute_ref = compute_ref[0]
+        except exception.ComputeHostNotFound:
+            raise webob.exc.HTTPNotFound(explanation=_("Host not found"))
+        instance_refs = db.instance_get_all_by_host(context,
+                                                    compute_ref['host'])
+
+        # Getting total available/used resource
+        compute_ref = compute_ref['compute_node'][0]
+        resource = {'vcpus': compute_ref['vcpus'],
+                    'memory_mb': compute_ref['memory_mb'],
+                    'local_gb': compute_ref['local_gb'],
+                    'vcpus_used': compute_ref['vcpus_used'],
+                    'memory_mb_used': compute_ref['memory_mb_used'],
+                    'local_gb_used': compute_ref['local_gb_used']}
+        usage = dict()
+        if not instance_refs:
+            return {'host':
+                    {'resource': resource, 'usage': usage}}
+
+        # Getting usage resource per project
+        project_ids = [i['project_id'] for i in instance_refs]
+        project_ids = list(set(project_ids))
+        for project_id in project_ids:
+            vcpus = [i['vcpus'] for i in instance_refs
+                     if i['project_id'] == project_id]
+
+            mem = [i['memory_mb']  for i in instance_refs
+                   if i['project_id'] == project_id]
+
+            disk = [i['root_gb'] + i['ephemeral_gb'] for i in instance_refs
+                    if i['project_id'] == project_id]
+
+            usage[project_id] = {'vcpus': reduce(lambda x, y: x + y, vcpus),
+                                 'memory_mb': reduce(lambda x, y: x + y, mem),
+                                 'local_gb': reduce(lambda x, y: x + y, disk)}
+
+        return {'host': {'resource': resource, 'usage': usage}}
 
 
 class Hosts(extensions.ExtensionDescriptor):

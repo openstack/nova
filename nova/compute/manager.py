@@ -1696,16 +1696,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         tmp_file = os.path.join(FLAGS.instances_path, filename)
         os.remove(tmp_file)
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def update_available_resource(self, context):
-        """See comments update_resource_info.
-
-        :param context: security context
-        :returns: See driver.update_available_resource()
-
-        """
-        self.driver.update_available_resource(context, self.host)
-
     def get_instance_disk_info(self, context, instance_name):
         """Getting infomation of instance's current disk.
 
@@ -2116,6 +2106,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.info(_("Reclaiming deleted instance %(instance_uuid)s"),
                          locals())
                 self._delete_instance(context, instance)
+
+    @manager.periodic_task
+    def update_available_resource(self, context):
+        """See driver.update_available_resource()
+
+        :param context: security context
+        :returns: See driver.update_available_resource()
+
+        """
+        self.driver.update_available_resource(context, self.host)
 
     def add_instance_fault_from_exc(self, context, instance_uuid, fault):
         """Adds the specified fault to the database."""

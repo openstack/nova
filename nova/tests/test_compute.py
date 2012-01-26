@@ -151,6 +151,7 @@ class BaseTestCase(test.TestCase):
         type_id = instance_types.get_instance_type_by_name(type_name)['id']
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
+        inst['memory_mb'] = 0
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0
         inst.update(params)
