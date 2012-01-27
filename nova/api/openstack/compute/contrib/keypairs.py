@@ -84,6 +84,9 @@ class KeypairController(object):
         params = body['keypair']
         name = params['name']
 
+        if not 0 < len(name) < 256:
+            msg = _('Keypair name must be between 1 and 255 characters long')
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         # NOTE(ja): generation is slow, so shortcut invalid name exception
         try:
             db.key_pair_get(context, context.user_id, name)
