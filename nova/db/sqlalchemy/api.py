@@ -4110,7 +4110,7 @@ def sm_backend_conf_update(context, sm_backend_id, values):
                 _("No backend config with id %(sm_backend_id)s") % locals())
 
     backend_conf.update(values)
-    backend_conf.save(session=session)
+    backend_conf.save()
     return backend_conf
 
 
