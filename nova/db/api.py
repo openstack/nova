@@ -163,12 +163,12 @@ def service_update(context, service_id, values):
 ###################
 
 
-def compute_node_get(context, compute_id, session=None):
+def compute_node_get(context, compute_id):
     """Get an computeNode or raise if it does not exist."""
     return IMPL.compute_node_get(context, compute_id)
 
 
-def compute_node_get_all(context, session=None):
+def compute_node_get_all(context):
     """Get all computeNodes."""
     return IMPL.compute_node_get_all(context)
 
@@ -636,10 +636,9 @@ def instance_get_project_vpn(context, project_id):
     return IMPL.instance_get_project_vpn(context, project_id)
 
 
-def instance_get_all_hung_in_rebooting(context, reboot_window, session=None):
+def instance_get_all_hung_in_rebooting(context, reboot_window):
     """Get all instances stuck in a rebooting state."""
-    return IMPL.instance_get_all_hung_in_rebooting(context, reboot_window,
-            session)
+    return IMPL.instance_get_all_hung_in_rebooting(context, reboot_window)
 
 
 def instance_update(context, instance_id, values):
@@ -690,32 +689,29 @@ def instance_info_cache_create(context, values):
     return IMPL.instance_info_cache_create(context, values)
 
 
-def instance_info_cache_get(context, instance_uuid, session=None):
+def instance_info_cache_get(context, instance_uuid):
     """Gets an instance info cache from the table.
 
     :param instance_uuid: = uuid of the info cache's instance
-    :param session: = optional session object
     """
-    return IMPL.instance_info_cache_get(context, instance_uuid, session=None)
+    return IMPL.instance_info_cache_get(context, instance_uuid)
 
 
-def instance_info_cache_update(context, instance_uuid, values,
-                               session=None):
+def instance_info_cache_update(context, instance_uuid, values):
     """Update an instance info cache record in the table.
 
     :param instance_uuid: = uuid of info cache's instance
     :param values: = dict containing column values to update
     """
-    return IMPL.instance_info_cache_update(context, instance_uuid, values,
-                                           session)
+    return IMPL.instance_info_cache_update(context, instance_uuid, values)
 
 
-def instance_info_cache_delete(context, instance_uuid, session=None):
+def instance_info_cache_delete(context, instance_uuid):
     """Deletes an existing instance_info_cache record
 
     :param instance_uuid: = uuid of the instance tied to the cache record
     """
-    return IMPL.instance_info_cache_delete(context, instance_uuid, session)
+    return IMPL.instance_info_cache_delete(context, instance_uuid)
 
 
 ###################
@@ -1544,16 +1540,14 @@ def bw_usage_update(context,
                     instance_id,
                     network_label,
                     start_period,
-                    bw_in, bw_out,
-                    session=None):
+                    bw_in, bw_out):
     """Update cached bw usage for an instance and network
        Creates new record if needed."""
     return IMPL.bw_usage_update(context,
                                 instance_id,
                                 network_label,
                                 start_period,
-                                bw_in, bw_out,
-                                session=None)
+                                bw_in, bw_out)
 
 
 ####################
