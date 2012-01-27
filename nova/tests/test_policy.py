@@ -73,15 +73,12 @@ class PolicyTestCase(test.TestCase):
                                 ["project_id:%(project_id)s"]],
             "example:early_and_fail": [["false:false", "rule:true"]],
             "example:early_or_success": [["rule:true"], ["false:false"]],
-            "example:sysadmin_allowed": [["role:admin"], ["role:sysadmin"]],
+            "example:lowercase_admin": [["role:admin"], ["role:sysadmin"]],
+            "example:uppercase_admin": [["role:ADMIN"], ["role:sysadmin"]],
         }
         # NOTE(vish): then overload underlying brain
         common_policy.set_brain(common_policy.HttpBrain(rules))
         self.context = context.RequestContext('fake', 'fake', roles=['member'])
-        self.admin_context = context.RequestContext('admin',
-                                                    'fake',
-                                                    roles=['admin'],
-                                                    is_admin=True)
         self.target = {}
 
     def tearDown(self):
@@ -138,6 +135,17 @@ class PolicyTestCase(test.TestCase):
     def test_early_OR_enforcement(self):
         action = "example:early_or_success"
         policy.enforce(self.context, action, self.target)
+
+    def test_ignore_case_role_check(self):
+        lowercase_action = "example:lowercase_admin"
+        uppercase_action = "example:uppercase_admin"
+        # NOTE(dprince) we mix case in the Admin role here to ensure
+        # case is ignored
+        admin_context = context.RequestContext('admin',
+                                                'fake',
+                                                roles=['AdMiN'])
+        policy.enforce(admin_context, lowercase_action, self.target)
+        policy.enforce(admin_context, uppercase_action, self.target)
 
 
 class DefaultPolicyTestCase(test.TestCase):

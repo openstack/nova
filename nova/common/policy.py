@@ -164,7 +164,7 @@ class Brain(object):
 
     def _check_role(self, match, target_dict, cred_dict):
         """Check that there is a matching role in the cred dict."""
-        return match in cred_dict['roles']
+        return match.lower() in [x.lower() for x in cred_dict['roles']]
 
     def _check_generic(self, match, target_dict, cred_dict):
         """Check an individual match.
