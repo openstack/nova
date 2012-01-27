@@ -1962,8 +1962,7 @@ class ImageCommands(object):
                 with open(image_path) as ifile:
                     image = self.image_service.create(elevated, meta, ifile)
                 new = image['id']
-                print _("Image %(old)s converted to " \
-                        "%(new)s (%(new)08x).") % locals()
+                print _("Image %(old)s converted to %(new)s.") % locals()
             except Exception as exc:
                 print _("Failed to convert %(old)s: %(exc)s") % locals()
 
