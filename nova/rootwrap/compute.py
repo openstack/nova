@@ -168,4 +168,7 @@ filterlist = [
     # nova/virt/libvirt/utils.py: 'mkswap'
     # nova/virt/xenapi/vm_utils.py: 'mkswap'
     filters.CommandFilter("/sbin/mkswap", "root"),
+
+    # nova/virt/libvirt/connection.py:
+    filters.ReadFileFilter("/etc/iscsi/initiatorname.iscsi"),
     ]

@@ -178,6 +178,15 @@ class VMWareESXConnection(driver.ComputeDriver):
         """Return link to instance's ajax console."""
         return self._vmops.get_ajax_console(instance)
 
+    def get_volume_connector(self, _instance):
+        """Return volume connector information"""
+        # TODO(vish): When volume attaching is supported, return the
+        #             proper initiator iqn.
+        return {
+            'ip': FLAGS.vmwareapi_host_ip,
+            'initiator': None
+        }
+
     def attach_volume(self, connection_info, instance_name, mountpoint):
         """Attach volume storage to VM instance."""
         pass

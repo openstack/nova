@@ -21,6 +21,10 @@ disk_sizes = {}
 disk_backing_files = {}
 
 
+def get_iscsi_initiator():
+    return "fake.initiator.iqn"
+
+
 def create_image(disk_format, path, size):
     pass
 
