@@ -718,6 +718,11 @@ class LibvirtConnection(driver.ComputeDriver):
         fp.write(data)
         return fpath
 
+    def _inject_files(self, instance, files):
+        disk_path = os.path.join(FLAGS.instances_path,
+                                 instance['name'], 'disk')
+        disk.inject_files(disk_path, files, use_cow=FLAGS.use_cow_images)
+
     @exception.wrap_exception()
     def get_console_output(self, instance):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
@@ -1064,6 +1069,10 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if FLAGS.libvirt_type == 'uml':
             libvirt_utils.chown(basepath('disk'), 'root')
+
+        files_to_inject = inst.get('injected_files')
+        if files_to_inject:
+            self._inject_files(inst, files_to_inject)
 
     @staticmethod
     def _volume_in_mapping(mount_device, block_device_info):
