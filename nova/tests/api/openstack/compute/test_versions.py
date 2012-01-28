@@ -37,6 +37,17 @@ NS = {
     'ns': 'http://docs.openstack.org/compute/api/v1.1'
 }
 
+
+LINKS = {
+   'v2.0': {
+       'pdf': 'http://docs.openstack.org/'
+               'api/openstack-compute/1.1/os-compute-devguide-1.1.pdf',
+       'wadl': 'http://docs.openstack.org/'
+               'api/openstack-compute/1.1/wadl/os-compute-1.1.wadl',
+    },
+}
+
+
 VERSIONS = {
     "v2.0": {
         "id": "v2.0",
@@ -46,14 +57,12 @@ VERSIONS = {
             {
                 "rel": "describedby",
                 "type": "application/pdf",
-                "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/cs-devguide-20110125.pdf",
+                "href": LINKS['v2.0']['pdf'],
             },
             {
                 "rel": "describedby",
                 "type": "application/vnd.sun.wadl+xml",
-                "href": "http://docs.rackspacecloud.com/"
-                        "servers/api/v1.1/application.wadl",
+                "href": LINKS['v2.0']['wadl'],
             },
         ],
         "media-types": [
@@ -133,14 +142,12 @@ class VersionsTest(test.TestCase):
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/cs-devguide-20110125.pdf",
+                        "href": LINKS['v2.0']['pdf'],
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/application.wadl",
+                        "href": LINKS['v2.0']['wadl'],
                     },
                 ],
                 "media-types": [
@@ -179,14 +186,12 @@ class VersionsTest(test.TestCase):
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/cs-devguide-20110125.pdf",
+                        "href": LINKS['v2.0']['pdf'],
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/application.wadl",
+                        "href": LINKS['v2.0']['wadl'],
                     },
                 ],
                 "media-types": [
@@ -283,13 +288,11 @@ class VersionsTest(test.TestCase):
         self.assertEqual(entry.links[0]['href'], 'http://localhost/v2/')
         self.assertEqual(entry.links[0]['rel'], 'self')
         self.assertEqual(entry.links[1], {
-            'href': 'http://docs.rackspacecloud.com/servers/api/v1.1/'\
-                    'cs-devguide-20110125.pdf',
+            'href': LINKS['v2.0']['pdf'],
             'type': 'application/pdf',
             'rel': 'describedby'})
         self.assertEqual(entry.links[2], {
-            'href': 'http://docs.rackspacecloud.com/servers/api/v1.1/'\
-                    'application.wadl',
+            'href': LINKS['v2.0']['wadl'],
             'type': 'application/vnd.sun.wadl+xml',
             'rel': 'describedby'})
 
@@ -606,14 +609,12 @@ class VersionsSerializerTests(test.TestCase):
                     {
                         "rel": "describedby",
                         "type": "application/pdf",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/cs-devguide-20110125.pdf",
+                        "href": LINKS['v2.0']['pdf'],
                     },
                     {
                         "rel": "describedby",
                         "type": "application/vnd.sun.wadl+xml",
-                        "href": "http://docs.rackspacecloud.com/"
-                                "servers/api/v1.1/application.wadl",
+                        "href": LINKS['v2.0']['wadl'],
                     },
                 ],
                 "media-types": [
@@ -658,11 +659,9 @@ class VersionsSerializerTests(test.TestCase):
         self.assertEqual(entry.links[1], {
             'rel': 'describedby',
             'type': 'application/pdf',
-            'href': 'http://docs.rackspacecloud.com/'
-                    'servers/api/v1.1/cs-devguide-20110125.pdf'})
+            'href': LINKS['v2.0']['pdf']})
         self.assertEqual(entry.links[2], {
             'rel': 'describedby',
             'type': 'application/vnd.sun.wadl+xml',
-            'href': 'http://docs.rackspacecloud.com/'
-                    'servers/api/v1.1/application.wadl',
+            'href': LINKS['v2.0']['wadl'],
         })
