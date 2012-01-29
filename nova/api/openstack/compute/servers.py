@@ -450,6 +450,17 @@ class Controller(wsgi.Controller):
                 # No 'changes-since', so we only want non-deleted servers
                 search_opts['deleted'] = False
 
+        # NOTE(dprince) This prevents computes' get_all() from returning
+        # instances from multiple tenants when an admin accounts is used.
+        # By default non-admin accounts are always limited to project/user
+        # both here and in the compute API.
+        if not context.is_admin or (context.is_admin and 'all_tenants'
+            not in search_opts):
+            if context.project_id:
+                search_opts['project_id'] = context.project_id
+            else:
+                search_opts['user_id'] = context.user_id
+
         instance_list = self.compute_api.get_all(context,
                                                  search_opts=search_opts)
 
