@@ -126,6 +126,8 @@ def generate_fingerprint(public_key):
         with open(pubfile, 'w') as f:
             f.write(public_key)
         return _generate_fingerprint(pubfile)
+    except exception.ProcessExecutionError:
+        raise exception.InvalidKeypair()
     finally:
         shutil.rmtree(tmpdir)
 

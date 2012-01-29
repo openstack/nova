@@ -133,6 +133,21 @@ class KeypairsTest(test.TestCase):
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertFalse('private_key' in res_dict['keypair'])
 
+    def test_keypair_import_bad_key(self):
+        body = {
+            'keypair': {
+                'name': 'create_test',
+                'public_key': 'ssh-what negative',
+            },
+        }
+
+        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_keypair_delete(self):
         req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
         req.method = 'DELETE'
