@@ -22,6 +22,7 @@
     "compute_extension:disk_config": [],
     "compute_extension:extended_status": [["rule:admin_api"]],
     "compute_extension:flavorextraspecs": [],
+    "compute_extension:flavormanage": [["rule:admin_api"]],
     "compute_extension:floating_ip_dns": [],
     "compute_extension:floating_ip_pools": [],
     "compute_extension:floating_ips": [],

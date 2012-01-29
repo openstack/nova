@@ -81,6 +81,7 @@
     "compute_extension:disk_config": [],
     "compute_extension:extended_status": [],
     "compute_extension:flavorextraspecs": [],
+    "compute_extension:flavormanage": [],
     "compute_extension:floating_ip_dns": [],
     "compute_extension:floating_ip_pools": [],
     "compute_extension:floating_ips": [],
