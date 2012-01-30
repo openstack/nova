@@ -44,7 +44,7 @@ class ConsolesController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(_('Missing type specification'))
 
         try:
-            instance = self.compute_api.routing_get(context, id)
+            instance = self.compute_api.get(context, id)
         except exception.NotFound:
             raise webob.exc.HTTPNotFound(_('Instance not found'))
 

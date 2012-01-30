@@ -43,19 +43,6 @@ class ConvertedException(webob.exc.WSGIHTTPException):
         super(ConvertedException, self).__init__()
 
 
-def novaclient_converter(f):
-    """Convert novaclient ClientException HTTP codes to webob exceptions.
-    Has to be the outer-most decorator.
-    """
-    def new_f(*args, **kwargs):
-        try:
-            ret = f(*args, **kwargs)
-            return ret
-        except novaclient.exceptions.ClientException, e:
-            raise ConvertedException(e.code, e.message, e.details)
-    return new_f
-
-
 class ProcessExecutionError(IOError):
     def __init__(self, stdout=None, stderr=None, exit_code=None, cmd=None,
                  description=None):

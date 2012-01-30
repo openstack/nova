@@ -38,7 +38,6 @@ from nova.db.sqlalchemy.models import InstanceMetadata
 from nova import flags
 import nova.image.fake
 import nova.rpc
-import nova.scheduler.api
 from nova import test
 from nova.tests import fake_network
 from nova.tests.api.openstack import fakes
@@ -120,28 +119,6 @@ def return_servers_by_reservation_empty(context, reservation_id=""):
     return []
 
 
-def return_servers_from_child_zones_empty(*args, **kwargs):
-    return []
-
-
-def return_servers_from_child_zones(*args, **kwargs):
-    class Server(object):
-        pass
-
-    zones = []
-    for zone in xrange(3):
-        servers_list = []
-        for server_id in xrange(5):
-            server = Server()
-            server._info = fakes.stub_instance(
-                    server_id, reservation_id="child",
-                    project_id='fake_project')
-            servers_list.append(server)
-
-        zones.append(("Zone%d" % zone, servers_list))
-    return zones
-
-
 def return_security_group(context, instance_id, security_group_id):
     pass
 
@@ -192,28 +169,6 @@ class ServersControllerTest(test.TestCase):
                                                           spectacular=True)
 
     def test_get_server_by_uuid(self):
-        """
-        The steps involved with resolving a UUID are pretty complicated;
-        here's what's happening in this scenario:
-
-        1. Show is calling `routing_get`
-
-        2. `routing_get` is wrapped by `reroute_compute` which does the work
-           of resolving requests to child zones.
-
-        3. `reroute_compute` looks up the UUID by hitting the stub
-           (returns_server_by_uuid)
-
-        4. Since the stub return that the record exists, `reroute_compute`
-           considers the request to be 'zone local', so it replaces the UUID
-           in the argument list with an integer ID and then calls the inner
-           function ('get').
-
-        5. The call to `get` hits the other stub 'returns_server_by_id` which
-           has the UUID set to FAKE_UUID
-
-        So, counterintuitively, we call `get` twice on the `show` command.
-        """
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
@@ -312,6 +267,9 @@ class ServersControllerTest(test.TestCase):
         new_return_server = return_server_with_attributes(
             vm_state=vm_states.ACTIVE, progress=100)
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
+        new_return_server = return_server_with_attributes_by_uuid(
+            vm_state=vm_states.ACTIVE, progress=100)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
         uuid = FAKE_UUID
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
@@ -383,6 +341,10 @@ class ServersControllerTest(test.TestCase):
             vm_state=vm_states.ACTIVE, image_ref=image_ref,
             flavor_id=flavor_id, progress=100)
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
+        new_return_server = return_server_with_attributes_by_uuid(
+            vm_state=vm_states.ACTIVE, image_ref=image_ref,
+            flavor_id=flavor_id, progress=100)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
         uuid = FAKE_UUID
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
@@ -615,8 +577,6 @@ class ServersControllerTest(test.TestCase):
     def test_get_server_list_with_reservation_id(self):
         self.stubs.Set(nova.db, 'instance_get_all_by_reservation',
                        return_servers_by_reservation)
-        self.stubs.Set(nova.scheduler.api, 'call_zone_method',
-                       return_servers_from_child_zones)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers?reservation_id=foo')
         res_dict = self.controller.index(req)
@@ -633,8 +593,6 @@ class ServersControllerTest(test.TestCase):
     def test_get_server_list_with_reservation_id_empty(self):
         self.stubs.Set(nova.db, 'instance_get_all_by_reservation',
                        return_servers_by_reservation_empty)
-        self.stubs.Set(nova.scheduler.api, 'call_zone_method',
-                       return_servers_from_child_zones_empty)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?'
                                       'reservation_id=foo')
@@ -651,8 +609,6 @@ class ServersControllerTest(test.TestCase):
     def test_get_server_list_with_reservation_id_details(self):
         self.stubs.Set(nova.db, 'instance_get_all_by_reservation',
                        return_servers_by_reservation)
-        self.stubs.Set(nova.scheduler.api, 'call_zone_method',
-                       return_servers_from_child_zones)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail?'
                                       'reservation_id=foo')
@@ -963,7 +919,8 @@ class ServersControllerTest(test.TestCase):
             self.assertNotEqual(search_opts, None)
             # Allowed by user
             self.assertTrue('name' in search_opts)
-            self.assertTrue('status' in search_opts)
+            # OSAPI converts status to vm_state
+            self.assertTrue('vm_state' in search_opts)
             # Allowed only by admins with admin API on
             self.assertFalse('ip' in search_opts)
             self.assertFalse('unknown_option' in search_opts)
@@ -989,7 +946,8 @@ class ServersControllerTest(test.TestCase):
             self.assertNotEqual(search_opts, None)
             # Allowed by user
             self.assertTrue('name' in search_opts)
-            self.assertTrue('status' in search_opts)
+            # OSAPI converts status to vm_state
+            self.assertTrue('vm_state' in search_opts)
             # Allowed only by admins with admin API on
             self.assertTrue('ip' in search_opts)
             self.assertTrue('unknown_option' in search_opts)
@@ -1340,6 +1298,9 @@ class ServersControllerTest(test.TestCase):
         new_return_server = return_server_with_attributes(
             vm_state=vm_states.RESIZING)
         self.stubs.Set(nova.db, 'instance_get', new_return_server)
+        new_return_server = return_server_with_attributes_by_uuid(
+            vm_state=vm_states.RESIZING)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
         def instance_destroy_mock(context, id):
             self.server_delete_called = True
@@ -1637,59 +1598,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertNotEqual(reservation_id, "")
         self.assertNotEqual(reservation_id, None)
         self.assertTrue(len(reservation_id) > 1)
-
-    def test_create_instance_with_user_supplied_reservation_id(self):
-        """Non-admin supplied reservation_id should be ignored."""
-        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {'hello': 'world',
-                             'open': 'stack'},
-                'personality': [],
-                'reservation_id': 'myresid',
-                'return_reservation_id': True
-            }
-        }
-
-        req = fakes.HTTPRequest.blank('/v2/fake/servers')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
-
-        self.assertIn('reservation_id', res)
-        self.assertNotEqual(res['reservation_id'], 'myresid')
-
-    def test_create_instance_with_admin_supplied_reservation_id(self):
-        """Admin supplied reservation_id should be honored."""
-        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/123/flavors/3'
-        body = {
-            'server': {
-                'name': 'server_test',
-                'imageRef': image_href,
-                'flavorRef': flavor_ref,
-                'metadata': {'hello': 'world',
-                             'open': 'stack'},
-                'personality': [],
-                'reservation_id': 'myresid',
-                'return_reservation_id': True
-            }
-        }
-
-        req = fakes.HTTPRequest.blank('/v2/fake/servers',
-                                      use_admin_context=True)
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
-
-        reservation_id = res['reservation_id']
-        self.assertEqual(reservation_id, "myresid")
 
     def test_create_instance_image_ref_is_bookmark(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'

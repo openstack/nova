@@ -23,8 +23,8 @@ is then selected for provisioning.
 """
 
 from nova import flags
-from nova.openstack.common import cfg
 from nova import log as logging
+from nova.openstack.common import cfg
 
 
 LOG = logging.getLogger(__name__)
@@ -55,23 +55,9 @@ class WeightedHost(object):
     This is an attempt to remove some of the ad-hoc dict structures
     previously used."""
 
-    def __init__(self, weight, host_state=None, blob=None, zone=None):
+    def __init__(self, weight, host_state=None):
         self.weight = weight
-        self.blob = blob
-        self.zone = zone
-
-        # Local members. These are not returned outside of the Zone.
         self.host_state = host_state
-
-    def to_dict(self):
-        x = dict(weight=self.weight)
-        if self.blob:
-            x['blob'] = self.blob
-        if self.host_state:
-            x['host'] = self.host_state.host
-        if self.zone:
-            x['zone'] = self.zone
-        return x
 
 
 def noop_cost_fn(host_state, weighing_properties):

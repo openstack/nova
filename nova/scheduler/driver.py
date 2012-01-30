@@ -31,8 +31,6 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova import rpc
-from nova.scheduler import host_manager
-from nova.scheduler import zone_manager
 from nova import utils
 
 
@@ -42,9 +40,6 @@ scheduler_driver_opts = [
     cfg.StrOpt('scheduler_host_manager',
                default='nova.scheduler.host_manager.HostManager',
                help='The scheduler host manager class to use'),
-    cfg.StrOpt('scheduler_zone_manager',
-               default='nova.scheduler.zone_manager.ZoneManager',
-               help='The scheduler zone manager class to use'),
     ]
 
 FLAGS = flags.FLAGS
@@ -135,8 +130,6 @@ class Scheduler(object):
     """The base class that all Scheduler classes should inherit from."""
 
     def __init__(self):
-        self.zone_manager = utils.import_object(
-                FLAGS.scheduler_zone_manager)
         self.host_manager = utils.import_object(
                 FLAGS.scheduler_host_manager)
         self.compute_api = compute_api.API()
@@ -145,13 +138,8 @@ class Scheduler(object):
         """Get a list of hosts from the HostManager."""
         return self.host_manager.get_host_list()
 
-    def get_zone_list(self):
-        """Get a list of zones from the ZoneManager."""
-        return self.zone_manager.get_zone_list()
-
     def get_service_capabilities(self):
-        """Get the normalized set of capabilities for the services
-        in this zone.
+        """Get the normalized set of capabilities for the services.
         """
         return self.host_manager.get_service_capabilities()
 
@@ -159,10 +147,6 @@ class Scheduler(object):
         """Process a capability update from a service node."""
         self.host_manager.update_service_capabilities(service_name,
                 host, capabilities)
-
-    def poll_child_zones(self, context):
-        """Poll child zones periodically to get status."""
-        return self.zone_manager.update(context)
 
     def hosts_up(self, context, topic):
         """Return the list of hosts that have a running service for topic."""
@@ -195,10 +179,6 @@ class Scheduler(object):
     def schedule(self, context, topic, method, *_args, **_kwargs):
         """Must override at least this method for scheduler to work."""
         raise NotImplementedError(_("Must implement a fallback schedule"))
-
-    def select(self, context, topic, method, *_args, **_kwargs):
-        """Must override this for zones to work."""
-        raise NotImplementedError(_("Must implement 'select' method"))
 
     def schedule_live_migration(self, context, instance_id, dest,
                                 block_migration=False,

@@ -172,6 +172,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Hosts",
             "Keypairs",
             "Multinic",
+            "Networks",
             "Quotas",
             "Rescue",
             "SchedulerHints",
@@ -185,8 +186,6 @@ class ExtensionControllerTest(ExtensionTestCase):
             "VirtualInterfaces",
             "Volumes",
             "VolumeTypes",
-            "Zones",
-            "Networks",
             ]
         self.ext_list.sort()
 

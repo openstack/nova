@@ -45,8 +45,6 @@ class AdminActionsController(wsgi.Controller):
     # TODO(bcwaldon): These action names should be prefixed with 'os-'
 
     @wsgi.action('pause')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _pause(self, req, id, body):
         """Permit Admins to pause the server"""
         ctxt = req.environ['nova.context']
@@ -64,8 +62,6 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('unpause')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _unpause(self, req, id, body):
         """Permit Admins to unpause the server"""
         ctxt = req.environ['nova.context']
@@ -83,8 +79,6 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('suspend')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _suspend(self, req, id, body):
         """Permit admins to suspend the server"""
         context = req.environ['nova.context']
@@ -102,8 +96,6 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('resume')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _resume(self, req, id, body):
         """Permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
@@ -121,8 +113,6 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('migrate')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host"""
         context = req.environ['nova.context']
@@ -139,8 +129,6 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('resetNetwork')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _reset_network(self, req, id, body):
         """Permit admins to reset networking on an server"""
         context = req.environ['nova.context']
@@ -155,8 +143,6 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('injectNetworkInfo')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server"""
         context = req.environ['nova.context']
@@ -173,8 +159,6 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('lock')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _lock(self, req, id, body):
         """Permit admins to lock a server"""
         context = req.environ['nova.context']
@@ -191,8 +175,6 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('unlock')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _unlock(self, req, id, body):
         """Permit admins to lock a server"""
         context = req.environ['nova.context']
@@ -277,8 +259,6 @@ class AdminActionsController(wsgi.Controller):
         return resp
 
     @wsgi.action('os-migrateLive')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host"""
         context = req.environ["nova.context"]

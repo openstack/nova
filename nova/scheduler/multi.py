@@ -71,10 +71,6 @@ class MultiScheduler(driver.Scheduler):
             raise AttributeError(key)
         return getattr(self.drivers[_METHOD_MAP[method]], key)
 
-    def set_zone_manager(self, zone_manager):
-        for k, v in self.drivers.iteritems():
-            v.set_zone_manager(zone_manager)
-
     def schedule(self, context, topic, method, *_args, **_kwargs):
         return self.drivers[topic].schedule(context, topic,
                 method, *_args, **_kwargs)

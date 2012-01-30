@@ -53,7 +53,6 @@
     "compute_extension:virtual_storage_arrays": [],
     "compute_extension:volumes": [],
     "compute_extension:volumetypes": [],
-    "compute_extension:zones": [],
 
 
     "volume:create": [],

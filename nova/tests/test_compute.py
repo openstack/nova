@@ -2904,37 +2904,6 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, refs[0]['id'])
 
-    def test_create_with_specified_reservation_id(self):
-        """Verify building instances with a specified
-        reservation_id results in the correct reservation_id
-        being set
-        """
-
-        # We need admin context to be able to specify our own
-        # reservation_ids.
-        context = self.context.elevated()
-        # 1 instance
-        (refs, resv_id) = self.compute_api.create(context,
-                instance_types.get_default_instance_type(), None,
-                min_count=1, max_count=1, reservation_id='meow')
-        try:
-            self.assertEqual(len(refs), 1)
-            self.assertEqual(resv_id, 'meow')
-        finally:
-            self.assertEqual(refs[0]['reservation_id'], resv_id)
-
-        # 2 instances
-        (refs, resv_id) = self.compute_api.create(context,
-                instance_types.get_default_instance_type(), None,
-                min_count=2, max_count=2, reservation_id='woof')
-        try:
-            self.assertEqual(len(refs), 2)
-            self.assertEqual(resv_id, 'woof')
-        finally:
-            for instance in refs:
-                self.assertEqual(instance['reservation_id'], resv_id)
-            db.instance_destroy(self.context, refs[0]['id'])
-
     def test_instance_name_template(self):
         """Test the instance_name template"""
         self.flags(instance_name_template='instance-%d')

@@ -14,24 +14,17 @@
 #    under the License.
 
 """
-The DistributedScheduler is for creating instances locally or across zones.
+The DistributedScheduler is for creating instances locally.
 You can customize this scheduler by specifying your own Host Filters and
 Weighing Functions.
 """
 
-import json
 import operator
 
-from novaclient import v1_1 as novaclient
-from novaclient import exceptions as novaclient_exceptions
-from nova import crypto
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.scheduler import api
 from nova.scheduler import driver
-from nova.scheduler import host_manager
 from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options
 from nova import utils
@@ -42,9 +35,7 @@ LOG = logging.getLogger(__name__)
 
 
 class DistributedScheduler(driver.Scheduler):
-    """Scheduler that can work across any nova deployment, from simple
-    deployments to multiple nested zones.
-    """
+    """Scheduler that can be used for filtering and weighing."""
     def __init__(self, *args, **kwargs):
         super(DistributedScheduler, self).__init__(*args, **kwargs)
         self.cost_function_cache = {}
@@ -61,14 +52,10 @@ class DistributedScheduler(driver.Scheduler):
 
     def schedule_run_instance(self, context, request_spec, *args, **kwargs):
         """This method is called from nova.compute.api to provision
-        an instance. However we need to look at the parameters being
-        passed in to see if this is a request to:
-        1. Create build plan (a list of WeightedHosts) and then provision, or
-        2. Use the WeightedHost information in the request parameters
-           to simply create the instance (either in this zone or
-           a child zone).
+        an instance.  We first create a build plan (a list of WeightedHosts)
+        and then provision.
 
-        returns a list of the instances created.
+        Returns a list of the instances created.
         """
 
         elevated = context.elevated()
@@ -76,16 +63,7 @@ class DistributedScheduler(driver.Scheduler):
         LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
                 locals())
 
-        weighted_hosts = []
-
-        # Having a 'blob' hint means we've already provided a build plan.
-        # We need to turn this back into a WeightedHost object.
-        blob = request_spec.get('blob', None)
-        if blob:
-            weighted_hosts.append(self._make_weighted_host_from_blob(blob))
-        else:
-            # No plan ... better make one.
-            weighted_hosts = self._schedule(context, "compute", request_spec,
+        weighted_hosts = self._schedule(context, "compute", request_spec,
                                         *args, **kwargs)
 
         if not weighted_hosts:
@@ -101,13 +79,8 @@ class DistributedScheduler(driver.Scheduler):
                 break
             weighted_host = weighted_hosts.pop(0)
 
-            instance = None
-            if weighted_host.zone:
-                instance = self._ask_child_zone_to_create_instance(elevated,
-                                        weighted_host, request_spec, kwargs)
-            else:
-                instance = self._provision_resource_locally(elevated,
-                                        weighted_host, request_spec, kwargs)
+            instance = self._provision_resource(elevated, weighted_host,
+                                                request_spec, kwargs)
 
             if instance:
                 instances.append(instance)
@@ -121,17 +94,6 @@ class DistributedScheduler(driver.Scheduler):
         the prep_resize operation to it.
         """
 
-        # We need the new instance type ID...
-        instance_type_id = kwargs['instance_type_id']
-
-        elevated = context.elevated()
-        LOG.debug(_("Attempting to determine target host for resize to "
-                    "instance type %(instance_type_id)s") % locals())
-
-        # Convert it to an actual instance type
-        instance_type = db.instance_type_get(elevated, instance_type_id)
-
-        # Now let's grab a possibility
         hosts = self._schedule(context, 'compute', request_spec,
                                *args, **kwargs)
         if not hosts:
@@ -146,22 +108,8 @@ class DistributedScheduler(driver.Scheduler):
         driver.cast_to_compute_host(context, host.host_state.host,
                 'prep_resize', **kwargs)
 
-    def select(self, context, request_spec, *args, **kwargs):
-        """Select returns a list of weights and zone/host information
-        corresponding to the best hosts to service the request. Any
-        internal zone information will be encrypted so as not to reveal
-        anything about our inner layout.
-        """
-        weighted_hosts = self._schedule(context, "compute", request_spec,
-                *args, **kwargs)
-        return [weighted_host.to_dict() for weighted_host in weighted_hosts]
-
-    def _call_zone_method(self, context, method, specs, zones):
-        """Call novaclient zone method. Broken out for testing."""
-        return api.call_zone_method(context, method, specs=specs, zones=zones)
-
-    def _provision_resource_locally(self, context, weighted_host, request_spec,
-                                    kwargs):
+    def _provision_resource(self, context, weighted_host, request_spec,
+            kwargs):
         """Create the requested resource in this Zone."""
         instance = self.create_instance_db_entry(context, request_spec)
         driver.cast_to_compute_host(context, weighted_host.host_state.host,
@@ -172,104 +120,6 @@ class DistributedScheduler(driver.Scheduler):
         # already
         del request_spec['instance_properties']['uuid']
         return inst
-
-    def _make_weighted_host_from_blob(self, blob):
-        """Returns the decrypted blob as a WeightedHost object
-        or None if invalid. Broken out for testing.
-        """
-        decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
-        json_entry = decryptor(blob)
-
-        # Extract our WeightedHost values
-        wh_dict = json.loads(json_entry)
-        host = wh_dict.get('host', None)
-        blob = wh_dict.get('blob', None)
-        zone = wh_dict.get('zone', None)
-        return least_cost.WeightedHost(wh_dict['weight'],
-                    host_state=host_manager.HostState(host, 'compute'),
-                    blob=blob, zone=zone)
-
-    def _ask_child_zone_to_create_instance(self, context, weighted_host,
-            request_spec, kwargs):
-        """Once we have determined that the request should go to one
-        of our children, we need to fabricate a new POST /servers/
-        call with the same parameters that were passed into us.
-        This request is always for a single instance.
-
-        Note that we have to reverse engineer from our args to get back the
-        image, flavor, ipgroup, etc. since the original call could have
-        come in from EC2 (which doesn't use these things).
-        """
-        instance_type = request_spec['instance_type']
-        instance_properties = request_spec['instance_properties']
-
-        name = instance_properties['display_name']
-        image_ref = instance_properties['image_ref']
-        meta = instance_properties['metadata']
-        flavor_id = instance_type['flavorid']
-        reservation_id = instance_properties['reservation_id']
-        files = kwargs['injected_files']
-
-        zone = db.zone_get(context.elevated(), weighted_host.zone)
-        zone_name = zone.name
-        url = zone.api_url
-        LOG.debug(_("Forwarding instance create call to zone '%(zone_name)s'. "
-                "ReservationID=%(reservation_id)s") % locals())
-        nova = None
-        try:
-            # This operation is done as the caller, not the zone admin.
-            nova = novaclient.Client(zone.username, zone.password, None, url,
-                                     token=context.auth_token,
-                                     region_name=zone_name)
-            nova.authenticate()
-        except novaclient_exceptions.BadRequest, e:
-            raise exception.NotAuthorized(_("Bad credentials attempting "
-                    "to talk to zone at %(url)s.") % locals())
-        # NOTE(Vek): Novaclient has two different calling conventions
-        #            for this call, depending on whether you're using
-        #            1.0 or 1.1 API: in 1.0, there's an ipgroups
-        #            argument after flavor_id which isn't present in
-        #            1.1.  To work around this, all the extra
-        #            arguments are passed as keyword arguments
-        #            (there's a reasonable default for ipgroups in the
-        #            novaclient call).
-        instance = nova.servers.create(name, image_ref, flavor_id,
-                            meta=meta, files=files,
-                            zone_blob=weighted_host.blob,
-                            reservation_id=reservation_id)
-        return driver.encode_instance(instance._info, local=False)
-
-    def _adjust_child_weights(self, child_results, zones):
-        """Apply the Scale and Offset values from the Zone definition
-        to adjust the weights returned from the child zones. Returns
-        a list of WeightedHost objects: [WeightedHost(), ...]
-        """
-        weighted_hosts = []
-        for zone_id, result in child_results:
-            if not result:
-                continue
-
-            for zone_rec in zones:
-                if zone_rec['id'] != zone_id:
-                    continue
-                for item in result:
-                    try:
-                        offset = zone_rec['weight_offset']
-                        scale = zone_rec['weight_scale']
-                        raw_weight = item['weight']
-                        cooked_weight = offset + scale * raw_weight
-
-                        weighted_hosts.append(least_cost.WeightedHost(
-                               cooked_weight, zone=zone_id,
-                               blob=item['blob']))
-                    except KeyError:
-                        LOG.exception(_("Bad child zone scaling values "
-                                "for Zone: %(zone_id)s") % locals())
-        return weighted_hosts
-
-    def _zone_get_all(self, context):
-        """Broken out for testing."""
-        return db.zone_get_all(context)
 
     def _get_configuration_options(self):
         """Fetch options dictionary. Broken out for testing."""
@@ -292,10 +142,6 @@ class DistributedScheduler(driver.Scheduler):
 
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
-        if not instance_type:
-            raise NotImplementedError(_("Scheduler only understands "
-                                        "InstanceType-based "
-                                        "provisioning."))
 
         cost_functions = self.get_cost_functions()
         config_options = self._get_configuration_options()
@@ -347,14 +193,6 @@ class DistributedScheduler(driver.Scheduler):
             weighted_host.host_state.consume_from_instance(
                     instance_properties)
 
-        # Next, tack on the host weights from the child zones
-        if not filter_properties.get('local_zone_only', False):
-            json_spec = json.dumps(request_spec)
-            all_zones = self._zone_get_all(elevated)
-            child_results = self._call_zone_method(elevated, "select",
-                    specs=json_spec, zones=all_zones)
-            selected_hosts.extend(self._adjust_child_weights(
-                                                    child_results, all_zones))
         selected_hosts.sort(key=operator.attrgetter('weight'))
         return selected_hosts[:num_instances]
 

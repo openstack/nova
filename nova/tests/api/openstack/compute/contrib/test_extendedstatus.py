@@ -51,7 +51,7 @@ class ExtendedStatusTest(test.TestCase):
     def setUp(self):
         super(ExtendedStatusTest, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
-        self.stubs.Set(compute.api.API, 'routing_get', fake_compute_get)
+        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
 
     def _make_request(self, url):
@@ -94,7 +94,7 @@ class ExtendedStatusTest(test.TestCase):
         def fake_compute_get(*args, **kwargs):
             raise exception.InstanceNotFound()
 
-        self.stubs.Set(compute.api.API, 'routing_get', fake_compute_get)
+        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         url = '/v2/fake/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 

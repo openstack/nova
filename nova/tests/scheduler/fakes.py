@@ -23,7 +23,6 @@ from nova.compute import instance_types
 from nova.compute import vm_states
 from nova.scheduler import distributed_scheduler
 from nova.scheduler import host_manager
-from nova.scheduler import zone_manager
 
 
 COMPUTE_NODES = [
@@ -60,7 +59,6 @@ INSTANCES = [
 class FakeDistributedScheduler(distributed_scheduler.DistributedScheduler):
     def __init__(self, *args, **kwargs):
         super(FakeDistributedScheduler, self).__init__(*args, **kwargs)
-        self.zone_manager = zone_manager.ZoneManager()
         self.host_manager = host_manager.HostManager()
 
 

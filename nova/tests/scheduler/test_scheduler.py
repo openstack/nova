@@ -72,16 +72,6 @@ class SchedulerManagerTestCase(test.TestCase):
         result = self.manager.get_host_list(self.context)
         self.assertEqual(result, expected)
 
-    def test_get_zone_list(self):
-        expected = 'fake_zones'
-
-        self.mox.StubOutWithMock(self.manager.driver, 'get_zone_list')
-        self.manager.driver.get_zone_list().AndReturn(expected)
-
-        self.mox.ReplayAll()
-        result = self.manager.get_zone_list(self.context)
-        self.assertEqual(result, expected)
-
     def test_get_service_capabilities(self):
         expected = 'fake_service_capabs'
 
@@ -141,18 +131,6 @@ class SchedulerManagerTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.manager.noexist(self.context, self.topic,
                 *self.fake_args, **self.fake_kwargs)
-
-    def test_select(self):
-        expected = 'fake_select'
-
-        self.mox.StubOutWithMock(self.manager.driver, 'select')
-        self.manager.driver.select(self.context,
-                *self.fake_args, **self.fake_kwargs).AndReturn(expected)
-
-        self.mox.ReplayAll()
-        result = self.manager.select(self.context, *self.fake_args,
-                **self.fake_kwargs)
-        self.assertEqual(result, expected)
 
     def test_show_host_resources(self):
         host = 'fake_host'
@@ -258,16 +236,6 @@ class SchedulerTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = self.driver.get_host_list()
-        self.assertEqual(result, expected)
-
-    def test_get_zone_list(self):
-        expected = 'fake_zones'
-
-        self.mox.StubOutWithMock(self.driver.zone_manager, 'get_zone_list')
-        self.driver.zone_manager.get_zone_list().AndReturn(expected)
-
-        self.mox.ReplayAll()
-        result = self.driver.get_zone_list()
         self.assertEqual(result, expected)
 
     def test_get_service_capabilities(self):

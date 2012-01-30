@@ -56,7 +56,7 @@ class ExtendedStatusController(wsgi.Controller):
             resp_obj.attach(xml=ExtendedStatusTemplate())
 
             try:
-                instance = self.compute_api.routing_get(context, id)
+                instance = self.compute_api.get(context, id)
             except exception.NotFound:
                 explanation = _("Server not found.")
                 raise exc.HTTPNotFound(explanation=explanation)

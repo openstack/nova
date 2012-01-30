@@ -33,7 +33,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.rpc import common as rpc_common
-from nova.scheduler import api as scheduler_api
 from nova import utils
 
 
@@ -417,18 +416,14 @@ class Controller(wsgi.Controller):
         remove_invalid_options(context, search_opts,
                 self._get_server_search_options())
 
-        # Convert local_zone_only into a boolean
-        search_opts['local_zone_only'] = utils.bool_from_str(
-                search_opts.get('local_zone_only', False))
-
-        # If search by 'status', we need to convert it to 'vm_state'
-        # to pass on to child zones.
-        if 'status' in search_opts:
-            status = search_opts['status']
+        # Verify search by 'status' contains a valid status.
+        # Convert it to filter by vm_state for compute_api.
+        status = search_opts.pop('status', None)
+        if status is not None:
             state = common.vm_state_from_status(status)
             if state is None:
-                reason = _('Invalid server status: %(status)s') % locals()
-                raise exception.InvalidInput(reason=reason)
+                msg = _('Invalid server status: %(status)s') % locals()
+                raise exc.HTTPBadRequest(explanation=msg)
             search_opts['vm_state'] = state
 
         if 'changes-since' in search_opts:
@@ -474,7 +469,7 @@ class Controller(wsgi.Controller):
     def _get_server(self, context, instance_uuid):
         """Utility function for looking up an instance by uuid"""
         try:
-            return self.compute_api.routing_get(context, instance_uuid)
+            return self.compute_api.get(context, instance_uuid)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
@@ -602,13 +597,11 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=expl)
 
     @wsgi.serializers(xml=ServerTemplate)
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def show(self, req, id):
         """ Returns server details by server id """
         try:
             context = req.environ['nova.context']
-            instance = self.compute_api.routing_get(context, id)
+            instance = self.compute_api.get(context, id)
             self._add_instance_faults(context, [instance])
             return self._view_builder.show(req, instance)
         except exception.NotFound:
@@ -684,8 +677,6 @@ class Controller(wsgi.Controller):
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        zone_blob = server_dict.get('blob')
-
         # optional openstack extensions:
         key_name = server_dict.get('key_name')
         user_data = server_dict.get('user_data')
@@ -697,14 +688,6 @@ class Controller(wsgi.Controller):
         name = name.strip()
 
         block_device_mapping = self._get_block_device_mapping(server_dict)
-
-        # Only allow admins to specify their own reservation_ids
-        # This is really meant to allow zones to work.
-        reservation_id = server_dict.get('reservation_id')
-        if all([reservation_id is not None,
-                reservation_id != '',
-                not context.is_admin]):
-            reservation_id = None
 
         ret_resv_id = server_dict.get('return_reservation_id', False)
 
@@ -736,8 +719,6 @@ class Controller(wsgi.Controller):
                             access_ip_v6=access_ip_v6,
                             injected_files=injected_files,
                             admin_password=password,
-                            zone_blob=zone_blob,
-                            reservation_id=reservation_id,
                             min_count=min_count,
                             max_count=max_count,
                             requested_networks=requested_networks,
@@ -795,7 +776,6 @@ class Controller(wsgi.Controller):
             self.compute_api.delete(context, instance)
 
     @wsgi.serializers(xml=ServerTemplate)
-    @scheduler_api.redirect_handler
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller"""
         if len(req.body) == 0:
@@ -827,7 +807,7 @@ class Controller(wsgi.Controller):
                     body['server']['auto_disk_config'])
             update_dict['auto_disk_config'] = auto_disk_config
 
-        instance = self.compute_api.routing_get(ctxt, id)
+        instance = self.compute_api.get(ctxt, id)
 
         try:
             self.compute_api.update(ctxt, instance, **update_dict)
@@ -843,8 +823,6 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('confirmResize')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, id)
@@ -865,8 +843,6 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('revertResize')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, id)
@@ -887,8 +863,6 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('reboot')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _action_reboot(self, req, id, body):
         if 'reboot' in body and 'type' in body['reboot']:
             valid_reboot_types = ['HARD', 'SOFT']
@@ -935,8 +909,6 @@ class Controller(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.response(204)
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def delete(self, req, id):
         """ Destroys a server """
         try:
@@ -975,8 +947,6 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('changePassword')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _action_change_password(self, req, id, body):
         context = req.environ['nova.context']
         if (not 'changePassword' in body
@@ -1007,8 +977,6 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('resize')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _action_resize(self, req, id, body):
         """ Resizes a given instance to the flavor size requested """
         try:
@@ -1030,8 +998,6 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('rebuild')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes"""
         try:
@@ -1115,8 +1081,6 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('createImage')
-    @exception.novaclient_converter
-    @scheduler_api.redirect_handler
     @common.check_snapshots_enabled
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
@@ -1173,8 +1137,8 @@ class Controller(wsgi.Controller):
 
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin"""
-        return ('reservation_id', 'name', 'local_zone_only',
-                'status', 'image', 'flavor', 'changes-since')
+        return ('reservation_id', 'name', 'status', 'image', 'flavor',
+                'changes-since')
 
 
 def create_resource():
