@@ -215,6 +215,10 @@ class Invalid(NovaException):
     message = _("Unacceptable parameters.")
 
 
+class InvalidKeypair(Invalid):
+    message = _("Keypair data is invalid")
+
+
 class InvalidRequest(Invalid):
     message = _("The request is invalid.")
 

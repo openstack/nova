@@ -99,7 +99,12 @@ class KeypairController(object):
 
         # import if public_key is sent
         if 'public_key' in params:
-            fingerprint = crypto.generate_fingerprint(params['public_key'])
+            try:
+                fingerprint = crypto.generate_fingerprint(params['public_key'])
+            except exception.InvalidKeypair:
+                msg = _("Keypair data is invalid")
+                raise webob.exc.HTTPBadRequest(explanation=msg)
+
             keypair['public_key'] = params['public_key']
             keypair['fingerprint'] = fingerprint
         else:
