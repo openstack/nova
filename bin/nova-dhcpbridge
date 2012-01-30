@@ -125,5 +125,8 @@ def main():
 
         print init_leases(network_id)
 
+    rpc.cleanup()
+
+
 if __name__ == "__main__":
     main()

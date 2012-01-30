@@ -2354,6 +2354,7 @@ def main():
     # call the action with the remaining arguments
     try:
         fn(*fn_args, **fn_kwargs)
+        rpc.cleanup()
         sys.exit(0)
     except TypeError:
         print _("Possible wrong number of arguments supplied")

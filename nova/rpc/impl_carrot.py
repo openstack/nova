@@ -635,6 +635,10 @@ def notify(context, topic, msg):
         publisher.close()
 
 
+def cleanup():
+    pass
+
+
 def generic_response(message_data, message):
     """Logs a result and exits."""
     LOG.debug(_('response %s'), message_data)

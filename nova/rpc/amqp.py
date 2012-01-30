@@ -127,6 +127,11 @@ class ConnectionContext(rpc_common.Connection):
         else:
             raise exception.InvalidRPCConnectionReuse()
 
+    @classmethod
+    def empty_pool(cls):
+        while cls._connection_pool.free_items:
+            cls._connection_pool.get().close()
+
 
 def msg_reply(msg_id, reply=None, failure=None, ending=False):
     """Sends a reply or an error on the channel signified by msg_id.
@@ -353,3 +358,7 @@ def notify(context, topic, msg):
     pack_context(msg, context)
     with ConnectionContext() as conn:
         conn.notify_send(topic, msg)
+
+
+def cleanup():
+    ConnectionContext.empty_pool()
