@@ -21,18 +21,26 @@ The unique thing about a SAN is that we don't expect that we can run the volume
 controller on the SAN hardware.  We expect to access it over SSH or some API.
 """
 
+import base64
+import httplib
+import json
 import os
 import paramiko
-
+import random
+import socket
+import string
+import uuid
 from xml.etree import ElementTree
 
 from nova.common import cfg
+
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.utils import ssh_execute
 from nova.volume.driver import ISCSIDriver
+
 
 LOG = logging.getLogger("nova.volume.driver")
 
@@ -72,7 +80,7 @@ FLAGS.add_options(san_opts)
 
 
 class SanISCSIDriver(ISCSIDriver):
-    """ Base class for SAN-style storage volumes
+    """Base class for SAN-style storage volumes
 
     A SAN-style storage value is 'different' because the volume controller
     probably won't run on it, so we need to access is over SSH or another
@@ -151,7 +159,7 @@ class SanISCSIDriver(ISCSIDriver):
 
 
 def _collect_lines(data):
-    """ Split lines from data into an array, trimming them """
+    """Split lines from data into an array, trimming them """
     matches = []
     for line in data.splitlines():
         match = line.strip()
@@ -645,3 +653,255 @@ class HpSanISCSIDriver(SanISCSIDriver):
         cliq_args['volumeName'] = volume['name']
 
         self._cliq_run_xml("unassignVolume", cliq_args)
+
+
+class SolidFireSanISCSIDriver(SanISCSIDriver):
+
+    def _issue_api_request(self, method_name, params):
+        """All API requests to SolidFire device go through this method
+
+        Simple json-rpc web based API calls.
+        each call takes a set of paramaters (dict)
+        and returns results in a dict as well.
+        """
+
+        host = FLAGS.san_ip
+        # For now 443 is the only port our server accepts requests on
+        port = 443
+
+        # NOTE(john-griffith): Probably don't need this, but the idea is
+        # we provide a request_id so we can correlate
+        # responses with requests
+        request_id = int(uuid.uuid4())  # just generate a random number
+
+        cluster_admin = FLAGS.san_login
+        cluster_password = FLAGS.san_password
+
+        command = {'method': method_name,
+                   'id': request_id}
+
+        if params is not None:
+            command['params'] = params
+
+        payload = json.dumps(command, ensure_ascii=False)
+        payload.encode('utf-8')
+        # we use json-rpc, webserver needs to see json-rpc in header
+        header = {'Content-Type': 'application/json-rpc; charset=utf-8'}
+
+        if cluster_password is not None:
+            # base64.encodestring includes a newline character
+            # in the result, make sure we strip it off
+            auth_key = base64.encodestring('%s:%s' % (cluster_admin,
+                                           cluster_password))[:-1]
+            header['Authorization'] = 'Basic %s' % auth_key
+
+        LOG.debug(_("Payload for SolidFire API call: %s" % payload))
+        connection = httplib.HTTPSConnection(host, port)
+        connection.request('POST', '/json-rpc/1.0', payload, header)
+        response = connection.getresponse()
+        data = {}
+
+        if response.status != 200:
+            connection.close()
+            msg = _("Error in SolidFire API response, status was: %s"
+                    % response.status)
+            raise exception.ApiError(msg)
+
+        else:
+            data = response.read()
+            try:
+                data = json.loads(data)
+
+            except (TypeError, ValueError), exc:
+                connection.close()
+                msg = _("Call to json.loads() raised an exception: %s" % exc)
+                raise exception.SfJsonEncodeFailure(msg)
+
+            connection.close()
+
+        LOG.debug(_("Results of SolidFire API call: %s" % data))
+        return data
+
+    def _get_volumes_by_sfaccount(self, account_id):
+        params = {'accountID': account_id}
+        data = self._issue_api_request('ListVolumesForAccount', params)
+        if 'result' in data:
+            return data['result']['volumes']
+
+    def _get_sfaccount_by_name(self, sf_account_name):
+        sfaccount = None
+        params = {'username': sf_account_name}
+        data = self._issue_api_request('GetAccountByName', params)
+        if 'result' in data and 'account' in data['result']:
+            LOG.debug(_('Found solidfire account: %s' % sf_account_name))
+            sfaccount = data['result']['account']
+        return sfaccount
+
+    def _create_sfaccount(self, nova_project_id):
+        """Create account on SolidFire device if it doesn't already exist.
+
+        We're first going to check if the account already exits, if it does
+        just return it.  If not, then create it.
+        """
+
+        sf_account_name = socket.gethostname() + '-' + nova_project_id
+        sfaccount = self._get_sfaccount_by_name(sf_account_name)
+        if sfaccount is None:
+            LOG.debug(_('solidfire account: %s does not exist, create it...'
+                    % sf_account_name))
+            chap_secret = self._generate_random_string(12)
+            params = {'username': sf_account_name,
+                      'initiatorSecret': chap_secret,
+                      'targetSecret': chap_secret,
+                      'attributes': {}}
+            data = self._issue_api_request('AddAccount', params)
+            if 'result' in data:
+                sfaccount = self._get_sfaccount_by_name(sf_account_name)
+
+        return sfaccount
+
+    def _get_cluster_info(self):
+        params = {}
+        data = self._issue_api_request('GetClusterInfo', params)
+        if 'result' not in data:
+            msg = _("Error in SolidFire API response data was: %s"
+                    % data)
+            raise exception.ApiError(msg)
+
+        return data['result']
+
+    def _do_export(self, volume):
+        """Gets the associated account, retrieves CHAP info and updates."""
+
+        sfaccount_name = '%s-%s' % (socket.gethostname(), volume['project_id'])
+        sfaccount = self._get_sfaccount_by_name(sfaccount_name)
+
+        model_update = {}
+        model_update['provider_auth'] = ('CHAP %s %s'
+                % (sfaccount['username'], sfaccount['targetSecret']))
+
+        return model_update
+
+    def _generate_random_string(self, length):
+        """Generates random_string to use for CHAP password."""
+
+        char_set = string.ascii_uppercase + string.digits
+        return ''.join(random.sample(char_set, length))
+
+    def create_volume(self, volume):
+        """Create volume on SolidFire device.
+
+        The account is where CHAP settings are derived from, volume is
+        created and exported.  Note that the new volume is immediately ready
+        for use.
+
+        One caveat here is that an existing user account must be specified
+        in the API call to create a new volume.  We use a set algorithm to
+        determine account info based on passed in nova volume object.  First
+        we check to see if the account already exists (and use it), or if it
+        does not already exist, we'll go ahead and create it.
+
+        For now, we're just using very basic settings, QOS is
+        turned off, 512 byte emulation is off etc.  Will be
+        looking at extensions for these things later, or
+        this module can be hacked to suit needs.
+        """
+
+        LOG.debug(_("Enter SolidFire create_volume..."))
+        GB = 1048576 * 1024
+        slice_count = 1
+        enable_emulation = False
+        attributes = {}
+
+        cluster_info = self._get_cluster_info()
+        iscsi_portal = cluster_info['clusterInfo']['svip'] + ':3260'
+        sfaccount = self._create_sfaccount(volume['project_id'])
+        account_id = sfaccount['accountID']
+        account_name = sfaccount['username']
+        chap_secret = sfaccount['targetSecret']
+
+        params = {'name': volume['name'],
+                  'accountID': account_id,
+                  'sliceCount': slice_count,
+                  'totalSize': volume['size'] * GB,
+                  'enable512e': enable_emulation,
+                  'attributes': attributes}
+
+        data = self._issue_api_request('CreateVolume', params)
+        if 'result' not in data:
+            msg = _("Error in SolidFire API response data was: %s"
+                    % data)
+            raise exception.ApiError(msg)
+        if 'volumeID' not in data['result']:
+            msg = _("Error in SolidFire API response data was: %s"
+                    % data)
+            raise exception.ApiError(msg)
+        volume_id = data['result']['volumeID']
+
+        volume_list = self._get_volumes_by_sfaccount(account_id)
+        iqn = None
+        for v in volume_list:
+            if v['volumeID'] == volume_id:
+                iqn = 'iqn.2010-01.com.solidfire:' + v['iqn']
+                break
+
+        model_update = {}
+        model_update['provider_location'] = ('%s %s' % (iscsi_portal, iqn))
+        model_update['provider_auth'] = ('CHAP %s %s'
+                % (account_name, chap_secret))
+
+        LOG.debug(_("Leaving SolidFire create_volume"))
+        return model_update
+
+    def delete_volume(self, volume):
+        """Delete SolidFire Volume from device.
+
+        SolidFire allows multipe volumes with same name,
+        volumeID is what's guaranteed unique.
+
+        What we'll do here is check volumes based on account. this
+        should work because nova will increment it's volume_id
+        so we should always get the correct volume. This assumes
+        that nova does not assign duplicate ID's.
+        """
+
+        LOG.debug(_("Enter SolidFire delete_volume..."))
+        sf_account_name = socket.gethostname() + '-' + volume['project_id']
+        sfaccount = self._get_sfaccount_by_name(sf_account_name)
+        if sfaccount is None:
+            raise exception.SfAccountNotFound(account_name=sf_account_name)
+
+        params = {'accountID': sfaccount['accountID']}
+        data = self._issue_api_request('ListVolumesForAccount', params)
+        if 'result' not in data:
+            msg = _("Error in SolidFire API response, data was: %s"
+                    % data)
+            raise exception.ApiError(msg)
+
+        found_count = 0
+        volid = -1
+        for v in data['result']['volumes']:
+            if v['name'] == volume['name']:
+                found_count += 1
+                volid = v['volumeID']
+
+        if found_count != 1:
+            LOG.debug(_("Deleting volumeID: %s " % volid))
+            raise exception.DuplicateSfVolumeNames(vol_name=volume['name'])
+
+        params = {'volumeID': volid}
+        data = self._issue_api_request('DeleteVolume', params)
+        if 'result' not in data:
+            msg = _("Error in SolidFire API response, data was: %s"
+                    % data)
+            raise exception.ApiError(msg)
+
+        LOG.debug(_("Leaving SolidFire delete_volume"))
+
+    def ensure_export(self, context, volume):
+        LOG.debug(_("Executing SolidFire ensure_export..."))
+        return self._do_export(volume)
+
+    def create_export(self, context, volume):
+        LOG.debug(_("Executing SolidFire create_export..."))
+        return self._do_export(volume)
