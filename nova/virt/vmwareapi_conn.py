@@ -36,6 +36,7 @@ import time
 
 from eventlet import event
 
+from nova.common import cfg
 from nova import context
 from nova import db
 from nova import exception
@@ -51,31 +52,35 @@ from nova.virt.vmwareapi.vmops import VMWareVMOps
 
 LOG = logging.getLogger("nova.virt.vmwareapi_conn")
 
+vmwareapi_opts = [
+    cfg.StrOpt('vmwareapi_host_ip',
+               default=None,
+               help='URL for connection to VMWare ESX host.Required if '
+                    'connection_type is vmwareapi.'),
+    cfg.StrOpt('vmwareapi_host_username',
+               default=None,
+               help='Username for connection to VMWare ESX host. '
+                    'Used only if connection_type is vmwareapi.'),
+    cfg.StrOpt('vmwareapi_host_password',
+               default=None,
+               help='Password for connection to VMWare ESX host. '
+                    'Used only if connection_type is vmwareapi.'),
+    cfg.FloatOpt('vmwareapi_task_poll_interval',
+                 default=5.0,
+                 help='The interval used for polling of remote tasks. '
+                       'Used only if connection_type is vmwareapi'),
+    cfg.FloatOpt('vmwareapi_api_retry_count',
+                 default=10,
+                 help='The number of times we retry on failures, e.g., '
+                      'socket error, etc. '
+                      'Used only if connection_type is vmwareapi'),
+    cfg.StrOpt('vmwareapi_vlan_interface',
+               default='vmnic0',
+               help='Physical ethernet adapter name for vlan networking'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vmwareapi_host_ip',
-                    None,
-                    'URL for connection to VMWare ESX host.'
-                    'Required if connection_type is vmwareapi.')
-flags.DEFINE_string('vmwareapi_host_username',
-                    None,
-                    'Username for connection to VMWare ESX host.'
-                    'Used only if connection_type is vmwareapi.')
-flags.DEFINE_string('vmwareapi_host_password',
-                    None,
-                    'Password for connection to VMWare ESX host.'
-                    'Used only if connection_type is vmwareapi.')
-flags.DEFINE_float('vmwareapi_task_poll_interval',
-                   5.0,
-                   'The interval used for polling of remote tasks '
-                   'Used only if connection_type is vmwareapi')
-flags.DEFINE_float('vmwareapi_api_retry_count',
-                   10,
-                   'The number of times we retry on failures, '
-                   'e.g., socket error, etc.'
-                   'Used only if connection_type is vmwareapi')
-flags.DEFINE_string('vmwareapi_vlan_interface',
-                   'vmnic0',
-                   'Physical ethernet adapter name for vlan networking')
+FLAGS.add_options(vmwareapi_opts)
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0
 

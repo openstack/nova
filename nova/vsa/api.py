@@ -25,6 +25,7 @@ For assistance and guidelines pls contact
 
 import sys
 
+from nova.common import cfg
 from nova import compute
 from nova import exception
 from nova import flags
@@ -45,15 +46,23 @@ class VsaState:
     DELETING = 'deleting'       # VSA started the deletion procedure
 
 
+vsa_opts = [
+    cfg.StrOpt('vsa_ec2_access_key',
+               default=None,
+               help='EC2 access key used by VSA for accessing nova'),
+    cfg.StrOpt('vsa_ec2_user_id',
+               default=None,
+               help='User ID used by VSA for accessing nova'),
+    cfg.BoolOpt('vsa_multi_vol_creation',
+                default=True,
+                help='Ask scheduler to create multiple volumes in one call'),
+    cfg.StrOpt('vsa_volume_type_name',
+               default='VSA volume type',
+               help='Name of volume type associated with FE VSA volumes'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vsa_ec2_access_key', None,
-                    'EC2 access key used by VSA for accessing nova')
-flags.DEFINE_string('vsa_ec2_user_id', None,
-                    'User ID used by VSA for accessing nova')
-flags.DEFINE_boolean('vsa_multi_vol_creation', True,
-                  'Ask scheduler to create multiple volumes in one call')
-flags.DEFINE_string('vsa_volume_type_name', 'VSA volume type',
-                    'Name of volume type associated with FE VSA volumes')
+FLAGS.add_options(vsa_opts)
 
 LOG = logging.getLogger('nova.vsa')
 

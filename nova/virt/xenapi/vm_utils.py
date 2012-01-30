@@ -33,6 +33,7 @@ import uuid
 from decimal import Decimal
 from xml.dom import minidom
 
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova.image import glance
@@ -47,12 +48,20 @@ from nova.virt.xenapi import volume_utils
 
 LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
 
+xenapi_vm_utils_opts = [
+    cfg.StrOpt('default_os_type',
+               default='linux',
+               help='Default OS type'),
+    cfg.IntOpt('block_device_creation_timeout',
+               default=10,
+               help='time to wait for a block device to be created'),
+    cfg.IntOpt('max_kernel_ramdisk_size',
+               default=16 * 1024 * 1024,
+               help='maximum size in bytes of kernel or ramdisk images'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
-flags.DEFINE_integer('block_device_creation_timeout', 10,
-                     'time to wait for a block device to be created')
-flags.DEFINE_integer('max_kernel_ramdisk_size', 16 * 1024 * 1024,
-                     'maximum size in bytes of kernel or ramdisk images')
+FLAGS.add_options(xenapi_vm_utils_opts)
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,

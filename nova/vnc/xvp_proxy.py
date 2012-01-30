@@ -26,6 +26,7 @@ import eventlet.green
 import eventlet.greenio
 import eventlet.wsgi
 
+from nova.common import cfg
 from nova import context
 from nova import flags
 from nova import log as logging
@@ -35,13 +36,20 @@ from nova import wsgi
 
 
 LOG = logging.getLogger('nova.xvpvncproxy')
+
+xvp_proxy_opts = [
+    cfg.IntOpt('xvpvncproxy_port',
+               default=6081,
+               help='Port that the XCP VNC proxy should bind to'),
+    cfg.StrOpt('xvpvncproxy_host',
+               default='0.0.0.0',
+               help='Address that the XCP VNC proxy should bind to'),
+    ]
+
 FLAGS = flags.FLAGS
+FLAGS.add_options(xvp_proxy_opts)
 
 flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
-flags.DEFINE_integer('xvpvncproxy_port', 6081,
-                     'Port that the XCP VNC proxy should bind to')
-flags.DEFINE_string('xvpvncproxy_host', '0.0.0.0',
-                     'Address that the XCP VNC proxy should bind to')
 
 
 class XCPVNCProxy(object):

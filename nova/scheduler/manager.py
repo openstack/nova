@@ -23,6 +23,7 @@ Scheduler Service
 
 import functools
 
+from nova.common import cfg
 from nova.compute import vm_states
 from nova import db
 from nova import exception
@@ -32,11 +33,16 @@ from nova import manager
 from nova import rpc
 from nova import utils
 
+
 LOG = logging.getLogger('nova.scheduler.manager')
+
+scheduler_driver_opt = \
+    cfg.StrOpt('scheduler_driver',
+               default='nova.scheduler.multi.MultiScheduler',
+               help='Default driver to use for the scheduler')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('scheduler_driver',
-                    'nova.scheduler.multi.MultiScheduler',
-                    'Default driver to use for the scheduler')
+FLAGS.add_option(scheduler_driver_opt)
 
 
 class SchedulerManager(manager.Manager):

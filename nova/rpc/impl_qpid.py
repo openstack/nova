@@ -25,36 +25,59 @@ import greenlet
 import qpid.messaging
 import qpid.messaging.exceptions
 
+from nova.common import cfg
 from nova import flags
 from nova.rpc import amqp as rpc_amqp
 from nova.rpc.common import LOG
 
 
-flags.DEFINE_string('qpid_hostname', 'localhost', 'Qpid broker hostname')
-flags.DEFINE_string('qpid_port', '5672', 'Qpid broker port')
-flags.DEFINE_string('qpid_username', '', 'Username for qpid connection')
-flags.DEFINE_string('qpid_password', '', 'Password for qpid connection')
-flags.DEFINE_string('qpid_sasl_mechanisms', '',
-                'Space separated list of SASL mechanisms to use for auth')
-flags.DEFINE_boolean('qpid_reconnect', True, 'Automatically reconnect')
-flags.DEFINE_integer('qpid_reconnect_timeout', 0,
-                'Reconnection timeout in seconds')
-flags.DEFINE_integer('qpid_reconnect_limit', 0,
-                'Max reconnections before giving up')
-flags.DEFINE_integer('qpid_reconnect_interval_min', 0,
-                'Minimum seconds between reconnection attempts')
-flags.DEFINE_integer('qpid_reconnect_interval_max', 0,
-                'Maximum seconds between reconnection attempts')
-flags.DEFINE_integer('qpid_reconnect_interval', 0,
-                'Equivalent to setting max and min to the same value')
-flags.DEFINE_integer('qpid_heartbeat', 5,
-                'Seconds between heartbeats used to keep the connection alive')
-flags.DEFINE_string('qpid_protocol', 'tcp',
-                "Transport to use, either 'tcp' or 'ssl'")
-flags.DEFINE_boolean('qpid_tcp_nodelay', True, 'Disable Nagle algorithm')
-
+qpid_opts = [
+    cfg.StrOpt('qpid_hostname',
+               default='localhost',
+               help='Qpid broker hostname'),
+    cfg.StrOpt('qpid_port',
+               default='5672',
+               help='Qpid broker port'),
+    cfg.StrOpt('qpid_username',
+               default='',
+               help='Username for qpid connection'),
+    cfg.StrOpt('qpid_password',
+               default='',
+               help='Password for qpid connection'),
+    cfg.StrOpt('qpid_sasl_mechanisms',
+               default='',
+               help='Space separated list of SASL mechanisms to use for auth'),
+    cfg.BoolOpt('qpid_reconnect',
+                default=True,
+                help='Automatically reconnect'),
+    cfg.IntOpt('qpid_reconnect_timeout',
+               default=0,
+               help='Reconnection timeout in seconds'),
+    cfg.IntOpt('qpid_reconnect_limit',
+               default=0,
+               help='Max reconnections before giving up'),
+    cfg.IntOpt('qpid_reconnect_interval_min',
+               default=0,
+               help='Minimum seconds between reconnection attempts'),
+    cfg.IntOpt('qpid_reconnect_interval_max',
+               default=0,
+               help='Maximum seconds between reconnection attempts'),
+    cfg.IntOpt('qpid_reconnect_interval',
+               default=0,
+               help='Equivalent to setting max and min to the same value'),
+    cfg.IntOpt('qpid_heartbeat',
+               default=5,
+               help='Seconds between connection keepalive heartbeats'),
+    cfg.StrOpt('qpid_protocol',
+               default='tcp',
+               help="Transport to use, either 'tcp' or 'ssl'"),
+    cfg.BoolOpt('qpid_tcp_nodelay',
+                default=True,
+                help='Disable Nagle algorithm'),
+    ]
 
 FLAGS = flags.FLAGS
+FLAGS.add_options(qpid_opts)
 
 
 class ConsumerBase(object):

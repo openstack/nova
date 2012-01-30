@@ -20,18 +20,23 @@
 import base64
 import json
 
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova.virt.vmwareapi import vim_util
 
 
+vmrc_opts = [
+    cfg.IntOpt('console_vmrc_port',
+               default=443,
+               help="port for VMware VMRC connections"),
+    cfg.IntOpt('console_vmrc_error_retries',
+               default=10,
+               help="number of retries for retrieving VMRC information"),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('console_vmrc_port',
-                     443,
-                     "port for VMware VMRC connections")
-flags.DEFINE_integer('console_vmrc_error_retries',
-                     10,
-                     "number of retries for retrieving VMRC information")
+FLAGS.add_options(vmrc_opts)
 
 
 class VMRCConsole(object):

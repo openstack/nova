@@ -17,15 +17,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+from nova.common import cfg
 from nova.utils import import_object
 from nova.rpc.common import RemoteError, LOG
 from nova import flags
 
+
+rpc_backend_opt = \
+    cfg.StrOpt('rpc_backend',
+               default='nova.rpc.impl_kombu',
+               help="The messaging module to use, defaults to kombu.")
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('rpc_backend',
-                    'nova.rpc.impl_kombu',
-                    "The messaging module to use, defaults to kombu.")
+FLAGS.add_option(rpc_backend_opt)
 
 
 def create_connection(new=True):

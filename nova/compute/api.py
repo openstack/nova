@@ -28,6 +28,7 @@ import novaclient
 import webob.exc
 
 from nova import block_device
+from nova.common import cfg
 from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -49,12 +50,15 @@ from nova import volume
 
 LOG = logging.getLogger('nova.compute.api')
 
+find_host_timeout_opt = \
+    cfg.StrOpt('find_host_timeout',
+               default=30,
+               help='Timeout after NN seconds when looking for a host.')
 
 FLAGS = flags.FLAGS
+FLAGS.add_option(find_host_timeout_opt)
 flags.DECLARE('enable_zone_routing', 'nova.scheduler.api')
 flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
-flags.DEFINE_integer('find_host_timeout', 30,
-                     'Timeout after NN seconds when looking for a host.')
 
 
 def check_instance_state(vm_state=None, task_state=None):

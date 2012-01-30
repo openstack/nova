@@ -18,9 +18,14 @@
 
 """Module to authenticate Consoles."""
 
+from nova.common import cfg
 from nova import flags
 
 
+consoleauth_topic_opt = \
+    cfg.StrOpt('consoleauth_topic',
+               default='consoleauth',
+               help='the topic console auth proxy nodes listen on')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('consoleauth_topic', 'consoleauth',
-                   'the topic console auth proxy nodes listen on')
+FLAGS.add_option(consoleauth_topic_opt)

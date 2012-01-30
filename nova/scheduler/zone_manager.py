@@ -23,16 +23,24 @@ import traceback
 from eventlet import greenpool
 from novaclient import v1_1 as novaclient
 
+from nova.common import cfg
 from nova import db
 from nova import flags
 from nova import log as logging
 from nova import utils
 
+
+zone_manager_opts = [
+    cfg.IntOpt('zone_db_check_interval',
+               default=60,
+               help='Seconds between getting fresh zone info from db.'),
+    cfg.IntOpt('zone_failures_to_offline',
+               default=3,
+               help='Number of consecutive errors before offlining a zone'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('zone_db_check_interval', 60,
-        'Seconds between getting fresh zone info from db.')
-flags.DEFINE_integer('zone_failures_to_offline', 3,
-        'Number of consecutive errors before marking zone offline')
+FLAGS.add_options(zone_manager_opts)
 
 LOG = logging.getLogger('nova.scheduler.zone_manager')
 

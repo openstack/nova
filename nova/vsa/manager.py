@@ -22,6 +22,7 @@ Handles all processes relating to Virtual Storage Arrays (VSA).
 
 """
 
+from nova.common import cfg
 from nova import compute
 from nova import exception
 from nova import flags
@@ -34,9 +35,13 @@ from nova.compute import instance_types
 from nova.vsa import utils as vsa_utils
 from nova.vsa.api import VsaState
 
+vsa_driver_opt = \
+    cfg.StrOpt('vsa_driver',
+               default='nova.vsa.connection.get_connection',
+               help='Driver to use for controlling VSAs')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vsa_driver', 'nova.vsa.connection.get_connection',
-                    'Driver to use for controlling VSAs')
+FLAGS.add_option(vsa_driver_opt)
 
 LOG = logging.getLogger('nova.vsa.manager')
 

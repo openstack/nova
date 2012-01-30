@@ -21,24 +21,33 @@ import datetime
 import types
 import UserDict
 
+from nova.common import cfg
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
 
+
+host_manager_opts = [
+    cfg.IntOpt('reserved_host_disk_mb',
+               default=0,
+               help='Amount of disk in MB to reserve for host/dom0'),
+    cfg.IntOpt('reserved_host_memory_mb',
+               default=512,
+               help='Amount of memory in MB to reserve for host/dom0'),
+    cfg.ListOpt('default_host_filters',
+                default=[
+                  'AvailabilityZoneFilter',
+                  'RamFilter',
+                  'ComputeFilter'
+                  ],
+                help='Which filters to use for filtering hosts when not '
+                     'specified in the request.'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('reserved_host_disk_mb', 0,
-        'Amount of disk in MB to reserve for host/dom0')
-flags.DEFINE_integer('reserved_host_memory_mb', 512,
-        'Amount of memory in MB to reserve for host/dom0')
-flags.DEFINE_list('default_host_filters', [
-            'AvailabilityZoneFilter',
-            'RamFilter',
-            'ComputeFilter',
-        ],
-        'Which filters to use for filtering hosts when not specified '
-        'in the request.')
+FLAGS.add_options(host_manager_opts)
 
 LOG = logging.getLogger('nova.scheduler.host_manager')
 

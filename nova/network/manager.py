@@ -56,6 +56,7 @@ import socket
 from eventlet import greenpool
 import netaddr
 
+from nova.common import cfg
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova import context
@@ -75,54 +76,89 @@ from nova import rpc
 
 LOG = logging.getLogger("nova.network.manager")
 
+network_opts = [
+    cfg.StrOpt('flat_network_bridge',
+               default=None,
+               help='Bridge for simple network instances'),
+    cfg.StrOpt('flat_network_dns',
+               default='8.8.4.4',
+               help='Dns for simple network'),
+    cfg.BoolOpt('flat_injected',
+                default=False,
+                help='Whether to attempt to inject network setup into guest'),
+    cfg.StrOpt('flat_interface',
+               default=None,
+               help='FlatDhcp will bridge into this interface if set'),
+    cfg.IntOpt('vlan_start',
+               default=100,
+               help='First VLAN for private networks'),
+    cfg.StrOpt('vlan_interface',
+               default=None,
+               help='vlans will bridge into this interface if set'),
+    cfg.IntOpt('num_networks',
+               default=1,
+               help='Number of networks to support'),
+    cfg.StrOpt('vpn_ip',
+               default='$my_ip',
+               help='Public IP for the cloudpipe VPN servers'),
+    cfg.IntOpt('vpn_start',
+               default=1000,
+               help='First Vpn port for private networks'),
+    cfg.BoolOpt('multi_host',
+                default=False,
+                help='Default value for multi_host in networks'),
+    cfg.IntOpt('network_size',
+               default=256,
+               help='Number of addresses in each private subnet'),
+    cfg.StrOpt('floating_range',
+               default='4.4.4.0/24',
+               help='Floating IP address block'),
+    cfg.StrOpt('default_floating_pool',
+               default='nova',
+               help='Default pool for floating ips'),
+    cfg.StrOpt('fixed_range',
+               default='10.0.0.0/8',
+               help='Fixed IP address block'),
+    cfg.StrOpt('fixed_range_v6',
+               default='fd00::/48',
+               help='Fixed IPv6 address block'),
+    cfg.StrOpt('gateway',
+               default=None,
+               help='Default IPv4 gateway'),
+    cfg.StrOpt('gateway_v6',
+               default=None,
+               help='Default IPv6 gateway'),
+    cfg.IntOpt('cnt_vpn_clients',
+               default=0,
+               help='Number of addresses reserved for vpn clients'),
+    cfg.BoolOpt('update_dhcp_on_disassociate',
+                default=False,
+                help='Whether to update dhcp when fixed_ip is disassociated'),
+    cfg.IntOpt('fixed_ip_disassociate_timeout',
+               default=600,
+               help='Seconds after which a deallocated ip is disassociated'),
+    cfg.IntOpt('create_unique_mac_address_attempts',
+               default=5,
+               help='Number of attempts to create unique mac address'),
+    cfg.BoolOpt('auto_assign_floating_ip',
+                default=False,
+                help='Autoassigning floating ip to VM'),
+    cfg.StrOpt('network_host',
+               default=socket.gethostname(),
+               help='Network host to use for ip allocation in flat modes'),
+    cfg.BoolOpt('fake_call',
+                default=False,
+                help='If True, skip using the queue and make local calls'),
+    cfg.BoolOpt('force_dhcp_release',
+                default=False,
+                help='If True, send a dhcp release on instance termination'),
+    cfg.StrOpt('dhcp_domain',
+               default='novalocal',
+               help='domain to use for building the hostnames'),
+    ]
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('flat_network_bridge', None,
-                    'Bridge for simple network instances')
-flags.DEFINE_string('flat_network_dns', '8.8.4.4',
-                    'Dns for simple network')
-flags.DEFINE_bool('flat_injected', False,
-                  'Whether to attempt to inject network setup into guest')
-flags.DEFINE_string('flat_interface', None,
-                    'FlatDhcp will bridge into this interface if set')
-flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
-flags.DEFINE_string('vlan_interface', None,
-                    'vlans will bridge into this interface if set')
-flags.DEFINE_integer('num_networks', 1, 'Number of networks to support')
-flags.DEFINE_string('vpn_ip', '$my_ip',
-                    'Public IP for the cloudpipe VPN servers')
-flags.DEFINE_integer('vpn_start', 1000, 'First Vpn port for private networks')
-flags.DEFINE_bool('multi_host', False,
-                  'Default value for multi_host in networks')
-flags.DEFINE_integer('network_size', 256,
-                        'Number of addresses in each private subnet')
-flags.DEFINE_string('floating_range', '4.4.4.0/24',
-                    'Floating IP address block')
-flags.DEFINE_string('default_floating_pool', 'nova',
-                    'Default pool for floating ips')
-flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
-flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
-flags.DEFINE_string('gateway', None, 'Default IPv4 gateway')
-flags.DEFINE_string('gateway_v6', None, 'Default IPv6 gateway')
-flags.DEFINE_integer('cnt_vpn_clients', 0,
-                     'Number of addresses reserved for vpn clients')
-flags.DEFINE_bool('update_dhcp_on_disassociate', False,
-                  'Whether to update dhcp when fixed_ip is disassociated')
-flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
-                     'Seconds after which a deallocated ip is disassociated')
-flags.DEFINE_integer('create_unique_mac_address_attempts', 5,
-                     'Number of attempts to create unique mac address')
-flags.DEFINE_bool('auto_assign_floating_ip', False,
-                  'Autoassigning floating ip to VM')
-flags.DEFINE_string('network_host', socket.gethostname(),
-                    'Network host to use for ip allocation in flat modes')
-flags.DEFINE_bool('fake_call', False,
-                  'If True, skip using the queue and make local calls')
-flags.DEFINE_bool('force_dhcp_release', False,
-                  'If True, send a dhcp release on instance termination')
-flags.DEFINE_string('dhcp_domain',
-                    'novalocal',
-                    'domain to use for building the hostnames')
+FLAGS.add_options(network_opts)
 
 
 class AddressAlreadyAllocated(exception.Error):

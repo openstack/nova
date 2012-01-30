@@ -24,6 +24,7 @@ import os
 import time
 from xml.etree import ElementTree
 
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -33,24 +34,36 @@ from nova.volume import volume_types
 
 
 LOG = logging.getLogger("nova.volume.driver")
+
+volume_opts = [
+    cfg.StrOpt('volume_group',
+               default='nova-volumes',
+               help='Name for the VG that will contain exported volumes'),
+    cfg.StrOpt('num_shell_tries',
+               default=3,
+               help='number of times to attempt to run flakey shell commands'),
+    cfg.StrOpt('num_iscsi_scan_tries',
+               default=3,
+               help='number of times to rescan iSCSI target to find volume'),
+    cfg.IntOpt('iscsi_num_targets',
+               default=100,
+               help='Number of iscsi target ids per host'),
+    cfg.StrOpt('iscsi_target_prefix',
+               default='iqn.2010-10.org.openstack:',
+               help='prefix for iscsi volumes'),
+    cfg.StrOpt('iscsi_ip_address',
+               default='$my_ip',
+               help='use this ip for iscsi'),
+    cfg.IntOpt('iscsi_port',
+               default=3260,
+               help='The port that the iSCSI daemon is listening on'),
+    cfg.StrOpt('rbd_pool',
+               default='rbd',
+               help='the rbd pool in which volumes are stored'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('volume_group', 'nova-volumes',
-                    'Name for the VG that will contain exported volumes')
-flags.DEFINE_string('num_shell_tries', 3,
-                    'number of times to attempt to run flakey shell commands')
-flags.DEFINE_string('num_iscsi_scan_tries', 3,
-                    'number of times to rescan iSCSI target to find volume')
-flags.DEFINE_integer('iscsi_num_targets',
-                    100,
-                    'Number of iscsi target ids per host')
-flags.DEFINE_string('iscsi_target_prefix', 'iqn.2010-10.org.openstack:',
-                    'prefix for iscsi volumes')
-flags.DEFINE_string('iscsi_ip_address', '$my_ip',
-                    'use this ip for iscsi')
-flags.DEFINE_integer('iscsi_port', 3260,
-                     'The port that the iSCSI daemon is listening on')
-flags.DEFINE_string('rbd_pool', 'rbd',
-                    'the rbd pool in which volumes are stored')
+FLAGS.add_options(volume_opts)
 
 
 class VolumeDriver(object):

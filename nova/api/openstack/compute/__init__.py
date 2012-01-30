@@ -35,16 +35,21 @@ from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import versions
 from nova.api.openstack import wsgi
+from nova.common import cfg
 from nova import flags
 from nova import log as logging
 from nova import wsgi as base_wsgi
 
 
 LOG = logging.getLogger('nova.api.openstack.compute')
+
+allow_instance_snapshots_opt = \
+    cfg.BoolOpt('allow_instance_snapshots',
+                default=True,
+                help='Permit instance snapshot operations.')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_bool('allow_instance_snapshots',
-    True,
-    'When True, this API service will permit instance snapshot operations.')
+FLAGS.add_option(allow_instance_snapshots_opt)
 
 
 class APIRouter(base_wsgi.Router):

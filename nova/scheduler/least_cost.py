@@ -22,24 +22,32 @@ The cost-function and weights are tabulated, and the host with the least cost
 is then selected for provisioning.
 """
 
-
+from nova.common import cfg
 from nova import flags
 from nova import log as logging
 
+
 LOG = logging.getLogger('nova.scheduler.least_cost')
 
-FLAGS = flags.FLAGS
-flags.DEFINE_list('least_cost_functions',
-        ['nova.scheduler.least_cost.compute_fill_first_cost_fn'],
-        'Which cost functions the LeastCostScheduler should use.')
+least_cost_opts = [
+    cfg.ListOpt('least_cost_functions',
+                default=[
+                  'nova.scheduler.least_cost.compute_fill_first_cost_fn'
+                  ],
+                help='Which cost functions the LeastCostScheduler should use'),
+    cfg.FloatOpt('noop_cost_fn_weight',
+             default=1.0,
+               help='How much weight to give the noop cost function'),
+    cfg.FloatOpt('compute_fill_first_cost_fn_weight',
+             default=1.0,
+               help='How much weight to give the fill-first cost function'),
+    ]
 
+FLAGS = flags.FLAGS
+FLAGS.add_options(least_cost_opts)
 
 # TODO(sirp): Once we have enough of these rules, we can break them out into a
 # cost_functions.py file (perhaps in a least_cost_scheduler directory)
-flags.DEFINE_float('noop_cost_fn_weight', 1.0,
-             'How much weight to give the noop cost function')
-flags.DEFINE_float('compute_fill_first_cost_fn_weight', 1.0,
-             'How much weight to give the fill-first cost function')
 
 
 class WeightedHost(object):

@@ -23,16 +23,21 @@ import os
 import random
 import shutil
 
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
 
-FLAGS = flags.FLAGS
 
-flags.DEFINE_string('qemu_img', 'qemu-img',
-                    'binary to use for qemu-img commands')
+qemu_img_opt = \
+    cfg.StrOpt('qemu_img',
+               default='qemu-img',
+               help='binary to use for qemu-img commands')
+
+FLAGS = flags.FLAGS
+FLAGS.add_option(qemu_img_opt)
 
 
 def execute(*args, **kwargs):

@@ -18,31 +18,46 @@
 
 """Quotas for instances, volumes, and floating ips."""
 
+from nova.common import cfg
 from nova import db
 from nova import flags
 
 
+quota_opts = [
+    cfg.IntOpt('quota_instances',
+               default=10,
+               help='number of instances allowed per project'),
+    cfg.IntOpt('quota_cores',
+               default=20,
+               help='number of instance cores allowed per project'),
+    cfg.IntOpt('quota_ram',
+               default=50 * 1024,
+               help='megabytes of instance ram allowed per project'),
+    cfg.IntOpt('quota_volumes',
+               default=10,
+               help='number of volumes allowed per project'),
+    cfg.IntOpt('quota_gigabytes',
+               default=1000,
+               help='number of volume gigabytes allowed per project'),
+    cfg.IntOpt('quota_floating_ips',
+               default=10,
+               help='number of floating ips allowed per project'),
+    cfg.IntOpt('quota_metadata_items',
+               default=128,
+               help='number of metadata items allowed per instance'),
+    cfg.IntOpt('quota_max_injected_files',
+               default=5,
+               help='number of injected files allowed'),
+    cfg.IntOpt('quota_max_injected_file_content_bytes',
+               default=10 * 1024,
+               help='number of bytes allowed per injected file'),
+    cfg.IntOpt('quota_max_injected_file_path_bytes',
+               default=255,
+               help='number of bytes allowed per injected file path'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('quota_instances', 10,
-                     'number of instances allowed per project')
-flags.DEFINE_integer('quota_cores', 20,
-                     'number of instance cores allowed per project')
-flags.DEFINE_integer('quota_ram', 50 * 1024,
-                     'megabytes of instance ram allowed per project')
-flags.DEFINE_integer('quota_volumes', 10,
-                     'number of volumes allowed per project')
-flags.DEFINE_integer('quota_gigabytes', 1000,
-                     'number of volume gigabytes allowed per project')
-flags.DEFINE_integer('quota_floating_ips', 10,
-                     'number of floating ips allowed per project')
-flags.DEFINE_integer('quota_metadata_items', 128,
-                     'number of metadata items allowed per instance')
-flags.DEFINE_integer('quota_max_injected_files', 5,
-                     'number of injected files allowed')
-flags.DEFINE_integer('quota_max_injected_file_content_bytes', 10 * 1024,
-                     'number of bytes allowed per injected file')
-flags.DEFINE_integer('quota_max_injected_file_path_bytes', 255,
-                     'number of bytes allowed per injected file path')
+FLAGS.add_options(quota_opts)
 
 
 def _get_default_quotas():

@@ -25,6 +25,7 @@ import os
 import eventlet
 import greenlet
 
+from nova.common import cfg
 from nova import context
 from nova import db
 from nova import exception
@@ -38,32 +39,47 @@ from nova import wsgi
 
 LOG = logging.getLogger('nova.service')
 
+service_opts = [
+    cfg.IntOpt('report_interval',
+               default=10,
+               help='seconds between nodes reporting state to datastore'),
+    cfg.IntOpt('periodic_interval',
+               default=60,
+               help='seconds between running periodic tasks'),
+    cfg.StrOpt('ec2_listen',
+               default="0.0.0.0",
+               help='IP address for EC2 API to listen'),
+    cfg.IntOpt('ec2_listen_port',
+               default=8773,
+               help='port for ec2 api to listen'),
+    cfg.StrOpt('osapi_compute_listen',
+               default="0.0.0.0",
+               help='IP address for OpenStack API to listen'),
+    cfg.IntOpt('osapi_compute_listen_port',
+               default=8774,
+               help='list port for osapi compute'),
+    cfg.StrOpt('metadata_manager',
+               default='nova.api.manager.MetadataManager',
+               help='OpenStack metadata service manager'),
+    cfg.StrOpt('metadata_listen',
+               default="0.0.0.0",
+               help='IP address for metadata api to listen'),
+    cfg.IntOpt('metadata_listen_port',
+               default=8775,
+               help='port for metadata api to listen'),
+    cfg.StrOpt('api_paste_config',
+               default="api-paste.ini",
+               help='File name for the paste.deploy config for nova-api'),
+    cfg.StrOpt('osapi_volume_listen',
+               default="0.0.0.0",
+               help='IP address for OpenStack Volume API to listen'),
+    cfg.IntOpt('osapi_volume_listen_port',
+               default=8776,
+               help='port for os volume api to listen'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('report_interval', 10,
-                     'seconds between nodes reporting state to datastore',
-                     lower_bound=1)
-flags.DEFINE_integer('periodic_interval', 60,
-                     'seconds between running periodic tasks',
-                     lower_bound=1)
-flags.DEFINE_string('ec2_listen', "0.0.0.0",
-                    'IP address for EC2 API to listen')
-flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
-flags.DEFINE_string('osapi_compute_listen', "0.0.0.0",
-                    'IP address for OpenStack API to listen')
-flags.DEFINE_integer('osapi_compute_listen_port', 8774,
-                     'list port for osapi compute')
-flags.DEFINE_string('metadata_manager', 'nova.api.manager.MetadataManager',
-                    'OpenStack metadata service manager')
-flags.DEFINE_string('metadata_listen', "0.0.0.0",
-                    'IP address for metadata api to listen')
-flags.DEFINE_integer('metadata_listen_port', 8775,
-                     'port for metadata api to listen')
-flags.DEFINE_string('api_paste_config', "api-paste.ini",
-                    'File name for the paste.deploy config for nova-api')
-flags.DEFINE_string('osapi_volume_listen', "0.0.0.0",
-                    'IP address for OpenStack Volume API to listen')
-flags.DEFINE_integer('osapi_volume_listen_port', 8776,
-                     'port for os volume api to listen')
+FLAGS.add_options(service_opts)
 
 
 class Launcher(object):

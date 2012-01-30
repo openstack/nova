@@ -19,6 +19,7 @@
 VSA Simple Scheduler
 """
 
+from nova.common import cfg
 from nova import context
 from nova import db
 from nova import flags
@@ -31,15 +32,23 @@ from nova.scheduler import simple
 from nova.vsa.api import VsaState
 from nova.volume import volume_types
 
+
 LOG = logging.getLogger('nova.scheduler.vsa')
 
+vsa_scheduler_opts = [
+    cfg.IntOpt('drive_type_approx_capacity_percent',
+               default=10,
+               help='The percentage range for capacity comparison'),
+    cfg.IntOpt('vsa_unique_hosts_per_alloc',
+               default=10,
+               help='The number of unique hosts per storage allocation'),
+    cfg.BoolOpt('vsa_select_unique_drives',
+                default=True,
+                help='Allow selection of same host for multiple drives'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('drive_type_approx_capacity_percent', 10,
-                    'The percentage range for capacity comparison')
-flags.DEFINE_integer('vsa_unique_hosts_per_alloc', 10,
-                    'The number of unique hosts per storage allocation')
-flags.DEFINE_boolean('vsa_select_unique_drives', True,
-                     'Allow selection of same host for multiple drives')
+FLAGS.add_options(vsa_scheduler_opts)
 
 
 def BYTES_TO_GB(bytes):

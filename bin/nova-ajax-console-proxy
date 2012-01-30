@@ -38,6 +38,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
 
+from nova.common import cfg
 from nova import flags
 from nova import log as logging
 from nova import rpc
@@ -45,9 +46,14 @@ from nova import service
 from nova import utils
 from nova import wsgi
 
+
+ajax_console_idle_timeout_opt = \
+    cfg.IntOpt('ajax_console_idle_timeout',
+               default=300,
+               help='Seconds before idle connection destroyed')
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('ajax_console_idle_timeout', 300,
-                     'Seconds before idle connection destroyed')
+FLAGS.add_option(ajax_console_idle_timeout_opt)
 
 LOG = logging.getLogger('nova.ajax_console_proxy')
 

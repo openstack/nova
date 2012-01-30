@@ -18,15 +18,23 @@
 import os
 import time
 
+from nova.common import cfg
 from nova import flags
 from nova import utils
 from nova.virt.disk import mount
 
+
+nbd_opts = [
+    cfg.IntOpt('timeout_nbd',
+               default=10,
+               help='time to wait for a NBD device coming up'),
+    cfg.IntOpt('max_nbd_devices',
+               default=16,
+               help='maximum number of possible nbd devices'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('timeout_nbd', 10,
-                     'time to wait for a NBD device coming up')
-flags.DEFINE_integer('max_nbd_devices', 16,
-                     'maximum number of possible nbd devices')
+FLAGS.add_options(nbd_opts)
 
 
 class Mount(mount.Mount):

@@ -19,6 +19,7 @@ import time
 
 from netaddr import IPNetwork, IPAddress
 
+from nova.common import cfg
 from nova.compute import instance_types
 from nova import context
 from nova import db
@@ -30,26 +31,30 @@ from nova.network.quantum import quantum_connection
 from nova.network.quantum import melange_ipam_lib
 from nova import utils
 
+
 LOG = logging.getLogger("nova.network.quantum.manager")
 
+quantum_opts = [
+    cfg.StrOpt('quantum_ipam_lib',
+               default='nova.network.quantum.nova_ipam_lib',
+               help="Indicates underlying IP address management library"),
+    # TODO(Vek): Eventually, this needs to mean more than just using
+    #            Melange for assignment of MAC addresses (with an
+    #            appropriate flag name change, of course), but this is all
+    #            it does right now
+    cfg.BoolOpt('use_melange_mac_generation',
+                default=False,
+                help="Use Melange for assignment of MAC addresses"),
+    cfg.BoolOpt('quantum_use_dhcp',
+                default=False,
+                help='Whether or not to enable DHCP for networks'),
+    cfg.BoolOpt('quantum_use_port_security',
+                default=False,
+                help='Whether or not to enable port security'),
+    ]
+
 FLAGS = flags.FLAGS
-
-flags.DEFINE_string('quantum_ipam_lib',
-                    'nova.network.quantum.nova_ipam_lib',
-                    "Indicates underlying IP address management library")
-# TODO(Vek): Eventually, this needs to mean more than just using
-#            Melange for assignment of MAC addresses (with an
-#            appropriate flag name change, of course), but this is all
-#            it does right now
-flags.DEFINE_bool('use_melange_mac_generation', False,
-                  "Use Melange for assignment of MAC addresses")
-
-
-flags.DEFINE_bool('quantum_use_dhcp', False,
-                    'Whether or not to enable DHCP for networks')
-
-flags.DEFINE_bool('quantum_use_port_security', False,
-                  'Whether or not to enable port security')
+FLAGS.add_options(quantum_opts)
 
 
 class QuantumManager(manager.FloatingIP, manager.FlatManager):

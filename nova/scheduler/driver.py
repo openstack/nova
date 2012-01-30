@@ -22,6 +22,7 @@ Scheduler base class that all Schedulers should inherit from
 """
 
 from nova.api.ec2 import ec2utils
+from nova.common import cfg
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import vm_states
@@ -35,14 +36,20 @@ from nova.scheduler import zone_manager
 from nova import utils
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.driver')
-flags.DEFINE_string('scheduler_host_manager',
-        'nova.scheduler.host_manager.HostManager',
-        'The scheduler host manager class to use')
-flags.DEFINE_string('scheduler_zone_manager',
-        'nova.scheduler.zone_manager.ZoneManager',
-        'The scheduler zone manager class to use')
+
+scheduler_driver_opts = [
+    cfg.StrOpt('scheduler_host_manager',
+               default='nova.scheduler.host_manager.HostManager',
+               help='The scheduler host manager class to use'),
+    cfg.StrOpt('scheduler_zone_manager',
+               default='nova.scheduler.zone_manager.ZoneManager',
+               help='The scheduler zone manager class to use'),
+    ]
+
+FLAGS = flags.FLAGS
+FLAGS.add_options(scheduler_driver_opts)
+
 flags.DECLARE('instances_path', 'nova.compute.manager')
 
 

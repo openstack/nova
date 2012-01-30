@@ -30,6 +30,7 @@ import tempfile
 import uuid
 import zipfile
 
+from nova.common import cfg
 from nova import context
 from nova import crypto
 from nova import db
@@ -40,44 +41,60 @@ from nova import utils
 from nova.auth import signer
 
 
+auth_opts = [
+    cfg.BoolOpt('use_deprecated_auth',
+                default=False,
+                help='This flag must be set to use old style auth'),
+    cfg.ListOpt('allowed_roles',
+                default=[
+                  'cloudadmin',
+                  'itsec',
+                  'sysadmin',
+                  'netadmin',
+                  'developer'
+                  ],
+                help='Allowed roles for project'),
+
+    # NOTE(vish): a user with one of these roles will be a superuser and
+    #             have access to all api commands
+    cfg.ListOpt('superuser_roles',
+                default=['cloudadmin'],
+                help='Roles that ignore authorization checking completely'),
+
+    # NOTE(vish): a user with one of these roles will have it for every
+    #             project, even if he or she is not a member of the project
+    cfg.ListOpt('global_roles',
+                default=['cloudadmin', 'itsec'],
+                help='Roles that apply to all projects'),
+
+    cfg.StrOpt('credentials_template',
+               default=utils.abspath('auth/novarc.template'),
+               help='Template for creating users rc file'),
+    cfg.StrOpt('vpn_client_template',
+               default=utils.abspath('cloudpipe/client.ovpn.template'),
+               help='Template for creating users vpn file'),
+    cfg.StrOpt('credential_vpn_file',
+               default='nova-vpn.conf',
+               help='Filename of certificate in credentials zip'),
+    cfg.StrOpt('credential_key_file',
+               default='pk.pem',
+               help='Filename of private key in credentials zip'),
+    cfg.StrOpt('credential_cert_file',
+               default='cert.pem',
+               help='Filename of certificate in credentials zip'),
+    cfg.StrOpt('credential_rc_file',
+               default='%src',
+               help='Filename of rc in credentials zip %s will be replaced by '
+                    'name of the region (nova by default)'),
+    cfg.StrOpt('auth_driver',
+               default='nova.auth.dbdriver.DbDriver',
+               help='Driver that auth manager uses'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_bool('use_deprecated_auth',
-                  False,
-                  'This flag must be set to use old style auth')
-
-flags.DEFINE_list('allowed_roles',
-                  ['cloudadmin', 'itsec', 'sysadmin', 'netadmin', 'developer'],
-                  'Allowed roles for project')
-# NOTE(vish): a user with one of these roles will be a superuser and
-#             have access to all api commands
-flags.DEFINE_list('superuser_roles', ['cloudadmin'],
-                  'Roles that ignore authorization checking completely')
-
-# NOTE(vish): a user with one of these roles will have it for every
-#             project, even if he or she is not a member of the project
-flags.DEFINE_list('global_roles', ['cloudadmin', 'itsec'],
-                  'Roles that apply to all projects')
-
-flags.DEFINE_string('credentials_template',
-                    utils.abspath('auth/novarc.template'),
-                    'Template for creating users rc file')
-flags.DEFINE_string('vpn_client_template',
-                    utils.abspath('cloudpipe/client.ovpn.template'),
-                    'Template for creating users vpn file')
-flags.DEFINE_string('credential_vpn_file', 'nova-vpn.conf',
-                    'Filename of certificate in credentials zip')
-flags.DEFINE_string('credential_key_file', 'pk.pem',
-                    'Filename of private key in credentials zip')
-flags.DEFINE_string('credential_cert_file', 'cert.pem',
-                    'Filename of certificate in credentials zip')
-flags.DEFINE_string('credential_rc_file', '%src',
-                    'Filename of rc in credentials zip, %s will be '
-                    'replaced by name of the region (nova by default)')
-flags.DEFINE_string('auth_driver', 'nova.auth.dbdriver.DbDriver',
-                    'Driver that auth manager uses')
+FLAGS.add_options(auth_opts)
 
 flags.DECLARE('osapi_compute_listen_port', 'nova.service')
-
 
 LOG = logging.getLogger('nova.auth.manager')
 

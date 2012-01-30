@@ -20,18 +20,21 @@ import socket
 import urllib
 import json
 
+from nova.common import cfg
 from nova import flags
 
 
+melange_opts = [
+    cfg.StrOpt('melange_host',
+               default='127.0.0.1',
+               help='HOST for connecting to melange'),
+    cfg.StrOpt('melange_port',
+               default='9898',
+               help='PORT for connecting to melange'),
+    ]
+
 FLAGS = flags.FLAGS
-
-flags.DEFINE_string('melange_host',
-                    '127.0.0.1',
-                    'HOST for connecting to melange')
-
-flags.DEFINE_string('melange_port',
-                    '9898',
-                    'PORT for connecting to melange')
+FLAGS.add_options(melange_opts)
 
 json_content_type = {'Content-type': "application/json"}
 

@@ -19,6 +19,7 @@ import tempfile
 import time
 
 from nova.auth import fakeldap
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -26,40 +27,44 @@ from nova import log as logging
 
 LOG = logging.getLogger("nova.network.manager")
 
-flags.DEFINE_string('ldap_dns_url',
-                    'ldap://ldap.example.com:389',
-                    'URL for ldap server which will store dns entries')
-flags.DEFINE_string('ldap_dns_user',
-                    'uid=admin,ou=people,dc=example,dc=org',
-                    'user for ldap DNS')
-flags.DEFINE_string('ldap_dns_password',
-                    'password',
-                    'password for ldap DNS')
-flags.DEFINE_string('ldap_dns_soa_hostmaster',
-                    'hostmaster@example.org',
-                    'Hostmaster for ldap dns driver Statement of Authority')
-flags.DEFINE_multistring('ldap_dns_servers',
-                    '[dns.example.org]',
-                    'DNS Servers for ldap dns driver')
-flags.DEFINE_string('ldap_dns_base_dn',
-                    'ou=hosts,dc=example,dc=org',
-                    'Base DN for DNS entries in ldap')
-flags.DEFINE_string('ldap_dns_soa_refresh',
-                    '1800',
-                    'Refresh interval (in seconds) for ldap dns driver '
-                    'Statement of Authority')
-flags.DEFINE_string('ldap_dns_soa_retry',
-                    '3600',
-                    'Retry interval (in seconds) for ldap dns driver '
-                    'Statement of Authority')
-flags.DEFINE_string('ldap_dns_soa_expiry',
-                    '86400',
-                    'Expiry interval (in seconds) for ldap dns driver '
-                    'Statement of Authority')
-flags.DEFINE_string('ldap_dns_soa_minimum',
-                    '7200',
-                    'Minimum interval (in seconds) for ldap dns driver '
-                    'Statement of Authority')
+ldap_dns_opts = [
+    cfg.StrOpt('ldap_dns_url',
+               default='ldap://ldap.example.com:389',
+               help='URL for ldap server which will store dns entries'),
+    cfg.StrOpt('ldap_dns_user',
+               default='uid=admin,ou=people,dc=example,dc=org',
+               help='user for ldap DNS'),
+    cfg.StrOpt('ldap_dns_password',
+               default='password',
+               help='password for ldap DNS'),
+    cfg.StrOpt('ldap_dns_soa_hostmaster',
+               default='hostmaster@example.org',
+               help='Hostmaster for ldap dns driver Statement of Authority'),
+    cfg.MultiStrOpt('ldap_dns_servers',
+                    default='[dns.example.org]',
+                    help='DNS Servers for ldap dns driver'),
+    cfg.StrOpt('ldap_dns_base_dn',
+               default='ou=hosts,dc=example,dc=org',
+               help='Base DN for DNS entries in ldap'),
+    cfg.StrOpt('ldap_dns_soa_refresh',
+               default='1800',
+               help='Refresh interval (in seconds) for ldap dns driver '
+                    'Statement of Authority'),
+    cfg.StrOpt('ldap_dns_soa_retry',
+               default='3600',
+               help='Retry interval (in seconds) for ldap dns driver '
+                    'Statement of Authority'),
+    cfg.StrOpt('ldap_dns_soa_expiry',
+               default='86400',
+               help='Expiry interval (in seconds) for ldap dns driver '
+                    'Statement of Authority'),
+    cfg.StrOpt('ldap_dns_soa_minimum',
+               default='7200',
+               help='Minimum interval (in seconds) for ldap dns driver '
+                    'Statement of Authority'),
+    ]
+
+flags.FLAGS.add_options(ldap_dns_opts)
 
 
 def utf8(instring):

@@ -29,6 +29,7 @@ import json
 import os
 import tempfile
 
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -37,35 +38,41 @@ from nova.virt.disk import guestfs
 from nova.virt.disk import loop
 from nova.virt.disk import nbd
 
+
 LOG = logging.getLogger('nova.compute.disk')
+
+disk_opts = [
+    cfg.StrOpt('injected_network_template',
+               default=utils.abspath('virt/interfaces.template'),
+               help='Template file for injected network'),
+    cfg.ListOpt('img_handlers',
+                default=['loop', 'nbd', 'guestfs'],
+                help='Order of methods used to mount disk images'),
+
+    # NOTE(yamahata): ListOpt won't work because the command may include a
+    #                 comma. For example:
+    #
+    #                 mkfs.ext3 -O dir_index,extent -E stride=8,stripe-width=16
+    #                           --label %(fs_label)s %(target)s
+    #
+    #                 list arguments are comma separated and there is no way to
+    #                 escape such commas.
+    #
+    cfg.MultiStrOpt('virt_mkfs',
+                    default=[
+                      'default=mkfs.ext3 -L %(fs_label)s -F %(target)s',
+                      'linux=mkfs.ext3 -L %(fs_label)s -F %(target)s',
+                      'windows='
+                      'mkfs.ntfs --fast --label %(fs_label)s %(target)s',
+                      # NOTE(yamahata): vfat case
+                      #'windows=mkfs.vfat -n %(fs_label)s %(target)s',
+                      ],
+                    help='mkfs commands for ephemeral device. '
+                         'The format is <os_type>=<mkfs command>'),
+    ]
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('injected_network_template',
-                    utils.abspath('virt/interfaces.template'),
-                    'Template file for injected network')
-flags.DEFINE_list('img_handlers', ['loop', 'nbd', 'guestfs'],
-                    'Order of methods used to mount disk images')
-
-
-# NOTE(yamahata): DEFINE_list() doesn't work because the command may
-#                 include ','. For example,
-#                 mkfs.ext3 -O dir_index,extent -E stride=8,stripe-width=16
-#                 --label %(fs_label)s %(target)s
-#
-#                 DEFINE_list() parses its argument by
-#                 [s.strip() for s in argument.split(self._token)]
-#                 where self._token = ','
-#                 No escape nor exceptional handling for ','.
-#                 DEFINE_list() doesn't give us what we need.
-flags.DEFINE_multistring('virt_mkfs',
-                         ['windows=mkfs.ntfs --fast --label %(fs_label)s '
-                          '%(target)s',
-                          # NOTE(yamahata): vfat case
-                          #'windows=mkfs.vfat -n %(fs_label)s %(target)s',
-                          'linux=mkfs.ext3 -L %(fs_label)s -F %(target)s',
-                          'default=mkfs.ext3 -L %(fs_label)s -F %(target)s'],
-                         'mkfs commands for ephemeral device. The format is'
-                         '<os_type>=<mkfs command>')
-
+FLAGS.add_options(disk_opts)
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None

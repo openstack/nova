@@ -20,19 +20,24 @@
 """
 Scheduler that allows routing some calls to one driver and others to another.
 """
+
+from nova.common import cfg
 from nova import flags
 from nova import utils
 from nova.scheduler import driver
 
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string('compute_scheduler_driver',
-                    'nova.scheduler.chance.ChanceScheduler',
-                    'Driver to use for scheduling compute calls')
-flags.DEFINE_string('volume_scheduler_driver',
-                    'nova.scheduler.chance.ChanceScheduler',
-                    'Driver to use for scheduling volume calls')
+multi_scheduler_opts = [
+    cfg.StrOpt('compute_scheduler_driver',
+               default='nova.scheduler.chance.ChanceScheduler',
+               help='Driver to use for scheduling compute calls'),
+    cfg.StrOpt('volume_scheduler_driver',
+               default='nova.scheduler.chance.ChanceScheduler',
+               help='Driver to use for scheduling volume calls'),
+    ]
 
+FLAGS = flags.FLAGS
+FLAGS.add_options(multi_scheduler_opts)
 
 # A mapping of methods to topics so we can figure out which driver to use.
 _METHOD_MAP = {'run_instance': 'compute',

@@ -21,11 +21,14 @@ import exceptions
 import os
 import tempfile
 
+from nova.common import cfg
 from nova import flags
 from nova import test
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('flags_unittest', 'foo', 'for testing purposes only')
+FLAGS.add_option(cfg.StrOpt('flags_unittest',
+                            default='foo',
+                            help='for testing purposes only'))
 
 
 class FlagsTestCase(test.TestCase):
@@ -41,11 +44,11 @@ class FlagsTestCase(test.TestCase):
         self.assert_('false' not in self.FLAGS)
         self.assert_('true' not in self.FLAGS)
 
-        flags.DEFINE_string('string', 'default', 'desc',
-                            flag_values=self.FLAGS)
-        flags.DEFINE_integer('int', 1, 'desc', flag_values=self.FLAGS)
-        flags.DEFINE_bool('false', False, 'desc', flag_values=self.FLAGS)
-        flags.DEFINE_bool('true', True, 'desc', flag_values=self.FLAGS)
+        self.FLAGS.add_option(cfg.StrOpt('string',
+                                         default='default', help='desc'))
+        self.FLAGS.add_option(cfg.IntOpt('int', default=1, help='desc'))
+        self.FLAGS.add_option(cfg.BoolOpt('false', default=False, help='desc'))
+        self.FLAGS.add_option(cfg.BoolOpt('true', default=True, help='desc'))
 
         self.assert_(self.FLAGS['string'])
         self.assert_(self.FLAGS['int'])
@@ -69,12 +72,12 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(self.FLAGS.true, False)
 
     def test_define_float(self):
-        flags.DEFINE_float('float', 6.66, 'desc', flag_values=self.FLAGS)
+        self.FLAGS.add_option(cfg.FloatOpt('float', default=6.66, help='desc'))
         self.assertEqual(self.FLAGS.float, 6.66)
 
     def test_define_multistring(self):
-        flags.DEFINE_multistring('multi', ['blaa'], 'desc',
-                                 flag_values=self.FLAGS)
+        self.FLAGS.add_option(cfg.MultiStrOpt('multi',
+                                              default=['blaa'], help='desc'))
 
         self.assert_(self.FLAGS['multi'])
         self.assertEqual(self.FLAGS.multi, ['blaa'])
@@ -89,7 +92,8 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(self.FLAGS.multi, ['foo', 'bar'])
 
     def test_define_list(self):
-        flags.DEFINE_list('list', ['foo'], 'desc', flag_values=self.FLAGS)
+        self.FLAGS.add_option(cfg.ListOpt('list',
+                                          default=['foo'], help='desc'))
 
         self.assert_(self.FLAGS['list'])
         self.assertEqual(self.FLAGS.list, ['foo'])
@@ -100,7 +104,7 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(self.FLAGS.list, ['a', 'b', 'c', 'd'])
 
     def test_error(self):
-        flags.DEFINE_integer('error', 1, 'desc', flag_values=self.FLAGS)
+        self.FLAGS.add_option(cfg.IntOpt('error', default=1, help='desc'))
 
         self.assertEqual(self.FLAGS.error, 1)
 
@@ -143,16 +147,16 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(self.global_FLAGS.runtime_answer, 60)
 
     def test_long_vs_short_flags(self):
-        flags.DEFINE_string('duplicate_answer_long', 'val', 'desc',
-                            flag_values=self.global_FLAGS)
+        self.global_FLAGS.add_option(cfg.StrOpt('duplicate_answer_long',
+                                                default='val', help='desc'))
         argv = ['flags_test', '--duplicate_answer=60', 'extra_arg']
         args = self.global_FLAGS(argv)
 
         self.assert_('duplicate_answer' not in self.global_FLAGS)
         self.assert_(self.global_FLAGS.duplicate_answer_long, 60)
 
-        flags.DEFINE_integer('duplicate_answer', 60, 'desc',
-                             flag_values=self.global_FLAGS)
+        self.global_FLAGS.add_option(cfg.IntOpt('duplicate_answer',
+                                                default=60, help='desc'))
         self.assertEqual(self.global_FLAGS.duplicate_answer, 60)
         self.assertEqual(self.global_FLAGS.duplicate_answer_long, 'val')
 
@@ -178,13 +182,13 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(FLAGS.FlagValuesDict()['flags_unittest'], 'foo')
 
     def test_flagfile(self):
-        flags.DEFINE_string('string', 'default', 'desc',
-                            flag_values=self.FLAGS)
-        flags.DEFINE_integer('int', 1, 'desc', flag_values=self.FLAGS)
-        flags.DEFINE_bool('false', False, 'desc', flag_values=self.FLAGS)
-        flags.DEFINE_bool('true', True, 'desc', flag_values=self.FLAGS)
-        flags.DEFINE_multistring('multi', ['blaa'], 'desc',
-                                 flag_values=self.FLAGS)
+        self.FLAGS.add_option(cfg.StrOpt('string',
+                                         default='default', help='desc'))
+        self.FLAGS.add_option(cfg.IntOpt('int', default=1, help='desc'))
+        self.FLAGS.add_option(cfg.BoolOpt('false', default=False, help='desc'))
+        self.FLAGS.add_option(cfg.BoolOpt('true', default=True, help='desc'))
+        self.FLAGS.add_option(cfg.MultiStrOpt('multi',
+                                              default=['blaa'], help='desc'))
 
         (fd, path) = tempfile.mkstemp(prefix='nova', suffix='.flags')
 
@@ -208,14 +212,15 @@ class FlagsTestCase(test.TestCase):
             os.remove(path)
 
     def test_defaults(self):
-        flags.DEFINE_string('foo', 'bar', 'help', flag_values=self.FLAGS)
+        self.FLAGS.add_option(cfg.StrOpt('foo', default='bar', help='desc'))
         self.assertEqual(self.FLAGS.foo, 'bar')
 
         self.FLAGS['foo'].SetDefault('blaa')
         self.assertEqual(self.FLAGS.foo, 'blaa')
 
     def test_templated_values(self):
-        flags.DEFINE_string('foo', 'foo', 'help', flag_values=self.FLAGS)
-        flags.DEFINE_string('bar', 'bar', 'help', flag_values=self.FLAGS)
-        flags.DEFINE_string('blaa', '$foo$bar', 'help', flag_values=self.FLAGS)
+        self.FLAGS.add_option(cfg.StrOpt('foo', default='foo', help='desc'))
+        self.FLAGS.add_option(cfg.StrOpt('bar', default='bar', help='desc'))
+        self.FLAGS.add_option(cfg.StrOpt('blaa',
+                                         default='$foo$bar', help='desc'))
         self.assertEqual(self.FLAGS.blaa, 'foobar')
