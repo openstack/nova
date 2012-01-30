@@ -114,13 +114,13 @@ class QuantumMelangeIPAMLib(object):
         db.network_delete_safe(context, network['id'])
 
     def get_networks_by_tenant(self, admin_context, tenant_id):
-        nets = []
+        nets = {}
         blocks = self.m_conn.get_blocks(tenant_id)
         for ip_block in blocks['ip_blocks']:
             network_id = ip_block['network_id']
             network = db.network_get_by_uuid(admin_context, network_id)
-            nets.append(network)
-        return nets
+            nets[network_id] = network
+        return nets.values()
 
     def get_global_networks(self, admin_context):
         return self.get_networks_by_tenant(admin_context,
