@@ -22,6 +22,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack.compute.contrib import keypairs
 from nova import context
 from nova import db
+from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -92,11 +93,7 @@ class KeypairsTest(test.TestCase):
     def test_keypair_create_with_invalid_name(self):
         body = {
             'keypair': {
-                'name': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                'name': 'a' * 256
             }
         }
         req = webob.Request.blank('/v2/fake/os-keypairs')
@@ -154,6 +151,18 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
+
+    def test_keypair_delete_not_found(self):
+
+        def db_key_pair_get_not_found(context, user_id, name):
+            raise exception.KeyPairNotFound()
+
+        self.stubs.Set(db, "key_pair_get",
+                       db_key_pair_get_not_found)
+        req = webob.Request.blank('/v2/fake/os-keypairs/WHAT')
+        res = req.get_response(fakes.wsgi_app())
+        print res
+        self.assertEqual(res.status_int, 404)
 
 
 class KeypairsXMLSerializerTest(test.TestCase):

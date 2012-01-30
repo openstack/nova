@@ -17,11 +17,8 @@
 
 """ Keypair management extension"""
 
-import os
-import shutil
-import tempfile
-
 import webob
+import webob.exc
 
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
@@ -122,7 +119,10 @@ class KeypairController(object):
         """
         context = req.environ['nova.context']
         authorize(context)
-        db.key_pair_destroy(context, context.user_id, id)
+        try:
+            db.key_pair_destroy(context, context.user_id, id)
+        except exception.KeypairNotFound:
+            raise webob.exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
     @wsgi.serializers(xml=KeypairsTemplate)
