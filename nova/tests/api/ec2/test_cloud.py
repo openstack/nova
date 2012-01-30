@@ -196,7 +196,7 @@ class CloudTestCase(test.TestCase):
                                'pool': 'nova',
                                'project_id': self.project_id})
         result = self.cloud.release_address(self.context, address)
-        self.assertEqual(result['releaseResponse'], ['Address released.'])
+        self.assertEqual(result.get('return', None), 'true')
 
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
