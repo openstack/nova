@@ -35,16 +35,15 @@ class ExtendedStatusController(wsgi.Controller):
         super(ExtendedStatusController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    def _get_and_extend_one(self, context, server_id, body):
-        try:
-            inst_ref = self.compute_api.routing_get(context, server_id)
-        except exception.NotFound:
-            LOG.warn("Instance %s not found" % server_id)
-            raise
+    def _get_instances(self, context, instance_uuids):
+        filters = {'uuid': instance_uuids}
+        instances = self.compute_api.get_all(context, filters)
+        return dict((instance['uuid'], instance) for instance in instances)
 
+    def _extend_server(self, server, instance):
         for state in ['task_state', 'vm_state', 'power_state']:
             key = "%s:%s" % (Extended_status.alias, state)
-            body[key] = inst_ref[state]
+            server[key] = instance[state]
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
@@ -54,10 +53,12 @@ class ExtendedStatusController(wsgi.Controller):
             resp_obj.attach(xml=ExtendedStatusTemplate())
 
             try:
-                self._get_and_extend_one(context, id, resp_obj.obj['server'])
+                instance = self.compute_api.routing_get(context, id)
             except exception.NotFound:
                 explanation = _("Server not found.")
                 raise exc.HTTPNotFound(explanation=explanation)
+
+            self._extend_server(resp_obj.obj['server'], instance)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
@@ -66,17 +67,18 @@ class ExtendedStatusController(wsgi.Controller):
             # Attach our slave template to the response object
             resp_obj.attach(xml=ExtendedStatusesTemplate())
 
-            for server in list(resp_obj.obj['servers']):
+            servers = list(resp_obj.obj['servers'])
+            instance_uuids = [server['id'] for server in servers]
+            instances = self._get_instances(context, instance_uuids)
+
+            for server_object in servers:
                 try:
-                    self._get_and_extend_one(context, server['id'], server)
-                except exception.NotFound:
-                    # NOTE(dtroyer): A NotFound exception at this point
-                    # happens because a delete was in progress and the
-                    # server that was present in the original call to
-                    # compute.api.get_all() is no longer present.
-                    # Delete it from the response and move on.
-                    resp_obj.obj['servers'].remove(server)
+                    instance_data = instances[server_object['id']]
+                except KeyError:
+                    # Ignore missing instance data
                     continue
+
+                self._extend_server(server_object, instance_data)
 
 
 class Extended_status(extensions.ExtensionDescriptor):
