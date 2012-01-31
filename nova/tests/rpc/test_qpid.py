@@ -186,7 +186,7 @@ class RpcQpidTestCase(test.TestCase):
 
             self.mocker.VerifyAll()
         finally:
-            if rpc_amqp.ConnectionContext._connection_pool.free():
+            while rpc_amqp.ConnectionContext._connection_pool.free_items:
                 # Pull the mock connection object out of the connection pool so
                 # that it doesn't mess up other test cases.
                 rpc_amqp.ConnectionContext._connection_pool.get()
@@ -261,7 +261,7 @@ class RpcQpidTestCase(test.TestCase):
 
             self.mocker.VerifyAll()
         finally:
-            if rpc_amqp.ConnectionContext._connection_pool.free():
+            while rpc_amqp.ConnectionContext._connection_pool.free_items:
                 # Pull the mock connection object out of the connection pool so
                 # that it doesn't mess up other test cases.
                 rpc_amqp.ConnectionContext._connection_pool.get()
