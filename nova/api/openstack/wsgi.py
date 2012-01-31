@@ -777,6 +777,18 @@ class Resource(wsgi.Application):
         content_type, body = self.get_body(request)
         accept = request.best_match_content_type()
 
+        # NOTE(Vek): Splitting the function up this way allows for
+        #            auditing by external tools that wrap the existing
+        #            function.  If we try to audit __call__(), we can
+        #            run into troubles due to the @webob.dec.wsgify()
+        #            decorator.
+        return self._process_stack(request, action, action_args,
+                                   content_type, body, accept)
+
+    def _process_stack(self, request, action, action_args,
+                       content_type, body, accept):
+        """Implement the processing stack."""
+
         # Get the implementing method
         try:
             meth, extensions = self.get_method(request, action,
