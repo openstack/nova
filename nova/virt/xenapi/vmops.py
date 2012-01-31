@@ -41,9 +41,11 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
 from nova.virt import driver
-from nova.virt.xenapi import volume_utils
+from nova.virt.xenapi import firewall
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
+from nova.virt.xenapi import volume_utils
+
 
 VolumeHelper = volume_utils.VolumeHelper
 NetworkHelper = network_utils.NetworkHelper
@@ -104,6 +106,8 @@ class VMOps(object):
         self._session = session
         self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
+        if FLAGS.firewall_driver not in firewall.drivers:
+            FLAGS['firewall_driver'].SetDefault(firewall.drivers[0])
         fw_class = utils.import_class(FLAGS.firewall_driver)
         self.firewall_driver = fw_class(xenapi_session=self._session)
         vif_impl = utils.import_class(FLAGS.xenapi_vif_driver)

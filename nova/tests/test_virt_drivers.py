@@ -444,13 +444,14 @@ class LibvirtConnTestCase(_VirtDriverTestCase):
 
         # Point _VirtDriverTestCase at the right module
         self.driver_module = nova.virt.libvirt.connection
+        FLAGS.firewall_driver = nova.virt.libvirt.firewall.drivers[0]
         super(LibvirtConnTestCase, self).setUp()
         FLAGS.rescue_image_id = "2"
         FLAGS.rescue_kernel_id = "3"
         FLAGS.rescue_ramdisk_id = None
 
     def tearDown(self):
-        super(LibvirtConnTestCase, self).setUp()
+        super(LibvirtConnTestCase, self).tearDown()
 
         # Restore libvirt
         import nova.virt.libvirt.connection

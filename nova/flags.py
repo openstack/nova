@@ -442,7 +442,7 @@ global_opts = [
                default=100,
                help='default partition size for shared capacity'),
     cfg.StrOpt('firewall_driver',
-               default='nova.virt.libvirt.firewall.IptablesFirewallDriver',
+               default='nova.virt.firewall.IptablesFirewallDriver',
                help='Firewall driver (defaults to iptables)'),
     cfg.StrOpt('image_service',
                default='nova.image.glance.GlanceImageService',

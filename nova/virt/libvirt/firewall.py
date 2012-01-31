@@ -33,6 +33,8 @@ from nova.virt import netutils
 LOG = logging.getLogger("nova.virt.libvirt.firewall")
 FLAGS = flags.FLAGS
 
+# The default Firewall driver must be listed at position 0
+drivers = ['nova.virt.libvirt.firewall.IptablesFirewallDriver', ]
 
 try:
     import libvirt

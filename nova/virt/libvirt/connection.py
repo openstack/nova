@@ -64,9 +64,10 @@ import nova.image
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
-from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import images
+from nova.virt.disk import api as disk
+from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
 
@@ -190,7 +191,8 @@ class LibvirtConnection(driver.ComputeDriver):
         self._wrapped_conn = None
         self.container = None
         self.read_only = read_only
-
+        if FLAGS.firewall_driver not in firewall.drivers:
+            FLAGS['firewall_driver'].SetDefault(firewall.drivers[0])
         fw_class = utils.import_class(FLAGS.firewall_driver)
         self.firewall_driver = fw_class(get_connection=self._get_connection)
         self.vif_driver = utils.import_object(FLAGS.libvirt_vif_driver)
