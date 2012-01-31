@@ -30,7 +30,7 @@ import tempfile
 import time
 import urllib
 import uuid
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from xml.dom import minidom
 
 from nova.common import cfg
@@ -1082,9 +1082,21 @@ def parse_rrd_update(doc, start, until=None):
 def average_series(data, col, start, until=None):
     vals = [row['values'][col] for row in data
             if (not until or (row['time'] <= until)) and
-                not row['values'][col].is_nan()]
+                row['values'][col].is_finite()]
     if vals:
-        return (sum(vals) / len(vals)).quantize(Decimal('1.0000'))
+        try:
+            return (sum(vals) / len(vals)).quantize(Decimal('1.0000'))
+        except InvalidOperation:
+            # (mdragon) Xenserver occasionally returns odd values in
+            # data that will throw an error on averaging (see bug 918490)
+            # These are hard to find, since, whatever those values are,
+            # Decimal seems to think they are a valid number, sortof.
+            # We *think* we've got the the cases covered, but just in
+            # case, log and return NaN, so we don't break reporting of
+            # other statistics.
+            LOG.error(_("Invalid statistics data from Xenserver: %s")
+                      % str(vals))
+            return Decimal('NaN')
     else:
         return Decimal('0.0000')
 
