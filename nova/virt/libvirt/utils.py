@@ -103,7 +103,11 @@ def copy_image(src, dest):
     :param src: Source image
     :param dest: Destination path
     """
-    shutil.copyfile(src, dest)
+    # We shell out to cp because that will intelligently copy
+    # sparse files.  I.E. holes will not be written to DEST,
+    # rather recreated efficiently.  In addition, since
+    # coreutils 8.11, holes can be read efficiently too.
+    execute('cp', src, dest)
 
 
 def mkfs(fs, path):
@@ -254,9 +258,6 @@ def get_fs_info(path):
             'used': used}
 
 
-def fetch_image(context, target, image_id, user_id, project_id,
-                 size=None):
-    """Grab image and optionally attempt to resize it"""
+def fetch_image(context, target, image_id, user_id, project_id):
+    """Grab image"""
     images.fetch(context, image_id, target, user_id, project_id)
-    if size:
-        disk.extend(target, size)

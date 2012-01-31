@@ -210,12 +210,17 @@ class CacheConcurrencyTestCase(test.TestCase):
         def fake_execute(*args, **kwargs):
             pass
 
+        def fake_extend(image, size):
+            pass
+
         self.stubs.Set(os.path, 'exists', fake_exists)
         self.stubs.Set(utils, 'execute', fake_execute)
         connection.libvirt_utils = fake_libvirt_utils
+        connection.disk.extend = fake_extend
 
     def tearDown(self):
         connection.libvirt_utils = libvirt_utils
+        connection.disk.extend = disk.extend
         super(CacheConcurrencyTestCase, self).tearDown()
 
     def test_same_fname_concurrency(self):
@@ -224,11 +229,11 @@ class CacheConcurrencyTestCase(test.TestCase):
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         eventlet.spawn(conn._cache_image, _concurrency,
-                       'target', 'fname', False, wait1, done1)
+                       'target', 'fname', False, None, wait1, done1)
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         eventlet.spawn(conn._cache_image, _concurrency,
-                       'target', 'fname', False, wait2, done2)
+                       'target', 'fname', False, None, wait2, done2)
         wait2.send()
         eventlet.sleep(0)
         try:
@@ -245,11 +250,11 @@ class CacheConcurrencyTestCase(test.TestCase):
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         eventlet.spawn(conn._cache_image, _concurrency,
-                       'target', 'fname2', False, wait1, done1)
+                       'target', 'fname2', False, None, wait1, done1)
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         eventlet.spawn(conn._cache_image, _concurrency,
-                       'target', 'fname1', False, wait2, done2)
+                       'target', 'fname1', False, None, wait2, done2)
         wait2.send()
         eventlet.sleep(0)
         try:
@@ -292,8 +297,14 @@ class LibvirtConnTestCase(test.TestCase):
         self.call_libvirt_dependant_setup = False
         connection.libvirt_utils = fake_libvirt_utils
 
+        def fake_extend(image, size):
+            pass
+
+        connection.disk.extend = fake_extend
+
     def tearDown(self):
         connection.libvirt_utils = libvirt_utils
+        connection.disk.extend = disk.extend
         super(LibvirtConnTestCase, self).tearDown()
 
     test_instance = {'memory_kb': '1024000',
@@ -1915,7 +1926,6 @@ disk size: 4.4M''', ''))
 
     def test_fetch_image(self):
         self.mox.StubOutWithMock(images, 'fetch')
-        self.mox.StubOutWithMock(disk, 'extend')
 
         context = 'opaque context'
         target = '/tmp/targetfile'
@@ -1923,11 +1933,7 @@ disk size: 4.4M''', ''))
         user_id = 'fake'
         project_id = 'fake'
         images.fetch(context, image_id, target, user_id, project_id)
-        images.fetch(context, image_id, target, user_id, project_id)
-        disk.extend(target, '10G')
 
         self.mox.ReplayAll()
         libvirt_utils.fetch_image(context, target, image_id,
                                   user_id, project_id)
-        libvirt_utils.fetch_image(context, target, image_id,
-                                  user_id, project_id, size='10G')
