@@ -61,7 +61,7 @@ class Mount(object):
         assert(os.path.exists(self.device))
 
         if self.partition:
-            map_path = '/dev/mapper/%sp%s' % (self.device.split('/')[-1],
+            map_path = '/dev/mapper/%sp%s' % (os.path.basename(self.device),
                                               self.partition)
             assert(not os.path.exists(map_path))
 
