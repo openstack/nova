@@ -1380,19 +1380,114 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(context, inst_ref['uuid'])
 
+    def test_check_can_live_migrate_source_works_correctly(self):
+        """Confirm check_can_live_migrate_source works on positive path"""
+        context = self.context.elevated()
+        inst_ref = self._create_fake_instance({'host': 'fake_host_2'})
+        inst_id = inst_ref["id"]
+        dest = "fake_host_1"
+
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_can_live_migrate_source')
+
+        dest_check_data = {"test": "data"}
+        db.instance_get(context, inst_id).AndReturn(inst_ref)
+        self.compute.driver.check_can_live_migrate_source(context,
+                                                          inst_ref,
+                                                          dest_check_data)
+
+        self.mox.ReplayAll()
+        self.compute.check_can_live_migrate_source(context, inst_id,
+                                                   dest_check_data)
+
+    def test_check_can_live_migrate_destination_works_correctly(self):
+        """Confirm check_can_live_migrate_destination works on positive path"""
+        context = self.context.elevated()
+        inst_ref = self._create_fake_instance({'host': 'fake_host_2'})
+        inst_id = inst_ref["id"]
+        dest = "fake_host_1"
+
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_can_live_migrate_destination')
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'check_can_live_migrate_source')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_can_live_migrate_destination_cleanup')
+
+        db.instance_get(context, inst_id).AndReturn(inst_ref)
+        dest_check_data = {"test": "data"}
+        self.compute.driver.check_can_live_migrate_destination(context,
+                inst_ref, True, False).AndReturn(dest_check_data)
+        self.compute.compute_rpcapi.check_can_live_migrate_source(context,
+                inst_ref, dest_check_data)
+        self.compute.driver.check_can_live_migrate_destination_cleanup(
+                context, dest_check_data)
+
+        self.mox.ReplayAll()
+        self.compute.check_can_live_migrate_destination(context, inst_id,
+                                                        True, False)
+
+    def test_check_can_live_migrate_destination_fails_dest_check(self):
+        """Confirm check_can_live_migrate_destination works on positive path"""
+        context = self.context.elevated()
+        inst_ref = self._create_fake_instance({'host': 'fake_host_2'})
+        inst_id = inst_ref["id"]
+        dest = "fake_host_1"
+
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_can_live_migrate_destination')
+
+        db.instance_get(context, inst_id).AndReturn(inst_ref)
+        self.compute.driver.check_can_live_migrate_destination(context,
+                inst_ref, True, False).AndRaise(exception.Invalid())
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.Invalid,
+                          self.compute.check_can_live_migrate_destination,
+                          context, inst_id, True, False)
+
+    def test_check_can_live_migrate_destination_fails_source(self):
+        """Confirm check_can_live_migrate_destination works on positive path"""
+        context = self.context.elevated()
+        inst_ref = self._create_fake_instance({'host': 'fake_host_2'})
+        inst_id = inst_ref["id"]
+        dest = "fake_host_1"
+
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_can_live_migrate_destination')
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'check_can_live_migrate_source')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'check_can_live_migrate_destination_cleanup')
+
+        db.instance_get(context, inst_id).AndReturn(inst_ref)
+        dest_check_data = {"test": "data"}
+        self.compute.driver.check_can_live_migrate_destination(context,
+                inst_ref, True, False).AndReturn(dest_check_data)
+        self.compute.compute_rpcapi.check_can_live_migrate_source(context,
+                inst_ref, dest_check_data).AndRaise(exception.Invalid())
+        self.compute.driver.check_can_live_migrate_destination_cleanup(
+                context, dest_check_data)
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.Invalid,
+                          self.compute.check_can_live_migrate_destination,
+                          context, inst_id, True, False)
+
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
         """Confirm raising exception if instance doesn't have fixed_ip."""
         # creating instance testdata
-        inst_ref = self._create_fake_instance({'host': 'dummy'})
-        c = context.get_admin_context()
+        context = self.context.elevated()
+        inst_ref = self._create_fake_instance()
+        inst_id = inst_ref["id"]
 
-        # start test
-        self.stubs.Set(time, 'sleep', lambda t: None)
+        self.mox.ReplayAll()
         self.assertRaises(exception.FixedIpNotFoundForInstance,
-                          self.compute.pre_live_migration,
-                          c, inst_ref['id'])
-        # cleanup
-        db.instance_destroy(c, inst_ref['uuid'])
+                          self.compute.pre_live_migration, context, inst_id)
 
     def test_pre_live_migration_works_correctly(self):
         """Confirm setup_compute_volume is called when volume is mounted."""
@@ -1401,16 +1496,18 @@ class ComputeTestCase(BaseTestCase):
                                                           spectacular=True)
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        '_get_instance_nw_info', stupid)
+
         # creating instance testdata
         inst_ref = self._create_fake_instance({'host': 'dummy'})
+        inst_id = inst_ref['id']
         c = context.get_admin_context()
+        nw_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'pre_live_migration')
-        self.compute.driver.pre_live_migration({'block_device_mapping': []})
-        nw_info = fake_network.fake_get_instance_nw_info(self.stubs)
-        self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
-        self.compute.driver.plug_vifs(mox.IsA(inst_ref), nw_info)
+        self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(inst_ref),
+                                               {'block_device_mapping': []},
+                                               mox.IgnoreArg())
         self.mox.StubOutWithMock(self.compute.driver,
                                  'ensure_filtering_rules_for_instance')
         self.compute.driver.ensure_filtering_rules_for_instance(
@@ -1418,7 +1515,7 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        ret = self.compute.pre_live_migration(c, inst_ref['id'])
+        ret = self.compute.pre_live_migration(c, inst_id)
         self.assertEqual(ret, None)
 
         # cleanup
@@ -1428,13 +1525,15 @@ class ComputeTestCase(BaseTestCase):
         """Confirm exception when pre_live_migration fails."""
         # creating instance testdata
         inst_ref = self._create_fake_instance({'host': 'dummy'})
+        inst_uuid = inst_ref['uuid']
+        inst_id = inst_ref['id']
 
         c = context.get_admin_context()
         topic = rpc.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
 
         # creating volume testdata
         volume_id = db.volume_create(c, {'size': 1})['id']
-        values = {'instance_uuid': inst_ref['uuid'], 'device_name': '/dev/vdc',
+        values = {'instance_uuid': inst_uuid, 'device_name': '/dev/vdc',
                   'delete_on_termination': False, 'volume_id': volume_id}
         db.block_device_mapping_create(c, values)
 
@@ -1442,60 +1541,60 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, FLAGS.volume_topic,
                  {"method": "check_for_export",
-                  "args": {'instance_id': inst_ref['id']}})
+                  "args": {'instance_id': inst_id}})
 
-        self.mox.StubOutWithMock(self.compute.driver, 'get_instance_disk_info')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'get_instance_disk_info')
         self.compute.driver.get_instance_disk_info(inst_ref.name)
 
-        rpc.call(c, topic,
-                 {"method": "pre_live_migration",
-                  "args": {'instance_id': inst_ref['id'],
-                           'block_migration': True,
-                           'disk': None},
-                  "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION
-                 }, None).AndRaise(rpc.common.RemoteError('', '', ''))
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'pre_live_migration')
+        self.compute.compute_rpcapi.pre_live_migration(c, mox.IsA(inst_ref),
+            True, None, inst_ref['host']).AndRaise(
+                                        rpc.common.RemoteError('', '', ''))
 
         # mocks for rollback
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
-                                'args': {'instance_id': inst_ref['id'],
+                                'args': {'instance_id': inst_id,
                                          'host': self.compute.host,
                                          'teardown': False}})
         rpc.call(c, topic,
                 {"method": "remove_volume_connection",
-                 "args": {'instance_id': inst_ref['id'],
+                 "args": {'instance_id': inst_id,
                           'volume_id': volume_id},
-                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-                None)
-        rpc.cast(c, topic, {"method": "rollback_live_migration_at_destination",
-                            "args": {'instance_id': inst_ref['id']}})
+                 "version": "1.0"}, None)
+        rpc.cast(c, topic,
+                {"method": "rollback_live_migration_at_destination",
+                 "args": {'instance_id': inst_id},
+                 "version": "1.0"})
 
         # start test
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.RemoteError,
                           self.compute.live_migration,
-                          c, inst_ref['id'], inst_ref['host'], True)
+                          c, inst_id, inst_ref['host'], True)
 
         # cleanup
         for bdms in db.block_device_mapping_get_all_by_instance(
-            c, inst_ref['uuid']):
+            c, inst_uuid):
             db.block_device_mapping_destroy(c, bdms['id'])
         db.volume_destroy(c, volume_id)
-        db.instance_destroy(c, inst_ref['uuid'])
+        db.instance_destroy(c, inst_uuid)
 
     def test_live_migration_works_correctly(self):
         """Confirm live_migration() works as expected correctly."""
         # creating instance testdata
-        instance = self._create_fake_instance({'host': 'dummy'})
-        instance_id = instance['id']
         c = context.get_admin_context()
-        inst_ref = db.instance_get(c, instance_id)
-        topic = rpc.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
+        inst_ref = self._create_fake_instance({'host': 'dummy'})
+        inst_uuid = inst_ref['uuid']
+        inst_id = inst_ref['id']
 
         # create
         self.mox.StubOutWithMock(rpc, 'call')
+        topic = rpc.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
         rpc.call(c, topic,
                 {"method": "pre_live_migration",
-                 "args": {'instance_id': instance_id,
+                 "args": {'instance_id': inst_id,
                           'block_migration': False,
                           'disk': None},
                  "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
@@ -1503,11 +1602,11 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        ret = self.compute.live_migration(c, inst_ref['id'], inst_ref['host'])
+        ret = self.compute.live_migration(c, inst_id, inst_ref['host'])
         self.assertEqual(ret, None)
 
         # cleanup
-        db.instance_destroy(c, instance['uuid'])
+        db.instance_destroy(c, inst_uuid)
 
     def test_post_live_migration_working_correctly(self):
         """Confirm post_live_migration() works as expected correctly."""
@@ -1516,40 +1615,40 @@ class ComputeTestCase(BaseTestCase):
 
         # creating testdata
         c = context.get_admin_context()
-        instance = self._create_fake_instance({
-                        'state_description': 'migrating',
-                        'state': power_state.PAUSED})
-        instance_id = instance['id']
-        i_ref = db.instance_get(c, instance_id)
-        db.instance_update(c, i_ref['uuid'],
+        inst_ref = self._create_fake_instance({
+                                'state_description': 'migrating',
+                                'state': power_state.PAUSED})
+        inst_uuid = inst_ref['uuid']
+        inst_id = inst_ref['id']
+
+        db.instance_update(c, inst_uuid,
                            {'task_state': task_states.MIGRATING,
                             'power_state': power_state.PAUSED})
-        v_ref = db.volume_create(c, {'size': 1, 'instance_id': instance_id})
+        v_ref = db.volume_create(c, {'size': 1, 'instance_id': inst_id})
         fix_addr = db.fixed_ip_create(c, {'address': '1.1.1.1',
-                                          'instance_id': instance_id})
+                                          'instance_id': inst_id})
         fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
         db.floating_ip_create(c, {'address': flo_addr,
                                   'fixed_ip_id': fix_ref['id']})
 
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
-        self.compute.driver.unfilter_instance(i_ref, [])
+        self.compute.driver.unfilter_instance(inst_ref, [])
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, rpc.queue_get_for(c, FLAGS.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
-             "args": {'instance_id': i_ref['id'], 'block_migration': False},
-             "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-            None)
+             "args": {'instance_id': inst_id, 'block_migration': False},
+             "version": "1.0"}, None)
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
-        self.compute.driver.unplug_vifs(i_ref, [])
+        self.compute.driver.unplug_vifs(inst_ref, [])
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
-                                'args': {'instance_id': instance_id,
+                                'args': {'instance_id': inst_id,
                                          'host': self.compute.host,
                                          'teardown': True}})
 
         # start test
         self.mox.ReplayAll()
-        self.compute.post_live_migration(c, i_ref, dest)
+        self.compute.post_live_migration(c, inst_ref, dest)
 
         # make sure floating ips are rewritten to destinatioin hostname.
         flo_refs = db.floating_ip_get_all_by_host(c, dest)
@@ -1557,7 +1656,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(flo_refs[0]['address'], flo_addr)
 
         # cleanup
-        db.instance_destroy(c, instance['uuid'])
+        db.instance_destroy(c, inst_uuid)
         db.volume_destroy(c, v_ref['id'])
         db.floating_ip_destroy(c, flo_addr)
 

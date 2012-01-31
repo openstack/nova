@@ -259,10 +259,6 @@ class FakeDriver(driver.ComputeDriver):
             LOG.info(_('Compute_service record updated for %s ') % host)
             db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
 
-    def compare_cpu(self, xml):
-        """This method is supported only by libvirt."""
-        raise NotImplementedError('This method is supported only by libvirt.')
-
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
@@ -283,7 +279,8 @@ class FakeDriver(driver.ComputeDriver):
     def confirm_migration(self, migration, instance, network_info):
         return
 
-    def pre_live_migration(self, block_device_info):
+    def pre_live_migration(self, context, instance_ref, block_device_info,
+                           network_info):
         """This method is supported only by libvirt."""
         return
 

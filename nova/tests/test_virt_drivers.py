@@ -456,32 +456,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.refresh_provider_fw_rules()
 
     @catch_notimplementederror
-    def test_compare_cpu(self):
-        cpu_info = '''{ "topology": {
-                               "sockets": 1,
-                               "cores": 2,
-                               "threads": 1 },
-                        "features": [
-                            "xtpr",
-                            "tm2",
-                            "est",
-                            "vmx",
-                            "ds_cpl",
-                            "monitor",
-                            "pbe",
-                            "tm",
-                            "ht",
-                            "ss",
-                            "acpi",
-                            "ds",
-                            "vme"],
-                        "arch": "x86_64",
-                        "model": "Penryn",
-                        "vendor": "Intel" }'''
-
-        self.connection.compare_cpu(cpu_info)
-
-    @catch_notimplementederror
     def test_ensure_filtering_for_instance(self):
         instance_ref = test_utils.get_test_instance()
         network_info = test_utils.get_test_network_info()

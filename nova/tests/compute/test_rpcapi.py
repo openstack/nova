@@ -60,12 +60,16 @@ class ComputeRpcAPITestCase(test.TestCase):
             expected_msg['args']['host'] = host_param
         elif 'host' in expected_msg['args']:
             del expected_msg['args']['host']
+        if 'destination' in expected_msg['args']:
+            del expected_msg['args']['destination']
         if 'instance' in expected_msg['args']:
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
             if method in ['rollback_live_migration_at_destination',
                           'pre_live_migration', 'remove_volume_connection',
-                          'post_live_migration_at_destination']:
+                          'post_live_migration_at_destination',
+                          'check_can_live_migrate_destination',
+                          'check_can_live_migrate_source']:
                 expected_msg['args']['instance_id'] = instance['id']
             elif method == 'get_instance_disk_info':
                 expected_msg['args']['instance_name'] = instance['name']
@@ -78,6 +82,8 @@ class ComputeRpcAPITestCase(test.TestCase):
             kwargs['cast'] = False
         if 'host' in kwargs:
             host = kwargs['host']
+        elif 'destination' in kwargs:
+            host = kwargs['destination']
         else:
             host = kwargs['instance']['host']
         expected_topic = '%s.%s' % (FLAGS.compute_topic, host)
@@ -112,17 +118,15 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('attach_volume', 'cast',
                 instance=self.fake_instance, volume_id='id', mountpoint='mp')
 
-    def test_check_shared_storage_test_file(self):
-        self._test_compute_api('check_shared_storage_test_file', 'call',
-                filename='fn', host='host')
+    def test_check_can_live_migrate_destination(self):
+        self._test_compute_api('check_can_live_migrate_destination', 'call',
+                version='1.2', instance=self.fake_instance, destination='dest',
+                block_migration=True, disk_over_commit=True)
 
-    def test_cleanup_shared_storage_test_file(self):
-        self._test_compute_api('cleanup_shared_storage_test_file', 'cast',
-                filename='fn', host='host')
-
-    def test_compare_cpu(self):
-        self._test_compute_api('compare_cpu', 'call', cpu_info='info',
-                host='host')
+    def test_check_can_live_migrate_source(self):
+        self._test_compute_api('check_can_live_migrate_source', 'call',
+                version='1.2', instance=self.fake_instance,
+                dest_check_data={"test": "data"})
 
     def test_confirm_resize_cast(self):
         self._test_compute_api('confirm_resize', 'cast',
@@ -131,10 +135,6 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_confirm_resize_call(self):
         self._test_compute_api('confirm_resize', 'call',
                 instance=self.fake_instance, migration_id='id', host='host')
-
-    def test_create_shared_storage_test_file(self):
-        self._test_compute_api('create_shared_storage_test_file', 'call',
-                host='host')
 
     def test_detach_volume(self):
         self._test_compute_api('detach_volume', 'cast',

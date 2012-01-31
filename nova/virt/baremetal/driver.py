@@ -716,9 +716,6 @@ class BareMetalDriver(driver.ComputeDriver):
             LOG.info(_('Compute_service record updated for %s ') % host)
             db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
 
-    def compare_cpu(self, cpu_info):
-        raise NotImplementedError()
-
     def ensure_filtering_rules_for_instance(self, instance_ref,
                                             time=None):
         raise NotImplementedError()
