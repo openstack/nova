@@ -33,7 +33,7 @@ FLAGS = flags.FLAGS
 
 
 class Dom0IptablesFirewallDriver(IptablesFirewallDriver):
-    """ IptablesFirewallDriver class
+    """ Dom0IptablesFirewallDriver class
 
     This class provides an implementation for nova.virt.Firewall
     using iptables. This class is meant to be used with the xenapi

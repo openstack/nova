@@ -100,7 +100,7 @@ class FirewallDriver(object):
 
 
 class IptablesFirewallDriver(FirewallDriver):
-    """ Driver which enforces security groups through iptables rules. """
+    """Driver which enforces security groups through iptables rules."""
 
     def __init__(self, **kwargs):
         from nova.network import linux_net
@@ -118,7 +118,7 @@ class IptablesFirewallDriver(FirewallDriver):
         pass
 
     def apply_instance_filter(self, instance, network_info):
-        """No-op. Everything is done in prepare_instance_filter"""
+        """No-op. Everything is done in prepare_instance_filter."""
         pass
 
     def unfilter_instance(self, instance, network_info):
@@ -146,7 +146,7 @@ class IptablesFirewallDriver(FirewallDriver):
     def _filters_for_instance(self, chain_name, network_info):
         """Creates a rule corresponding to each ip that defines a
              jump to the corresponding instance - chain for all the traffic
-             destined to that ip"""
+             destined to that ip."""
         ips_v4 = [ip['ip'] for (_n, mapping) in network_info
                  for ip in mapping['ips']]
         ipv4_rules = self._create_filter(ips_v4, chain_name)
@@ -395,4 +395,49 @@ class IptablesFirewallDriver(FirewallDriver):
     @staticmethod
     def _provider_rules():
         """Generate a list of rules from provider for IP4 & IP6."""
-        raise NotImplementedError()
+        ctxt = context.get_admin_context()
+        ipv4_rules = []
+        ipv6_rules = []
+        rules = db.provider_fw_rule_get_all(ctxt)
+        for rule in rules:
+            LOG.debug(_('Adding provider rule: %s'), rule['cidr'])
+            version = netutils.get_ip_version(rule['cidr'])
+            if version == 4:
+                fw_rules = ipv4_rules
+            else:
+                fw_rules = ipv6_rules
+
+            protocol = rule['protocol']
+            if version == 6 and protocol == 'icmp':
+                protocol = 'icmpv6'
+
+            args = ['-p', protocol, '-s', rule['cidr']]
+
+            if protocol in ['udp', 'tcp']:
+                if rule['from_port'] == rule['to_port']:
+                    args += ['--dport', '%s' % (rule['from_port'],)]
+                else:
+                    args += ['-m', 'multiport',
+                             '--dports', '%s:%s' % (rule['from_port'],
+                                                    rule['to_port'])]
+            elif protocol == 'icmp':
+                icmp_type = rule['from_port']
+                icmp_code = rule['to_port']
+
+                if icmp_type == -1:
+                    icmp_type_arg = None
+                else:
+                    icmp_type_arg = '%s' % icmp_type
+                    if not icmp_code == -1:
+                        icmp_type_arg += '/%s' % icmp_code
+
+                if icmp_type_arg:
+                    if version == 4:
+                        args += ['-m', 'icmp', '--icmp-type',
+                                 icmp_type_arg]
+                    elif version == 6:
+                        args += ['-m', 'icmp6', '--icmpv6-type',
+                                 icmp_type_arg]
+            args += ['-j DROP']
+            fw_rules += [' '.join(args)]
+        return ipv4_rules, ipv6_rules
