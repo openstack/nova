@@ -1360,19 +1360,6 @@ class CloudTestCase(test.TestCase):
         result = run_instances(self.context, **kwargs)
         self.assertEqual(len(result['instancesSet']), 1)
 
-    def test_terminate_instances(self):
-        inst1 = db.instance_create(self.context, {'reservation_id': 'a',
-                                                  'image_ref': 1,
-                                                  'host': 'host1'})
-        terminate_instances = self.cloud.terminate_instances
-        # valid instance_id
-        result = terminate_instances(self.context, ['i-00000001'])
-        self.assertTrue(result)
-        # non-existing instance_id
-        self.assertRaises(exception.InstanceNotFound, terminate_instances,
-                          self.context, ['i-2'])
-        db.instance_destroy(self.context, inst1['id'])
-
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
         ec2_id = ec2utils.id_to_ec2_id(inst['id'])
@@ -1432,8 +1419,14 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.rescue_instance(self.context, instance_id)
         self.assertTrue(result)
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'rescue'},
+                         'shutdownState': {'code': 48,
+                                           'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
-        self.assertTrue(result)
+        self.assertEqual(result, expected)
         self._restart_compute_service()
 
     def test_unrescue_instances(self):
@@ -1448,8 +1441,14 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.unrescue_instance(self.context, instance_id)
         self.assertTrue(result)
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'shutdownState': {'code': 48,
+                                           'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
-        self.assertTrue(result)
+        self.assertEqual(result, expected)
         self._restart_compute_service()
 
     def test_stop_start_instance(self):
@@ -1476,8 +1475,14 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.stop_instances(self.context, [instance_id])
         self.assertTrue(result)
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 80,
+                                           'name': 'stopped'},
+                         'shutdownState': {'code': 48,
+                                           'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
-        self.assertTrue(result)
+        self.assertEqual(result, expected)
 
     def test_start_instances(self):
         kwargs = {'image_id': 'ami-1',
@@ -1491,8 +1496,14 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.start_instances(self.context, [instance_id])
         self.assertTrue(result)
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'shutdownState': {'code': 48,
+                                           'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
-        self.assertTrue(result)
+        self.assertEqual(result, expected)
         self._restart_compute_service()
 
     def test_stop_instances(self):
@@ -1504,8 +1515,14 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.stop_instances(self.context, [instance_id])
         self.assertTrue(result)
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 80,
+                                           'name': 'stopped'},
+                         'shutdownState': {'code': 48,
+                                           'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
-        self.assertTrue(result)
+        self.assertEqual(result, expected)
         self._restart_compute_service()
 
     def test_terminate_instances(self):
@@ -1519,8 +1536,82 @@ class CloudTestCase(test.TestCase):
                           self.cloud.start_instances,
                           self.context, [instance_id])
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'shutdownState': {'code': 48,
+                                           'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
+        self.assertEqual(result, expected)
+        self._restart_compute_service()
+
+    def test_terminate_instances_invalid_instance_id(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1, }
+        instance_id = self._run_instance(**kwargs)
+
+        self.assertRaises(exception.InstanceNotFound,
+                          self.cloud.terminate_instances,
+                          self.context, ['i-2'])
+        self._restart_compute_service()
+
+    def test_terminate_instances_disable_terminate(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1, }
+        instance_id = self._run_instance(**kwargs)
+
+        internal_id = ec2utils.ec2_id_to_id(instance_id)
+        instance = db.instance_update(self.context, internal_id,
+                                      {'disable_terminate': True})
+
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'shutdownState': {'code': 16,
+                                           'name': 'running'}}]}
+        result = self.cloud.terminate_instances(self.context, [instance_id])
+        self.assertEqual(result, expected)
+
+        instance = db.instance_update(self.context, internal_id,
+                                      {'disable_terminate': False})
+
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'shutdownState': {'code': 48,
+                                           'name': 'terminated'}}]}
+        result = self.cloud.terminate_instances(self.context, [instance_id])
+        self.assertEqual(result, expected)
+        self._restart_compute_service()
+
+    def test_terminate_instances_two_instances(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1, }
+        inst1 = self._run_instance(**kwargs)
+        inst2 = self._run_instance(**kwargs)
+
+        result = self.cloud.stop_instances(self.context, [inst1])
         self.assertTrue(result)
+
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 80,
+                                           'name': 'stopped'},
+                         'shutdownState': {'code': 48,
+                                           'name': 'terminated'}},
+                        {'instanceId': 'i-00000002',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'shutdownState': {'code': 48,
+                                           'name': 'terminated'}}]}
+        result = self.cloud.terminate_instances(self.context, [inst1, inst2])
+        self.assertEqual(result, expected)
         self._restart_compute_service()
 
     def test_reboot_instances(self):
@@ -1916,9 +2007,15 @@ class CloudTestCase(test.TestCase):
             self.assertEqual(result['instanceInitiatedShutdownBehavior'],
                              expected_result)
 
+            expected = {'instancesSet': [
+                            {'instanceId': instance_id,
+                             'previousState': {'code': 16,
+                                               'name': 'running'},
+                             'shutdownState': {'code': 48,
+                                               'name': 'terminated'}}]}
             result = self.cloud.terminate_instances(self.context,
                                                     [instance_id])
-            self.assertTrue(result)
+            self.assertEqual(result, expected)
             self._restart_compute_service()
 
         test_dia_iisb('terminate', image_id='ami-1')

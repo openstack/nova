@@ -1023,6 +1023,25 @@ class CloudController(object):
         assert len(i) == 1
         return i[0]
 
+    def _format_terminate_instances(self, context, instance_id,
+                                    previous_states):
+        instances_set = []
+        for (ec2_id, previous_state) in zip(instance_id, previous_states):
+            i = {}
+            i['instanceId'] = ec2_id
+            i['previousState'] = _state_description(previous_state['vm_state'],
+                                        previous_state['shutdown_terminate'])
+            try:
+                internal_id = ec2utils.ec2_id_to_id(ec2_id)
+                instance = self.compute_api.get(context, internal_id)
+                i['shutdownState'] = _state_description(instance['vm_state'],
+                                            instance['shutdown_terminate'])
+            except exception.NotFound:
+                i['shutdownState'] = _state_description(vm_states.DELETED,
+                                                        True)
+            instances_set.append(i)
+        return {'instancesSet': instances_set}
+
     def _format_instance_bdm(self, context, instance_id, root_device_name,
                              result):
         """Format InstanceBlockDeviceMappingResponseItemType"""
@@ -1263,11 +1282,15 @@ class CloudController(object):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified."""
         LOG.debug(_("Going to start terminating instances"))
+        previous_states = []
         for ec2_id in instance_id:
             _instance_id = ec2utils.ec2_id_to_id(ec2_id)
             instance = self.compute_api.get(context, _instance_id)
+            previous_states.append(instance)
             self.compute_api.delete(context, instance)
-        return True
+        return self._format_terminate_instances(context,
+                                                instance_id,
+                                                previous_states)
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
