@@ -68,6 +68,16 @@ class HostActionTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
+class HostShowTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('host')
+        elem = xmlutil.make_flat_dict('resource', selector='host',
+                                      subselector='resource')
+        root.append(elem)
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
 class HostDeserializer(wsgi.XMLDeserializer):
     def default(self, string):
         try:
@@ -81,15 +91,6 @@ class HostDeserializer(wsgi.XMLDeserializer):
             updates[child.tagName] = self.extract_text(child)
 
         return dict(body=updates)
-
-
-class HostShowTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('host', selector='host')
-        root.set('resource')
-        root.set('usage')
-
-        return xmlutil.MasterTemplate(root, 1)
 
 
 def _list_hosts(req, service=None):
@@ -192,16 +193,10 @@ class HostController(object):
 
         :param context: security context
         :param host: hostname
-        :returns:
-            {'host': {'resource':D1, 'usage':{proj_id1:D2,..}}}
-
-            'resource' shows "available" and "in-use" vcpus, memory and disk.
-            'usage' shows "in-use" vcpus, memory and disk per project.
-
-            D1: {'vcpus': 16, 'memory_mb': 2048, 'local_gb': 2048,
-                 'vcpus_used': 12, 'memory_mb_used': 10240,
-                 'local_gb_used': 64}
-            D2: {'vcpus': 1, 'memory_mb': 2048, 'local_gb': 20}
+        :returns: expected to use HostShowTemplate.
+            ex. {'host': {'resource':D},..}
+                D: {'host': 'hostname','project': 'admin',
+                    'cpu': 1, 'memory_mb': 2048, 'disk_gb': 30}
         """
         host = id
         context = req.environ['nova.context']
@@ -222,16 +217,28 @@ class HostController(object):
 
         # Getting total available/used resource
         compute_ref = compute_ref['compute_node'][0]
-        resource = {'vcpus': compute_ref['vcpus'],
-                    'memory_mb': compute_ref['memory_mb'],
-                    'local_gb': compute_ref['local_gb'],
-                    'vcpus_used': compute_ref['vcpus_used'],
-                    'memory_mb_used': compute_ref['memory_mb_used'],
-                    'local_gb_used': compute_ref['local_gb_used']}
-        usage = dict()
-        if not instance_refs:
-            return {'host':
-                    {'resource': resource, 'usage': usage}}
+        resources = [{'resource': {'host': host, 'project': '(total)',
+                      'cpu': compute_ref['vcpus'],
+                      'memory_mb': compute_ref['memory_mb'],
+                      'disk_gb': compute_ref['local_gb']}},
+                     {'resource': {'host': host, 'project': '(used_now)',
+                      'cpu': compute_ref['vcpus_used'],
+                      'memory_mb': compute_ref['memory_mb_used'],
+                      'disk_gb': compute_ref['local_gb_used']}}]
+
+        cpu_sum = 0
+        mem_sum = 0
+        hdd_sum = 0
+        for i in instance_refs:
+            cpu_sum += i['vcpus']
+            mem_sum += i['memory_mb']
+            hdd_sum += i['root_gb'] + i['ephemeral_gb']
+
+        resources.append({'resource': {'host': host,
+                          'project': '(used_max)',
+                          'cpu': cpu_sum,
+                          'memory_mb': mem_sum,
+                          'disk_gb': hdd_sum}})
 
         # Getting usage resource per project
         project_ids = [i['project_id'] for i in instance_refs]
@@ -246,11 +253,13 @@ class HostController(object):
             disk = [i['root_gb'] + i['ephemeral_gb'] for i in instance_refs
                     if i['project_id'] == project_id]
 
-            usage[project_id] = {'vcpus': reduce(lambda x, y: x + y, vcpus),
-                                 'memory_mb': reduce(lambda x, y: x + y, mem),
-                                 'local_gb': reduce(lambda x, y: x + y, disk)}
+            resources.append({'resource': {'host': host,
+                              'project': project_id,
+                              'cpu': reduce(lambda x, y: x + y, vcpus),
+                              'memory_mb': reduce(lambda x, y: x + y, mem),
+                              'disk_gb': reduce(lambda x, y: x + y, disk)}})
 
-        return {'host': {'resource': resource, 'usage': usage}}
+        return {'host': resources}
 
 
 class Hosts(extensions.ExtensionDescriptor):
