@@ -521,7 +521,7 @@ class TestSecurityGroupRules(test.TestCase):
                           "10.2.3.124/24")
 
     def test_create_by_group_id(self):
-        rule = security_group_rule_template(group_id='1')
+        rule = security_group_rule_template(group_id=1)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
@@ -529,6 +529,23 @@ class TestSecurityGroupRules(test.TestCase):
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
         self.assertEquals(security_group_rule['parent_group_id'], 2)
+
+    def test_create_by_same_group_id(self):
+        rule1 = security_group_rule_template(group_id=1, from_port=80,
+                                             to_port=80)
+        self.parent_security_group['rules'] = [security_group_rule_db(rule1)]
+
+        rule2 = security_group_rule_template(group_id=1, from_port=81,
+                                             to_port=81)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        res_dict = self.controller.create(req, {'security_group_rule': rule2})
+
+        security_group_rule = res_dict['security_group_rule']
+        self.assertNotEquals(security_group_rule['id'], 0)
+        self.assertEquals(security_group_rule['parent_group_id'], 2)
+        self.assertEquals(security_group_rule['from_port'], 81)
+        self.assertEquals(security_group_rule['to_port'], 81)
 
     def test_create_by_invalid_cidr_json(self):
         rules = {
@@ -571,8 +588,17 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
-    def test_create_add_existing_rules(self):
+    def test_create_add_existing_rules_by_cidr(self):
         rule = security_group_rule_template(cidr='10.0.0.0/24')
+
+        self.parent_security_group['rules'] = [security_group_rule_db(rule)]
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'security_group_rule': rule})
+
+    def test_create_add_existing_rules_by_group_id(self):
+        rule = security_group_rule_template(group_id=1)
 
         self.parent_security_group['rules'] = [security_group_rule_db(rule)]
 
@@ -711,7 +737,7 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
-    def test_create_rule_with_same_group_parent_id(self):
+    def test_create_with_same_group_parent_id_and_group_id(self):
         rule = security_group_rule_template(group_id=2)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
