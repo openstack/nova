@@ -338,11 +338,6 @@ def debug(arg):
     return arg
 
 
-def runthis(prompt, *cmd, **kwargs):
-    LOG.debug(_('Running %s'), (' '.join(cmd)))
-    rv, err = execute(*cmd, **kwargs)
-
-
 def generate_uid(topic, size=8):
     characters = '01234567890abcdefghijklmnopqrstuvwxyz'
     choices = [random.choice(characters) for x in xrange(size)]

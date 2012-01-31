@@ -119,7 +119,7 @@ def ensure_ca_filesystem():
         if not os.path.exists(ca_dir):
             os.makedirs(ca_dir)
         os.chdir(ca_dir)
-        utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
+        utils.execute("sh", genrootca_sh_path)
         os.chdir(start)
 
 
