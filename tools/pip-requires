@@ -4,7 +4,7 @@ pylint==0.19
 Cheetah==2.4.4
 amqplib==0.6.1
 anyjson==0.2.4
-boto
+boto==2.1.1
 carrot==0.10.5
 eventlet
 kombu==1.0.4
