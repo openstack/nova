@@ -195,6 +195,27 @@ class LibvirtVolumeTestCase(test.TestCase):
         libvirt_driver.disconnect_volume(connection_info, mount_device)
         connection_info = vol_driver.terminate_connection(vol, self.connr)
 
+    def test_libvirt_lxc_volume(self):
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        vol_driver = volume_driver.ISCSIDriver()
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        location = '10.0.2.15:3260'
+        name = 'volume-00000001'
+        iqn = 'iqn.2010-10.org.openstack:%s' % name
+        vol = {'id': 1,
+               'name': name,
+               'provider_auth': None,
+               'provider_location': '%s,fake %s' % (location, iqn)}
+        connection_info = vol_driver.initialize_connection(vol, self.connr)
+        mount_device = "vde"
+        xml = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = xml_to_tree(xml)
+        dev_str = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-0' % (location, iqn)
+        self.assertEqual(tree.get('type'), 'block')
+        self.assertEqual(tree.find('./source').get('dev'), dev_str)
+        libvirt_driver.disconnect_volume(connection_info, mount_device)
+        connection_info = vol_driver.terminate_connection(vol, self.connr)
+
 
 class CacheConcurrencyTestCase(test.TestCase):
     def setUp(self):
