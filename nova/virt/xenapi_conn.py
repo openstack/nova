@@ -544,10 +544,14 @@ class XenAPISession(object):
 
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread."""
+        # NOTE(johannes): Fetch host before we acquire a session. Since
+        # _get_session() acquires a session too, it can result in a deadlock
+        # if multiple greenthreads race with each other. See bug 924918
+        host = self.get_xenapi_host()
         with self._get_session() as session:
             return tpool.execute(self._unwrap_plugin_exceptions,
                                  session.xenapi.Async.host.call_plugin,
-                                 self.get_xenapi_host(), plugin, fn, args)
+                                 host, plugin, fn, args)
 
     def wait_for_task(self, task, uuid=None):
         """Return the result of the given task. The task is polled
