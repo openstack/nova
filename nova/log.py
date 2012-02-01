@@ -21,7 +21,9 @@
 
 This module adds to logging functionality by adding the option to specify
 a context object when calling the various log methods.  If the context object
-is not specified, default formatting is used.
+is not specified, default formatting is used. Additionally, an instance uuid
+may be passed as part of the log message, which is intended to make it easier
+for admins to find messages related to a specific instance.
 
 It also allows setting of formatting information through flags.
 
@@ -47,10 +49,12 @@ from nova import version
 log_opts = [
     cfg.StrOpt('logging_context_format_string',
                default='%(asctime)s %(levelname)s %(name)s [%(request_id)s '
-                       '%(user_id)s %(project_id)s] %(message)s',
+                       '%(user_id)s %(project_id)s] %(instance)s'
+                       '%(message)s',
                help='format string to use for log messages with context'),
     cfg.StrOpt('logging_default_format_string',
-               default='%(asctime)s %(levelname)s %(name)s [-] %(message)s',
+               default='%(asctime)s %(levelname)s %(name)s [-] %(instance)s'
+                       '%(message)s',
                help='format string to use for log messages without context'),
     cfg.StrOpt('logging_debug_format_suffix',
                default='from (pid=%(process)d) %(funcName)s '
@@ -59,6 +63,14 @@ log_opts = [
     cfg.StrOpt('logging_exception_prefix',
                default='(%(name)s): TRACE: ',
                help='prefix each line of exception output with this format'),
+    cfg.StrOpt('logging_debug_format_suffix',
+               default='from (pid=%(process)d) %(funcName)s '
+                       '%(pathname)s:%(lineno)d',
+               help='data to append to log format when level is DEBUG'),
+    cfg.StrOpt('instance_format',
+               default='[instance: %(uuid)s] ',
+               help='If an instance is passed with the log message, format '
+                    'it like this'),
     cfg.ListOpt('default_log_levels',
                 default=[
                   'amqplib=WARN',
@@ -168,6 +180,7 @@ class NovaLogger(logging.Logger):
         if 'extra' not in params:
             params['extra'] = {}
         extra = params['extra']
+
         context = None
         if 'context' in params:
             context = params['context']
@@ -176,6 +189,14 @@ class NovaLogger(logging.Logger):
             context = getattr(local.store, 'context', None)
         if context:
             extra.update(_dictify_context(context))
+
+        if 'instance' in params:
+            extra.update({'instance': (FLAGS.instance_format
+                                       % params['instance'])})
+            del params['instance']
+        else:
+            extra.update({'instance': ''})
+
         extra.update({"nova_version": version.version_string_with_vcs()})
 
     #NOTE(ameade): The following calls to _log must be maintained as direct
@@ -256,7 +277,7 @@ class NovaLogger(logging.Logger):
 class NovaFormatter(logging.Formatter):
     """A nova.context.RequestContext aware formatter configured through flags.
 
-    The flags used to set format strings are: logging_context_foramt_string
+    The flags used to set format strings are: logging_context_format_string
     and logging_default_format_string.  You can also specify
     logging_debug_format_suffix to append extra formatting if the log level is
     debug.
@@ -272,9 +293,11 @@ class NovaFormatter(logging.Formatter):
             self._fmt = FLAGS.logging_context_format_string
         else:
             self._fmt = FLAGS.logging_default_format_string
+
         if record.levelno == logging.DEBUG \
         and FLAGS.logging_debug_format_suffix:
             self._fmt += " " + FLAGS.logging_debug_format_suffix
+
         # Cache this on the record, Logger will respect our formated copy
         if record.exc_info:
             record.exc_text = self.formatException(record.exc_info, record)

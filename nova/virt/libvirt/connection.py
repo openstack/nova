@@ -690,7 +690,8 @@ class LibvirtConnection(driver.ComputeDriver):
                            block_device_info=block_device_info)
 
         domain = self._create_new_domain(xml)
-        LOG.debug(_("instance %s: is running"), instance['name'])
+        LOG.debug(_("instance %s: is running"), instance['name'],
+                  instance=instance)
         self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_boot():
@@ -701,12 +702,12 @@ class LibvirtConnection(driver.ComputeDriver):
                 state = self.get_info(instance_name)['state']
             except exception.NotFound:
                 msg = _("During reboot, %s disappeared.") % instance_name
-                LOG.error(msg)
+                LOG.error(msg, instance=instance)
                 raise utils.LoopingCallDone
 
             if state == power_state.RUNNING:
                 msg = _("Instance %s spawned successfully.") % instance_name
-                LOG.info(msg)
+                LOG.info(msg, instance=instance)
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_boot)
