@@ -34,6 +34,9 @@ rpc_opts = [
     cfg.IntOpt('rpc_conn_pool_size',
                default=30,
                help='Size of RPC connection pool'),
+    cfg.IntOpt('rpc_response_timeout',
+               default=3600,
+               help='Seconds to wait for a response from call or multicall'),
     ]
 
 flags.FLAGS.add_options(rpc_opts)
@@ -57,6 +60,15 @@ class RemoteError(exception.NovaException):
         super(RemoteError, self).__init__(exc_type=exc_type,
                                           value=value,
                                           traceback=traceback)
+
+
+class Timeout(exception.NovaException):
+    """Signifies that a timeout has occurred.
+
+    This exception is raised if the rpc_response_timeout is reached while
+    waiting for a response from the remote side.
+    """
+    message = _("Timeout while waiting on RPC response.")
 
 
 class Connection(object):

@@ -30,7 +30,7 @@ LOG = logging.getLogger('nova.tests.rpc')
 class RpcCarrotTestCase(common._BaseRpcTestCase):
     def setUp(self):
         self.rpc = impl_carrot
-        super(RpcCarrotTestCase, self).setUp()
+        super(RpcCarrotTestCase, self).setUp(supports_timeouts=False)
 
     def tearDown(self):
         super(RpcCarrotTestCase, self).tearDown()

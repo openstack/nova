@@ -28,6 +28,7 @@ import qpid.messaging.exceptions
 from nova.common import cfg
 from nova import flags
 from nova.rpc import amqp as rpc_amqp
+from nova.rpc import common as rpc_common
 from nova.rpc.common import LOG
 
 
@@ -338,7 +339,8 @@ class Connection(object):
         while True:
             try:
                 return method(*args, **kwargs)
-            except qpid.messaging.exceptions.ConnectionError, e:
+            except (qpid.messaging.exceptions.Empty,
+                    qpid.messaging.exceptions.ConnectionError), e:
                 if error_callback:
                     error_callback(e)
                 self.reconnect()
@@ -372,15 +374,20 @@ class Connection(object):
 
         return self.ensure(_connect_error, _declare_consumer)
 
-    def iterconsume(self, limit=None):
+    def iterconsume(self, limit=None, timeout=None):
         """Return an iterator that will consume from all queues/consumers"""
 
         def _error_callback(exc):
-            LOG.exception(_('Failed to consume message from queue: %s') %
-                    str(exc))
+            if isinstance(exc, qpid.messaging.exceptions.Empty):
+                LOG.exception(_('Timed out waiting for RPC response: %s') %
+                        str(exc))
+                raise rpc_common.Timeout()
+            else:
+                LOG.exception(_('Failed to consume message from queue: %s') %
+                        str(exc))
 
         def _consume():
-            nxt_receiver = self.session.next_receiver()
+            nxt_receiver = self.session.next_receiver(timeout=timeout)
             self._lookup_consumer(nxt_receiver).consume()
 
         for iteration in itertools.count(0):
@@ -483,14 +490,14 @@ def create_connection(new=True):
     return rpc_amqp.create_connection(new)
 
 
-def multicall(context, topic, msg):
+def multicall(context, topic, msg, timeout=None):
     """Make a call that returns multiple times."""
-    return rpc_amqp.multicall(context, topic, msg)
+    return rpc_amqp.multicall(context, topic, msg, timeout)
 
 
-def call(context, topic, msg):
+def call(context, topic, msg, timeout=None):
     """Sends a message on a topic and wait for a response."""
-    return rpc_amqp.call(context, topic, msg)
+    return rpc_amqp.call(context, topic, msg, timeout)
 
 
 def cast(context, topic, msg):

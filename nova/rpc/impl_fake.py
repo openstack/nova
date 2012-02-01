@@ -18,13 +18,20 @@ queues.  Casts will block, but this is very useful for tests.
 """
 
 import inspect
+import signal
 import sys
+import time
 import traceback
 
+import eventlet
+
 from nova import context
+from nova import flags
 from nova.rpc import common as rpc_common
 
 CONSUMERS = {}
+
+FLAGS = flags.FLAGS
 
 
 class RpcContext(context.RequestContext):
@@ -45,31 +52,49 @@ class Consumer(object):
         self.topic = topic
         self.proxy = proxy
 
-    def call(self, context, method, args):
+    def call(self, context, method, args, timeout):
         node_func = getattr(self.proxy, method)
         node_args = dict((str(k), v) for k, v in args.iteritems())
+        done = eventlet.event.Event()
 
-        ctxt = RpcContext.from_dict(context.to_dict())
-        try:
-            rval = node_func(context=ctxt, **node_args)
-            # Caller might have called ctxt.reply() manually
-            for (reply, failure) in ctxt._response:
-                if failure:
-                    raise failure[0], failure[1], failure[2]
-                yield reply
-            # if ending not 'sent'...we might have more data to
-            # return from the function itself
-            if not ctxt._done:
-                if inspect.isgenerator(rval):
-                    for val in rval:
-                        yield val
-                else:
-                    yield rval
-        except Exception:
-            exc_info = sys.exc_info()
-            raise rpc_common.RemoteError(exc_info[0].__name__,
-                    str(exc_info[1]),
-                    ''.join(traceback.format_exception(*exc_info)))
+        def _inner():
+            ctxt = RpcContext.from_dict(context.to_dict())
+            try:
+                rval = node_func(context=ctxt, **node_args)
+                res = []
+                # Caller might have called ctxt.reply() manually
+                for (reply, failure) in ctxt._response:
+                    if failure:
+                        raise failure[0], failure[1], failure[2]
+                    res.append(reply)
+                # if ending not 'sent'...we might have more data to
+                # return from the function itself
+                if not ctxt._done:
+                    if inspect.isgenerator(rval):
+                        for val in rval:
+                            res.append(val)
+                    else:
+                        res.append(rval)
+                done.send(res)
+            except Exception:
+                exc_info = sys.exc_info()
+                done.send_exception(
+                        rpc_common.RemoteError(exc_info[0].__name__,
+                            str(exc_info[1]),
+                            ''.join(traceback.format_exception(*exc_info))))
+
+        thread = eventlet.greenthread.spawn(_inner)
+
+        if timeout:
+            start_time = time.time()
+            while not done.ready():
+                eventlet.greenthread.sleep(1)
+                cur_time = time.time()
+                if (cur_time - start_time) > timeout:
+                    thread.kill()
+                    raise rpc_common.Timeout()
+
+        return done.wait()
 
 
 class Connection(object):
@@ -99,7 +124,7 @@ def create_connection(new=True):
     return Connection()
 
 
-def multicall(context, topic, msg):
+def multicall(context, topic, msg, timeout=None):
     """Make a call that returns multiple times."""
 
     method = msg.get('method')
@@ -112,12 +137,12 @@ def multicall(context, topic, msg):
     except (KeyError, IndexError):
         return iter([None])
     else:
-        return consumer.call(context, method, args)
+        return consumer.call(context, method, args, timeout)
 
 
-def call(context, topic, msg):
+def call(context, topic, msg, timeout=None):
     """Sends a message on a topic and wait for a response."""
-    rv = multicall(context, topic, msg)
+    rv = multicall(context, topic, msg, timeout)
     # NOTE(vish): return the last result from the multicall
     rv = list(rv)
     if not rv:
