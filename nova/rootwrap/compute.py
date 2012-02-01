@@ -164,4 +164,8 @@ filterlist = [
     # nova/network/linux_net.py: 'brctl', 'addif', bridge, interface
     filters.CommandFilter("/sbin/brctl", "root"),
     filters.CommandFilter("/usr/sbin/brctl", "root"),
+
+    # nova/virt/libvirt/utils.py: 'mkswap'
+    # nova/virt/xenapi/vm_utils.py: 'mkswap'
+    filters.CommandFilter("/sbin/mkswap", "root"),
     ]
