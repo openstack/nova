@@ -20,7 +20,10 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import utils
+import nova.compute.utils
 from nova.network import manager as network_manager
+from nova.network.quantum import nova_ipam_lib
+from nova.tests import fake_network_cache_model
 
 
 HOST = "testhost"
@@ -199,7 +202,6 @@ def vifs(n):
                'address': 'DE:AD:BE:EF:00:%02x' % x,
                'uuid': '00000000-0000-0000-0000-00000000000000%02d' % x,
                'network_id': x,
-               'network': FakeModel(**fake_network(x)),
                'instance_id': 0}
 
 
@@ -253,7 +255,8 @@ def ipv4_like(ip, match_string):
 
 
 def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
-                              floating_ips_per_fixed_ip=0):
+                              floating_ips_per_fixed_ip=0,
+                              spectacular=False):
     # stubs is the self.stubs from the test
     # ips_per_vif is the number of ips each vif will have
     # num_floating_ips is number of float ips for each fixed ip
@@ -261,21 +264,36 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     network.db = db
 
     # reset the fixed and floating ip generators
-    global floating_ip_id, fixed_ip_id
+    global floating_ip_id, fixed_ip_id, fixed_ips
     floating_ip_id = floating_ip_ids()
     fixed_ip_id = fixed_ip_ids()
+    fixed_ips = []
 
     networks = [fake_network(x) for x in xrange(num_networks)]
 
     def fixed_ips_fake(*args, **kwargs):
-        return [next_fixed_ip(i, floating_ips_per_fixed_ip)
-                for i in xrange(num_networks) for j in xrange(ips_per_vif)]
+        global fixed_ips
+        ips = [next_fixed_ip(i, floating_ips_per_fixed_ip)
+               for i in xrange(num_networks) for j in xrange(ips_per_vif)]
+        fixed_ips = ips
+        return ips
 
-    def floating_ips_fake(*args, **kwargs):
+    def floating_ips_fake(context, address):
+        for ip in fixed_ips:
+            if address == ip['address']:
+                return ip['floating_ips']
         return []
 
     def virtual_interfaces_fake(*args, **kwargs):
         return [vif for vif in vifs(num_networks)]
+
+    def vif_by_uuid_fake(context, uuid):
+        return {'id': 1,
+               'address': 'DE:AD:BE:EF:00:01',
+               'uuid': uuid,
+               'network_id': 1,
+               'network': None,
+               'instance_id': 0}
 
     def instance_type_fake(*args, **kwargs):
         return flavor
@@ -289,25 +307,68 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     def update_cache_fake(*args, **kwargs):
         pass
 
+    def get_subnets_by_net_id(self, context, project_id, network_uuid,
+                              vif_uuid):
+        subnet_v4 = dict(
+            cidr='192.168.0.0/24',
+            dns1='1.2.3.4',
+            dns2='2.3.4.5',
+            gateway='192.168.0.1')
+
+        subnet_v6 = dict(
+            cidr='fe80::/64',
+            gateway='fe80::def')
+        return [subnet_v4, subnet_v6]
+
+    def get_network_by_uuid(context, uuid):
+        return dict(id=1,
+                    cidr_v6='fe80::/64',
+                    bridge='br0',
+                    label='public')
+
+    def get_v4_fake(*args, **kwargs):
+        ips = fixed_ips_fake(*args, **kwargs)
+        return [ip['address'] for ip in ips]
+
     stubs.Set(db, 'fixed_ip_get_by_instance', fixed_ips_fake)
     stubs.Set(db, 'floating_ip_get_by_fixed_address', floating_ips_fake)
+    stubs.Set(db, 'virtual_interface_get_by_uuid', vif_by_uuid_fake)
+    stubs.Set(db, 'network_get_by_uuid', get_network_by_uuid)
     stubs.Set(db, 'virtual_interface_get_by_instance', virtual_interfaces_fake)
     stubs.Set(db, 'instance_type_get', instance_type_fake)
     stubs.Set(db, 'network_get', network_get_fake)
     stubs.Set(db, 'instance_info_cache_update', update_cache_fake)
 
-    context = nova.context.RequestContext('testuser', 'testproject',
-                                          is_admin=False)
-    return network.get_instance_nw_info(context, 0, 0, 0, None)
+    stubs.Set(nova_ipam_lib.QuantumNovaIPAMLib, 'get_subnets_by_net_id',
+              get_subnets_by_net_id)
+    stubs.Set(nova_ipam_lib.QuantumNovaIPAMLib, 'get_v4_ips_by_interface',
+                    get_v4_fake)
+
+    class FakeContext(nova.context.RequestContext):
+        def is_admin(self):
+            return True
+
+    nw_model = network.get_instance_nw_info(
+                FakeContext('fakeuser', 'fake_project'),
+            0, 0, 0, None)
+    if spectacular:
+        return nw_model
+    return nova.compute.utils.legacy_network_info(nw_model)
 
 
-def stub_out_nw_api_get_instance_nw_info(stubs, func=None):
+def stub_out_nw_api_get_instance_nw_info(stubs, func=None,
+                                         num_networks=1,
+                                         ips_per_vif=1,
+                                         floating_ips_per_fixed_ip=0,
+                                         spectacular=False):
     import nova.network
 
     def get_instance_nw_info(self, context, instance):
-        return [(None, {'label': 'public',
-                       'ips': [{'ip': '192.168.0.3'}],
-                                'ip6s': []})]
+        return fake_get_instance_nw_info(stubs, num_networks=num_networks,
+                        ips_per_vif=ips_per_vif,
+                        floating_ips_per_fixed_ip=floating_ips_per_fixed_ip,
+                        spectacular=spectacular)
+
     if func is None:
         func = get_instance_nw_info
     stubs.Set(nova.network.API, 'get_instance_nw_info', func)

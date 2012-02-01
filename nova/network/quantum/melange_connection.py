@@ -22,6 +22,7 @@ import json
 
 from nova.common import cfg
 from nova import flags
+from nova import log as logging
 
 
 melange_opts = [
@@ -35,6 +36,7 @@ melange_opts = [
 
 FLAGS = flags.FLAGS
 FLAGS.add_options(melange_opts)
+LOG = logging.getLogger(__name__)
 
 json_content_type = {'Content-type': "application/json"}
 
@@ -89,9 +91,14 @@ class MelangeConnection(object):
             raise Exception(_("Unable to connect to "
                             "server. Got error: %s" % e))
 
-    def allocate_ip(self, network_id, vif_id,
+    def allocate_ip(self, network_id, network_tenant_id, vif_id,
                     project_id=None, mac_address=None):
-        tenant_scope = "/tenants/%s" % project_id if project_id else ""
+        LOG.info(_("allocate IP on network |%(network_id)s| "
+                   "belonging to |%(network_tenant_id)s| "
+                   "to this vif |%(vif_id)s| with mac |%(mac_address)s| "
+                   "belonging to |%(project_id)s| ") % locals())
+        tenant_scope = "/tenants/%s" % network_tenant_id if network_tenant_id \
+                       else ""
         request_body = (json.dumps(dict(network=dict(mac_address=mac_address,
                                  tenant_id=project_id)))
                     if mac_address else None)
@@ -127,6 +134,15 @@ class MelangeConnection(object):
 
         response = self.get(url, headers=json_content_type)
         return json.loads(response)
+
+    def get_routes(self, block_id, project_id=None):
+        tenant_scope = "/tenants/%s" % project_id if project_id else ""
+
+        url = "ipam%(tenant_scope)s/ip_blocks/%(block_id)s/ip_routes" % \
+        locals()
+
+        response = self.get(url, headers=json_content_type)
+        return json.loads(response)['ip_routes']
 
     def get_allocated_ips(self, network_id, vif_id, project_id=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""

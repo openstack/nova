@@ -414,13 +414,8 @@ def usage_from_instance(instance_ref, network_info=None, **kw):
           state_description=instance_ref['task_state'] \
                              if instance_ref['task_state'] else '')
 
-    # NOTE(jkoelker) This nastyness can go away once compute uses the
-    #                network model
     if network_info is not None:
-        fixed_ips = []
-        for network, info in network_info:
-            fixed_ips.extend([ip['ip'] for ip in info['ips']])
-        usage_info['fixed_ips'] = fixed_ips
+        usage_info['fixed_ips'] = network_info.fixed_ips()
 
     usage_info.update(kw)
     return usage_info

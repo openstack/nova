@@ -70,6 +70,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
        Support for these capabilities are targted for future releases.
     """
 
+    DHCP = FLAGS.quantum_use_dhcp
+
     def __init__(self, q_conn=None, ipam_lib=None, *args, **kwargs):
         """Initialize two key libraries, the connection to a
            Quantum service, and the library for implementing IPAM.
@@ -83,7 +85,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
 
         if not ipam_lib:
             ipam_lib = FLAGS.quantum_ipam_lib
-        self.ipam = utils.import_object(ipam_lib).get_ipam_lib(self)
+        self._import_ipam_lib(ipam_lib)
 
         super(QuantumManager, self).__init__(*args, **kwargs)
 
@@ -206,6 +208,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
 
         ipam_tenant_id = kwargs.get("project_id", None)
         priority = kwargs.get("priority", 0)
+        # NOTE(tr3buchet): this call creates a nova network in the nova db
         self.ipam.create_subnet(context, label, ipam_tenant_id, quantum_net_id,
             priority, cidr, gateway, gateway_v6,
             cidr_v6, dns1, dns2)
@@ -283,7 +286,6 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         host = kwargs.pop('host')
         project_id = kwargs.pop('project_id')
         LOG.debug(_("network allocations for instance %s"), project_id)
-
         requested_networks = kwargs.get('requested_networks')
 
         if requested_networks:
@@ -294,7 +296,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                                                                 project_id)
 
         # Create a port via quantum and attach the vif
-        for (quantum_net_id, project_id) in net_proj_pairs:
+        for (quantum_net_id, net_tenant_id) in net_proj_pairs:
+            net_tenant_id = net_tenant_id or FLAGS.quantum_default_tenant_id
             # FIXME(danwent): We'd like to have the manager be
             # completely decoupled from the nova networks table.
             # However, other parts of nova sometimes go behind our
@@ -313,7 +316,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             if network_ref is None:
                 network_ref = {}
                 network_ref = {"uuid": quantum_net_id,
-                    "project_id": project_id,
+                    "project_id": net_tenant_id,
                     # NOTE(bgh): We need to document this somewhere but since
                     # we don't know the priority of any networks we get from
                     # quantum we just give them a priority of 0.  If its
@@ -328,6 +331,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                     "id": 'NULL',
                     "label": "quantum-net-%s" % quantum_net_id}
 
+            # TODO(tr3buchet): broken. Virtual interfaces require an integer
+            #                  network ID and it is not nullable
             vif_rec = self.add_virtual_interface(context,
                                                  instance_id,
                                                  network_ref['id'])
@@ -337,16 +342,15 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             instance_type = instance_types.get_instance_type(instance_type_id)
             rxtx_factor = instance_type['rxtx_factor']
             nova_id = self._get_nova_id(instance)
-            q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
             # Tell the ipam library to allocate an IP
             ip = self.ipam.allocate_fixed_ip(context, project_id,
-                    quantum_net_id, vif_rec)
+                    quantum_net_id, net_tenant_id, vif_rec)
             pairs = []
             # Set up port security if enabled
             if FLAGS.quantum_use_port_security:
                 pairs = [{'mac_address': vif_rec['address'],
                           'ip_address': ip}]
-            self.q_conn.create_and_attach_port(q_tenant_id, quantum_net_id,
+            self.q_conn.create_and_attach_port(net_tenant_id, quantum_net_id,
                                                vif_rec['uuid'],
                                                vm_id=instance['uuid'],
                                                rxtx_factor=rxtx_factor,
@@ -355,7 +359,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             # Set up/start the dhcp server for this network if necessary
             if FLAGS.quantum_use_dhcp:
                 self.enable_dhcp(context, quantum_net_id, network_ref,
-                    vif_rec, project_id)
+                    vif_rec, net_tenant_id)
         return self.get_instance_nw_info(context, instance_id,
                                          instance['uuid'],
                                          instance_type_id, host)
@@ -370,11 +374,12 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         ipam_tenant_id = self.ipam.get_tenant_id_by_net_id(context,
             quantum_net_id, vif_rec['uuid'], project_id)
         # Figure out what subnets correspond to this network
-        v4_subnet, v6_subnet = self.ipam.get_subnets_by_net_id(context,
-                    ipam_tenant_id, quantum_net_id, vif_rec['uuid'])
+        subnets = self.ipam.get_subnets_by_net_id(context,
+                            ipam_tenant_id, quantum_net_id, vif_rec['uuid'])
+
         # Set up (or find) the dhcp server for each of the subnets
         # returned above (both v4 and v6).
-        for subnet in [v4_subnet, v6_subnet]:
+        for subnet in subnets:
             if subnet is None or subnet['cidr'] is None:
                 continue
             # Fill in some of the network fields that we would have
@@ -382,8 +387,10 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             # passed to the linux_net functions).
             network_ref['cidr'] = subnet['cidr']
             n = IPNetwork(subnet['cidr'])
+            # NOTE(tr3buchet): should probably not always assume first+1
             network_ref['dhcp_server'] = IPAddress(n.first + 1)
             # TODO(bgh): Melange should probably track dhcp_start
+            # TODO(tr3buchet): melange should store dhcp_server as well
             if not 'dhcp_start' in network_ref or \
                     network_ref['dhcp_start'] is None:
                 network_ref['dhcp_start'] = IPAddress(n.first + 2)
@@ -457,81 +464,35 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
            Ideally this 'interface' will be more formally defined
            in the future.
         """
-        network_info = []
-        instance = db.instance_get(context, instance_id)
-        project_id = instance.project_id
-
         admin_context = context.elevated()
-        vifs = db.virtual_interface_get_by_instance(admin_context,
-                                                    instance_id)
+        project_id = context.project_id
+        vifs = db.virtual_interface_get_by_instance(context, instance_id)
+        instance_type = instance_types.get_instance_type(instance_type_id)
+
+        net_tenant_dict = dict((net_id, tenant_id)
+                               for (net_id, tenant_id)
+                               in self.ipam.get_project_and_global_net_ids(
+                                                          context, project_id))
+        networks = {}
         for vif in vifs:
-            net = db.network_get(admin_context, vif['network_id'])
-            net_id = net['uuid']
+            if vif.get('network_id') is not None:
+                network = db.network_get(admin_context, vif['network_id'])
+                net_tenant_id = net_tenant_dict[network['uuid']]
+                network = {'id': network['id'],
+                           'uuid': network['uuid'],
+                           'bridge': 'ovs_flag',
+                           'label': self.q_conn.get_network_name(net_tenant_id,
+                                                              network['uuid']),
+                           'project_id': net_tenant_id}
+                networks[vif['uuid']] = network
 
-            if not net_id:
-                # TODO(bgh): We need to figure out a way to tell if we
-                # should actually be raising this exception or not.
-                # In the case that a VM spawn failed it may not have
-                # attached the vif and raising the exception here
-                # prevents deletion of the VM.  In that case we should
-                # probably just log, continue, and move on.
-                raise Exception(_("No network for for virtual interface %s") %
-                                vif['uuid'])
+        # update instance network cache and return network_info
+        nw_info = self.build_network_info_model(context, vifs, networks,
+                                                     instance_type, host)
+        db.instance_info_cache_update(context, instance_uuid,
+                                      {'network_info': nw_info.as_cache()})
 
-            ipam_tenant_id = self.ipam.get_tenant_id_by_net_id(context,
-                net_id, vif['uuid'], project_id)
-            v4_subnet, v6_subnet = \
-                    self.ipam.get_subnets_by_net_id(context,
-                            ipam_tenant_id, net_id, vif['uuid'])
-
-            v4_ips = self.ipam.get_v4_ips_by_interface(context,
-                                        net_id, vif['uuid'],
-                                        project_id=ipam_tenant_id)
-            v6_ips = self.ipam.get_v6_ips_by_interface(context,
-                                        net_id, vif['uuid'],
-                                        project_id=ipam_tenant_id)
-
-            def ip_dict(ip, subnet):
-                return {
-                    "ip": ip,
-                    "netmask": subnet["netmask"],
-                    "enabled": "1"}
-
-            network_dict = {
-                'cidr': v4_subnet['cidr'],
-                'injected': True,
-                'bridge': net['bridge'],
-                'multi_host': False}
-
-            q_tenant_id = project_id or FLAGS.quantum_default_tenant_id
-            info = {
-                'net_uuid': net_id,
-                'label': self.q_conn.get_network_name(q_tenant_id, net_id),
-                'gateway': v4_subnet['gateway'],
-                'dhcp_server': v4_subnet['gateway'],
-                'broadcast': v4_subnet['broadcast'],
-                'mac': vif['address'],
-                'vif_uuid': vif['uuid'],
-                'dns': [],
-                'ips': [ip_dict(ip, v4_subnet) for ip in v4_ips]}
-
-            if v6_subnet:
-                if v6_subnet['cidr']:
-                    network_dict['cidr_v6'] = v6_subnet['cidr']
-                    info['ip6s'] = [ip_dict(ip, v6_subnet) for ip in v6_ips]
-
-                if v6_subnet['gateway']:
-                    info['gateway_v6'] = v6_subnet['gateway']
-
-            dns_dict = {}
-            for s in [v4_subnet, v6_subnet]:
-                for k in ['dns1', 'dns2']:
-                    if s and s[k]:
-                        dns_dict[s[k]] = None
-            info['dns'] = [d for d in dns_dict.keys()]
-
-            network_info.append((network_dict, info))
-        return network_info
+        return nw_info
 
     def deallocate_for_instance(self, context, **kwargs):
         """Called when a VM is terminated.  Loop through each virtual
@@ -552,31 +513,48 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             network_ref = db.network_get(admin_context, vif_ref['network_id'])
             net_id = network_ref['uuid']
 
-            port_id = self.q_conn.get_port_by_attachment(q_tenant_id,
-                                                         net_id, interface_id)
-            if not port_id:
-                q_tenant_id = FLAGS.quantum_default_tenant_id
-                port_id = self.q_conn.get_port_by_attachment(
-                    q_tenant_id, net_id, interface_id)
+            # port deallocate block
+            try:
+                port_id = None
+                port_id = self.q_conn.get_port_by_attachment(q_tenant_id,
+                                                    net_id, interface_id)
+                if not port_id:
+                    q_tenant_id = FLAGS.quantum_default_tenant_id
+                    port_id = self.q_conn.get_port_by_attachment(
+                        q_tenant_id, net_id, interface_id)
 
-            if not port_id:
-                LOG.error("Unable to find port with attachment: %s" %
-                          (interface_id))
-            else:
-                self.q_conn.detach_and_delete_port(q_tenant_id,
-                                                   net_id, port_id)
+                if not port_id:
+                    LOG.error("Unable to find port with attachment: %s" %
+                              (interface_id))
+                else:
+                    self.q_conn.detach_and_delete_port(q_tenant_id,
+                                                       net_id, port_id)
+            except:
+                # except anything so the rest of deallocate can succeed
+                msg = _('port deallocation failed for instance: '
+                        '|%(instance_id)s|, port_id: |%(port_id)s|')
+                LOG.critical(msg % locals)
 
-            ipam_tenant_id = self.ipam.get_tenant_id_by_net_id(context,
-                net_id, vif_ref['uuid'], project_id)
+            # ipam deallocation block
+            try:
+                ipam_tenant_id = self.ipam.get_tenant_id_by_net_id(context,
+                    net_id, vif_ref['uuid'], project_id)
 
-            self.ipam.deallocate_ips_by_vif(context, ipam_tenant_id,
-                                            net_id, vif_ref)
+                self.ipam.deallocate_ips_by_vif(context, ipam_tenant_id,
+                                                net_id, vif_ref)
 
-            # If DHCP is enabled on this network then we need to update the
-            # leases and restart the server.
-            if FLAGS.quantum_use_dhcp:
-                self.update_dhcp(context, ipam_tenant_id, network_ref, vif_ref,
-                    project_id)
+                # If DHCP is enabled on this network then we need to update the
+                # leases and restart the server.
+                if FLAGS.quantum_use_dhcp:
+                    self.update_dhcp(context, ipam_tenant_id, network_ref,
+                                     vif_ref, project_id)
+            except:
+                # except anything so the rest of deallocate can succeed
+                vif_uuid = vif_ref['uuid']
+                msg = _('ipam deallocation failed for instance: '
+                        '|%(instance_id)s|, vif_uuid: |%(vif_uuid)s|')
+                LOG.critical(msg % locals)
+
         try:
             db.virtual_interface_delete_by_instance(admin_context,
                                                     instance_id)
@@ -586,12 +564,13 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
 
     # TODO(bgh): At some point we should consider merging enable_dhcp() and
     # update_dhcp()
+    # TODO(tr3buchet): agree, i'm curious why they differ even now..
     def update_dhcp(self, context, ipam_tenant_id, network_ref, vif_ref,
             project_id):
         # Figure out what subnet corresponds to this network/vif
-        v4_subnet, v6_subnet = self.ipam.get_subnets_by_net_id(context,
+        subnets = self.ipam.get_subnets_by_net_id(context,
                         ipam_tenant_id, network_ref['uuid'], vif_ref['uuid'])
-        for subnet in [v4_subnet, v6_subnet]:
+        for subnet in subnets:
             if subnet is None:
                 continue
             # Fill in some of the network fields that we would have

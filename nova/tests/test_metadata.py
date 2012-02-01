@@ -61,12 +61,6 @@ class MetadataTestCase(test.TestCase):
                          'root_device_name': '/dev/sda1',
                          'hostname': 'test'})
 
-        def fake_get_instance_nw_info(self, context, instance):
-            return [(None, {'label': 'public',
-                            'ips': [{'ip': '192.168.0.3'},
-                                    {'ip': '192.168.0.4'}],
-                            'ip6s': [{'ip': 'fe80::beef'}]})]
-
         def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
             return ['1.2.3.4', '5.6.7.8']
 
@@ -76,8 +70,8 @@ class MetadataTestCase(test.TestCase):
         def instance_get_list(*args, **kwargs):
             return [self.instance]
 
-        self.stubs.Set(network.API, 'get_instance_nw_info',
-                fake_get_instance_nw_info)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          spectacular=True)
         self.stubs.Set(network.API, 'get_floating_ips_by_fixed_address',
                 fake_get_floating_ips_by_fixed_address)
         self.stubs.Set(api, 'instance_get', instance_get)

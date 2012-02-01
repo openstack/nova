@@ -287,15 +287,7 @@ def dict_to_query_str(params):
     return param_str.rstrip('&')
 
 
-def get_networks_for_instance_from_cache(instance):
-    if (not instance.get('info_cache') or
-        not instance['info_cache'].get('network_info')):
-        # NOTE(jkoelker) Raising ValueError so that we trigger the
-        #                fallback lookup
-        raise ValueError
-
-    cached_info = instance['info_cache']['network_info']
-    nw_info = network_model.NetworkInfo.hydrate(cached_info)
+def get_networks_for_instance_from_nw_info(nw_info):
     networks = {}
 
     for vif in nw_info:
@@ -310,38 +302,16 @@ def get_networks_for_instance_from_cache(instance):
     return networks
 
 
-def get_networks_for_instance_from_nwinfo(context, instance):
-    # NOTE(jkoelker) When the network_api starts returning the model, this
-    #                can be refactored out into the above function
-    network_api = network.API()
+def get_networks_for_instance_from_cache(instance):
+    if (not instance.get('info_cache') or
+        not instance['info_cache'].get('network_info')):
+        # NOTE(jkoelker) Raising ValueError so that we trigger the
+        #                fallback lookup
+        raise ValueError
 
-    def _get_floats(ip):
-        return network_api.get_floating_ips_by_fixed_address(context, ip)
-
-    def _emit_addr(ip, version):
-        return {'address': ip, 'version': version}
-
-    nw_info = network_api.get_instance_nw_info(context, instance)
-    networks = {}
-    for _net, info in nw_info:
-        net = {'ips': [], 'floating_ips': []}
-        for ip in info['ips']:
-            net['ips'].append(_emit_addr(ip['ip'], 4))
-            floaters = _get_floats(ip['ip'])
-            if floaters:
-                net['floating_ips'].extend([_emit_addr(float, 4)
-                                            for float in floaters])
-        if 'ip6s' in info:
-            for ip in info['ip6s']:
-                net['ips'].append(_emit_addr(ip['ip'], 6))
-
-        label = info['label']
-        if label not in networks:
-            networks[label] = {'ips': [], 'floating_ips': []}
-
-        networks[label]['ips'].extend(net['ips'])
-        networks[label]['floating_ips'].extend(net['floating_ips'])
-    return networks
+    cached_info = instance['info_cache']['network_info']
+    nw_info = network_model.NetworkInfo.hydrate(cached_info)
+    return get_networks_for_instance_from_nw_info(nw_info)
 
 
 def get_networks_for_instance(context, instance):
@@ -363,7 +333,10 @@ def get_networks_for_instance(context, instance):
         #                sqlalchemy FK (KeyError, AttributeError)
         #                fail fall back to calling out the the
         #                network api
-        return get_networks_for_instance_from_nwinfo(context, instance)
+        network_api = network.API()
+
+        nw_info = network_api.get_instance_nw_info(context, instance)
+        return get_networks_for_instance_from_nw_info(nw_info)
 
 
 def raise_http_conflict_for_instance_invalid_state(exc, action):

@@ -91,6 +91,10 @@ class CloudTestCase(test.TestCase):
         self.flags(connection_type='fake',
                    stub_network=True)
 
+        def dumb(*args, **kwargs):
+            pass
+
+        self.stubs.Set(utils, 'usage_from_instance', dumb)
         # set up our cloud
         self.cloud = cloud.CloudController()
 
@@ -198,20 +202,15 @@ class CloudTestCase(test.TestCase):
                               {'host': self.network.host})
         project_id = self.context.project_id
         type_id = inst['instance_type_id']
-        ips = self.network.allocate_for_instance(self.context,
+        nw_info = self.network.allocate_for_instance(self.context,
                                                  instance_id=inst['id'],
                                                  instance_uuid='',
                                                  host=inst['host'],
                                                  vpn=None,
                                                  instance_type_id=type_id,
                                                  project_id=project_id)
-        # TODO(jkoelker) Make this mas bueno
-        self.assertTrue(ips)
-        self.assertTrue('ips' in ips[0][1])
-        self.assertTrue(ips[0][1]['ips'])
-        self.assertTrue('ip' in ips[0][1]['ips'][0])
 
-        fixed = ips[0][1]['ips'][0]['ip']
+        fixed_ips = nw_info.fixed_ips()
 
         ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
@@ -221,7 +220,7 @@ class CloudTestCase(test.TestCase):
                                         public_ip=address)
         self.cloud.release_address(self.context,
                                   public_ip=address)
-        self.network.deallocate_fixed_ip(self.context, fixed)
+        self.network.deallocate_fixed_ip(self.context, fixed_ips[0]['address'])
         db.instance_destroy(self.context, inst['id'])
         db.floating_ip_destroy(self.context, address)
 
@@ -1229,6 +1228,11 @@ class CloudTestCase(test.TestCase):
 
         self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+
+        def dumb(*args, **kwargs):
+            pass
+
+        self.stubs.Set(utils, 'usage_from_instance', dumb)
         # NOTE(comstud): Make 'cast' behave like a 'call' which will
         # ensure that operations complete
         self.stubs.Set(rpc, 'cast', rpc.call)

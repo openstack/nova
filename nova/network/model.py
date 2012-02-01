@@ -54,6 +54,13 @@ class IP(Model):
     def __eq__(self, other):
         return self['address'] == other['address']
 
+    def is_in_subnet(self, subnet):
+        if self['address'] and subnet['cidr']:
+            return netaddr.IPAddress(self['address']) in \
+                   netaddr.IPNetwork(subnet['cidr'])
+        else:
+            return False
+
     @classmethod
     def hydrate(cls, ip):
         if ip:
@@ -135,6 +142,10 @@ class Subnet(Model):
     def add_ip(self, ip):
         if ip not in self['ips']:
             self['ips'].append(ip)
+
+    def as_netaddr(self):
+        """Convience function to get cidr as a netaddr object"""
+        return netaddr.IPNetwork(self['cidr'])
 
     @classmethod
     def hydrate(cls, subnet):

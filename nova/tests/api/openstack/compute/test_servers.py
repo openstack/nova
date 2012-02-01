@@ -39,6 +39,7 @@ import nova.image.fake
 import nova.rpc
 import nova.scheduler.api
 from nova import test
+from nova.tests import fake_network
 from nova.tests.api.openstack import fakes
 from nova import utils
 
@@ -65,12 +66,13 @@ def fake_gen_uuid():
 
 
 def return_server_by_id(context, id):
-    return fakes.stub_instance(id)
+    return fakes.stub_instance(id, project_id='fake_project')
 
 
 def return_server_by_uuid(context, uuid):
     id = 1
-    return fakes.stub_instance(id, uuid=uuid)
+    return fakes.stub_instance(id, uuid=uuid,
+                               project_id='fake_project')
 
 
 def return_server_with_attributes(**kwargs):
@@ -131,7 +133,8 @@ def return_servers_from_child_zones(*args, **kwargs):
         for server_id in xrange(5):
             server = Server()
             server._info = fakes.stub_instance(
-                    server_id, reservation_id="child")
+                    server_id, reservation_id="child",
+                    project_id='fake_project')
             servers_list.append(server)
 
         zones.append(("Zone%d" % zone, servers_list))
@@ -165,11 +168,9 @@ class ServersControllerTest(test.TestCase):
         self.maxDiff = None
         super(ServersControllerTest, self).setUp()
         self.flags(verbose=True, use_ipv6=False)
-        fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
-        fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(nova.db, 'instance_get_all_by_filters',
                 return_servers)
         self.stubs.Set(nova.db, 'instance_get', return_server_by_id)
@@ -186,13 +187,8 @@ class ServersControllerTest(test.TestCase):
         self.controller = servers.Controller()
         self.ips_controller = ips.Controller()
 
-        def nw_info(*args, **kwargs):
-            return []
-
-        floaters = nw_info
-        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, nw_info)
-        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
-                                                                floaters)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          spectacular=True)
 
     def test_get_server_by_uuid(self):
         """
@@ -229,11 +225,12 @@ class ServersControllerTest(test.TestCase):
         uuid = FAKE_UUID
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % uuid)
         res_dict = self.controller.show(req, uuid)
+
         expected_server = {
             "server": {
                 "id": uuid,
                 "user_id": "fake",
-                "tenant_id": "fake",
+                "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -262,6 +259,10 @@ class ServersControllerTest(test.TestCase):
                   ],
                 },
                 "addresses": {
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    ]
                 },
                 "metadata": {
                     "seq": "1",
@@ -326,6 +327,10 @@ class ServersControllerTest(test.TestCase):
                   ],
                 },
                 "addresses": {
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    ]
                 },
                 "metadata": {
                     "seq": "1",
@@ -393,6 +398,10 @@ class ServersControllerTest(test.TestCase):
                   ],
                 },
                 "addresses": {
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    ]
                 },
                 "metadata": {
                     "seq": "1",
@@ -443,67 +452,13 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
-    def test_get_server_by_id_with_addresses(self):
+    def test_get_server_addresses_from_nw_info(self):
         self.flags(use_ipv6=True)
-        privates = ['192.168.0.3', '192.168.0.4']
-        publics = ['172.19.0.1', '172.19.0.2']
-        public6s = ['b33f::fdee:ddff:fecc:bbaa']
-
-        def nw_info(*args, **kwargs):
-            return [(None, {'label': 'public',
-                            'ips': [dict(ip=ip) for ip in publics],
-                            'ip6s': [dict(ip=ip) for ip in public6s]}),
-                    (None, {'label': 'private',
-                            'ips': [dict(ip=ip) for ip in privates]})]
-
-        def floaters(*args, **kwargs):
-            return []
-
-        new_return_server = return_server_with_attributes()
-        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, nw_info)
-        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
-                                                                floaters)
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
-        res_dict = self.controller.show(req, FAKE_UUID)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['name'], 'server1')
-        addresses = res_dict['server']['addresses']
-        expected = {
-            'private': [
-                {'addr': '192.168.0.3', 'version': 4},
-                {'addr': '192.168.0.4', 'version': 4},
-            ],
-            'public': [
-                {'addr': '172.19.0.1', 'version': 4},
-                {'addr': '172.19.0.2', 'version': 4},
-                {'addr': 'b33f::fdee:ddff:fecc:bbaa', 'version': 6},
-            ],
-        }
-        self.assertDictMatch(addresses, expected)
-
-    def test_get_server_addresses_from_nwinfo(self):
-        self.flags(use_ipv6=True)
-
-        privates = ['192.168.0.3', '192.168.0.4']
-        publics = ['172.19.0.1', '1.2.3.4', '172.19.0.2']
-
-        public6s = ['b33f::fdee:ddff:fecc:bbaa']
-
-        def nw_info(*args, **kwargs):
-            return [(None, {'label': 'public',
-                            'ips': [dict(ip=ip) for ip in publics],
-                            'ip6s': [dict(ip=ip) for ip in public6s]}),
-                    (None, {'label': 'private',
-                            'ips': [dict(ip=ip) for ip in privates]})]
-
-        def floaters(*args, **kwargs):
-            return []
 
         new_return_server = return_server_with_attributes_by_uuid()
-        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, nw_info)
+        fake_network.fake_get_instance_nw_info(self.stubs, num_networks=2,
+                                               spectacular=True)
+        floaters = []
         fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
                                                                 floaters)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
@@ -513,16 +468,10 @@ class ServersControllerTest(test.TestCase):
 
         expected = {
             'addresses': {
-                'private': [
-                    {'version': 4, 'addr': '192.168.0.3'},
-                    {'version': 4, 'addr': '192.168.0.4'},
-                ],
-                'public': [
-                    {'version': 4, 'addr': '172.19.0.1'},
-                    {'version': 4, 'addr': '1.2.3.4'},
-                    {'version': 4, 'addr': '172.19.0.2'},
-                    {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
-                ],
+                'test0': [
+                    {'version': 4, 'addr': '192.168.0.100'},
+                    {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                ]
             },
         }
         self.assertDictMatch(res_dict, expected)
@@ -580,39 +529,21 @@ class ServersControllerTest(test.TestCase):
         self.assertDictMatch(res_dict, expected)
 
     def test_get_server_addresses_with_floating_from_nwinfo(self):
-        ips = dict(privates=['192.168.0.3', '192.168.0.4'],
-                   publics=['172.19.0.1', '1.2.3.4', '172.19.0.2'])
-
-        def nw_info(*args, **kwargs):
-            return [(None, {'label': 'private',
-                            'ips': [dict(ip=ip)
-                                    for ip in ips['privates']]})]
-
-        def floaters(*args, **kwargs):
-            # NOTE(jkoelker) floaters will get called multiple times
-            #                this makes sure it will only return data
-            #                once
-            pubs = list(ips['publics'])
-            ips['publics'] = []
-            return pubs
-
         new_return_server = return_server_with_attributes_by_uuid()
-        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, nw_info)
-        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
-                                                                floaters)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                   floating_ips_per_fixed_ip=1,
+                                                   spectacular=True)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/ips' % FAKE_UUID)
         res_dict = self.ips_controller.index(req, FAKE_UUID)
 
         expected = {
             'addresses': {
-                'private': [
-                    {'version': 4, 'addr': '192.168.0.3'},
-                    {'version': 4, 'addr': '192.168.0.4'},
-                    {'version': 4, 'addr': '172.19.0.1'},
-                    {'version': 4, 'addr': '1.2.3.4'},
-                    {'version': 4, 'addr': '172.19.0.2'},
+                'test0': [
+                    {'version': 4, 'addr': '192.168.0.100'},
+                    {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'},
+                    {'version': 4, 'addr': '10.10.10.100'},
                 ],
             },
         }
@@ -620,37 +551,25 @@ class ServersControllerTest(test.TestCase):
 
     def test_get_server_addresses_single_network_from_nwinfo(self):
         self.flags(use_ipv6=True)
-        privates = ['192.168.0.3', '192.168.0.4']
-        publics = ['172.19.0.1', '1.2.3.4', '172.19.0.2']
-        public6s = ['b33f::fdee:ddff:fecc:bbaa']
-
-        def nw_info(*args, **kwargs):
-            return [(None, {'label': 'public',
-                            'ips': [dict(ip=ip) for ip in publics],
-                            'ip6s': [dict(ip=ip) for ip in public6s]}),
-                    (None, {'label': 'private',
-                            'ips': [dict(ip=ip) for ip in privates]})]
 
         def floaters(*args, **kwargs):
             return []
 
         new_return_server = return_server_with_attributes_by_uuid()
-        fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, nw_info)
+        fake_network.fake_get_instance_nw_info(self.stubs, num_networks=1)
         fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
                                                                 floaters)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
-        url = '/v2/fake/servers/%s/ips/public' % FAKE_UUID
+        url = '/v2/fake/servers/%s/ips/test0' % FAKE_UUID
         req = fakes.HTTPRequest.blank(url)
-        res_dict = self.ips_controller.show(req, FAKE_UUID, 'public')
+        res_dict = self.ips_controller.show(req, FAKE_UUID, 'test0')
 
         expected = {
-            'public': [
-                {'version': 4, 'addr': '172.19.0.1'},
-                {'version': 4, 'addr': '1.2.3.4'},
-                {'version': 4, 'addr': '172.19.0.2'},
-                {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
-            ],
+            'test0': [
+                {'version': 4, 'addr': '192.168.0.100'},
+                {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+            ]
         }
         self.assertDictMatch(res_dict, expected)
 
@@ -1215,7 +1134,8 @@ class ServersControllerTest(test.TestCase):
     def test_rebuild_instance_with_access_ipv6_bad_format(self):
 
         def fake_get_instance(*args, **kwargs):
-            return fakes.stub_instance(1, vm_state=vm_states.ACTIVE)
+            return fakes.stub_instance(1, vm_state=vm_states.ACTIVE,
+                                       project_id='fake_project')
 
         self.stubs.Set(nova.db, 'instance_get', fake_get_instance)
         # proper local hrefs must start with 'http://localhost/v2/'
@@ -1493,7 +1413,6 @@ class ServersControllerCreateTest(test.TestCase):
         def queue_get_for(context, *args):
             return 'network_topic'
 
-        fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
@@ -2712,13 +2631,10 @@ class ServersViewBuilderTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'private': [
-                        {'version': 4, 'addr': '172.19.0.1'}
-                    ],
-                    'public': [
-                        {'version': 4, 'addr': '192.168.0.3'},
-                        {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
-                    ],
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    ]
                 },
                 "metadata": {},
                 "config_drive": None,
@@ -2784,13 +2700,10 @@ class ServersViewBuilderTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'private': [
-                        {'version': 4, 'addr': '172.19.0.1'}
-                    ],
-                    'public': [
-                        {'version': 4, 'addr': '192.168.0.3'},
-                        {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
-                    ],
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    ]
                 },
                 "metadata": {},
                 "config_drive": None,
@@ -2864,13 +2777,10 @@ class ServersViewBuilderTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'private': [
-                        {'version': 4, 'addr': '172.19.0.1'}
-                    ],
-                    'public': [
-                        {'version': 4, 'addr': '192.168.0.3'},
-                        {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
-                    ],
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    ]
                 },
                 "metadata": {},
                 "config_drive": None,
@@ -2931,13 +2841,10 @@ class ServersViewBuilderTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'private': [
-                        {'version': 4, 'addr': '172.19.0.1'}
-                    ],
-                    'public': [
-                        {'version': 4, 'addr': '192.168.0.3'},
-                        {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
-                    ],
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    ]
                 },
                 "metadata": {},
                 "config_drive": None,
@@ -2996,13 +2903,10 @@ class ServersViewBuilderTest(test.TestCase):
                     ],
                 },
                 "addresses": {
-                    'private': [
-                        {'version': 4, 'addr': '172.19.0.1'}
-                    ],
-                    'public': [
-                        {'version': 4, 'addr': '192.168.0.3'},
-                        {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
-                    ],
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    ]
                 },
                 "metadata": {},
                 "config_drive": None,
@@ -3063,12 +2967,9 @@ class ServersViewBuilderTest(test.TestCase):
                     ],
                 },
                 "addresses": {
-                    'private': [
-                        {'version': 4, 'addr': '172.19.0.1'}
-                    ],
-                    'public': [
-                        {'version': 4, 'addr': '192.168.0.3'},
-                        {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
                     ]
                 },
                 "metadata": {},
@@ -3135,12 +3036,9 @@ class ServersViewBuilderTest(test.TestCase):
                     ],
                 },
                 "addresses": {
-                    'private': [
-                        {'version': 4, 'addr': '172.19.0.1'}
-                    ],
-                    'public': [
-                        {'version': 4, 'addr': '192.168.0.3'},
-                        {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
+                    'test0': [
+                        {'version': 4, 'addr': '192.168.0.100'},
+                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
                     ]
                 },
                 "metadata": {

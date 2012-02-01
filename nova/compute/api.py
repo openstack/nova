@@ -1687,25 +1687,30 @@ class API(base.Base):
         # in its info, if this changes, the next few lines will need to
         # accommodate the info containing floating as well as fixed ip
         # addresses
-        fixed_ip_addrs = []
-        for info in self.network_api.get_instance_nw_info(context.elevated(),
-                                                          instance):
-            ips = info[1]['ips']
-            fixed_ip_addrs.extend([ip_dict['ip'] for ip_dict in ips])
 
-        # TODO(tr3buchet): this will associate the floating IP with the first
-        # fixed_ip (lowest id) an instance has. This should be changed to
-        # support specifying a particular fixed_ip if multiple exist.
-        if not fixed_ip_addrs:
-            msg = _("instance |%s| has no fixed_ips. "
-                    "unable to associate floating ip") % instance_uuid
-            raise exception.ApiError(msg)
-        if len(fixed_ip_addrs) > 1:
-            LOG.warning(_("multiple fixed_ips exist, using the first: %s"),
-                                                         fixed_ip_addrs[0])
-        self.network_api.associate_floating_ip(context,
+        fail_bag = _('instance |%s| has no fixed ips. '
+                     'unable to associate floating ip') % instance_uuid
+
+        nw_info = self.network_api.get_instance_nw_info(context.elevated(),
+                                                        instance)
+
+        if nw_info:
+            ips = [ip for ip in nw_info[0].fixed_ips()]
+
+            # TODO(tr3buchet): this will associate the floating IP with the
+            # first # fixed_ip (lowest id) an instance has. This should be
+            # changed to # support specifying a particular fixed_ip if
+            # multiple exist.
+            if not ips:
+                raise exception.ApiError(fail_bag)
+            if len(ips) > 1:
+                LOG.warning(_('multiple fixedips exist, using the first: %s'),
+                                                             ips[0]['address'])
+            self.network_api.associate_floating_ip(context,
                                                floating_address=address,
-                                               fixed_address=fixed_ip_addrs[0])
+                                               fixed_address=ips[0]['address'])
+            return
+        raise exception.ApiError(fail_bag)
 
     @wrap_check_policy
     def get_instance_metadata(self, context, instance):
