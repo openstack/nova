@@ -202,6 +202,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Update an instance in the database using kwargs as value."""
         return self.db.instance_update(context, instance_id, kwargs)
 
+    def _set_instance_error_state(self, context, instance_uuid):
+        self._instance_update(context,
+                              instance_uuid,
+                              vm_state=vm_states.ERROR,
+                              task_state=None)
+
     def init_host(self):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
@@ -732,6 +738,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param injected_files: Files to inject
         :param new_pass: password to set on rebuilt instance
         """
+        try:
+            self._rebuild_instance(context, instance_uuid, kwargs)
+        except exception.ImageNotFound:
+            msg = _("Cannot rebuild instance [%(instance_uuid)s]"
+                    ", because the given image does not exist.")
+            LOG.error(msg % instance_uuid, context=context)
+            self._set_instance_error_state(context, instance_uuid)
+        except Exception as exc:
+            msg = _("Cannot rebuild instance [%(instance_uuid)s]: %(exc)s")
+            LOG.error(msg % locals(), context=context)
+            self._set_instance_error_state(context, instance_uuid)
+
+    def _rebuild_instance(self, context, instance_uuid, kwargs):
         context = context.elevated()
 
         LOG.audit(_("Rebuilding instance %s"), instance_uuid, context=context)
@@ -974,10 +993,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # Catch all here because this could be anything.
                     LOG.exception(e)
                     if i == max_tries - 1:
-                        self._instance_update(context,
-                                              instance_id,
-                                              task_state=None,
-                                              vm_state=vm_states.ERROR)
+                        self._set_instance_error_state(context, instance_id)
                         # We create a new exception here so that we won't
                         # potentially reveal password information to the
                         # API caller.  The real exception is logged above
@@ -2240,10 +2256,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             with utils.save_and_reraise_exception():
                 msg = _('%s. Setting instance vm_state to ERROR')
                 LOG.error(msg % error)
-                self._instance_update(context,
-                                      instance_uuid,
-                                      vm_state=vm_states.ERROR,
-                                      task_state=None)
+                self._set_instance_error_state(context, instance_uuid)
 
     def add_aggregate_host(self, context, aggregate_id, host):
         """Adds a host to a physical hypervisor pool."""
