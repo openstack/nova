@@ -70,7 +70,17 @@
 
 
     "compute_extension:accounts": [],
-    "compute_extension:admin_actions": [],
+    "compute_extension:admin_actions:pause": [],
+    "compute_extension:admin_actions:unpause": [],
+    "compute_extension:admin_actions:suspend": [],
+    "compute_extension:admin_actions:resume": [],
+    "compute_extension:admin_actions:lock": [],
+    "compute_extension:admin_actions:unlock": [],
+    "compute_extension:admin_actions:resetNetwork": [],
+    "compute_extension:admin_actions:injectNetworkInfo": [],
+    "compute_extension:admin_actions:createBackup": [],
+    "compute_extension:admin_actions:migrateLive": [],
+    "compute_extension:admin_actions:migrate": [],
     "compute_extension:aggregates": [],
     "compute_extension:certificates": [],
     "compute_extension:cloudpipe": [],
