@@ -1181,6 +1181,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
 
+        compute_utils.notify_usage_exists(instance_ref, current_period=True)
         self._notify_about_instance_usage(instance_ref, "resize.prep.start")
 
         same_host = instance_ref['host'] == FLAGS.host
