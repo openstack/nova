@@ -1220,7 +1220,7 @@ class CloudController(object):
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
         self.network_api.release_floating_ip(context, address=public_ip)
-        return {'releaseResponse': ["Address released."]}
+        return {'return': "true"}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         LOG.audit(_("Associate address %(public_ip)s to"
@@ -1230,12 +1230,12 @@ class CloudController(object):
         self.compute_api.associate_floating_ip(context,
                                                instance,
                                                address=public_ip)
-        return {'associateResponse': ["Address associated."]}
+        return {'return': "true"}
 
     def disassociate_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Disassociate address %s"), public_ip, context=context)
         self.network_api.disassociate_floating_ip(context, address=public_ip)
-        return {'disassociateResponse': ["Address disassociated."]}
+        return {'return': "true"}
 
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))
