@@ -799,7 +799,7 @@ class LibvirtConnection(driver.ComputeDriver):
         return {'host': host, 'port': port, 'internal_access_path': None}
 
     @staticmethod
-    def _cache_image(fn, target, fname, cow=False, *args, **kwargs):
+    def _cache_image(fn, target, fname, cow=False, size=None, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.
 
         This wrapper will save the image into a common store and create a
@@ -812,7 +812,11 @@ class LibvirtConnection(driver.ComputeDriver):
         to be unique to a given image.
 
         If cow is True, it will make a CoW image instead of a copy.
+
+        If size is specified, we attempt to resize up to that size.
         """
+
+        generating = 'image_id' not in kwargs
 
         if not os.path.exists(target):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
@@ -825,20 +829,36 @@ class LibvirtConnection(driver.ComputeDriver):
                 if not os.path.exists(base):
                     fn(target=base, *args, **kwargs)
 
-            call_if_not_exists(base, fn, *args, **kwargs)
+            if cow or not generating:
+                call_if_not_exists(base, fn, *args, **kwargs)
+            elif generating:
+                # For raw it's quicker to generate both
+                # FIXME(p-draigbrady) the first call here is probably
+                # redundant, as it's of no benefit to cache in base?
+                call_if_not_exists(base, fn, *args, **kwargs)
+                if os.path.exists(target):
+                    os.unlink(target)
+                fn(target=target, *args, **kwargs)
 
             if cow:
+                if size:
+                    disk.extend(base, size)
                 libvirt_utils.create_cow_image(base, target)
-            else:
+            elif not generating:
                 libvirt_utils.copy_image(base, target)
+                # Resize after the copy, as it's usually much faster
+                # to make sparse updates, rather than potentially
+                # naively copying the whole image file.
+                if size:
+                    # FIXME(p-draigbrady) the first call here is probably
+                    # redundant, as it's of no benefit have full size in base?
+                    disk.extend(base, size)
+                    disk.extend(target, size)
 
     @staticmethod
-    def _fetch_image(context, target, image_id, user_id, project_id,
-                     size=None):
-        """Grab image and optionally attempt to resize it"""
+    def _fetch_image(context, target, image_id, user_id, project_id):
+        """Grab image to raw format"""
         images.fetch_to_raw(context, image_id, target, user_id, project_id)
-        if size:
-            disk.extend(target, size)
 
     @staticmethod
     def _create_local(target, local_size, unit='G', fs_format=None):
