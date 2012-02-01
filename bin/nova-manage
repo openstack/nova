@@ -89,11 +89,11 @@ from nova import rpc
 from nova import utils
 from nova import version
 from nova import vsa
-from nova.api.ec2 import admin
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.compute import instance_types
+from nova.compute import vm_states
 from nova.db import migration
 from nova.volume import volume_types
 
@@ -214,7 +214,11 @@ class VpnCommands(object):
                                'vpn_public_port': int(port)})
 
     def _vpn_for(self, context, project_id):
-        return admin.AdminController()._vpn_for(context, project_id)
+        """Get the VPN instance for a project ID."""
+        for instance in db.instance_get_all_by_project(context, project_id):
+            if (instance['image_id'] == str(FLAGS.vpn_image_id)
+                and not instance['vm_state'] in [vm_states.DELETED]):
+                return instance
 
 
 class ShellCommands(object):

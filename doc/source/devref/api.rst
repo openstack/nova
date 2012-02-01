@@ -129,15 +129,6 @@ The :mod:`nova.api.ec2` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`admin` Module
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.api.ec2.admin
-    :noindex:
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 The :mod:`apirequest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -23,10 +23,7 @@ datastore.
 """
 
 import base64
-import os
 import re
-import shutil
-import tempfile
 import time
 import urllib
 
@@ -253,7 +250,6 @@ class CloudController(object):
                                         'zoneState': 'available'}]}
 
         services = db.service_get_all(context, False)
-        now = utils.utcnow()
         hosts = []
         for host in [service['host'] for service in services]:
             if not host in hosts:
@@ -323,9 +319,6 @@ class CloudController(object):
         s['ownerId'] = snapshot['project_id']
         s['volumeSize'] = snapshot['volume_size']
         s['description'] = snapshot['display_description']
-
-        s['display_name'] = snapshot['display_name']
-        s['display_description'] = snapshot['display_description']
         return s
 
     def create_snapshot(self, context, volume_id, **kwargs):
@@ -336,8 +329,8 @@ class CloudController(object):
         snapshot = self.volume_api.create_snapshot(
                 context,
                 volume,
-                kwargs.get('display_name'),
-                kwargs.get('display_description'))
+                None,
+                kwargs.get('description'))
         return self._format_snapshot(context, snapshot)
 
     def delete_snapshot(self, context, snapshot_id, **kwargs):
@@ -790,15 +783,6 @@ class CloudController(object):
                 "Timestamp": now,
                 "output": base64.b64encode(output)}
 
-    def get_ajax_console(self, context, instance_id, **kwargs):
-        """Web based ajax terminal for vm.
-
-        This is an extension to the normal ec2_api"""
-        ec2_id = instance_id[0]
-        instance_id = ec2utils.ec2_id_to_id(ec2_id)
-        instance = self.compute_api.get(context, instance_id)
-        return self.compute_api.get_ajax_console(context, instance)
-
     def describe_volumes(self, context, volume_id=None, **kwargs):
         if volume_id:
             volumes = []
@@ -846,8 +830,6 @@ class CloudController(object):
         else:
             v['snapshotId'] = None
 
-        v['display_name'] = volume['display_name']
-        v['display_description'] = volume['display_description']
         return v
 
     def create_volume(self, context, **kwargs):
@@ -863,8 +845,8 @@ class CloudController(object):
 
         volume = self.volume_api.create(context,
                                         size,
-                                        kwargs.get('display_name'),
-                                        kwargs.get('display_description'),
+                                        None,
+                                        None,
                                         snapshot)
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
@@ -875,18 +857,6 @@ class CloudController(object):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.delete(context, volume)
-        return True
-
-    def update_volume(self, context, volume_id, **kwargs):
-        volume_id = ec2utils.ec2_id_to_id(volume_id)
-        updatable_fields = ['display_name', 'display_description']
-        changes = {}
-        for field in updatable_fields:
-            if field in kwargs:
-                changes[field] = kwargs[field]
-        if changes:
-            volume = self.volume_api.get(context, volume_id)
-            self.volume_api.update(context, volume, fields=changes)
         return True
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
@@ -1157,8 +1127,6 @@ class CloudController(object):
             self._format_instance_type(instance, i)
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']
-            i['displayName'] = instance['display_name']
-            i['displayDescription'] = instance['display_description']
             self._format_instance_root_device_name(instance, i)
             self._format_instance_bdm(context, instance_id,
                                       i['rootDeviceName'], i)
@@ -1265,8 +1233,6 @@ class CloudController(object):
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id'),
             ramdisk_id=kwargs.get('ramdisk_id'),
-            display_name=kwargs.get('display_name'),
-            display_description=kwargs.get('display_description'),
             key_name=kwargs.get('key_name'),
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
@@ -1318,35 +1284,6 @@ class CloudController(object):
             self.compute_api.start(context, instance)
         return True
 
-    def rescue_instance(self, context, instance_id, **kwargs):
-        """This is an extension to the normal ec2_api"""
-        LOG.debug(_("Going to rescue instance %s") % instance_id)
-        _instance_id = ec2utils.ec2_id_to_id(instance_id)
-        instance = self.compute_api.get(context, _instance_id)
-        self.compute_api.rescue(context, instance)
-        return True
-
-    def unrescue_instance(self, context, instance_id, **kwargs):
-        """This is an extension to the normal ec2_api"""
-        LOG.debug(_("Going to unrescue instance %s") % instance_id)
-        _instance_id = ec2utils.ec2_id_to_id(instance_id)
-        instance = self.compute_api.get(context, _instance_id)
-        self.compute_api.unrescue(context, instance)
-        return True
-
-    def update_instance(self, context, instance_id, **kwargs):
-        """This is an extension to the normal ec2_api"""
-        updatable_fields = ['display_name', 'display_description']
-        changes = {}
-        for field in updatable_fields:
-            if field in kwargs:
-                changes[field] = kwargs[field]
-        if changes:
-            instance_id = ec2utils.ec2_id_to_id(instance_id)
-            instance = self.compute_api.get(context, instance_id)
-            self.compute_api.update(context, instance, **changes)
-        return True
-
     def _get_image(self, context, ec2_id):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
@@ -1391,7 +1328,6 @@ class CloudController(object):
             i['imageLocation'] = image['properties'].get('image_location')
 
         i['imageState'] = self._get_image_state(image)
-        i['displayName'] = name
         i['description'] = image.get('description')
         display_mapping = {'aki': 'kernel',
                            'ari': 'ramdisk',
