@@ -63,7 +63,7 @@ from nova import log as logging
 from nova import utils
 
 
-_CLASSES = ['host', 'network', 'session', 'SR', 'VBD',
+_CLASSES = ['host', 'network', 'session', 'SR', 'VBD', 'pool',
             'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task']
 
 _db_content = {}
@@ -91,6 +91,11 @@ def reset_table(table):
     if not table in _CLASSES:
         return
     _db_content[table] = {}
+
+
+def create_pool(name_label):
+    return _create_object('pool',
+                          {'name_label': name_label})
 
 
 def create_host(name_label):
@@ -201,50 +206,40 @@ def create_local_pifs():
        Do this one per host."""
     for host_ref in _db_content['host'].keys():
         _create_local_pif(host_ref)
-        _create_local_sr_iso(host_ref)
 
 
 def create_local_srs():
     """Create an SR that looks like the one created on the local disk by
-    default by the XenServer installer.  Do this one per host."""
+    default by the XenServer installer.  Do this one per host. Also, fake
+    the installation of an ISO SR."""
     for host_ref in _db_content['host'].keys():
-        _create_local_sr(host_ref)
+        create_sr(name_label='Local storage',
+                  type='lvm',
+                  other_config={'i18n-original-value-name_label':
+                                'Local storage',
+                                'i18n-key': 'local-storage'},
+                  host_ref=host_ref)
+        create_sr(name_label='Local storage ISO',
+                  type='iso',
+                  other_config={'i18n-original-value-name_label':
+                                'Local storage ISO',
+                                'i18n-key': 'local-storage-iso'},
+                  host_ref=host_ref)
 
 
-def _create_local_sr(host_ref):
+def create_sr(**kwargs):
     sr_ref = _create_object(
              'SR',
-             {'name_label': 'Local storage',
-              'type': 'lvm',
+             {'name_label': kwargs.get('name_label'),
+              'type': kwargs.get('type'),
               'content_type': 'user',
               'shared': False,
               'physical_size': str(1 << 30),
               'physical_utilisation': str(0),
               'virtual_allocation': str(0),
-              'other_config': {
-                     'i18n-original-value-name_label': 'Local storage',
-                     'i18n-key': 'local-storage'},
+              'other_config': kwargs.get('other_config'),
               'VDIs': []})
-    pbd_ref = create_pbd('', host_ref, sr_ref, True)
-    _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
-    return sr_ref
-
-
-def _create_local_sr_iso(host_ref):
-    sr_ref = _create_object(
-             'SR',
-             {'name_label': 'Local storage ISO',
-              'type': 'lvm',
-              'content_type': 'iso',
-              'shared': False,
-              'physical_size': str(1 << 30),
-              'physical_utilisation': str(0),
-              'virtual_allocation': str(0),
-              'other_config': {
-                     'i18n-original-value-name_label': 'Local storage ISO',
-                     'i18n-key': 'local-storage-iso'},
-              'VDIs': []})
-    pbd_ref = create_pbd('', host_ref, sr_ref, True)
+    pbd_ref = create_pbd('', kwargs.get('host_ref'), sr_ref, True)
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
     return sr_ref
 
@@ -355,6 +350,9 @@ class SessionBase(object):
 
     def __init__(self, uri):
         self._session = None
+
+    def pool_get_default_SR(self, _1, pool_ref):
+        return 'FAKE DEFAULT SR'
 
     def VBD_plug(self, _1, ref):
         rec = get_record('VBD', ref)
