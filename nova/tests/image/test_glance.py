@@ -193,10 +193,6 @@ class TestGlanceImageService(test.TestCase):
                           'bad image id')
 
     def test_create_and_show_non_existing_image_by_name(self):
-        fixture = self._make_fixture(name='test image')
-        image_id = self.service.create(self.context, fixture)['id']
-
-        self.assertNotEquals(None, image_id)
         self.assertRaises(exception.ImageNotFound,
                           self.service.show_by_name,
                           self.context,
