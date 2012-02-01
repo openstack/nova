@@ -969,7 +969,7 @@ class VmCommands(object):
         for instance in instances:
             print "%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s" \
                   "  %-10s %-10s %-10s %-5d" % (
-                instance['hostname'],
+                instance['display_name'],
                 instance['host'],
                 instance['instance_type'].name,
                 instance['vm_state'],
