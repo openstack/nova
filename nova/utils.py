@@ -128,7 +128,7 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
     if session_id is None:
         session_id = random.randint(0, 0xffffffffffffffff)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    data = struct.pack('!BQxxxxxx', 0x38, session_id)
+    data = struct.pack('!BQxxxxx', 0x38, session_id)
     sock.sendto(data, (address, port))
     sock.settimeout(timeout)
     try:
