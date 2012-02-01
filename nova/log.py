@@ -178,42 +178,55 @@ class NovaLogger(logging.Logger):
             extra.update(_dictify_context(context))
         extra.update({"nova_version": version.version_string_with_vcs()})
 
+    #NOTE(ameade): The following calls to _log must be maintained as direct
+    #calls. _log introspects the call stack to get information such as the
+    #filename and line number the logging method was called from.
+
     def log(self, lvl, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        logging.Logger.log(self, lvl, msg, *args, **kwargs)
+        if self.isEnabledFor(lvl):
+            self._log(lvl, msg, args, **kwargs)
 
     def debug(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        logging.Logger.debug(self, msg, *args, **kwargs)
+        if self.isEnabledFor(DEBUG):
+            self._log(DEBUG, msg, args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        logging.Logger.info(self, msg, *args, **kwargs)
+        if self.isEnabledFor(INFO):
+            self._log(INFO, msg, args, **kwargs)
 
     def warn(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        logging.Logger.warn(self, msg, *args, **kwargs)
+        if self.isEnabledFor(WARN):
+            self._log(WARN, msg, args, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        logging.Logger.warning(self, msg, *args, **kwargs)
+        if self.isEnabledFor(WARNING):
+            self._log(WARNING, msg, args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        logging.Logger.error(self, msg, *args, **kwargs)
+        if self.isEnabledFor(ERROR):
+            self._log(ERROR, msg, args, **kwargs)
 
     def critical(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        logging.Logger.critical(self, msg, *args, **kwargs)
+        if self.isEnabledFor(CRITICAL):
+            self._log(CRITICAL, msg, args, **kwargs)
 
     def fatal(self, msg, *args, **kwargs):
         self._update_extra(kwargs)
-        logging.Logger.fatal(self, msg, *args, **kwargs)
+        if self.isEnabledFor(FATAL):
+            self._log(FATAL, msg, args, **kwargs)
 
     def audit(self, msg, *args, **kwargs):
         """Shortcut for our AUDIT level."""
         self._update_extra(kwargs)
-        self.log(AUDIT, msg, *args, **kwargs)
+        if self.isEnabledFor(AUDIT):
+            self._log(AUDIT, msg, args, **kwargs)
 
     def addHandler(self, handler):
         """Each handler gets our custom formatter."""
