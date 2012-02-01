@@ -33,6 +33,7 @@ import subprocess
 import tempfile
 import time
 
+import XenAPI
 import XenAPIPlugin
 import pluginlib_nova as pluginlib
 
@@ -41,6 +42,8 @@ pluginlib.configure_logging("xenhost")
 
 host_data_pattern = re.compile(r"\s*(\S+) \([^\)]+\) *: ?(.*)")
 config_file_path = "/usr/etc/xenhost.conf"
+DEFAULT_TRIES = 23
+DEFAULT_SLEEP = 10
 
 
 def jsonify(fnc):
@@ -95,6 +98,28 @@ def _run_command_with_input(cmd, process_input):
         raise pluginlib.PluginError(err)
     # This is tantamount to proc.stdout.read()
     return output
+
+
+def _resume_compute(session, compute_ref, compute_uuid):
+    """Resume compute node on slave host after pool join. This has to
+    happen regardless of the success or failure of the join operation."""
+    try:
+        # session is valid if the join operation has failed
+        session.xenapi.VM.start(compute_ref, False, True)
+    except XenAPI.Failure, e:
+        # if session is invalid, e.g. xapi has restarted, then the pool
+        # join has been successful, wait for xapi to become alive again
+        for c in xrange(0, DEFAULT_TRIES):
+            try:
+                _run_command("xe vm-start uuid=%s" % compute_uuid)
+                return
+            except pluginlib.PluginError, e:
+                logging.exception('Waited %d seconds for the slave to '
+                                  'become available.' % (c * DEFAULT_SLEEP))
+                time.sleep(DEFAULT_SLEEP)
+    raise pluginlib.PluginError('Unrecoverable error: the host has '
+                                'not come back for more than %d seconds'
+                                % (DEFAULT_SLEEP * (DEFAULT_TRIES + 1)))
 
 
 def _get_host_uuid():
@@ -258,6 +283,34 @@ def host_start(self, arg_dict):
 
 
 @jsonify
+def host_join(self, arg_dict):
+    """Join a remote host into a pool whose master is the host
+    where the plugin is called from. The following constraints apply:
+
+    - The host must have no VMs running, except nova-compute, which will be
+      shut down (and restarted upon pool-join) automatically,
+    - The host must have no shared storage currently set up,
+    - The host must have the same license of the master,
+    - The host must have the same supplemental packs as the master."""
+    session = XenAPI.Session(arg_dict.get("url"))
+    session.login_with_password(arg_dict.get("user"),
+                                arg_dict.get("password"))
+    compute_ref = session.xenapi.VM.get_by_uuid(arg_dict.get('compute_uuid'))
+    session.xenapi.VM.clean_shutdown(compute_ref)
+    try:
+        if arg_dict.get("force"):
+            session.xenapi.pool.join(arg_dict.get("master_addr"),
+                                     arg_dict.get("master_user"),
+                                     arg_dict.get("master_pass"))
+        else:
+            session.xenapi.pool.join_force(arg_dict.get("master_addr"),
+                                           arg_dict.get("master_user"),
+                                           arg_dict.get("master_pass"))
+    finally:
+        _resume_compute(session, compute_ref, arg_dict.get("compute_uuid"))
+
+
+@jsonify
 def host_data(self, arg_dict):
     """Runs the commands on the xenstore host to return the current status
     information.
@@ -380,6 +433,7 @@ if __name__ == "__main__":
             "host_shutdown": host_shutdown,
             "host_reboot": host_reboot,
             "host_start": host_start,
+            "host_join": host_join,
             "get_config": get_config,
             "set_config": set_config,
             "iptables_config": iptables_config})

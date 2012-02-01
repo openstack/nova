@@ -63,7 +63,7 @@ from nova import log as logging
 from nova import utils
 
 
-_CLASSES = ['host', 'network', 'session', 'SR', 'VBD', 'pool',
+_CLASSES = ['host', 'network', 'session', 'pool', 'SR', 'VBD',
             'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task']
 
 _db_content = {}
@@ -508,6 +508,15 @@ class SessionBase(object):
 
     def VM_clean_reboot(self, *args):
         return 'burp'
+
+    def pool_eject(self, session, host_ref):
+        pass
+
+    def pool_join(self, session, hostname, username, password):
+        pass
+
+    def pool_set_name_label(self, session, pool_ref, name):
+        pass
 
     def network_get_all_records_where(self, _1, filter):
         return self.xenapi.network.get_all_records()

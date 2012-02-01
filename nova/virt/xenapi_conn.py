@@ -78,6 +78,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.virt import driver
+from nova.virt.xenapi import pool
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
@@ -180,6 +181,7 @@ class XenAPIConnection(driver.ComputeDriver):
         self._product_version = self._session.get_product_version()
         self._vmops = VMOps(self._session, self._product_version)
         self._initiator = None
+        self._pool = pool.ResourcePool(self._session)
 
     @property
     def host_state(self):
@@ -488,6 +490,15 @@ class XenAPIConnection(driver.ComputeDriver):
         """Sets the specified host's ability to accept new instances."""
         return self._vmops.set_host_enabled(host, enabled)
 
+    def add_to_aggregate(self, context, aggregate, host, **kwargs):
+        """Add a compute host to an aggregate."""
+        return self._pool.add_to_aggregate(context, aggregate, host, **kwargs)
+
+    def remove_from_aggregate(self, context, aggregate, host, **kwargs):
+        """Remove a compute host from an aggregate."""
+        return self._pool.remove_from_aggregate(context,
+                                                aggregate, host, **kwargs)
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""
@@ -498,9 +509,19 @@ class XenAPISession(object):
         exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
                             "(is the Dom0 disk full?)"))
         for i in xrange(FLAGS.xenapi_connection_concurrent):
-            session = self._create_session(url)
-            with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
-                session.login_with_password(user, pw)
+            try:
+                session = self._create_session(url)
+                with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
+                    session.login_with_password(user, pw)
+            except self.XenAPI.Failure, e:
+                # if user and pw of the master are different, we're doomed!
+                if e.details[0] == 'HOST_IS_SLAVE':
+                    master = e.details[1]
+                    session = self.XenAPI.Session(pool.swap_xapi_host(url,
+                                                                      master))
+                    session.login_with_password(user, pw)
+                else:
+                    raise
             self._sessions.put(session)
 
     def get_product_version(self):
