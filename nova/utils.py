@@ -826,7 +826,7 @@ def synchronized(name, external=False):
                                 'method "%(method)s"...' %
                                 {'lock': name, 'method': f.__name__}))
                     lock_file_path = os.path.join(FLAGS.lock_path,
-                                                  'nova-%s.lock' % name)
+                                                  'nova-%s' % name)
                     lock = lockfile.FileLock(lock_file_path)
                 else:
                     lock = _NoopContextManager()
