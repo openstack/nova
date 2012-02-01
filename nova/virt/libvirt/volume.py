@@ -106,12 +106,11 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
     def connect_volume(self, connection_info, mount_device):
         """Attach the volume to instance_name"""
         iscsi_properties = connection_info['data']
-        try:
-            # NOTE(vish): if we are on the same host as nova volume, the
-            #             discovery makes the target so we don't need to
-            #             run --op new
-            self._run_iscsiadm(iscsi_properties, ())
-        except exception.ProcessExecutionError:
+        # NOTE(vish): if we are on the same host as nova volume, the
+        #             discovery makes the target so we don't need to
+        #             run --op new
+        (out, err) = self._run_iscsiadm(iscsi_properties, ())
+        if err and err.strip() == "iscsiadm: no records found!":
             self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
 
         if iscsi_properties.get('auth_method'):
