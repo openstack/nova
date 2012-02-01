@@ -18,8 +18,6 @@ import json
 import webob
 
 from nova.api.openstack  import compute as compute_api
-from nova.api.openstack.compute import extensions
-from nova.api.openstack import wsgi
 from nova import compute
 from nova import context
 from nova import exception
@@ -137,21 +135,6 @@ class AdminActionsTest(test.TestCase):
         req.content_type = 'application/json'
         res = req.get_response(app)
         self.assertEqual(res.status_int, 202)
-
-    def test_migrate_live_forbidden(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = False
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
-        req.method = 'POST'
-        req.body = json.dumps({'os-migrateLive': {'host': 'hostname',
-                                               'block_migration': False,
-                                               'disk_over_commit': False}})
-        req.content_type = 'application/json'
-        res = req.get_response(app)
-        self.assertEqual(res.status_int, 403)
 
     def test_migrate_live_missing_dict_param(self):
         ctxt = context.get_admin_context()
