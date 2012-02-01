@@ -416,7 +416,8 @@ class VMOps(object):
                     bootable=False)
             userdevice += 1
 
-    def _configure_instance(self, ctx, instance, vm_ref):
+    def _configure_instance(self, ctx, instance, vm_ref,
+                            skip_set_password=False):
         # Inject files, if necessary
         injected_files = instance.injected_files
         if injected_files:
@@ -434,9 +435,9 @@ class VMOps(object):
                 LOG.debug(_("Injecting file path: '%s'") % path)
                 self.inject_file(instance, path, contents)
 
-        # Set admin password, if necessary
         admin_password = instance.admin_pass
-        if admin_password:
+        # Set admin password, if necessary
+        if admin_password and not skip_set_password:
             LOG.debug(_("Setting admin password"))
             self.set_admin_password(instance, admin_password)
 
@@ -498,7 +499,10 @@ class VMOps(object):
             self.agent_update(instance, agent_build['url'],
                           agent_build['md5hash'])
 
-        self._configure_instance(ctx, instance, vm_ref)
+        # if the guest agent is not available, configure the
+        # instance, but skip the admin password configuration
+        no_agent = version is None or agent_build is None
+        self._configure_instance(ctx, instance, vm_ref, no_agent)
 
     def _handle_spawn_error(self, vdis, spawn_error):
         # Extract resource list from spawn_error.
@@ -611,7 +615,7 @@ class VMOps(object):
         """
         template_vm_ref = None
         try:
-            template_vm_ref, template_vdi_uuids =\
+            template_vm_ref, template_vdi_uuids = \
                     self._create_snapshot(instance)
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(context,
@@ -704,7 +708,7 @@ class VMOps(object):
         template_vdi_uuids = template_vm_ref = None
         try:
             # 1. Create Snapshot
-            template_vm_ref, template_vdi_uuids =\
+            template_vm_ref, template_vdi_uuids = \
                     self._create_snapshot(instance)
             self._update_instance_progress(context, instance,
                                            step=1,
