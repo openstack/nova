@@ -28,12 +28,10 @@ import hashlib
 import os
 import shutil
 import string
-import struct
 import tempfile
-import time
 import utils
 
-import M2Crypto
+import Crypto.Cipher.AES
 
 gettext.install('nova', unicode=1)
 
@@ -154,31 +152,8 @@ def generate_key_pair(bits=1024):
     public_key = open(keyfile + '.pub').read()
 
     shutil.rmtree(tmpdir)
-    # code below returns public key in pem format
-    # key = M2Crypto.RSA.gen_key(bits, 65537, callback=lambda: None)
-    # private_key = key.as_pem(cipher=None)
-    # bio = M2Crypto.BIO.MemoryBuffer()
-    # key.save_pub_key_bio(bio)
-    # public_key = bio.read()
-    # public_key, err = execute('ssh-keygen', '-y', '-f',
-    #                           '/dev/stdin', private_key)
 
     return (private_key, public_key, fingerprint)
-
-
-def ssl_pub_to_ssh_pub(ssl_public_key, name='root', suffix='nova'):
-    buf = M2Crypto.BIO.MemoryBuffer(ssl_public_key)
-    rsa_key = M2Crypto.RSA.load_pub_key_bio(buf)
-    e, n = rsa_key.pub()
-
-    key_type = 'ssh-rsa'
-
-    key_data = struct.pack('>I', len(key_type))
-    key_data += key_type
-    key_data += '%s%s' % (e, n)
-
-    b64_blob = base64.b64encode(key_data)
-    return '%s %s %s@%s\n' % (key_type, b64_blob, name, suffix)
 
 
 def fetch_crl(project_id):
@@ -335,72 +310,22 @@ def _sign_csr(csr_text, ca_folder):
         return (serial, crtfile.read())
 
 
-def mkreq(bits, subject='foo', ca=0):
-    pk = M2Crypto.EVP.PKey()
-    req = M2Crypto.X509.Request()
-    rsa = M2Crypto.RSA.gen_key(bits, 65537, callback=lambda: None)
-    pk.assign_rsa(rsa)
-    rsa = None  # should not be freed here
-    req.set_pubkey(pk)
-    req.set_subject(subject)
-    req.sign(pk, 'sha512')
-    assert req.verify(pk)
-    pk2 = req.get_pubkey()
-    assert req.verify(pk2)
-    return req, pk
-
-
-def mkcacert(subject='nova', years=1):
-    req, pk = mkreq(2048, subject, ca=1)
-    pkey = req.get_pubkey()
-    sub = req.get_subject()
-    cert = M2Crypto.X509.X509()
-    cert.set_serial_number(1)
-    cert.set_version(2)
-    # FIXME subject is not set in mkreq yet
-    cert.set_subject(sub)
-    t = long(time.time()) + time.timezone
-    now = M2Crypto.ASN1.ASN1_UTCTIME()
-    now.set_time(t)
-    nowPlusYear = M2Crypto.ASN1.ASN1_UTCTIME()
-    nowPlusYear.set_time(t + (years * 60 * 60 * 24 * 365))
-    cert.set_not_before(now)
-    cert.set_not_after(nowPlusYear)
-    issuer = M2Crypto.X509.X509_Name()
-    issuer.C = 'US'
-    issuer.CN = subject
-    cert.set_issuer(issuer)
-    cert.set_pubkey(pkey)
-    ext = M2Crypto.X509.new_extension('basicConstraints', 'CA:TRUE')
-    cert.add_ext(ext)
-    cert.sign(pk, 'sha512')
-
-    # print 'cert', dir(cert)
-    print cert.as_pem()
-    print pk.get_rsa().as_pem()
-
-    return cert, pk, pkey
-
-
-def _build_cipher(key, iv, encode=True):
+def _build_cipher(key, iv):
     """Make a 128bit AES CBC encode/decode Cipher object.
        Padding is handled internally."""
-    operation = 1 if encode else 0
-    return M2Crypto.EVP.Cipher(alg='aes_128_cbc', key=key, iv=iv, op=operation)
+    return Crypto.Cipher.AES.new(key, IV=iv)
 
 
-def encryptor(key, iv=None):
+def encryptor(key):
     """Simple symmetric key encryption."""
     key = base64.b64decode(key)
-    if iv is None:
-        iv = '\0' * 16
-    else:
-        iv = base64.b64decode(iv)
+    iv = '\0' * 16
 
     def encrypt(data):
-        cipher = _build_cipher(key, iv, encode=True)
-        v = cipher.update(data)
-        v = v + cipher.final()
+        cipher = _build_cipher(key, iv)
+        # Must pad string to multiple of 16 chars
+        padding = (16 - len(data) % 16) * " "
+        v = cipher.encrypt(data + padding)
         del cipher
         v = base64.b64encode(v)
         return v
@@ -408,19 +333,15 @@ def encryptor(key, iv=None):
     return encrypt
 
 
-def decryptor(key, iv=None):
+def decryptor(key):
     """Simple symmetric key decryption."""
     key = base64.b64decode(key)
-    if iv is None:
-        iv = '\0' * 16
-    else:
-        iv = base64.b64decode(iv)
+    iv = '\0' * 16
 
     def decrypt(data):
         data = base64.b64decode(data)
-        cipher = _build_cipher(key, iv, encode=False)
-        v = cipher.update(data)
-        v = v + cipher.final()
+        cipher = _build_cipher(key, iv)
+        v = cipher.decrypt(data).rstrip()
         del cipher
         return v
 

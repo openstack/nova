@@ -22,8 +22,6 @@ Weighing Functions.
 import json
 import operator
 
-import M2Crypto
-
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
 from nova import crypto
@@ -41,11 +39,6 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.distributed_scheduler')
-
-
-class InvalidBlob(exception.NovaException):
-    message = _("Ill-formed or incorrectly routed 'blob' data sent "
-            "to instance create request.")
 
 
 class DistributedScheduler(driver.Scheduler):
@@ -185,19 +178,16 @@ class DistributedScheduler(driver.Scheduler):
         or None if invalid. Broken out for testing.
         """
         decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
-        try:
-            json_entry = decryptor(blob)
-            # Extract our WeightedHost values
-            wh_dict = json.loads(json_entry)
-            host = wh_dict.get('host', None)
-            blob = wh_dict.get('blob', None)
-            zone = wh_dict.get('zone', None)
-            return least_cost.WeightedHost(wh_dict['weight'],
-                        host_state=host_manager.HostState(host, 'compute'),
-                        blob=blob, zone=zone)
+        json_entry = decryptor(blob)
 
-        except M2Crypto.EVP.EVPError:
-            raise InvalidBlob()
+        # Extract our WeightedHost values
+        wh_dict = json.loads(json_entry)
+        host = wh_dict.get('host', None)
+        blob = wh_dict.get('blob', None)
+        zone = wh_dict.get('zone', None)
+        return least_cost.WeightedHost(wh_dict['weight'],
+                    host_state=host_manager.HostState(host, 'compute'),
+                    blob=blob, zone=zone)
 
     def _ask_child_zone_to_create_instance(self, context, weighted_host,
             request_spec, kwargs):

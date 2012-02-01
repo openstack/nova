@@ -20,7 +20,9 @@ Management class for VM-related functions (spawn, reboot, etc).
 """
 
 import base64
+import binascii
 import json
+import os
 import pickle
 import random
 import sys
@@ -28,7 +30,6 @@ import time
 import uuid
 
 from eventlet import greenthread
-import M2Crypto
 
 from nova.common import cfg
 from nova.compute import api as compute
@@ -1763,7 +1764,6 @@ class VMOps(object):
         """Removes filters for each VIF of the specified instance."""
         self.firewall_driver.unfilter_instance(instance_ref,
                                                network_info=network_info)
-    ########################################################################
 
 
 class SimpleDH(object):
@@ -1776,51 +1776,35 @@ class SimpleDH(object):
     as it uses that to handle the encryption and decryption. If openssl
     is not available, a RuntimeError will be raised.
     """
-    def __init__(self, prime=None, base=None, secret=None):
-        """
-        You can specify the values for prime and base if you wish;
-        otherwise, reasonable default values will be used.
-        """
-        if prime is None:
-            self._prime = 162259276829213363391578010288127
-        else:
-            self._prime = prime
-        if base is None:
-            self._base = 5
-        else:
-            self._base = base
-        self._shared = self._public = None
+    def __init__(self):
+        self._prime = 162259276829213363391578010288127
+        self._base = 5
+        self._public = None
+        self._shared = None
+        self.generate_private()
 
-        self._dh = M2Crypto.DH.set_params(
-                self.dec_to_mpi(self._prime),
-                self.dec_to_mpi(self._base))
-        self._dh.gen_key()
-        self._public = self.mpi_to_dec(self._dh.pub)
+    def generate_private(self):
+        self._private = int(binascii.hexlify(os.urandom(10)), 16)
+        return self._private
 
     def get_public(self):
+        self._public = self.mod_exp(self._base, self._private, self._prime)
         return self._public
 
     def compute_shared(self, other):
-        self._shared = self.bin_to_dec(
-                self._dh.compute_key(self.dec_to_mpi(other)))
+        self._shared = self.mod_exp(other, self._private, self._prime)
         return self._shared
 
-    def mpi_to_dec(self, mpi):
-        bn = M2Crypto.m2.mpi_to_bn(mpi)
-        hexval = M2Crypto.m2.bn_to_hex(bn)
-        dec = int(hexval, 16)
-        return dec
-
-    def bin_to_dec(self, binval):
-        bn = M2Crypto.m2.bin_to_bn(binval)
-        hexval = M2Crypto.m2.bn_to_hex(bn)
-        dec = int(hexval, 16)
-        return dec
-
-    def dec_to_mpi(self, dec):
-        bn = M2Crypto.m2.dec_to_bn('%s' % dec)
-        mpi = M2Crypto.m2.bn_to_mpi(bn)
-        return mpi
+    @staticmethod
+    def mod_exp(num, exp, mod):
+        """Efficient implementation of (num ** exp) % mod"""
+        result = 1
+        while exp > 0:
+            if (exp & 1) == 1:
+                result = (result * num) % mod
+            exp = exp >> 1
+            num = (num * num) % mod
+        return result
 
     def _run_ssl(self, text, decrypt=False):
         cmd = ['openssl', 'aes-128-cbc', '-A', '-a', '-pass',

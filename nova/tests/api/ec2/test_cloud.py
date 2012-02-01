@@ -20,10 +20,8 @@
 import base64
 import copy
 import functools
+import tempfile
 import os
-
-from M2Crypto import BIO
-from M2Crypto import RSA
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -31,7 +29,6 @@ from nova.api.ec2 import inst_state
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context
-from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
@@ -1188,16 +1185,21 @@ class CloudTestCase(test.TestCase):
     def test_key_generation(self):
         result = self._create_key('test')
         private_key = result['private_key']
-        key = RSA.load_key_string(private_key, callback=lambda: None)
-        bio = BIO.MemoryBuffer()
-        public_key = db.key_pair_get(self.context,
+
+        expected = db.key_pair_get(self.context,
                                     self.context.user_id,
                                     'test')['public_key']
-        key.save_pub_key_bio(bio)
-        converted = crypto.ssl_pub_to_ssh_pub(bio.read())
+
+        (fd, fname) = tempfile.mkstemp()
+        os.write(fd, private_key)
+
+        public_key, err = utils.execute('ssh-keygen', '-e', '-f', fname)
+
+        os.unlink(fname)
+
         # assert key fields are equal
-        self.assertEqual(public_key.split(" ")[1].strip(),
-                         converted.split(" ")[1].strip())
+        self.assertEqual(''.join(public_key.split("\n")[2:-2]),
+                         expected.split(" ")[1].strip())
 
     def test_describe_key_pairs(self):
         self._create_key('test1')

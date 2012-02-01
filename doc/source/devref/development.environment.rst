@@ -54,21 +54,15 @@ Install the prerequisite packages.
 
 On Ubuntu::
 
-  sudo apt-get install python-dev swig libssl-dev python-pip git-core
+  sudo apt-get install python-dev libssl-dev python-pip git-core
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
-  sudo yum install python-devel swig openssl-devel python-pip git
+  sudo yum install python-devel openssl-devel python-pip git
 
 
 Mac OS X Systems
 ----------------
-
-Install swig, which is needed to build the M2Crypto Python package. If you are
-using the `homebrew <http://mxcl.github.com/homebrew/>`_, package manager,
-install swig by doing::
-
-    brew install swig
 
 Install virtualenv::
 
@@ -120,7 +114,7 @@ You can manually install the virtual environment instead of having
 
 This will install all of the Python packages listed in the
 ``tools/pip-requires`` file into your virtualenv. There will also be some
-additional packages (pip, distribute, greenlet, M2Crypto) that are installed
+additional packages (pip, distribute, greenlet) that are installed
 by the ``tools/install_venv.py`` file into the virutalenv.
 
 If all goes well, you should get a message something like this::

@@ -27,7 +27,6 @@ import optparse
 import os
 import subprocess
 import sys
-import platform
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -88,27 +87,12 @@ class Distro(object):
             ' requires virtualenv, please install it using your'
             ' favorite package management tool')
 
-    def install_m2crypto(self):
-        pip_install('M2Crypto')
-
     def post_process(self):
         """Any distribution-specific post-processing gets done here.
 
         In particular, this is useful for applying patches to code inside
         the venv."""
         pass
-
-
-class UbuntuOneiric(Distro):
-    """Oneiric specific installation steps"""
-
-    def install_m2crypto(self):
-        """
-        The pip installed version of m2crypto has problems on oneiric
-        """
-        print "Attempting to install 'python-m2crypto' via apt-get"
-        run_command(['sudo', 'apt-get', 'install', '-y',
-            "python-m2crypto"])
 
 
 class Fedora(Distro):
@@ -136,14 +120,6 @@ class Fedora(Distro):
 
         super(Fedora, self).install_virtualenv()
 
-    #
-    # pip install M2Crypto fails on Fedora because of
-    # weird differences with OpenSSL headers
-    #
-    def install_m2crypto(self):
-        if not self.check_pkg('m2crypto'):
-            self.yum_install('m2crypto')
-
     def post_process(self):
         """Workaround for a bug in eventlet.
 
@@ -169,8 +145,6 @@ def get_distro():
     if os.path.exists('/etc/fedora-release') or \
        os.path.exists('/etc/redhat-release'):
         return Fedora()
-    elif platform.linux_distribution()[2] == 'oneiric':
-        return UbuntuOneiric()
     else:
         return Distro()
 
@@ -214,8 +188,6 @@ def install_dependencies(venv=VENV):
     pip_install('greenlet')
 
     pip_install('-r', PIP_REQUIRES)
-
-    get_distro().install_m2crypto()
 
     # Tell the virtual env how to "import nova"
     pthfile = os.path.join(venv, "lib", PY_VERSION, "site-packages",
