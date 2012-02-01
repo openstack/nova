@@ -21,7 +21,7 @@ from lxml import etree
 
 from nova.api import auth
 from nova.api.openstack import compute
-from nova.api.openstack.compute import wsgi
+from nova.api.openstack import wsgi
 from nova.api.openstack.compute.contrib import cloudpipe
 from nova import context
 from nova import db

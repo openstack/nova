@@ -17,11 +17,8 @@
 #    under the License.
 
 """
-WSGI middleware for OpenStack API controllers.
+WSGI middleware for OpenStack Compute API.
 """
-
-import webob.dec
-import webob.exc
 
 import nova.api.openstack
 from nova.api.openstack.compute import consoles
@@ -34,11 +31,9 @@ from nova.api.openstack.compute import limits
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import versions
-from nova.api.openstack import wsgi
 from nova.common import cfg
 from nova import flags
 from nova import log as logging
-from nova import wsgi as base_wsgi
 
 
 LOG = logging.getLogger('nova.api.openstack.compute')
@@ -52,66 +47,12 @@ FLAGS = flags.FLAGS
 FLAGS.add_option(allow_instance_snapshots_opt)
 
 
-class APIRouter(base_wsgi.Router):
+class APIRouter(nova.api.openstack.APIRouter):
     """
     Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
-
-    @classmethod
-    def factory(cls, global_config, **local_config):
-        """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one"""
-        return cls()
-
-    def __init__(self, ext_mgr=None):
-        if ext_mgr is None:
-            ext_mgr = extensions.ExtensionManager()
-
-        mapper = nova.api.openstack.ProjectMapper()
-        self.resources = {}
-        self._setup_routes(mapper)
-        self._setup_ext_routes(mapper, ext_mgr)
-        self._setup_extensions(ext_mgr)
-        super(APIRouter, self).__init__(mapper)
-
-    def _setup_ext_routes(self, mapper, ext_mgr):
-        for resource in ext_mgr.get_resources():
-            LOG.debug(_('Extended resource: %s'),
-                      resource.collection)
-
-            wsgi_resource = wsgi.Resource(resource.controller)
-            self.resources[resource.collection] = wsgi_resource
-            kargs = dict(
-                controller=wsgi_resource,
-                collection=resource.collection_actions,
-                member=resource.member_actions)
-
-            if resource.parent:
-                kargs['parent_resource'] = resource.parent
-
-            mapper.resource(resource.collection, resource.collection, **kargs)
-
-            if resource.custom_routes_fn:
-                resource.custom_routes_fn(mapper, wsgi_resource)
-
-    def _setup_extensions(self, ext_mgr):
-        for extension in ext_mgr.get_controller_extensions():
-            ext_name = extension.extension.name
-            collection = extension.collection
-            controller = extension.controller
-
-            if collection not in self.resources:
-                LOG.warning(_('Extension %(ext_name)s: Cannot extend '
-                              'resource %(collection)s: No such resource') %
-                            locals())
-                continue
-
-            LOG.debug(_('Extension %(ext_name)s extending resource: '
-                        '%(collection)s') % locals())
-
-            resource = self.resources[collection]
-            resource.register_actions(controller)
-            resource.register_extensions(controller)
+    ExtensionManager = extensions.ExtensionManager
 
     def _setup_routes(self, mapper):
         self.resources['versions'] = versions.create_resource()
