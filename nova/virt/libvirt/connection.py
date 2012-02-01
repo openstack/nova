@@ -828,27 +828,24 @@ class LibvirtConnection(driver.ComputeDriver):
             if cow or not generating:
                 call_if_not_exists(base, fn, *args, **kwargs)
             elif generating:
-                # For raw it's quicker to generate both
-                # FIXME(p-draigbrady) the first call here is probably
-                # redundant, as it's of no benefit to cache in base?
-                call_if_not_exists(base, fn, *args, **kwargs)
-                if os.path.exists(target):
-                    os.unlink(target)
-                fn(target=target, *args, **kwargs)
+                # For raw it's quicker to just generate outside the cache
+                call_if_not_exists(target, fn, *args, **kwargs)
 
             if cow:
+                cow_base = base
                 if size:
-                    disk.extend(base, size)
-                libvirt_utils.create_cow_image(base, target)
+                    size_gb = size / (1024 * 1024 * 1024)
+                    cow_base += "_%d" % size_gb
+                    if not os.path.exists(cow_base):
+                        libvirt_utils.copy_image(base, cow_base)
+                        disk.extend(cow_base, size)
+                libvirt_utils.create_cow_image(cow_base, target)
             elif not generating:
                 libvirt_utils.copy_image(base, target)
                 # Resize after the copy, as it's usually much faster
                 # to make sparse updates, rather than potentially
                 # naively copying the whole image file.
                 if size:
-                    # FIXME(p-draigbrady) the first call here is probably
-                    # redundant, as it's of no benefit have full size in base?
-                    disk.extend(base, size)
                     disk.extend(target, size)
 
     @staticmethod
@@ -944,9 +941,6 @@ class LibvirtConnection(driver.ComputeDriver):
         inst_type = instance_types.get_instance_type(inst_type_id)
         if size == 0 or suffix == '.rescue':
             size = None
-            root_fname += "_sm"
-        else:
-            root_fname += "_%d" % instance['root_gb']
 
         if not self._volume_in_mapping(self.default_root_device,
                                        block_device_info):
@@ -1829,11 +1823,14 @@ class LibvirtConnection(driver.ComputeDriver):
                 backing_file = os.path.join(FLAGS.instances_path,
                                             '_base', info['backing_file'])
 
+                # Remove any size tags which the cache manages
+                cached_file = info['backing_file'].split('_')[0]
+
                 if not os.path.exists(backing_file):
                     self._cache_image(fn=self._fetch_image,
                         context=ctxt,
                         target=info['path'],
-                        fname=info['backing_file'],
+                        fname=cached_file,
                         cow=FLAGS.use_cow_images,
                         image_id=instance_ref['image_ref'],
                         user_id=instance_ref['user_id'],
