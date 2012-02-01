@@ -139,6 +139,19 @@ def notify(context, topic, msg):
     return _get_impl().notify(context, topic, msg)
 
 
+def cleanup():
+    """Clean up resoruces in use by implementation.
+
+    Clean up any resources that have been allocated by the RPC implementation.
+    This is typically open connections to a messaging service.  This function
+    would get called before an application using this API exits to allow
+    connections to get torn down cleanly.
+
+    :returns: None
+    """
+    return _get_impl().cleanup()
+
+
 _RPCIMPL = None
 
 

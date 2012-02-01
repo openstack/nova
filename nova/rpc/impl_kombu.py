@@ -618,3 +618,7 @@ def fanout_cast(context, topic, msg):
 def notify(context, topic, msg):
     """Sends a notification event on a topic."""
     return rpc_amqp.notify(context, topic, msg)
+
+
+def cleanup():
+    return rpc_amqp.cleanup()
