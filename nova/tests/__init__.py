@@ -37,6 +37,7 @@ setattr(__builtin__, '_', lambda x: x)
 
 
 def setup():
+    import mox  # Fail fast if you don't have mox. Workaround for bug 810424
     import os
     import shutil
 
