@@ -30,13 +30,11 @@ class Mount(object):
     to be called in that order.
     """
 
-    def __init__(self, image, mount_dir, partition=None,
-                 disable_auto_fsck=False):
+    def __init__(self, image, mount_dir, partition=None):
 
         # Input
         self.image = image
         self.partition = partition
-        self.disable_auto_fsck = disable_auto_fsck
         self.mount_dir = mount_dir
 
         # Output
@@ -83,16 +81,6 @@ class Mount(object):
         else:
             self.mapped_device = self.device
             self.mapped = True
-
-        # This is an orthogonal operation
-        # which only needs to be done once
-        if self.disable_auto_fsck and self.mapped:
-            self.disable_auto_fsck = False
-            # attempt to set ext[234] so that it doesn't auto-fsck
-            _out, err = utils.trycmd('tune2fs', '-c', 0, '-i', 0,
-                                     self.mapped_device, run_as_root=True)
-            if err:
-                LOG.info(_('Failed to disable fs check: %s') % err)
 
         return self.mapped
 
