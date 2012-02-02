@@ -46,6 +46,10 @@ def db_key_pair_destroy(context, user_id, name):
         raise Exception()
 
 
+def db_key_pair_get(context, user_id, name):
+    pass
+
+
 class KeypairsTest(test.TestCase):
 
     def setUp(self):
@@ -129,6 +133,16 @@ class KeypairsTest(test.TestCase):
         res_dict = json.loads(res.body)
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertFalse('private_key' in res_dict['keypair'])
+
+    def test_keypair_create_duplicate(self):
+        self.stubs.Set(db, "key_pair_get", db_key_pair_get)
+        body = {'keypair': {'name': 'create_duplicate'}}
+        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 409)
 
     def test_keypair_import_bad_key(self):
         body = {
