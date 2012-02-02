@@ -35,10 +35,9 @@ from nova.compute import instance_types
 from nova.vsa import utils as vsa_utils
 from nova.vsa.api import VsaState
 
-vsa_driver_opt = \
-    cfg.StrOpt('vsa_driver',
-               default='nova.vsa.connection.get_connection',
-               help='Driver to use for controlling VSAs')
+vsa_driver_opt = cfg.StrOpt('vsa_driver',
+                            default='nova.vsa.connection.get_connection',
+                            help='Driver to use for controlling VSAs')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(vsa_driver_opt)
@@ -59,8 +58,7 @@ class VsaManager(manager.SchedulerDependentManager):
         self.volume_api = volume.API()
         self.vsa_api = vsa.API()
 
-        if FLAGS.vsa_ec2_user_id is None or \
-           FLAGS.vsa_ec2_access_key is None:
+        if FLAGS.vsa_ec2_user_id is None or FLAGS.vsa_ec2_access_key is None:
             raise exception.VSANovaAccessParamNotFound()
 
         super(VsaManager, self).__init__(*args, **kwargs)
@@ -88,7 +86,7 @@ class VsaManager(manager.SchedulerDependentManager):
     @exception.wrap_exception()
     def vsa_volume_created(self, context, vol_id, vsa_id, status):
         """Callback for volume creations"""
-        LOG.debug(_("VSA ID %(vsa_id)s: Drive %(vol_id)s created. "\
+        LOG.debug(_("VSA ID %(vsa_id)s: Drive %(vol_id)s created. "
                     "Status %(status)s"), locals())
         vsa_id = int(vsa_id)    # just in case
 
@@ -99,7 +97,7 @@ class VsaManager(manager.SchedulerDependentManager):
             if drive['status'] == 'creating':
                 vol_name = drive['name']
                 vol_disp_name = drive['display_name']
-                LOG.debug(_("Drive %(vol_name)s (%(vol_disp_name)s) still "\
+                LOG.debug(_("Drive %(vol_name)s (%(vol_disp_name)s) still "
                             "in creating phase - wait"), locals())
                 return
 
@@ -113,7 +111,7 @@ class VsaManager(manager.SchedulerDependentManager):
         if len(drives) != vsa['vol_count']:
             cvol_real = len(drives)
             cvol_exp = vsa['vol_count']
-            LOG.debug(_("VSA ID %(vsa_id)d: Not all volumes are created "\
+            LOG.debug(_("VSA ID %(vsa_id)d: Not all volumes are created "
                         "(%(cvol_real)d of %(cvol_exp)d)"), locals())
             return
 
@@ -136,9 +134,9 @@ class VsaManager(manager.SchedulerDependentManager):
             vol_name = drive['name']
             vol_disp_name = drive['display_name']
             status = drive['status']
-            LOG.info(_("VSA ID %(vsa_id)d: Drive %(vol_name)s "\
-                        "(%(vol_disp_name)s) is in %(status)s state"),
-                        locals())
+            LOG.info(_("VSA ID %(vsa_id)d: Drive %(vol_name)s "
+                       "(%(vol_disp_name)s) is in %(status)s state"),
+                     locals())
             if status == 'available':
                 try:
                     # self.volume_api.update(context, volume,

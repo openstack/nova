@@ -57,8 +57,8 @@ class XenSMDriver(VolumeDriver):
                 sr_uuid = self._volumeops.create_sr(label, params)
             # update sr_uuid and created in db
             except Exception as ex:
-                LOG.debug(_("Failed to create sr %s...continuing") \
-                          % str(backend_ref['id']))
+                LOG.debug(_("Failed to create sr %s...continuing") %
+                          str(backend_ref['id']))
                 raise exception.Error(_('Create failed'))
 
             LOG.debug(_('SR UUID of new SR is: %s') % sr_uuid)
@@ -77,7 +77,7 @@ class XenSMDriver(VolumeDriver):
                                               params)
             except Exception as ex:
                 LOG.exception(ex)
-                LOG.debug(_("Failed to introduce sr %s...continuing") \
+                LOG.debug(_("Failed to introduce sr %s...continuing")
                           % str(backend_ref['id']))
 
     def _create_storage_repos(self, context):
@@ -88,7 +88,7 @@ class XenSMDriver(VolumeDriver):
                 self._create_storage_repo(context, backend)
             except Exception as ex:
                 LOG.exception(ex)
-                raise exception.Error(_('Failed to reach backend %d') \
+                raise exception.Error(_('Failed to reach backend %d')
                                       % backend['id'])
 
     def __init__(self, *args, **kwargs):
@@ -136,11 +136,10 @@ class XenSMDriver(VolumeDriver):
             # volume are both running on this host, then, as a
             # part of detach_volume, compute could potentially forget SR
             self._create_storage_repo(self.ctxt, backend)
-            sm_vol_rec = self._volumeops.\
-                              create_volume_for_sm(volume,
-                                                   backend['sr_uuid'])
+            sm_vol_rec = self._volumeops.create_volume_for_sm(volume,
+                                                  backend['sr_uuid'])
             if sm_vol_rec:
-                LOG.debug(_('Volume will be created in backend - %d') \
+                LOG.debug(_('Volume will be created in backend - %d')
                           % backend['id'])
                 break
 
@@ -216,9 +215,8 @@ class XenSMDriver(VolumeDriver):
         del xensm_properties['id']
 
         try:
-            backend_conf = self.db.\
-                           sm_backend_conf_get(self.ctxt,
-                                               xensm_properties['backend_id'])
+            backend_conf = self.db.sm_backend_conf_get(self.ctxt,
+                                  xensm_properties['backend_id'])
         except Exception as ex:
             LOG.exception(ex)
             raise exception.Error(_("Failed to find backend in db"))
@@ -229,8 +227,8 @@ class XenSMDriver(VolumeDriver):
         xensm_properties['sr_uuid'] = backend_conf['sr_uuid']
         xensm_properties['sr_type'] = backend_conf['sr_type']
         xensm_properties.update(params)
-        xensm_properties['introduce_sr_keys'] = self.\
-                                                _get_introduce_sr_keys(params)
+        _introduce_sr_keys = self._get_introduce_sr_keys(params)
+        xensm_properties['introduce_sr_keys'] = _introduce_sr_keys
         return {
             'driver_volume_type': 'xensm',
             'data': xensm_properties

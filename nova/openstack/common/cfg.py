@@ -30,17 +30,15 @@ The schema for each option is defined using the Opt sub-classes e.g.
 
 Options can be strings, integers, floats, booleans, lists or 'multi strings':
 
-    enabled_apis_opt = \
-        cfg.ListOpt('enabled_apis',
-                    default=['ec2', 'osapi_compute'],
-                    help='List of APIs to enable by default')
+    enabled_apis_opt = cfg.ListOpt('enabled_apis',
+                                   default=['ec2', 'osapi_compute'],
+                                   help='List of APIs to enable by default')
 
     DEFAULT_EXTENSIONS = [
         'nova.api.openstack.contrib.standard_extensions'
     ]
-    osapi_compute_extension_opt = \
-        cfg.MultiStrOpt('osapi_compute_extension',
-                        default=DEFAULT_EXTENSIONS)
+    osapi_compute_extension_opt = cfg.MultiStrOpt('osapi_compute_extension',
+                                                  default=DEFAULT_EXTENSIONS)
 
 Option schemas are registered with with the config manager at runtime, but
 before the option is referenced:
@@ -94,9 +92,8 @@ The config manager has a single CLI option defined by default, --config-file:
 
     class ConfigOpts(object):
 
-        config_file_opt = \
-            MultiStrOpt('config-file',
-                        ...
+        config_file_opt = MultiStrOpt('config-file',
+                                      ...
 
         def __init__(self, ...):
             ...
@@ -132,14 +129,12 @@ Options can be registered as belonging to a group:
     rabbit_group = cfg.OptionGroup(name='rabbit',
                                    title='RabbitMQ options')
 
-    rabbit_host_opt = \
-        cfg.StrOpt('host',
-                   default='localhost',
-                   help='IP/hostname to listen on'),
-    rabbit_port_opt = \
-        cfg.IntOpt('port',
-                   default=5672,
-                   help='Port number to listen on')
+    rabbit_host_opt = cfg.StrOpt('host',
+                                 default='localhost',
+                                 help='IP/hostname to listen on'),
+    rabbit_port_opt = cfg.IntOpt('port',
+                                 default=5672,
+                                 help='Port number to listen on')
 
     def register_rabbit_opts(conf):
         conf.register_group(rabbit_group)
@@ -289,8 +284,8 @@ class ConfigFilesNotFoundError(Error):
         self.config_files = config_files
 
     def __str__(self):
-        return 'Failed to read some config files: %s' % \
-            string.join(self.config_files, ',')
+        return ('Failed to read some config files: %s' %
+                string.join(self.config_files, ','))
 
 
 class ConfigFileParseError(Error):
@@ -624,8 +619,8 @@ class MultiStrOpt(Opt):
         """Retrieve the opt value as a multistr from ConfigParser."""
         # FIXME(markmc): values spread across the CLI and multiple
         #                config files should be appended
-        value = \
-            super(MultiStrOpt, self)._get_from_config_parser(cparser, section)
+        value = super(MultiStrOpt, self)._get_from_config_parser(cparser,
+                                                                 section)
         return value if value is None else [value]
 
     def _get_optparse_kwargs(self, group, **kwargs):
@@ -688,8 +683,8 @@ class OptGroup(object):
     def _get_optparse_group(self, parser):
         """Build an optparse.OptionGroup for this group."""
         if self._optparse_group is None:
-            self._optparse_group = \
-                optparse.OptionGroup(parser, self.title, self.help)
+            self._optparse_group = optparse.OptionGroup(parser, self.title,
+                                                        self.help)
         return self._optparse_group
 
 
@@ -743,7 +738,7 @@ class ConfigOpts(collections.Mapping, object):
                                               usage=self.usage)
         self._cparser = None
 
-        self.register_cli_opt(\
+        self.register_cli_opt(
             MultiStrOpt('config-file',
                         default=self.default_config_files,
                         metavar='PATH',

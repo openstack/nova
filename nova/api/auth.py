@@ -28,11 +28,10 @@ from nova.openstack.common import cfg
 from nova import wsgi
 
 
-use_forwarded_for_opt = \
-    cfg.BoolOpt('use_forwarded_for',
-                default=False,
-                help='Treat X-Forwarded-For as the canonical remote address. '
-                     'Only enable this if you have a sanitizing proxy.')
+use_forwarded_for_opt = cfg.BoolOpt('use_forwarded_for',
+        default=False,
+        help='Treat X-Forwarded-For as the canonical remote address. '
+             'Only enable this if you have a sanitizing proxy.')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(use_forwarded_for_opt)

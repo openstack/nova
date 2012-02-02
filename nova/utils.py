@@ -222,8 +222,7 @@ def execute(*cmd, **kwargs):
             _returncode = obj.returncode  # pylint: disable=E1101
             if _returncode:
                 LOG.debug(_('Result was %s') % _returncode)
-                if not ignore_exit_code \
-                    and _returncode not in check_exit_code:
+                if not ignore_exit_code and _returncode not in check_exit_code:
                     (stdout, stderr) = result
                     raise exception.ProcessExecutionError(
                             exit_code=_returncode,
@@ -415,12 +414,12 @@ def usage_from_instance(instance_ref, network_info=None, **kw):
           disk_gb=instance_ref['root_gb'] + instance_ref['ephemeral_gb'],
           display_name=instance_ref['display_name'],
           created_at=str(instance_ref['created_at']),
-          launched_at=str(instance_ref['launched_at']) \
+          launched_at=str(instance_ref['launched_at'])
                       if instance_ref['launched_at'] else '',
           image_ref_url=image_ref_url,
           state=instance_ref['vm_state'],
-          state_description=instance_ref['task_state'] \
-                             if instance_ref['task_state'] else '')
+          state_description=instance_ref['task_state']
+                            if instance_ref['task_state'] else '')
 
     if network_info is not None:
         usage_info['fixed_ips'] = network_info.fixed_ips()
@@ -804,7 +803,7 @@ def synchronized(name, external=False):
         @functools.wraps(f)
         def inner(*args, **kwargs):
             # NOTE(soren): If we ever go natively threaded, this will be racy.
-            #              See http://stackoverflow.com/questions/5390569/dyn\
+            #              See http://stackoverflow.com/questions/5390569/dyn
             #              amically-allocating-and-destroying-mutexes
             if name not in _semaphores:
                 _semaphores[name] = semaphore.Semaphore()

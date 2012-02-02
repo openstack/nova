@@ -23,10 +23,9 @@ from nova.rpc.common import RemoteError, LOG
 from nova.utils import import_object
 
 
-rpc_backend_opt = \
-    cfg.StrOpt('rpc_backend',
-               default='nova.rpc.impl_kombu',
-               help="The messaging module to use, defaults to kombu.")
+rpc_backend_opt = cfg.StrOpt('rpc_backend',
+        default='nova.rpc.impl_kombu',
+        help="The messaging module to use, defaults to kombu.")
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(rpc_backend_opt)

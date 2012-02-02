@@ -713,8 +713,8 @@ class LdapDriver(object):
         """Convert ldap attributes to User object"""
         if attr is None:
             return None
-        if ('accessKey' in attr.keys() and 'secretKey' in attr.keys() \
-            and LdapDriver.isadmin_attribute in attr.keys()):
+        if ('accessKey' in attr.keys() and 'secretKey' in attr.keys() and
+            LdapDriver.isadmin_attribute in attr.keys()):
             return {
                 'id': attr[FLAGS.ldap_user_id_attribute][0],
                 'name': attr[FLAGS.ldap_user_name_attribute][0],

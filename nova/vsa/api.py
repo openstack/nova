@@ -76,10 +76,10 @@ class API(base.Base):
         super(API, self).__init__(**kwargs)
 
     def _check_volume_type_correctness(self, vol_type):
-        if vol_type.get('extra_specs') is None or\
-           vol_type['extra_specs'].get('type') != 'vsa_drive' or\
-           vol_type['extra_specs'].get('drive_type') is None or\
-           vol_type['extra_specs'].get('drive_size') is None:
+        if (vol_type.get('extra_specs') is None or
+            vol_type['extra_specs'].get('type') != 'vsa_drive' or
+            vol_type['extra_specs'].get('drive_type') is None or
+            vol_type['extra_specs'].get('drive_size') is None):
 
             raise exception.ApiError(_("Invalid drive type %s")
                                         % vol_type['name'])
@@ -130,8 +130,7 @@ class API(base.Base):
             for i in range(num_volumes):
                 volume_name = "drive-%03d" % first_index
                 first_index += 1
-                volume_desc = 'BE volume for VSA %s type %s' % \
-                              (vsa_name, name)
+                volume_desc = 'BE volume for VSA %s type %s' % (vsa_name, name)
                 volume = {
                     'size': size,
                     'name': volume_name,
@@ -157,7 +156,7 @@ class API(base.Base):
         LOG.info(_("*** Experimental VSA code ***"))
 
         if vc_count > FLAGS.max_vcs_in_vsa:
-            LOG.warning(_("Requested number of VCs (%d) is too high."\
+            LOG.warning(_("Requested number of VCs (%d) is too high."
                           " Setting to default"), vc_count)
             vc_count = FLAGS.max_vcs_in_vsa
 
@@ -246,8 +245,8 @@ class API(base.Base):
                     vol_name = vol['name']
                     vol_size = vol['size']
                     vol_type_id = vol['volume_type_id']
-                    LOG.debug(_("VSA ID %(vsa_id)d %(vsa_name)s: Create "\
-                                "volume %(vol_name)s, %(vol_size)d GB, "\
+                    LOG.debug(_("VSA ID %(vsa_id)d %(vsa_name)s: Create "
+                                "volume %(vol_name)s, %(vol_size)d GB, "
                                 "type %(vol_type_id)s"), locals())
 
                     vol_type = volume_types.get_volume_type(context,
@@ -308,7 +307,7 @@ class API(base.Base):
             vsa = self.get(context, vsa_id)
             vc_count = int(vc_count)
             if vc_count > FLAGS.max_vcs_in_vsa:
-                LOG.warning(_("Requested number of VCs (%d) is too high."\
+                LOG.warning(_("Requested number of VCs (%d) is too high."
                               " Setting to default"), vc_count)
                 vc_count = FLAGS.max_vcs_in_vsa
 
@@ -356,13 +355,13 @@ class API(base.Base):
         for volume in volumes:
             try:
                 vol_name = volume['name']
-                LOG.info(_("VSA ID %(vsa_id)s: Deleting %(direction)s "\
+                LOG.info(_("VSA ID %(vsa_id)s: Deleting %(direction)s "
                            "volume %(vol_name)s"), locals())
                 self.volume_api.delete(context, volume)
             except exception.ApiError:
                 LOG.info(_("Unable to delete volume %s"), volume['name'])
                 if force_delete:
-                    LOG.info(_("VSA ID %(vsa_id)s: Forced delete. "\
+                    LOG.info(_("VSA ID %(vsa_id)s: Forced delete. "
                                "%(direction)s volume %(vol_name)s"), locals())
                     self._force_volume_delete(context, volume)
 

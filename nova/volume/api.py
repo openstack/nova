@@ -168,8 +168,8 @@ class API(base.Base):
                     volume_metadata[i['key']] = i['value']
 
                 for k, v in searchdict.iteritems():
-                    if k not in volume_metadata.keys()\
-                       or volume_metadata[k] != v:
+                    if (k not in volume_metadata.keys() or
+                        volume_metadata[k] != v):
                         return False
                 return True
 

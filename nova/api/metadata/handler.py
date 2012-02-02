@@ -100,8 +100,7 @@ class MetadataRequestHandler(wsgi.Application):
         mappings = {}
         mappings['ami'] = block_device.strip_dev(root_device_name)
         mappings['root'] = root_device_name
-        default_ephemeral_device = \
-                instance_ref.get('default_ephemeral_device')
+        default_ephemeral_device = instance_ref.get('default_ephemeral_device')
         if default_ephemeral_device:
             mappings['ephemeral0'] = default_ephemeral_device
         default_swap_device = instance_ref.get('default_swap_device')

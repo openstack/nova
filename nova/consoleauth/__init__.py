@@ -22,10 +22,9 @@ from nova import flags
 from nova.openstack.common import cfg
 
 
-consoleauth_topic_opt = \
-    cfg.StrOpt('consoleauth_topic',
-               default='consoleauth',
-               help='the topic console auth proxy nodes listen on')
+consoleauth_topic_opt = cfg.StrOpt('consoleauth_topic',
+        default='consoleauth',
+        help='the topic console auth proxy nodes listen on')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(consoleauth_topic_opt)

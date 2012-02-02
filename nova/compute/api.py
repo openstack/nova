@@ -50,10 +50,9 @@ from nova import volume
 
 LOG = logging.getLogger('nova.compute.api')
 
-find_host_timeout_opt = \
-    cfg.StrOpt('find_host_timeout',
-               default=30,
-               help='Timeout after NN seconds when looking for a host.')
+find_host_timeout_opt = cfg.StrOpt('find_host_timeout',
+        default=30,
+        help='Timeout after NN seconds when looking for a host.')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(find_host_timeout_opt)
@@ -75,15 +74,14 @@ def check_instance_state(vm_state=None, task_state=None):
     def outer(f):
         @functools.wraps(f)
         def inner(self, context, instance, *args, **kw):
-            if vm_state is not None and \
-               instance['vm_state'] not in vm_state:
+            if vm_state is not None and instance['vm_state'] not in vm_state:
                 raise exception.InstanceInvalidState(
                     attr='vm_state',
                     instance_uuid=instance['uuid'],
                     state=instance['vm_state'],
                     method=f.__name__)
-            if task_state is not None and \
-               instance['task_state'] not in task_state:
+            if (task_state is not None and
+                instance['task_state'] not in task_state):
                 raise exception.InstanceInvalidState(
                     attr='task_state',
                     instance_uuid=instance['uuid'],
@@ -114,8 +112,8 @@ class API(base.Base):
 
     def __init__(self, image_service=None, network_api=None, volume_api=None,
                  **kwargs):
-        self.image_service = image_service or \
-                nova.image.get_default_image_service()
+        self.image_service = (image_service or
+                              nova.image.get_default_image_service())
 
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or volume.API()
@@ -1600,8 +1598,8 @@ class API(base.Base):
                            'console_type': console_type,
                            'host': connect_info['host'],
                            'port': connect_info['port'],
-                           'internal_access_path':\
-                            connect_info['internal_access_path']}})
+                           'internal_access_path':
+                                   connect_info['internal_access_path']}})
 
         return {'url': connect_info['access_url']}
 
@@ -1822,10 +1820,10 @@ class AggregateAPI(base.Base):
         if aggregate.operational_state in [aggregate_states.CREATED,
                                            aggregate_states.ACTIVE]:
             if service.availability_zone != aggregate.availability_zone:
-                raise exception.\
-                    InvalidAggregateAction(action='add host',
-                                           aggregate_id=aggregate_id,
-                                           reason='availibility zone mismatch')
+                raise exception.InvalidAggregateAction(
+                        action='add host',
+                        aggregate_id=aggregate_id,
+                        reason='availibility zone mismatch')
             self.db.aggregate_host_add(context, aggregate_id, host)
             if aggregate.operational_state == aggregate_states.CREATED:
                 values = {'operational_state': aggregate_states.CHANGING}
@@ -1840,10 +1838,10 @@ class AggregateAPI(base.Base):
                        aggregate_states.DISMISSED: 'aggregate deleted',
                        aggregate_states.ERROR: 'aggregate in error', }
             if aggregate.operational_state in invalid.keys():
-                raise exception.\
-                    InvalidAggregateAction(action='add host',
-                            aggregate_id=aggregate_id,
-                            reason=invalid[aggregate.operational_state])
+                raise exception.InvalidAggregateAction(
+                        action='add host',
+                        aggregate_id=aggregate_id,
+                        reason=invalid[aggregate.operational_state])
 
     def remove_host_from_aggregate(self, context, aggregate_id, host):
         """Removes host from the aggregate."""
@@ -1862,10 +1860,10 @@ class AggregateAPI(base.Base):
             invalid = {aggregate_states.CHANGING: 'setup in progress',
                        aggregate_states.DISMISSED: 'aggregate deleted', }
             if aggregate.operational_state in invalid.keys():
-                raise exception.\
-                    InvalidAggregateAction(action='remove host',
-                            aggregate_id=aggregate_id,
-                            reason=invalid[aggregate.operational_state])
+                raise exception.InvalidAggregateAction(
+                        action='remove host',
+                        aggregate_id=aggregate_id,
+                        reason=invalid[aggregate.operational_state])
 
     def _get_aggregate_info(self, context, aggregate):
         """Builds a dictionary with aggregate props, metadata and hosts."""
