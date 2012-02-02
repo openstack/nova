@@ -294,8 +294,15 @@ def _inject_key_into_fs(key, fs, execute=None):
     utils.execute('chown', 'root', sshdir, run_as_root=True)
     utils.execute('chmod', '700', sshdir, run_as_root=True)
     keyfile = os.path.join(sshdir, 'authorized_keys')
+    key_data = [
+        '\n',
+        '# The following ssh key was injected by Nova',
+        '\n',
+        key.strip(),
+        '\n',
+    ]
     utils.execute('tee', '-a', keyfile,
-                  process_input='\n' + key.strip() + '\n', run_as_root=True)
+                  process_input=''.join(key_data), run_as_root=True)
 
 
 def _inject_net_into_fs(net, fs, execute=None):
