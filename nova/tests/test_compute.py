@@ -1036,11 +1036,14 @@ class ComputeTestCase(BaseTestCase):
                                                 instance_uuid,
                                                 'pre-migrating')
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['event_type'],
-                          'compute.instance.resize.prep.start')
+                          'compute.instance.exists')
         msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg['event_type'],
+                          'compute.instance.resize.prep.start')
+        msg = test_notifier.NOTIFICATIONS[2]
         self.assertEquals(msg['event_type'],
                           'compute.instance.resize.prep.end')
         self.assertEquals(msg['priority'], 'INFO')
