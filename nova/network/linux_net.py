@@ -864,10 +864,11 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     def plug(self, network, mac_address):
         if network.get('vlan', None) is not None:
+            iface = FLAGS.vlan_interface or network['bridge_interface']
             LinuxBridgeInterfaceDriver.ensure_vlan_bridge(
                            network['vlan'],
                            network['bridge'],
-                           network['bridge_interface'],
+                           iface,
                            network,
                            mac_address)
         else:
