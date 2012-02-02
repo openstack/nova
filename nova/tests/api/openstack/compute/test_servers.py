@@ -803,6 +803,50 @@ class ServersControllerTest(test.TestCase):
 
         self.assertTrue('servers' in res)
 
+    def test_admin_restricted_tenant(self):
+        def fake_get_all(context, filters=None, instances=None):
+            self.assertNotEqual(filters, None)
+            self.assertEqual(filters['project_id'], 'fake')
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(nova.db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers',
+                                      use_admin_context=True)
+        res = self.controller.index(req)
+
+        self.assertTrue('servers' in res)
+
+    def test_admin_all_tenants(self):
+        def fake_get_all(context, filters=None, instances=None):
+            self.assertNotEqual(filters, None)
+            self.assertTrue('project_id' not in filters)
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(nova.db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?all_tenants=1',
+                                      use_admin_context=True)
+        res = self.controller.index(req)
+
+        self.assertTrue('servers' in res)
+
+    def test_all_tenants(self):
+        def fake_get_all(context, filters=None, instances=None):
+            self.assertNotEqual(filters, None)
+            self.assertEqual(filters['project_id'], 'fake')
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(nova.db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers?all_tenants=1')
+        res = self.controller.index(req)
+
+        self.assertTrue('servers' in res)
+
     def test_get_servers_allows_flavor(self):
         server_uuid = str(utils.gen_uuid())
 
