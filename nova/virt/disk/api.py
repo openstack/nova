@@ -212,6 +212,21 @@ def inject_data(image, key=None, net=None, metadata=None,
         raise exception.Error(img.errors)
 
 
+def inject_files(image, files, partition=None, use_cow=False,
+                 disable_auto_fsck=True):
+    """Injects arbitrary files into a disk image"""
+    img = _DiskImage(image=image, partition=partition, use_cow=use_cow,
+                     disable_auto_fsck=disable_auto_fsck)
+    if img.mount():
+        try:
+            for (path, contents) in files:
+                _inject_file_into_fs(img.mount_dir, path, contents)
+        finally:
+            img.umount()
+    else:
+        raise exception.Error(img.errors)
+
+
 def setup_container(image, container_dir=None, use_cow=False):
     """Setup the LXC container.
 
@@ -256,6 +271,14 @@ def inject_data_into_fs(fs, key, net, metadata, execute):
         _inject_net_into_fs(net, fs, execute=execute)
     if metadata:
         _inject_metadata_into_fs(metadata, fs, execute=execute)
+
+
+def _inject_file_into_fs(fs, path, contents):
+    absolute_path = os.path.join(fs, path.lstrip('/'))
+    parent_dir = os.path.dirname(absolute_path)
+    utils.execute('mkdir', '-p', parent_dir, run_as_root=True)
+    utils.execute('tee', absolute_path, process_input=contents,
+          run_as_root=True)
 
 
 def _inject_metadata_into_fs(metadata, fs, execute=None):
