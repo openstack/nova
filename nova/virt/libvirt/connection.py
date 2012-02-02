@@ -942,7 +942,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         inst_type_id = inst['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
-        if inst_type['name'] == 'm1.tiny' or suffix == '.rescue':
+        if size == 0 or suffix == '.rescue':
             size = None
             root_fname += "_sm"
         else:
