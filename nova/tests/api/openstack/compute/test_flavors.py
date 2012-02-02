@@ -24,9 +24,13 @@ from nova.api.openstack.compute import flavors
 from nova.api.openstack import xmlutil
 import nova.compute.instance_types
 from nova import exception
+from nova import flags
 from nova import test
 from nova import utils
 from nova.tests.api.openstack import fakes
+
+
+FLAGS = flags.FLAGS
 
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -124,6 +128,34 @@ class FlavorsTest(test.TestCase):
                     {
                         "rel": "bookmark",
                         "href": "http://localhost/fake/flavors/1",
+                    },
+                ],
+            },
+        }
+        self.assertEqual(flavor, expected)
+
+    def test_get_flavor_with_custom_link_prefix(self):
+        self.flags(osapi_compute_link_prefix='http://zoo.com:42',
+                   osapi_glance_link_prefix='http://circus.com:34')
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/1')
+        flavor = self.controller.show(req, '1')
+        expected = {
+            "flavor": {
+                "id": "1",
+                "name": "flavor 1",
+                "ram": "256",
+                "disk": "10",
+                "rxtx_factor": "",
+                "swap": "",
+                "vcpus": "",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://zoo.com:42/v2/fake/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://zoo.com:42/fake/flavors/1",
                     },
                 ],
             },
