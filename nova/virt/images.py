@@ -32,7 +32,6 @@ from nova.openstack.common import cfg
 from nova import utils
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 image_opts = [

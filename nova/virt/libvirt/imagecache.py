@@ -23,11 +23,9 @@ http://wiki.openstack.org/nova-image-cache-management.
 
 """
 
-import datetime
 import hashlib
 import os
 import re
-import sys
 import time
 
 from nova import compute

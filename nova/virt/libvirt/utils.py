@@ -53,9 +53,9 @@ def create_image(disk_format, path, size):
     :param size: Desired size of disk image. May be given as an int or
                  a string. If given as an int, it will be interpreted
                  as bytes. If it's a string, it should consist of a number
-                 followed by an optional prefix ('k' for kilobytes, 'm'
-                 for megabytes, 'g' for gigabytes, 't' for terabytes). If no
-                 prefix is given, it will be interpreted as bytes.
+                 with an optional suffix ('K' for Kibibytes,
+                 M for Mebibytes, 'G' for Gibibytes, 'T' for Tebibytes).
+                 If no suffix is given, it will be interpreted as bytes.
     """
     execute('qemu-img', 'create', '-f', disk_format, path, size)
 
