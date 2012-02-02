@@ -174,7 +174,7 @@ class InstanceTypeTestCase(test.TestCase):
     def test_will_not_get_bad_default_instance_type(self):
         """ensures error raised on bad default instance type"""
         FLAGS.default_instance_type = 'unknown_flavor'
-        self.assertRaises(exception.InstanceTypeNotFoundByName,
+        self.assertRaises(exception.ApiError,
                           instance_types.get_default_instance_type)
 
     def test_will_get_instance_type_by_id(self):
@@ -185,12 +185,12 @@ class InstanceTypeTestCase(test.TestCase):
 
     def test_will_not_get_instance_type_by_unknown_id(self):
         """Ensure get by name returns default flavor with no name"""
-        self.assertRaises(exception.InstanceTypeNotFound,
+        self.assertRaises(exception.ApiError,
                          instance_types.get_instance_type, 10000)
 
     def test_will_not_get_instance_type_with_bad_id(self):
         """Ensure get by name returns default flavor with bad name"""
-        self.assertRaises(exception.InstanceTypeNotFound,
+        self.assertRaises(exception.ApiError,
                           instance_types.get_instance_type, 'asdf')
 
     def test_instance_type_get_by_None_name_returns_default(self):
@@ -201,7 +201,7 @@ class InstanceTypeTestCase(test.TestCase):
 
     def test_will_not_get_instance_type_with_bad_name(self):
         """Ensure get by name returns default flavor with bad name"""
-        self.assertRaises(exception.InstanceTypeNotFoundByName,
+        self.assertRaises(exception.ApiError,
                           instance_types.get_instance_type_by_name, 10000)
 
     def test_will_not_get_instance_by_unknown_flavor_id(self):
