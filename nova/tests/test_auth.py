@@ -19,6 +19,7 @@
 import unittest
 
 from nova import crypto
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
@@ -86,6 +87,9 @@ class user_and_project_generator(object):
 
 
 class _AuthManagerBaseTestCase(test.TestCase):
+
+    user_not_found_type = exception.UserNotFound
+
     def setUp(self):
         super(_AuthManagerBaseTestCase, self).setUp()
         self.flags(auth_driver=self.auth_driver,
@@ -105,6 +109,11 @@ class _AuthManagerBaseTestCase(test.TestCase):
             self.assertEqual('herbert', u.name)
             self.assertEqual('classified', u.secret)
             self.assertEqual('private-party', u.access)
+
+    def test_create_user_twice(self):
+        self.manager.create_user('test-1')
+        self.assertRaises(exception.UserExists, self.manager.create_user,
+                          'test-1')
 
     def test_signature_is_valid(self):
         with user_generator(self.manager, name='admin', secret='admin',
@@ -197,9 +206,28 @@ class _AuthManagerBaseTestCase(test.TestCase):
             self.assertEqual('test1', project.project_manager_id)
             self.assertTrue(self.manager.is_project_manager(user, project))
 
+    def test_can_create_project_twice(self):
+        with user_and_project_generator(self.manager) as (user1, project):
+            self.assertRaises(exception.ProjectExists,
+                              self.manager.create_project, "testproj", "test1")
+
     def test_create_project_assigns_manager_to_members(self):
         with user_and_project_generator(self.manager) as (user, project):
             self.assertTrue(self.manager.is_project_member(user, project))
+
+    def test_create_project_with_manager_and_members(self):
+        with user_generator(self.manager, name='test2') as user2:
+            with user_and_project_generator(self.manager,
+                project_state={'member_users': ['test2']}) as (user1, project):
+                    self.assertTrue(self.manager.is_project_member(
+                        user1, project))
+                    self.assertTrue(self.manager.is_project_member(
+                        user2, project))
+
+    def test_create_project_with_manager_and_missing_members(self):
+        self.assertRaises(self.user_not_found_type,
+                          self.manager.create_project, "testproj", "test1",
+                          member_users="test2")
 
     def test_no_extra_project_members(self):
         with user_generator(self.manager, name='test2') as baduser:
@@ -313,12 +341,25 @@ class _AuthManagerBaseTestCase(test.TestCase):
                 self.assertEqual('test2', project.project_manager_id)
                 self.assertEqual('new desc', project.description)
 
+    def test_can_call_modify_project_but_do_nothing(self):
+        with user_and_project_generator(self.manager):
+            self.manager.modify_project('testproj')
+            project = self.manager.get_project('testproj')
+            self.assertEqual('test1', project.project_manager_id)
+            self.assertEqual('testproj', project.description)
+
     def test_modify_project_adds_new_manager(self):
         with user_and_project_generator(self.manager):
             with user_generator(self.manager, name='test2'):
                 self.manager.modify_project('testproj', 'test2', 'new desc')
                 project = self.manager.get_project('testproj')
                 self.assertTrue('test2' in project.member_ids)
+
+    def test_create_project_with_missing_user(self):
+        with user_generator(self.manager):
+            self.assertRaises(self.user_not_found_type,
+                              self.manager.create_project, 'testproj',
+                              'not_real')
 
     def test_can_delete_project(self):
         with user_generator(self.manager):
@@ -344,9 +385,19 @@ class _AuthManagerBaseTestCase(test.TestCase):
             self.assertEqual('secret', user.secret)
             self.assertTrue(user.is_admin())
 
+    def test_can_call_modify_user_but_do_nothing(self):
+        with user_generator(self.manager):
+            old_user = self.manager.get_user('test1')
+            self.manager.modify_user('test1')
+            user = self.manager.get_user('test1')
+            self.assertEqual(old_user.access, user.access)
+            self.assertEqual(old_user.secret, user.secret)
+            self.assertEqual(old_user.is_admin(), user.is_admin())
+
 
 class AuthManagerLdapTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
+    user_not_found_type = exception.LDAPUserNotFound
 
     def test_reconnect_on_server_failure(self):
         self.manager.get_users()
@@ -360,6 +411,7 @@ class AuthManagerLdapTestCase(_AuthManagerBaseTestCase):
 
 class AuthManagerDbTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'
+    user_not_found_type = exception.UserNotFound
 
 
 if __name__ == "__main__":
