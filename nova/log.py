@@ -63,10 +63,6 @@ log_opts = [
     cfg.StrOpt('logging_exception_prefix',
                default='(%(name)s): TRACE: ',
                help='prefix each line of exception output with this format'),
-    cfg.StrOpt('logging_debug_format_suffix',
-               default='from (pid=%(process)d) %(funcName)s '
-                       '%(pathname)s:%(lineno)d',
-               help='data to append to log format when level is DEBUG'),
     cfg.StrOpt('instance_format',
                default='[instance: %(uuid)s] ',
                help='If an instance is passed with the log message, format '
