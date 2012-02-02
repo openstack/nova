@@ -15,6 +15,7 @@
 #    under the License.
 
 import itertools
+import socket
 import sys
 import time
 import uuid
@@ -425,7 +426,7 @@ class Connection(object):
         while True:
             try:
                 return method(*args, **kwargs)
-            except self.connection_errors, e:
+            except (self.connection_errors, socket.timeout), e:
                 pass
             except Exception, e:
                 # NOTE(comstud): Unfortunately it's possible for amqplib
@@ -478,15 +479,20 @@ class Connection(object):
 
         return self.ensure(_connect_error, _declare_consumer)
 
-    def iterconsume(self, limit=None):
+    def iterconsume(self, limit=None, timeout=None):
         """Return an iterator that will consume from all queues/consumers"""
 
         info = {'do_consume': True}
 
         def _error_callback(exc):
-            LOG.exception(_('Failed to consume message from queue: %s') %
-                    str(exc))
-            info['do_consume'] = True
+            if isinstance(exc, socket.timeout):
+                LOG.exception(_('Timed out waiting for RPC response: %s') %
+                        str(exc))
+                raise rpc_common.Timeout()
+            else:
+                LOG.exception(_('Failed to consume message from queue: %s') %
+                        str(exc))
+                info['do_consume'] = True
 
         def _consume():
             if info['do_consume']:
@@ -496,7 +502,7 @@ class Connection(object):
                     queue.consume(nowait=True)
                 queues_tail.consume(nowait=False)
                 info['do_consume'] = False
-            return self.connection.drain_events()
+            return self.connection.drain_events(timeout=timeout)
 
         for iteration in itertools.count(0):
             if limit and iteration >= limit:
@@ -595,14 +601,14 @@ def create_connection(new=True):
     return rpc_amqp.create_connection(new)
 
 
-def multicall(context, topic, msg):
+def multicall(context, topic, msg, timeout=None):
     """Make a call that returns multiple times."""
-    return rpc_amqp.multicall(context, topic, msg)
+    return rpc_amqp.multicall(context, topic, msg, timeout)
 
 
-def call(context, topic, msg):
+def call(context, topic, msg, timeout=None):
     """Sends a message on a topic and wait for a response."""
-    return rpc_amqp.call(context, topic, msg)
+    return rpc_amqp.call(context, topic, msg, timeout)
 
 
 def cast(context, topic, msg):
