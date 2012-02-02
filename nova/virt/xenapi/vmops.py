@@ -501,7 +501,7 @@ class VMOps(object):
 
         # if the guest agent is not available, configure the
         # instance, but skip the admin password configuration
-        no_agent = version is None or agent_build is None
+        no_agent = version is None
         self._configure_instance(ctx, instance, vm_ref, no_agent)
 
     def _handle_spawn_error(self, vdis, spawn_error):
