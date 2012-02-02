@@ -251,6 +251,14 @@ class VMOps(object):
         """Spawn a rescue instance."""
         self.spawn(context, instance, image_meta, network_info)
 
+    def _generate_hostname(self, instance):
+        """Generate the instance's hostname."""
+        hostname = instance["hostname"]
+        if getattr(instance, "_rescue", False):
+            hostname = "RESCUE-%s" % hostname
+
+        return hostname
+
     def _create_vm(self, context, instance, vdis, network_info, image_meta):
         """Create VM instance."""
         instance_name = instance.name
@@ -339,7 +347,9 @@ class VMOps(object):
 
         self.create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
-        self.inject_hostname(instance, vm_ref, instance['hostname'])
+
+        hostname = self._generate_hostname(instance)
+        self.inject_hostname(instance, vm_ref, hostname)
 
         return vm_ref
 
