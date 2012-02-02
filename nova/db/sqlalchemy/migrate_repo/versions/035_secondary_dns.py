@@ -26,7 +26,7 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
     networks = Table('networks', meta, autoload=True)
-    networks.c.dns.alter(Column('dns1', String(255)))
+    networks.c.dns.alter(name='dns1')
     networks.create_column(dns2)
 
 
@@ -34,5 +34,5 @@ def downgrade(migrate_engine):
     meta.bind = migrate_engine
 
     networks = Table('networks', meta, autoload=True)
-    networks.c.dns1.alter(Column('dns', String(255)))
+    networks.c.dns1.alter(name='dns')
     networks.drop_column(dns2)
