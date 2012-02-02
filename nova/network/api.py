@@ -91,11 +91,13 @@ class API(base.Base):
                         {'method': 'get_floating_ips_by_fixed_address',
                          'args': {'fixed_address': fixed_address}})
 
-    def get_vifs_by_instance(self, context, instance_id):
+    def get_vifs_by_instance(self, context, instance):
+        # NOTE(vish): When the db calls are converted to store network
+        #             data by instance_uuid, this should pass uuid instead.
         return rpc.call(context,
                         FLAGS.network_topic,
                         {'method': 'get_vifs_by_instance',
-                         'args': {'instance_id': instance_id}})
+                         'args': {'instance_id': instance['id']}})
 
     def allocate_floating_ip(self, context, pool=None):
         """Adds a floating ip to a project from a pool. (allocates)"""

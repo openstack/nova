@@ -20,12 +20,20 @@ import webob
 
 from nova.api.openstack.compute.contrib import virtual_interfaces
 from nova.api.openstack import wsgi
+from nova import compute
 from nova import network
 from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def get_vifs_by_instance(self, context, server_id):
+FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+
+
+def compute_api_get(self, context, instance_id):
+    return dict(uuid=FAKE_UUID, id=instance_id, instance_type_id=1, host='bob')
+
+
+def get_vifs_by_instance(self, context, instance_id):
     return [{'uuid': '00000000-0000-0000-0000-00000000000000000',
              'address': '00-00-00-00-00-00'},
             {'uuid': '11111111-1111-1111-1111-11111111111111111',
@@ -37,6 +45,8 @@ class ServerVirtualInterfaceTest(test.TestCase):
     def setUp(self):
         super(ServerVirtualInterfaceTest, self).setUp()
         self.controller = virtual_interfaces.ServerVirtualInterfaceController()
+        self.stubs.Set(compute.api.API, "get",
+                       compute_api_get)
         self.stubs.Set(network.api.API, "get_vifs_by_instance",
                        get_vifs_by_instance)
 
