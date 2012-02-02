@@ -537,3 +537,65 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
     instance.update(info_cache)
 
     return instance
+
+
+def stub_volume(id):
+    return {'id': id,
+            'user_id': 'fakeuser',
+            'project_id': 'fakeproject',
+            'host': 'fakehost',
+            'size': 1,
+            'availability_zone': 'fakeaz',
+            'instance': {'uuid': 'fakeuuid'},
+            'mountpoint': '/',
+            'status': 'fakestatus',
+            'attach_status': 'attached',
+            'name': 'vol name',
+            'display_name': 'displayname',
+            'display_description': 'displaydesc',
+            'created_at': datetime.datetime(1, 1, 1, 1, 1, 1),
+            'snapshot_id': None,
+            'volume_type_id': 'fakevoltype',
+            'volume_metadata': [],
+            'volume_type': {'name': 'vol_type_name'}}
+
+
+def stub_volume_create(self, context, size, name, description, snapshot,
+                       **param):
+    vol = stub_volume(1)
+    vol['size'] = size
+    vol['display_name'] = name
+    vol['display_description'] = description
+    try:
+        vol['snapshot_id'] = snapshot['id']
+    except (KeyError, TypeError):
+        vol['snapshot_id'] = None
+    vol['availability_zone'] = param.get('availability_zone', 'fakeaz')
+    return vol
+
+
+def stub_volume_update(self, context, *args, **param):
+    pass
+
+
+def stub_volume_delete(self, context, *args, **param):
+    pass
+
+
+def stub_volume_get(self, context, volume_id):
+    vol = stub_volume(volume_id)
+    if volume_id == '234':
+        meta = {'key': 'from_vsa_id', 'value': '123'}
+        vol['volume_metadata'].append(meta)
+    if volume_id == '345':
+        meta = {'key': 'to_vsa_id', 'value': '123'}
+        vol['volume_metadata'].append(meta)
+    return vol
+
+
+def stub_volume_get_notfound(self, context, volume_id):
+    raise exc.NotFound
+
+
+def stub_volume_get_all(self, context, search_opts=None):
+    return [stub_volume_get(self, context, 1)]

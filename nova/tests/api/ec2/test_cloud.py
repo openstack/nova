@@ -456,6 +456,26 @@ class CloudTestCase(test.TestCase):
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 
+    def test_create_volume_in_availability_zone(self):
+        """Makes sure create_volume works when we specify an availability
+        zone
+        """
+        availability_zone = 'zone1:host1'
+
+        result = self.cloud.create_volume(self.context,
+                                          size=1,
+                                          availability_zone=availability_zone)
+        volume_id = result['volumeId']
+        availabilityZone = result['availabilityZone']
+        self.assertEqual(availabilityZone, availability_zone)
+        result = self.cloud.describe_volumes(self.context)
+        self.assertEqual(len(result['volumeSet']), 1)
+        self.assertEqual(result['volumeSet'][0]['volumeId'], volume_id)
+        self.assertEqual(result['volumeSet'][0]['availabilityZone'],
+                         availabilityZone)
+
+        db.volume_destroy(self.context, ec2utils.ec2_id_to_id(volume_id))
+
     def test_create_volume_from_snapshot(self):
         """Makes sure create_volume works when we specify a snapshot."""
         vol = db.volume_create(self.context, {'size': 1})

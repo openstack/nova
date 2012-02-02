@@ -143,7 +143,7 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         self.assertEquals(delete_action['id'], created_volume_id)
 
     def test_create_volume_with_metadata(self):
-        """Creates and deletes a volume."""
+        """Creates a volume with metadata."""
 
         # Create volume
         metadata = {'key1': 'value1',
@@ -159,6 +159,23 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         found_volume = self.api.get_volume(created_volume_id)
         self.assertEqual(created_volume_id, found_volume['id'])
         self.assertEqual(metadata, found_volume['metadata'])
+
+    def test_create_volume_in_availability_zone(self):
+        """Creates a volume in availability_zone."""
+
+        # Create volume
+        availability_zone = 'zone1:host1'
+        created_volume = self.api.post_volume(
+            {'volume': {'size': 1,
+                        'availability_zone': availability_zone}})
+        LOG.debug("created_volume: %s" % created_volume)
+        self.assertTrue(created_volume['id'])
+        created_volume_id = created_volume['id']
+
+        # Check it's there and availability zone present
+        found_volume = self.api.get_volume(created_volume_id)
+        self.assertEqual(created_volume_id, found_volume['id'])
+        self.assertEqual(availability_zone, found_volume['availabilityZone'])
 
 if __name__ == "__main__":
     unittest.main()
