@@ -45,6 +45,7 @@ from eventlet import semaphore
 from eventlet.green import subprocess
 import netaddr
 
+from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -54,6 +55,11 @@ LOG = logging.getLogger("nova.utils")
 ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 PERFECT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 FLAGS = flags.FLAGS
+
+
+FLAGS.add_option(
+    cfg.BoolOpt('disable_process_locking', default=False,
+                help='Whether to disable inter-process locks'))
 
 
 def import_class(import_str):
@@ -764,14 +770,6 @@ else:
 _semaphores = {}
 
 
-class _NoopContextManager(object):
-    def __enter__(self):
-        pass
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-
 def synchronized(name, external=False):
     """Synchronization decorator.
 
@@ -816,21 +814,19 @@ def synchronized(name, external=False):
                 LOG.debug(_('Got semaphore "%(lock)s" for method '
                             '"%(method)s"...' % {'lock': name,
                                                  'method': f.__name__}))
-                if external:
+                if external and not FLAGS.disable_process_locking:
                     LOG.debug(_('Attempting to grab file lock "%(lock)s" for '
                                 'method "%(method)s"...' %
                                 {'lock': name, 'method': f.__name__}))
                     lock_file_path = os.path.join(FLAGS.lock_path,
                                                   'nova-%s' % name)
                     lock = lockfile.FileLock(lock_file_path)
-                else:
-                    lock = _NoopContextManager()
-
-                with lock:
-                    if external:
+                    with lock:
                         LOG.debug(_('Got file lock "%(lock)s" for '
                                     'method "%(method)s"...' %
                                     {'lock': name, 'method': f.__name__}))
+                        retval = f(*args, **kwargs)
+                else:
                     retval = f(*args, **kwargs)
 
             # If no-one else is waiting for it, delete it.
