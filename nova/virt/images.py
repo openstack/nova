@@ -41,8 +41,12 @@ def fetch(context, image_href, path, _user_id, _project_id):
     #             checked before we got here.
     (image_service, image_id) = nova.image.get_image_service(context,
                                                              image_href)
-    with open(path, "wb") as image_file:
-        metadata = image_service.get(context, image_id, image_file)
+    try:
+        with open(path, "wb") as image_file:
+            metadata = image_service.get(context, image_id, image_file)
+    except Exception:
+        os.unlink(path)
+        raise
     return metadata
 
 
