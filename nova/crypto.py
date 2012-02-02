@@ -22,18 +22,16 @@ Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
 
 """
 
+from __future__ import absolute_import
+
 import base64
-import gettext
 import hashlib
 import os
 import shutil
 import string
 import tempfile
-import utils
 
 import Crypto.Cipher.AES
-
-gettext.install('nova', unicode=1)
 
 from nova.common import cfg
 from nova import context
@@ -41,6 +39,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import utils
 
 
 LOG = logging.getLogger("nova.crypto")
