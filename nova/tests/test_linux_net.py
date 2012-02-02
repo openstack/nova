@@ -432,6 +432,31 @@ class LinuxNetworkTestCase(test.TestCase):
         driver.plug({"bridge": "br100", "bridge_interface": "eth0"},
                     "fakemac")
 
+    def test_vlan_override(self):
+        """Makes sure vlan_interface flag overrides network bridge_interface.
+
+        Allows heterogeneous networks a la bug 833426"""
+
+        driver = linux_net.LinuxBridgeInterfaceDriver()
+
+        @classmethod
+        def test_ensure(_self, vlan, bridge, interface, network, mac_address):
+            self.passed_interface = interface
+
+        self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
+                       'ensure_vlan_bridge', test_ensure)
+
+        network = {
+                "bridge": "br100",
+                "bridge_interface": "base_interface",
+                "vlan": "fake"
+        }
+        driver.plug(network, "fakemac")
+        self.assertEqual(self.passed_interface, "base_interface")
+        self.flags(vlan_interface="override_interface")
+        driver.plug(network, "fakemac")
+        self.assertEqual(self.passed_interface, "override_interface")
+
     def _test_initialize_gateway(self, existing, expected, routes=''):
         self.flags(fake_network=False)
         executes = []
