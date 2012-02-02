@@ -91,6 +91,9 @@ class APIRouter(base_wsgi.Router):
 
             mapper.resource(resource.collection, resource.collection, **kargs)
 
+            if resource.custom_routes_fn:
+                resource.custom_routes_fn(mapper, wsgi_resource)
+
     def _setup_extensions(self, ext_mgr):
         for extension in ext_mgr.get_controller_extensions():
             ext_name = extension.extension.name
