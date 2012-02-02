@@ -1063,7 +1063,7 @@ def fixed_ip_disassociate(context, address):
         fixed_ip_ref = fixed_ip_get_by_address(context,
                                                address,
                                                session=session)
-        fixed_ip_ref.instance = None
+        fixed_ip_ref['instance_id'] = None
         fixed_ip_ref.save(session=session)
 
 
