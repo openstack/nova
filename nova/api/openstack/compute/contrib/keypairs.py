@@ -87,7 +87,8 @@ class KeypairController(object):
         # NOTE(ja): generation is slow, so shortcut invalid name exception
         try:
             db.key_pair_get(context, context.user_id, name)
-            raise exception.KeyPairExists(key_name=name)
+            msg = _("Key pair '%s' already exists.") % name
+            raise webob.exc.HTTPConflict(explanation=msg)
         except exception.NotFound:
             pass
 
