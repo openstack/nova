@@ -109,12 +109,10 @@ def extend(image, size):
 class _DiskImage(object):
     """Provide operations on a disk image file."""
 
-    def __init__(self, image, partition=None, use_cow=False,
-                 disable_auto_fsck=False, mount_dir=None):
+    def __init__(self, image, partition=None, use_cow=False, mount_dir=None):
         # These passed to each mounter
         self.image = image
         self.partition = partition
-        self.disable_auto_fsck = disable_auto_fsck
         self.mount_dir = mount_dir
 
         # Internal
@@ -164,7 +162,6 @@ class _DiskImage(object):
                 mounter_cls = self._handler_class(h)
                 mounter = mounter_cls(image=self.image,
                                       partition=self.partition,
-                                      disable_auto_fsck=self.disable_auto_fsck,
                                       mount_dir=self.mount_dir)
                 if mounter.do_mount():
                     self._mounter = mounter
@@ -191,7 +188,7 @@ class _DiskImage(object):
 # Public module functions
 
 def inject_data(image, key=None, net=None, metadata=None,
-                partition=None, use_cow=False, disable_auto_fsck=True):
+                partition=None, use_cow=False):
     """Injects a ssh key and optionally net data into a disk image.
 
     it will mount the image as a fully partitioned disk and attempt to inject
@@ -200,8 +197,7 @@ def inject_data(image, key=None, net=None, metadata=None,
     If partition is not specified it mounts the image as a single partition.
 
     """
-    img = _DiskImage(image=image, partition=partition, use_cow=use_cow,
-                     disable_auto_fsck=disable_auto_fsck)
+    img = _DiskImage(image=image, partition=partition, use_cow=use_cow)
     if img.mount():
         try:
             inject_data_into_fs(img.mount_dir, key, net, metadata,
@@ -212,11 +208,9 @@ def inject_data(image, key=None, net=None, metadata=None,
         raise exception.Error(img.errors)
 
 
-def inject_files(image, files, partition=None, use_cow=False,
-                 disable_auto_fsck=True):
+def inject_files(image, files, partition=None, use_cow=False):
     """Injects arbitrary files into a disk image"""
-    img = _DiskImage(image=image, partition=partition, use_cow=use_cow,
-                     disable_auto_fsck=disable_auto_fsck)
+    img = _DiskImage(image=image, partition=partition, use_cow=use_cow)
     if img.mount():
         try:
             for (path, contents) in files:

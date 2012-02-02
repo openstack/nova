@@ -1076,11 +1076,9 @@ class LibvirtConnection(driver.ComputeDriver):
             if config_drive:  # Should be True or None by now.
                 injection_path = basepath('disk.config')
                 img_id = 'config-drive'
-                disable_auto_fsck = False
             else:
                 injection_path = basepath('disk')
                 img_id = inst.image_ref
-                disable_auto_fsck = True
 
             for injection in ('metadata', 'key', 'net'):
                 if locals()[injection]:
@@ -1090,8 +1088,7 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 disk.inject_data(injection_path, key, net, metadata,
                                  partition=target_partition,
-                                 use_cow=FLAGS.use_cow_images,
-                                 disable_auto_fsck=disable_auto_fsck)
+                                 use_cow=FLAGS.use_cow_images)
 
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
