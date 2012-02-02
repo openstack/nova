@@ -27,10 +27,9 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.network import manager
-from nova.network.quantum import quantum_connection
 from nova.network.quantum import melange_ipam_lib
+from nova.network.quantum import quantum_connection
 from nova import utils
-
 
 LOG = logging.getLogger("nova.network.quantum.manager")
 
@@ -93,10 +92,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         # Don't call into self.driver (linux_net) unless dhcp is enabled
         if not FLAGS.quantum_use_dhcp:
             return
-
-        # Initialize forwarding rules for anything specified in
-        # FLAGS.fixed_range()
-        self.driver.init_host()
+        # Initialize general L3 networking
+        self.l3driver.initialize()
         # Initialize floating ip support (only works for nova ipam currently)
         if FLAGS.quantum_ipam_lib == 'nova.network.quantum.nova_ipam_lib':
             LOG.debug("Initializing FloatingIP support")
@@ -104,13 +101,15 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         # Set up all the forwarding rules for any network that has a
         # gateway set.
         networks = self.get_all_networks()
+        cidrs = []
         for net in networks:
             if net['gateway']:
                 LOG.debug("Initializing NAT: %s (cidr: %s, gw: %s)" % (
                     net['label'], net['cidr'], net['gateway']))
-                self.driver.add_snat_rule(net['cidr'])
-        self.driver.ensure_metadata_ip()
-        self.driver.metadata_forward()
+                cidrs.append(net['cidr'])
+        # .. and for each network
+        for c in cidrs:
+            self.l3driver.initialize_network(c)
 
     def _get_nova_id(self, instance=None):
         # When creating the network we need to pass in an identifier for
@@ -213,9 +212,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             priority, cidr, gateway, gateway_v6,
             cidr_v6, dns1, dns2)
 
-        # Initialize forwarding if gateway is set
-        if gateway and FLAGS.quantum_use_dhcp:
-            self.driver.add_snat_rule(cidr)
+        # Initialize forwarding
+        self.l3driver.initialize_network(cidr)
 
         return [{'uuid': quantum_net_id}]
 
@@ -408,10 +406,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             port = self.q_conn.get_port_by_attachment(q_tenant_id,
                     quantum_net_id, interface_id)
             if not port:  # No dhcp server has been started
-                mac_address = self.generate_mac_address()
-                dev = self.driver.plug(network_ref, mac_address,
-                    gateway=(network_ref['gateway'] is not None))
-                self.driver.initialize_gateway_device(dev, network_ref)
+                self.l3driver.initialize_gateway(network_ref)
+                dev = self.driver.get_dev(network_ref)
                 LOG.debug("Intializing DHCP for network: %s" %
                     network_ref)
                 self.q_conn.create_and_attach_port(q_tenant_id,

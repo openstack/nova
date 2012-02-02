@@ -155,7 +155,11 @@ network_opts = [
     cfg.StrOpt('dhcp_domain',
                default='novalocal',
                help='domain to use for building the hostnames'),
+    cfg.StrOpt('l3_lib',
+               default='nova.network.l3.LinuxNetL3',
+               help="Indicates underlying L3 management library")
     ]
+
 
 FLAGS = flags.FLAGS
 FLAGS.add_options(network_opts)
@@ -264,15 +268,12 @@ class FloatingIP(object):
                 fixed_address = floating_ip['fixed_ip']['address']
                 interface = floating_ip['interface']
                 try:
-                    self.driver.bind_floating_ip(floating_ip['address'],
-                                                 interface)
+                    self.l3driver.add_floating_ip(floating_ip['address'],
+                            fixed_address, floating_ip['interface'])
                 except exception.ProcessExecutionError:
                     msg = _('Interface %(interface)s not found' % locals())
                     LOG.debug(msg)
                     raise exception.NoFloatingIpInterface(interface=interface)
-
-                self.driver.ensure_floating_forward(floating_ip['address'],
-                                                    fixed_address)
 
     @wrap_check_policy
     def allocate_for_instance(self, context, **kwargs):
@@ -458,7 +459,8 @@ class FloatingIP(object):
                                                self.host)
         try:
             # gogo driver time
-            self.driver.bind_floating_ip(floating_address, interface)
+            self.l3driver.add_floating_ip(floating_address, fixed_address,
+                    interface)
         except exception.ProcessExecutionError as e:
             fixed_address = self.db.floating_ip_disassociate(context,
                                                              floating_address)
@@ -466,9 +468,6 @@ class FloatingIP(object):
                 msg = _('Interface %(interface)s not found' % locals())
                 LOG.error(msg)
                 raise exception.NoFloatingIpInterface(interface=interface)
-            raise
-
-        self.driver.ensure_floating_forward(floating_address, fixed_address)
 
     @wrap_check_policy
     def disassociate_floating_ip(self, context, address,
@@ -520,8 +519,7 @@ class FloatingIP(object):
         fixed_address = self.db.floating_ip_disassociate(context, address)
 
         # go go driver time
-        self.driver.unbind_floating_ip(address, interface)
-        self.driver.remove_floating_forward(address, fixed_address)
+        self.l3driver.remove_floating_ip(address, fixed_address, interface)
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):
@@ -694,6 +692,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                 already imported ipam, import nova ipam here
         if not hasattr(self, 'ipam'):
             self._import_ipam_lib('nova.network.quantum.nova_ipam_lib')
+        l3_lib = kwargs.get("l3_lib", FLAGS.l3_lib)
+        self.l3driver = utils.import_object(l3_lib)
 
         super(NetworkManager, self).__init__(service_name='network',
                                                 *args, **kwargs)
@@ -1064,7 +1064,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             self.add_virtual_interface(context, instance_id, network['id'])
 
     def add_virtual_interface(self, context, instance_id, network_id):
-        vif = {'address': self.generate_mac_address(),
+        vif = {'address': utils.generate_mac_address(),
                    'instance_id': instance_id,
                    'network_id': network_id,
                    'uuid': str(utils.gen_uuid())}
@@ -1073,19 +1073,11 @@ class NetworkManager(manager.SchedulerDependentManager):
             try:
                 return self.db.virtual_interface_create(context, vif)
             except exception.VirtualInterfaceCreateException:
-                vif['address'] = self.generate_mac_address()
+                vif['address'] = utils.generate_mac_address()
         else:
             self.db.virtual_interface_delete_by_instance(context,
                                                              instance_id)
             raise exception.VirtualInterfaceMacAddressException()
-
-    def generate_mac_address(self):
-        """Generate an Ethernet MAC address."""
-        mac = [0x02, 0x16, 0x3e,
-               random.randint(0x00, 0x7f),
-               random.randint(0x00, 0xff),
-               random.randint(0x00, 0xff)]
-        return ':'.join(map(lambda x: "%02x" % x, mac))
 
     @wrap_check_policy
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):
@@ -1558,23 +1550,18 @@ class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         """Do any initialization that needs to be run if this is a
         standalone service.
         """
-        self.driver.init_host()
-        self.driver.ensure_metadata_ip()
-
+        self.l3driver.initialize()
         super(FlatDHCPManager, self).init_host()
         self.init_host_floating_ips()
-
-        self.driver.metadata_forward()
 
     def _setup_network(self, context, network_ref):
         """Sets up network on this host."""
         network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
 
-        mac_address = self.generate_mac_address()
-        dev = self.driver.plug(network_ref, mac_address)
-        self.driver.initialize_gateway_device(dev, network_ref)
+        self.l3driver.initialize_gateway(network_ref)
 
         if not FLAGS.fake_network:
+            dev = self.driver.get_dev(network_ref)
             self.driver.update_dhcp(context, dev, network_ref)
             if(FLAGS.use_ipv6):
                 self.driver.update_ra(context, dev, network_ref)
@@ -1627,13 +1614,9 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         standalone service.
         """
 
-        self.driver.init_host()
-        self.driver.ensure_metadata_ip()
-
+        self.l3driver.initialize()
         NetworkManager.init_host(self)
         self.init_host_floating_ips()
-
-        self.driver.metadata_forward()
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
@@ -1711,17 +1694,15 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             address = network_ref['vpn_public_address']
         network_ref['dhcp_server'] = self._get_dhcp_ip(context, network_ref)
 
-        mac_address = self.generate_mac_address()
-        dev = self.driver.plug(network_ref, mac_address)
-        self.driver.initialize_gateway_device(dev, network_ref)
+        self.l3driver.initialize_gateway(network_ref)
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.
         if address == FLAGS.vpn_ip and hasattr(self.driver,
                                                "ensure_vpn_forward"):
-            self.driver.ensure_vpn_forward(FLAGS.vpn_ip,
-                                            network_ref['vpn_public_port'],
-                                            network_ref['vpn_private_address'])
+            self.l3driver.add_vpn(FLAGS.vpn_ip,
+                    network_ref['vpn_public_port'],
+                    network_ref['vpn_private_address'])
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, dev, network_ref)
             if(FLAGS.use_ipv6):

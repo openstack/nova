@@ -1399,3 +1399,12 @@ def service_is_up(service):
     # Timestamps in DB are UTC.
     elapsed = total_seconds(utcnow() - last_heartbeat)
     return abs(elapsed) <= FLAGS.service_down_time
+
+
+def generate_mac_address():
+    """Generate an Ethernet MAC address."""
+    mac = [0x02, 0x16, 0x3e,
+           random.randint(0x00, 0x7f),
+           random.randint(0x00, 0xff),
+           random.randint(0x00, 0xff)]
+    return ':'.join(map(lambda x: "%02x" % x, mac))
