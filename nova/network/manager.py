@@ -1704,6 +1704,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                     network_ref['vpn_public_port'],
                     network_ref['vpn_private_address'])
         if not FLAGS.fake_network:
+            dev = self.driver.get_dev(network_ref)
             self.driver.update_dhcp(context, dev, network_ref)
             if(FLAGS.use_ipv6):
                 self.driver.update_ra(context, dev, network_ref)
