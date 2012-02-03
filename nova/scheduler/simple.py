@@ -21,10 +21,10 @@
 Simple Scheduler
 """
 
-from nova.common import cfg
 from nova import db
 from nova import flags
 from nova import exception
+from nova.openstack.common import cfg
 from nova.scheduler import driver
 from nova.scheduler import chance
 from nova import utils

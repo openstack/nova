@@ -19,7 +19,6 @@ import time
 
 from netaddr import IPNetwork, IPAddress
 
-from nova.common import cfg
 from nova.compute import instance_types
 from nova import context
 from nova import db
@@ -29,6 +28,7 @@ from nova import log as logging
 from nova.network import manager
 from nova.network.quantum import melange_ipam_lib
 from nova.network.quantum import quantum_connection
+from nova.openstack.common import cfg
 from nova import utils
 
 LOG = logging.getLogger("nova.network.quantum.manager")

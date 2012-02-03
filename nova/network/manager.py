@@ -56,7 +56,6 @@ import socket
 from eventlet import greenpool
 import netaddr
 
-from nova.common import cfg
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova import context
@@ -68,6 +67,7 @@ from nova import log as logging
 from nova import manager
 from nova.network import api as network_api
 from nova.network import model as network_model
+from nova.openstack.common import cfg
 import nova.policy
 from nova import quota
 from nova import utils

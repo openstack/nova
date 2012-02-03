@@ -21,10 +21,10 @@ Common Auth Middleware.
 import webob.dec
 import webob.exc
 
-from nova.common import cfg
 from nova import context
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import wsgi
 
 

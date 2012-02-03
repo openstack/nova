@@ -15,10 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.common import cfg
 from nova import flags
 from nova import log as logging
 from nova.network.quantum import client as quantum_client
+from nova.openstack.common import cfg
 
 
 LOG = logging.getLogger("nova.network.quantum.quantum_connection")

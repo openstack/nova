@@ -24,11 +24,11 @@ import inspect
 import netaddr
 import os
 
-from nova.common import cfg
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import utils
 
 

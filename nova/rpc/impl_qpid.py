@@ -25,8 +25,8 @@ import greenlet
 import qpid.messaging
 import qpid.messaging.exceptions
 
-from nova.common import cfg
 from nova import flags
+from nova.openstack.common import cfg
 from nova.rpc import amqp as rpc_amqp
 from nova.rpc import common as rpc_common
 from nova.rpc.common import LOG

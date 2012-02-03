@@ -54,7 +54,6 @@ from xml.etree import ElementTree
 
 from nova.auth import manager
 from nova import block_device
-from nova.common import cfg
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova import context as nova_context
@@ -63,6 +62,7 @@ from nova import exception
 from nova import flags
 import nova.image
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import driver

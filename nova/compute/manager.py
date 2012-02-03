@@ -45,7 +45,6 @@ from eventlet import greenthread
 
 from nova import block_device
 import nova.context
-from nova.common import cfg
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
@@ -59,6 +58,7 @@ from nova import manager
 from nova import network
 from nova.network import model as network_model
 from nova.notifier import api as notifier
+from nova.openstack.common import cfg
 from nova import rpc
 from nova import utils
 from nova.virt import driver

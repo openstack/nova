@@ -21,8 +21,8 @@ import exceptions
 import os
 import tempfile
 
-from nova.common import cfg
 from nova import flags
+from nova.openstack.common import cfg
 from nova import test
 
 FLAGS = flags.FLAGS

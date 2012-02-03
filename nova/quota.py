@@ -18,8 +18,8 @@
 
 """Quotas for instances, volumes, and floating ips."""
 
-from nova.common import cfg
 from nova import db
+from nova.openstack.common import cfg
 from nova import flags
 
 

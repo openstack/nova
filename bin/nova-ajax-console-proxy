@@ -38,9 +38,9 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
 
-from nova.common import cfg
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import rpc
 from nova import service
 from nova import utils

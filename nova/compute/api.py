@@ -28,7 +28,6 @@ import novaclient
 import webob.exc
 
 from nova import block_device
-from nova.common import cfg
 from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -40,6 +39,7 @@ from nova import flags
 import nova.image
 from nova import log as logging
 from nova import network
+from nova.openstack.common import cfg
 import nova.policy
 from nova import quota
 from nova import rpc

@@ -43,9 +43,9 @@ these objects be simple dictionaries.
 
 """
 
-from nova.common import cfg
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova import utils
 
 

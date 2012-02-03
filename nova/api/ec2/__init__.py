@@ -32,11 +32,11 @@ from nova.api.ec2 import ec2utils
 from nova.api.ec2 import faults
 from nova.api import validator
 from nova.auth import manager
-from nova.common import cfg
 from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import utils
 from nova import wsgi
 

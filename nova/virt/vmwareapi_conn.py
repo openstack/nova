@@ -36,12 +36,12 @@ import time
 
 from eventlet import event
 
-from nova.common import cfg
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import utils
 from nova.virt import driver
 from nova.virt.vmwareapi import error_util

@@ -25,11 +25,11 @@ For assistance and guidelines pls contact
 
 import sys
 
-from nova.common import cfg
 from nova import compute
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import rpc
 from nova import volume
 from nova.compute import instance_types

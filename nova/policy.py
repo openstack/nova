@@ -17,10 +17,10 @@
 
 """Policy Engine For Nova"""
 
-from nova.common import cfg
 from nova.common import policy
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova import utils
 
 

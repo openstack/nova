@@ -33,11 +33,11 @@ import uuid
 from decimal import Decimal, InvalidOperation
 from xml.dom import minidom
 
-from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova.image import glance
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import utils
 from nova.compute import instance_types
 from nova.compute import power_state

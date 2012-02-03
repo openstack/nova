@@ -20,9 +20,9 @@ import socket
 import urllib
 import json
 
-from nova.common import cfg
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 
 
 melange_opts = [

@@ -22,10 +22,10 @@ import os
 import sys
 import time
 
-from nova.common import cfg
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova.openstack.common import cfg
 from nova import utils
 
 

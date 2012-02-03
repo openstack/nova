@@ -32,7 +32,7 @@ import sys
 
 import gflags
 
-from nova.common import cfg
+from nova.openstack.common import cfg
 
 
 class FlagValues(object):

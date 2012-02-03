@@ -14,9 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.common import cfg
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova.scheduler.filters import abstract_filter
 
 LOG = logging.getLogger('nova.scheduler.filter.ram_filter')

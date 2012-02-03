@@ -17,10 +17,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.common import cfg
-from nova.utils import import_object
-from nova.rpc.common import RemoteError, LOG
 from nova import flags
+from nova.openstack.common import cfg
+from nova.rpc.common import RemoteError, LOG
+from nova.utils import import_object
 
 
 rpc_backend_opt = \

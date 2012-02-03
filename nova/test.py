@@ -33,10 +33,10 @@ import mox
 import nose.plugins.skip
 import stubout
 
-from nova.common import cfg
 from nova import flags
 import nova.image.fake
 from nova import log
+from nova.openstack.common import cfg
 from nova import utils
 from nova import service
 from nova.testing.fake import rabbit
