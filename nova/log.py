@@ -76,18 +76,9 @@ log_opts = [
                   'eventlet.wsgi.server=WARN'
                   ],
                 help='list of logger=LEVEL pairs'),
-    cfg.BoolOpt('use_syslog',
-                default=False,
-                help='output to syslog'),
     cfg.BoolOpt('publish_errors',
                 default=False,
                 help='publish error events'),
-    cfg.StrOpt('logfile',
-               default=None,
-               help='output to named file'),
-    cfg.BoolOpt('use_stderr',
-                default=True,
-                help='log to standard error'),
     ]
 
 FLAGS = flags.FLAGS

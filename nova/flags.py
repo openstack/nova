@@ -32,6 +32,7 @@ import sys
 
 import gflags
 
+from nova.compat import flagfile
 from nova.openstack.common import cfg
 
 
@@ -46,62 +47,17 @@ class FlagValues(object):
             if self._update_default:
                 self._update_default(self.name, default)
 
-    class ErrorCatcher:
-        def __init__(self, orig_error):
-            self.orig_error = orig_error
-            self.reset()
-
-        def reset(self):
-            self._error_msg = None
-
-        def catch(self, msg):
-            if ": --" in msg:
-                self._error_msg = msg
-            else:
-                self.orig_error(msg)
-
-        def get_unknown_arg(self, args):
-            if not self._error_msg:
-                return None
-            # Error message is e.g. "no such option: --runtime_answer"
-            a = self._error_msg[self._error_msg.rindex(": --") + 2:]
-            return filter(lambda i: i == a or i.startswith(a + "="), args)[0]
-
     def __init__(self):
         self._conf = cfg.ConfigOpts()
         self._conf.disable_interspersed_args()
-        self._opts = {}
         self.Reset()
 
     def _parse(self):
         if self._extra is not None:
             return
 
-        args = gflags.FlagValues().ReadFlagsFromFiles(self._args)
-
-        extra = None
-
-        #
-        # This horrendous hack allows us to stop optparse
-        # exiting when it encounters an unknown option
-        #
-        error_catcher = self.ErrorCatcher(self._conf._oparser.error)
-        self._conf._oparser.error = error_catcher.catch
-        try:
-            while True:
-                error_catcher.reset()
-
-                extra = self._conf(args)
-
-                unknown = error_catcher.get_unknown_arg(args)
-                if not unknown:
-                    break
-
-                args.remove(unknown)
-        finally:
-            self._conf._oparser.error = error_catcher.orig_error
-
-        self._extra = extra
+        with flagfile.handle_flagfiles_managed(self._args) as args:
+            self._extra = self._conf(args)
 
     def __call__(self, argv):
         self.Reset()
@@ -152,21 +108,16 @@ class FlagValues(object):
         return ret
 
     def add_option(self, opt):
-        if opt.dest in self._conf:
-            return
-
-        self._opts[opt.dest] = opt
-
-        try:
-            self._conf.register_cli_opts(self._opts.values())
-        except cfg.ArgsAlreadyParsedError:
-            self._conf.reset()
-            self._conf.register_cli_opts(self._opts.values())
-            self._extra = None
+        self._conf.register_opt(opt)
 
     def add_options(self, opts):
-        for opt in opts:
-            self.add_option(opt)
+        self._conf.register_opts(opts)
+
+    def add_cli_option(self, opt):
+        self._conf.register_cli_opt(opt)
+
+    def add_cli_options(self, opts):
+        self._conf.register_cli_opts(opts)
 
 
 FLAGS = FlagValues()
@@ -195,6 +146,55 @@ def _get_my_ip():
         return "127.0.0.1"
 
 
+log_opts = [
+    cfg.BoolOpt('verbose',
+                default=False,
+                help='show debug output'),
+    cfg.StrOpt('logdir',
+               default=None,
+               help='output to a per-service log file in named directory'),
+    cfg.StrOpt('logfile',
+               default=None,
+               help='output to named file'),
+    cfg.BoolOpt('use_syslog',
+                default=False,
+                help='output to syslog'),
+    cfg.BoolOpt('use_stderr',
+                default=True,
+                help='log to standard error'),
+    ]
+
+core_opts = [
+    cfg.StrOpt('connection_type',
+               default=None,
+               help='libvirt, xenapi or fake'),
+    cfg.StrOpt('sql_connection',
+               default='sqlite:///$state_path/$sqlite_db',
+               help='connection string for sql database'),
+    cfg.StrOpt('api_paste_config',
+               default="api-paste.ini",
+               help='File name for the paste.deploy config for nova-api'),
+    cfg.StrOpt('state_path',
+               default=os.path.join(os.path.dirname(__file__), '../'),
+               help="Top-level directory for maintaining nova's state"),
+    cfg.StrOpt('lock_path',
+               default=os.path.join(os.path.dirname(__file__), '../'),
+               help='Directory for lock files'),
+    ]
+
+debug_opts = [
+    cfg.BoolOpt('fake_network',
+                default=False,
+                help='should we use fake network devices and addresses'),
+    cfg.BoolOpt('fake_rabbit',
+                default=False,
+                help='use a fake rabbit'),
+]
+
+FLAGS.add_cli_options(log_opts)
+FLAGS.add_cli_options(core_opts)
+FLAGS.add_cli_options(debug_opts)
+
 global_opts = [
     cfg.StrOpt('my_ip',
                default=_get_my_ip(),
@@ -202,9 +202,6 @@ global_opts = [
     cfg.ListOpt('region_list',
                 default=[],
                 help='list of region=fqdn pairs separated by commas'),
-    cfg.StrOpt('connection_type',
-               default=None,
-               help='libvirt, xenapi or fake'),
     cfg.StrOpt('aws_access_key_id',
                default='admin',
                help='AWS Access ID'),
@@ -262,15 +259,6 @@ global_opts = [
     cfg.StrOpt('vsa_topic',
                default='vsa',
                help='the topic that nova-vsa service listens on'),
-    cfg.BoolOpt('verbose',
-                default=False,
-                help='show debug output'),
-    cfg.BoolOpt('fake_rabbit',
-                default=False,
-                help='use a fake rabbit'),
-    cfg.BoolOpt('fake_network',
-                default=False,
-                help='should we use fake network devices and addresses'),
     cfg.StrOpt('rabbit_host',
                default='localhost',
                help='rabbit host'),
@@ -377,15 +365,6 @@ global_opts = [
     cfg.IntOpt('auth_token_ttl',
                default=3600,
                help='Seconds for auth tokens to linger'),
-    cfg.StrOpt('state_path',
-               default=os.path.join(os.path.dirname(__file__), '../'),
-               help="Top-level directory for maintaining nova's state"),
-    cfg.StrOpt('lock_path',
-               default=os.path.join(os.path.dirname(__file__), '../'),
-               help='Directory for lock files'),
-    cfg.StrOpt('logdir',
-               default=None,
-               help='output to a per-service log file in named directory'),
     cfg.StrOpt('logfile_mode',
                default='0644',
                help='Default file mode of the logs.'),
@@ -395,9 +374,6 @@ global_opts = [
     cfg.BoolOpt('sqlite_synchronous',
                 default=True,
                 help='Synchronous mode for sqlite'),
-    cfg.StrOpt('sql_connection',
-               default='sqlite:///$state_path/$sqlite_db',
-               help='connection string for sql database'),
     cfg.IntOpt('sql_idle_timeout',
                default=3600,
                help='timeout for idle sql database connections'),
