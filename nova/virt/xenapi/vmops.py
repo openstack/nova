@@ -418,10 +418,14 @@ class VMOps(object):
 
         # Attach any other disks
         for vdi in vdis[1:]:
-            if generate_swap and vdi['vdi_type'] == 'swap':
-                continue
             vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                     vdi['vdi_uuid'])
+
+            if generate_swap and vdi['vdi_type'] == 'swap':
+                # We won't be using it, so don't let it leak
+                VMHelper.destroy_vdi(self._session, vdi_ref)
+                continue
+
             VolumeHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                     vdi_ref=vdi_ref, userdevice=userdevice,
                     bootable=False)
