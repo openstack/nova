@@ -69,7 +69,7 @@ class FlagValues(object):
 
     def __init__(self):
         self._conf = cfg.ConfigOpts()
-        self._conf._oparser.disable_interspersed_args()
+        self._conf.disable_interspersed_args()
         self._opts = {}
         self.Reset()
 
@@ -128,7 +128,7 @@ class FlagValues(object):
         self._conf.set_default(name, default)
 
     def __iter__(self):
-        return self.FlagValuesDict().iterkeys()
+        return self._conf.iterkeys()
 
     def __getitem__(self, name):
         self._parse()
@@ -147,12 +147,12 @@ class FlagValues(object):
     def FlagValuesDict(self):
         self._parse()
         ret = {}
-        for opt in self._opts.values():
-            ret[opt.dest] = getattr(self, opt.dest)
+        for name in self._conf:
+            ret[name] = getattr(self, name)
         return ret
 
     def add_option(self, opt):
-        if opt.dest in self._opts:
+        if opt.dest in self._conf:
             return
 
         self._opts[opt.dest] = opt
