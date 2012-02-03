@@ -123,3 +123,20 @@ class KillFilter(CommandFilter):
             # Incorrect PID
             return False
         return True
+
+
+class ReadFileFilter(CommandFilter):
+    """Specific filter for the utils.read_file_as_root call"""
+
+    def __init__(self, file_path, *args):
+        self.file_path = file_path
+        super(ReadFileFilter, self).__init__("/bin/cat", "root", *args)
+
+    def match(self, userargs):
+        if userargs[0] != 'cat':
+            return False
+        if userargs[1] != self.file_path:
+            return False
+        if len(userargs) != 2:
+            return False
+        return True

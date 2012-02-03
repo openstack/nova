@@ -382,6 +382,18 @@ class GenericUtilsTestCase(test.TestCase):
         self.assertTrue([c for c in password
                          if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'])
 
+    def test_read_file_as_root(self):
+        def fake_execute(*args, **kwargs):
+            if args[1] == 'bad':
+                raise exception.ProcessExecutionError
+            return 'fakecontents', None
+
+        self.stubs.Set(utils, 'execute', fake_execute)
+        contents = utils.read_file_as_root('good')
+        self.assertEqual(contents, 'fakecontents')
+        self.assertRaises(exception.FileNotFound,
+                          utils.read_file_as_root, 'bad')
+
 
 class IsUUIDLikeTestCase(test.TestCase):
     def assertUUIDLike(self, val, expected):
