@@ -843,6 +843,14 @@ class InstanceExists(Duplicate):
     message = _("Instance %(name)s already exists.")
 
 
+class InstanceTypeExists(Duplicate):
+    message = _("Instance Type %(name)s already exists.")
+
+
+class VolumeTypeExists(Duplicate):
+    message = _("Volume Type %(name)s already exists.")
+
+
 class InvalidSharedStorage(NovaException):
     message = _("%(path)s is on shared storage: %(reason)s")
 

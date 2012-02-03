@@ -74,7 +74,7 @@ class VsaSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def tearDown(self):
         for name in self.created_types_lst:
-            volume_types.purge(self.context.elevated(), name)
+            volume_types.destroy(self.context.elevated(), name)
         super(VsaSchedulerTestCase, self).tearDown()
 
     def _get_vol_creation_request(self, num_vols, drive_ix, size=0):
@@ -89,7 +89,7 @@ class VsaSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                          'drive_type': 'type_' + str(drive_ix),
                                          'drive_size': 1 + 100 * (drive_ix)})
                 self.created_types_lst.append(name)
-            except exception.ApiError:
+            except exception.VolumeTypeExists:
                 # type is already created
                 pass
 

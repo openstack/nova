@@ -39,6 +39,7 @@ def get_test_instance_type(context=None):
         context = get_test_admin_context()
 
     test_instance_type = {'name': 'kinda.big',
+                          'flavorid': 'someid',
                           'memory_mb': 2048,
                           'vcpus': 4,
                           'root_gb': 40,

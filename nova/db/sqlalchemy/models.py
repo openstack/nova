@@ -337,12 +337,12 @@ class InstanceTypes(BASE, NovaBase):
     """Represent possible instance_types or flavor of VM offered"""
     __tablename__ = "instance_types"
     id = Column(Integer, primary_key=True)
-    name = Column(String(255), unique=True)
+    name = Column(String(255))
     memory_mb = Column(Integer)
     vcpus = Column(Integer)
     root_gb = Column(Integer)
     ephemeral_gb = Column(Integer)
-    flavorid = Column(String(255), unique=True)
+    flavorid = Column(String(255))
     swap = Column(Integer, nullable=False, default=0)
     rxtx_factor = Column(Float, nullable=False, default=1)
     vcpu_weight = Column(Integer, nullable=True)
@@ -350,14 +350,17 @@ class InstanceTypes(BASE, NovaBase):
     instances = relationship(Instance,
                            backref=backref('instance_type', uselist=False),
                            foreign_keys=id,
-                           primaryjoin='and_(Instance.instance_type_id == '
-                                       'InstanceTypes.id)')
+                           primaryjoin='and_('
+                               'Instance.instance_type_id == '
+                               'InstanceTypes.id, '
+                               'InstanceTypes.deleted == False)')
 
     vsas = relationship(VirtualStorageArray,
                        backref=backref('vsa_instance_type', uselist=False),
                        foreign_keys=id,
-                       primaryjoin='and_(VirtualStorageArray.instance_type_id'
-                                   ' == InstanceTypes.id)')
+                       primaryjoin='and_('
+                           'VirtualStorageArray.instance_type_id == '
+                           'InstanceTypes.id, InstanceTypes.deleted == False)')
 
 
 class Volume(BASE, NovaBase):
@@ -419,13 +422,14 @@ class VolumeTypes(BASE, NovaBase):
     """Represent possible volume_types of volumes offered"""
     __tablename__ = "volume_types"
     id = Column(Integer, primary_key=True)
-    name = Column(String(255), unique=True)
+    name = Column(String(255))
 
     volumes = relationship(Volume,
                            backref=backref('volume_type', uselist=False),
                            foreign_keys=id,
-                           primaryjoin='and_(Volume.volume_type_id == '
-                                       'VolumeTypes.id)')
+                           primaryjoin='and_('
+                               'Volume.volume_type_id == VolumeTypes.id, '
+                               'VolumeTypes.deleted == False)')
 
 
 class VolumeTypeExtraSpecs(BASE, NovaBase):

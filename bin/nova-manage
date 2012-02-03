@@ -1415,7 +1415,7 @@ class VsaCommands(object):
            not self.manager.is_project_member(user_id, project_id):
             msg = _("%(user_id)s must be an admin or a "
                     "member of %(project_id)s")
-            LOG.warn(msg % locals())
+            logging.warn(msg % locals())
             raise ValueError(msg % locals())
 
         # Sanity check for storage string
@@ -1590,22 +1590,23 @@ class VsaDriveTypeCommands(object):
         if capabilities is not None and capabilities != '':
             extra_specs['capabilities'] = capabilities
 
-        volume_types.create(self.context, name, extra_specs)
-        result = volume_types.get_volume_type_by_name(self.context, name)
-        self._list({name: result})
+        try:
+            volume_types.create(self.context, name, extra_specs)
+            result = volume_types.get_volume_type_by_name(self.context, name)
+            self._list({name: result})
+        except exception.VolumeTypeExists:
+            print
+            print "Volume Type Exists"
+            print "Please ensure volume_type name is unique."
+            print "Currently defined volume types:"
+            print
+            self.list()
 
     @args('--name', dest='name', metavar="<name>", help='Drive name')
-    @args('--purge', action="store_true", dest='purge', default=False,
-            help='purge record from database')
-    def delete(self, name, purge):
-        """Marks instance types / flavors as deleted"""
+    def delete(self, name):
+        """Marks volume types as deleted"""
         try:
-            if purge:
-                volume_types.purge(self.context, name)
-                verb = "purged"
-            else:
-                volume_types.destroy(self.context, name)
-                verb = "deleted"
+            volume_types.destroy(self.context, name)
         except exception.ApiError:
             print "Valid volume type name is required"
             sys.exit(1)
@@ -1615,7 +1616,7 @@ class VsaDriveTypeCommands(object):
         except Exception:
             sys.exit(3)
         else:
-            print "%s %s" % (name, verb)
+            print "%s deleted" % name
 
     @args('--all', dest='all', action="store_true", default=False,
         help='Show all drives (including invisible)')
@@ -1766,14 +1767,12 @@ class InstanceTypeCommands(object):
             print "Must supply valid parameters to create instance_type"
             print e
             sys.exit(1)
-        except exception.ApiError, e:
-            print "\n\n"
-            print "\n%s" % e
+        except exception.InstanceTypeExists:
+            print "Instance Type exists."
             print "Please ensure instance_type name and flavorid are unique."
-            print "To complete remove a instance_type, use the --purge flag:"
-            print "\n     # nova-manage instance_type delete <name> --purge\n"
             print "Currently defined instance_type names and flavorids:"
-            self.list("--all")
+            print
+            self.list()
             sys.exit(2)
         except Exception:
             print "Unknown error"
@@ -1783,17 +1782,10 @@ class InstanceTypeCommands(object):
 
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
-    @args('--purge', action="store_true", dest='purge', default=False,
-            help='purge record from database')
-    def delete(self, name, purge):
+    def delete(self, name):
         """Marks instance types / flavors as deleted"""
         try:
-            if purge:
-                instance_types.purge(name)
-                verb = "purged"
-            else:
-                instance_types.destroy(name)
-                verb = "deleted"
+            instance_types.destroy(name)
         except exception.ApiError:
             print "Valid instance type name is required"
             sys.exit(1)
@@ -1803,7 +1795,7 @@ class InstanceTypeCommands(object):
         except Exception:
             sys.exit(3)
         else:
-            print "%s %s" % (name, verb)
+            print "%s deleted" % name
 
     @args('--name', dest='name', metavar='<name>',
             help='Name of instance type/flavor')
@@ -1812,8 +1804,6 @@ class InstanceTypeCommands(object):
         try:
             if name is None:
                 inst_types = instance_types.get_all_types()
-            elif name == "--all":
-                inst_types = instance_types.get_all_types(True)
             else:
                 inst_types = instance_types.get_instance_type_by_name(name)
         except exception.DBError, e:

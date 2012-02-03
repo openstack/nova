@@ -87,16 +87,6 @@ def destroy(name):
         raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
 
 
-def purge(name):
-    """Removes instance types from database."""
-    try:
-        assert name is not None
-        db.instance_type_purge(context.get_admin_context(), name)
-    except (AssertionError, exception.NotFound):
-        LOG.exception(_('Instance type %s not found for purge') % name)
-        raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
-
-
 def get_all_types(inactive=0, filters=None):
     """Get all non-deleted instance_types.
 

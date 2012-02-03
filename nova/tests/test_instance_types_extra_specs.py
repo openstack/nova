@@ -44,7 +44,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
 
     def tearDown(self):
         # Remove the instance type from the database
-        db.instance_type_purge(self.context, "cg1.4xlarge")
+        db.instance_type_destroy(self.context, "cg1.4xlarge")
         super(InstanceTypeExtraSpecsTestCase, self).tearDown()
 
     def test_instance_type_specs_get(self):
