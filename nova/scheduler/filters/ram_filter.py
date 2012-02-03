@@ -21,10 +21,9 @@ from nova.scheduler.filters import abstract_filter
 
 LOG = logging.getLogger('nova.scheduler.filter.ram_filter')
 
-ram_allocation_ratio_opt = \
-    cfg.FloatOpt("ram_allocation_ratio",
-             default=1.0,
-               help="virtual ram to physical ram allocation ratio")
+ram_allocation_ratio_opt = cfg.FloatOpt("ram_allocation_ratio",
+        default=1.0,
+        help="virtual ram to physical ram allocation ratio")
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(ram_allocation_ratio_opt)

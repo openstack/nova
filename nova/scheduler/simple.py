@@ -82,8 +82,8 @@ class SimpleScheduler(chance.ChanceScheduler):
             if service['host'] in FLAGS.isolated_hosts and not in_isolation:
                 # images that aren't isolated only run on general hosts
                 continue
-            if check_cores and \
-                    instance_cores + instance_opts['vcpus'] > FLAGS.max_cores:
+            if (check_cores and
+                instance_cores + instance_opts['vcpus'] > FLAGS.max_cores):
                 msg = _("Not enough allocatable CPU cores remaining")
                 raise exception.NoValidHost(reason=msg)
             if utils.service_is_up(service) and not service['disabled']:

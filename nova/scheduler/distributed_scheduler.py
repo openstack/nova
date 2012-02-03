@@ -293,9 +293,9 @@ class DistributedScheduler(driver.Scheduler):
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
         if not instance_type:
-            msg = _("Scheduler only understands InstanceType-based" \
-                    "provisioning.")
-            raise NotImplementedError(msg)
+            raise NotImplementedError(_("Scheduler only understands "
+                                        "InstanceType-based "
+                                        "provisioning."))
 
         cost_functions = self.get_cost_functions()
         config_options = self._get_configuration_options()

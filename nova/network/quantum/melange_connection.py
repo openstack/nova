@@ -72,7 +72,7 @@ class MelangeConnection(object):
             return httplib.HTTPConnection(self.host, self.port)
 
     def do_request(self, method, path, body=None, headers=None, params=None,
-            content_type=".json"):
+                   content_type=".json"):
         headers = headers or {}
         params = params or {}
 
@@ -89,7 +89,7 @@ class MelangeConnection(object):
             raise Exception(_("Server returned error: %s" % response_str))
         except (socket.error, IOError), e:
             raise Exception(_("Unable to connect to "
-                            "server. Got error: %s" % e))
+                              "server. Got error: %s" % e))
 
     def allocate_ip(self, network_id, network_tenant_id, vif_id,
                     project_id=None, mac_address=None):
@@ -97,28 +97,26 @@ class MelangeConnection(object):
                    "belonging to |%(network_tenant_id)s| "
                    "to this vif |%(vif_id)s| with mac |%(mac_address)s| "
                    "belonging to |%(project_id)s| ") % locals())
-        tenant_scope = "/tenants/%s" % network_tenant_id if network_tenant_id \
-                       else ""
+        tenant_scope = "/tenants/%s" % (network_tenant_id
+                                        if network_tenant_id else "")
         request_body = (json.dumps(dict(network=dict(mac_address=mac_address,
-                                 tenant_id=project_id)))
+                                                     tenant_id=project_id)))
                     if mac_address else None)
         url = ("ipam%(tenant_scope)s/networks/%(network_id)s/"
-           "interfaces/%(vif_id)s/ip_allocations" % locals())
-        response = self.post(url, body=request_body,
-                                    headers=json_content_type)
+               "interfaces/%(vif_id)s/ip_allocations" % locals())
+        response = self.post(url, body=request_body, headers=json_content_type)
         return json.loads(response)['ip_addresses']
 
     def create_block(self, network_id, cidr,
-                    project_id=None, gateway=None, dns1=None, dns2=None):
+                     project_id=None, gateway=None, dns1=None, dns2=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
 
         url = "ipam%(tenant_scope)s/ip_blocks" % locals()
 
         req_params = dict(ip_block=dict(cidr=cidr, network_id=network_id,
-                                    type='private', gateway=gateway,
-                                    dns1=dns1, dns2=dns2))
-        self.post(url, body=json.dumps(req_params),
-                                headers=json_content_type)
+                                        type='private', gateway=gateway,
+                                        dns1=dns1, dns2=dns2))
+        self.post(url, body=json.dumps(req_params), headers=json_content_type)
 
     def delete_block(self, block_id, project_id=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
@@ -138,8 +136,8 @@ class MelangeConnection(object):
     def get_routes(self, block_id, project_id=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
 
-        url = "ipam%(tenant_scope)s/ip_blocks/%(block_id)s/ip_routes" % \
-        locals()
+        url = ("ipam%(tenant_scope)s/ip_blocks/%(block_id)s/ip_routes" %
+               locals())
 
         response = self.get(url, headers=json_content_type)
         return json.loads(response)['ip_routes']
@@ -148,7 +146,7 @@ class MelangeConnection(object):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
 
         url = ("ipam%(tenant_scope)s/networks/%(network_id)s/"
-           "interfaces/%(vif_id)s/ip_allocations" % locals())
+               "interfaces/%(vif_id)s/ip_allocations" % locals())
 
         response = self.get(url, headers=json_content_type)
         return json.loads(response)['ip_addresses']
@@ -165,7 +163,7 @@ class MelangeConnection(object):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
 
         url = ("ipam%(tenant_scope)s/networks/%(network_id)s/"
-           "interfaces/%(vif_id)s/ip_allocations" % locals())
+               "interfaces/%(vif_id)s/ip_allocations" % locals())
 
         self.delete(url, headers=json_content_type)
 

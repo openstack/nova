@@ -145,8 +145,8 @@ class HostState(object):
         return True
 
     def __repr__(self):
-        return "host '%s': free_ram_mb:%s free_disk_mb:%s" % \
-                    (self.host, self.free_ram_mb, self.free_disk_mb)
+        return ("host '%s': free_ram_mb:%s free_disk_mb:%s" %
+                (self.host, self.free_ram_mb, self.free_disk_mb))
 
 
 class HostManager(object):
@@ -275,8 +275,8 @@ class HostManager(object):
         """Check if host service capabilites are not recent enough."""
         allowed_time_diff = FLAGS.periodic_interval * 3
         caps = self.service_states[host][service]
-        if (utils.utcnow() - caps["timestamp"]) <= \
-            datetime.timedelta(seconds=allowed_time_diff):
+        if ((utils.utcnow() - caps["timestamp"]) <=
+            datetime.timedelta(seconds=allowed_time_diff)):
             return False
         return True
 

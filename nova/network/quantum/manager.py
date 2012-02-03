@@ -200,9 +200,10 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         # created in Quantum, so make sure.
         if quantum_net_id:
             if not self.q_conn.network_exists(q_tenant_id, quantum_net_id):
-                    raise Exception(_("Unable to find existing quantum " \
-                        " network for tenant '%(q_tenant_id)s' with "
-                        "net-id '%(quantum_net_id)s'" % locals()))
+                    raise Exception(_("Unable to find existing quantum "
+                                      "network for tenant '%(q_tenant_id)s' "
+                                      "with net-id '%(quantum_net_id)s'" %
+                                      locals()))
         else:
             nova_id = self._get_nova_id()
             quantum_net_id = self.q_conn.create_network(q_tenant_id, label,
@@ -290,8 +291,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         requested_networks = kwargs.get('requested_networks')
 
         if requested_networks:
-            net_proj_pairs = [(net_id, project_id) \
-                for (net_id, _i) in requested_networks]
+            net_proj_pairs = [(net_id, project_id)
+                              for (net_id, _i) in requested_networks]
         else:
             net_proj_pairs = self.ipam.get_project_and_global_net_ids(context,
                                                                 project_id)
@@ -397,8 +398,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             network_ref['dhcp_server'] = netaddr.IPAddress(n.first + 1)
             # TODO(bgh): Melange should probably track dhcp_start
             # TODO(tr3buchet): melange should store dhcp_server as well
-            if not 'dhcp_start' in network_ref or \
-                    network_ref['dhcp_start'] is None:
+            if (not 'dhcp_start' in network_ref or
+                network_ref['dhcp_start'] is None):
                 network_ref['dhcp_start'] = netaddr.IPAddress(n.first + 2)
             network_ref['broadcast'] = netaddr.IPAddress(n.broadcast)
             network_ref['gateway'] = subnet['gateway']
@@ -643,9 +644,9 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             address, vif_id = ip
             vif = db.virtual_interface_get_by_uuid(admin_context, vif_id)
             mac_address = vif['address']
-            text = "%s %s %s %s *\n" % \
-                (int(time.time()) - FLAGS.dhcp_lease_time,
-                 mac_address, address, '*')
+            text = ("%s %s %s %s *\n" % (int(time.time()) -
+                                         FLAGS.dhcp_lease_time,
+                                         mac_address, address, '*'))
             leases_text += text
         LOG.debug("DHCP leases: %s" % leases_text)
         return leases_text
