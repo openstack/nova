@@ -474,6 +474,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             if vif.get('network_id') is not None:
                 network = db.network_get(admin_context, vif['network_id'])
                 net_tenant_id = net_tenant_dict[network['uuid']]
+                if net_tenant_id is None:
+                    net_tenant_id = FLAGS.quantum_default_tenant_id
                 network = {'id': network['id'],
                            'uuid': network['uuid'],
                            'bridge': 'ovs_flag',
