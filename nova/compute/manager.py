@@ -1168,7 +1168,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vcpus=instance_type['vcpus'],
                               root_gb=instance_type['root_gb'],
                               ephemeral_gb=instance_type['ephemeral_gb'],
-                              instance_type_id=instance_type['id'])
+                              instance_type_id=instance_type['id'],
+                              vm_state=vm_states.ACTIVE,
+                              task_state=None)
 
         self.driver.finish_revert_migration(instance_ref)
         self.db.migration_update(context, migration_id,

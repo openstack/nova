@@ -66,6 +66,7 @@ _STATE_MAP = {
     },
     vm_states.RESIZING: {
         'default': 'RESIZE',
+        task_states.RESIZE_REVERTING: 'REVERT_RESIZE',
     },
     vm_states.PAUSED: {
         'default': 'PAUSED',

@@ -1169,6 +1169,10 @@ class ComputeTestCase(BaseTestCase):
         self.compute.finish_revert_resize(context, inst_ref['uuid'],
                 migration_ref['id'])
 
+        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(instance['task_state'], None)
+
         inst_ref = db.instance_get_by_uuid(context, instance_uuid)
         instance_type_ref = db.instance_type_get(context,
                 inst_ref['instance_type_id'])
@@ -2182,6 +2186,11 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(context, instance['uuid'])
 
         self.compute_api.revert_resize(context, instance)
+
+        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        self.assertEqual(instance['vm_state'], vm_states.RESIZING)
+        self.assertEqual(instance['task_state'], task_states.RESIZE_REVERTING)
+
         self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_invalid_flavor_fails(self):
