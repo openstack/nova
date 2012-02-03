@@ -223,6 +223,8 @@ class LdapDriver(object):
     def get_user(self, uid):
         """Retrieve user by id"""
         attr = self.__get_ldap_user(uid)
+        if attr is None:
+            raise exception.LDAPUserNotFound(user_id=uid)
         return self.__to_user(attr)
 
     @sanitize
@@ -495,7 +497,10 @@ class LdapDriver(object):
 
     def __user_exists(self, uid):
         """Check if user exists"""
-        return self.get_user(uid) is not None
+        try:
+            return self.get_user(uid) is not None
+        except exception.LDAPUserNotFound:
+            return False
 
     def __ldap_user_exists(self, uid):
         """Check if the user exists in ldap"""
