@@ -118,8 +118,8 @@ def get_default_instance_type():
     name = FLAGS.default_instance_type
     try:
         return get_instance_type_by_name(name)
-    except exception.DBError:
-        raise exception.ApiError(_("Unknown instance type: %s") % name)
+    except exception.InstanceTypeNotFound as e:
+        raise exception.ApiError(e)
 
 
 def get_instance_type(instance_type_id):
@@ -130,9 +130,8 @@ def get_instance_type(instance_type_id):
     ctxt = context.get_admin_context()
     try:
         return db.instance_type_get(ctxt, instance_type_id)
-    except exception.DBError:
-        msg = _("Unknown instance type: %s") % instance_type_id
-        raise exception.ApiError(msg)
+    except exception.InstanceTypeNotFound as e:
+        raise exception.ApiError(e)
 
 
 def get_instance_type_by_name(name):
@@ -144,16 +143,16 @@ def get_instance_type_by_name(name):
 
     try:
         return db.instance_type_get_by_name(ctxt, name)
-    except exception.DBError:
-        raise exception.ApiError(_("Unknown instance type: %s") % name)
+    except exception.InstanceTypeNotFound as e:
+        raise exception.ApiError(e)
 
 
 # TODO(termie): flavor-specific code should probably be in the API that uses
 #               flavors.
 def get_instance_type_by_flavor_id(flavorid):
-    """Retrieve instance type by flavorid."""
+    """Retrieve instance type by flavorid.
+
+    :raises: FlavorNotFound
+    """
     ctxt = context.get_admin_context()
-    try:
-        return db.instance_type_get_by_flavor_id(ctxt, flavorid)
-    except exception.DBError:
-        raise exception.ApiError(_("Unknown instance type: %s") % flavorid)
+    return db.instance_type_get_by_flavor_id(ctxt, flavorid)
