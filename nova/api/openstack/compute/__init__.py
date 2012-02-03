@@ -31,9 +31,9 @@ from nova.api.openstack.compute import limits
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import versions
-from nova.common import cfg
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 
 
 LOG = logging.getLogger('nova.api.openstack.compute')

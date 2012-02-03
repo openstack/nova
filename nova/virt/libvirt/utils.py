@@ -23,9 +23,9 @@ import os
 import random
 import shutil
 
-from nova.common import cfg
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images

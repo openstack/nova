@@ -22,11 +22,11 @@ Unit Tests for remote procedure calls using queue
 
 import mox
 
-from nova.common import cfg
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova import test
 from nova import service
 from nova import manager

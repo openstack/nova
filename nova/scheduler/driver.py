@@ -22,7 +22,6 @@ Scheduler base class that all Schedulers should inherit from
 """
 
 from nova.api.ec2 import ec2utils
-from nova.common import cfg
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import vm_states
@@ -30,6 +29,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import rpc
 from nova.scheduler import host_manager
 from nova.scheduler import zone_manager

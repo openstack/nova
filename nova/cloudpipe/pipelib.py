@@ -27,13 +27,13 @@ import string
 import tempfile
 import zipfile
 
-from nova.common import cfg
 from nova import context
 from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import utils
 # TODO(eday): Eventually changes these to something not ec2-specific
 from nova.api.ec2 import cloud

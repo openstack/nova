@@ -22,8 +22,8 @@ The cost-function and weights are tabulated, and the host with the least cost
 is then selected for provisioning.
 """
 
-from nova.common import cfg
 from nova import flags
+from nova.openstack.common import cfg
 from nova import log as logging
 
 

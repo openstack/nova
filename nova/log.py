@@ -40,9 +40,9 @@ import sys
 import traceback
 
 import nova
-from nova.common import cfg
 from nova import flags
 from nova import local
+from nova.openstack.common import cfg
 from nova import version
 
 

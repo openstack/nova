@@ -18,9 +18,9 @@
 
 """Base class for classes that need modular database access."""
 
-from nova.common import cfg
 from nova import utils
 from nova import flags
+from nova.openstack.common import cfg
 
 
 db_driver_opt = \

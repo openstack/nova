@@ -32,11 +32,10 @@ import string
 import uuid
 from xml.etree import ElementTree
 
-from nova.common import cfg
-
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import utils
 from nova.utils import ssh_execute
 from nova.volume.driver import ISCSIDriver

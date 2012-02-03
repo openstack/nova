@@ -19,11 +19,11 @@
 
 """VIF drivers for libvirt."""
 
-from nova.common import cfg
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.network import linux_net
+from nova.openstack.common import cfg
 from nova import utils
 from nova.virt import netutils
 from nova.virt.vif import VIFDriver

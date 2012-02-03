@@ -29,13 +29,13 @@ import os
 import sys
 import time
 
-from nova.common import cfg
 from nova import compute
 from nova import context as db_context
 from nova import db
 from nova import flags
 from nova import image
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import utils
 from nova.virt.libvirt import utils as virtutils
 

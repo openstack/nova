@@ -20,9 +20,9 @@
 import base64
 import json
 
-from nova.common import cfg
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova.virt.vmwareapi import vim_util
 
 

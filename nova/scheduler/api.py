@@ -22,11 +22,11 @@ import functools
 from novaclient import v1_1 as novaclient
 from novaclient import exceptions as novaclient_exceptions
 
-from nova.common import cfg
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import rpc
 from nova import utils
 
