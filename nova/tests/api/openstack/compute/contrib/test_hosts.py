@@ -184,17 +184,6 @@ class HostTestCase(test.TestCase):
                           self.controller.show,
                           self.req, dest)
 
-    def _dic_is_equal(self, dic1, dic2, keys=None):
-        """Compares 2 dictionary contents(Helper method)"""
-        if not keys:
-            keys = ['vcpus', 'memory_mb', 'local_gb',
-                    'vcpus_used', 'memory_mb_used', 'local_gb_used']
-
-        for key in keys:
-            if not (dic1[key] == dic2[key]):
-                return False
-        return True
-
     def _create_compute_service(self):
         """Create compute-manager(ComputeNode and Service record)."""
         ctxt = context.get_admin_context()
@@ -218,14 +207,13 @@ class HostTestCase(test.TestCase):
 
         result = self.controller.show(self.req, s_ref['host'])
 
-        # result checking
-        c1 = ('resource' in result['host'] and
-              'usage' in result['host'])
-        compute_node = s_ref['compute_node'][0]
-        c2 = self._dic_is_equal(result['host']['resource'],
-                                compute_node)
-        c3 = result['host']['usage'] == {}
-        self.assertTrue(c1 and c2 and c3)
+        proj = ['(total)', '(used_now)', '(used_max)']
+        column = ['host', 'project', 'cpu', 'memory_mb', 'disk_gb']
+        self.assertEqual(len(result['host']), 3)
+        for resource in result['host']:
+            self.assertTrue(resource['resource']['project'] in proj)
+            self.assertEqual(len(resource['resource']), 5)
+            self.assertTrue(set(resource['resource'].keys()) == set(column))
         db.service_destroy(ctxt, s_ref['id'])
 
     def test_show_works_correctly(self):
@@ -238,28 +226,13 @@ class HostTestCase(test.TestCase):
 
         result = self.controller.show(self.req, s_ref['host'])
 
-        c1 = ('resource' in result['host'] and
-              'usage' in result['host'])
-        compute_node = s_ref['compute_node'][0]
-        c2 = self._dic_is_equal(result['host']['resource'],
-                                compute_node)
-        c3 = result['host']['usage'].keys() == ['p-01', 'p-02']
-        keys = ['vcpus', 'memory_mb']
-        c4 = self._dic_is_equal(
-                 result['host']['usage']['p-01'], i_ref1, keys)
-        disk = i_ref2['root_gb'] + i_ref2['ephemeral_gb']
-        if result['host']['usage']['p-01']['local_gb'] == disk:
-            c6 = True
-        else:
-            c6 = False
-        c5 = self._dic_is_equal(
-                 result['host']['usage']['p-02'], i_ref2, keys)
-        if result['host']['usage']['p-02']['local_gb'] == disk:
-            c7 = True
-        else:
-            c7 = False
-        self.assertTrue(c1 and c2 and c3 and c4 and c5 and c6 and c7)
-
+        proj = ['(total)', '(used_now)', '(used_max)', 'p-01', 'p-02']
+        column = ['host', 'project', 'cpu', 'memory_mb', 'disk_gb']
+        self.assertEqual(len(result['host']), 5)
+        for resource in result['host']:
+            self.assertTrue(resource['resource']['project'] in proj)
+            self.assertEqual(len(resource['resource']), 5)
+            self.assertTrue(set(resource['resource'].keys()) == set(column))
         db.service_destroy(ctxt, s_ref['id'])
         db.instance_destroy(ctxt, i_ref1['id'])
         db.instance_destroy(ctxt, i_ref2['id'])
