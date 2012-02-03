@@ -93,6 +93,16 @@ class RootwrapTestCase(test.TestCase):
         # Providing -9 signal should work
         self.assertTrue(f.match(usercmd))
 
+    def test_KillFilter_no_raise(self):
+        """Makes sure ValueError from bug 926412 is gone"""
+        f = filters.KillFilter("/bin/kill", "root", [""])
+        # Providing anything other than kill should be False
+        usercmd = ['notkill', 999999]
+        self.assertFalse(f.match(usercmd))
+        # Providing something that is not a pid should be False
+        usercmd = ['kill', 'notapid']
+        self.assertFalse(f.match(usercmd))
+
     def test_ReadFileFilter(self):
         goodfn = '/good/file.name'
         f = filters.ReadFileFilter(goodfn)

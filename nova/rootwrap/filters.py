@@ -100,6 +100,8 @@ class KillFilter(CommandFilter):
     """
 
     def match(self, userargs):
+        if userargs[0] != "kill":
+            return False
         args = list(userargs)
         if len(args) == 3:
             signal = args.pop(1)
@@ -113,13 +115,12 @@ class KillFilter(CommandFilter):
             if '' not in self.args[0]:
                 # No signal, but list doesn't include empty string
                 return False
-        pid = int(args[1])
         try:
-            command = os.readlink("/proc/%d/exe" % pid)
+            command = os.readlink("/proc/%d/exe" % int(args[1]))
             if command not in self.args[1]:
                 # Affected executable not in accepted list
                 return False
-        except:
+        except (ValueError, OSError):
             # Incorrect PID
             return False
         return True
