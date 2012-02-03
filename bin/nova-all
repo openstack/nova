@@ -45,6 +45,7 @@ from nova import log as logging
 from nova import service
 from nova import utils
 from nova.objectstore import s3server
+from nova.vnc import xvp_proxy
 
 
 if __name__ == '__main__':
@@ -59,12 +60,14 @@ if __name__ == '__main__':
             servers.append(service.WSGIService(api))
         except (Exception, SystemExit):
             logging.exception(_('Failed to load %s') % '%s-api' % api)
-    # nova-objectstore
-    try:
-        servers.append(s3server.get_wsgi_server())
-    except (Exception, SystemExit):
-        logging.exception(_('Failed to load %s') % 'objectstore-wsgi')
-    for binary in ['nova-xvpvncproxy', 'nova-compute', 'nova-volume',
+
+    for mod in [s3server, xvp_proxy]:
+        try:
+            servers.append(mod.get_wsgi_server())
+        except (Exception, SystemExit):
+            logging.exception(_('Failed to load %s') % mod.__name__)
+
+    for binary in ['nova-compute', 'nova-volume',
                    'nova-network', 'nova-scheduler', 'nova-vsa', 'nova-cert']:
         try:
             servers.append(service.Service.create(binary=binary))
