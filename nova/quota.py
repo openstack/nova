@@ -110,9 +110,13 @@ def allowed_instances(context, requested_instances, instance_type):
     allowed_cores = _get_request_allotment(requested_cores, used_cores,
                                            quota['cores'])
     allowed_ram = _get_request_allotment(requested_ram, used_ram, quota['ram'])
-    allowed_instances = min(allowed_instances,
-                            allowed_cores // instance_type['vcpus'],
-                            allowed_ram // instance_type['memory_mb'])
+    if instance_type['vcpus']:
+        allowed_instances = min(allowed_instances,
+                                allowed_cores // instance_type['vcpus'])
+    if instance_type['memory_mb']:
+        allowed_instances = min(allowed_instances,
+                                allowed_ram // instance_type['memory_mb'])
+
     return min(requested_instances, allowed_instances)
 
 
