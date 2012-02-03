@@ -84,11 +84,10 @@ class FaultCheckers(object):
             for obj_cont in resp_obj:
                 if hasattr(obj_cont, "missingSet"):
                     for missing_elem in obj_cont.missingSet:
-                        fault_type = \
-                            missing_elem.fault.fault.__class__.__name__
+                        fault_type = missing_elem.fault.fault.__class__
                         # Fault needs to be added to the type of fault for
                         # uniformity in error checking as SOAP faults define
-                        fault_list.append(fault_type)
+                        fault_list.append(fault_type.__name__)
         if fault_list:
             exc_msg_list = ', '.join(fault_list)
             raise VimFaultException(fault_list, Exception(_("Error(s) %s "

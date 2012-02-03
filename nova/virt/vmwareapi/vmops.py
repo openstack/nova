@@ -38,10 +38,9 @@ from nova.virt.vmwareapi import vmware_images
 from nova.virt.vmwareapi import network_utils
 
 
-vmware_vif_driver_opt = \
-    cfg.StrOpt('vmware_vif_driver',
-               default='nova.virt.vmwareapi.vif.VMWareVlanBridgeDriver',
-               help='The VMWare VIF driver to configure the VIFs.')
+vmware_vif_driver_opt = cfg.StrOpt('vmware_vif_driver',
+        default='nova.virt.vmwareapi.vif.VMWareVlanBridgeDriver',
+        help='The VMWare VIF driver to configure the VIFs.')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(vmware_vif_driver_opt)
@@ -134,9 +133,10 @@ class VMWareVMOps(object):
             Get the Size of the flat vmdk file that is there on the storage
             repository.
             """
-            image_size, image_properties = \
-                    vmware_images.get_vmdk_size_and_properties(context,
-                                       instance.image_ref, instance)
+            _image_info = vmware_images.get_vmdk_size_and_properties(context,
+                                                          instance.image_ref,
+                                                          instance)
+            image_size, image_properties = _image_info
             vmdk_file_size_in_kb = int(image_size) / 1024
             os_type = image_properties.get("vmware_ostype", "otherGuest")
             adapter_type = image_properties.get("vmware_adaptertype",
@@ -161,9 +161,8 @@ class VMWareVMOps(object):
         vm_folder_mor, res_pool_mor = _get_vmfolder_and_res_pool_mors()
 
         def _check_if_network_bridge_exists(network_name):
-            network_ref = \
-                network_utils.get_network_with_the_name(self._session,
-                                                        network_name)
+            network_ref = network_utils.get_network_with_the_name(
+                          self._session, network_name)
             if network_ref is None:
                 raise exception.NetworkNotFoundForBridge(bridge=network_name)
             return network_ref
@@ -361,9 +360,9 @@ class VMWareVMOps(object):
             hardware_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "config.hardware.device")
-            vmdk_file_path_before_snapshot, adapter_type = \
-                vm_util.get_vmdk_file_path_and_adapter_type(client_factory,
-                                                            hardware_devices)
+            _vmdk_info = vm_util.get_vmdk_file_path_and_adapter_type(
+                         client_factory, hardware_devices)
+            vmdk_file_path_before_snapshot, adapter_type = _vmdk_info
             datastore_name = vm_util.split_datastore_path(
                                       vmdk_file_path_before_snapshot)[0]
             os_type = self._session._call_method(vim_util,
@@ -372,8 +371,8 @@ class VMWareVMOps(object):
             return (vmdk_file_path_before_snapshot, adapter_type,
                     datastore_name, os_type)
 
-        vmdk_file_path_before_snapshot, adapter_type, datastore_name,\
-            os_type = _get_vm_and_vmdk_attribs()
+        (vmdk_file_path_before_snapshot, adapter_type, datastore_name,
+         os_type) = _get_vm_and_vmdk_attribs()
 
         def _create_vm_snapshot():
             # Create a snapshot of the VM
@@ -559,8 +558,8 @@ class VMWareVMOps(object):
                     elif prop.name == "config.files.vmPathName":
                         vm_config_pathname = prop.val
             if vm_config_pathname:
-                datastore_name, vmx_file_path = \
-                            vm_util.split_datastore_path(vm_config_pathname)
+                _ds_path = vm_util.split_datastore_path(vm_config_pathname)
+                datastore_name, vmx_file_path = _ds_path
             # Power off the VM if it is in PoweredOn state.
             if pwr_state == "poweredOn":
                 LOG.debug(_("Powering off the VM %s") % instance.name)
@@ -742,17 +741,16 @@ class VMWareVMOps(object):
             else:
                 dns = ''
 
-            interface_str = "%s;%s;%s;%s;%s;%s" % \
-                                            (info['mac'],
-                                             ip_v4 and ip_v4['ip'] or '',
-                                             ip_v4 and ip_v4['netmask'] or '',
-                                             info['gateway'],
-                                             info['broadcast'],
-                                             dns)
+            interface_str = ";".join([info['mac'],
+                                      ip_v4 and ip_v4['ip'] or '',
+                                      ip_v4 and ip_v4['netmask'] or '',
+                                      info['gateway'],
+                                      info['broadcast'],
+                                      dns])
             machine_id_str = machine_id_str + interface_str + '#'
 
-        machine_id_change_spec = \
-            vm_util.get_machine_id_change_spec(client_factory, machine_id_str)
+        machine_id_change_spec = vm_util.get_machine_id_change_spec(
+                                 client_factory, machine_id_str)
 
         LOG.debug(_("Reconfiguring VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %

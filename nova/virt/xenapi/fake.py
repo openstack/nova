@@ -498,9 +498,9 @@ class SessionBase(object):
 
     def _login(self, method, params):
         self._session = str(uuid.uuid4())
-        _db_content['session'][self._session] = \
-                                {'uuid': str(uuid.uuid4()),
-                                 'this_host': _db_content['host'].keys()[0]}
+        _session_info = {'uuid': str(uuid.uuid4()),
+                         'this_host': _db_content['host'].keys()[0]}
+        _db_content['session'][self._session] = _session_info
 
     def _logout(self):
         s = self._session
@@ -621,11 +621,11 @@ class SessionBase(object):
         expected = is_sr_create and 10 or is_vlan_create and 4 or 2
         self._check_arg_count(params, expected)
         (cls, _) = name.split('.')
-        ref = is_sr_create and \
-              _create_sr(cls, params) or \
-              is_vlan_create and \
-              _create_vlan(params[1], params[2], params[3]) or \
-              _create_object(cls, params[1])
+        ref = (is_sr_create and
+               _create_sr(cls, params) or
+               is_vlan_create and
+               _create_vlan(params[1], params[2], params[3]) or
+               _create_object(cls, params[1]))
 
         # Call hook to provide any fixups needed (ex. creating backrefs)
         after_hook = 'after_%s_create' % cls

@@ -148,8 +148,7 @@ def get_object_properties(vim, collector, mobj, type, properties):
 
 def get_dynamic_property(vim, mobj, type, property_name):
     """Gets a particular property of the Managed Object."""
-    obj_content = \
-        get_object_properties(vim, None, mobj, type, [property_name])
+    obj_content = get_object_properties(vim, None, mobj, type, [property_name])
     property_value = None
     if obj_content:
         dynamic_property = obj_content[0].propSet
@@ -197,8 +196,7 @@ def get_obj_spec(client_factory, obj, select_set=None):
 
 def get_prop_filter_spec(client_factory, obj_spec, prop_spec):
     """Builds the Property Filter Spec Object."""
-    prop_filter_spec = \
-        client_factory.create('ns0:PropertyFilterSpec')
+    prop_filter_spec = client_factory.create('ns0:PropertyFilterSpec')
     prop_filter_spec.propSet = prop_spec
     prop_filter_spec.objectSet = obj_spec
     return prop_filter_spec

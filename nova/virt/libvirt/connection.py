@@ -251,9 +251,9 @@ class LibvirtConnection(driver.ComputeDriver):
             self._wrapped_conn.getCapabilities()
             return True
         except libvirt.libvirtError as e:
-            if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
-               e.get_error_domain() in (libvirt.VIR_FROM_REMOTE,
-                       libvirt.VIR_FROM_RPC):
+            if (e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and
+                e.get_error_domain() in (libvirt.VIR_FROM_REMOTE,
+                                         libvirt.VIR_FROM_RPC)):
                 LOG.debug(_('Connection to libvirt broke'))
                 return False
             raise
@@ -496,8 +496,8 @@ class LibvirtConnection(driver.ComputeDriver):
         (image_service, image_id) = nova.image.get_image_service(
             context, instance['image_ref'])
         base = image_service.show(context, image_id)
-        (snapshot_image_service, snapshot_image_id) = \
-            nova.image.get_image_service(context, image_href)
+        _image_service = nova.image.get_image_service(context, image_href)
+        snapshot_image_service, snapshot_image_id = _image_service
         snapshot = snapshot_image_service.show(context, snapshot_image_id)
 
         metadata = {'is_public': False,
@@ -2037,8 +2037,8 @@ class HostState(object):
         data["disk_used"] = self.connection.get_local_gb_used()
         data["disk_available"] = data["disk_total"] - data["disk_used"]
         data["host_memory_total"] = self.connection.get_memory_mb_total()
-        data["host_memory_free"] = data["host_memory_total"] - \
-            self.connection.get_memory_mb_used()
+        data["host_memory_free"] = (data["host_memory_total"] -
+                                    self.connection.get_memory_mb_used())
         data["hypervisor_type"] = self.connection.get_hypervisor_type()
         data["hypervisor_version"] = self.connection.get_hypervisor_version()
 

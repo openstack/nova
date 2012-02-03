@@ -34,13 +34,12 @@ RESP_NOT_XML_ERROR = 'Response is "text/html", not "text/xml"'
 CONN_ABORT_ERROR = 'Software caused connection abort'
 ADDRESS_IN_USE_ERROR = 'Address already in use'
 
-vmwareapi_wsdl_loc_opt = \
-    cfg.StrOpt('vmwareapi_wsdl_loc',
-               default=None,
-               help='VIM Service WSDL Location '
-                    'e.g http://<server>/vimService.wsdl. '
-                    'Due to a bug in vSphere ESX 4.1 default wsdl. '
-                    'Refer readme-vmware to setup')
+vmwareapi_wsdl_loc_opt = cfg.StrOpt('vmwareapi_wsdl_loc',
+        default=None,
+        help='VIM Service WSDL Location '
+             'e.g http://<server>/vimService.wsdl. '
+             'Due to a bug in vSphere ESX 4.1 default wsdl. '
+             'Refer readme-vmware to setup')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(vmwareapi_wsdl_loc_opt)
@@ -95,8 +94,7 @@ class Vim:
         url = '%s://%s/sdk' % (self._protocol, self._host_name)
         self.client = suds.client.Client(wsdl_url, location=url,
                             plugins=[VIMMessagePlugin()])
-        self._service_content = \
-                self.RetrieveServiceContent("ServiceInstance")
+        self._service_content = self.RetrieveServiceContent("ServiceInstance")
 
     def get_service_content(self):
         """Gets the service content object."""
@@ -119,8 +117,8 @@ class Vim:
                 """
                 # Dynamic handler for VI SDK Calls
                 try:
-                    request_mo = \
-                        self._request_managed_object_builder(managed_object)
+                    request_mo = self._request_managed_object_builder(
+                                 managed_object)
                     request = getattr(self.client.service, attr_name)
                     response = request(request_mo, **kwargs)
                     # To check for the faults that are part of the message body

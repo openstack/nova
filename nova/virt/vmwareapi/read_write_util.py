@@ -124,8 +124,8 @@ class VMWareHTTPWriteFile(VMwareHTTPFile):
         base_url = "%s://%s/folder/%s" % (scheme, host, file_path)
         param_list = {"dcPath": data_center_name, "dsName": datastore_name}
         base_url = base_url + "?" + urllib.urlencode(param_list)
-        (scheme, netloc, path, params, query, fragment) = \
-            urlparse.urlparse(base_url)
+        _urlparse = urlparse.urlparse(base_url)
+        scheme, netloc, path, params, query, fragment = _urlparse
         if scheme == "http":
             conn = httplib.HTTPConnection(netloc)
         elif scheme == "https":

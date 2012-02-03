@@ -293,8 +293,8 @@ class VolumeHelper(HelperBase):
                 vbd_refs = session.call_xenapi("VDI.get_VBDs", vdi_ref)
             except StorageError, ex:
                 LOG.exception(ex)
-                raise StorageError(_('Unable to find vbd for vdi %s') \
-                                   % vdi_ref)
+                raise StorageError(_('Unable to find vbd for vdi %s') %
+                                   vdi_ref)
             if len(vbd_refs) > 0:
                 return
 
@@ -323,10 +323,10 @@ class VolumeHelper(HelperBase):
         target_iqn = data['target_iqn']
         LOG.debug('(vol_id,number,host,port,iqn): (%s,%s,%s,%s)',
                   volume_id, target_host, target_port, target_iqn)
-        if (device_number < 0) or \
-            (volume_id is None) or \
-            (target_host is None) or \
-            (target_iqn is None):
+        if (device_number < 0 or
+            volume_id is None or
+            target_host is None or
+            target_iqn is None):
             raise StorageError(_('Unable to obtain target information'
                     ' %(data)s, %(mountpoint)s') % locals())
         volume_info = {}
@@ -334,8 +334,8 @@ class VolumeHelper(HelperBase):
         volume_info['target'] = target_host
         volume_info['port'] = target_port
         volume_info['targetIQN'] = target_iqn
-        if  'auth_method' in connection_info and \
-             connection_info['auth_method'] == 'CHAP':
+        if ('auth_method' in connection_info and
+            connection_info['auth_method'] == 'CHAP'):
             volume_info['chapuser'] = connection_info['auth_username']
             volume_info['chappassword'] = connection_info['auth_password']
 

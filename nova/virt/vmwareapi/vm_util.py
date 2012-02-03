@@ -78,11 +78,10 @@ def create_controller_spec(client_factory, key):
     to the VM.
     """
     # Create a controller for the Virtual Hard Disk
-    virtual_device_config = \
-        client_factory.create('ns0:VirtualDeviceConfigSpec')
+    virtual_device_config = client_factory.create(
+                            'ns0:VirtualDeviceConfigSpec')
     virtual_device_config.operation = "add"
-    virtual_lsi = \
-        client_factory.create('ns0:VirtualLsiLogicController')
+    virtual_lsi = client_factory.create('ns0:VirtualLsiLogicController')
     virtual_lsi.key = key
     virtual_lsi.busNumber = 0
     virtual_lsi.sharedBus = "noSharing"
@@ -95,8 +94,7 @@ def create_network_spec(client_factory, vif_info):
     Builds a config spec for the addition of a new network
     adapter to the VM.
     """
-    network_spec = \
-         client_factory.create('ns0:VirtualDeviceConfigSpec')
+    network_spec = client_factory.create('ns0:VirtualDeviceConfigSpec')
     network_spec.operation = "add"
 
     # Get the recommended card type for the VM based on the guest OS of the VM
@@ -111,22 +109,20 @@ def create_network_spec(client_factory, vif_info):
     backing = None
     if (network_ref and
         network_ref['type'] == "DistributedVirtualPortgroup"):
-        backing_name = \
-         'ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo'
-        backing = \
-         client_factory.create(backing_name)
-        portgroup = \
-         client_factory.create('ns0:DistributedVirtualSwitchPortConnection')
+        backing_name = ''.join(['ns0:VirtualEthernetCardDistributed',
+                                'VirtualPortBackingInfo'])
+        backing = client_factory.create(backing_name)
+        portgroup = client_factory.create(
+                    'ns0:DistributedVirtualSwitchPortConnection')
         portgroup.switchUuid = network_ref['dvsw']
         portgroup.portgroupKey = network_ref['dvpg']
         backing.port = portgroup
     else:
-        backing = \
-         client_factory.create('ns0:VirtualEthernetCardNetworkBackingInfo')
+        backing = client_factory.create(
+                  'ns0:VirtualEthernetCardNetworkBackingInfo')
         backing.deviceName = network_name
 
-    connectable_spec = \
-        client_factory.create('ns0:VirtualDeviceConnectInfo')
+    connectable_spec = client_factory.create('ns0:VirtualDeviceConnectInfo')
     connectable_spec.startConnected = True
     connectable_spec.allowGuestControl = True
     connectable_spec.connected = True
@@ -181,9 +177,9 @@ def get_vmdk_file_path_and_adapter_type(client_factory, hardware_devices):
 
     adapter_type_dict = {}
     for device in hardware_devices:
-        if device.__class__.__name__ == "VirtualDisk" and \
-            device.backing.__class__.__name__ \
-                == "VirtualDiskFlatVer2BackingInfo":
+        if (device.__class__.__name__ == "VirtualDisk" and
+            device.backing.__class__.__name__ ==
+                    "VirtualDiskFlatVer2BackingInfo"):
             vmdk_file_path = device.backing.fileName
             vmdk_controler_key = device.controllerKey
         elif device.__class__.__name__ == "VirtualLsiLogicController":
@@ -210,8 +206,7 @@ def get_copy_virtual_disk_spec(client_factory, adapter_type="lsilogic"):
 
 def get_vmdk_create_spec(client_factory, size_in_kb, adapter_type="lsiLogic"):
     """Builds the virtual disk create spec."""
-    create_vmdk_spec = \
-        client_factory.create('ns0:FileBackedVirtualDiskSpec')
+    create_vmdk_spec = client_factory.create('ns0:FileBackedVirtualDiskSpec')
     create_vmdk_spec.adapterType = adapter_type
     create_vmdk_spec.diskType = "thick"
     create_vmdk_spec.capacityKb = size_in_kb
@@ -224,16 +219,16 @@ def create_virtual_disk_spec(client_factory, disksize, controller_key,
     Builds spec for the creation of a new/ attaching of an already existing
     Virtual Disk to the VM.
     """
-    virtual_device_config = \
-        client_factory.create('ns0:VirtualDeviceConfigSpec')
+    virtual_device_config = client_factory.create(
+                            'ns0:VirtualDeviceConfigSpec')
     virtual_device_config.operation = "add"
     if file_path is None:
         virtual_device_config.fileOperation = "create"
 
     virtual_disk = client_factory.create('ns0:VirtualDisk')
 
-    disk_file_backing = \
-        client_factory.create('ns0:VirtualDiskFlatVer2BackingInfo')
+    disk_file_backing = client_factory.create(
+                        'ns0:VirtualDiskFlatVer2BackingInfo')
     disk_file_backing.diskMode = "persistent"
     disk_file_backing.thinProvisioned = False
     if file_path is not None:
@@ -296,8 +291,8 @@ def get_dummy_vm_create_spec(client_factory, name, data_store_name):
 
 def get_machine_id_change_spec(client_factory, machine_id_str):
     """Builds the machine id change config spec."""
-    virtual_machine_config_spec = \
-        client_factory.create('ns0:VirtualMachineConfigSpec')
+    virtual_machine_config_spec = client_factory.create(
+                                  'ns0:VirtualMachineConfigSpec')
 
     opt = client_factory.create('ns0:OptionValue')
     opt.key = "machine.id"
