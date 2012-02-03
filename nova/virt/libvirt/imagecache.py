@@ -43,9 +43,6 @@ from nova.virt.libvirt import utils as virtutils
 LOG = logging.getLogger('nova.compute.imagecache')
 
 imagecache_opts = [
-    cfg.StrOpt('instances_path',
-               default='$state_path/instances',
-               help='Where instances are stored on disk'),
     cfg.BoolOpt('remove_unused_base_images',
                 default=False,
                 help='Should unused base images be removed?'),
