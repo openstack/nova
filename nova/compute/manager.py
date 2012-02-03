@@ -109,6 +109,13 @@ compute_opts = [
                help="Action to take if a running deleted instance is detected."
                     "Valid options are 'noop', 'log' and 'reap'. "
                     "Set to 'noop' to disable."),
+    cfg.BoolOpt("use_image_cache_manager",
+                default=False,
+                help="Whether to manage images in the local cache."),
+    cfg.IntOpt("image_cache_manager_interval",
+               default=3600,
+               help="Number of periodic scheduler ticks to wait between "
+                    "runs of the image cache manager."),
     ]
 
 FLAGS = flags.FLAGS
@@ -195,6 +202,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
+
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -2266,3 +2274,16 @@ class ComputeManager(manager.SchedulerDependentManager):
     def remove_aggregate_host(self, context, aggregate_id, host):
         """Removes a host from a physical hypervisor pool."""
         raise NotImplementedError()
+
+    @manager.periodic_task(
+        ticks_between_runs=FLAGS.image_cache_manager_interval)
+    def _run_image_cache_manager_pass(self, context):
+        """Run a single pass of the image cache manager."""
+
+        if not FLAGS.use_image_cache_manager:
+            return
+
+        try:
+            self.driver.manage_image_cache(context)
+        except NotImplementedError:
+            pass

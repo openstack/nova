@@ -22,6 +22,7 @@
 import contextlib
 import datetime
 import functools
+import hashlib
 import inspect
 import json
 import lockfile
@@ -1192,6 +1193,13 @@ def read_cached_file(filename, cache_info, reload_func=None):
         if reload_func:
             reload_func(cache_info['data'])
     return cache_info['data']
+
+
+def hash_file(file_like_object):
+    """Generate a hash for the contents of a file."""
+    checksum = hashlib.sha1()
+    any(map(checksum.update, iter(lambda: file_like_object.read(32768), '')))
+    return checksum.hexdigest()
 
 
 @contextlib.contextmanager

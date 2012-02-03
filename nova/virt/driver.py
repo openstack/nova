@@ -612,3 +612,14 @@ class ComputeDriver(object):
         """
         # TODO(tr3buchet): update all subclasses and remove this
         return True
+
+    def manage_image_cache(self, context):
+        """
+        Manage the driver's local image cache.
+
+        Some drivers chose to cache images for instances on disk. This method
+        is an opportunity to do management of that cache which isn't directly
+        related to other calls into the driver. The prime example is to clean
+        the cache and remove images which are no longer of interest.
+        """
+        raise NotImplementedError()
