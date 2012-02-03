@@ -325,7 +325,7 @@ def default_flagfile(filename='nova.conf', args=None):
         args = sys.argv
     for arg in args:
         if arg.find('flagfile') != -1:
-            break
+            return arg[arg.index('flagfile') + 1:]
     else:
         if not os.path.isabs(filename):
             # turn relative filename into an absolute path
@@ -338,6 +338,7 @@ def default_flagfile(filename='nova.conf', args=None):
         if os.path.exists(filename):
             flagfile = '--flagfile=%s' % filename
             args.insert(1, flagfile)
+            return filename
 
 
 def debug(arg):

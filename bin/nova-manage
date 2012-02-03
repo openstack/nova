@@ -2307,7 +2307,16 @@ def methods_of(obj):
 
 def main():
     """Parse options and call the appropriate class/method."""
-    utils.default_flagfile()
+    flagfile = utils.default_flagfile()
+
+    if flagfile and not os.access(flagfile, os.R_OK):
+        st = os.stat(flagfile)
+        print "Could not read %s. Re-running with sudo" % flagfile
+        try:
+            os.execvp('sudo', ['sudo', '-u', '#%s' % st.st_uid] + sys.argv)
+        except:
+            print 'sudo failed, continuing as if nothing happened'
+
     argv = FLAGS(sys.argv)
     logging.setup()
 
