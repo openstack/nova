@@ -165,7 +165,8 @@ class ServerActionsControllerTest(test.TestCase):
         self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
-        self.flags(allow_instance_snapshots=True)
+        self.flags(allow_instance_snapshots=True,
+                   enable_instance_password=True)
         self.uuid = FAKE_UUID
         self.url = '/v2/fake/servers/%s/action' % self.uuid
         self._image_href = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
@@ -185,6 +186,22 @@ class ServerActionsControllerTest(test.TestCase):
         self.controller._action_change_password(req, FAKE_UUID, body)
 
         self.assertEqual(mock_method.instance_id, self.uuid)
+        self.assertEqual(mock_method.password, '1234pass')
+
+    def test_server_change_password_pass_disabled(self):
+        # run with enable_instance_password disabled to verify adminPass
+        # is missing from response. See lp bug 921814
+        self.flags(enable_instance_password=False)
+
+        mock_method = MockSetAdminPassword()
+        self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
+        body = {'changePassword': {'adminPass': '1234pass'}}
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.controller._action_change_password(req, FAKE_UUID, body)
+
+        self.assertEqual(mock_method.instance_id, self.uuid)
+        # note,the mock still contains the password.
         self.assertEqual(mock_method.password, '1234pass')
 
     def test_server_change_password_not_a_string(self):
@@ -280,6 +297,31 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertEqual(len(body['server']['adminPass']),
                          FLAGS.password_length)
+
+        self.assertEqual(robj['location'], self_href)
+
+    def test_rebuild_accepted_minimum_pass_disabled(self):
+        # run with enable_instance_password disabled to verify adminPass
+        # is missing from response. See lp bug 921814
+        self.flags(enable_instance_password=False)
+
+        new_return_server = return_server_with_attributes(image_ref='2')
+        self.stubs.Set(nova.db, 'instance_get', new_return_server)
+        self_href = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
+
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank(self.url)
+        robj = self.controller._action_rebuild(req, FAKE_UUID, body)
+        body = robj.obj
+
+        self.assertEqual(body['server']['image']['id'], '2')
+        self.assertTrue("adminPass" not in body['server'])
+
         self.assertEqual(robj['location'], self_href)
 
     def test_rebuild_raises_conflict_on_invalid_state(self):
@@ -390,6 +432,27 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertEqual(body['server']['adminPass'], 'asdf')
+
+    def test_rebuild_admin_pass_pass_disabled(self):
+        # run with enable_instance_password disabled to verify adminPass
+        # is missing from response. See lp bug 921814
+        self.flags(enable_instance_password=False)
+
+        new_return_server = return_server_with_attributes(image_ref='2')
+        self.stubs.Set(nova.db, 'instance_get', new_return_server)
+
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+                "adminPass": "asdf",
+            },
+        }
+
+        req = fakes.HTTPRequest.blank(self.url)
+        body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
+
+        self.assertEqual(body['server']['image']['id'], '2')
+        self.assertTrue('adminPass' not in body['server'])
 
     def test_rebuild_server_not_found(self):
         def server_not_found(self, instance_id):

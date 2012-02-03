@@ -784,7 +784,8 @@ class Controller(wsgi.Controller):
         if '_is_precooked' in server['server'].keys():
             del server['server']['_is_precooked']
         else:
-            server['server']['adminPass'] = password
+            if FLAGS.enable_instance_password:
+                server['server']['adminPass'] = password
 
         robj = wsgi.ResponseObject(server)
 
@@ -1107,7 +1108,9 @@ class Controller(wsgi.Controller):
         view = self._view_builder.show(req, instance)
 
         # Add on the adminPass attribute since the view doesn't do it
-        view['server']['adminPass'] = password
+        # unless instance passwords are disabled
+        if FLAGS.enable_instance_password:
+            view['server']['adminPass'] = password
 
         robj = wsgi.ResponseObject(view)
         return self._add_location(robj)
