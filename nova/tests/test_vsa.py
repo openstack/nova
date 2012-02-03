@@ -90,7 +90,7 @@ class VsaTestCase(test.TestCase):
 
     def test_vsa_create_wrong_image_name(self):
         param = {'image_name': 'wrong_image_name'}
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.ImageNotFound,
                           self.vsa_api.create, self.context, **param)
 
     def test_vsa_create_db_error(self):
@@ -100,19 +100,19 @@ class VsaTestCase(test.TestCase):
             raise exception.Error
 
         self.stubs.Set(nova.db, 'vsa_create', fake_vsa_create)
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.Error,
                           self.vsa_api.create, self.context)
 
     def test_vsa_create_wrong_storage_params(self):
         vsa_list1 = self.vsa_api.get_all(self.context)
         param = {'storage': [{'stub': 1}]}
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InvalidVolumeType,
                           self.vsa_api.create, self.context, **param)
         vsa_list2 = self.vsa_api.get_all(self.context)
         self.assertEqual(len(vsa_list2), len(vsa_list1))
 
         param = {'storage': [{'drive_name': 'wrong name'}]}
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InvalidVolumeType,
                           self.vsa_api.create, self.context, **param)
 
     def test_vsa_create_with_storage(self, multi_vol_creation=True):

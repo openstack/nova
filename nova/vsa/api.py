@@ -23,8 +23,6 @@ For assistance and guidelines pls contact
     Zadara Storage Inc & Openstack community
 """
 
-import sys
-
 from nova import compute
 from nova import exception
 from nova import flags
@@ -81,8 +79,8 @@ class API(base.Base):
             vol_type['extra_specs'].get('drive_type') is None or
             vol_type['extra_specs'].get('drive_size') is None):
 
-            raise exception.ApiError(_("Invalid drive type %s")
-                                        % vol_type['name'])
+            msg = _("invalid drive data")
+            raise exception.InvalidVolumeType(reason=msg)
 
     def _get_default_vsa_instance_type(self):
         return instance_types.get_instance_type_by_name(
@@ -104,13 +102,14 @@ class API(base.Base):
             num_disks = node.get('num_drives', 1)
 
             if name is None:
-                raise exception.ApiError(_("No drive_name param found in %s")
-                                            % node)
+                msg = _("drive_name not defined")
+                raise exception.InvalidVolumeType(reason=msg)
+
             try:
                 vol_type = volume_types.get_volume_type_by_name(context, name)
             except exception.NotFound:
-                raise exception.ApiError(_("Invalid drive type name %s")
-                                            % name)
+                msg = _("invalid drive type name %s")
+                raise exception.InvalidVolumeType(reason=msg % name)
 
             self._check_volume_type_correctness(vol_type)
 
@@ -177,13 +176,10 @@ class API(base.Base):
         # check if image is ready before starting any work
         if image_name is None:
             image_name = FLAGS.vc_image_name
-        try:
-            image_service = self.compute_api.image_service
-            vc_image = image_service.show_by_name(context, image_name)
-            vc_image_href = vc_image['id']
-        except exception.ImageNotFound:
-            raise exception.ApiError(_("Failed to find configured image %s")
-                                        % image_name)
+
+        image_service = self.compute_api.image_service
+        vc_image = image_service.show_by_name(context, image_name)
+        vc_image_href = vc_image['id']
 
         options = {
             'display_name': display_name,
@@ -198,10 +194,8 @@ class API(base.Base):
         LOG.info(_("Creating VSA: %s") % options)
 
         # create DB entry for VSA instance
-        try:
-            vsa_ref = self.db.vsa_create(context, options)
-        except exception.Error:
-            raise exception.ApiError(_(sys.exc_info()[1]))
+        vsa_ref = self.db.vsa_create(context, options)
+
         vsa_id = vsa_ref['id']
         vsa_name = vsa_ref['name']
 
@@ -209,10 +203,9 @@ class API(base.Base):
         try:
             volume_params = self._check_storage_parameters(context, vsa_name,
                                                            storage, shared)
-        except exception.ApiError:
+        except exception.InvalidVolumeType:
             self.db.vsa_destroy(context, vsa_id)
-            raise exception.ApiError(_("Error in storage parameters: %s")
-                                        % storage)
+            raise
 
         # after creating DB entry, re-check and set some defaults
         updates = {}
@@ -358,7 +351,7 @@ class API(base.Base):
                 LOG.info(_("VSA ID %(vsa_id)s: Deleting %(direction)s "
                            "volume %(vol_name)s"), locals())
                 self.volume_api.delete(context, volume)
-            except exception.ApiError:
+            except exception.InvalidVolume:
                 LOG.info(_("Unable to delete volume %s"), volume['name'])
                 if force_delete:
                     LOG.info(_("VSA ID %(vsa_id)s: Forced delete. "

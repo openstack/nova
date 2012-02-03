@@ -610,12 +610,12 @@ class VMWareVMOps(object):
             LOG.exception(exc)
 
     def pause(self, instance):
-        """Pause a VM instance."""
-        raise exception.ApiError("pause not supported for vmwareapi")
+        msg = _("pause not supported for vmwareapi")
+        raise NotImplementedError(msg)
 
     def unpause(self, instance):
-        """Un-Pause a VM instance."""
-        raise exception.ApiError("unpause not supported for vmwareapi")
+        msg = _("unpause not supported for vmwareapi")
+        raise NotImplementedError(msg)
 
     def suspend(self, instance):
         """Suspend the specified instance."""
@@ -694,8 +694,8 @@ class VMWareVMOps(object):
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""
-        raise exception.ApiError("get_diagnostics not implemented for "
-                                 "vmwareapi")
+        msg = _("get_diagnostics not implemented for vmwareapi")
+        raise NotImplementedError(msg)
 
     def get_console_output(self, instance):
         """Return snapshot of console."""

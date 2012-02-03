@@ -13,14 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
 from nova.scheduler import vsa as vsa_sched
-from nova import test
 from nova.tests.scheduler import test_scheduler
 from nova import utils
 from nova.volume import volume_types

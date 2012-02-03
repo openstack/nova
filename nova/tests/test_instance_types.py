@@ -85,7 +85,7 @@ class InstanceTypeTestCase(test.TestCase):
                             'instance type was not created')
 
         instance_types.destroy(name)
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InstanceTypeNotFound,
                           instance_types.get_instance_type, inst_type_id)
 
         # deleted instance should not be in list anymoer
@@ -133,7 +133,7 @@ class InstanceTypeTestCase(test.TestCase):
                           'unknown_flavor')
 
     def test_duplicate_names_fail(self):
-        """Ensures that name duplicates raise ApiError"""
+        """Ensures that name duplicates raise InstanceTypeCreateFailed"""
         name = 'some_name'
         instance_types.create(name, 256, 1, 120, 200, 'flavor1')
         self.assertRaises(exception.InstanceTypeExists,
@@ -141,7 +141,7 @@ class InstanceTypeTestCase(test.TestCase):
                           name, 256, 1, 120, 200, 'flavor2')
 
     def test_duplicate_flavorids_fail(self):
-        """Ensures that flavorid duplicates raise ApiError"""
+        """Ensures that flavorid duplicates raise InstanceTypeCreateFailed"""
         flavorid = 'flavor1'
         instance_types.create('name one', 256, 1, 120, 200, flavorid)
         self.assertRaises(exception.InstanceTypeExists,
@@ -156,7 +156,7 @@ class InstanceTypeTestCase(test.TestCase):
     def test_will_not_get_bad_default_instance_type(self):
         """ensures error raised on bad default instance type"""
         self.flags(default_instance_type='unknown_flavor')
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InstanceTypeNotFound,
                           instance_types.get_default_instance_type)
 
     def test_will_get_instance_type_by_id(self):
@@ -167,12 +167,12 @@ class InstanceTypeTestCase(test.TestCase):
 
     def test_will_not_get_instance_type_by_unknown_id(self):
         """Ensure get by name returns default flavor with no name"""
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InstanceTypeNotFound,
                          instance_types.get_instance_type, 10000)
 
     def test_will_not_get_instance_type_with_bad_id(self):
         """Ensure get by name returns default flavor with bad name"""
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InstanceTypeNotFound,
                           instance_types.get_instance_type, 'asdf')
 
     def test_instance_type_get_by_None_name_returns_default(self):
@@ -183,7 +183,7 @@ class InstanceTypeTestCase(test.TestCase):
 
     def test_will_not_get_instance_type_with_bad_name(self):
         """Ensure get by name returns default flavor with bad name"""
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InstanceTypeNotFound,
                           instance_types.get_instance_type_by_name, 10000)
 
     def test_will_not_get_instance_by_unknown_flavor_id(self):

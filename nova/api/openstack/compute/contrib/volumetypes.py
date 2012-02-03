@@ -100,7 +100,7 @@ class VolumeTypesController(object):
 
         try:
             vol_type = volume_types.get_volume_type(context, id)
-        except exception.NotFound or exception.ApiError:
+        except exception.NotFound:
             raise exc.HTTPNotFound()
 
         return {'volume_type': vol_type}

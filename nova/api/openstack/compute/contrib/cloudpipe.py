@@ -116,7 +116,7 @@ class CloudpipeController(object):
             except db.NoMoreNetworks:
                 msg = _("Unable to claim IP for VPN instances, ensure it "
                         "isn't running, and try again in a few minutes")
-                raise exception.ApiError(msg)
+                raise exception.HTTPBadRequest(explanation=msg)
             instance = self._get_cloudpipe_for_project(ctxt, proj)
         return {'instance_id': instance['uuid']}
 

@@ -551,8 +551,8 @@ class ProxyConnection(driver.ComputeDriver):
         raise NotImplementedError()
 
     def get_diagnostics(self, instance_name):
-        raise exception.ApiError(_("diagnostics are not supported "
-                                   "for baremetal"))
+        # diagnostics are not supported for baremetal
+        raise NotImplementedError()
 
     def get_disks(self, instance_name):
         raise NotImplementedError()

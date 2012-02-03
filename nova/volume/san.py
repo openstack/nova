@@ -702,9 +702,7 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
 
         if response.status != 200:
             connection.close()
-            msg = _("Error in SolidFire API response, status was: %s"
-                    % response.status)
-            raise exception.ApiError(msg)
+            raise exception.SolidFireAPIException(status=response.status)
 
         else:
             data = response.read()
@@ -763,9 +761,7 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
         params = {}
         data = self._issue_api_request('GetClusterInfo', params)
         if 'result' not in data:
-            msg = _("Error in SolidFire API response data was: %s"
-                    % data)
-            raise exception.ApiError(msg)
+            raise exception.SolidFireAPIDataException(data=data)
 
         return data['result']
 
@@ -827,14 +823,10 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
                   'attributes': attributes}
 
         data = self._issue_api_request('CreateVolume', params)
-        if 'result' not in data:
-            msg = _("Error in SolidFire API response data was: %s"
-                    % data)
-            raise exception.ApiError(msg)
-        if 'volumeID' not in data['result']:
-            msg = _("Error in SolidFire API response data was: %s"
-                    % data)
-            raise exception.ApiError(msg)
+
+        if 'result' not in data or 'volumeID' not in data['result']:
+            raise exception.SolidFireAPIDataException(data=data)
+
         volume_id = data['result']['volumeID']
 
         volume_list = self._get_volumes_by_sfaccount(account_id)
@@ -873,9 +865,7 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
         params = {'accountID': sfaccount['accountID']}
         data = self._issue_api_request('ListVolumesForAccount', params)
         if 'result' not in data:
-            msg = _("Error in SolidFire API response, data was: %s"
-                    % data)
-            raise exception.ApiError(msg)
+            raise exception.SolidFireAPIDataException(data=data)
 
         found_count = 0
         volid = -1
@@ -891,9 +881,7 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
         params = {'volumeID': volid}
         data = self._issue_api_request('DeleteVolume', params)
         if 'result' not in data:
-            msg = _("Error in SolidFire API response, data was: %s"
-                    % data)
-            raise exception.ApiError(msg)
+            raise exception.SolidFireAPIDataException(data=data)
 
         LOG.debug(_("Leaving SolidFire delete_volume"))
 

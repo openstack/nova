@@ -36,7 +36,7 @@ def fake_get(self, context, instance_uuid):
     return {'uuid': instance_uuid}
 
 
-def fake_get_not_found(self, context, instance_uuid):
+def fake_get_not_found(*args, **kwargs):
     raise exception.NotFound()
 
 
@@ -74,6 +74,17 @@ class ConsolesExtensionTest(test.TestCase):
 
     def test_get_vnc_console_no_instance(self):
         self.stubs.Set(compute.API, 'get', fake_get_not_found)
+        body = {'os-getVNCConsole': {'type': 'novnc'}}
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
+    def test_get_vnc_console_no_instance_on_console_get(self):
+        self.stubs.Set(compute.API, 'get_vnc_console', fake_get_not_found)
         body = {'os-getVNCConsole': {'type': 'novnc'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"

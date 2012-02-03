@@ -368,11 +368,9 @@ class FloatingIP(object):
         # NOTE(tr3buchet): all network hosts in zone now use the same pool
         LOG.debug("QUOTA: %s" % quota.allowed_floating_ips(context, 1))
         if quota.allowed_floating_ips(context, 1) < 1:
-            LOG.warn(_('Quota exceeded for %s, tried to allocate '
-                       'address'),
+            LOG.warn(_('Quota exceeded for %s, tried to allocate address'),
                      context.project_id)
-            raise exception.QuotaError(_('Address quota exceeded. You cannot '
-                                     'allocate any more addresses'))
+            raise exception.QuotaError(code='AddressLimitExceeded')
         pool = pool or FLAGS.default_floating_pool
         return self.db.floating_ip_allocate_address(context,
                                                     project_id,

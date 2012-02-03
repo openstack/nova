@@ -31,35 +31,29 @@ class ServerStartStopActionController(wsgi.Controller):
         super(ServerStartStopActionController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    def _get_instance(self, context, instance_uuid):
+        try:
+            return self.compute_api.get(context, instance_uuid)
+        except exception.NotFound:
+            msg = _("Instance not found")
+            raise webob.exc.HTTPNotFound(explanation=msg)
+
     @wsgi.action('os-start')
     def _start_server(self, req, id, body):
         """Start an instance. """
         context = req.environ['nova.context']
-
-        try:
-            LOG.debug(_("start instance %r"), id)
-            instance = self.compute_api.get(context, id)
-            self.compute_api.start(context, instance)
-        except exception.ApiError, e:
-            raise webob.exc.HTTPBadRequest(explanation=e.message)
-        except exception.NotAuthorized, e:
-            raise webob.exc.HTTPUnauthorized()
+        LOG.debug(_("start instance %r"), id)
+        instance = self._get_instance(context, id)
+        self.compute_api.start(context, instance)
         return webob.Response(status_int=202)
 
     @wsgi.action('os-stop')
     def _stop_server(self, req, id, body):
         """Stop an instance."""
         context = req.environ['nova.context']
-
-        try:
-            LOG.debug(_("stop instance %r"), id)
-            instance = self.compute_api.get(context, id)
-            self.compute_api.stop(context, instance)
-        except exception.ApiError, e:
-            raise webob.exc.HTTPBadRequest(explanation=e.message)
-        except exception.NotAuthorized, e:
-            raise webob.exc.HTTPUnauthorized()
-
+        LOG.debug(_("stop instance %r"), id)
+        instance = self._get_instance(context, id)
+        self.compute_api.stop(context, instance)
         return webob.Response(status_int=202)
 
 

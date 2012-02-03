@@ -72,9 +72,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid, swap=None,
         return db.instance_type_create(context.get_admin_context(), kwargs)
     except exception.DBError, e:
         LOG.exception(_('DB error: %s') % e)
-        msg = _("Cannot create instance_type with name %(name)s and "
-                "flavorid %(flavorid)s") % locals()
-        raise exception.ApiError(msg)
+        raise exception.InstanceTypeCreateFailed()
 
 
 def destroy(name):
@@ -106,10 +104,7 @@ get_all_flavors = get_all_types
 def get_default_instance_type():
     """Get the default instance type."""
     name = FLAGS.default_instance_type
-    try:
-        return get_instance_type_by_name(name)
-    except exception.InstanceTypeNotFound as e:
-        raise exception.ApiError(e)
+    return get_instance_type_by_name(name)
 
 
 def get_instance_type(instance_type_id):
@@ -118,10 +113,7 @@ def get_instance_type(instance_type_id):
         return get_default_instance_type()
 
     ctxt = context.get_admin_context()
-    try:
-        return db.instance_type_get(ctxt, instance_type_id)
-    except exception.InstanceTypeNotFound as e:
-        raise exception.ApiError(e)
+    return db.instance_type_get(ctxt, instance_type_id)
 
 
 def get_instance_type_by_name(name):
@@ -130,11 +122,7 @@ def get_instance_type_by_name(name):
         return get_default_instance_type()
 
     ctxt = context.get_admin_context()
-
-    try:
-        return db.instance_type_get_by_name(ctxt, name)
-    except exception.InstanceTypeNotFound as e:
-        raise exception.ApiError(e)
+    return db.instance_type_get_by_name(ctxt, name)
 
 
 # TODO(termie): flavor-specific code should probably be in the API that uses

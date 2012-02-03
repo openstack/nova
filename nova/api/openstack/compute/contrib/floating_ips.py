@@ -204,14 +204,14 @@ class FloatingIPActionController(wsgi.Controller):
             msg = _("Address not specified")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
+        instance = self.compute_api.get(context, id)
+
         try:
-            instance = self.compute_api.get(context, id)
             self.compute_api.associate_floating_ip(context, instance,
                                                    address)
-        except exception.ApiError, e:
-            raise webob.exc.HTTPBadRequest(explanation=e.message)
-        except exception.NotAuthorized, e:
-            raise webob.exc.HTTPUnauthorized()
+        except exception.FixedIpNotFoundForInstance:
+            msg = _("No fixed ips associated to instance")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         except rpc.RemoteError:
             msg = _("Associate floating ip failed")
             raise webob.exc.HTTPInternalServerError(explanation=msg)
