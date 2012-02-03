@@ -88,7 +88,7 @@ ldap_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(ldap_opts)
+FLAGS.register_opts(ldap_opts)
 
 LOG = logging.getLogger("nova.ldapdriver")
 
@@ -573,7 +573,7 @@ class LdapDriver(object):
     def __role_to_dn(self, role, project_id=None):
         """Convert role to corresponding dn"""
         if project_id is None:
-            return FLAGS.__getitem__("ldap_%s" % role).value
+            return FLAGS["ldap_%s" % role]
         else:
             project_dn = self.__project_to_dn(project_id)
             return 'cn=%s,%s' % (role, project_dn)

@@ -47,4 +47,4 @@ vnc_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(vnc_opts)
+FLAGS.register_opts(vnc_opts)

@@ -37,7 +37,7 @@ multi_scheduler_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(multi_scheduler_opts)
+FLAGS.register_opts(multi_scheduler_opts)
 
 # A mapping of methods to topics so we can figure out which driver to use.
 _METHOD_MAP = {'run_instance': 'compute',

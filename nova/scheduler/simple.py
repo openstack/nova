@@ -46,7 +46,7 @@ simple_scheduler_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(simple_scheduler_opts)
+FLAGS.register_opts(simple_scheduler_opts)
 
 
 class SimpleScheduler(chance.ChanceScheduler):

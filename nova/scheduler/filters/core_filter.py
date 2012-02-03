@@ -28,7 +28,7 @@ cpu_allocation_ratio_opt = cfg.FloatOpt('cpu_allocation_ratio',
         help='Virtual CPU to Physical CPU allocation ratio')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(cpu_allocation_ratio_opt)
+FLAGS.register_opt(cpu_allocation_ratio_opt)
 
 
 class CoreFilter(abstract_filter.AbstractHostFilter):

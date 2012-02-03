@@ -57,7 +57,7 @@ direct_api_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(direct_api_opts)
+FLAGS.register_cli_opts(direct_api_opts)
 
 
 # An example of an API that only exposes read-only methods.

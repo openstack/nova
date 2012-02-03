@@ -3,7 +3,7 @@
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
-# Copyright 2011 Red Hat, Inc.
+# Copyright 2012 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -30,97 +30,21 @@ import os
 import socket
 import sys
 
-import gflags
-
 from nova.compat import flagfile
 from nova.openstack.common import cfg
 
 
-class FlagValues(object):
-    class Flag:
-        def __init__(self, name, value, update_default=None):
-            self.name = name
-            self.value = value
-            self._update_default = update_default
+class NovaConfigOpts(cfg.ConfigOpts):
 
-        def SetDefault(self, default):
-            if self._update_default:
-                self._update_default(self.name, default)
-
-    def __init__(self):
-        self._conf = cfg.ConfigOpts()
-        self._conf.disable_interspersed_args()
-        self.Reset()
-
-    def _parse(self):
-        if self._extra is not None:
-            return
-
-        with flagfile.handle_flagfiles_managed(self._args) as args:
-            self._extra = self._conf(args)
+    def __init__(self, *args, **kwargs):
+        super(NovaConfigOpts, self).__init__(*args, **kwargs)
+        self.disable_interspersed_args()
 
     def __call__(self, argv):
-        self.Reset()
-        self._args = argv[1:]
-        self._parse()
-        return [argv[0]] + self._extra
+        with flagfile.handle_flagfiles_managed(argv[1:]) as args:
+            return argv[:1] + super(NovaConfigOpts, self).__call__(args)
 
-    def __getattr__(self, name):
-        self._parse()
-        return getattr(self._conf, name)
-
-    def get(self, name, default):
-        value = getattr(self, name)
-        if value is not None:  # value might be '0' or ""
-            return value
-        else:
-            return default
-
-    def __contains__(self, name):
-        self._parse()
-        return hasattr(self._conf, name)
-
-    def _update_default(self, name, default):
-        self._conf.set_default(name, default)
-
-    def __iter__(self):
-        return self._conf.iterkeys()
-
-    def __getitem__(self, name):
-        self._parse()
-        if not self.__contains__(name):
-            return None
-        return self.Flag(name, getattr(self, name), self._update_default)
-
-    def Reset(self):
-        self._conf.reset()
-        self._args = []
-        self._extra = None
-
-    def ParseNewFlags(self):
-        pass
-
-    def FlagValuesDict(self):
-        self._parse()
-        ret = {}
-        for name in self._conf:
-            ret[name] = getattr(self, name)
-        return ret
-
-    def add_option(self, opt):
-        self._conf.register_opt(opt)
-
-    def add_options(self, opts):
-        self._conf.register_opts(opts)
-
-    def add_cli_option(self, opt):
-        self._conf.register_cli_opt(opt)
-
-    def add_cli_options(self, opts):
-        self._conf.register_cli_opts(opts)
-
-
-FLAGS = FlagValues()
+FLAGS = NovaConfigOpts()
 
 
 class UnrecognizedFlag(Exception):
@@ -191,9 +115,9 @@ debug_opts = [
                 help='use a fake rabbit'),
 ]
 
-FLAGS.add_cli_options(log_opts)
-FLAGS.add_cli_options(core_opts)
-FLAGS.add_cli_options(debug_opts)
+FLAGS.register_cli_opts(log_opts)
+FLAGS.register_cli_opts(core_opts)
+FLAGS.register_cli_opts(debug_opts)
 
 global_opts = [
     cfg.StrOpt('my_ip',
@@ -523,4 +447,4 @@ global_opts = [
                 help='Host reserved for specific images'),
     ]
 
-FLAGS.add_options(global_opts)
+FLAGS.register_opts(global_opts)

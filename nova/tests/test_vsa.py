@@ -40,8 +40,7 @@ class VsaTestCase(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.vsa_api = vsa.API()
 
-        FLAGS.quota_volumes = 100
-        FLAGS.quota_gigabytes = 10000
+        self.flags(quota_volumes=100, quota_gigabytes=10000)
 
         self.context = context.get_admin_context()
 
@@ -119,7 +118,7 @@ class VsaTestCase(test.TestCase):
     def test_vsa_create_with_storage(self, multi_vol_creation=True):
         """Test creation of VSA with BE storage"""
 
-        FLAGS.vsa_multi_vol_creation = multi_vol_creation
+        self.flags(vsa_multi_vol_creation=multi_vol_creation)
 
         param = {'storage': [{'drive_name': 'SATA_500_7200',
                               'num_drives': 3}]}
@@ -152,7 +151,7 @@ class VsaTestCase(test.TestCase):
 
     def test_vsa_generate_user_data(self):
 
-        FLAGS.vsa_multi_vol_creation = False
+        self.flags(vsa_multi_vol_creation=False)
         param = {'display_name': 'VSA name test',
                  'display_description': 'VSA desc test',
                  'vc_count': 2,

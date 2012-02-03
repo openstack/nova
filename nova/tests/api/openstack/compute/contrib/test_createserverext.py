@@ -31,7 +31,6 @@ from nova.tests.api.openstack import fakes
 
 
 FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 

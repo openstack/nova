@@ -59,7 +59,7 @@ ec2_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(ec2_opts)
+FLAGS.register_opts(ec2_opts)
 
 flags.DECLARE('use_forwarded_for', 'nova.api.auth')
 

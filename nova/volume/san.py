@@ -75,7 +75,7 @@ san_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(san_opts)
+FLAGS.register_opts(san_opts)
 
 
 class SanISCSIDriver(ISCSIDriver):

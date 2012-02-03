@@ -55,7 +55,7 @@ s3_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(s3_opts)
+FLAGS.register_opts(s3_opts)
 
 
 class S3ImageService(object):

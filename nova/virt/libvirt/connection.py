@@ -149,7 +149,7 @@ libvirt_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(libvirt_opts)
+FLAGS.register_opts(libvirt_opts)
 
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 flags.DECLARE('vncserver_proxyclient_address', 'nova.vnc')
@@ -190,7 +190,7 @@ class LibvirtConnection(driver.ComputeDriver):
         self.container = None
         self.read_only = read_only
         if FLAGS.firewall_driver not in firewall.drivers:
-            FLAGS['firewall_driver'].SetDefault(firewall.drivers[0])
+            FLAGS.set_default('firewall_driver', firewall.drivers[0])
         fw_class = utils.import_class(FLAGS.firewall_driver)
         self.firewall_driver = fw_class(get_connection=self._get_connection)
         self.vif_driver = utils.import_object(FLAGS.libvirt_vif_driver)

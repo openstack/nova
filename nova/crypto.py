@@ -76,7 +76,7 @@ crypto_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(crypto_opts)
+FLAGS.register_opts(crypto_opts)
 
 
 def ca_folder(project_id=None):

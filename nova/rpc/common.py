@@ -39,7 +39,7 @@ rpc_opts = [
                help='Seconds to wait for a response from call or multicall'),
     ]
 
-flags.FLAGS.add_options(rpc_opts)
+flags.FLAGS.register_opts(rpc_opts)
 
 
 class RemoteError(exception.NovaException):

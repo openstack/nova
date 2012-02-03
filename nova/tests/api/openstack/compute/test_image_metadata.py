@@ -189,7 +189,7 @@ class ImageMetaDataTest(test.TestCase):
                           self.controller.create, req, '123', data)
 
     def test_too_many_metadata_items_on_put(self):
-        FLAGS.quota_metadata_items = 1
+        self.flags(quota_metadata_items=1)
         req = fakes.HTTPRequest.blank('/v2/fake/images/123/metadata/blah')
         req.method = 'PUT'
         body = {"meta": {"blah": "blah"}}

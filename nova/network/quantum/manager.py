@@ -56,7 +56,7 @@ quantum_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(quantum_opts)
+FLAGS.register_opts(quantum_opts)
 
 
 class QuantumManager(manager.FloatingIP, manager.FlatManager):

@@ -53,7 +53,7 @@ test_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(test_opts)
+FLAGS.register_opts(test_opts)
 
 LOG = log.getLogger('nova.tests')
 
@@ -134,7 +134,7 @@ class TestCase(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.injected = []
         self._services = []
-        self._original_flags = FLAGS.FlagValuesDict()
+        self._overridden_opts = []
 
     def tearDown(self):
         """Runs after each test method to tear down test environment."""
@@ -176,7 +176,8 @@ class TestCase(unittest.TestCase):
     def flags(self, **kw):
         """Override flag variables for a test."""
         for k, v in kw.iteritems():
-            setattr(FLAGS, k, v)
+            FLAGS.set_override(k, v)
+            self._overridden_opts.append(k)
 
     def reset_flags(self):
         """Resets all flag variables for the test.
@@ -184,9 +185,9 @@ class TestCase(unittest.TestCase):
         Runs after each test.
 
         """
-        FLAGS.Reset()
-        for k, v in self._original_flags.iteritems():
-            setattr(FLAGS, k, v)
+        for k in self._overridden_opts:
+            FLAGS.set_override(k, None)
+        self._overridden_opts = []
 
     def start_service(self, name, host=None, **kwargs):
         host = host and host or uuid.uuid4().hex

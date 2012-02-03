@@ -67,7 +67,7 @@ volume_manager_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(volume_manager_opts)
+FLAGS.register_opts(volume_manager_opts)
 
 
 class VolumeManager(manager.SchedulerDependentManager):

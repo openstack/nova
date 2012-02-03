@@ -82,7 +82,7 @@ log_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(log_opts)
+FLAGS.register_opts(log_opts)
 
 # A list of things we want to replicate from logging.
 # levels

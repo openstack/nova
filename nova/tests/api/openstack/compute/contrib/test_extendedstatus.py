@@ -25,7 +25,6 @@ from nova.tests.api.openstack import fakes
 
 
 FLAGS = flags.FLAGS
-FLAGS.verbose = True
 
 
 UUID1 = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'

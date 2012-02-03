@@ -42,7 +42,7 @@ vmwareapi_wsdl_loc_opt = cfg.StrOpt('vmwareapi_wsdl_loc',
              'Refer readme-vmware to setup')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(vmwareapi_wsdl_loc_opt)
+FLAGS.register_opt(vmwareapi_wsdl_loc_opt)
 
 
 if suds:

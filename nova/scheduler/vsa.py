@@ -48,7 +48,7 @@ vsa_scheduler_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(vsa_scheduler_opts)
+FLAGS.register_opts(vsa_scheduler_opts)
 
 
 def BYTES_TO_GB(bytes):

@@ -53,7 +53,7 @@ cloudpipe_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(cloudpipe_opts)
+FLAGS.register_opts(cloudpipe_opts)
 
 
 LOG = logging.getLogger('nova.cloudpipe')

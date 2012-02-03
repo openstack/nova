@@ -72,7 +72,7 @@ xenapi_vm_utils_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(xenapi_vm_utils_opts)
+FLAGS.register_opts(xenapi_vm_utils_opts)
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,

@@ -34,7 +34,7 @@ use_forwarded_for_opt = cfg.BoolOpt('use_forwarded_for',
              'Only enable this if you have a sanitizing proxy.')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(use_forwarded_for_opt)
+FLAGS.register_opt(use_forwarded_for_opt)
 
 
 class InjectContext(wsgi.Middleware):

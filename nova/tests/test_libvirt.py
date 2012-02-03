@@ -939,8 +939,7 @@ class LibvirtConnTestCase(test.TestCase):
         """Confirms pre_block_migration works correctly."""
         # Replace instances_path since this testcase creates tmpfile
         tmpdir = tempfile.mkdtemp()
-        store = FLAGS.instances_path
-        FLAGS.instances_path = tmpdir
+        self.flags(instances_path=tmpdir)
 
         # Test data
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -960,8 +959,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         shutil.rmtree(tmpdir)
         db.instance_destroy(self.context, instance_ref['id'])
-        # Restore FLAGS.instances_path
-        FLAGS.instances_path = store
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_get_instance_disk_info_works_correctly(self):

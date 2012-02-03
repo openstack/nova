@@ -30,7 +30,7 @@ iscsi_helper_opt = cfg.StrOpt('iscsi_helper',
                               help='iscsi target user-land tool to use')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(iscsi_helper_opt)
+FLAGS.register_opt(iscsi_helper_opt)
 
 
 class TargetAdmin(object):

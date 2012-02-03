@@ -41,7 +41,7 @@ consoleauth_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(consoleauth_opts)
+FLAGS.register_opts(consoleauth_opts)
 
 
 class ConsoleAuthManager(manager.Manager):

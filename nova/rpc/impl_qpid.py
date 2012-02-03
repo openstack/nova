@@ -78,7 +78,7 @@ qpid_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(qpid_opts)
+FLAGS.register_opts(qpid_opts)
 
 
 class ConsumerBase(object):

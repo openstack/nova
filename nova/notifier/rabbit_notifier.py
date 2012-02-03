@@ -26,7 +26,7 @@ notification_topic_opt = cfg.StrOpt('notification_topic',
         help='RabbitMQ topic used for Nova notifications')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(notification_topic_opt)
+FLAGS.register_opt(notification_topic_opt)
 
 
 def notify(message):

@@ -92,7 +92,7 @@ auth_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(auth_opts)
+FLAGS.register_opts(auth_opts)
 
 flags.DECLARE('osapi_compute_listen_port', 'nova.service')
 

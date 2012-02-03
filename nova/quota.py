@@ -57,7 +57,7 @@ quota_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(quota_opts)
+FLAGS.register_opts(quota_opts)
 
 
 def _get_default_quotas():

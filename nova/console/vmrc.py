@@ -36,7 +36,7 @@ vmrc_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(vmrc_opts)
+FLAGS.register_opts(vmrc_opts)
 
 
 class VMRCConsole(object):

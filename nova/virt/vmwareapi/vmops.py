@@ -43,7 +43,7 @@ vmware_vif_driver_opt = cfg.StrOpt('vmware_vif_driver',
         help='The VMWare VIF driver to configure the VIFs.')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(vmware_vif_driver_opt)
+FLAGS.register_opt(vmware_vif_driver_opt)
 
 LOG = logging.getLogger("nova.virt.vmwareapi.vmops")
 

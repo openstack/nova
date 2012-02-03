@@ -55,7 +55,7 @@ delete_exchange_opt = \
                 help='delete nova exchange too.')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(delete_exchange_opt)
+FLAGS.register_cli_opt(delete_exchange_opt)
 
 
 def delete_exchange(exch):

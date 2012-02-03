@@ -28,7 +28,7 @@ db_driver_opt = cfg.StrOpt('db_driver',
                            help='driver to use for database access')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(db_driver_opt)
+FLAGS.register_opt(db_driver_opt)
 
 
 class Base(object):

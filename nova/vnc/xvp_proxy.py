@@ -47,7 +47,7 @@ xvp_proxy_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(xvp_proxy_opts)
+FLAGS.register_opts(xvp_proxy_opts)
 
 flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
 

@@ -71,9 +71,9 @@ db_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(db_opts)
+FLAGS.register_opts(db_opts)
 
-IMPL = utils.LazyPluggable(FLAGS['db_backend'],
+IMPL = utils.LazyPluggable('db_backend',
                            sqlalchemy='nova.db.sqlalchemy.api')
 
 
