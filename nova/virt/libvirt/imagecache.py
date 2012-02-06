@@ -52,6 +52,7 @@ imagecache_opts = [
                     'removed'),
     ]
 
+flags.DECLARE('instances_path', 'nova.compute.manager')
 FLAGS = flags.FLAGS
 FLAGS.add_options(imagecache_opts)
 
