@@ -338,6 +338,14 @@ global_opts = [
     cfg.StrOpt('osapi_path',
                default='/v1.1/',
                help='suffix for openstack'),
+    cfg.StrOpt('osapi_compute_link_prefix',
+               default=None,
+               help='Base URL that will be presented to users in links '
+                    'to the Openstack Compute API'),
+    cfg.StrOpt('osapi_glance_link_prefix',
+               default=None,
+               help='Base URL that will be presented to users in links '
+                    'to glance resources'),
     cfg.IntOpt('osapi_max_limit',
                default=1000,
                help='max number of items returned in a collection response'),

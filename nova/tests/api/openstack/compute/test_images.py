@@ -26,12 +26,16 @@ from lxml import etree
 import stubout
 import webob
 
+from nova import flags
 from nova.api.openstack.compute import images
 from nova.api.openstack.compute.views import images as images_view
 from nova.api.openstack import xmlutil
 from nova import test
 from nova import utils
 from nova.tests.api.openstack import fakes
+
+
+FLAGS = flags.FLAGS
 
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -115,6 +119,60 @@ class ImagesControllerTest(test.TestCase):
             },
         }
 
+        self.assertDictMatch(expected_image, actual_image)
+
+    def test_get_image_with_custom_prefix(self):
+        self.flags(osapi_compute_link_prefix='http://zoo.com:42',
+                   osapi_glance_link_prefix='http://circus.com:34')
+        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
+        actual_image = self.controller.show(fake_req, '124')
+        href = "http://zoo.com:42/v2/fake/images/124"
+        bookmark = "http://zoo.com:42/fake/images/124"
+        alternate = "http://circus.com:34/fake/images/124"
+        server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
+        server_href = "http://localhost/v2/servers/" + server_uuid
+        server_bookmark = "http://localhost/servers/" + server_uuid
+
+        expected_image = {
+            "image": {
+                "id": "124",
+                "name": "queued snapshot",
+                "updated": NOW_API_FORMAT,
+                "created": NOW_API_FORMAT,
+                "status": "SAVING",
+                "progress": 25,
+                "minDisk": 0,
+                "minRam": 0,
+                'server': {
+                    'id': server_uuid,
+                    "links": [{
+                        "rel": "self",
+                        "href": server_href,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": server_bookmark,
+                    }],
+                },
+                "metadata": {
+                    "instance_uuid": server_uuid,
+                    "user_id": "fake",
+                },
+                "links": [{
+                    "rel": "self",
+                    "href": href,
+                },
+                {
+                    "rel": "bookmark",
+                    "href": bookmark,
+                },
+                {
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image",
+                    "href": alternate
+                }],
+            },
+        }
         self.assertDictMatch(expected_image, actual_image)
 
     def test_get_image_404(self):
