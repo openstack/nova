@@ -48,8 +48,8 @@ class RequestTest(test.TestCase):
         self.assertEqual(result, "application/json")
 
         request = wsgi.Request.blank('/tests/123')
-        request.headers["Accept"] = \
-            "application/json; q=0.3, application/xml; q=0.9"
+        request.headers["Accept"] = ("application/json; q=0.3, "
+                                     "application/xml; q=0.9")
         result = request.best_match_content_type()
         self.assertEqual(result, "application/xml")
 

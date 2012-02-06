@@ -121,8 +121,8 @@ class IptablesManagerTestCase(test.TestCase):
                         "nova-postouting-bottom: %s" % last_postrouting_line)
 
         for chain in ['POSTROUTING', 'PREROUTING', 'OUTPUT']:
-            self.assertTrue('-A %s -j runner.py-%s' \
-                            % (chain, chain) in new_lines,
+            self.assertTrue('-A %s -j runner.py-%s' %
+                            (chain, chain) in new_lines,
                             "Built-in chain %s not wrapped" % (chain,))
 
     def test_filter_rules(self):
@@ -157,6 +157,6 @@ class IptablesManagerTestCase(test.TestCase):
                         "nova-filter-top does not jump to wrapped local chain")
 
         for chain in ['INPUT', 'OUTPUT', 'FORWARD']:
-            self.assertTrue('-A %s -j runner.py-%s' \
-                            % (chain, chain) in new_lines,
+            self.assertTrue('-A %s -j runner.py-%s' %
+                            (chain, chain) in new_lines,
                             "Built-in chain %s not wrapped" % (chain,))

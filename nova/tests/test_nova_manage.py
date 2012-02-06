@@ -172,9 +172,9 @@ class NetworkCommandsTestCase(test.TestCase):
         self.commands.list()
         sys.stdout = sys.__stdout__
         result = output.getvalue()
-        _fmt = "%(id)-5s\t%(cidr)-18s\t%(cidr_v6)-15s\t%(dhcp_start)-15s\t" +\
-               "%(dns1)-15s\t%(dns2)-15s\t%(vlan)-15s\t%(project_id)-15s\t" +\
-               "%(uuid)-15s"
+        _fmt = "\t".join(["%(id)-5s", "%(cidr)-18s", "%(cidr_v6)-15s",
+                          "%(dhcp_start)-15s", "%(dns1)-15s", "%(dns2)-15s",
+                          "%(vlan)-15s", "%(project_id)-15s", "%(uuid)-15s"])
         head = _fmt % {'id': _('id'),
                        'cidr': _('IPv4'),
                        'cidr_v6': _('IPv6'),

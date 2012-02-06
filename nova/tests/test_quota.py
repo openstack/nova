@@ -59,8 +59,8 @@ class QuotaTestCase(test.TestCase):
 
         def rpc_call_wrapper(context, topic, msg):
             """Stub out the scheduler creating the instance entry"""
-            if topic == FLAGS.scheduler_topic and \
-                    msg['method'] == 'run_instance':
+            if (topic == FLAGS.scheduler_topic and
+                msg['method'] == 'run_instance'):
                 scheduler = scheduler_driver.Scheduler
                 instance = scheduler().create_instance_db_entry(
                         context,

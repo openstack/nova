@@ -95,9 +95,9 @@ class DomainReadWriteTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(__builtin__, 'open')
         try:
-            open('/tftpboot/test_fake_dom_file', 'r').AndRaise(\
-            IOError(2, 'No such file or directory',
-                       '/tftpboot/test_fake_dom_file'))
+            open('/tftpboot/test_fake_dom_file',
+                 'r').AndRaise(IOError(2, 'No such file or directory',
+                                       '/tftpboot/test_fake_dom_file'))
 
             self.mox.ReplayAll()
 
@@ -128,8 +128,8 @@ class DomainReadWriteTestCase(test.TestCase):
             # Python object as expected_json
             # We can't do an exact string comparison
             # because of ordering and whitespace
-            mock_file.write(mox.Func(functools.partial(self.assertJSONEquals,\
-                expected_json)))
+            mock_file.write(mox.Func(functools.partial(self.assertJSONEquals,
+                                                       expected_json)))
             mock_file.close()
 
             self.mox.ReplayAll()
@@ -236,8 +236,8 @@ class BareMetalDomTestCase(test.TestCase):
         self.mox.StubOutWithMock(dom, 'write_domains')
 
         # Expected calls
-        dom.read_domains('/tftpboot/test_fake_dom_file')\
-            .AndReturn(fake_domains)
+        dom.read_domains('/tftpboot/'
+                         'test_fake_dom_file').AndReturn(fake_domains)
         dom.write_domains('/tftpboot/test_fake_dom_file', fake_domains)
 
         self.mox.ReplayAll()
@@ -274,8 +274,8 @@ class ProxyBareMetalTestCase(test.TestCase):
         self.mox.StubOutWithMock(dom, 'write_domains')
 
         # Expected calls
-        dom.read_domains('/tftpboot/test_fake_dom_file')\
-            .AndReturn(fake_domains)
+        dom.read_domains('/tftpboot/'
+                         'test_fake_dom_file').AndReturn(fake_domains)
         dom.write_domains('/tftpboot/test_fake_dom_file', fake_domains)
 
         self.mox.ReplayAll()

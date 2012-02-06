@@ -406,8 +406,8 @@ class FakeAuthManager(object):
 
     def create_project(self, name, manager_user, description=None,
                        member_users=None):
-        member_ids = [User.safe_id(m) for m in member_users] \
-                     if member_users else []
+        member_ids = ([User.safe_id(m) for m in member_users]
+                      if member_users else [])
         p = Project(name, name, User.safe_id(manager_user),
                                  description, member_ids)
         FakeAuthManager.projects[name] = p

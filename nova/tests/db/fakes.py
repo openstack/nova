@@ -100,9 +100,9 @@ def stub_out_db_network_api(stubs):
     networks = [network_fields]
 
     def fake_floating_ip_allocate_address(context, project_id, pool):
-        ips = filter(lambda i: i['fixed_ip_id'] is None \
-                           and i['project_id'] is None \
-                           and i['pool'] == pool,
+        ips = filter(lambda i: i['fixed_ip_id'] is None and
+                               i['project_id'] is None and
+                               i['pool'] == pool,
                      floating_ips)
         if not ips:
             raise exception.NoMoreFloatingIps()
@@ -169,9 +169,8 @@ def stub_out_db_network_api(stubs):
         ips[0]['instance_id'] = instance_id
 
     def fake_fixed_ip_associate_pool(context, network_id, instance_id):
-        ips = filter(lambda i: (i['network_id'] == network_id \
-                             or i['network_id'] is None) \
-                            and not i['instance'],
+        ips = filter(lambda i: (i['network_id'] == network_id or
+                                i['network_id'] is None) and not i['instance'],
                      fixed_ips)
         if not ips:
             raise exception.NoMoreFixedIps()
@@ -243,7 +242,7 @@ def stub_out_db_network_api(stubs):
         return FakeModel(vif)
 
     def fake_virtual_interface_delete_by_instance(context, instance_id):
-        addresses = [m for m in virtual_interfacees \
+        addresses = [m for m in virtual_interfacees
                      if m['instance_id'] == instance_id]
         try:
             for address in addresses:
@@ -252,13 +251,13 @@ def stub_out_db_network_api(stubs):
             pass
 
     def fake_virtual_interface_get_by_instance(context, instance_id):
-        return [FakeModel(m) for m in virtual_interfacees \
+        return [FakeModel(m) for m in virtual_interfacees
                 if m['instance_id'] == instance_id]
 
     def fake_virtual_interface_get_by_instance_and_network(context,
                                                            instance_id,
                                                            network_id):
-        vif = filter(lambda m: m['instance_id'] == instance_id and \
+        vif = filter(lambda m: m['instance_id'] == instance_id and
                                m['network_id'] == network_id,
                      virtual_interfacees)
         if not vif:
@@ -302,7 +301,7 @@ def stub_out_db_network_api(stubs):
                 net[key] = values[key]
 
     def fake_project_get_networks(context, project_id):
-        return [FakeModel(n) for n in networks \
+        return [FakeModel(n) for n in networks
                 if n['project_id'] == project_id]
 
     def fake_queue_get_for(context, topic, node):

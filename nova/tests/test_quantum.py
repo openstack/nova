@@ -465,8 +465,8 @@ class QuantumNovaPortSecurityTestCase(QuantumNovaTestCase):
             self.assertTrue(pairs[0]['mac_address'] == fake_mac)
             self.net_man.q_conn.create_and_attach_port = oldfunc
             return oldfunc(tenant_id, net_id, interface_id, **kwargs)
-        self.net_man.q_conn.create_and_attach_port = \
-            _instrumented_create_and_attach_port
+        _port_attach = _instrumented_create_and_attach_port
+        self.net_man.q_conn.create_and_attach_port = _port_attach
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
                         rxtx_factor=3,
@@ -500,8 +500,8 @@ class QuantumNovaPortSecurityTestCase(QuantumNovaTestCase):
             self.assertTrue(len(pairs) == 0)
             self.net_man.q_conn.create_and_attach_port = oldfunc
             return oldfunc(tenant_id, net_id, interface_id, **kwargs)
-        self.net_man.q_conn.create_and_attach_port = \
-            _instrumented_create_and_attach_port
+        _port_attach = _instrumented_create_and_attach_port
+        self.net_man.q_conn.create_and_attach_port = _port_attach
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
                         rxtx_factor=3,

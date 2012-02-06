@@ -229,69 +229,69 @@ class CreateserverextTest(test.TestCase):
     def _create_instance_with_networks_json(self, networks):
         body_dict = self._create_networks_request_dict(networks)
         request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
+        _create_inst = self._run_create_instance_with_mock_compute_api
+        compute_api, response = _create_inst(request)
         return request, response, compute_api.networks
 
     def _create_instance_with_user_data_json(self, networks):
         body_dict = self._create_user_data_request_dict(networks)
         request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
+        _create_inst = self._run_create_instance_with_mock_compute_api
+        compute_api, response = _create_inst(request)
         return request, response, compute_api.user_data
 
     def _create_instance_with_networks_xml(self, networks):
         body_dict = self._create_networks_request_dict(networks)
         request = self._get_create_request_xml(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
+        _create_inst = self._run_create_instance_with_mock_compute_api
+        compute_api, response = _create_inst(request)
         return request, response, compute_api.networks
 
     def test_create_instance_with_no_networks(self):
-        request, response, networks = \
-                self._create_instance_with_networks_json(networks=None)
+        _create_inst = self._create_instance_with_networks_json
+        request, response, networks = _create_inst(networks=None)
         self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, None)
 
     def test_create_instance_with_no_networks_xml(self):
-        request, response, networks = \
-                self._create_instance_with_networks_xml(networks=None)
+        _create_inst = self._create_instance_with_networks_xml
+        request, response, networks = _create_inst(networks=None)
         self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, None)
 
     def test_create_instance_with_one_network(self):
-        request, response, networks = \
-            self._create_instance_with_networks_json([FAKE_NETWORKS[0]])
+        _create_inst = self._create_instance_with_networks_json
+        request, response, networks = _create_inst([FAKE_NETWORKS[0]])
         self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, [FAKE_NETWORKS[0]])
 
     def test_create_instance_with_one_network_xml(self):
-        request, response, networks = \
-            self._create_instance_with_networks_xml([FAKE_NETWORKS[0]])
+        _create_inst = self._create_instance_with_networks_xml
+        request, response, networks = _create_inst([FAKE_NETWORKS[0]])
         self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, [FAKE_NETWORKS[0]])
 
     def test_create_instance_with_two_networks(self):
-        request, response, networks = \
-            self._create_instance_with_networks_json(FAKE_NETWORKS)
+        _create_inst = self._create_instance_with_networks_json
+        request, response, networks = _create_inst(FAKE_NETWORKS)
         self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, FAKE_NETWORKS)
 
     def test_create_instance_with_two_networks_xml(self):
-        request, response, networks = \
-            self._create_instance_with_networks_xml(FAKE_NETWORKS)
+        _create_inst = self._create_instance_with_networks_xml
+        request, response, networks = _create_inst(FAKE_NETWORKS)
         self.assertEquals(response.status_int, 202)
         self.assertEquals(networks, FAKE_NETWORKS)
 
     def test_create_instance_with_duplicate_networks(self):
-        request, response, networks = \
-            self._create_instance_with_networks_json(DUPLICATE_NETWORKS)
+        _create_inst = self._create_instance_with_networks_json
+        request, response, networks = _create_inst(DUPLICATE_NETWORKS)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(networks, None)
 
     def test_create_instance_with_duplicate_networks_xml(self):
-        request, response, networks = \
-            self._create_instance_with_networks_xml(DUPLICATE_NETWORKS)
+        _create_inst = self._create_instance_with_networks_xml
+        request, response, networks = _create_inst(DUPLICATE_NETWORKS)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(networks, None)
 
@@ -299,8 +299,8 @@ class CreateserverextTest(test.TestCase):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
         del body_dict['server']['networks'][0]['uuid']
         request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
+        _run_create_inst = self._run_create_instance_with_mock_compute_api
+        compute_api, response = _run_create_inst(request)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(compute_api.networks, None)
 
@@ -309,41 +309,41 @@ class CreateserverextTest(test.TestCase):
         request = self._get_create_request_xml(body_dict)
         uuid = ' uuid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"'
         request.body = request.body.replace(uuid, '')
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
+        _run_create_inst = self._run_create_instance_with_mock_compute_api
+        compute_api, response = _run_create_inst(request)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(compute_api.networks, None)
 
     def test_create_instance_with_network_invalid_id(self):
-        request, response, networks = \
-            self._create_instance_with_networks_json(INVALID_NETWORKS)
+        _create_inst = self._create_instance_with_networks_json
+        request, response, networks = _create_inst(INVALID_NETWORKS)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(networks, None)
 
     def test_create_instance_with_network_invalid_id_xml(self):
-        request, response, networks = \
-            self._create_instance_with_networks_xml(INVALID_NETWORKS)
+        _create_inst = self._create_instance_with_networks_xml
+        request, response, networks = _create_inst(INVALID_NETWORKS)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(networks, None)
 
     def test_create_instance_with_network_empty_fixed_ip(self):
         networks = [('1', '')]
-        request, response, networks = \
-            self._create_instance_with_networks_json(networks)
+        _create_inst = self._create_instance_with_networks_json
+        request, response, networks = _create_inst(networks)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(networks, None)
 
     def test_create_instance_with_network_non_string_fixed_ip(self):
         networks = [('1', 12345)]
-        request, response, networks = \
-            self._create_instance_with_networks_json(networks)
+        _create_inst = self._create_instance_with_networks_json
+        request, response, networks = _create_inst(networks)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(networks, None)
 
     def test_create_instance_with_network_empty_fixed_ip_xml(self):
         networks = [('1', '')]
-        request, response, networks = \
-            self._create_instance_with_networks_xml(networks)
+        _create_inst = self._create_instance_with_networks_xml
+        request, response, networks = _create_inst(networks)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(networks, None)
 
@@ -351,8 +351,8 @@ class CreateserverextTest(test.TestCase):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
         del body_dict['server']['networks'][0]['fixed_ip']
         request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
+        _run_create_inst = self._run_create_instance_with_mock_compute_api
+        compute_api, response = _run_create_inst(request)
         self.assertEquals(response.status_int, 202)
         self.assertEquals(compute_api.networks,
                           [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
@@ -361,8 +361,8 @@ class CreateserverextTest(test.TestCase):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
         request = self._get_create_request_xml(body_dict)
         request.body = request.body.replace(' fixed_ip="10.0.1.12"', '')
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
+        _run_create_inst = self._run_create_instance_with_mock_compute_api
+        compute_api, response = _run_create_inst(request)
         self.assertEquals(response.status_int, 202)
         self.assertEquals(compute_api.networks,
                           [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
@@ -370,22 +370,22 @@ class CreateserverextTest(test.TestCase):
     def test_create_instance_with_userdata(self):
         user_data_contents = '#!/bin/bash\necho "Oh no!"\n'
         user_data_contents = base64.b64encode(user_data_contents)
-        request, response, user_data = \
-                self._create_instance_with_user_data_json(user_data_contents)
+        _create_inst = self._create_instance_with_user_data_json
+        request, response, user_data = _create_inst(user_data_contents)
         self.assertEquals(response.status_int, 202)
         self.assertEquals(user_data, user_data_contents)
 
     def test_create_instance_with_userdata_none(self):
         user_data_contents = None
-        request, response, user_data = \
-                self._create_instance_with_user_data_json(user_data_contents)
+        _create_inst = self._create_instance_with_user_data_json
+        request, response, user_data = _create_inst(user_data_contents)
         self.assertEquals(response.status_int, 202)
         self.assertEquals(user_data, user_data_contents)
 
     def test_create_instance_with_userdata_with_non_b64_content(self):
         user_data_contents = '#!/bin/bash\necho "Oh no!"\n'
-        request, response, user_data = \
-                self._create_instance_with_user_data_json(user_data_contents)
+        _create_inst = self._create_instance_with_user_data_json
+        request, response, user_data = _create_inst(user_data_contents)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(user_data, None)
 
@@ -398,8 +398,8 @@ class CreateserverextTest(test.TestCase):
         self._setup_mock_network_api()
         body_dict = self._create_security_group_request_dict(security_groups)
         request = self._get_create_request_json(body_dict)
-        compute_api, response = \
-            self._run_create_instance_with_mock_compute_api(request)
+        _run_create_inst = self._run_create_instance_with_mock_compute_api
+        compute_api, response = _run_create_inst(request)
         self.assertEquals(response.status_int, 202)
 
     def test_get_server_by_id_verify_security_groups_json(self):

@@ -74,8 +74,8 @@ orig_rpc_cast = rpc.cast
 
 def rpc_call_wrapper(context, topic, msg, do_cast=True):
     """Stub out the scheduler creating the instance entry"""
-    if topic == FLAGS.scheduler_topic and \
-            msg['method'] == 'run_instance':
+    if (topic == FLAGS.scheduler_topic and
+        msg['method'] == 'run_instance'):
         request_spec = msg['args']['request_spec']
         scheduler = scheduler_driver.Scheduler
         num_instances = request_spec.get('num_instances', 1)
@@ -892,11 +892,11 @@ class ComputeTestCase(BaseTestCase):
                        fake_get_nw_info)
         self.mox.StubOutWithMock(self.compute.network_api,
                                  "allocate_for_instance")
-        self.compute.network_api.allocate_for_instance(mox.IgnoreArg(),
-                                                       mox.IgnoreArg(),
-                                                       requested_networks=None,
-                                                       vpn=False).\
-            AndRaise(quantum_client.QuantumServerException())
+        self.compute.network_api.allocate_for_instance(
+                mox.IgnoreArg(),
+                mox.IgnoreArg(),
+                requested_networks=None,
+                vpn=False).AndRaise(quantum_client.QuantumServerException())
 
         self.flags(stub_network=False)
 
@@ -918,9 +918,9 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
 
         self.mox.StubOutWithMock(self.compute, "_setup_block_device_mapping")
-        self.compute._setup_block_device_mapping(mox.IgnoreArg(),
-                                                 mox.IgnoreArg()).\
-            AndRaise(rpc.common.RemoteError('', '', ''))
+        self.compute._setup_block_device_mapping(
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(rpc.common.RemoteError('', '', ''))
 
         self.mox.ReplayAll()
 
@@ -1339,11 +1339,12 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'get_instance_disk_info')
         self.compute.driver.get_instance_disk_info(inst_ref.name)
 
-        rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': instance_id,
-                                     'block_migration': True,
-                                     'disk': None}}).\
-                            AndRaise(rpc.common.RemoteError('', '', ''))
+        rpc.call(c, topic,
+                 {"method": "pre_live_migration",
+                  "args": {'instance_id': instance_id,
+                           'block_migration': True,
+                           'disk': None}
+                 }).AndRaise(rpc.common.RemoteError('', '', ''))
         # mocks for rollback
         rpc.call(c, topic, {"method": "remove_volume_connection",
                             "args": {'instance_id': instance_id,

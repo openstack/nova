@@ -83,17 +83,17 @@ class TgtAdmTestCase(test.TestCase, TargetAdminTestCase):
         super(TgtAdmTestCase, self).setUp()
         TargetAdminTestCase.setUp(self)
         self.flags(iscsi_helper='tgtadm')
-        self.script_template = """
-tgtadm --op new --lld=iscsi --mode=target --tid=%(tid)s \
---targetname=%(target_name)s
-tgtadm --op bind --lld=iscsi --mode=target --initiator-address=ALL \
---tid=%(tid)s
-tgtadm --op show --lld=iscsi --mode=target --tid=%(tid)s
-tgtadm --op new --lld=iscsi --mode=logicalunit --tid=%(tid)s --lun=%(lun)d \
---backing-store=%(path)s
-tgtadm --op delete --lld=iscsi --mode=logicalunit --tid=%(tid)s --lun=%(lun)d
-tgtadm --op delete --lld=iscsi --mode=target --tid=%(tid)s
-"""
+        self.script_template = "\n".join([
+        "tgtadm --op new --lld=iscsi --mode=target --tid=%(tid)s "
+                "--targetname=%(target_name)s",
+        "tgtadm --op bind --lld=iscsi --mode=target --initiator-address=ALL "
+                "--tid=%(tid)s",
+        "tgtadm --op show --lld=iscsi --mode=target --tid=%(tid)s",
+        "tgtadm --op new --lld=iscsi --mode=logicalunit --tid=%(tid)s "
+                "--lun=%(lun)d --backing-store=%(path)s",
+        "tgtadm --op delete --lld=iscsi --mode=logicalunit --tid=%(tid)s "
+                "--lun=%(lun)d",
+        "tgtadm --op delete --lld=iscsi --mode=target --tid=%(tid)s"])
 
     def get_script_params(self):
         params = super(TgtAdmTestCase, self).get_script_params()
@@ -107,10 +107,10 @@ class IetAdmTestCase(test.TestCase, TargetAdminTestCase):
         super(IetAdmTestCase, self).setUp()
         TargetAdminTestCase.setUp(self)
         self.flags(iscsi_helper='ietadm')
-        self.script_template = """
-ietadm --op new --tid=%(tid)s --params Name=%(target_name)s
-ietadm --op show --tid=%(tid)s
-ietadm --op new --tid=%(tid)s --lun=%(lun)d --params Path=%(path)s,Type=fileio
-ietadm --op delete --tid=%(tid)s --lun=%(lun)d
-ietadm --op delete --tid=%(tid)s
-"""
+        self.script_template = "\n".join([
+        "ietadm --op new --tid=%(tid)s --params Name=%(target_name)s",
+        "ietadm --op show --tid=%(tid)s",
+        "ietadm --op new --tid=%(tid)s --lun=%(lun)d "
+                "--params Path=%(path)s,Type=fileio",
+        "ietadm --op delete --tid=%(tid)s --lun=%(lun)d",
+        "ietadm --op delete --tid=%(tid)s"])
