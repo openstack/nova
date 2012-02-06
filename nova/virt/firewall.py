@@ -135,7 +135,7 @@ class IptablesFirewallDriver(FirewallDriver):
         self.instances[instance['id']] = instance
         self.network_infos[instance['id']] = network_info
         self.add_filters_for_instance(instance)
-        LOG.debug(_('Filters added to the instance: %r'), instance)
+        LOG.debug(_('Filters added to instance %s'), instance['uuid'])
         self.refresh_provider_fw_rules()
         LOG.debug(_('Provider Firewall Rules refreshed'))
         self.iptables.apply()
