@@ -117,18 +117,21 @@ class QuantumClientConnection(object):
         """Given a tenant and network, search for the port UUID that
            has the specified interface-id attachment.
         """
-        # FIXME(danwent): this will be inefficient until the Quantum
-        # API implements querying a port by the interface-id
-        port_list_resdict = self.client.list_ports(net_id, tenant=tenant_id)
-        for p in port_list_resdict["ports"]:
-            port_id = p["id"]
-            port_get_resdict = self.client.show_port_attachment(net_id,
-                                port_id, tenant=tenant_id)
-            # Skip ports without an attachment
-            if "id" not in port_get_resdict["attachment"]:
-                continue
-            if attachment_id == port_get_resdict["attachment"]["id"]:
-                return port_id
+        port_list = []
+        try:
+            port_list_resdict = self.client.list_ports(net_id,
+                tenant=tenant_id,
+                filter_ops={'attachment': attachment_id})
+            port_list = port_list_resdict["ports"]
+        except quantum_client.QuantumNotFoundException:
+            return None
+
+        port_list_len = len(port_list)
+        if port_list_len != 1:
+            LOG.error("Expected single port with attachment "
+                 "%(attachment_id)s, found %(port_list_len)s" % locals())
+        if port_list_len >= 1:
+            return port_list[0]['id']
         return None
 
     def get_attached_ports(self, tenant_id, network_id):
