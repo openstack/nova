@@ -46,7 +46,8 @@ class QuotaTestCase(test.TestCase):
                    quota_cores=4,
                    quota_volumes=2,
                    quota_gigabytes=20,
-                   quota_floating_ips=1)
+                   quota_floating_ips=1,
+                   network_manager='nova.network.manager.FlatDHCPManager')
 
         self.network = self.network = self.start_service('network')
         self.user_id = 'admin'

@@ -2088,10 +2088,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                 return
 
             for usage in bw_usage:
-                vif = usage['virtual_interface']
+                mac = usage['mac_address']
+                vif = self.network_api.get_vif_by_mac_address(context, mac)
+                if not vif:
+                    continue
+
                 self.db.bw_usage_update(context,
-                                        vif.instance_id,
-                                        vif.network.label,
+                                        vif['instance_id'],
+                                        mac,
                                         start_time,
                                         usage['bw_in'], usage['bw_out'])
 

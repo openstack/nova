@@ -190,6 +190,15 @@ class BaseTestCase(test.TestCase):
 
 
 class ComputeTestCase(BaseTestCase):
+    def setUp(self):
+        def fake_get_nw_info(cls, ctxt, instance):
+            self.assertTrue(ctxt.is_admin)
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                          spectacular=True)
+
+        super(ComputeTestCase, self).setUp()
+        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+                       fake_get_nw_info)
 
     def test_wrap_instance_fault(self):
         inst_uuid = "fake_uuid"
@@ -966,29 +975,44 @@ class ComputeTestCase(BaseTestCase):
     def test_finish_resize(self):
         """Contrived test to ensure finish_resize doesn't raise anything"""
 
+        nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
+                                                         spectacular=True)
+
         def fake(*args, **kwargs):
             pass
 
+        def fake_nw_info(*args, **kwargs):
+            return nw_info
+
+        # NOTE(jkoelker) There is a bit of a stubbing issue here.
+        #                fake_network stubs out a bunch of stuff which
+        #                this functional test expects to be acting on
+        #                the db or the stubs it sets.
+        self.stubs.UnsetAll()
+        self.stubs.SmartUnsetAll()
+        self.setUp()
+
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
-        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
+        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info',
+                       fake_nw_info)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          func=fake_nw_info)
         context = self.context.elevated()
+
         instance = self._create_fake_instance()
         self.compute.prep_resize(context, instance['uuid'], 1,
                                  filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
-        try:
-            self.compute.finish_resize(context, instance['uuid'],
-                    int(migration_ref['id']), {})
-        except KeyError, e:
-            # Only catch key errors. We want other reasons for the test to
-            # fail to actually error out so we don't obscure anything
-            self.fail()
-
+        self.compute.finish_resize(context, instance['uuid'],
+                                   int(migration_ref['id']), {})
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_finish_resize_handles_error(self):
         """Make sure we don't leave the instance in RESIZE on error"""
+
+        nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
+                                                         spectacular=True)
 
         def throw_up(*args, **kwargs):
             raise Exception()
@@ -996,8 +1020,21 @@ class ComputeTestCase(BaseTestCase):
         def fake(*args, **kwargs):
             pass
 
+        def fake_nw_info(*args, **kwargs):
+            return nw_info
+
+        # NOTE(jkoelker) There is a bit of a stubbing issue here.
+        #                fake_network stubs out a bunch of stuff which
+        #                this functional test expects to be acting on
+        #                the db or the stubs it sets.
+        self.stubs.UnsetAll()
+        self.stubs.SmartUnsetAll()
+        self.setUp()
+
         self.stubs.Set(self.compute.driver, 'finish_migration', throw_up)
         self.stubs.Set(self.compute.network_api, 'get_instance_nw_info', fake)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          func=fake_nw_info)
         context = self.context.elevated()
         instance = self._create_fake_instance()
         self.compute.prep_resize(context, instance['uuid'], 1,
@@ -1123,12 +1160,31 @@ class ComputeTestCase(BaseTestCase):
 
     def test_finish_revert_resize(self):
         """Ensure that the flavor is reverted to the original on revert"""
-        context = self.context.elevated()
-        instance = self._create_fake_instance()
-        instance_uuid = instance['uuid']
+        nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
+                                                         spectacular=True)
 
         def fake(*args, **kwargs):
             pass
+
+        def fake_nw_info(*args, **kwargs):
+            return nw_info
+
+        # NOTE(jkoelker) There is a bit of a stubbing issue here.
+        #                fake_network stubs out a bunch of stuff which
+        #                this functional test expects to be acting on
+        #                the db or the stubs it sets.
+        self.stubs.UnsetAll()
+        self.stubs.SmartUnsetAll()
+        self.setUp()
+
+        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info',
+                       fake_nw_info)
+        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
+                                                          func=fake_nw_info)
+
+        context = self.context.elevated()
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
 
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
         self.stubs.Set(self.compute.driver, 'finish_revert_migration', fake)
@@ -1450,7 +1506,14 @@ class ComputeTestCase(BaseTestCase):
 class ComputeAPITestCase(BaseTestCase):
 
     def setUp(self):
+        def fake_get_nw_info(cls, ctxt, instance):
+            self.assertTrue(ctxt.is_admin)
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
+                                                          spectacular=True)
+
         super(ComputeAPITestCase, self).setUp()
+        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+                       fake_get_nw_info)
         self.compute_api = compute.API()
         self.fake_image = {
             'id': 1,
@@ -2267,16 +2330,8 @@ class ComputeAPITestCase(BaseTestCase):
                                           fixed_address):
             called['associate'] = True
 
-        def fake_get_nw_info(cls, ctxt, instance):
-            self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
-                                                          spectacular=True)
-
         self.stubs.Set(nova.network.API, 'associate_floating_ip',
                        fake_associate_ip_network_api)
-
-        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
-                       fake_get_nw_info)
 
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
@@ -2995,12 +3050,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(self.compute_api.get_lock(self.context, instance))
 
     def test_add_remove_security_group(self):
-        def fake_get_nw_info(cls, ctxt, instance):
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
-                                                          spectacular=True)
-
-        self.stubs.Set(nova.network.API, 'get_instance_nw_info',
-                       fake_get_nw_info)
         instance = self._create_fake_instance()
 
         self.compute.run_instance(self.context, instance['uuid'])

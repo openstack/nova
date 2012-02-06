@@ -3710,7 +3710,7 @@ def bw_usage_get_all_by_filters(context, filters):
 @require_context
 def bw_usage_update(context,
                     instance_id,
-                    network_label,
+                    mac,
                     start_period,
                     bw_in, bw_out,
                     session=None):
@@ -3722,14 +3722,14 @@ def bw_usage_update(context,
                               read_deleted="yes").\
                       filter_by(instance_id=instance_id).\
                       filter_by(start_period=start_period).\
-                      filter_by(network_label=network_label).\
+                      filter_by(mac=mac).\
                       first()
 
         if not bwusage:
             bwusage = models.BandwidthUsage()
             bwusage.instance_id = instance_id
             bwusage.start_period = start_period
-            bwusage.network_label = network_label
+            bwusage.mac = mac
 
         bwusage.last_refreshed = utils.utcnow()
         bwusage.bw_in = bw_in

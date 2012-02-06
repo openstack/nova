@@ -1476,6 +1476,11 @@ class NetworkManager(manager.SchedulerDependentManager):
         fixed = self.db.fixed_ip_get(context, id)
         return dict(fixed.iteritems())
 
+    def get_vif_by_mac_address(self, context, mac_address):
+        """Returns the vifs record for the mac_address"""
+        return self.db.virtual_interface_get_by_address(context,
+                                                        mac_address)
+
 
 class FlatManager(NetworkManager):
     """Basic network where no vlans are used.

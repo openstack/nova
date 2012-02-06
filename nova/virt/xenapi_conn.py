@@ -328,13 +328,9 @@ class XenAPIConnection(driver.ComputeDriver):
         for iusage in self._vmops.get_all_bw_usage(start_time, stop_time).\
                       values():
             for macaddr, usage in iusage.iteritems():
-                vi = db.virtual_interface_get_by_address(
-                                    context.get_admin_context(),
-                                    macaddr)
-                if vi:
-                    bwusage.append(dict(virtual_interface=vi,
-                                        bw_in=usage['bw_in'],
-                                        bw_out=usage['bw_out']))
+                bwusage.append(dict(mac_address=macaddr,
+                                    bw_in=usage['bw_in'],
+                                    bw_out=usage['bw_out']))
         return bwusage
 
     def get_console_output(self, instance):
