@@ -69,6 +69,9 @@ class ImageCacheManagerTestCase(test.TestCase):
                    'e97222e91fc4241f49a7f520d1dcf446751129b3_sm',
                    'e09c675c2d1cfac32dae3c2d83689c8c94bc693b_sm',
                    'e97222e91fc4241f49a7f520d1dcf446751129b3',
+                   '17d1b00b81642842e514494a78e804e9a511637c',
+                   '17d1b00b81642842e514494a78e804e9a511637c_5368709120',
+                   '17d1b00b81642842e514494a78e804e9a511637c_10737418240',
                    '00000004']
 
         self.stubs.Set(os, 'listdir', lambda x: listing)
@@ -78,10 +81,15 @@ class ImageCacheManagerTestCase(test.TestCase):
         image_cache_manager = imagecache.ImageCacheManager()
         image_cache_manager._list_base_images(base_dir)
 
-        self.assertEquals(len(image_cache_manager.unexplained_images), 3)
+        self.assertEquals(len(image_cache_manager.unexplained_images), 6)
 
         expected = os.path.join(base_dir,
                                 'e97222e91fc4241f49a7f520d1dcf446751129b3')
+        self.assertTrue(expected in image_cache_manager.unexplained_images)
+
+        expected = os.path.join(base_dir,
+                                '17d1b00b81642842e514494a78e804e9a511637c_'
+                                '10737418240')
         self.assertTrue(expected in image_cache_manager.unexplained_images)
 
         unexpected = os.path.join(base_dir, '00000004')
@@ -89,6 +97,17 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         for ent in image_cache_manager.unexplained_images:
             self.assertTrue(ent.startswith(base_dir))
+
+        self.assertEquals(len(image_cache_manager.originals), 2)
+
+        expected = os.path.join(base_dir,
+                                '17d1b00b81642842e514494a78e804e9a511637c')
+        self.assertTrue(expected in image_cache_manager.originals)
+
+        unexpected = os.path.join(base_dir,
+                                  '17d1b00b81642842e514494a78e804e9a511637c_'
+                                '10737418240')
+        self.assertFalse(unexpected in image_cache_manager.originals)
 
     def test_list_running_instances(self):
         self.stubs.Set(db, 'instance_get_all',
@@ -117,7 +136,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.assertEqual(image_cache_manager.image_popularity['image-1'], 1)
         self.assertEqual(image_cache_manager.image_popularity['image-2'], 2)
 
-    def test_list_backing_images(self):
+    def test_list_backing_images_small(self):
         self.stubs.Set(os, 'listdir',
                        lambda x: ['_base', 'instance-00000001',
                                   'instance-00000002', 'instance-00000003'])
@@ -128,6 +147,28 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         found = os.path.join(FLAGS.instances_path, '_base',
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
+
+        image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager.unexplained_images = [found]
+
+        inuse_images = image_cache_manager._list_backing_images()
+
+        self.assertEquals(inuse_images, [found])
+        self.assertEquals(len(image_cache_manager.unexplained_images), 0)
+
+    def test_list_backing_images_resized(self):
+        self.stubs.Set(os, 'listdir',
+                       lambda x: ['_base', 'instance-00000001',
+                                  'instance-00000002', 'instance-00000003'])
+        self.stubs.Set(os.path, 'exists',
+                       lambda x: x.find('instance-') != -1)
+        self.stubs.Set(virtutils, 'get_disk_backing_file',
+                       lambda x: ('e97222e91fc4241f49a7f520d1dcf446751129b3_'
+                                  '10737418240'))
+
+        found = os.path.join(FLAGS.instances_path, '_base',
+                             'e97222e91fc4241f49a7f520d1dcf446751129b3_'
+                             '10737418240')
 
         image_cache_manager = imagecache.ImageCacheManager()
         image_cache_manager.unexplained_images = [found]
@@ -148,28 +189,61 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.assertEqual(0, len(res))
 
     def test_find_base_file_small(self):
+        fingerprint = '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a'
         self.stubs.Set(os.path, 'exists',
-                       lambda x: x.endswith('549867354867_sm'))
+                       lambda x: x.endswith('%s_sm' % fingerprint))
 
         base_dir = '/var/lib/nova/instances/_base'
-        fingerprint = '549867354867'
         image_cache_manager = imagecache.ImageCacheManager()
         res = list(image_cache_manager._find_base_file(base_dir, fingerprint))
 
         base_file = os.path.join(base_dir, fingerprint + '_sm')
-        self.assertTrue(res == [(base_file, True)])
+        self.assertTrue(res == [(base_file, True, False)])
 
-    def test_find_base_file_both(self):
-        self.stubs.Set(os.path, 'exists', lambda x: True)
+    def test_find_base_file_resized(self):
+        fingerprint = '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a'
+        listing = ['00000001',
+                   'ephemeral_0_20_None',
+                   '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a_10737418240',
+                   '00000004']
+
+        self.stubs.Set(os, 'listdir', lambda x: listing)
+        self.stubs.Set(os.path, 'exists',
+                       lambda x: x.endswith('%s_10737418240' % fingerprint))
+        self.stubs.Set(os.path, 'isfile', lambda x: True)
 
         base_dir = '/var/lib/nova/instances/_base'
-        fingerprint = '549867354867'
         image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager._list_base_images(base_dir)
+        res = list(image_cache_manager._find_base_file(base_dir, fingerprint))
+
+        base_file = os.path.join(base_dir, fingerprint + '_10737418240')
+        self.assertTrue(res == [(base_file, False, True)])
+
+    def test_find_base_file_all(self):
+        fingerprint = '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a'
+        listing = ['00000001',
+                   'ephemeral_0_20_None',
+                   '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a_sm',
+                   '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a_10737418240',
+                   '00000004']
+
+        self.stubs.Set(os, 'listdir', lambda x: listing)
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        self.stubs.Set(os.path, 'isfile', lambda x: True)
+
+        base_dir = '/var/lib/nova/instances/_base'
+        image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager._list_base_images(base_dir)
         res = list(image_cache_manager._find_base_file(base_dir, fingerprint))
 
         base_file1 = os.path.join(base_dir, fingerprint)
         base_file2 = os.path.join(base_dir, fingerprint + '_sm')
-        self.assertTrue(res == [(base_file1, False), (base_file2, True)])
+        base_file3 = os.path.join(base_dir, fingerprint + '_10737418240')
+        print res
+        self.assertTrue(res == [(base_file1, False, False),
+                                (base_file2, True, False),
+                                (base_file3, False, True)])
 
     def test_verify_checksum(self):
         testdata = ('OpenStack Software delivers a massively scalable cloud '

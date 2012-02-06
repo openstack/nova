@@ -26,6 +26,7 @@ http://wiki.openstack.org/nova-image-cache-management.
 import datetime
 import hashlib
 import os
+import re
 import sys
 import time
 
@@ -46,10 +47,14 @@ imagecache_opts = [
     cfg.BoolOpt('remove_unused_base_images',
                 default=False,
                 help='Should unused base images be removed?'),
-    cfg.IntOpt('remove_unused_minimum_age_seconds',
+    cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
                default=3600,
-               help='Unused base images younger than this will not be '
+               help='Unused resized base images younger than this will not be '
                     'removed'),
+    cfg.IntOpt('remove_unused_original_minimum_age_seconds',
+               default=(24 * 3600),
+               help='Unused unresized base images younger than this will not '
+                    'be removed'),
     ]
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
@@ -75,23 +80,33 @@ def read_stored_checksum(base_file):
 class ImageCacheManager(object):
     def __init__(self):
         self.unexplained_images = []
+        self.originals = []
+
+    def _store_image(self, base_dir, ent, original=False):
+        """Store a base image for later examination."""
+        entpath = os.path.join(base_dir, ent)
+        if os.path.isfile(entpath):
+            self.unexplained_images.append(entpath)
+            if original:
+                self.originals.append(entpath)
 
     def _list_base_images(self, base_dir):
         """Return a list of the images present in _base.
 
+        Determine what images we have on disk. There will be other files in
+        this directory (for example kernels) so we only grab the ones which
+        are the right length to be disk images.
+
         Note that this does not return a value. It instead populates a class
         variable with a list of images that we need to try and explain.
         """
-        # Determine what images we have on disk. There will be other files in
-        # this directory (for example kernels) so we only grab the ones which
-        # are the right length to be disk images.
-        self.unexplained_images = []
         digest_size = hashlib.sha1().digestsize * 2
         for ent in os.listdir(base_dir):
-            if len(ent) == digest_size or len(ent) == digest_size + 3:
-                entpath = os.path.join(base_dir, ent)
-                if os.path.isfile(entpath):
-                    self.unexplained_images.append(entpath)
+            if len(ent) == digest_size:
+                self._store_image(base_dir, ent, original=True)
+
+            elif len(ent) > digest_size + 2 and ent[digest_size] == '_':
+                self._store_image(base_dir, ent, original=False)
 
     def _list_running_instances(self, context):
         """List running instances (on all compute nodes)."""
@@ -144,19 +159,29 @@ class ImageCacheManager(object):
     def _find_base_file(self, base_dir, fingerprint):
         """Find the base file matching this fingerprint.
 
-        Yields the name of the base file, and a boolean which is True if
-        the image is "small". Note that is is possible for more than one
-        yield to result from this check.
+        Yields the name of the base file, a boolean which is True if the image
+        is "small", and a boolean which indicates if this is a resized image.
+        Note that is is possible for more than one yield to result from this
+        check.
 
         If no base file is found, then nothing is yielded.
         """
+        # The original file from glance
         base_file = os.path.join(base_dir, fingerprint)
         if os.path.exists(base_file):
-            yield base_file, False
+            yield base_file, False, False
 
+        # An older naming style which can be removed sometime after Folsom
         base_file = os.path.join(base_dir, fingerprint + '_sm')
         if os.path.exists(base_file):
-            yield base_file, True
+            yield base_file, True, False
+
+        # Resized images
+        resize_re = re.compile('.*/%s_[0-9]+$' % fingerprint)
+        for img in self.unexplained_images:
+            m = resize_re.match(img)
+            if m:
+                yield img, False, True
 
     def _verify_checksum(self, img, base_file):
         """Compare the checksum stored on disk with the current file.
@@ -200,7 +225,11 @@ class ImageCacheManager(object):
         mtime = os.path.getmtime(base_file)
         age = time.time() - mtime
 
-        if age < FLAGS.remove_unused_minimum_age_seconds:
+        maxage = FLAGS.remove_unused_resized_minimum_age_seconds
+        if base_file in self.originals:
+            maxage = FLAGS.remove_unused_original_minimum_age_seconds
+
+        if age < maxage:
             LOG.info(_('Base file too young to remove: %s'),
                      base_file)
         else:
@@ -216,31 +245,21 @@ class ImageCacheManager(object):
                           {'base_file': base_file,
                            'error': e})
 
-    def _handle_base_image(self, img, base_file, image_small):
+    def _handle_base_image(self, img, base_file):
         """Handle the checks for a single base image."""
 
         # TODO(mikal): Write a unit test for this method
         image_bad = False
         image_in_use = False
 
-        if base_file:
-            LOG.debug(_('%(container_format)s-%(id)s (%(base_file)s): '
-                        'checking'),
-                      {'container_format': img['container_format'],
-                       'id': img['id'],
-                       'base_file': base_file})
+        LOG.debug(_('%(container_format)s-%(id)s (%(base_file)s): checking'),
+                  {'container_format': img['container_format'],
+                   'id': img['id'],
+                   'base_file': base_file})
 
-            if base_file in self.unexplained_images:
-                self.unexplained_images.remove(base_file)
-            self._verify_checksum(img, base_file)
-
-        else:
-            LOG.debug(_('%(container_format)s-%(id)s (%(base_file)s): '
-                        'base file absent'),
-                      {'container_format': img['container_format'],
-                       'id': img['id'],
-                       'base_file': base_file})
-            base_file = None
+        if base_file in self.unexplained_images:
+            self.unexplained_images.remove(base_file)
+        self._verify_checksum(img, base_file)
 
         instances = []
         if str(img['id']) in self.used_images:
@@ -299,6 +318,23 @@ class ImageCacheManager(object):
     def verify_base_images(self, context):
         """Verify that base images are in a reasonable state."""
         # TODO(mikal): Write a unit test for this method
+        # TODO(mikal): Handle "generated" images
+
+        # The new scheme for base images is as follows -- an image is streamed
+        # from the image service to _base (filename is the sha1 hash of the
+        # image id). If CoW is enabled, that file is then resized to be the
+        # correct size for the instance (filename is the same as the original,
+        # but with an underscore and the resized size in bytes). This second
+        # file is then CoW'd to the instance disk. If CoW is disabled, the
+        # resize occurs as part of the copy from the cache to the instance
+        # directory. Files ending in _sm are no longer created, but may remain
+        # from previous versions.
+
+        self.unexplained_images = []
+        self.active_base_files = []
+        self.corrupt_base_files = []
+        self.removable_base_files = []
+        self.originals = []
 
         base_dir = os.path.join(FLAGS.instances_path, '_base')
         if not os.path.exists(base_dir):
@@ -310,34 +346,27 @@ class ImageCacheManager(object):
         self._list_base_images(base_dir)
         self._list_running_instances(context)
 
-        # Determine what images are in glance
+        # Determine what images are in glance. GlanceImageService.detail uses
+        # _fetch_images which handles pagination for us
         image_service = image.get_default_image_service()
-
-        self.active_base_files = []
-        self.corrupt_base_files = []
-        self.removable_base_files = []
-
-        # GlanceImageService.detail uses _fetch_images which handles pagination
-        # for us
         for img in image_service.detail(context):
             if img['container_format'] != 'ami':
                 continue
 
             fingerprint = hashlib.sha1(str(img['id'])).hexdigest()
-            for base_file, image_small in self._find_base_file(base_dir,
-                                                               fingerprint):
-                self._handle_base_image(img, base_file, image_small)
+            for result in self._find_base_file(base_dir, fingerprint):
+                base_file, image_small, image_resized = res
+                self._handle_base_image(img, base_file)
 
-        # Elements remaining in unexplained_images are not currently in
-        # glance. That doesn't mean that they're really not in use though
-        # (consider images which have been removed from glance but are still
-        # used by instances). So, we check the backing file for any running
-        # instances as well.
-        if self.unexplained_images:
-            inuse_backing_images = self._list_backing_images()
-            if inuse_backing_images:
-                for backing_path in inuse_backing_images:
-                    self.active_base_files.append(backing_path)
+                if not image_small and not image_resized:
+                    self.originals.append(base_file)
+
+        # Elements remaining in unexplained_images are not directly from
+        # glance. That might mean they're from a image that was removed from
+        # glance, but it might also mean that they're a resized image.
+        inuse_backing_images = self._list_backing_images()
+        for backing_path in inuse_backing_images:
+            self.active_base_files.append(backing_path)
 
         # Anything left is an unknown base image
         for img in self.unexplained_images:
