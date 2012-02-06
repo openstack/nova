@@ -513,7 +513,7 @@ class VMHelper(HelperBase):
         # NOTE(jk0): We use a FAT32 filesystem for the Windows swap
         # partition because that is what parted supports.
         is_windows = instance.os_type == "windows"
-        fs_type = "fat32" if is_windows else "linux-swap"
+        fs_type = "vfat" if is_windows else "linux-swap"
 
         cls._generate_disk(session, instance, vm_ref, userdevice,
                            'swap', swap_mb, fs_type)
