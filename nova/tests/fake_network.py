@@ -150,7 +150,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
     def deallocate_fixed_ip(self, context, address):
         self.deallocate_called = address
 
-    def _create_fixed_ips(self, context, network_id):
+    def _create_fixed_ips(self, context, network_id, fixed_cidr=None):
         pass
 
 

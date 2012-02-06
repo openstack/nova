@@ -770,6 +770,8 @@ class NetworkCommands(object):
     @args('--dns2', dest="dns2", metavar="<DNS Address>", help='Second DNS')
     @args('--uuid', dest="uuid", metavar="<network uuid>",
       help='Network UUID')
+    @args('--fixed_cidr', dest="fixed_cidr", metavar='<x.x.x.x/yy>',
+            help='IPv4 subnet for fixed IPS (ex: 10.20.0.0/16)')
     @args('--project_id', dest="project_id", metavar="<project id>",
       help='Project id')
     @args('--priority', dest="priority", metavar="<number>",
@@ -779,7 +781,7 @@ class NetworkCommands(object):
                vpn_start=None, fixed_range_v6=None, gateway=None,
                gateway_v6=None, bridge=None, bridge_interface=None,
                dns1=None, dns2=None, project_id=None, priority=None,
-               uuid=None):
+               uuid=None, fixed_cidr=None):
         """Creates fixed ips for host by range"""
 
         # check for certain required inputs
@@ -831,6 +833,9 @@ class NetworkCommands(object):
         if not network_size:
             network_size = FLAGS.network_size
 
+        if fixed_cidr:
+            fixed_cidr = netaddr.IPNetwork(fixed_cidr)
+
         # create the network
         net_manager = utils.import_object(FLAGS.network_manager)
         net_manager.create_networks(context.get_admin_context(),
@@ -850,7 +855,8 @@ class NetworkCommands(object):
                                     dns2=dns2,
                                     project_id=project_id,
                                     priority=priority,
-                                    uuid=uuid)
+                                    uuid=uuid,
+                                    fixed_cidr=fixed_cidr)
 
     def list(self):
         """List all created networks"""
