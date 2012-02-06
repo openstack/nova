@@ -188,6 +188,7 @@ class LibvirtConnection(driver.ComputeDriver):
         super(LibvirtConnection, self).__init__()
 
         self._host_state = None
+        self._initiator = None
         self._wrapped_conn = None
         self.container = None
         self.read_only = read_only
@@ -424,6 +425,16 @@ class LibvirtConnection(driver.ComputeDriver):
             disk.destroy_container(self.container)
         if os.path.exists(target):
             shutil.rmtree(target)
+
+    def get_volume_connector(self, _instance):
+        if not self._initiator:
+            self._initiator = libvirt_utils.get_iscsi_initiator()
+            if not self._initiator:
+                LOG.warn(_('Could not determine iscsi initiator name'))
+        return {
+            'ip': FLAGS.my_ip,
+            'initiator': self._initiator,
+        }
 
     def volume_driver_method(self, method_name, connection_info,
                              *args, **kwargs):
@@ -724,7 +735,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if virsh_output.startswith('/dev/'):
             LOG.info(_("cool, it's a device"))
             out, err = utils.execute('dd',
-                                     "if=%s" % virsh_output,
+                                     'if=%s' % virsh_output,
                                      'iflag=nonblock',
                                      run_as_root=True,
                                      check_exit_code=False)
@@ -753,7 +764,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
-            virsh_output = utils.execute('virsh', 'ttyconsole',
+            virsh_output = utils.execute('virsh',
+                                         'ttyconsole',
                                          instance['name'])
             data = self._flush_xen_console(virsh_output)
             fpath = self._append_to_file(data, console_log)

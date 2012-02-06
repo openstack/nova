@@ -215,12 +215,12 @@ class VolumeDriver(object):
         """Make sure volume is exported."""
         raise NotImplementedError()
 
-    def initialize_connection(self, volume, address):
-        """Allow connection to ip and return connection info."""
+    def initialize_connection(self, volume, connector):
+        """Allow connection to connector and return connection info."""
         raise NotImplementedError()
 
-    def terminate_connection(self, volume, address):
-        """Disallow connection from ip"""
+    def terminate_connection(self, volume, connector):
+        """Disallow connection from connector"""
         raise NotImplementedError()
 
     def get_volume_stats(self, refresh=False):
@@ -409,7 +409,7 @@ class ISCSIDriver(VolumeDriver):
                          '-v', property_value)
         return self._run_iscsiadm(iscsi_properties, iscsi_command)
 
-    def initialize_connection(self, volume, address):
+    def initialize_connection(self, volume, connector):
         """Initializes the connection and returns connection info.
 
         The iscsi driver returns a driver_volume_type of 'iscsi'.
@@ -433,7 +433,7 @@ class ISCSIDriver(VolumeDriver):
             'data': iscsi_properties
         }
 
-    def terminate_connection(self, volume, address):
+    def terminate_connection(self, volume, connector):
         pass
 
     def check_for_export(self, context, volume_id):
@@ -461,13 +461,13 @@ class FakeISCSIDriver(ISCSIDriver):
         """No setup necessary in fake mode."""
         pass
 
-    def initialize_connection(self, volume, address):
+    def initialize_connection(self, volume, connector):
         return {
             'driver_volume_type': 'iscsi',
             'data': {}
         }
 
-    def terminate_connection(self, volume, address):
+    def terminate_connection(self, volume, connector):
         pass
 
     @staticmethod
@@ -532,7 +532,7 @@ class RBDDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def initialize_connection(self, volume, address):
+    def initialize_connection(self, volume, connector):
         return {
             'driver_volume_type': 'rbd',
             'data': {
@@ -540,7 +540,7 @@ class RBDDriver(VolumeDriver):
             }
         }
 
-    def terminate_connection(self, volume, address):
+    def terminate_connection(self, volume, connector):
         pass
 
 
@@ -601,7 +601,7 @@ class SheepdogDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def initialize_connection(self, volume, address):
+    def initialize_connection(self, volume, connector):
         return {
             'driver_volume_type': 'sheepdog',
             'data': {
@@ -609,7 +609,7 @@ class SheepdogDriver(VolumeDriver):
             }
         }
 
-    def terminate_connection(self, volume, address):
+    def terminate_connection(self, volume, connector):
         pass
 
 
@@ -638,10 +638,10 @@ class LoggingVolumeDriver(VolumeDriver):
     def remove_export(self, context, volume):
         self.log_action('remove_export', volume)
 
-    def initialize_connection(self, volume, address):
+    def initialize_connection(self, volume, connector):
         self.log_action('initialize_connection', volume)
 
-    def terminate_connection(self, volume, address):
+    def terminate_connection(self, volume, connector):
         self.log_action('terminate_connection', volume)
 
     def check_for_export(self, context, volume_id):

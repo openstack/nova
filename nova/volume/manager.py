@@ -254,31 +254,51 @@ class VolumeManager(manager.SchedulerDependentManager):
         # TODO(vish): refactor this into a more general "unreserve"
         self.db.volume_detached(context, volume_id)
 
-    def initialize_connection(self, context, volume_id, address):
-        """Initialize volume to be connected from address.
+    def initialize_connection(self, context, volume_id, connector):
+        """Prepare volume for connection from host represented by connector.
 
         This method calls the driver initialize_connection and returns
-        it to the caller.  The driver is responsible for doing any
-        necessary security setup and returning a connection_info dictionary
-        in the following format:
-            {'driver_volume_type': driver_volume_type
-             'data': data}
+        it to the caller.  The connector parameter is a dictionary with
+        information about the host that will connect to the volume in the
+        following format:
+            {
+                'ip': ip,
+                'initiator': initiator,
+            }
+
+        ip: the ip address of the connecting machine
+
+        initiator: the iscsi initiator name of the connecting machine.
+        This can be None if the connecting machine does not support iscsi
+        connections.
+
+        driver is responsible for doing any necessary security setup and
+        returning a connection_info dictionary in the following format:
+            {
+                'driver_volume_type': driver_volume_type,
+                'data': data,
+            }
 
         driver_volume_type: a string to identify the type of volume.  This
                            can be used by the calling code to determine the
                            strategy for connecting to the volume. This could
                            be 'iscsi', 'rbd', 'sheepdog', etc.
+
         data: this is the data that the calling code will use to connect
               to the volume. Keep in mind that this will be serialized to
               json in various places, so it should not contain any non-json
               data types.
         """
         volume_ref = self.db.volume_get(context, volume_id)
-        return self.driver.initialize_connection(volume_ref, address)
+        return self.driver.initialize_connection(volume_ref, connector)
 
-    def terminate_connection(self, context, volume_id, address):
+    def terminate_connection(self, context, volume_id, connector):
+        """Cleanup connection from host represented by connector.
+
+        The format of connector is the same as for initialize_connection.
+        """
         volume_ref = self.db.volume_get(context, volume_id)
-        self.driver.terminate_connection(volume_ref, address)
+        self.driver.terminate_connection(volume_ref, connector)
 
     def check_for_export(self, context, instance_id):
         """Make sure whether volume is exported."""

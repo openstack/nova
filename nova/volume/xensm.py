@@ -203,7 +203,7 @@ class XenSMDriver(VolumeDriver):
         """Safely, synchronously recreates an export for a logical volume."""
         pass
 
-    def initialize_connection(self, volume, address):
+    def initialize_connection(self, volume, connector):
         try:
             xensm_properties = dict(self.db.sm_volume_get(self.ctxt,
                                                           volume['id']))
@@ -236,5 +236,5 @@ class XenSMDriver(VolumeDriver):
             'data': xensm_properties
         }
 
-    def terminate_connection(self, volume, address):
+    def terminate_connection(self, volume, connector):
         pass

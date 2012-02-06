@@ -44,6 +44,16 @@ def execute(*args, **kwargs):
     return utils.execute(*args, **kwargs)
 
 
+def get_iscsi_initiator():
+    """Get iscsi initiator name for this machine"""
+    # NOTE(vish) openiscsi stores initiator name in a file that
+    #            needs root permission to read.
+    contents = utils.read_file_as_root('/etc/iscsi/initiatorname.iscsi')
+    for l in contents.split('\n'):
+        if l.startswith('InitiatorName='):
+            return l[l.index('=') + 1:].strip()
+
+
 def create_image(disk_format, path, size):
     """Create a disk image
 
