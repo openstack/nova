@@ -44,12 +44,16 @@ class JSONSerializer(object):
     def deserialize(self, data, content_type):
         return json.loads(data)
 
+# Quantum API v1.0 uses 420 + 430 for network + port not found
+# Quantum API v1.1 uses 404 for network + port not found
+NOT_FOUND_CODES = set((404, 420, 430))
+
 
 # The full client lib will expose more
 # granular exceptions, for now, just try to distinguish
 # between the cases we care about.
 class QuantumNotFoundException(Exception):
-    """Indicates that Quantum Server returned 404"""
+    """Indicates that Quantum Server returned a not-found error code"""
     pass
 
 
@@ -90,7 +94,7 @@ class api_call(object):
 class Client(object):
     """A base client class - derived from Glance.BaseClient"""
 
-    action_prefix = '/v1.0/tenants/{tenant_id}'
+    action_prefix = '/v1.1/tenants/{tenant_id}'
 
     """Action query strings"""
     networks_path = "/networks"
@@ -188,7 +192,7 @@ class Client(object):
                 self.logger.debug("Quantum Client Reply (code = %s) :\n %s" \
                         % (str(status_code), data))
 
-            if status_code == httplib.NOT_FOUND:
+            if status_code in NOT_FOUND_CODES:
                 raise QuantumNotFoundException(
                     _("Quantum entity not found: %s" % data))
 
@@ -233,10 +237,18 @@ class Client(object):
             format = self.format
         return "application/%s" % (format)
 
+    def append_filter_params(self, url, filter_ops):
+        if len(filter_ops) > 0:
+            url += "?"
+        for fkey, fval in filter_ops.values():
+            url += "%s=%s&" % (fkey, fval)
+
     @api_call
-    def list_networks(self):
+    def list_networks(self, filter_ops={}):
         """Fetches a list of all networks for a tenant"""
-        return self.do_request("GET", self.networks_path)
+        url = self.networks_path
+        self.append_filter_params(url, filter_ops)
+        return self.do_request("GET", url)
 
     @api_call
     def show_network_details(self, network):
@@ -261,9 +273,11 @@ class Client(object):
         return self.do_request("DELETE", self.network_path % (network))
 
     @api_call
-    def list_ports(self, network):
+    def list_ports(self, network, filter_ops={}):
         """Fetches a list of ports on a given network"""
-        return self.do_request("GET", self.ports_path % (network))
+        url = self.ports_path % (network)
+        self.append_filter_params(url, filter_ops)
+        return self.do_request("GET", url)
 
     @api_call
     def show_port_details(self, network, port):

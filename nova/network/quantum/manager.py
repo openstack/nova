@@ -478,9 +478,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                     net_tenant_id = FLAGS.quantum_default_tenant_id
                 network = {'id': network['id'],
                            'uuid': network['uuid'],
-                           'bridge': 'ovs_flag',
-                           'label': self.q_conn.get_network_name(net_tenant_id,
-                                                              network['uuid']),
+                           'bridge': '',  # Quantum ignores this field
+                           'label': network['label'],
                            'project_id': net_tenant_id}
                 networks[vif['uuid']] = network
 
@@ -540,6 +539,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
 
                 self.ipam.deallocate_ips_by_vif(context, ipam_tenant_id,
                                                 net_id, vif_ref)
+                db.virtual_interface_delete(admin_context, vif_ref['id'])
 
                 # If DHCP is enabled on this network then we need to update the
                 # leases and restart the server.
@@ -552,13 +552,6 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                 msg = _('ipam deallocation failed for instance: '
                         '|%(instance_id)s|, vif_uuid: |%(vif_uuid)s|')
                 LOG.critical(msg % locals)
-
-        try:
-            db.virtual_interface_delete_by_instance(admin_context,
-                                                    instance_id)
-        except exception.InstanceNotFound:
-            LOG.error(_("Attempted to deallocate non-existent instance: %s" %
-                        (instance_id)))
 
     # TODO(bgh): At some point we should consider merging enable_dhcp() and
     # update_dhcp()
