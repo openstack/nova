@@ -650,7 +650,7 @@ class VMOps(object):
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
 
-        logging.debug(_("Starting snapshot for VM %s"), instance)
+        logging.debug(_("Starting snapshot for VM %s"), instance['uuid'])
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
         label = "%s-snapshot" % instance.name
