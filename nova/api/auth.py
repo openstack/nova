@@ -75,7 +75,6 @@ class NovaKeystoneContext(wsgi.Middleware):
                                      req.headers.get('X_STORAGE_TOKEN'))
 
         # Build a context, including the auth_token...
-        remote_address = getattr(req, 'remote_address', '127.0.0.1')
         remote_address = req.remote_addr
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
