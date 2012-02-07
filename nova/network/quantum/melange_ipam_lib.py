@@ -67,7 +67,7 @@ class QuantumMelangeIPAMLib(object):
                                      dns1=dns1, dns2=dns2)
 
         net = {"uuid": quantum_net_id,
-               "project_id": project_id,
+               "project_id": tenant_id,
                "priority": priority,
                "label": label}
         if FLAGS.quantum_use_dhcp:
