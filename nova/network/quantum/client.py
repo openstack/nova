@@ -77,14 +77,12 @@ class api_call(object):
             """Temporarily set format and tenant for this request"""
             (format, tenant) = (instance.format, instance.tenant)
 
-            if 'format' in kwargs:
-                instance.format = kwargs['format']
-            if 'tenant' in kwargs:
-                instance.tenant = kwargs['tenant']
+            instance.format = kwargs.pop('format', instance.format)
+            instance.tenant = kwargs.pop('tenant', instance.tenant)
 
             ret = None
             try:
-                ret = self.func(instance, *args)
+                ret = self.func(instance, *args, **kwargs)
             finally:
                 (instance.format, instance.tenant) = (format, tenant)
             return ret
@@ -237,18 +235,11 @@ class Client(object):
             format = self.format
         return "application/%s" % (format)
 
-    def append_filter_params(self, url, filter_ops):
-        if len(filter_ops) > 0:
-            url += "?"
-        for fkey, fval in filter_ops.values():
-            url += "%s=%s&" % (fkey, fval)
-
     @api_call
-    def list_networks(self, filter_ops={}):
+    def list_networks(self, filter_ops=None):
         """Fetches a list of all networks for a tenant"""
         url = self.networks_path
-        self.append_filter_params(url, filter_ops)
-        return self.do_request("GET", url)
+        return self.do_request("GET", url, params=filter_ops)
 
     @api_call
     def show_network_details(self, network):
@@ -273,11 +264,10 @@ class Client(object):
         return self.do_request("DELETE", self.network_path % (network))
 
     @api_call
-    def list_ports(self, network, filter_ops={}):
+    def list_ports(self, network, filter_ops=None):
         """Fetches a list of ports on a given network"""
         url = self.ports_path % (network)
-        self.append_filter_params(url, filter_ops)
-        return self.do_request("GET", url)
+        return self.do_request("GET", url, params=filter_ops)
 
     @api_call
     def show_port_details(self, network, port):
