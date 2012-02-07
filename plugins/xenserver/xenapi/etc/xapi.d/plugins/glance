@@ -343,6 +343,10 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     if auth_token:
         headers['x-auth-token'] = auth_token
 
+    for key, value in properties.iteritems():
+        header_key = "x-image-meta-property-%s" % key.replace('_', '-')
+        headers[header_key] = str(value)
+
     for header, value in headers.iteritems():
         conn.putheader(header, value)
     conn.endheaders()
