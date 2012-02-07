@@ -137,14 +137,14 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
     def setup_basic_filtering(self, instance, network_info):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
-        logging.info('called setup_basic_filtering in nwfilter')
+        LOG.info(_('called setup_basic_filtering in nwfilter'))
 
         if self.handle_security_groups:
             # No point in setting up a filter set that we'll be overriding
             # anyway.
             return
 
-        logging.info('ensuring static filters')
+        LOG.info(_('ensuring static filters'))
         self._ensure_static_filters()
 
         if instance['image_ref'] == str(FLAGS.vpn_image_id):

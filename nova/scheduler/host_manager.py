@@ -262,8 +262,8 @@ class HostManager(object):
 
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
-        logging.debug(_("Received %(service_name)s service update from "
-                "%(host)s.") % locals())
+        LOG.debug(_("Received %(service_name)s service update from "
+                    "%(host)s.") % locals())
         service_caps = self.service_states.get(host, {})
         # Copy the capabilities, so we don't modify the original dict
         capab_copy = dict(capabilities)
@@ -313,7 +313,7 @@ class HostManager(object):
         for compute in compute_nodes:
             service = compute['service']
             if not service:
-                logging.warn(_("No service for compute ID %s") % compute['id'])
+                LOG.warn(_("No service for compute ID %s") % compute['id'])
                 continue
             host = service['host']
             capabilities = self.service_states.get(host, None)

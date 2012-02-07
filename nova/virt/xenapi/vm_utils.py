@@ -378,8 +378,8 @@ class VMHelper(HelperBase):
         """
         # NOTE(sirp): Currently we only support uploading images as VHD, there
         # is no RAW equivalent (yet)
-        logging.debug(_("Asking xapi to upload %(vdi_uuids)s as"
-                " ID %(image_id)s") % locals())
+        LOG.debug(_("Asking xapi to upload %(vdi_uuids)s as"
+                    " ID %(image_id)s") % locals())
 
         glance_host, glance_port = glance.pick_glance_api_server()
 

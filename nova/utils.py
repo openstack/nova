@@ -635,7 +635,7 @@ class LoopingCall(object):
                 self.stop()
                 done.send(e.retvalue)
             except Exception:
-                logging.exception('in looping call')
+                LOG.exception(_('in looping call'))
                 done.send_exception(*sys.exc_info())
                 return
             else:

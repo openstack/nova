@@ -249,12 +249,12 @@ class HostManagerTestCase(test.TestCase):
         topic = 'compute'
 
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        self.mox.StubOutWithMock(logging, 'warn')
+        self.mox.StubOutWithMock(host_manager.LOG, 'warn')
         self.mox.StubOutWithMock(db, 'instance_get_all')
 
         db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # Invalid service
-        logging.warn("No service for compute ID 5")
+        host_manager.LOG.warn("No service for compute ID 5")
         db.instance_get_all(context).AndReturn(fakes.INSTANCES)
 
         self.mox.ReplayAll()
