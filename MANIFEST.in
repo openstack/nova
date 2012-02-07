@@ -9,7 +9,7 @@ graft etc
 graft contrib
 graft po
 graft plugins
-graft nova/api/openstack/schemas
+graft nova/api/openstack/*/schemas
 include nova/auth/*.schema
 include nova/auth/novarc.template
 include nova/auth/opendj.sh
