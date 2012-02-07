@@ -108,10 +108,16 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
         iscsi_properties = connection_info['data']
         # NOTE(vish): if we are on the same host as nova volume, the
         #             discovery makes the target so we don't need to
-        #             run --op new
-        (out, err) = self._run_iscsiadm(iscsi_properties, ())
-        if err and err.strip() == "iscsiadm: no records found!":
-            self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
+        #             run --op new. Therefore, we check to see if the
+        #             target exists, and if we get 255 (Not Found), then
+        #             we run --op new
+        try:
+            self._run_iscsiadm(iscsi_properties, ())
+        except exception.ProcessExecutionError as exc:
+            if exc.exit_code == 255:
+                self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
+            else:
+                raise
 
         if iscsi_properties.get('auth_method'):
             self._iscsiadm_update(iscsi_properties,
