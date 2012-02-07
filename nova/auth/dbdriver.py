@@ -78,7 +78,7 @@ class DbDriver(object):
         try:
             user_ref = db.user_create(context.get_admin_context(), values)
             return self._db_user_to_auth_user(user_ref)
-        except exception.Duplicate, e:
+        except (exception.Duplicate, exception.DBError) as e:
             raise exception.UserExists(user=name)
 
     def _db_user_to_auth_user(self, user_ref):
@@ -100,8 +100,6 @@ class DbDriver(object):
                        description=None, member_uids=None):
         """Create a project"""
         manager = db.user_get(context.get_admin_context(), manager_uid)
-        if not manager:
-            raise exception.UserNotFound(user_id=manager_uid)
 
         # description is a required attribute
         if description is None:
@@ -114,8 +112,6 @@ class DbDriver(object):
         if member_uids is not None:
             for member_uid in member_uids:
                 member = db.user_get(context.get_admin_context(), member_uid)
-                if not member:
-                    raise exception.UserNotFound(user_id=member_uid)
                 members.add(member)
 
         values = {'id': name,
@@ -146,8 +142,6 @@ class DbDriver(object):
         values = {}
         if manager_uid:
             manager = db.user_get(context.get_admin_context(), manager_uid)
-            if not manager:
-                raise exception.UserNotFound(user_id=manager_uid)
             values['project_manager'] = manager['id']
         if description:
             values['description'] = description
@@ -234,9 +228,5 @@ class DbDriver(object):
 
     def _validate_user_and_project(self, user_id, project_id):
         user = db.user_get(context.get_admin_context(), user_id)
-        if not user:
-            raise exception.UserNotFound(user_id=user_id)
         project = db.project_get(context.get_admin_context(), project_id)
-        if not project:
-            raise exception.ProjectNotFound(project_id=project_id)
         return user, project
