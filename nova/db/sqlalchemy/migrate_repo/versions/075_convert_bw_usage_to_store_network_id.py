@@ -46,12 +46,19 @@ def upgrade(migrate_engine):
     networks = Table('networks', meta, autoload=True)
     mac_column = Column('mac', String(255))
 
-    bw_usage_cache.create_column(mac_column)
+    try:
+        bw_usage_cache.create_column(mac_column)
+    except Exception:
+        # NOTE(jkoelker) passing here since this migration was broken
+        #                at one point
+        pass
 
     bw_usage_cache.update()\
         .values(mac=select([vifs.c.address])\
-            .where(and_(networks.c.label == bw_usage_cache.c.network_label,
-                        networks.c.id == vifs.c.network_id))\
+            .where(and_(
+                    networks.c.label == bw_usage_cache.c.network_label,
+                    networks.c.id == vifs.c.network_id,
+                    bw_usage_cache.c.instance_id == vifs.c.instance_id))\
             .as_scalar()).execute()
 
     bw_usage_cache.c.network_label.drop()
@@ -61,7 +68,7 @@ def downgrade(migrate_engine):
     meta.bind = migrate_engine
     bw_usage_cache = Table('bw_usage_cache', meta,
                            Column('id', Integer, primary_key=True),
-                           Column('network_uuid', String(36)),
+                           Column('mac', String(255)),
                            Column('instance_id', Integer, nullable=False),
                            Column('start_period', DateTime, nullable=False),
                            Column('last_refreshed', DateTime),
@@ -81,10 +88,17 @@ def downgrade(migrate_engine):
 
     bw_usage_cache.create_column(network_label_column)
 
-    bw_usage_cache.update()\
-        .values(network_label=select([network.c.label])\
-            .where(and_(network.c.id == vifs.c.network_id,
-                        vifs.c.address == bw_usage_cache.c.mac))\
-            .as_scalar()).execute()
+    try:
+        bw_usage_cache.update()\
+            .values(network_label=select([network.c.label])\
+                .where(and_(
+                    network.c.id == vifs.c.network_id,
+                   vifs.c.address == bw_usage_cache.c.mac,
+                   bw_usage_cache.c.instance_id == vifs.c.instance_id))\
+                .as_scalar()).execute()
+    except Exception:
+        # NOTE(jkoelker) passing here since this migration was broken
+        #                at one point
+        pass
 
-    bw_usage_cache.c.network_uuid.drop()
+    bw_usage_cache.c.mac.drop()
