@@ -237,18 +237,6 @@ def get_open_port(start_port, end_port):
     raise Exception(_('Unable to find an open port'))
 
 
-def run_ajaxterm(cmd, token, port):
-    """Run ajaxterm
-
-    :param cmd: Command to connect to
-    :param token: Token to require for authentication
-    :param port: Port to run on
-    """
-    cmd = ['%s/tools/ajaxterm/ajaxterm.py' % utils.novadir(),
-           '--command', cmd, '-t', token, '-p', port]
-    execute(*cmd)
-
-
 def get_fs_info(path):
     """Get free/used/total space info for a filesystem
 

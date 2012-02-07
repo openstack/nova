@@ -337,12 +337,8 @@ class XenAPIConnection(driver.ComputeDriver):
         """Return snapshot of console"""
         return self._vmops.get_console_output(instance)
 
-    def get_ajax_console(self, instance):
-        """Return link to instance's ajax console"""
-        return self._vmops.get_ajax_console(instance)
-
     def get_vnc_console(self, instance):
-        """Return link to instance's ajax console"""
+        """Return link to instance's VNC console"""
         return self._vmops.get_vnc_console(instance)
 
     def get_volume_connector(self, _instance):

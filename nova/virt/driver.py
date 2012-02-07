@@ -191,10 +191,6 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def get_ajax_console(self, instance):
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
-
     def get_vnc_console(self, instance):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()

@@ -289,14 +289,6 @@ class _VirtDriverTestCase(test.TestCase):
         self.assertTrue(isinstance(console_output, basestring))
 
     @catch_notimplementederror
-    def test_get_ajax_console(self):
-        instance_ref, network_info = self._get_running_instance()
-        ajax_console = self.connection.get_ajax_console(instance_ref)
-        self.assertIn('token', ajax_console)
-        self.assertIn('host', ajax_console)
-        self.assertIn('port', ajax_console)
-
-    @catch_notimplementederror
     def test_get_vnc_console(self):
         instance_ref, network_info = self._get_running_instance()
         vnc_console = self.connection.get_vnc_console(instance_ref)

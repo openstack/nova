@@ -719,10 +719,6 @@ class VMWareVMOps(object):
         else:
             return ""
 
-    def get_ajax_console(self, instance):
-        """Return link to instance's ajax console."""
-        return 'http://fakeajaxconsole/fake_url'
-
     def _set_machine_id(self, client_factory, instance, network_info):
         """
         Set the machine id of the VM for guest tools to pick up and reconfigure
