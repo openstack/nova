@@ -22,6 +22,7 @@ import webob.exc
 import webob.dec
 from webob import Request
 
+import nova.context
 from nova import test
 from nova.api import openstack as openstack_api
 from nova.api.openstack import wsgi
@@ -119,3 +120,13 @@ class APITest(test.TestCase):
         resp = Request.blank('/.xml').get_response(api)
         self.assertTrue('<computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
+
+    def test_request_id_in_response(self):
+        req = webob.Request.blank('/')
+        req.method = 'GET'
+        context = nova.context.RequestContext('bob', 1)
+        context.request_id = 'test-req-id'
+        req.environ['nova.context'] = context
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.headers['x-compute-request-id'], 'test-req-id')

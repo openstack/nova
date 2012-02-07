@@ -819,8 +819,8 @@ class Resource(wsgi.Application):
         action_args.update(contents)
 
         project_id = action_args.pop("project_id", None)
-        if ('nova.context' in request.environ and project_id
-            and project_id != request.environ['nova.context'].project_id):
+        context = request.environ.get('nova.context')
+        if (context and project_id and (project_id != context.project_id)):
             msg = _("Malformed request url")
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
@@ -848,6 +848,8 @@ class Resource(wsgi.Application):
 
             # Run post-processing extensions
             if resp_obj:
+                if context:
+                    resp_obj['x-compute-request-id'] = context.request_id
                 # Do a preserialize to set up the response object
                 serializers = getattr(meth, 'wsgi_serializers', {})
                 resp_obj._bind_method_serializers(serializers)
