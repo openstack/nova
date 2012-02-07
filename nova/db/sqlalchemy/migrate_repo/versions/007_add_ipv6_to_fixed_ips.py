@@ -15,71 +15,56 @@
 
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
-meta = MetaData()
-
-# Table stub-definitions
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of instances or services.
-#
-fixed_ips = Table(
-    "fixed_ips",
-    meta,
-    Column(
-        "id",
-        Integer(),
-        primary_key=True,
-        nullable=False))
-
-#
-# New Tables
-#
-# None
-
-#
-# Tables to alter
-#
-# None
-
-#
-# Columns to add to existing tables
-#
-
-fixed_ips_addressV6 = Column(
-    "addressV6",
-    String(
-        length=255,
-        convert_unicode=False,
-        assert_unicode=None,
-        unicode_error=None,
-        _warn_on_bytestring=False))
-
-
-fixed_ips_netmaskV6 = Column(
-    "netmaskV6",
-    String(
-        length=3,
-        convert_unicode=False,
-        assert_unicode=None,
-        unicode_error=None,
-        _warn_on_bytestring=False))
-
-
-fixed_ips_gatewayV6 = Column(
-    "gatewayV6",
-    String(
-        length=255,
-        convert_unicode=False,
-        assert_unicode=None,
-        unicode_error=None,
-        _warn_on_bytestring=False))
-
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
 
+    fixed_ips = Table('fixed_ips', meta, autoload=True)
+
+    #
+    # New Columns
+    #
+    fixed_ips_addressV6 = Column(
+        "addressV6",
+        String(
+            length=255,
+            convert_unicode=False,
+            assert_unicode=None,
+            unicode_error=None,
+            _warn_on_bytestring=False))
+
+    fixed_ips_netmaskV6 = Column(
+        "netmaskV6",
+        String(
+            length=3,
+            convert_unicode=False,
+            assert_unicode=None,
+            unicode_error=None,
+            _warn_on_bytestring=False))
+
+    fixed_ips_gatewayV6 = Column(
+        "gatewayV6",
+        String(
+            length=255,
+            convert_unicode=False,
+            assert_unicode=None,
+            unicode_error=None,
+            _warn_on_bytestring=False))
     # Add columns to existing tables
     fixed_ips.create_column(fixed_ips_addressV6)
     fixed_ips.create_column(fixed_ips_netmaskV6)
     fixed_ips.create_column(fixed_ips_gatewayV6)
+
+
+def downgrade(migrate_engine):
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    fixed_ips = Table('fixed_ips', meta, autoload=True)
+
+    fixed_ips.drop_column('addressV6')
+    fixed_ips.drop_column('netmaskV6')
+    fixed_ips.drop_column('gatewayV6')

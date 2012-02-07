@@ -14,24 +14,29 @@
 
 from sqlalchemy import Column, MetaData, Table, String
 
-meta = MetaData()
-
-admin_pass = Column(
-    'admin_pass',
-    String(length=255, convert_unicode=False, assert_unicode=None,
-           unicode_error=None, _warn_on_bytestring=False),
-    nullable=True)
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+
+    instances = Table('instances', meta, autoload=True)
+
     instances.drop_column('admin_pass')
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+
+    instances = Table('instances', meta, autoload=True)
+
+    #
+    # New Columns
+    #
+    admin_pass = Column(
+        'admin_pass',
+        String(length=255, convert_unicode=False, assert_unicode=None,
+               unicode_error=None, _warn_on_bytestring=False),
+        nullable=True)
+
     instances.create_column(admin_pass)

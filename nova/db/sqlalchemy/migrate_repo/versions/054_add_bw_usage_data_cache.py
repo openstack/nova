@@ -20,31 +20,33 @@ from sqlalchemy import Integer, BigInteger, DateTime, Boolean, String
 
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
-
-
-bw_cache = Table('bw_usage_cache', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('instance_id', Integer(), nullable=False),
-        Column('network_label',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('start_period', DateTime(timezone=False), nullable=False),
-        Column('last_refreshed', DateTime(timezone=False)),
-        Column('bw_in', BigInteger()),
-        Column('bw_out', BigInteger()))
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
 
+    #
+    # New Tables
+    #
+    bw_cache = Table('bw_usage_cache', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('id', Integer(), primary_key=True, nullable=False),
+            Column('instance_id', Integer(), nullable=False),
+            Column('network_label',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('start_period', DateTime(timezone=False), nullable=False),
+            Column('last_refreshed', DateTime(timezone=False)),
+            Column('bw_in', BigInteger()),
+            Column('bw_out', BigInteger()))
     try:
         bw_cache.create()
     except Exception:
@@ -55,6 +57,8 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
-    meta.bind = migrate_engine
     # Operations to reverse the above upgrade go here.
+    meta = MetaData()
+    meta.bind = migrate_engine
+    bw_cache = Table('bw_usage_cache', meta, autoload=True)
     bw_cache.drop()

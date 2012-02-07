@@ -17,24 +17,22 @@
 from sqlalchemy import MetaData, Table
 
 
-meta = MetaData()
-
-
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+    instances = Table('instances', meta, autoload=True)
 
     image_id_column = instances.c.image_id
     image_id_column.alter(name='image_ref')
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+
+    instances = Table('instances', meta, autoload=True)
 
     image_ref_column = instances.c.image_ref
     image_ref_column.alter(name='image_id')

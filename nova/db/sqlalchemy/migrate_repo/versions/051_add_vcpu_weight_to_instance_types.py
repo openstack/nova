@@ -14,19 +14,21 @@
 
 from sqlalchemy import Column, Integer, MetaData, Table
 
-meta = MetaData()
-
-instance_types = Table("instance_types", meta, Column("id", Integer(),
-        primary_key=True, nullable=False))
-
-vcpu_weight = Column("vcpu_weight", Integer())
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    instance_types = Table('instance_types', meta, autoload=True)
+
+    vcpu_weight = Column("vcpu_weight", Integer())
     instance_types.create_column(vcpu_weight)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instance_types.drop_column(vcpu_weight)
+
+    instance_types = Table('instance_types', meta, autoload=True)
+
+    instance_types.drop_column('vcpu_weight')

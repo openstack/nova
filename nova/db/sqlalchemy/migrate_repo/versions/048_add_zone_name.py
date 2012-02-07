@@ -14,22 +14,20 @@
 
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
-meta = MetaData()
-
-zones = Table('zones', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-name = Column('name', String(255))
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
+    zones = Table('zones', meta, autoload=True)
+    name = Column('name', String(255))
     zones.create_column(name)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    zones.drop_column(name)
+    zones = Table('zones', meta, autoload=True)
+
+    zones.drop_column('name')

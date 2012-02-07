@@ -12,27 +12,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import MetaData
 from sqlalchemy import Boolean
-from sqlalchemy import Column, Table
-
-meta = MetaData()
-
-shutdown_terminate = Column(
-    'shutdown_terminate', Boolean(), default=True)
-disable_terminate = Column(
-    'disable_terminate', Boolean(), default=False)
+from sqlalchemy import Column, MetaData, Table
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
+    shutdown_terminate = Column(
+        'shutdown_terminate', Boolean(), default=True)
+    disable_terminate = Column(
+        'disable_terminate', Boolean(), default=False)
     instances.create_column(shutdown_terminate)
     instances.create_column(disable_terminate)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
-    instances.drop_column(shutdown_terminate)
-    instances.drop_column(disable_terminate)
+    instances.drop_column('shutdown_terminate')
+    instances.drop_column('disable_terminate')

@@ -15,20 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sqlalchemy
-from sqlalchemy import select, Column, Integer
+from sqlalchemy import select, Column, Integer, MetaData, Table
 
 from nova import exception
 from nova import flags
 
-
 FLAGS = flags.FLAGS
-
-meta = sqlalchemy.MetaData()
-
-
-def _get_table(name):
-    return sqlalchemy.Table(name, meta, autoload=True)
 
 
 def upgrade_libvirt(instances, instance_types):
@@ -73,8 +65,9 @@ def check_instance_presence(migrate_engine, instances_table):
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances = _get_table('instances')
+    instances = Table('instances', meta, autoload=True)
 
     data_present = check_instance_presence(migrate_engine, instances)
 
@@ -83,7 +76,7 @@ def upgrade(migrate_engine):
                "connection_type to run migration migration")
         raise exception.Error(msg)
 
-    instance_types = _get_table('instance_types')
+    instance_types = Table('instance_types', meta, autoload=True)
 
     for table in (instances, instance_types):
         root_gb = Column('root_gb', Integer)
@@ -108,12 +101,13 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances = _get_table('instances')
-    instance_types = _get_table('instance_types')
+    instances = Table('instances', meta, autoload=True)
+    instance_types = Table('instance_types', meta, autoload=True)
 
     for table in (instances, instance_types):
-        local_gb = Column('root_gb', Integer)
+        local_gb = Column('local_gb', Integer)
         local_gb.create(table)
 
     try:

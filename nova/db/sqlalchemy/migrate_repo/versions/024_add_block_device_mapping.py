@@ -18,62 +18,57 @@ from sqlalchemy import DateTime, Boolean, Integer, String
 from sqlalchemy import ForeignKey
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
-
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of instances or services.
-instances = Table('instances', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-volumes = Table('volumes', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-snapshots = Table('snapshots', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-
-block_device_mapping = Table('block_device_mapping', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(), primary_key=True, autoincrement=True),
-        Column('instance_id',
-               Integer(),
-               ForeignKey('instances.id'),
-               nullable=False),
-        Column('device_name',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-               nullable=False),
-        Column('delete_on_termination',
-               Boolean(create_constraint=True, name=None),
-               default=False),
-        Column('virtual_name',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-               nullable=True),
-        Column('snapshot_id',
-               Integer(),
-               ForeignKey('snapshots.id'),
-               nullable=True),
-        Column('volume_id', Integer(), ForeignKey('volumes.id'),
-               nullable=True),
-        Column('volume_size', Integer(), nullable=True),
-        Column('no_device',
-               Boolean(create_constraint=True, name=None),
-               nullable=True),
-        )
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    # load tables for fk
+    instances = Table('instances', meta, autoload=True)
+    volumes = Table('volumes', meta, autoload=True)
+    snapshots = Table('snapshots', meta, autoload=True)
+
+    #
+    # New Tables
+    #
+    block_device_mapping = Table('block_device_mapping', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('id', Integer(), primary_key=True, autoincrement=True),
+            Column('instance_id',
+                   Integer(),
+                   ForeignKey('instances.id'),
+                   nullable=False),
+            Column('device_name',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False),
+                   nullable=False),
+            Column('delete_on_termination',
+                   Boolean(create_constraint=True, name=None),
+                   default=False),
+            Column('virtual_name',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False),
+                   nullable=True),
+            Column('snapshot_id',
+                   Integer(),
+                   ForeignKey('snapshots.id'),
+                   nullable=True),
+            Column('volume_id', Integer(), ForeignKey('volumes.id'),
+                   nullable=True),
+            Column('volume_size', Integer(), nullable=True),
+            Column('no_device',
+                   Boolean(create_constraint=True, name=None),
+                   nullable=True),
+            )
     try:
         block_device_mapping.create()
     except Exception:
@@ -85,4 +80,13 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    # load tables for fk
+    instances = Table('instances', meta, autoload=True)
+    volumes = Table('volumes', meta, autoload=True)
+    snapshots = Table('snapshots', meta, autoload=True)
+
+    block_device_mapping = Table('block_device_mapping', meta, autoload=True)
     block_device_mapping.drop()

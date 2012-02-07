@@ -17,13 +17,13 @@ from migrate import ForeignKeyConstraint
 
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
     dialect = migrate_engine.url.get_dialect().name
     if dialect.startswith('sqlite'):
@@ -45,6 +45,7 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
+    meta = MetaData()
     meta.bind = migrate_engine
     dialect = migrate_engine.url.get_dialect().name
     if dialect.startswith('sqlite'):

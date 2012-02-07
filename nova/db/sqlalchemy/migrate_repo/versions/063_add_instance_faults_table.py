@@ -17,41 +17,35 @@ from sqlalchemy import Boolean, Column, DateTime, Integer, ForeignKey
 from sqlalchemy import MetaData, String, Table, Text
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
-
-#
-# New Tables
-#
-instance_faults = Table('instance_faults', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None),
-                default=False),
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('instance_uuid', String(36, ForeignKey('instances.uuid'))),
-        Column('code', Integer(), nullable=False),
-        Column('message',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('details',
-               Text(length=None, convert_unicode=False, assert_unicode=None,
-                    unicode_error=None, _warn_on_bytestring=False)),
-        )
-
-
-#
-# Tables to alter
-#
-
-# (none currently)
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
+    #
+    # New Tables
+    #
+    instance_faults = Table('instance_faults', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None),
+                    default=False),
+            Column('id', Integer(), primary_key=True, nullable=False),
+            Column('instance_uuid', String(36, ForeignKey('instances.uuid'))),
+            Column('code', Integer(), nullable=False),
+            Column('message',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('details',
+                   Text(length=None, convert_unicode=False,
+                        assert_unicode=None,
+                        unicode_error=None, _warn_on_bytestring=False)),
+            )
     try:
         instance_faults.create()
     except Exception:
@@ -60,4 +54,7 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
+    meta = MetaData()
+    meta.bind = migrate_engine
+    instance_faults = Table('instance_faults', meta, autoload=True)
     instance_faults.drop()

@@ -19,8 +19,6 @@ from sqlalchemy import MetaData, String, Table
 
 from nova import utils
 
-meta = MetaData()
-
 resources = [
     'instances',
     'cores',
@@ -31,7 +29,7 @@ resources = [
 ]
 
 
-def old_style_quotas_table(name):
+def old_style_quotas_table(meta, name):
     return Table(name, meta,
                  Column('id', Integer(), primary_key=True),
                  Column('created_at', DateTime(),
@@ -53,7 +51,7 @@ def old_style_quotas_table(name):
                 )
 
 
-def new_style_quotas_table(name):
+def new_style_quotas_table(meta, name):
     return Table(name, meta,
                  Column('id', Integer(), primary_key=True),
                  Column('created_at', DateTime(),
@@ -75,8 +73,8 @@ def new_style_quotas_table(name):
                 )
 
 
-def quotas_table(migrate_engine, name='quotas'):
-    return Table(name, meta, autoload=True, autoload_with=migrate_engine)
+def quotas_table(meta, name='quotas'):
+    return Table(name, meta, autoload=True)
 
 
 def _assert_no_duplicate_project_ids(quotas):
@@ -177,12 +175,13 @@ def convert_backward(migrate_engine, old_quotas, new_quotas):
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    old_quotas = quotas_table(migrate_engine)
+    old_quotas = quotas_table(meta)
     assert_old_quotas_have_no_active_duplicates(migrate_engine, old_quotas)
 
-    new_quotas = new_style_quotas_table('quotas_new')
+    new_quotas = new_style_quotas_table(meta, 'quotas_new')
     new_quotas.create()
     convert_forward(migrate_engine, old_quotas, new_quotas)
     old_quotas.drop()
@@ -190,18 +189,19 @@ def upgrade(migrate_engine):
     # clear metadata to work around this:
     # http://code.google.com/p/sqlalchemy-migrate/issues/detail?id=128
     meta.clear()
-    new_quotas = quotas_table(migrate_engine, 'quotas_new')
+    new_quotas = quotas_table(meta, 'quotas_new')
     new_quotas.rename('quotas')
 
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    new_quotas = quotas_table(migrate_engine)
+    new_quotas = quotas_table(meta)
     assert_new_quotas_have_no_active_duplicates(migrate_engine, new_quotas)
 
-    old_quotas = old_style_quotas_table('quotas_old')
+    old_quotas = old_style_quotas_table(meta, 'quotas_old')
     old_quotas.create()
     convert_backward(migrate_engine, old_quotas, new_quotas)
     new_quotas.drop()
@@ -209,5 +209,5 @@ def downgrade(migrate_engine):
     # clear metadata to work around this:
     # http://code.google.com/p/sqlalchemy-migrate/issues/detail?id=128
     meta.clear()
-    old_quotas = quotas_table(migrate_engine, 'quotas_old')
+    old_quotas = quotas_table(meta, 'quotas_old')
     old_quotas.rename('quotas')

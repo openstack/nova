@@ -14,25 +14,28 @@
 
 from sqlalchemy import Column, Float, Integer, MetaData, Table
 
-meta = MetaData()
-
-zones = Table('zones', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-weight_offset = Column('weight_offset', Float(), default=0.0)
-weight_scale = Column('weight_scale', Float(), default=1.0)
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    zones = Table('zones', meta, autoload=True)
+
+    #
+    # New Columns
+    #
+    weight_offset = Column('weight_offset', Float(), default=0.0)
+    weight_scale = Column('weight_scale', Float(), default=1.0)
 
     zones.create_column(weight_offset)
     zones.create_column(weight_scale)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    zones.drop_column(weight_offset)
-    zones.drop_column(weight_scale)
+    zones = Table('zones', meta, autoload=True)
+
+    zones.drop_column('weight_offset')
+    zones.drop_column('weight_scale')

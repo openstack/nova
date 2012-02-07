@@ -17,52 +17,38 @@
 
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
-meta = MetaData()
 
+def upgrade(migrate_engine):
+    # Upgrade operations go here. Don't create your own engine;
+    # bind migrate_engine to your metadata
+    meta = MetaData()
+    meta.bind = migrate_engine
 
-# Table stub-definitions
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of instances or services.
-#
-volumes = Table('volumes', meta,
-                Column('id', Integer(), primary_key=True, nullable=False),
-                )
+    volumes = Table('volumes', meta, autoload=True)
 
+    # Add columns to existing tables
+    volumes_provider_location = Column('provider_location',
+                                       String(length=256,
+                                              convert_unicode=False,
+                                              assert_unicode=None,
+                                              unicode_error=None,
+                                              _warn_on_bytestring=False))
 
-#
-# New Tables
-#
-# None
-
-#
-# Tables to alter
-#
-# None
-
-#
-# Columns to add to existing tables
-#
-
-volumes_provider_location = Column('provider_location',
+    volumes_provider_auth = Column('provider_auth',
                                    String(length=256,
                                           convert_unicode=False,
                                           assert_unicode=None,
                                           unicode_error=None,
                                           _warn_on_bytestring=False))
-
-volumes_provider_auth = Column('provider_auth',
-                               String(length=256,
-                                      convert_unicode=False,
-                                      assert_unicode=None,
-                                      unicode_error=None,
-                                      _warn_on_bytestring=False))
-
-
-def upgrade(migrate_engine):
-    # Upgrade operations go here. Don't create your own engine;
-    # bind migrate_engine to your metadata
-    meta.bind = migrate_engine
-
-    # Add columns to existing tables
     volumes.create_column(volumes_provider_location)
     volumes.create_column(volumes_provider_auth)
+
+
+def downgrade(migrate_engine):
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    volumes = Table('volumes', meta, autoload=True)
+
+    volumes.drop_column('provider_location')
+    volumes.drop_column('provider_auth')

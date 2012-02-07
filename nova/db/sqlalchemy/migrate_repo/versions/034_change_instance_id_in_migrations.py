@@ -13,26 +13,17 @@
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
-#    under the License.from sqlalchemy import *
+#    under the License.
 
 from sqlalchemy import Column, Integer, String, MetaData, Table
 
 
-meta = MetaData()
-
-
-#
-# Tables to alter
-#
-#
-
-instance_id = Column('instance_id', Integer())
-instance_uuid = Column('instance_uuid', String(255))
-
-
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
     migrations = Table('migrations', meta, autoload=True)
+    instance_uuid = Column('instance_uuid', String(255))
     migrations.create_column(instance_uuid)
 
     if migrate_engine.name == "mysql":
@@ -46,7 +37,10 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
     migrations = Table('migrations', meta, autoload=True)
     migrations.c.instance_uuid.drop()
+    instance_id = Column('instance_id', Integer())
     migrations.create_column(instance_id)

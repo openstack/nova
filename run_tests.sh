@@ -34,6 +34,8 @@ function process_option {
     -s|--no-site-packages) no_site_packages=1;;
     -r|--recreate-db) recreate_db=1;;
     -n|--no-recreate-db) recreate_db=0;;
+    -m|--patch-migrate) patch_migrate=1;;
+    -w|--no-patch-migrate) patch_migrate=0;;
     -f|--force) force=1;;
     -p|--pep8) just_pep8=1;;
     -P|--no-pep8) no_pep8=1;;
@@ -59,6 +61,7 @@ no_pep8=0
 just_hacking=0
 coverage=0
 recreate_db=1
+patch_migrate=1
 
 for arg in "$@"; do
   process_option $arg
@@ -183,6 +186,16 @@ fi
 
 if [ $recreate_db -eq 1 ]; then
     rm -f tests.sqlite
+fi
+
+# Workaround for sqlalchemy-migrate issue 72
+# see: http://code.google.com/p/sqlalchemy-migrate/issues/detail?id=72
+if [ $patch_migrate -eq 1 ]; then
+  pyver=python`python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))'`
+  target=${venv}/lib/${pyver}/site-packages/migrate/versioning/util/__init__.py
+  if [ -f $target ]; then
+    sed -i -e '/^\s\+finally:$/ {N; /^\(\s\+finally:\n\s\+if isinstance(engine, Engine)\):$/ {s//\1 and engine is not url:/}}' $target
+  fi
 fi
 
 run_tests

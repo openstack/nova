@@ -14,10 +14,9 @@
 
 from sqlalchemy import Index, MetaData, Table
 
-meta = MetaData()
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
     index = Index('project_id', instances.c.project_id)
@@ -25,6 +24,7 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
     index = Index('project_id', instances.c.project_id)

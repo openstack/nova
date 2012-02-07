@@ -17,20 +17,20 @@
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
 
-meta = MetaData()
-
-instances = Table("instances", meta,
-        Column("id", Integer(), primary_key=True, nullable=False))
-
-# matches the size of an image_ref
-config_drive_column = Column("config_drive", String(255), nullable=True)
-
-
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    instances = Table("instances", meta, autoload=True)
+
+    config_drive_column = Column("config_drive", String(255), nullable=True)
     instances.create_column(config_drive_column)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances.drop_column(config_drive_column)
+
+    instances = Table("instances", meta, autoload=True)
+
+    instances.drop_column('config_drive')

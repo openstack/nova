@@ -18,28 +18,23 @@
 from sqlalchemy import Column, Table, MetaData, Integer
 
 
-meta = MetaData()
-
-
-# Table stub-definitions
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of instances or services.
-#
-volumes = Table('volumes', meta,
-                Column('id', Integer(), primary_key=True, nullable=False),
-                )
-
-#
-# New Column
-#
-
-snapshot_id = Column('snapshot_id', Integer())
-
-
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
 
+    volumes = Table('volumes', meta, autoload=True)
+
+    snapshot_id = Column('snapshot_id', Integer())
     # Add columns to existing tables
     volumes.create_column(snapshot_id)
+
+
+def downgrade(migrate_engine):
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    volumes = Table('volumes', meta, autoload=True)
+
+    volumes.drop_column('snapshot_id')

@@ -17,40 +17,43 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey
 from sqlalchemy import MetaData, String, Table
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
-
-#
-# New Tables
-#
-dns_domains = Table('dns_domains', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('domain',
-               String(length=512, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-               primary_key=True, nullable=False),
-        Column('scope',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('availability_zone',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('project_id',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-               ForeignKey('projects.id'))
-        )
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    # load instances for fk
-    instances = Table('projects', meta, autoload=True)
+    # load tables for fk
+    projects = Table('projects', meta, autoload=True)
 
+    #
+    # New Tables
+    #
+    dns_domains = Table('dns_domains', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('domain',
+                   String(length=512, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False),
+                   primary_key=True, nullable=False),
+            Column('scope',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('availability_zone',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('project_id',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False),
+                   ForeignKey('projects.id'))
+            )
     # create dns_domains table
     try:
         dns_domains.create()
@@ -60,6 +63,13 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    # load tables for fk
+    projects = Table('projects', meta, autoload=True)
+
+    dns_domains = Table('dns_domains', meta, autoload=True)
     try:
         dns_domains.drop()
     except Exception:

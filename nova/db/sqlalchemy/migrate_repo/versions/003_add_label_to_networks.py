@@ -17,30 +17,26 @@
 
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
-meta = MetaData()
-
-networks = Table('networks', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-
-#
-# New Tables
-#
-
-
-#
-# Tables to alter
-#
-
-networks_label = Column(
-        'label',
-        String(length=255, convert_unicode=False, assert_unicode=None,
-               unicode_error=None, _warn_on_bytestring=False))
-
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    networks = Table('networks', meta, autoload=True)
+
+    networks_label = Column(
+            'label',
+            String(length=255, convert_unicode=False, assert_unicode=None,
+                   unicode_error=None, _warn_on_bytestring=False))
     networks.create_column(networks_label)
+
+
+def downgrade(migrate_engine):
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    networks = Table('networks', meta, autoload=True)
+
+    networks.drop_column('label')

@@ -7,7 +7,7 @@ BEGIN TRANSACTION;
                            deleted BOOLEAN,
                            id INTEGER NOT NULL,
                            name VARCHAR(255),
-                           api_url VARVHAR(255),
+                           api_url VARCHAR(255),
                            username VARCHAR(255),
                            password VARCHAR(255),
                            weight_offset FLOAT,
