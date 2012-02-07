@@ -134,24 +134,18 @@ Options can be registered as belonging to a group:
 
     rabbit_host_opt = \
         cfg.StrOpt('host',
-                   group='rabbit',
                    default='localhost',
                    help='IP/hostname to listen on'),
     rabbit_port_opt = \
         cfg.IntOpt('port',
                    default=5672,
                    help='Port number to listen on')
-    rabbit_ssl_opt = \
-        conf.BoolOpt('use_ssl',
-                     default=False,
-                     help='Whether to support SSL connections')
 
     def register_rabbit_opts(conf):
         conf.register_group(rabbit_group)
-        # options can be registered under a group in any of these ways:
-        conf.register_opt(rabbit_host_opt)
+        # options can be registered under a group in either of these ways:
+        conf.register_opt(rabbit_host_opt, group=rabbit_group)
         conf.register_opt(rabbit_port_opt, group='rabbit')
-        conf.register_opt(rabbit_ssl_opt, group=rabbit_group)
 
 If no group is specified, options belong to the 'DEFAULT' section of config
 files:
@@ -171,7 +165,7 @@ files:
 
 Command-line options in a group are automatically prefixed with the group name:
 
-    --rabbit-host localhost --rabbit-use-ssl False
+    --rabbit-host localhost --rabbit-port 9999
 
 Option values in the default group are referenced as attributes/properties on
 the config manager; groups are also attributes on the config manager, with
@@ -199,14 +193,31 @@ Option values may reference other values using PEP 292 string substitution:
     ]
 
 Note that interpolation can be avoided by using '$$'.
+
+For command line utilities that dispatch to other command line utilities, the
+disable_interspersed_args() method is available. If this this method is called,
+then parsing e.g.
+
+  script --verbose cmd --debug /tmp/mything
+
+will no longer return:
+
+  ['cmd', '/tmp/mything']
+
+as the leftover arguments, but will instead return:
+
+  ['cmd', '--debug', '/tmp/mything']
+
+i.e. argument parsing is stopped at the first non-option argument.
 """
 
-import sys
+import collections
 import ConfigParser
 import copy
 import optparse
 import os
 import string
+import sys
 
 
 class Error(Exception):
@@ -540,6 +551,7 @@ class BoolOpt(Opt):
         container = self._get_optparse_container(parser, group)
         kwargs = self._get_optparse_kwargs(group, action='store_false')
         prefix = self._get_optparse_prefix('no', group)
+        kwargs["help"] = "The inverse of --" + self.name
         self._add_to_optparse(container, self.name, None, kwargs, prefix)
 
     def _get_optparse_kwargs(self, group, action='store_true', **kwargs):
@@ -681,7 +693,7 @@ class OptGroup(object):
         return self._optparse_group
 
 
-class ConfigOpts(object):
+class ConfigOpts(collections.Mapping, object):
 
     """
     Config options which may be set on the command line or in config files.
@@ -775,6 +787,23 @@ class ConfigOpts(object):
         :raises: NoSuchOptError,ConfigFileValueError,TemplateSubstitutionError
         """
         return self._substitute(self._get(name))
+
+    def __getitem__(self, key):
+        """Look up an option value and perform string substitution."""
+        return self.__getattr__(key)
+
+    def __contains__(self, key):
+        """Return True if key is the name of a registered opt or group."""
+        return key in self._opts or key in self._groups
+
+    def __iter__(self):
+        """Iterate over all registered opt and group names."""
+        for key in self._opts.keys() + self._groups.keys():
+            yield key
+
+    def __len__(self):
+        """Return the number of options and option groups."""
+        return len(self._opts) + len(self._groups)
 
     def reset(self):
         """Reset the state of the object to before it was called."""
@@ -880,6 +909,31 @@ class ConfigOpts(object):
         opt_info = self._get_opt_info(name, group)
         opt_info['default'] = default
 
+    def disable_interspersed_args(self):
+        """Set parsing to stop on the first non-option.
+
+        If this this method is called, then parsing e.g.
+
+          script --verbose cmd --debug /tmp/mything
+
+        will no longer return:
+
+          ['cmd', '/tmp/mything']
+
+        as the leftover arguments, but will instead return:
+
+          ['cmd', '--debug', '/tmp/mything']
+
+        i.e. argument parsing is stopped at the first non-option argument.
+        """
+        self._oparser.disable_interspersed_args()
+
+    def enable_interspersed_args(self):
+        """Set parsing to not stop on the first non-option.
+
+        This it the default behaviour."""
+        self._oparser.enable_interspersed_args()
+
     def log_opt_values(self, logger, lvl):
         """Log the value of all registered opts.
 
@@ -900,7 +954,7 @@ class ConfigOpts(object):
             logger.log(lvl, "%-30s = %s", opt_name, getattr(self, opt_name))
 
         for group_name in self._groups:
-            group_attr = self.GroupAttr(self, group_name)
+            group_attr = self.GroupAttr(self, self._get_group(group_name))
             for opt_name in sorted(self._groups[group_name]._opts):
                 logger.log(lvl, "%-30s = %s",
                            "%s.%s" % (group_name, opt_name),
@@ -916,16 +970,13 @@ class ConfigOpts(object):
         """Look up an option value.
 
         :param name: the opt name (or 'dest', more precisely)
-        :param group: an option OptGroup
+        :param group: an OptGroup
         :returns: the option value, or a GroupAttr object
         :raises: NoSuchOptError, NoSuchGroupError, ConfigFileValueError,
                  TemplateSubstitutionError
         """
         if group is None and name in self._groups:
-            return self.GroupAttr(self, name)
-
-        if group is not None:
-            group = self._get_group(group)
+            return self.GroupAttr(self, self._get_group(name))
 
         info = self._get_opt_info(name, group)
         default, opt, override = map(lambda k: info[k], sorted(info.keys()))
@@ -1027,17 +1078,18 @@ class ConfigOpts(object):
             not_read_ok = filter(lambda f: f not in read_ok, config_files)
             raise ConfigFilesNotFoundError(not_read_ok)
 
-    class GroupAttr(object):
+    class GroupAttr(collections.Mapping, object):
 
         """
-        A helper class representing the option values of a group as attributes.
+        A helper class representing the option values of a group as a mapping
+        and attributes.
         """
 
         def __init__(self, conf, group):
             """Construct a GroupAttr object.
 
             :param conf: a ConfigOpts object
-            :param group: a group name or OptGroup object
+            :param group: an OptGroup object
             """
             self.conf = conf
             self.group = group
@@ -1045,6 +1097,23 @@ class ConfigOpts(object):
         def __getattr__(self, name):
             """Look up an option value and perform template substitution."""
             return self.conf._substitute(self.conf._get(name, self.group))
+
+        def __getitem__(self, key):
+            """Look up an option value and perform string substitution."""
+            return self.__getattr__(key)
+
+        def __contains__(self, key):
+            """Return True if key is the name of a registered opt or group."""
+            return key in self.group._opts
+
+        def __iter__(self):
+            """Iterate over all registered opt and group names."""
+            for key in self.group._opts.keys():
+                yield key
+
+        def __len__(self):
+            """Return the number of options and option groups."""
+            return len(self.group._opts)
 
     class StrSubWrapper(object):
 
@@ -1118,6 +1187,9 @@ class CommonConfigOpts(ConfigOpts):
         BoolOpt('use-syslog',
                 default=False,
                 help='Use syslog for logging.'),
+        StrOpt('syslog-log-facility',
+               default='LOG_USER',
+               help='syslog facility to receive log lines')
         ]
 
     def __init__(self, **kwargs):
