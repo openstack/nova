@@ -67,6 +67,7 @@ if __name__ == '__main__':
                                stdout=sys.stdout,
                                stderr=sys.stderr,
                                env=filtermatch.get_environment(userargs))
+        obj.wait()
         sys.exit(obj.returncode)
 
     print "Unauthorized command: %s" % ' '.join(userargs)
