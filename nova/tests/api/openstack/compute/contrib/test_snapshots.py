@@ -105,6 +105,7 @@ class SnapshotApiTest(test.TestCase):
         self.stubs.Set(volume.api.API, "get_snapshot", stub_snapshot_get)
         self.stubs.Set(volume.api.API, "get_all_snapshots",
             stub_snapshot_get_all)
+        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get)
 
         self.context = context.get_admin_context()
 
