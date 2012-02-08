@@ -17,7 +17,7 @@
 
 import time
 
-from netaddr import IPNetwork, IPAddress
+import netaddr
 
 from nova.compute import instance_types
 from nova import context
@@ -50,6 +50,9 @@ quantum_opts = [
     cfg.BoolOpt('quantum_use_port_security',
                 default=False,
                 help='Whether or not to enable port security'),
+    cfg.BoolOpt('quantum_port_security_include_link_local',
+                default=False,
+                help='Add the link local address to the port security list'),
     ]
 
 FLAGS = flags.FLAGS
@@ -346,8 +349,13 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             pairs = []
             # Set up port security if enabled
             if FLAGS.quantum_use_port_security:
+                if FLAGS.quantum_port_security_include_link_local:
+                    mac = netaddr.EUI(vif_rec['address'])
+                    ips.append(str(mac.ipv6_link_local()))
+
                 pairs = [{'mac_address': vif_rec['address'],
                           'ip_address': ip} for ip in ips]
+
             self.q_conn.create_and_attach_port(net_tenant_id, quantum_net_id,
                                                vif_rec['uuid'],
                                                vm_id=instance['uuid'],
@@ -384,15 +392,15 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             # previously gotten from the network table (they'll be
             # passed to the linux_net functions).
             network_ref['cidr'] = subnet['cidr']
-            n = IPNetwork(subnet['cidr'])
+            n = netaddr.IPNetwork(subnet['cidr'])
             # NOTE(tr3buchet): should probably not always assume first+1
-            network_ref['dhcp_server'] = IPAddress(n.first + 1)
+            network_ref['dhcp_server'] = netaddr.IPAddress(n.first + 1)
             # TODO(bgh): Melange should probably track dhcp_start
             # TODO(tr3buchet): melange should store dhcp_server as well
             if not 'dhcp_start' in network_ref or \
                     network_ref['dhcp_start'] is None:
-                network_ref['dhcp_start'] = IPAddress(n.first + 2)
-            network_ref['broadcast'] = IPAddress(n.broadcast)
+                network_ref['dhcp_start'] = netaddr.IPAddress(n.first + 2)
+            network_ref['broadcast'] = netaddr.IPAddress(n.broadcast)
             network_ref['gateway'] = subnet['gateway']
             # Construct the interface id that we'll use for the bridge
             interface_id = "gw-" + str(network_ref['uuid'][0:11])
@@ -530,7 +538,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                 # except anything so the rest of deallocate can succeed
                 msg = _('port deallocation failed for instance: '
                         '|%(instance_id)s|, port_id: |%(port_id)s|')
-                LOG.critical(msg % locals)
+                LOG.critical(msg % locals())
 
             # ipam deallocation block
             try:
@@ -551,7 +559,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                 vif_uuid = vif_ref['uuid']
                 msg = _('ipam deallocation failed for instance: '
                         '|%(instance_id)s|, vif_uuid: |%(vif_uuid)s|')
-                LOG.critical(msg % locals)
+                LOG.critical(msg % locals())
 
     # TODO(bgh): At some point we should consider merging enable_dhcp() and
     # update_dhcp()
@@ -569,11 +577,11 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             # passed to the linux_net functions).
             if subnet['cidr']:
                 network_ref['cidr'] = subnet['cidr']
-            n = IPNetwork(network_ref['cidr'])
-            network_ref['dhcp_server'] = IPAddress(n.first + 1)
-            network_ref['dhcp_start'] = IPAddress(n.first + 2)
-            network_ref['broadcast'] = IPAddress(n.broadcast)
-            network_ref['gateway'] = IPAddress(n.first + 1)
+            n = netaddr.IPNetwork(network_ref['cidr'])
+            network_ref['dhcp_server'] = netaddr.IPAddress(n.first + 1)
+            network_ref['dhcp_start'] = netaddr.IPAddress(n.first + 2)
+            network_ref['broadcast'] = netaddr.IPAddress(n.broadcast)
+            network_ref['gateway'] = netaddr.IPAddress(n.first + 1)
             dev = self._generate_gw_dev(network_ref['uuid'])
             # And remove the dhcp mappings for the subnet
             hosts = self.get_dhcp_hosts_text(context,
