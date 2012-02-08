@@ -33,6 +33,8 @@ import uuid
 from decimal import Decimal, InvalidOperation
 from xml.dom import minidom
 
+from eventlet import greenthread
+
 from nova import exception
 from nova import flags
 from nova.image import glance
@@ -1211,16 +1213,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
             snapshot
     """
     max_attempts = FLAGS.xenapi_vhd_coalesce_max_attempts
-    attempts = {'counter': 0}
-
-    def _poll_vhds():
-        attempts['counter'] += 1
-        if attempts['counter'] > max_attempts:
-            counter = attempts['counter']
-            msg = (_("VHD coalesce attempts exceeded (%(counter)d >"
-                    " %(max_attempts)d), giving up...") % locals())
-            raise exception.Error(msg)
-
+    for i in xrange(max_attempts):
         VMHelper.scan_sr(session, instance, sr_ref)
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
@@ -1228,13 +1221,13 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
                     " %(original_parent_uuid)s, waiting for coalesce...")
                     % locals())
         else:
-            # Breakout of the loop (normally) and return the parent_uuid
-            raise utils.LoopingCallDone(parent_uuid)
+            return parent_uuid
 
-    loop = utils.LoopingCall(_poll_vhds)
-    loop.start(FLAGS.xenapi_vhd_coalesce_poll_interval, now=True)
-    parent_uuid = loop.wait()
-    return parent_uuid
+        greenthread.sleep(FLAGS.xenapi_vhd_coalesce_poll_interval)
+
+    msg = (_("VHD coalesce attempts exceeded (%(max_attempts)d)"
+             ", giving up...") % locals())
+    raise exception.Error(msg)
 
 
 def remap_vbd_dev(dev):
@@ -1319,7 +1312,6 @@ def vbd_unplug_with_retry(session, vbd_ref):
     DEVICE_DETACH_REJECTED.  For reasons which I don't understand, we're
     seeing the device still in use, even when all processes using the device
     should be dead."""
-    # FIXME(sirp): We can use LoopingCall here w/o blocking sleep()
     while True:
         try:
             session.call_xenapi("VBD.unplug", vbd_ref)
@@ -1329,7 +1321,7 @@ def vbd_unplug_with_retry(session, vbd_ref):
             if (len(e.details) > 0 and
                 e.details[0] == 'DEVICE_DETACH_REJECTED'):
                 LOG.debug(_('VBD.unplug rejected: retrying...'))
-                time.sleep(1)
+                greenthread.sleep(1)
                 LOG.debug(_('Not sleeping anymore!'))
             elif (len(e.details) > 0 and
                   e.details[0] == 'DEVICE_ALREADY_DETACHED'):
