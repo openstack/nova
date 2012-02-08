@@ -1446,9 +1446,14 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
                   run_as_root=True)
 
     # fsck the disk
+    #
     # NOTE(sirp): using -p here to automatically repair filesystem, is
     # this okay?
-    utils.execute('e2fsck', '-f', '-p', partition_path, run_as_root=True)
+    #
+    # Exit Code 1 = File system errors corrected
+    #           2 = File system errors corrected, system needs a reboot
+    utils.execute('e2fsck', '-f', '-p', partition_path, run_as_root=True,
+                  check_exit_code=[0, 1, 2])
 
     if new_sectors < old_sectors:
         # Resizing down, resize filesystem before partition resize
