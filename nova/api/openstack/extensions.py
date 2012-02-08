@@ -309,7 +309,7 @@ def wrap_errors(fn):
     return wrapped
 
 
-def load_standard_extensions(ext_mgr, logger, path, package):
+def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
     """Registers all standard API extensions."""
 
     # Walk through all the modules in our directory...
@@ -331,13 +331,18 @@ def load_standard_extensions(ext_mgr, logger, path, package):
                 continue
 
             # Try loading it
-            classname = ("%s%s.%s.%s%s" %
-                         (package, relpkg, root,
-                          root[0].upper(), root[1:]))
+            classname = "%s%s" % (root[0].upper(), root[1:])
+            classpath = ("%s%s.%s.%s" %
+                         (package, relpkg, root, classname))
+
+            if ext_list is not None and classname not in ext_list:
+                logger.debug("Skipping extension: %s" % classpath)
+                continue
+
             try:
-                ext_mgr.load_extension(classname)
+                ext_mgr.load_extension(classpath)
             except Exception as exc:
-                logger.warn(_('Failed to load extension %(classname)s: '
+                logger.warn(_('Failed to load extension %(classpath)s: '
                               '%(exc)s') % locals())
 
         # Now, let's consider any subdirectories we may have...
