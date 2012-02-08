@@ -65,7 +65,7 @@ import time
 import urlparse
 import xmlrpclib
 
-from eventlet import event
+from eventlet import greenthread
 from eventlet import queue
 from eventlet import tpool
 from eventlet import timeout
@@ -563,54 +563,44 @@ class XenAPISession(object):
     def wait_for_task(self, task, uuid=None):
         """Return the result of the given task. The task is polled
         until it completes."""
-        done = event.Event()
-        loop = utils.LoopingCall(f=None)
-
-        def _poll_task():
+        while True:
             """Poll the given XenAPI task, and return the result if the
             action was completed successfully or not.
             """
-            try:
-                ctxt = context.get_admin_context()
-                name = self.call_xenapi("task.get_name_label", task)
-                status = self.call_xenapi("task.get_status", task)
+            ctxt = context.get_admin_context()
+            name = self.call_xenapi("task.get_name_label", task)
+            status = self.call_xenapi("task.get_status", task)
 
-                # Ensure action is never > 255
-                action = dict(action=name[:255], error=None)
-                log_instance_actions = (FLAGS.xenapi_log_instance_actions and
-                                        uuid)
+            # Ensure action is never > 255
+            action = dict(action=name[:255], error=None)
+            log_instance_actions = (FLAGS.xenapi_log_instance_actions and
+                                    uuid)
+            if log_instance_actions:
+                action["instance_uuid"] = uuid
+
+            if status == "pending":
+                pass
+            elif status == "success":
+                result = self.call_xenapi("task.get_result", task)
+                LOG.info(_("Task [%(name)s] %(task)s status:"
+                        " success    %(result)s") % locals())
+
                 if log_instance_actions:
-                    action["instance_uuid"] = uuid
+                    db.instance_action_create(ctxt, action)
 
-                if status == "pending":
-                    return
-                elif status == "success":
-                    result = self.call_xenapi("task.get_result", task)
-                    LOG.info(_("Task [%(name)s] %(task)s status:"
-                            " success    %(result)s") % locals())
+                return _parse_xmlrpc_value(result)
+            else:
+                error_info = self.call_xenapi("task.get_error_info", task)
+                LOG.warn(_("Task [%(name)s] %(task)s status:"
+                        " %(status)s    %(error_info)s") % locals())
 
-                    if log_instance_actions:
-                        db.instance_action_create(ctxt, action)
+                if log_instance_actions:
+                    action["error"] = str(error_info)
+                    db.instance_action_create(ctxt, action)
 
-                    done.send(_parse_xmlrpc_value(result))
-                else:
-                    error_info = self.call_xenapi("task.get_error_info", task)
-                    LOG.warn(_("Task [%(name)s] %(task)s status:"
-                            " %(status)s    %(error_info)s") % locals())
+                raise self.XenAPI.Failure(error_info)
 
-                    if log_instance_actions:
-                        action["error"] = str(error_info)
-                        db.instance_action_create(ctxt, action)
-
-                    done.send_exception(self.XenAPI.Failure(error_info))
-            except self.XenAPI.Failure, exc:
-                LOG.warn(exc)
-                done.send_exception(*sys.exc_info())
-            loop.stop()
-
-        loop.f = _poll_task
-        loop.start(FLAGS.xenapi_task_poll_interval, now=True)
-        return done.wait()
+            greenthread.sleep(FLAGS.xenapi_task_poll_interval)
 
     def _create_session(self, url):
         """Stubout point. This can be replaced with a mock session."""
