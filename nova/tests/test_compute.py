@@ -590,7 +590,7 @@ class ComputeTestCase(BaseTestCase):
 
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
-        self.assertEqual(inst_ref['task_state'], None)
+        self.assertEqual(inst_ref['task_state'], task_states.UPDATING_PASSWORD)
 
         self.compute.terminate_instance(self.context, inst_ref['uuid'])
 

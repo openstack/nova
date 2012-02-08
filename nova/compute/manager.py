@@ -213,8 +213,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _set_instance_error_state(self, context, instance_uuid):
         self._instance_update(context,
                               instance_uuid,
-                              vm_state=vm_states.ERROR,
-                              task_state=None)
+                              vm_state=vm_states.ERROR)
 
     def init_host(self):
         """Initialization for a standalone compute service."""
@@ -437,8 +436,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             return
         except Exception as e:
             with utils.save_and_reraise_exception():
-                self._instance_update(context, instance_uuid,
-                                      vm_state=vm_states.ERROR)
+                self._set_instance_error_state(context, instance_uuid)
 
     def _check_instance_not_already_created(self, context, instance):
         """Ensure an instance with the same name is not already present."""
@@ -1195,9 +1193,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         same_host = instance_ref['host'] == FLAGS.host
         if same_host and not FLAGS.allow_resize_to_same_host:
-            self._instance_update(context,
-                                  instance_uuid,
-                                  vm_state=vm_states.ERROR)
+            self._set_instance_error_state(context, instance_uuid)
             msg = _('destination same as source!')
             raise exception.MigrationError(msg)
 
@@ -1253,9 +1249,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             with utils.save_and_reraise_exception():
                 msg = _('%s. Setting instance vm_state to ERROR')
                 LOG.error(msg % error)
-                self._instance_update(context,
-                                      instance_uuid,
-                                      vm_state=vm_states.ERROR)
+                self._set_instance_error_state(context, instance_uuid)
 
         self.db.migration_update(context,
                                  migration_id,
@@ -1330,9 +1324,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             with utils.save_and_reraise_exception():
                 msg = _('%s. Setting instance vm_state to ERROR')
                 LOG.error(msg % error)
-                self._instance_update(context,
-                                      instance_ref.uuid,
-                                      vm_state=vm_states.ERROR)
+                self._set_instance_error_state(context, instance_ref.uuid)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1485,7 +1477,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
 
         LOG.debug(_('instance %s: locking'), instance_uuid, context=context)
-        self.db.instance_update(context, instance_uuid, {'locked': True})
+        self._instance_update(context, instance_uuid, locked=True)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
@@ -1494,7 +1486,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
 
         LOG.debug(_('instance %s: unlocking'), instance_uuid, context=context)
-        self.db.instance_update(context, instance_uuid, {'locked': False})
+        self._instance_update(context, instance_uuid, locked=False)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
