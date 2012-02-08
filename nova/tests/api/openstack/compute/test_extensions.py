@@ -217,6 +217,13 @@ class ExtensionControllerTest(ExtensionTestCase):
             },
         )
 
+        for ext in data['extensions']:
+            url = '/fake/extensions/%s' % ext['alias']
+            request = webob.Request.blank(url)
+            response = request.get_response(app)
+            output = json.loads(response.body)
+            self.assertEqual(output['extension']['alias'], ext['alias'])
+
     def test_get_extension_json(self):
         app = compute.APIRouter()
         request = webob.Request.blank("/fake/extensions/FOXNSOX")
