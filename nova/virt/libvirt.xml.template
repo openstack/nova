@@ -166,6 +166,9 @@
             <source path='/dev/pts/2'/>
             <target port='0'/>
         </serial>
+#if $getVar('use_usb_tablet', True)
+        <input type='tablet' bus='usb'/>
+#end if
 
 #if $getVar('vncserver_listen', False)
         <graphics type='vnc' port='-1' autoport='yes' keymap='${vnc_keymap}' listen='${vncserver_listen}'/>
