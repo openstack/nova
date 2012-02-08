@@ -96,7 +96,8 @@ class _IntegratedTestBase(test.TestCase):
 
         # Auto-assign ports to allow concurrent tests
         f['ec2_listen_port'] = 0
-        f['osapi_listen_port'] = 0
+        f['osapi_compute_listen_port'] = 0
+        f['osapi_volume_listen_port'] = 0
         f['metadata_listen_port'] = 0
 
         f['image_service'] = 'nova.image.fake.FakeImageService'
