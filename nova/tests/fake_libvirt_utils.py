@@ -93,10 +93,6 @@ def get_open_port(start_port, end_port):
     return int((start_port + end_port) / 2)
 
 
-def run_ajaxterm(cmd, token, port):
-    pass
-
-
 def get_fs_info(path):
     return {'total': 128 * (1024 ** 3),
             'used': 44 * (1024 ** 3),

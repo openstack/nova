@@ -259,6 +259,3 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_get_console_output(self):
         pass
-
-    def test_get_ajax_console(self):
-        pass

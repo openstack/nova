@@ -1425,11 +1425,6 @@ class VMOps(object):
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
 
-    def get_ajax_console(self, instance):
-        """Return link to instance's ajax console."""
-        # TODO: implement this!
-        return 'http://fakeajaxconsole/fake_url'
-
     def get_vnc_console(self, instance):
         """Return connection info for a vnc console."""
         vm_ref = self._get_vm_opaque_ref(instance)

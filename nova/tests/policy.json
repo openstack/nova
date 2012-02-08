@@ -20,7 +20,6 @@
     "compute:lock": [],
     "compute:unlock": [],
 
-    "compute:get_ajax_console": [],
     "compute:get_vnc_console": [],
     "compute:get_console_output": [],
 

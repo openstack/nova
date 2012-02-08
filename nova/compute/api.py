@@ -1574,19 +1574,6 @@ class API(base.Base):
                                    instance, params=params)
 
     @wrap_check_policy
-    def get_ajax_console(self, context, instance):
-        """Get a url to an AJAX Console."""
-        output = self._call_compute_message('get_ajax_console',
-                                            context,
-                                            instance)
-        rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
-                 {'method': 'authorize_ajax_console',
-                  'args': {'token': output['token'], 'host': output['host'],
-                  'port': output['port']}})
-        return {'url': '%s/?token=%s' % (FLAGS.ajax_console_proxy_url,
-                                         output['token'])}
-
-    @wrap_check_policy
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to an instance Console."""
         connect_info = self._call_compute_message('get_vnc_console',

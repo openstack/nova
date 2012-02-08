@@ -1925,20 +1925,6 @@ disk size: 4.4M''', ''))
         finally:
             os.unlink(dst_path)
 
-    def test_run_ajaxterm(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        token = 's3cr3tt0ken'
-        shell_cmd = 'shell-cmd.py'
-        port = 2048
-        utils.execute(mox.IgnoreArg(),
-                      '--command', shell_cmd,
-                      '-t', token,
-                      '-p', port)
-
-        # Start test
-        self.mox.ReplayAll()
-        libvirt_utils.run_ajaxterm(shell_cmd, token, port)
-
     def test_get_fs_info(self):
         # Use a 1024-byte block size (df -k) because OS X does not support
         # the -B flag

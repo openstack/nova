@@ -102,9 +102,6 @@ libvirt_opts = [
     cfg.BoolOpt('use_cow_images',
                 default=True,
                 help='Whether to use cow images'),
-    cfg.StrOpt('ajaxterm_portrange',
-               default='10000-12000',
-               help='Range of ports that ajaxterm should try to bind'),
     cfg.StrOpt('cpuinfo_xml_template',
                default=utils.abspath('virt/cpuinfo.xml.template'),
                help='CpuInfo XML Template (Used only live migration now)'),
@@ -776,29 +773,6 @@ class LibvirtConnection(driver.ComputeDriver):
             fpath = console_log
 
         return libvirt_utils.load_file(fpath)
-
-    @exception.wrap_exception()
-    def get_ajax_console(self, instance):
-        def get_pty_for_instance(instance_name):
-            virt_dom = self._lookup_by_name(instance_name)
-            xml = virt_dom.XMLDesc(0)
-            dom = minidom.parseString(xml)
-
-            for serial in dom.getElementsByTagName('serial'):
-                if serial.getAttribute('type') == 'pty':
-                    source = serial.getElementsByTagName('source')[0]
-                    return source.getAttribute('path')
-
-        start_port, end_port = FLAGS.ajaxterm_portrange.split("-")
-        port = libvirt_utils.get_open_port(int(start_port), int(end_port))
-        token = str(uuid.uuid4())
-        host = instance['host']
-
-        ajaxterm_cmd = 'sudo netcat - %s' \
-                       % get_pty_for_instance(instance['name'])
-
-        libvirt_utils.run_ajaxterm(ajaxterm_cmd, token, port)
-        return {'token': token, 'host': host, 'port': port}
 
     @staticmethod
     def get_host_ip_addr():

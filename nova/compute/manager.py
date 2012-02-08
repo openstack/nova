@@ -1553,15 +1553,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def get_ajax_console(self, context, instance_uuid):
-        """Return connection information for an ajax console."""
-        context = context.elevated()
-        LOG.debug(_("instance %s: getting ajax console"), instance_uuid)
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        return self.driver.get_ajax_console(instance_ref)
-
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @wrap_instance_fault
     def get_vnc_console(self, context, instance_uuid, console_type):
         """Return connection information for a vnc console."""
         context = context.elevated()

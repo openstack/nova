@@ -219,11 +219,6 @@ class FakeConnection(driver.ComputeDriver):
     def get_console_output(self, instance):
         return 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE'
 
-    def get_ajax_console(self, instance):
-        return {'token': 'FAKETOKEN',
-                'host': 'fakeajaxconsole.com',
-                'port': 6969}
-
     def get_vnc_console(self, instance):
         return {'internal_access_path': 'FAKE',
                 'host': 'fakevncconsole.com',
