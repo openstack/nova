@@ -62,8 +62,8 @@ disk_opts = [
                     default=[
                       'default=mkfs.ext3 -L %(fs_label)s -F %(target)s',
                       'linux=mkfs.ext3 -L %(fs_label)s -F %(target)s',
-                      'windows='
-                      'mkfs.ntfs --fast --label %(fs_label)s %(target)s',
+                      'windows=mkfs.ntfs'
+                      ' --force --fast --label %(fs_label)s %(target)s',
                       # NOTE(yamahata): vfat case
                       #'windows=mkfs.vfat -n %(fs_label)s %(target)s',
                       ],
