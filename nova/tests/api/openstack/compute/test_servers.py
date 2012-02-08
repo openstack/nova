@@ -1393,7 +1393,8 @@ class ServersControllerCreateTest(test.TestCase):
         super(ServersControllerCreateTest, self).setUp()
 
         self.maxDiff = None
-        self.flags(verbose=True)
+        self.flags(verbose=True,
+                   enable_instance_password=True)
         self.config_drive = None
         self.instance_cache_num = 0
         self.instance_cache = {}
@@ -1475,6 +1476,20 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
 
+    def _check_admin_pass_len(self, server_dict):
+        """ utility function - check server_dict for adminPass
+        length.
+
+        """
+        self.assertEqual(FLAGS.password_length,
+                         len(server_dict["adminPass"]))
+
+    def _check_admin_pass_missing(self, server_dict):
+        """ utility function - check server_dict for absence
+        of adminPass
+        """
+        self.assertTrue("adminPass" not in server_dict)
+
     def _test_create_instance(self):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         body = dict(server=dict(
@@ -1487,7 +1502,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         server = self.controller.create(req, body).obj['server']
 
-        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
+        self._check_admin_pass_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_multiple_instances(self):
@@ -1515,7 +1530,35 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(req, body).obj
 
         self.assertEqual(FAKE_UUID, res["server"]["id"])
-        self.assertEqual(12, len(res["server"]["adminPass"]))
+        self._check_admin_pass_len(res["server"])
+
+    def test_create_multiple_instances_pass_disabled(self):
+        """Test creating multiple instances but not asking for
+        reservation_id
+        """
+        self.flags(enable_instance_password=False)
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'min_count': 2,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {'hello': 'world',
+                             'open': 'stack'},
+                'personality': []
+            }
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = self.controller.create(req, body).obj
+
+        self.assertEqual(FAKE_UUID, res["server"]["id"])
+        self._check_admin_pass_missing(res["server"])
 
     def test_create_multiple_instances_resv_id_return(self):
         """Test creating multiple instances with asking for
@@ -1678,7 +1721,47 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(req, body).obj
 
         server = res['server']
-        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
+        self._check_admin_pass_len(server)
+        self.assertEqual(FAKE_UUID, server['id'])
+
+    def test_create_instance_with_access_ip_pass_disabled(self):
+        # test with admin passwords disabled See lp bug 921814
+        self.flags(enable_instance_password=False)
+
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/fake/flavors/3'
+        access_ipv4 = '1.2.3.4'
+        access_ipv6 = 'fead::1234'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'accessIPv4': access_ipv4,
+                'accessIPv6': access_ipv6,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = self.controller.create(req, body).obj
+
+        server = res['server']
+        self._check_admin_pass_missing(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_bad_format_access_ip_v4(self):
@@ -1768,6 +1851,7 @@ class ServersControllerCreateTest(test.TestCase):
                         "path": "/etc/banner.txt",
                         "contents": "MQ==",
                     },
+
                 ],
             },
         }
@@ -1779,7 +1863,42 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(req, body).obj
 
         server = res['server']
-        self.assertEqual(FLAGS.password_length, len(server['adminPass']))
+        self._check_admin_pass_len(server)
+        self.assertEqual(FAKE_UUID, server['id'])
+
+    def test_create_instance_pass_disabled(self):
+        self.flags(enable_instance_password=False)
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = self.controller.create(req, body).obj
+
+        server = res['server']
+        self._check_admin_pass_missing(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_too_much_metadata(self):
@@ -1835,7 +1954,7 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(req, body).obj
 
         self.assertEqual(FAKE_UUID, res["server"]["id"])
-        self.assertEqual(12, len(res["server"]["adminPass"]))
+        self._check_admin_pass_len(res["server"])
 
     def test_create_instance_invalid_flavor_href(self):
         image_href = 'http://localhost/v2/images/2'
@@ -2042,6 +2161,28 @@ class ServersControllerCreateTest(test.TestCase):
 
         server = res['server']
         self.assertEqual(server['adminPass'], body['server']['adminPass'])
+
+    def test_create_instance_admin_pass_pass_disabled(self):
+        self.flags(enable_instance_password=False)
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_uuid,
+                'flavorRef': 3,
+                'adminPass': 'testpass',
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['content-type'] = "application/json"
+        res = self.controller.create(req, body).obj
+
+        server = res['server']
+        self.assertTrue('adminPass' in body['server'] )
+        self.assertTrue('adminPass' not in server)
 
     def test_create_instance_admin_pass_empty(self):
         body = {
