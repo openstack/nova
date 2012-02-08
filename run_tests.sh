@@ -95,7 +95,7 @@ function run_pep8 {
   ignore_scripts="*.sh:*nova-debug:*clean-vlans"
   ignore_files="*eventlet-patch:*pip-requires"
   GLOBIGNORE="$ignore_scripts:$ignore_files"
-  srcfiles=`find bin -type f ! -name "nova.conf*"`
+  srcfiles=`find bin -type f ! -name "nova.conf*" ! -name "api-paste.ini*"`
   srcfiles+=" `find tools/*`"
   srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
   # Just run PEP8 in current environment
