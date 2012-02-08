@@ -517,18 +517,20 @@ class SnapshotController(object):
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
+        volume = self.volume_api.get(context, volume_id)
+
         force = snapshot.get('force', False)
         LOG.audit(_("Create snapshot from volume %s"), volume_id,
                 context=context)
 
         if force:
             new_snapshot = self.volume_api.create_snapshot_force(context,
-                                        volume_id,
+                                        volume,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
         else:
             new_snapshot = self.volume_api.create_snapshot(context,
-                                        volume_id,
+                                        volume,
                                         snapshot.get('display_name'),
                                         snapshot.get('display_description'))
 
