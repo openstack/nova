@@ -25,7 +25,6 @@ import mox
 from nova import context
 from nova import log as logging
 from nova import test
-import nova.rpc.amqp as rpc_amqp
 
 try:
     import qpid
@@ -186,10 +185,10 @@ class RpcQpidTestCase(test.TestCase):
 
             self.mocker.VerifyAll()
         finally:
-            while rpc_amqp.ConnectionContext._connection_pool.free_items:
+            while impl_qpid.Connection.pool.free_items:
                 # Pull the mock connection object out of the connection pool so
                 # that it doesn't mess up other test cases.
-                rpc_amqp.ConnectionContext._connection_pool.get()
+                impl_qpid.Connection.pool.get()
 
     @test.skip_if(qpid is None, "Test requires qpid")
     def test_cast(self):
@@ -265,10 +264,10 @@ class RpcQpidTestCase(test.TestCase):
 
             self.mocker.VerifyAll()
         finally:
-            while rpc_amqp.ConnectionContext._connection_pool.free_items:
+            while impl_qpid.Connection.pool.free_items:
                 # Pull the mock connection object out of the connection pool so
                 # that it doesn't mess up other test cases.
-                rpc_amqp.ConnectionContext._connection_pool.get()
+                impl_qpid.Connection.pool.get()
 
     @test.skip_if(qpid is None, "Test requires qpid")
     def test_call(self):

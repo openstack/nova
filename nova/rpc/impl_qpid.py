@@ -474,46 +474,46 @@ class Connection(object):
         """Create a consumer that calls a method in a proxy object"""
         if fanout:
             consumer = FanoutConsumer(self.session, topic,
-                                      rpc_amqp.ProxyCallback(proxy))
+                                rpc_amqp.ProxyCallback(proxy, Connection.pool))
         else:
             consumer = TopicConsumer(self.session, topic,
-                                     rpc_amqp.ProxyCallback(proxy))
+                                rpc_amqp.ProxyCallback(proxy, Connection.pool))
         self._register_consumer(consumer)
         return consumer
 
 
-rpc_amqp.ConnectionClass = Connection
+Connection.pool = rpc_amqp.Pool(connection_cls=Connection)
 
 
 def create_connection(new=True):
     """Create a connection"""
-    return rpc_amqp.create_connection(new)
+    return rpc_amqp.create_connection(new, Connection.pool)
 
 
 def multicall(context, topic, msg, timeout=None):
     """Make a call that returns multiple times."""
-    return rpc_amqp.multicall(context, topic, msg, timeout)
+    return rpc_amqp.multicall(context, topic, msg, timeout, Connection.pool)
 
 
 def call(context, topic, msg, timeout=None):
     """Sends a message on a topic and wait for a response."""
-    return rpc_amqp.call(context, topic, msg, timeout)
+    return rpc_amqp.call(context, topic, msg, timeout, Connection.pool)
 
 
 def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response."""
-    return rpc_amqp.cast(context, topic, msg)
+    return rpc_amqp.cast(context, topic, msg, Connection.pool)
 
 
 def fanout_cast(context, topic, msg):
     """Sends a message on a fanout exchange without waiting for a response."""
-    return rpc_amqp.fanout_cast(context, topic, msg)
+    return rpc_amqp.fanout_cast(context, topic, msg, Connection.pool)
 
 
 def notify(context, topic, msg):
     """Sends a notification event on a topic."""
-    return rpc_amqp.notify(context, topic, msg)
+    return rpc_amqp.notify(context, topic, msg, Connection.pool)
 
 
 def cleanup():
-    return rpc_amqp.cleanup()
+    return rpc_amqp.cleanup(Connection.pool)
