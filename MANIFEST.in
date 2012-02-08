@@ -1,5 +1,5 @@
-include HACKING LICENSE run_tests.py run_tests.sh
-include README exercise_rsapi.py
+include LICENSE run_tests.sh
+include README.rst
 include MANIFEST.in pylintrc Authors
 graft nova/CA
 graft doc
@@ -7,7 +7,6 @@ graft smoketests
 graft tools
 graft etc
 graft contrib
-graft po
 graft plugins
 graft nova/api/openstack/*/schemas
 include nova/auth/*.schema
@@ -43,3 +42,5 @@ include plugins/xenapi/README
 include plugins/xenapi/etc/xapi.d/plugins/objectstore
 include plugins/xenapi/etc/xapi.d/plugins/pluginlib_nova.py
 global-exclude *.pyc
+
+recursive-include nova/locale *
