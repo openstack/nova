@@ -88,8 +88,8 @@ class NotifierTestCase(test.TestCase):
     def test_rabbit_priority_queue(self):
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
                 'nova.notifier.rabbit_notifier')
-        self.stubs.Set(nova.flags.FLAGS, 'notification_topic',
-                'testnotify')
+        self.stubs.Set(nova.flags.FLAGS, 'notification_topics',
+                       ['testnotify', ])
 
         self.test_topic = None
 

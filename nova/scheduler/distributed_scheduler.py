@@ -24,6 +24,7 @@ import operator
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.notifier import api as notifier
 from nova.scheduler import driver
 from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options
@@ -63,6 +64,10 @@ class DistributedScheduler(driver.Scheduler):
         LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
                 locals())
 
+        payload = dict(request_spec=request_spec)
+        notifier.notify(notifier.publisher_id("scheduler"),
+                        'scheduler.run_instance.start', notifier.INFO, payload)
+
         weighted_hosts = self._schedule(context, "compute", request_spec,
                                         *args, **kwargs)
 
@@ -84,6 +89,9 @@ class DistributedScheduler(driver.Scheduler):
 
             if instance:
                 instances.append(instance)
+
+        notifier.notify(notifier.publisher_id("scheduler"),
+                        'scheduler.run_instance.end', notifier.INFO, payload)
 
         return instances
 
@@ -112,6 +120,14 @@ class DistributedScheduler(driver.Scheduler):
             kwargs):
         """Create the requested resource in this Zone."""
         instance = self.create_instance_db_entry(context, request_spec)
+
+        payload = dict(request_spec=request_spec,
+                       weighted_host=weighted_host.to_dict(),
+                       instance_id=instance['uuid'])
+        notifier.notify(notifier.publisher_id("scheduler"),
+                        'scheduler.run_instance.scheduled', notifier.INFO,
+                        payload)
+
         driver.cast_to_compute_host(context, weighted_host.host_state.host,
                 'run_instance', instance_uuid=instance['uuid'], **kwargs)
         inst = driver.encode_instance(instance, local=True)
@@ -163,6 +179,10 @@ class DistributedScheduler(driver.Scheduler):
         # unfiltered_hosts_dict is {host : ZoneManager.HostInfo()}
         unfiltered_hosts_dict = self.host_manager.get_all_host_states(
                 elevated, topic)
+
+        # Note: remember, we are using an iterator here. So only
+        # traverse this list once. This can bite you if the hosts
+        # are being scanned in a filter or weighing function.
         hosts = unfiltered_hosts_dict.itervalues()
 
         num_instances = request_spec.get('num_instances', 1)
