@@ -2192,7 +2192,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             'instance_uuid': instance_uuid,
             'code': code,
             'message': fault.__class__.__name__,
-            'details': fault.message,
+            'details': unicode(fault),
         }
         self.db.instance_fault_create(context, values)
 
