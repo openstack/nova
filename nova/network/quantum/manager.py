@@ -341,13 +341,13 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             rxtx_factor = instance_type['rxtx_factor']
             nova_id = self._get_nova_id(instance)
             # Tell the ipam library to allocate an IP
-            ip = self.ipam.allocate_fixed_ip(context, project_id,
+            ips = self.ipam.allocate_fixed_ips(context, project_id,
                     quantum_net_id, net_tenant_id, vif_rec)
             pairs = []
             # Set up port security if enabled
             if FLAGS.quantum_use_port_security:
                 pairs = [{'mac_address': vif_rec['address'],
-                          'ip_address': ip}]
+                          'ip_address': ip} for ip in ips]
             self.q_conn.create_and_attach_port(net_tenant_id, quantum_net_id,
                                                vif_rec['uuid'],
                                                vm_id=instance['uuid'],

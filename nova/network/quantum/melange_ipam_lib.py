@@ -79,13 +79,13 @@ class QuantumMelangeIPAMLib(object):
         admin_context = context.elevated()
         network = db.network_create_safe(admin_context, net)
 
-    def allocate_fixed_ip(self, context, project_id, quantum_net_id,
-                          network_tenant_id, vif_ref):
+    def allocate_fixed_ips(self, context, project_id, quantum_net_id,
+                           network_tenant_id, vif_ref):
         """Pass call to allocate fixed IP on to Melange"""
-        ip = self.m_conn.allocate_ip(quantum_net_id, network_tenant_id,
-                                     vif_ref['uuid'], project_id,
-                                     vif_ref['address'])
-        return ip[0]['address']
+        ips = self.m_conn.allocate_ip(quantum_net_id, network_tenant_id,
+                                      vif_ref['uuid'], project_id,
+                                      vif_ref['address'])
+        return [ip['address'] for ip in ips]
 
     def get_network_id_by_cidr(self, context, cidr, project_id):
         """Find the Quantum UUID associated with a IPv4 CIDR

@@ -129,8 +129,8 @@ class QuantumNovaIPAMLib(object):
             id_priority_map[net_id] = n['priority']
         return sorted(net_list, key=lambda x: id_priority_map[x[0]])
 
-    def allocate_fixed_ip(self, context, tenant_id, quantum_net_id,
-                          network_tenant_id, vif_rec):
+    def allocate_fixed_ips(self, context, tenant_id, quantum_net_id,
+                           network_tenant_id, vif_rec):
         """Allocates a single fixed IPv4 address for a virtual interface."""
         admin_context = context.elevated()
         network = db.network_get_by_uuid(admin_context, quantum_net_id)
@@ -142,7 +142,7 @@ class QuantumNovaIPAMLib(object):
             values = {'allocated': True,
                       'virtual_interface_id': vif_rec['id']}
             db.fixed_ip_update(admin_context, address, values)
-        return address
+        return [address]
 
     def get_tenant_id_by_net_id(self, context, net_id, vif_id, project_id):
         """Returns tenant_id for this network.  This is only necessary
