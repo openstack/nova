@@ -1,4 +1,4 @@
-SQLAlchemy
+SQLAlchemy>=0.7.3
 pep8==0.6.1
 pylint==0.19
 Cheetah==2.4.4
@@ -21,7 +21,7 @@ greenlet>=0.3.1
 nose
 PasteDeploy==1.5.0
 paste
-sqlalchemy-migrate
+sqlalchemy-migrate>=0.7.2
 netaddr
 sphinx
 glance
