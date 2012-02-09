@@ -469,7 +469,7 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
                   include_fake_metadata=True,
                   power_state=None, nw_cache=None):
     if include_fake_metadata:
-        metadata = [models.InstanceMetadata(key='seq', value=id)]
+        metadata = [models.InstanceMetadata(key='seq', value=str(id))]
     else:
         metadata = []
 

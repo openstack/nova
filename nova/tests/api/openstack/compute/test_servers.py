@@ -3229,7 +3229,6 @@ class ServersViewBuilderTest(test.TestCase):
 
         metadata = []
         metadata.append(InstanceMetadata(key="Open", value="Stack"))
-        metadata.append(InstanceMetadata(key="Number", value=1))
         self.instance['metadata'] = metadata
 
         image_bookmark = "http://localhost/fake/images/5"
@@ -3274,10 +3273,7 @@ class ServersViewBuilderTest(test.TestCase):
                         {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
                     ]
                 },
-                "metadata": {
-                    "Open": "Stack",
-                    "Number": "1",
-                },
+                "metadata": {"Open": "Stack"},
                 "config_drive": None,
                 "links": [
                     {

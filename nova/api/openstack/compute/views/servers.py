@@ -136,7 +136,7 @@ class ViewBuilder(common.ViewBuilder):
     @staticmethod
     def _get_metadata(instance):
         metadata = instance.get("metadata", [])
-        return dict((item['key'], str(item['value'])) for item in metadata)
+        return dict((item['key'], item['value']) for item in metadata)
 
     @staticmethod
     def _get_vm_state(instance):
