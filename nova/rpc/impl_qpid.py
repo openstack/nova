@@ -299,13 +299,18 @@ class Connection(object):
         self.connection.password = params['password']
         self.connection.sasl_mechanisms = FLAGS.qpid_sasl_mechanisms
         self.connection.reconnect = FLAGS.qpid_reconnect
-        self.connection.reconnect_timeout = FLAGS.qpid_reconnect_timeout
-        self.connection.reconnect_limit = FLAGS.qpid_reconnect_limit
-        _qpid_reconnect_interval_max = FLAGS.qpid_reconnect_interval_max
-        self.connection.reconnect_interval_max = _qpid_reconnect_interval_max
-        _qpid_reconnect_interval_min = FLAGS.qpid_reconnect_interval_min
-        self.connection.reconnect_interval_min = _qpid_reconnect_interval_min
-        self.connection.reconnect_interval = FLAGS.qpid_reconnect_interval
+        if FLAGS.qpid_reconnect_timeout:
+            self.connection.reconnect_timeout = FLAGS.qpid_reconnect_timeout
+        if FLAGS.qpid_reconnect_limit:
+            self.connection.reconnect_limit = FLAGS.qpid_reconnect_limit
+        if FLAGS.qpid_reconnect_interval_max:
+            self.connection.reconnect_interval_max = (
+                    FLAGS.qpid_reconnect_interval_max)
+        if FLAGS.qpid_reconnect_interval_min:
+            self.connection.reconnect_interval_min = (
+                    FLAGS.qpid_reconnect_interval_min)
+        if FLAGS.qpid_reconnect_interval:
+            self.connection.reconnect_interval = FLAGS.qpid_reconnect_interval
         self.connection.hearbeat = FLAGS.qpid_heartbeat
         self.connection.protocol = FLAGS.qpid_protocol
         self.connection.tcp_nodelay = FLAGS.qpid_tcp_nodelay
