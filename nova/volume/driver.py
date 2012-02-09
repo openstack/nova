@@ -295,8 +295,12 @@ class ISCSIDriver(VolumeDriver):
         self.tgtadm.new_logicalunit(iscsi_target, 0, volume_path)
 
         model_update = {}
+        if FLAGS.iscsi_helper == 'tgtadm':
+            lun = 1
+        else:
+            lun = 0
         model_update['provider_location'] = _iscsi_location(
-            FLAGS.iscsi_ip_address, iscsi_target, iscsi_name)
+            FLAGS.iscsi_ip_address, iscsi_target, iscsi_name, lun)
         return model_update
 
     def remove_export(self, context, volume):
@@ -349,6 +353,8 @@ class ISCSIDriver(VolumeDriver):
 
         :target_portal:    the portal of the iSCSI target
 
+        :target_lun:    the lun of the iSCSI target
+
         :volume_id:    the id of the volume (currently used by xen)
 
         :auth_method:, :auth_username:, :auth_password:
@@ -376,16 +382,20 @@ class ISCSIDriver(VolumeDriver):
             LOG.debug(_("ISCSI Discovery: Found %s") % (location))
             properties['target_discovered'] = True
 
-        (iscsi_target, _sep, iscsi_name) = location.partition(" ")
-
-        iscsi_portal = iscsi_target.split(",")[0]
+        results = location.split(" ")
+        properties['target_portal'] = results[0].split(",")[0]
+        properties['target_iqn'] = results[1]
+        try:
+            properties['target_lun'] = int(results[2])
+        except (IndexError, ValueError):
+            if FLAGS.iscsi_helper == 'tgtadm':
+                properties['target_lun'] = 1
+            else:
+                properties['target_lun'] = 0
 
         properties['volume_id'] = volume['id']
-        properties['target_iqn'] = iscsi_name
-        properties['target_portal'] = iscsi_portal
 
         auth = volume['provider_auth']
-
         if auth:
             (auth_method, auth_username, auth_secret) = auth.split()
 
@@ -794,14 +804,10 @@ class ZadaraBEDriver(ISCSIDriver):
 
         self._iscsiadm_update(iscsi_properties, "node.startup", "automatic")
 
-        if FLAGS.iscsi_helper == 'tgtadm':
-            mount_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-1" %
-                            (iscsi_properties['target_portal'],
-                             iscsi_properties['target_iqn']))
-        else:
-            mount_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" %
-                            (iscsi_properties['target_portal'],
-                             iscsi_properties['target_iqn']))
+        mount_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%s" %
+                        (iscsi_properties['target_portal'],
+                         iscsi_properties['target_iqn'],
+                         iscsi_properties['target_lun']))
 
         # The /dev/disk/by-path/... node is not always present immediately
         # TODO(justinsb): This retry-with-delay is a pattern, move to utils?
@@ -1007,5 +1013,5 @@ class ZadaraBEDriver(ISCSIDriver):
         return {'drive_qos_info': drive_info}
 
 
-def _iscsi_location(ip, target, iqn):
-    return "%s:%s,%s %s" % (ip, FLAGS.iscsi_port, target, iqn)
+def _iscsi_location(ip, target, iqn, lun=None):
+    return "%s:%s,%s %s %s" % (ip, FLAGS.iscsi_port, target, iqn, lun)

@@ -132,6 +132,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                 'volume_id': 1,
                 'target_iqn': 'iqn.2010-10.org.openstack:volume-00000001',
                 'target_portal': '127.0.0.1:3260,fake',
+                'target_lun': None,
                 'auth_method': 'CHAP',
                 'auth_method': 'fake',
                 'auth_method': 'fake',
