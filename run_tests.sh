@@ -89,17 +89,21 @@ function run_tests {
   return $RESULT
 }
 
+# Files of interest
+# NOTE(lzyeval): Avoid selecting nova-api-paste.ini and nova.conf in nova/bin
+#                when running on devstack.
+# NOTE(lzyeval): Avoid selecting *.pyc files to reduce pep8 check-up time
+#                when running on devstack.
+xen_api_path="plugins/xenserver/xenapi/etc/xapi.d/plugins"
+xen_net_path="plugins/xenserver/networking/etc/xensource/scripts"
+srcfiles=`find nova -type f -name "*.py"`
+srcfiles+=" `find bin -type f ! -name "nova.conf*" ! -name "*api-paste.ini*"`"
+srcfiles+=" `find tools -type f -name "*.py"`"
+srcfiles+=" `find ${xen_api_path} ${xen_net_path} -type f ! -name "*.patch"`"
+srcfiles+=" setup.py"
+
 function run_pep8 {
   echo "Running pep8 ..."
-  # Opt-out files from pep8
-  ignore_scripts="*.patch:*.sh:*nova-debug:*clean-vlans"
-  ignore_files="*eventlet-patch:*pip-requires"
-  GLOBIGNORE="$ignore_scripts:$ignore_files"
-  srcfiles=`find bin -type f ! -name "nova.conf*" ! -name "api-paste.ini*"`
-  srcfiles+=" `find tools/*`"
-  srcfiles+=" nova setup.py"
-  srcfiles+=" plugins/xenserver/networking/etc/xensource/scripts/*"
-  srcfiles+=" plugins/xenserver/xenapi/etc/xapi.d/plugins/*"
   # Just run PEP8 in current environment
   #
   # NOTE(sirp): W602 (deprecated 3-arg raise) is being ignored for the
@@ -122,13 +126,6 @@ function run_pep8 {
 
 function run_hacking {
   echo "Running hacking compliance testing..."
-  # Opt-out files from pep8
-  ignore_scripts="*.sh:*nova-debug:*clean-vlans:*.swp"
-  ignore_files="*eventlet-patch:*pip-requires"
-  GLOBIGNORE="$ignore_scripts:$ignore_files"
-  srcfiles=`find bin -type f ! -name "nova.conf*"`
-  srcfiles+=" `find tools/*`"
-  srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
   hacking_opts="--ignore=E202,W602 --repeat"
   ${wrapper} python tools/hacking.py ${hacking_opts} ${srcfiles}
 }
