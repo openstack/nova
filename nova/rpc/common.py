@@ -1,3 +1,5 @@
+import copy
+
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -27,3 +29,22 @@ class RemoteError(exception.Error):
         super(RemoteError, self).__init__('%s %s\n%s' % (exc_type,
                                                          value,
                                                          traceback))
+
+
+def _safe_log(log_func, msg, msg_data):
+    """Sanitizes the msg_data field before logging."""
+    SANITIZE = {
+                'set_admin_password': ('new_pass',),
+                'run_instance': ('admin_password',),
+               }
+    method = msg_data['method']
+    if method in SANITIZE:
+        msg_data = copy.deepcopy(msg_data)
+        args_to_sanitize = SANITIZE[method]
+        for arg in args_to_sanitize:
+            try:
+                msg_data['args'][arg] = "<SANITIZED>"
+            except KeyError:
+                pass
+
+    return log_func(msg, msg_data)

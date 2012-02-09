@@ -43,6 +43,7 @@ from nova import context
 from nova import exception
 from nova import fakerabbit
 from nova import flags
+import nova.rpc.common as rpc_common
 from nova.rpc.common import RemoteError, LOG
 
 # Needed for tests
@@ -252,7 +253,7 @@ class AdapterConsumer(Consumer):
         Example: {'method': 'echo', 'args': {'value': 42}}
 
         """
-        LOG.debug(_('received %s') % message_data)
+        rpc_common._safe_log(LOG.debug, _('received %s'), message_data)
         # This will be popped off in _unpack_context
         msg_id = message_data.get('_msg_id', None)
         ctxt = _unpack_context(message_data)

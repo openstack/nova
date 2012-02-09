@@ -33,6 +33,7 @@ import greenlet
 from nova import context
 from nova import exception
 from nova import flags
+import nova.rpc.common as rpc_common
 from nova.rpc.common import RemoteError, LOG
 
 # Needed for tests
@@ -597,7 +598,7 @@ class ProxyCallback(object):
         Example: {'method': 'echo', 'args': {'value': 42}}
 
         """
-        LOG.debug(_('received %s') % message_data)
+        rpc_common._safe_log(LOG.debug, _('received %s'), message_data)
         ctxt = _unpack_context(message_data)
         method = message_data.get('method')
         args = message_data.get('args', {})
