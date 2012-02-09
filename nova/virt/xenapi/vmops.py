@@ -1372,8 +1372,22 @@ class VMOps(object):
                     "older than %(confirm_window)d seconds") % migrations_info)
 
         for migration in migrations:
-            LOG.info(_("Automatically confirming migration %d"), migration.id)
-            self.compute_api.confirm_resize(ctxt, migration.instance_uuid)
+            LOG.info(_("Automatically confirming migration %d"),
+                     migration['id'])
+            try:
+                instance = self.compute_api.get(ctxt, migration.instance_uuid)
+            except exception.InstanceNotFound:
+                LOG.warn(_("Instance for migration %d not found, skipping"),
+                         migration.id)
+
+                # NOTE(sirp): setting to error so we don't keep trying to auto
+                # confirm this resize
+                db.migration_update(
+                    ctxt, migration['id'], {'status': 'error'})
+
+                continue
+            else:
+                self.compute_api.confirm_resize(ctxt, instance)
 
     def get_info(self, instance):
         """Return data about VM instance."""
