@@ -477,7 +477,8 @@ class VMOps(object):
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
         instance_name = instance.name
-        LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
+        instance_uuid = instance.uuid
+        LOG.info(_('Spawning VM %(instance_uuid)s created %(vm_ref)s.')
                  % locals())
 
         ctx = nova_context.get_admin_context()
@@ -494,7 +495,7 @@ class VMOps(object):
                         'architecture': instance.architecture})
 
         # Wait for boot to finish
-        LOG.debug(_('Instance %s: waiting for running'), instance_name)
+        LOG.debug(_('Instance %s: waiting for running'), instance_uuid)
         expiration = time.time() + FLAGS.xenapi_running_timeout
         while time.time() < expiration:
             state = self.get_info(instance_name)['state']
@@ -503,7 +504,7 @@ class VMOps(object):
 
             greenthread.sleep(0.5)
 
-        LOG.debug(_('Instance %s: running'), instance_name)
+        LOG.debug(_('Instance %s: running'), instance_uuid)
 
         # Update agent, if necessary
         # This also waits until the agent starts
@@ -644,13 +645,15 @@ class VMOps(object):
                 self._destroy(instance, template_vm_ref,
                         shutdown=False, destroy_kernel_ramdisk=False)
 
-        LOG.debug(_("Finished snapshot and upload for VM %s"), instance)
+        LOG.debug(_("Finished snapshot and upload for VM %s"),
+                instance['uuid'])
 
     def _create_snapshot(self, instance):
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
 
-        LOG.debug(_("Starting snapshot for VM %s"), instance['uuid'])
+        instance_uuid = instance.uuid
+        LOG.debug(_("Starting snapshot for VM %s") % instance_uuid)
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
         label = "%s-snapshot" % instance.name
@@ -659,8 +662,8 @@ class VMOps(object):
                     self._session, instance, vm_ref, label)
             return template_vm_ref, template_vdi_uuids
         except self.XenAPI.Failure, exc:
-            LOG.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
-                      % locals())
+            LOG.error(_("Unable to Snapshot instance %(instance_uuid)s: "
+                    "%(exc)s") % locals())
             return
 
     def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path):
@@ -864,7 +867,6 @@ class VMOps(object):
                                                  vdi_ref)
         virtual_size = int(virtual_size)
 
-        instance_name = instance.name
         old_gb = virtual_size / (1024 * 1024 * 1024)
         new_gb = instance.root_gb
 
@@ -878,7 +880,7 @@ class VMOps(object):
                 resize_func_name = 'VDI.resize_online'
             self._session.call_xenapi(resize_func_name, vdi_ref,
                     str(new_disk_size))
-            LOG.debug(_("Resize instance %s complete") % (instance.name))
+            LOG.debug(_("Resize instance %s complete") % (instance.uuid))
 
     def reboot(self, instance, reboot_type):
         """Reboot VM instance."""
@@ -1017,14 +1019,13 @@ class VMOps(object):
 
     def _shutdown(self, instance, vm_ref, hard=True):
         """Shutdown an instance."""
+        instance_uuid = instance.uuid
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
-            instance_name = instance.name
-            LOG.warn(_("VM %(instance_name)s already halted,"
+            LOG.warn(_("VM %(instance_uuid)s already halted,"
                     "skipping shutdown...") % locals())
             return
 
-        instance_uuid = instance['uuid']
         LOG.debug(_("Shutting down VM for Instance %(instance_uuid)s")
                   % locals())
         try:
