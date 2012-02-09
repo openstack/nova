@@ -22,7 +22,15 @@ Driver base-classes:
     types that support that contract
 """
 
+from nova import context as nova_context
+from nova import db
+from nova import flags
+from nova import log as logging
 from nova.compute import power_state
+
+
+LOG = logging.getLogger("nova.virt.driver")
+FLAGS = flags.FLAGS
 
 
 class InstanceInfo(object):
@@ -500,7 +508,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def poll_unconfirmed_resizes(self, resize_confirm_window):
-        """Poll for unconfirmed resizes"""
+        """Poll for unconfirmed resizes."""
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
