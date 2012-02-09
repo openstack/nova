@@ -33,10 +33,9 @@ from nova import utils
 from eventlet import greenpool
 
 
-enable_zone_routing_opt = \
-    cfg.BoolOpt('enable_zone_routing',
-                default=False,
-                help='When True, routing to child zones will occur.')
+enable_zone_routing_opt = cfg.BoolOpt('enable_zone_routing',
+        default=False,
+        help='When True, routing to child zones will occur.')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(enable_zone_routing_opt)
@@ -310,8 +309,8 @@ class reroute_compute(object):
     def __call__(self, f):
         @functools.wraps(f)
         def wrapped_f(*args, **kwargs):
-            collection, context, item_id_or_uuid = \
-                            self.get_collection_context_and_id(args, kwargs)
+            _collection_info = self.get_collection_context_and_id(args, kwargs)
+            collection, context, item_id_or_uuid = _collection_info
 
             attempt_reroute = False
             if utils.is_uuid_like(item_id_or_uuid):

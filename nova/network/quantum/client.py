@@ -187,8 +187,8 @@ class Client(object):
             data = res.read()
 
             if self.logger:
-                self.logger.debug("Quantum Client Reply (code = %s) :\n %s" \
-                        % (str(status_code), data))
+                self.logger.debug("Quantum Client Reply (code = %s) :\n %s" %
+                                  (str(status_code), data))
 
             if status_code in NOT_FOUND_CODES:
                 raise QuantumNotFoundException(

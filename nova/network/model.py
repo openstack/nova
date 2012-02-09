@@ -56,8 +56,8 @@ class IP(Model):
 
     def is_in_subnet(self, subnet):
         if self['address'] and subnet['cidr']:
-            return netaddr.IPAddress(self['address']) in \
-                   netaddr.IPNetwork(subnet['cidr'])
+            return (netaddr.IPAddress(self['address']) in
+                    netaddr.IPNetwork(subnet['cidr']))
         else:
             return False
 
