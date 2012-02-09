@@ -446,8 +446,8 @@ class ISCSIDriver(VolumeDriver):
             # Instances remount read-only in this case.
             # /etc/init.d/iscsitarget restart and rebooting nova-volume
             # is better since ensure_export() works at boot time.
-            logging.error(_("Cannot confirm exported volume "
-                            "id:%(volume_id)s.") % locals())
+            LOG.error(_("Cannot confirm exported volume "
+                        "id:%(volume_id)s.") % locals())
             raise
 
 

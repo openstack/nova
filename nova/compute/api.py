@@ -269,8 +269,8 @@ class API(base.Base):
             ramdisk_id = None
             LOG.debug(_("Creating a raw instance"))
         # Make sure we have access to kernel and ramdisk (if not raw)
-        logging.debug("Using Kernel=%s, Ramdisk=%s" %
-                       (kernel_id, ramdisk_id))
+        LOG.debug(_("Using Kernel=%(kernel_id)s, Ramdisk=%(ramdisk_id)s")
+                  % locals())
         if kernel_id:
             image_service.show(context, kernel_id)
         if ramdisk_id:

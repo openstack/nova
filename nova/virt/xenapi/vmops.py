@@ -644,13 +644,13 @@ class VMOps(object):
                 self._destroy(instance, template_vm_ref,
                         shutdown=False, destroy_kernel_ramdisk=False)
 
-        logging.debug(_("Finished snapshot and upload for VM %s"), instance)
+        LOG.debug(_("Finished snapshot and upload for VM %s"), instance)
 
     def _create_snapshot(self, instance):
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
 
-        logging.debug(_("Starting snapshot for VM %s"), instance['uuid'])
+        LOG.debug(_("Starting snapshot for VM %s"), instance['uuid'])
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
         label = "%s-snapshot" % instance.name
@@ -659,8 +659,8 @@ class VMOps(object):
                     self._session, instance, vm_ref, label)
             return template_vm_ref, template_vdi_uuids
         except self.XenAPI.Failure, exc:
-            logging.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
-                    % locals())
+            LOG.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
+                      % locals())
             return
 
     def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path):
@@ -1485,7 +1485,7 @@ class VMOps(object):
             self._session.call_xenapi("VM.get_record", vm_ref)
         else:
             vm_ref = VMHelper.lookup(self._session, instance.name)
-        logging.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
+        LOG.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
 
         for (network, info) in network_info:
             location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
@@ -1503,7 +1503,7 @@ class VMOps(object):
     def create_vifs(self, vm_ref, instance, network_info):
         """Creates vifs for an instance."""
 
-        logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
+        LOG.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
 
         # this function raises if vm_ref is not a vm_opaque_ref
         self._session.call_xenapi("VM.get_record", vm_ref)
@@ -1544,7 +1544,7 @@ class VMOps(object):
             # NOTE(jk0): Windows hostnames can only be <= 15 chars.
             hostname = hostname[:15]
 
-        logging.debug(_("injecting hostname to xs for vm: |%s|"), vm_ref)
+        LOG.debug(_("injecting hostname to xs for vm: |%s|"), vm_ref)
         self._session.call_xenapi_request("VM.add_to_xenstore_data",
                 (vm_ref, "vm-data/hostname", hostname))
 

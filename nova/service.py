@@ -159,8 +159,8 @@ class Service(object):
 
     def start(self):
         vcs_string = version.version_string_with_vcs()
-        logging.audit(_('Starting %(topic)s node (version %(vcs_string)s)'),
-                      {'topic': self.topic, 'vcs_string': vcs_string})
+        LOG.audit(_('Starting %(topic)s node (version %(vcs_string)s)'),
+                  {'topic': self.topic, 'vcs_string': vcs_string})
         self.manager.init_host()
         self.model_disconnected = False
         ctxt = context.get_admin_context()
@@ -176,8 +176,8 @@ class Service(object):
             self.manager.update_available_resource(ctxt)
 
         self.conn = rpc.create_connection(new=True)
-        logging.debug("Creating Consumer connection for Service %s" %
-                      self.topic)
+        LOG.debug(_("Creating Consumer connection for Service %s") %
+                  self.topic)
 
         # Share this same connection for these Consumers
         self.conn.create_consumer(self.topic, self, fanout=False)
@@ -250,7 +250,7 @@ class Service(object):
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
-            logging.warn(_('Service killed that has no database entry'))
+            LOG.warn(_('Service killed that has no database entry'))
 
     def stop(self):
         # Try to shut the connection down, but if we get any sort of
@@ -287,8 +287,8 @@ class Service(object):
             try:
                 service_ref = db.service_get(ctxt, self.service_id)
             except exception.NotFound:
-                logging.debug(_('The service database object disappeared, '
-                                'Recreating it.'))
+                LOG.debug(_('The service database object disappeared, '
+                            'Recreating it.'))
                 self._create_service_ref(ctxt)
                 service_ref = db.service_get(ctxt, self.service_id)
 
@@ -302,13 +302,13 @@ class Service(object):
             # TODO(termie): make this pattern be more elegant.
             if getattr(self, 'model_disconnected', False):
                 self.model_disconnected = False
-                logging.error(_('Recovered model server connection!'))
+                LOG.error(_('Recovered model server connection!'))
 
         # TODO(vish): this should probably only catch connection errors
         except Exception:  # pylint: disable=W0702
             if not getattr(self, 'model_disconnected', False):
                 self.model_disconnected = True
-                logging.exception(_('model server went away'))
+                LOG.exception(_('model server went away'))
 
 
 class WSGIService(object):
@@ -400,16 +400,16 @@ def serve(*servers):
 
 
 def wait():
-    logging.debug(_('Full set of FLAGS:'))
+    LOG.debug(_('Full set of FLAGS:'))
     for flag in FLAGS:
         flag_get = FLAGS.get(flag, None)
         # hide flag contents from log if contains a password
         # should use secret flag when switch over to openstack-common
         if ("_password" in flag or "_key" in flag or
                 (flag == "sql_connection" and "mysql:" in flag_get)):
-            logging.debug('%(flag)s : FLAG SET ' % locals())
+            LOG.debug(_('%(flag)s : FLAG SET ') % locals())
         else:
-            logging.debug('%(flag)s : %(flag_get)s' % locals())
+            LOG.debug('%(flag)s : %(flag_get)s' % locals())
     try:
         _launcher.wait()
     except KeyboardInterrupt:
