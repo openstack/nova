@@ -196,6 +196,10 @@ class VirtualInterfaceMacAddressException(NovaException):
                 "with unique mac address failed")
 
 
+class GlanceConnectionFailed(NovaException):
+    message = _("Connection to glance failed") + ": %(reason)s"
+
+
 class NotAuthorized(NovaException):
     message = _("Not authorized.")
 
