@@ -335,11 +335,6 @@ class ProxyConnection(driver.ComputeDriver):
             else:
                 libvirt_utils.copy_image(base, target)
 
-    def _fetch_image(self, context, target, image_id, user_id, project_id,
-                     size=None):
-        """Grab image and optionally attempt to resize it"""
-        images.fetch_to_raw(context, image_id, target, user_id, project_id)
-
     def _create_image(self, context, inst, xml, suffix='',
                       disk_images=None, network_info=None,
                       block_device_info=None):
