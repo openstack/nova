@@ -56,18 +56,6 @@ def destroy(context, name):
             raise exception.ApiError(_("Unknown volume type: %s") % name)
 
 
-def purge(context, name):
-    """Removes volume types from database."""
-    if name is None:
-        raise exception.InvalidVolumeType(volume_type=name)
-    else:
-        try:
-            db.volume_type_purge(context, name)
-        except exception.NotFound:
-            LOG.exception(_('Volume type %s not found for purge') % name)
-            raise exception.ApiError(_("Unknown volume type: %s") % name)
-
-
 def get_all_types(context, inactive=0, search_opts={}):
     """Get all non-deleted volume_types.
 

@@ -75,37 +75,6 @@ class VolumeTypeTestCase(test.TestCase):
                          new_all_vtypes,
                          'drive type was not deleted')
 
-    def test_volume_type_create_then_purge(self):
-        """Ensure volume types can be created and deleted"""
-        prev_all_vtypes = volume_types.get_all_types(self.ctxt, inactive=1)
-
-        volume_types.create(self.ctxt,
-                            self.vol_type1_name,
-                            self.vol_type1_specs)
-        new = volume_types.get_volume_type_by_name(self.ctxt,
-                                                   self.vol_type1_name)
-
-        for k, v in self.vol_type1_specs.iteritems():
-            self.assertEqual(v, new['extra_specs'][k],
-                             'one of fields doesnt match')
-
-        new_all_vtypes = volume_types.get_all_types(self.ctxt, inactive=1)
-        self.assertEqual(len(prev_all_vtypes) + 1,
-                         len(new_all_vtypes),
-                         'drive type was not created')
-
-        volume_types.destroy(self.ctxt, self.vol_type1_name)
-        new_all_vtypes2 = volume_types.get_all_types(self.ctxt, inactive=1)
-        self.assertEqual(len(new_all_vtypes),
-                         len(new_all_vtypes2),
-                         'drive type was incorrectly deleted')
-
-        volume_types.purge(self.ctxt, self.vol_type1_name)
-        new_all_vtypes2 = volume_types.get_all_types(self.ctxt, inactive=1)
-        self.assertEqual(len(new_all_vtypes) - 1,
-                         len(new_all_vtypes2),
-                         'drive type was not purged')
-
     def test_get_all_volume_types(self):
         """Ensures that all volume types can be retrieved"""
         session = get_session()
@@ -114,26 +83,22 @@ class VolumeTypeTestCase(test.TestCase):
         vol_types = volume_types.get_all_types(self.ctxt)
         self.assertEqual(total_volume_types, len(vol_types))
 
-    def test_non_existant_inst_type_shouldnt_delete(self):
+    def test_non_existant_vol_type_shouldnt_delete(self):
         """Ensures that volume type creation fails with invalid args"""
         self.assertRaises(exception.ApiError,
                           volume_types.destroy, self.ctxt, "sfsfsdfdfs")
 
-    def test_repeated_vol_types_should_raise_api_error(self):
-        """Ensures that volume duplicates raises ApiError"""
+    def test_repeated_vol_types_shouldnt_raise(self):
+        """Ensures that volume duplicates don't raise"""
         new_name = self.vol_type1_name + "dup"
         volume_types.create(self.ctxt, new_name)
         volume_types.destroy(self.ctxt, new_name)
-        self.assertRaises(
-                exception.ApiError,
-                volume_types.create, self.ctxt, new_name)
+        volume_types.create(self.ctxt, new_name)
 
     def test_invalid_volume_types_params(self):
         """Ensures that volume type creation fails with invalid args"""
         self.assertRaises(exception.InvalidVolumeType,
                           volume_types.destroy, self.ctxt, None)
-        self.assertRaises(exception.InvalidVolumeType,
-                          volume_types.purge, self.ctxt, None)
         self.assertRaises(exception.InvalidVolumeType,
                           volume_types.get_volume_type, self.ctxt, None)
         self.assertRaises(exception.InvalidVolumeType,

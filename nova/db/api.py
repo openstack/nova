@@ -1450,15 +1450,6 @@ def instance_type_destroy(context, name):
     return IMPL.instance_type_destroy(context, name)
 
 
-def instance_type_purge(context, name):
-    """Purges (removes) an instance type from DB.
-
-    Use instance_type_destroy for most cases
-
-    """
-    return IMPL.instance_type_purge(context, name)
-
-
 ####################
 
 
@@ -1626,15 +1617,6 @@ def volume_type_get_by_name(context, name):
 def volume_type_destroy(context, name):
     """Delete a volume type."""
     return IMPL.volume_type_destroy(context, name)
-
-
-def volume_type_purge(context, name):
-    """Purges (removes) a volume type from DB.
-
-    Use volume_type_destroy for most cases
-
-    """
-    return IMPL.volume_type_purge(context, name)
 
 
 ####################

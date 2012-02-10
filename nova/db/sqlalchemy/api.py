@@ -3354,22 +3354,35 @@ def instance_type_create(context, values):
     {'extra_specs' : {'k1': 'v1', 'k2': 'v2', ...}}
 
     """
-    try:
-        specs = values.get('extra_specs')
-        specs_refs = []
-        if specs:
-            for k, v in specs.iteritems():
-                specs_ref = models.InstanceTypeExtraSpecs()
-                specs_ref['key'] = k
-                specs_ref['value'] = v
-                specs_refs.append(specs_ref)
-        values['extra_specs'] = specs_refs
-        instance_type_ref = models.InstanceTypes()
-        instance_type_ref.update(values)
-        instance_type_ref.save()
-    except Exception, e:
-        raise exception.DBError(e)
-    return _dict_with_extra_specs(instance_type_ref)
+    session = get_session()
+    with session.begin():
+        try:
+            instance_type_get_by_name(context, values['name'], session)
+            raise exception.InstanceTypeExists(name=values['name'])
+        except exception.InstanceTypeNotFoundByName:
+            pass
+        try:
+            instance_type_get_by_flavor_id(context, values['flavorid'],
+                                           session)
+            raise exception.InstanceTypeExists(name=values['name'])
+        except exception.FlavorNotFound:
+            pass
+        try:
+            specs = values.get('extra_specs')
+            specs_refs = []
+            if specs:
+                for k, v in specs.iteritems():
+                    specs_ref = models.InstanceTypeExtraSpecs()
+                    specs_ref['key'] = k
+                    specs_ref['value'] = v
+                    specs_refs.append(specs_ref)
+            values['extra_specs'] = specs_refs
+            instance_type_ref = models.InstanceTypes()
+            instance_type_ref.update(values)
+            instance_type_ref.save(session=session)
+        except Exception, e:
+            raise exception.DBError(e)
+        return _dict_with_extra_specs(instance_type_ref)
 
 
 def _dict_with_extra_specs(inst_type_query):
@@ -3419,9 +3432,9 @@ def instance_type_get_all(context, inactive=False, filters=None):
 
 
 @require_context
-def instance_type_get(context, id):
+def instance_type_get(context, id, session=None):
     """Returns a dict describing specific instance_type"""
-    result = _instance_type_get_query(context, read_deleted="yes").\
+    result = _instance_type_get_query(context, session=session).\
                     filter_by(id=id).\
                     first()
 
@@ -3432,9 +3445,9 @@ def instance_type_get(context, id):
 
 
 @require_context
-def instance_type_get_by_name(context, name):
+def instance_type_get_by_name(context, name, session=None):
     """Returns a dict describing specific instance_type"""
-    result = _instance_type_get_query(context, read_deleted="yes").\
+    result = _instance_type_get_query(context, session=session).\
                     filter_by(name=name).\
                     first()
 
@@ -3445,9 +3458,9 @@ def instance_type_get_by_name(context, name):
 
 
 @require_context
-def instance_type_get_by_flavor_id(context, flavor_id):
+def instance_type_get_by_flavor_id(context, flavor_id, session=None):
     """Returns a dict describing specific flavor_id"""
-    result = _instance_type_get_query(context, read_deleted="yes").\
+    result = _instance_type_get_query(context, session=session).\
                     filter_by(flavorid=flavor_id).\
                     first()
 
@@ -3459,35 +3472,22 @@ def instance_type_get_by_flavor_id(context, flavor_id):
 
 @require_admin_context
 def instance_type_destroy(context, name):
-    """ Marks specific instance_type as deleted"""
-    instance_type_ref = model_query(context, models.InstanceTypes,
-                                    read_deleted="yes").\
-                      filter_by(name=name)
-
-    # FIXME(sirp): this should update deleted_at and updated_at as well
-    records = instance_type_ref.update(dict(deleted=True))
-
-    if records == 0:
-        raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
-    else:
-        return instance_type_ref
-
-
-@require_admin_context
-def instance_type_purge(context, name):
-    """ Removes specific instance_type from DB
-        Usually instance_type_destroy should be used
-    """
-    instance_type_ref = model_query(context, models.InstanceTypes,
-                                    read_deleted="yes").\
-                      filter_by(name=name)
-
-    records = instance_type_ref.delete()
-
-    if records == 0:
-        raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
-    else:
-        return instance_type_ref
+    """Marks specific instance_type as deleted"""
+    session = get_session()
+    with session.begin():
+        instance_type_ref = instance_type_get_by_name(context, name,
+                                                      session=session)
+        instance_type_id = instance_type_ref['id']
+        session.query(models.InstanceTypes).\
+                filter_by(id=instance_type_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.InstanceTypeExtraSpecs).\
+                filter_by(instance_type_id=instance_type_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 ####################
@@ -3510,7 +3510,7 @@ def _zone_get_by_id_query(context, zone_id, session=None):
 def zone_update(context, zone_id, values):
     zone = zone_get(context, zone_id)
     zone.update(values)
-    zone.save(session=session)
+    zone.save()
     return zone
 
 
@@ -3812,17 +3812,24 @@ def volume_type_create(context, values):
     {'extra_specs' : {'k1': 'v1', 'k2': 'v2', ...}}
 
     """
-    try:
-        specs = values.get('extra_specs')
+    session = get_session()
+    with session.begin():
+        try:
+            volume_type_get_by_name(context, values['name'], session)
+            raise exception.VolumeTypeExists(name=values['name'])
+        except exception.VolumeTypeNotFoundByName:
+            pass
+        try:
+            specs = values.get('extra_specs')
 
-        values['extra_specs'] = _metadata_refs(values.get('extra_specs'),
-                                                models.VolumeTypeExtraSpecs)
-        volume_type_ref = models.VolumeTypes()
-        volume_type_ref.update(values)
-        volume_type_ref.save()
-    except Exception, e:
-        raise exception.DBError(e)
-    return volume_type_ref
+            values['extra_specs'] = _metadata_refs(values.get('extra_specs'),
+                                                   models.VolumeTypeExtraSpecs)
+            volume_type_ref = models.VolumeTypes()
+            volume_type_ref.update(values)
+            volume_type_ref.save()
+        except Exception, e:
+            raise exception.DBError(e)
+        return volume_type_ref
 
 
 @require_context
@@ -3849,9 +3856,9 @@ def volume_type_get_all(context, inactive=False, filters=None):
 
 
 @require_context
-def volume_type_get(context, id):
+def volume_type_get(context, id, session=None):
     """Returns a dict describing specific volume_type"""
-    result = model_query(context, models.VolumeTypes, read_deleted="yes").\
+    result = model_query(context, models.VolumeTypes, session=session).\
                     options(joinedload('extra_specs')).\
                     filter_by(id=id).\
                     first()
@@ -3863,9 +3870,9 @@ def volume_type_get(context, id):
 
 
 @require_context
-def volume_type_get_by_name(context, name):
+def volume_type_get_by_name(context, name, session=None):
     """Returns a dict describing specific volume_type"""
-    result = model_query(context, models.VolumeTypes, read_deleted="yes").\
+    result = model_query(context, models.VolumeTypes, session=session).\
                     options(joinedload('extra_specs')).\
                     filter_by(name=name).\
                     first()
@@ -3878,32 +3885,21 @@ def volume_type_get_by_name(context, name):
 
 @require_admin_context
 def volume_type_destroy(context, name):
-    """ Marks specific volume_type as deleted"""
-    volume_type_ref = model_query(context, models.VolumeTypes,
-                                  read_deleted="yes").\
-                                      filter_by(name=name)
-
-    # FIXME(sirp): we should be setting deleted_at and updated_at here
-    records = volume_type_ref.update(dict(deleted=True))
-    if records == 0:
-        raise exception.VolumeTypeNotFoundByName(volume_type_name=name)
-    else:
-        return volume_type_ref
-
-
-@require_admin_context
-def volume_type_purge(context, name):
-    """ Removes specific volume_type from DB
-        Usually volume_type_destroy should be used
-    """
-    volume_type_ref = model_query(context, models.VolumeTypes,
-                                  read_deleted="yes").\
-                                      filter_by(name=name)
-    records = volume_type_ref.delete()
-    if records == 0:
-        raise exception.VolumeTypeNotFoundByName(volume_type_name=name)
-    else:
-        return volume_type_ref
+    session = get_session()
+    with session.begin():
+        volume_type_ref = volume_type_get_by_name(context, name,
+                                                  session=session)
+        volume_type_id = volume_type_ref['id']
+        session.query(models.VolumeTypes).\
+                filter_by(id=volume_type_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.VolumeTypeExtraSpecs).\
+                filter_by(volume_type_id=volume_type_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 ####################

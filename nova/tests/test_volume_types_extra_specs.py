@@ -43,11 +43,11 @@ class VolumeTypeExtraSpecsTestCase(test.TestCase):
         self.vol_type2_id = ref.id
 
     def tearDown(self):
-        # Remove the instance type from the database
-        db.volume_type_purge(context.get_admin_context(),
-                                 self.vol_type1['name'])
-        db.volume_type_purge(context.get_admin_context(),
-                                 self.vol_type2_noextra['name'])
+        # Remove the volume type from the database
+        db.volume_type_destroy(context.get_admin_context(),
+                               self.vol_type1['name'])
+        db.volume_type_destroy(context.get_admin_context(),
+                               self.vol_type2_noextra['name'])
         super(VolumeTypeExtraSpecsTestCase, self).tearDown()
 
     def test_volume_type_specs_get(self):

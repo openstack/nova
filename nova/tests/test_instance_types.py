@@ -84,20 +84,13 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertNotEqual(len(original_list), len(new_list),
                             'instance type was not created')
 
-        # destroy instance and make sure deleted flag is set to True
         instance_types.destroy(name)
-        inst_type = instance_types.get_instance_type(inst_type_id)
-        self.assertEqual(1, inst_type["deleted"])
+        self.assertRaises(exception.ApiError,
+                          instance_types.get_instance_type, inst_type_id)
 
         # deleted instance should not be in list anymoer
         new_list = instance_types.get_all_types()
         self.assertEqual(original_list, new_list)
-
-        # ensure instances are gone after purge
-        instance_types.purge(name)
-        new_list = instance_types.get_all_types()
-        self.assertEqual(original_list, new_list,
-                         'instance type not purged')
 
     def test_get_all_instance_types(self):
         """Ensures that all instance types can be retrieved"""
@@ -143,15 +136,15 @@ class InstanceTypeTestCase(test.TestCase):
         """Ensures that name duplicates raise ApiError"""
         name = 'some_name'
         instance_types.create(name, 256, 1, 120, 200, 'flavor1')
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InstanceTypeExists,
                           instance_types.create,
-                          name, "256", 1, 120, 200, 'flavor2')
+                          name, 256, 1, 120, 200, 'flavor2')
 
     def test_duplicate_flavorids_fail(self):
         """Ensures that flavorid duplicates raise ApiError"""
         flavorid = 'flavor1'
         instance_types.create('name one', 256, 1, 120, 200, flavorid)
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InstanceTypeExists,
                           instance_types.create,
                           'name two', 256, 1, 120, 200, flavorid)
 
@@ -159,17 +152,6 @@ class InstanceTypeTestCase(test.TestCase):
         """Ensure destroy sad path of no name raises error"""
         self.assertRaises(exception.InstanceTypeNotFoundByName,
                           instance_types.destroy, None)
-
-    def test_will_not_purge_without_name(self):
-        """Ensure purge without a name raises error"""
-        self.assertRaises(exception.InstanceTypeNotFoundByName,
-                          instance_types.purge, None)
-
-    def test_will_not_purge_with_wrong_name(self):
-        """Ensure purge without correct name raises error"""
-        self.assertRaises(exception.InstanceTypeNotFound,
-                          instance_types.purge,
-                          'unknown_flavor')
 
     def test_will_not_get_bad_default_instance_type(self):
         """ensures error raised on bad default instance type"""

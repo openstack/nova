@@ -47,10 +47,6 @@ def fake_get_instance_type_by_flavor_id(flavorid):
     }
 
 
-def fake_purge(flavorname):
-    pass
-
-
 def fake_destroy(flavorname):
     pass
 
