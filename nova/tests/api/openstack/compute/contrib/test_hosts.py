@@ -47,8 +47,17 @@ def stub_set_host_enabled(context, host, enabled):
     # that 'host_c1' always succeeds, and 'host_c2'
     # always fails
     fail = (host == "host_c2")
-    status = "enabled" if (enabled ^ fail) else "disabled"
+    status = "enabled" if (enabled != fail) else "disabled"
     return status
+
+
+def stub_set_host_maintenance(context, host, mode):
+    # We'll simulate success and failure by assuming
+    # that 'host_c1' always succeeds, and 'host_c2'
+    # always fails
+    fail = (host == "host_c2")
+    maintenance = "on_maintenance" if (mode != fail) else "off_maintenance"
+    return maintenance
 
 
 def stub_host_power_action(context, host, action):
@@ -96,10 +105,17 @@ class HostTestCase(test.TestCase):
         self.controller = os_hosts.HostController()
         self.req = FakeRequest()
         self.stubs.Set(scheduler_api, 'get_host_list', stub_get_host_list)
-        self.stubs.Set(self.controller.compute_api, 'set_host_enabled',
-                stub_set_host_enabled)
-        self.stubs.Set(self.controller.compute_api, 'host_power_action',
-                stub_host_power_action)
+        self.stubs.Set(self.controller.api, 'set_host_enabled',
+                       stub_set_host_enabled)
+        self.stubs.Set(self.controller.api, 'set_host_maintenance',
+                       stub_set_host_maintenance)
+        self.stubs.Set(self.controller.api, 'host_power_action',
+                       stub_host_power_action)
+
+    def _test_host_update(self, host, key, val, expected_value):
+        body = {key: val}
+        result = self.controller.update(self.req, host, body=body)
+        self.assertEqual(result[key], expected_value)
 
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""
@@ -112,30 +128,20 @@ class HostTestCase(test.TestCase):
         self.assertEqual(compute_hosts, expected)
 
     def test_disable_host(self):
-        dis_body = {"status": "disable"}
-        result_c1 = self.controller.update(self.req, "host_c1", body=dis_body)
-        self.assertEqual(result_c1["status"], "disabled")
-        result_c2 = self.controller.update(self.req, "host_c2", body=dis_body)
-        self.assertEqual(result_c2["status"], "enabled")
+        self._test_host_update('host_c1', 'status', 'disable', 'disabled')
+        self._test_host_update('host_c2', 'status', 'disable', 'enabled')
 
     def test_enable_host(self):
-        en_body = {"status": "enable"}
-        result_c1 = self.controller.update(self.req, "host_c1", body=en_body)
-        self.assertEqual(result_c1["status"], "enabled")
-        result_c2 = self.controller.update(self.req, "host_c2", body=en_body)
-        self.assertEqual(result_c2["status"], "disabled")
+        self._test_host_update('host_c1', 'status', 'enable', 'enabled')
+        self._test_host_update('host_c2', 'status', 'enable', 'disabled')
 
-    def test_enable_maintainance_mode(self):
-        body = {"maintenance_mode": "enable"}
-        self.assertRaises(webob.exc.HTTPNotImplemented,
-                          self.controller.update,
-                          self.req, "host_c1", body=body)
+    def test_enable_maintenance(self):
+        self._test_host_update('host_c1', 'maintenance_mode',
+                               'enable', 'on_maintenance')
 
-    def test_disable_maintainance_mode_and_enable(self):
-        body = {"status": "enable", "maintenance_mode": "disable"}
-        self.assertRaises(webob.exc.HTTPNotImplemented,
-                          self.controller.update,
-                          self.req, "host_c1", body=body)
+    def test_disable_maintenance(self):
+        self._test_host_update('host_c1', 'maintenance_mode',
+                               'disable', 'off_maintenance')
 
     def test_host_startup(self):
         result = self.controller.startup(self.req, "host_c1")
@@ -163,6 +169,13 @@ class HostTestCase(test.TestCase):
         bad_body = {"status": "disable", "crazy": "bad"}
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                 self.req, "host_c1", body=bad_body)
+
+    def test_good_udpate_keys(self):
+        body = {"status": "disable", "maintenance_mode": "enable"}
+        result = self.controller.update(self.req, 'host_c1', body=body)
+        self.assertEqual(result["host"], "host_c1")
+        self.assertEqual(result["status"], "disabled")
+        self.assertEqual(result["maintenance_mode"], "on_maintenance")
 
     def test_bad_host(self):
         self.assertRaises(exception.HostNotFound, self.controller.update,
