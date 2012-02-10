@@ -961,7 +961,7 @@ class Controller(wsgi.Controller):
 
     def _image_ref_from_req_data(self, data):
         try:
-            return data['server']['imageRef']
+            return unicode(data['server']['imageRef'])
         except (TypeError, KeyError):
             msg = _("Missing imageRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
