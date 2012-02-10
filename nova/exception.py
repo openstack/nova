@@ -200,6 +200,10 @@ class GlanceConnectionFailed(NovaException):
     message = _("Connection to glance failed") + ": %(reason)s"
 
 
+class MelangeConnectionFailed(NovaException):
+    message = _("Connection to melange failed") + ": %(reason)s"
+
+
 class NotAuthorized(NovaException):
     message = _("Not authorized.")
 
