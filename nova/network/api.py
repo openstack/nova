@@ -157,7 +157,7 @@ class API(base.Base):
         args['instance_uuid'] = instance['uuid']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
-        args['instance_type_id'] = instance['instance_type_id']
+        args['rxtx_factor'] = instance['instance_type']['rxtx_factor']
 
         nw_info = rpc.call(context, FLAGS.network_topic,
                            {'method': 'allocate_for_instance',
@@ -201,7 +201,7 @@ class API(base.Base):
         """Returns all network info related to an instance."""
         args = {'instance_id': instance['id'],
                 'instance_uuid': instance['uuid'],
-                'instance_type_id': instance['instance_type_id'],
+                'rxtx_factor': instance['instance_type']['rxtx_factor'],
                 'host': instance['host']}
         try:
             nw_info = rpc.call(context, FLAGS.network_topic,

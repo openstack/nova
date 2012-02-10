@@ -198,13 +198,12 @@ class CloudTestCase(test.TestCase):
             db.network_update(self.context, network['id'],
                               {'host': self.network.host})
         project_id = self.context.project_id
-        type_id = inst['instance_type_id']
         nw_info = self.network.allocate_for_instance(self.context,
                                                  instance_id=inst['id'],
                                                  instance_uuid='',
                                                  host=inst['host'],
                                                  vpn=None,
-                                                 instance_type_id=type_id,
+                                                 rxtx_factor=3,
                                                  project_id=project_id)
 
         fixed_ips = nw_info.fixed_ips()

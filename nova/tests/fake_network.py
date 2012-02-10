@@ -154,16 +154,6 @@ class FakeNetworkManager(network_manager.NetworkManager):
         pass
 
 
-flavor = {'id': 0,
-          'name': 'fake_flavor',
-          'memory_mb': 2048,
-          'vcpus': 2,
-          'root_gb': 10,
-          'flavor_id': 0,
-          'swap': 0,
-          'rxtx_factor': 3}
-
-
 def fake_network(network_id, ipv6=None):
     if ipv6 is None:
         ipv6 = FLAGS.use_ipv6
@@ -295,9 +285,6 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
                'network': None,
                'instance_id': 0}
 
-    def instance_type_fake(*args, **kwargs):
-        return flavor
-
     def network_get_fake(context, network_id):
         nets = [n for n in networks if n['id'] == network_id]
         if not nets:
@@ -335,7 +322,6 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     stubs.Set(db, 'virtual_interface_get_by_uuid', vif_by_uuid_fake)
     stubs.Set(db, 'network_get_by_uuid', get_network_by_uuid)
     stubs.Set(db, 'virtual_interface_get_by_instance', virtual_interfaces_fake)
-    stubs.Set(db, 'instance_type_get', instance_type_fake)
     stubs.Set(db, 'network_get', network_get_fake)
     stubs.Set(db, 'instance_info_cache_update', update_cache_fake)
 
@@ -350,7 +336,7 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
 
     nw_model = network.get_instance_nw_info(
                 FakeContext('fakeuser', 'fake_project'),
-            0, 0, 0, None)
+                0, 0, 3, None)
     if spectacular:
         return nw_model
     return nova.compute.utils.legacy_network_info(nw_model)
