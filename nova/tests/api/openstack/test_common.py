@@ -26,6 +26,7 @@ from webob import Request
 import xml.dom.minidom as minidom
 
 from nova import exception
+from nova import network
 from nova import test
 from nova.api.openstack import common
 from nova.api.openstack import xmlutil
@@ -327,6 +328,16 @@ class MiscFunctionsTest(test.TestCase):
                 "Instance is in an invalid state for 'meow'")
         else:
             self.fail("webob.exc.HTTPConflict was not raised")
+
+    def test_get_networks_for_instance_handles_instance_not_found(self):
+
+        def raise_not_found(*args, **kwargs):
+            raise exception.InstanceNotFound(instance_id='abcd')
+
+        self.stubs.Set(network.API, 'get_instance_nw_info', raise_not_found)
+
+        networks = common.get_networks_for_instance(context={}, instance={})
+        self.assertEqual(networks, {})
 
 
 class MetadataXMLDeserializationTest(test.TestCase):
