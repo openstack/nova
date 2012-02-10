@@ -143,43 +143,46 @@ class FlatNetworkTestCase(test.TestCase):
         nw_info = fake_get_instance_nw_info(self.stubs, 0, 2)
         self.assertFalse(nw_info)
 
+        nw_info = fake_get_instance_nw_info(self.stubs, 1, 2)
+
         for i, (nw, info) in enumerate(nw_info):
             check = {'bridge': 'fake_br%d' % i,
                      'cidr': '192.168.%s.0/24' % i,
-                     'cidr_v6': '2001:db8:0:%x::/64' % i,
-                     'id': i,
+                     'cidr_v6': 'DONTCARE',
+                     'id': 'DONTCARE',
                      'multi_host': False,
                      'injected': False,
-                     'bridge_interface': 'fake_eth%d' % i,
+                     'bridge_interface': 'DONTCARE',
                      'vlan': None}
 
             self.assertDictMatch(nw, check)
 
             check = {'broadcast': '192.168.%d.255' % i,
                      'dhcp_server': '192.168.%d.1' % i,
-                     'dns': ['192.168.%d.3' % n, '192.168.%d.4' % n],
+                     'dns': 'DONTCARE',
                      'gateway': '192.168.%d.1' % i,
-                     'gateway_v6': '2001:db8:0:%x::1' % i,
+                     'gateway_v6': 'DONTCARE',
                      'ip6s': 'DONTCARE',
                      'ips': 'DONTCARE',
                      'label': 'test%d' % i,
                      'mac': 'DE:AD:BE:EF:00:%02x' % i,
-                     'rxtx_cap': "%d" % i * 3,
                      'vif_uuid':
                         '00000000-0000-0000-0000-00000000000000%02d' % i,
-                     'rxtx_cap': 3,
+                     'rxtx_cap': 0,
                      'should_create_vlan': False,
                      'should_create_bridge': False}
             self.assertDictMatch(info, check)
 
             check = [{'enabled': 'DONTCARE',
-                      'ip': '2001:db8::dcad:beff:feef:%s' % i,
-                      'netmask': '64'}]
+                      'ip': 'DONTCARE',
+                      'gateway': 'DONTCARE',
+                      'netmask': 64}]
             self.assertDictListMatch(info['ip6s'], check)
 
             num_fixed_ips = len(info['ips'])
             check = [{'enabled': 'DONTCARE',
                       'ip': '192.168.%d.1%02d' % (i, ip_num),
+                      'gateway': 'DONTCARE',
                       'netmask': '255.255.255.0'}
                       for ip_num in xrange(num_fixed_ips)]
             self.assertDictListMatch(info['ips'], check)
