@@ -898,7 +898,7 @@ class ComputeTestCase(BaseTestCase):
                                                        vpn=False).\
             AndRaise(quantum_client.QuantumServerException())
 
-        FLAGS.stub_network = False
+        self.flags(stub_network=False)
 
         self.mox.ReplayAll()
 

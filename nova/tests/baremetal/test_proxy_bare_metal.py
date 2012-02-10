@@ -47,8 +47,8 @@ fake_domains = [{'status': 1, 'name': 'instance-00000001',
 class DomainReadWriteTestCase(test.TestCase):
 
     def setUp(self):
-        self.flags(baremetal_driver='fake')
         super(DomainReadWriteTestCase, self).setUp()
+        self.flags(baremetal_driver='fake')
 
     def test_read_domain_with_empty_list(self):
         """Read a file that contains no domains"""
@@ -143,8 +143,8 @@ class DomainReadWriteTestCase(test.TestCase):
 class BareMetalDomTestCase(test.TestCase):
 
     def setUp(self):
-        self.flags(baremetal_driver='fake')
         super(BareMetalDomTestCase, self).setUp()
+        self.flags(baremetal_driver='fake')
         # Stub out utils.execute
         self.stubs = stubout.StubOutForTesting()
         fake_utils.stub_out_utils_execute(self.stubs)
@@ -263,8 +263,8 @@ class ProxyBareMetalTestCase(test.TestCase):
                      'instance_type_id': '5'}  # m1.small
 
     def setUp(self):
-        self.flags(baremetal_driver='fake')
         super(ProxyBareMetalTestCase, self).setUp()
+        self.flags(baremetal_driver='fake')
         self.context = context.get_admin_context()
         fake_utils.stub_out_utils_execute(self.stubs)
 

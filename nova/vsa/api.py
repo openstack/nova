@@ -62,7 +62,7 @@ vsa_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(vsa_opts)
+FLAGS.register_opts(vsa_opts)
 
 LOG = logging.getLogger('nova.vsa')
 

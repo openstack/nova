@@ -34,7 +34,7 @@ policy_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(policy_opts)
+FLAGS.register_opts(policy_opts)
 
 _POLICY_PATH = None
 _POLICY_CACHE = {}

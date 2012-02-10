@@ -80,7 +80,7 @@ vmwareapi_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(vmwareapi_opts)
+FLAGS.register_opts(vmwareapi_opts)
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0
 

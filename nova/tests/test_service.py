@@ -45,7 +45,7 @@ test_service_opts = [
                help="Port number to bind test service to"),
     ]
 
-flags.FLAGS.add_options(test_service_opts)
+flags.FLAGS.register_opts(test_service_opts)
 
 
 class FakeManager(manager.Manager):

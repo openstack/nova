@@ -58,7 +58,7 @@ LOG = logging.getLogger('nova.virt.baremetal.proxy')
 
 FLAGS = flags.FLAGS
 
-global_opts = [
+baremetal_opts = [
     cfg.StrOpt('baremetal_injected_network_template',
                 default=utils.abspath('virt/interfaces.template'),
                 help='Template file for injected network'),
@@ -73,7 +73,7 @@ global_opts = [
                  help='Whether to allow in project network traffic')
     ]
 
-FLAGS.add_options(global_opts)
+FLAGS.register_opts(baremetal_opts)
 
 
 def get_connection(read_only):

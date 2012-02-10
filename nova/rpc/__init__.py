@@ -28,7 +28,7 @@ rpc_backend_opt = cfg.StrOpt('rpc_backend',
         help="The messaging module to use, defaults to kombu.")
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(rpc_backend_opt)
+FLAGS.register_opt(rpc_backend_opt)
 
 
 def create_connection(new=True):

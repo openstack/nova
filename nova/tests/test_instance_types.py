@@ -173,7 +173,7 @@ class InstanceTypeTestCase(test.TestCase):
 
     def test_will_not_get_bad_default_instance_type(self):
         """ensures error raised on bad default instance type"""
-        FLAGS.default_instance_type = 'unknown_flavor'
+        self.flags(default_instance_type='unknown_flavor')
         self.assertRaises(exception.ApiError,
                           instance_types.get_default_instance_type)
 

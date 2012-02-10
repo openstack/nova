@@ -63,7 +63,7 @@ volume_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(volume_opts)
+FLAGS.register_opts(volume_opts)
 
 
 class VolumeDriver(object):

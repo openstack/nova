@@ -76,7 +76,7 @@ service_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(service_opts)
+FLAGS.register_opts(service_opts)
 
 
 class Launcher(object):

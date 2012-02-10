@@ -35,7 +35,7 @@ melange_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(melange_opts)
+FLAGS.register_opts(melange_opts)
 LOG = logging.getLogger(__name__)
 
 json_content_type = {'Content-type': "application/json"}

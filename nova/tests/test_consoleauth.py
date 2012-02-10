@@ -42,16 +42,14 @@ class ConsoleauthTestCase(test.TestCase):
         super(ConsoleauthTestCase, self).setUp()
         self.manager = utils.import_object(FLAGS.consoleauth_manager)
         self.context = context.get_admin_context()
-        self.old_ttl = FLAGS.console_token_ttl
 
     def tearDown(self):
         super(ConsoleauthTestCase, self).tearDown()
-        FLAGS.console_token_ttl = self.old_ttl
 
     def test_tokens_expire(self):
         """Test that tokens expire correctly."""
         token = 'mytok'
-        FLAGS.console_token_ttl = 1
+        self.flags(console_token_ttl=1)
         self.manager.authorize_console(self.context, token, 'novnc',
                                        '127.0.0.1', 'host', '')
         self.assertTrue(self.manager.check_token(self.context, token))

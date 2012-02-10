@@ -36,7 +36,7 @@ qemu_img_opt = cfg.StrOpt('qemu_img',
                           help='binary to use for qemu-img commands')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(qemu_img_opt)
+FLAGS.register_opt(qemu_img_opt)
 
 
 def execute(*args, **kwargs):

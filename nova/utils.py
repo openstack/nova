@@ -57,8 +57,7 @@ ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 PERFECT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 FLAGS = flags.FLAGS
 
-
-FLAGS.add_option(
+FLAGS.register_opt(
     cfg.BoolOpt('disable_process_locking', default=False,
                 help='Whether to disable inter-process locks'))
 
@@ -572,7 +571,7 @@ class LazyPluggable(object):
 
     def __get_backend(self):
         if not self.__backend:
-            backend_name = self.__pivot.value
+            backend_name = FLAGS[self.__pivot]
             if backend_name not in self.__backends:
                 raise exception.Error(_('Invalid backend: %s') % backend_name)
 

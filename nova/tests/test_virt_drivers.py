@@ -442,9 +442,9 @@ class LibvirtConnTestCase(_VirtDriverTestCase):
 
         # Point _VirtDriverTestCase at the right module
         self.driver_module = nova.virt.libvirt.connection
-        FLAGS.firewall_driver = nova.virt.libvirt.firewall.drivers[0]
         super(LibvirtConnTestCase, self).setUp()
-        self.flags(rescue_image_id="2",
+        self.flags(firewall_driver=nova.virt.libvirt.firewall.drivers[0],
+                   rescue_image_id="2",
                    rescue_kernel_id="3",
                    rescue_ramdisk_id=None)
 

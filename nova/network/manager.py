@@ -162,7 +162,7 @@ network_opts = [
 
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(network_opts)
+FLAGS.register_opts(network_opts)
 
 
 class AddressAlreadyAllocated(exception.Error):

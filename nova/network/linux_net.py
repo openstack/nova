@@ -87,7 +87,7 @@ linux_net_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(linux_net_opts)
+FLAGS.register_opts(linux_net_opts)
 
 
 binary_name = os.path.basename(inspect.stack()[-1][1])

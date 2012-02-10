@@ -72,7 +72,7 @@ disk_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(disk_opts)
+FLAGS.register_opts(disk_opts)
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None

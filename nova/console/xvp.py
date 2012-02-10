@@ -50,7 +50,7 @@ xvp_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(xvp_opts)
+FLAGS.register_opts(xvp_opts)
 
 
 class XVPConsoleProxy(object):

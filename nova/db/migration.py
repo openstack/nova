@@ -18,15 +18,10 @@
 
 """Database setup and migration commands."""
 
-from nova import flags
 from nova import utils
 
 
-FLAGS = flags.FLAGS
-flags.DECLARE('db_backend', 'nova.db')
-
-
-IMPL = utils.LazyPluggable(FLAGS['db_backend'],
+IMPL = utils.LazyPluggable('db_backend',
                            sqlalchemy='nova.db.sqlalchemy.migration')
 
 

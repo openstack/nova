@@ -55,7 +55,7 @@ buckets_path_opt = cfg.StrOpt('buckets_path', default='$state_path/buckets',
                               help='path to s3 buckets')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(buckets_path_opt)
+FLAGS.register_opt(buckets_path_opt)
 
 
 def get_wsgi_server():

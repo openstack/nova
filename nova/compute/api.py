@@ -55,7 +55,7 @@ find_host_timeout_opt = cfg.StrOpt('find_host_timeout',
         help='Timeout after NN seconds when looking for a host.')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(find_host_timeout_opt)
+FLAGS.register_opt(find_host_timeout_opt)
 flags.DECLARE('enable_zone_routing', 'nova.scheduler.api')
 flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
 

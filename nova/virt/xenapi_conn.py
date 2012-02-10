@@ -152,7 +152,7 @@ xenapi_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(xenapi_opts)
+FLAGS.register_opts(xenapi_opts)
 
 
 def get_connection(_):

@@ -2201,7 +2201,7 @@ class ConfigCommands(object):
         pass
 
     def list(self):
-        for key, value in FLAGS.FlagValuesDict().iteritems():
+        for key, value in FLAGS.iteritems():
             if value is not None:
                 print '%s = %s' % (key, value)
 

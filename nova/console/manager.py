@@ -41,7 +41,7 @@ console_manager_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(console_manager_opts)
+FLAGS.register_opts(console_manager_opts)
 
 
 class ConsoleProxyManager(manager.Manager):

@@ -39,7 +39,7 @@ vmrc_manager_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(vmrc_manager_opts)
+FLAGS.register_opts(vmrc_manager_opts)
 
 
 class ConsoleVMRCManager(manager.Manager):

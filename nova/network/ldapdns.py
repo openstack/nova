@@ -64,7 +64,7 @@ ldap_dns_opts = [
                     'Statement of Authority'),
     ]
 
-flags.FLAGS.add_options(ldap_dns_opts)
+flags.FLAGS.register_opts(ldap_dns_opts)
 
 
 def utf8(instring):

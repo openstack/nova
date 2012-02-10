@@ -33,7 +33,7 @@ notifier_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(notifier_opts)
+FLAGS.register_opts(notifier_opts)
 
 WARN = 'WARN'
 INFO = 'INFO'

@@ -119,7 +119,7 @@ compute_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(compute_opts)
+FLAGS.register_opts(compute_opts)
 
 LOG = logging.getLogger('nova.compute.manager')
 

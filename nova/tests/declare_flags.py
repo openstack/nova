@@ -20,4 +20,4 @@ from nova import flags
 from nova.openstack.common import cfg
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(cfg.IntOpt('answer', default=42, help='test flag'))
+FLAGS.register_opt(cfg.IntOpt('answer', default=42, help='test flag'))

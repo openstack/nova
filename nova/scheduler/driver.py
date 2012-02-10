@@ -48,7 +48,7 @@ scheduler_driver_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(scheduler_driver_opts)
+FLAGS.register_opts(scheduler_driver_opts)
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
 

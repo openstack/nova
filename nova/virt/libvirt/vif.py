@@ -36,7 +36,7 @@ libvirt_ovs_bridge_opt = cfg.StrOpt('libvirt_ovs_bridge',
         help='Name of Integration Bridge used by Open vSwitch')
 
 FLAGS = flags.FLAGS
-FLAGS.add_option(libvirt_ovs_bridge_opt)
+FLAGS.register_opt(libvirt_ovs_bridge_opt)
 
 
 class LibvirtBridgeDriver(VIFDriver):

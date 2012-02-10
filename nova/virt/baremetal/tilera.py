@@ -35,13 +35,13 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 
-global_opts = [
+tilera_opts = [
     cfg.StrOpt('tile_monitor',
                default='/usr/local/TileraMDE/bin/tile-monitor',
                help='Tilera command line program for Bare-metal driver')
     ]
 
-FLAGS.add_options(global_opts)
+FLAGS.register_opts(tilera_opts)
 
 LOG = logging.getLogger('nova.virt.tilera')
 

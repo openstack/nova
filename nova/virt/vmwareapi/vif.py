@@ -27,7 +27,7 @@ from nova.virt.vmwareapi import network_utils
 LOG = logging.getLogger("nova.virt.vmwareapi.vif")
 
 FLAGS = flags.FLAGS
-FLAGS['vmwareapi_vlan_interface'].SetDefault('vmnic0')
+FLAGS.set_default('vmwareapi_vlan_interface', 'vmnic0')
 
 
 class VMWareVlanBridgeDriver(VIFDriver):

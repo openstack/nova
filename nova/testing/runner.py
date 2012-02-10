@@ -73,7 +73,9 @@ reldir = os.path.join(os.path.dirname(__file__), '..', '..')
 absdir = os.path.abspath(reldir)
 sys.path.insert(0, absdir)
 
+from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 
 
 class _AnsiColorizer(object):
@@ -341,18 +343,15 @@ class NovaTestRunner(core.TextTestRunner):
 
 
 def run():
+    flags.FLAGS.register_cli_opt(cfg.BoolOpt('hide-elapsed', default=False))
+    argv = flags.FLAGS(sys.argv)
     logging.setup()
+
     # If any argument looks like a test name but doesn't have "nova.tests" in
     # front of it, automatically add that so we don't have to type as much
-    show_elapsed = True
-    argv = []
-    for x in sys.argv:
-        if x.startswith('test_'):
-            argv.append('nova.tests.%s' % x)
-        elif x.startswith('--hide-elapsed'):
-            show_elapsed = False
-        else:
-            argv.append(x)
+    for i, arg in enumerate(argv):
+        if arg.startswith('test_'):
+            argv[i] = append('nova.tests.%s' % arg)
 
     testdir = os.path.abspath(os.path.join("nova", "tests"))
     c = config.Config(stream=sys.stdout,
@@ -364,7 +363,7 @@ def run():
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,
                             config=c,
-                            show_elapsed=show_elapsed)
+                            show_elapsed=not flags.FLAGS.hide_elapsed)
     sys.exit(not core.run(config=c, testRunner=runner, argv=argv))
 
 

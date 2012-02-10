@@ -44,7 +44,7 @@ least_cost_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(least_cost_opts)
+FLAGS.register_opts(least_cost_opts)
 
 # TODO(sirp): Once we have enough of these rules, we can break them out into a
 # cost_functions.py file (perhaps in a least_cost_scheduler directory)

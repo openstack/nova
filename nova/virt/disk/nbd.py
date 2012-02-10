@@ -34,7 +34,7 @@ nbd_opts = [
     ]
 
 FLAGS = flags.FLAGS
-FLAGS.add_options(nbd_opts)
+FLAGS.register_opts(nbd_opts)
 
 
 class Mount(mount.Mount):

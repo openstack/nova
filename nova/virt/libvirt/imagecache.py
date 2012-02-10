@@ -54,7 +54,7 @@ imagecache_opts = [
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
 FLAGS = flags.FLAGS
-FLAGS.add_options(imagecache_opts)
+FLAGS.register_opts(imagecache_opts)
 
 
 def read_stored_checksum(base_file):

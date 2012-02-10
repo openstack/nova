@@ -23,13 +23,13 @@ from nova import exception
 
 FLAGS = flags.FLAGS
 
-global_opts = [
+baremetal_opts = [
     cfg.StrOpt('baremetal_driver',
                default='tilera',
                help='Bare-metal driver runs on')
     ]
 
-FLAGS.add_options(global_opts)
+FLAGS.register_opts(baremetal_opts)
 
 
 def get_baremetal_nodes():
