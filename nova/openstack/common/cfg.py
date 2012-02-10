@@ -430,7 +430,7 @@ class Opt(object):
         :param cparser: a ConfigParser object
         :param section: a section name
         """
-        return cparser.get(section, self.dest)
+        return cparser.get(section, self.dest, raw=True)
 
     def _add_to_cli(self, parser, group=None):
         """Makes the option available in the command line interface.
