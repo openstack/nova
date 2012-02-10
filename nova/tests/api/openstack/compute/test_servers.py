@@ -1505,6 +1505,27 @@ class ServersControllerCreateTest(test.TestCase):
         self._check_admin_pass_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
+    def test_create_server_bad_image_href(self):
+        image_href = 1
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                'min_count': 1,
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+            }
+        }
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          req,
+                          body)
+
     def test_create_multiple_instances(self):
         """Test creating multiple instances but not asking for
         reservation_id
