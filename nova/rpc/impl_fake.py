@@ -174,6 +174,6 @@ def fanout_cast(context, topic, msg):
 
     for consumer in CONSUMERS.get(topic, []):
         try:
-            consumer.call(context, method, args)
+            consumer.call(context, method, args, None)
         except rpc_common.RemoteError:
             pass
