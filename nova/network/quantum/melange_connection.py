@@ -16,9 +16,10 @@
 #    under the License.
 
 import httplib
-import socket
-import urllib
 import json
+import socket
+import time
+import urllib
 
 from nova import flags
 from nova import log as logging
@@ -32,6 +33,9 @@ melange_opts = [
     cfg.StrOpt('melange_port',
                default='9898',
                help='PORT for connecting to melange'),
+    cfg.IntOpt('melange_num_retries',
+               default=0,
+               help='Number retries when contacting melange'),
     ]
 
 FLAGS = flags.FLAGS
@@ -57,7 +61,8 @@ class MelangeConnection(object):
         self.version = "v0.1"
 
     def get(self, path, params=None, headers=None):
-        return self.do_request("GET", path, params=params, headers=headers)
+        return self.do_request("GET", path, params=params, headers=headers,
+                               retries=FLAGS.melange_num_retries)
 
     def post(self, path, body=None, headers=None):
         return self.do_request("POST", path, body=body, headers=headers)
@@ -72,24 +77,30 @@ class MelangeConnection(object):
             return httplib.HTTPConnection(self.host, self.port)
 
     def do_request(self, method, path, body=None, headers=None, params=None,
-                   content_type=".json"):
+                   content_type=".json", retries=0):
         headers = headers or {}
         params = params or {}
 
         url = "/%s/%s%s" % (self.version, path, content_type)
         if params:
             url += "?%s" % urllib.urlencode(params)
-        try:
+        for i in xrange(retries + 1):
             connection = self._get_connection()
-            connection.request(method, url, body, headers)
-            response = connection.getresponse()
-            response_str = response.read()
-            if response.status < 400:
-                return response_str
-            raise Exception(_("Server returned error: %s" % response_str))
-        except (socket.error, IOError), e:
-            raise Exception(_("Unable to connect to "
-                              "server. Got error: %s" % e))
+            try:
+                connection.request(method, url, body, headers)
+                response = connection.getresponse()
+                response_str = response.read()
+                if response.status < 400:
+                    return response_str
+                raise Exception(_("Server returned error: %s" % response_str))
+            except (socket.error, IOError), e:
+                LOG.exception(_('Connection error contacting melange'
+                                ' service, retrying'))
+
+                time.sleep(1)
+
+        raise exception.MelangeConnectionFailed(
+                reason=_("Maximum attempts reached"))
 
     def allocate_ip(self, network_id, network_tenant_id, vif_id,
                     project_id=None, mac_address=None):
