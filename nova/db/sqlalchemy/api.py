@@ -245,8 +245,7 @@ def service_destroy(context, service_id):
         service_ref = service_get(context, service_id, session=session)
         service_ref.delete(session=session)
 
-        if service_ref.topic == 'compute' and \
-            len(service_ref.compute_node) != 0:
+        if service_ref.topic == 'compute' and service_ref.compute_node:
             for c in service_ref.compute_node:
                 c.delete(session=session)
 
@@ -571,11 +570,11 @@ def compute_node_utilization_update(context, host, free_ram_mb_delta=0,
         if free_ram_mb_delta != 0:
             compute_node.free_ram_mb = table.c.free_ram_mb + free_ram_mb_delta
         if free_disk_gb_delta != 0:
-            compute_node.free_disk_gb = table.c.free_disk_gb + \
-                                        free_disk_gb_delta
+            compute_node.free_disk_gb = (table.c.free_disk_gb +
+                                         free_disk_gb_delta)
         if work_delta != 0:
-            compute_node.current_workload = table.c.current_workload + \
-                                            work_delta
+            compute_node.current_workload = (table.c.current_workload +
+                                             work_delta)
         if vm_delta != 0:
             compute_node.running_vms = table.c.running_vms + vm_delta
     return compute_node
@@ -1487,7 +1486,7 @@ def instance_get_all_by_filters(context, filters):
     otherwise"""
 
     def _regexp_filter_by_metadata(instance, meta):
-        inst_metadata = [{node['key']: node['value']} \
+        inst_metadata = [{node['key']: node['value']}
                          for node in instance['metadata']]
         if isinstance(meta, list):
             for node in meta:
@@ -1829,8 +1828,7 @@ def instance_info_cache_update(context, instance_uuid, values,
         # NOTE(tr3buchet): just in case someone blows away an instance's
         #                  cache entry
         values['instance_id'] = instance_uuid
-        info_cache = \
-            instance_info_cache_create(context, values)
+        info_cache = instance_info_cache_create(context, values)
 
     return info_cache
 
@@ -3387,8 +3385,8 @@ def _dict_with_extra_specs(inst_type_query):
 
     """
     inst_type_dict = dict(inst_type_query)
-    extra_specs = dict([(x['key'], x['value']) for x in \
-                        inst_type_query['extra_specs']])
+    extra_specs = dict([(x['key'], x['value'])
+                        for x in inst_type_query['extra_specs']])
     inst_type_dict['extra_specs'] = extra_specs
     return inst_type_dict
 
@@ -4138,7 +4136,7 @@ def sm_backend_conf_get(context, sm_backend_id):
                      first()
 
     if not result:
-        raise exception.NotFound(_("No backend config with id "\
+        raise exception.NotFound(_("No backend config with id "
                                    "%(sm_backend_id)s") % locals())
 
     return result

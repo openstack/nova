@@ -37,8 +37,8 @@ def upgrade(migrate_engine):
 
     if migrate_engine.name == "mysql":
         try:
-            migrate_engine.execute("ALTER TABLE migrations DROP FOREIGN KEY " \
-                    "`migrations_ibfk_1`;")
+            migrate_engine.execute("ALTER TABLE migrations DROP FOREIGN KEY "
+                                   "`migrations_ibfk_1`;")
         except Exception:  # Don't care, just fail silently.
             pass
 
