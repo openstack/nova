@@ -202,8 +202,8 @@ class BareMetalNodes(object):
             pdu_num = 2
             pdu_outlet_num = node_id
         path1 = "10.0.100." + str(pdu_num)
-        utils.execute('/tftpboot/pdu_mgr', path1, str(pdu_outlet_num), \
-            str(mode), '>>', 'pdu_output')
+        utils.execute('/tftpboot/pdu_mgr', path1, str(pdu_outlet_num),
+                      str(mode), '>>', 'pdu_output')
 
     def deactivate_node(self, node_id):
         """
@@ -213,9 +213,9 @@ class BareMetalNodes(object):
         and /tftpboot/root_x file is an file system image of node#x.
         """
         node_ip = self.get_ip_by_id(node_id)
-        LOG.debug(_("deactivate_node is called for \
-               node_id = %(id)s node_ip = %(ip)s"),
-               {'id': str(node_id), 'ip': node_ip})
+        LOG.debug(_("deactivate_node is called for "
+                    "node_id = %(id)s node_ip = %(ip)s"),
+                  {'id': str(node_id), 'ip': node_ip})
         for item in self.nodes:
             if item['node_id'] == node_id:
                 LOG.debug(_("status of node is set to 0"))
@@ -237,11 +237,11 @@ class BareMetalNodes(object):
 
         User can access the bare-metal node using ssh.
         """
-        cmd = FLAGS.tile_monitor + \
-            " --resume --net " + node_ip + " --run - " + \
-            "ifconfig xgbe0 hw ether " + mac_address + \
-            " - --wait --run - ifconfig xgbe0 " + ip_address + \
-            " - --wait --quit"
+        cmd = (FLAGS.tile_monitor +
+               " --resume --net " + node_ip + " --run - " +
+               "ifconfig xgbe0 hw ether " + mac_address +
+               " - --wait --run - ifconfig xgbe0 " + ip_address +
+               " - --wait --quit")
         subprocess.Popen(cmd, shell=True)
         #utils.execute(cmd, shell=True)
         self.sleep_mgr(5)
@@ -263,8 +263,8 @@ class BareMetalNodes(object):
         """
         LOG.debug(_("Before ping to the bare-metal node"))
         tile_output = "/tftpboot/tile_output_" + str(node_id)
-        grep_cmd = "ping -c1 " + node_ip + " | grep Unreachable > " \
-                   + tile_output
+        grep_cmd = ("ping -c1 " + node_ip + " | grep Unreachable > " +
+                    tile_output)
         subprocess.Popen(grep_cmd, shell=True)
         self.sleep_mgr(5)
 
@@ -272,13 +272,13 @@ class BareMetalNodes(object):
         out_msg = file.readline().find("Unreachable")
         utils.execute('sudo', 'rm', tile_output)
         if out_msg == -1:
-            cmd = "TILERA_BOARD_#" + str(node_id) + " " + node_ip \
-                + " is ready"
+            cmd = ("TILERA_BOARD_#" + str(node_id) + " " + node_ip +
+                   " is ready")
             LOG.debug(_(cmd))
             return True
         else:
-            cmd = "TILERA_BOARD_#" + str(node_id) + " " \
-                + node_ip + " is not ready, out_msg=" + out_msg
+            cmd = ("TILERA_BOARD_#" + str(node_id) + " " +
+                   node_ip + " is not ready, out_msg=" + out_msg)
             LOG.debug(_(cmd))
             self.power_mgr(node_id, 2)
             return False
@@ -303,13 +303,13 @@ class BareMetalNodes(object):
         """
         Sets and Runs sshd in the node.
         """
-        cmd = FLAGS.tile_monitor + \
-            " --resume --net " + node_ip + " --run - " + \
-            "/usr/sbin/sshd - --wait --quit"
+        cmd = (FLAGS.tile_monitor +
+               " --resume --net " + node_ip + " --run - " +
+               "/usr/sbin/sshd - --wait --quit")
         subprocess.Popen(cmd, shell=True)
         self.sleep_mgr(5)
 
-    def activate_node(self, node_id, node_ip, name, mac_address, \
+    def activate_node(self, node_id, node_ip, name, mac_address,
                       ip_address, user_data):
         """
         Activates the given node using ID, IP, and MAC address.
@@ -336,9 +336,9 @@ class BareMetalNodes(object):
         """
         node_ip = self.get_ip_by_id(node_id)
         log_path = "/tftpboot/log_" + str(node_id)
-        kmsg_cmd = FLAGS.tile_monitor + \
-                   " --resume --net " + node_ip + \
-                   " -- dmesg > " + log_path
+        kmsg_cmd = (FLAGS.tile_monitor +
+                    " --resume --net " + node_ip +
+                    " -- dmesg > " + log_path)
         subprocess.Popen(kmsg_cmd, shell=True)
         self.sleep_mgr(5)
         utils.execute('cp', log_path, console_log)
