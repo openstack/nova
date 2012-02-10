@@ -20,10 +20,13 @@
 """RequestContext: context for requests that persist through all of nova."""
 
 import copy
-import uuid
 
 from nova import local
 from nova import utils
+
+
+def generate_request_id():
+    return 'req-' + str(utils.gen_uuid())
 
 
 class RequestContext(object):
@@ -61,7 +64,7 @@ class RequestContext(object):
             timestamp = utils.parse_strtime(timestamp)
         self.timestamp = timestamp
         if not request_id:
-            request_id = 'req-' + str(utils.gen_uuid())
+            request_id = generate_request_id()
         self.request_id = request_id
         self.auth_token = auth_token
         self.strategy = strategy
