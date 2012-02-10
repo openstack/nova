@@ -257,7 +257,7 @@ class CloudController(object):
         for host in hosts:
             rv['availabilityZoneInfo'].append({'zoneName': '|- %s' % host,
                                                'zoneState': ''})
-            hsvcs = [service for service in services \
+            hsvcs = [service for service in services
                      if service['host'] == host]
             for svc in hsvcs:
                 alive = utils.service_is_up(svc)
@@ -348,8 +348,7 @@ class CloudController(object):
         for key_pair in key_pairs:
             # filter out the vpn keys
             suffix = FLAGS.vpn_key_suffix
-            if context.is_admin or \
-               not key_pair['name'].endswith(suffix):
+            if context.is_admin or not key_pair['name'].endswith(suffix):
                 result.append({
                     'keyName': key_pair['name'],
                     'keyFingerprint': key_pair['fingerprint'],
@@ -513,10 +512,10 @@ class CloudController(object):
             source_project_id = self._get_source_project_id(context,
                 source_security_group_owner_id)
 
-            source_security_group = \
-                    db.security_group_get_by_name(context.elevated(),
-                                                  source_project_id,
-                                                  source_security_group_name)
+            source_security_group = db.security_group_get_by_name(
+                    context.elevated(),
+                    source_project_id,
+                    source_security_group_name)
             notfound = exception.SecurityGroupNotFound
             if not source_security_group:
                 raise notfound(security_group_id=source_security_group_name)
@@ -1389,8 +1388,8 @@ class CloudController(object):
         metadata = {'properties': {'image_location': image_location}}
 
         if 'root_device_name' in kwargs:
-            metadata['properties']['root_device_name'] = \
-            kwargs.get('root_device_name')
+            metadata['properties']['root_device_name'] = kwargs.get(
+                                                         'root_device_name')
 
         mappings = [_parse_block_device_mapping(bdm) for bdm in
                     kwargs.get('block_device_mapping', [])]
@@ -1413,8 +1412,8 @@ class CloudController(object):
                 result['launchPermission'].append({'group': 'all'})
 
         def _root_device_name_attribute(image, result):
-            result['rootDeviceName'] = \
-                block_device.properties_root_device_name(image['properties'])
+            _prop_root_dev_name = block_device.properties_root_device_name
+            result['rootDeviceName'] = _prop_root_dev_name(image['properties'])
             if result['rootDeviceName'] is None:
                 result['rootDeviceName'] = block_device.DEFAULT_ROOT_DEV_NAME
 

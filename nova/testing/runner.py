@@ -51,7 +51,7 @@ To run a single test module:
     python nova/testing/runner.py api.test_wsgi
 
 To run a single test:
-    python nova/testing/runner.py \
+    python nova/testing/runner.py
         test_compute:ComputeTestCase.test_run_terminate
 
 """
@@ -130,9 +130,9 @@ class _Win32Colorizer(object):
     See _AnsiColorizer docstring.
     """
     def __init__(self, stream):
-        from win32console import GetStdHandle, STD_OUT_HANDLE, \
-             FOREGROUND_RED, FOREGROUND_BLUE, FOREGROUND_GREEN, \
-             FOREGROUND_INTENSITY
+        from win32console import (GetStdHandle, STD_OUT_HANDLE,
+                                  FOREGROUND_RED, FOREGROUND_BLUE,
+                                  FOREGROUND_GREEN, FOREGROUND_INTENSITY)
         red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
                                   FOREGROUND_BLUE, FOREGROUND_INTENSITY)
         self.stream = stream

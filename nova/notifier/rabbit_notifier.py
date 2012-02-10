@@ -21,10 +21,9 @@ from nova.openstack.common import cfg
 from nova import rpc
 
 
-notification_topic_opt = \
-    cfg.StrOpt('notification_topic',
-               default='notifications',
-               help='RabbitMQ topic used for Nova notifications')
+notification_topic_opt = cfg.StrOpt('notification_topic',
+        default='notifications',
+        help='RabbitMQ topic used for Nova notifications')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(notification_topic_opt)

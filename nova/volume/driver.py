@@ -726,8 +726,8 @@ class ZadaraBEDriver(ISCSIDriver):
         volume_type = volume_types.get_volume_type(None,
                                             volume['volume_type_id'])
         if volume_type is not None:
-            qosstr = volume_type['extra_specs']['drive_type'] + \
-                     ("_%s" % volume_type['extra_specs']['drive_size'])
+            qosstr = '_'.join([volume_type['extra_specs']['drive_type'],
+                               volume_type['extra_specs']['drive_size']])
 
         vsa_id = None
         for i in volume.get('volume_metadata'):
@@ -983,13 +983,15 @@ class ZadaraBEDriver(ISCSIDriver):
                 # two types of elements -  property of qos-group & sub property
                 # classify them accordingly
                 if child.text:
-                    qos_group[child.tag] = int(child.text) \
-                        if child.text.isdigit() else child.text
+                    qos_group[child.tag] = (int(child.text)
+                                            if child.text.isdigit()
+                                            else child.text)
                 else:
                     subelement = {}
                     for subchild in child.getchildren():
-                        subelement[subchild.tag] = int(subchild.text) \
-                            if subchild.text.isdigit() else subchild.text
+                        subelement[subchild.tag] = (int(subchild.text)
+                                                    if subchild.text.isdigit()
+                                                    else subchild.text)
                     qos_group[child.tag] = subelement
 
             # Now add this group to the master qos_groups

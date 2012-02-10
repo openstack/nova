@@ -400,8 +400,8 @@ class TopicPublisher(Publisher):
     def __init__(self, connection=None, topic='broadcast', durable=None):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
-        self.durable = FLAGS.rabbit_durable_queues \
-                       if durable is None else durable
+        self.durable = (FLAGS.rabbit_durable_queues if durable is None
+                                                    else durable)
         super(TopicPublisher, self).__init__(connection=connection)
 
 

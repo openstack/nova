@@ -225,14 +225,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             db_state = instance['power_state']
             drv_state = self._get_power_state(context, instance)
 
-            expect_running = db_state == power_state.RUNNING \
-                             and drv_state != db_state
+            expect_running = (db_state == power_state.RUNNING and
+                              drv_state != db_state)
 
             LOG.debug(_('Current state of %(instance_uuid)s is %(drv_state)s, '
                         'state in DB is %(db_state)s.'), locals())
 
-            if (expect_running and FLAGS.resume_guests_state_on_host_boot)\
-               or FLAGS.start_guests_on_host_boot:
+            if ((expect_running and FLAGS.resume_guests_state_on_host_boot) or
+                FLAGS.start_guests_on_host_boot):
                 LOG.info(_('Rebooting instance %(instance_uuid)s after '
                             'nova-compute restart.'), locals())
                 self.reboot_instance(context, instance['uuid'])
@@ -1771,8 +1771,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
 
         # If any volume is mounted, prepare here.
-        block_device_info = \
-            self._get_instance_volume_block_device_info(context, instance_id)
+        block_device_info = self._get_instance_volume_block_device_info(
+                            context, instance_id)
         if not block_device_info['block_device_mapping']:
             LOG.info(_("%s has no volume."), instance_ref['uuid'])
 
@@ -2036,8 +2036,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(vish): The mapping is passed in so the driver can disconnect
         #             from remote volumes if necessary
-        block_device_info = \
-            self._get_instance_volume_block_device_info(context, instance_id)
+        block_device_info = self._get_instance_volume_block_device_info(
+                            context, instance_id)
         self.driver.destroy(instance_ref, self._legacy_nw_info(network_info),
                             block_device_info)
 
