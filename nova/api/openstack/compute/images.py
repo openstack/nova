@@ -94,15 +94,13 @@ class Controller(wsgi.Controller):
 
     _view_builder_class = views_images.ViewBuilder
 
-    def __init__(self, image_service=None, compute_service=None, **kwargs):
+    def __init__(self, image_service=None, **kwargs):
         """Initialize new `ImageController`.
 
-        :param compute_service: `nova.compute.api:API`
         :param image_service: `nova.image.glance:GlancemageService`
 
         """
         super(Controller, self).__init__(**kwargs)
-        self._compute_service = compute_service or compute.API()
         self._image_service = image_service or \
                 nova.image.get_default_image_service()
 
