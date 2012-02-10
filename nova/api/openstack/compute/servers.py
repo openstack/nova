@@ -303,7 +303,7 @@ class ActionDeserializer(CommonDeserializer):
             raise AttributeError("No flavorRef was specified in request")
 
         if node.hasAttribute("auto_disk_config"):
-            rezise['auto_disk_config'] = node.getAttribute("auto_disk_config")
+            resize['auto_disk_config'] = node.getAttribute("auto_disk_config")
 
         return resize
 
