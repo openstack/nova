@@ -46,8 +46,8 @@ class NetworkHelper(HelperBase):
         The bridge is defined in the nova db and can be found either in the
         'bridge' or 'name_label' fields of the XenAPI network record.
         """
-        expr = 'field "name__label" = "%s" or ' \
-               'field "bridge" = "%s"' % (bridge, bridge)
+        expr = ('field "name__label" = "%s" or field "bridge" = "%s"' %
+                (bridge, bridge))
         networks = session.call_xenapi('network.get_all_records_where', expr)
         if len(networks) == 1:
             return networks.keys()[0]

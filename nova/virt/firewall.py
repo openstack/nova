@@ -28,10 +28,9 @@ from nova.virt import netutils
 
 LOG = logging.getLogger("nova.virt.firewall")
 
-allow_same_net_traffic_opt = \
-    cfg.BoolOpt('allow_same_net_traffic',
-                default=True,
-                help='Whether to allow network traffic from same network')
+allow_same_net_traffic_opt = cfg.BoolOpt('allow_same_net_traffic',
+        default=True,
+        help='Whether to allow network traffic from same network')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(allow_same_net_traffic_opt)

@@ -325,8 +325,8 @@ class XenAPIConnection(driver.ComputeDriver):
         start_time = time.mktime(start_time.timetuple())
         if stop_time:
             stop_time = time.mktime(stop_time.timetuple())
-        for iusage in self._vmops.get_all_bw_usage(start_time, stop_time).\
-                      values():
+        for iusage in self._vmops.get_all_bw_usage(start_time,
+                                                   stop_time).values():
             for macaddr, usage in iusage.iteritems():
                 bwusage.append(dict(mac_address=macaddr,
                                     bw_in=usage['bw_in'],
@@ -681,8 +681,8 @@ class HostState(object):
             data["host_memory_total"] = host_memory.get('total', 0)
             data["host_memory_overhead"] = host_memory.get('overhead', 0)
             data["host_memory_free"] = host_memory.get('free', 0)
-            data["host_memory_free_computed"] = \
-                        host_memory.get('free-computed', 0)
+            data["host_memory_free_computed"] = host_memory.get(
+                                                'free-computed', 0)
             del data['host_memory']
         self._stats = data
 

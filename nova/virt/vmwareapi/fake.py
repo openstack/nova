@@ -545,8 +545,7 @@ class FakeVim(object):
     def _create_copy_disk(self, method, vmdk_file_path):
         """Creates/copies a vmdk file object in the datastore."""
         # We need to add/create both .vmdk and .-flat.vmdk files
-        flat_vmdk_file_path = \
-            vmdk_file_path.replace(".vmdk", "-flat.vmdk")
+        flat_vmdk_file_path = vmdk_file_path.replace(".vmdk", "-flat.vmdk")
         _add_file(vmdk_file_path)
         _add_file(flat_vmdk_file_path)
         task_mdo = create_task(method, "success")
@@ -560,8 +559,7 @@ class FakeVim(object):
     def _delete_disk(self, method, *args, **kwargs):
         """Deletes .vmdk and -flat.vmdk files corresponding to the VM."""
         vmdk_file_path = kwargs.get("name")
-        flat_vmdk_file_path = \
-            vmdk_file_path.replace(".vmdk", "-flat.vmdk")
+        flat_vmdk_file_path = vmdk_file_path.replace(".vmdk", "-flat.vmdk")
         _remove_file(vmdk_file_path)
         _remove_file(flat_vmdk_file_path)
         task_mdo = create_task(method, "success")
@@ -652,8 +650,8 @@ class FakeVim(object):
 
     def _add_port_group(self, method, *args, **kwargs):
         """Adds a port group to the host system."""
-        host_mdo = \
-            _db_content["HostSystem"][_db_content["HostSystem"].keys()[0]]
+        _host_sk = _db_content["HostSystem"].keys()[0]
+        host_mdo = _db_content["HostSystem"][_host_sk]
         host_mdo._add_port_group(kwargs.get("portgrp"))
 
     def __getattr__(self, attr_name):

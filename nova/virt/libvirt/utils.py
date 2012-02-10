@@ -31,10 +31,9 @@ from nova.virt.disk import api as disk
 from nova.virt import images
 
 
-qemu_img_opt = \
-    cfg.StrOpt('qemu_img',
-               default='qemu-img',
-               help='binary to use for qemu-img commands')
+qemu_img_opt = cfg.StrOpt('qemu_img',
+                          default='qemu-img',
+                          help='binary to use for qemu-img commands')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(qemu_img_opt)

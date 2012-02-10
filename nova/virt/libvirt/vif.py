@@ -31,10 +31,9 @@ from nova.virt.vif import VIFDriver
 
 LOG = logging.getLogger('nova.virt.libvirt.vif')
 
-libvirt_ovs_bridge_opt = \
-    cfg.StrOpt('libvirt_ovs_bridge',
-               default='br-int',
-               help='Name of Integration Bridge used by Open vSwitch')
+libvirt_ovs_bridge_opt = cfg.StrOpt('libvirt_ovs_bridge',
+        default='br-int',
+        help='Name of Integration Bridge used by Open vSwitch')
 
 FLAGS = flags.FLAGS
 FLAGS.add_option(libvirt_ovs_bridge_opt)

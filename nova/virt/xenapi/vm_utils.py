@@ -685,8 +685,8 @@ class VMHelper(HelperBase):
         if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
-        elif image_type in (ImageType.KERNEL, ImageType.RAMDISK) and \
-             vdi_size > FLAGS.max_kernel_ramdisk_size:
+        elif (image_type in (ImageType.KERNEL, ImageType.RAMDISK) and
+              vdi_size > FLAGS.max_kernel_ramdisk_size):
             max_size = FLAGS.max_kernel_ramdisk_size
             raise exception.Error(
                 _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
@@ -923,8 +923,8 @@ class VMHelper(HelperBase):
                         ref = node.childNodes
                         # Name and Value
                         if len(ref) > 6:
-                            diags[ref[0].firstChild.data] = \
-                                ref[6].firstChild.data
+                            _ref_zero = ref[0].firstChild.data
+                            diags[_ref_zero] = ref[6].firstChild.data
             return diags
         except cls.XenAPI.Failure as e:
             return {"Unable to retrieve diagnostics": e}

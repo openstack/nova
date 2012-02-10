@@ -255,18 +255,19 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             instance_filter_name = self._instance_filter_name(instance, nic_id)
 
             try:
-                self._conn.nwfilterLookupByName(instance_filter_name).\
-                                                    undefine()
+                _nw = self._conn.nwfilterLookupByName(instance_filter_name)
+                _nw.undefine()
             except libvirt.libvirtError:
                 LOG.debug(_('The nwfilter(%(instance_filter_name)s) '
                             'for %(instance_name)s is not found.') % locals())
 
-        instance_secgroup_filter_name = \
-            '%s-secgroup' % (self._instance_filter_name(instance))
+        instance_secgroup_filter_name = ('%s-secgroup' %
+                                         self._instance_filter_name(instance))
 
         try:
-            self._conn.nwfilterLookupByName(instance_secgroup_filter_name)\
-                                            .undefine()
+            _nw = self._conn.nwfilterLookupByName(
+                  instance_secgroup_filter_name)
+            _nw.undefine()
         except libvirt.libvirtError:
             LOG.debug(_('The nwfilter(%(instance_secgroup_filter_name)s) '
                         'for %(instance_name)s is not found.') % locals())
@@ -282,8 +283,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
         ctxt = context.get_admin_context()
 
-        instance_secgroup_filter_name = \
-            '%s-secgroup' % (self._instance_filter_name(instance))
+        instance_secgroup_filter_name = ('%s-secgroup' %
+                                         self._instance_filter_name(instance))
 
         instance_secgroup_filter_children = ['nova-base-ipv4',
                                              'nova-base-ipv6',
@@ -294,11 +295,11 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                         info['gateway_v6']]
 
             if networks:
-                instance_secgroup_filter_children.\
-                    append('nova-allow-ra-server')
+                instance_secgroup_filter_children.append(
+                        'nova-allow-ra-server')
 
-        for security_group in \
-                db.security_group_get_by_instance(ctxt, instance['id']):
+        for security_group in db.security_group_get_by_instance(ctxt,
+                                                       instance['id']):
 
             self.refresh_security_group_rules(security_group['id'])
 
@@ -309,9 +310,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                     self._filter_container(instance_secgroup_filter_name,
                                            instance_secgroup_filter_children))
 
-        network_filters = self.\
-            _create_network_filters(instance, network_info,
-                                    instance_secgroup_filter_name)
+        network_filters = self._create_network_filters(instance, network_info,
+                          instance_secgroup_filter_name)
 
         for (name, children) in network_filters:
             self._define_filters(name, children)
@@ -372,15 +372,15 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                 version = netutils.get_ip_version(rule.cidr)
                 if(FLAGS.use_ipv6 and version == 6):
                     net, prefixlen = netutils.get_net_and_prefixlen(rule.cidr)
-                    rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                                (v6protocol[rule.protocol], net, prefixlen)
+                    rule_xml += ("<%s srcipaddr='%s' srcipmask='%s' " %
+                                 (v6protocol[rule.protocol], net, prefixlen))
                 else:
                     net, mask = netutils.get_net_and_mask(rule.cidr)
-                    rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                                (rule.protocol, net, mask)
+                    rule_xml += ("<%s srcipaddr='%s' srcipmask='%s' " %
+                                 (rule.protocol, net, mask))
                 if rule.protocol in ['tcp', 'udp']:
-                    rule_xml += "dstportstart='%s' dstportend='%s' " % \
-                                (rule.from_port, rule.to_port)
+                    rule_xml += ("dstportstart='%s' dstportend='%s' " %
+                                 (rule.from_port, rule.to_port))
                 elif rule.protocol == 'icmp':
                     LOG.info('rule.protocol: %r, rule.from_port: %r, '
                              'rule.to_port: %r', rule.protocol,
@@ -410,15 +410,15 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             version = netutils.get_ip_version(rule.cidr)
             if(FLAGS.use_ipv6 and version == 6):
                 net, prefixlen = netutils.get_net_and_prefixlen(rule.cidr)
-                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                            (v6protocol[rule.protocol], net, prefixlen)
+                rule_xml += ("<%s srcipaddr='%s' srcipmask='%s' " %
+                             (v6protocol[rule.protocol], net, prefixlen))
             else:
                 net, mask = netutils.get_net_and_mask(rule.cidr)
-                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                            (rule.protocol, net, mask)
+                rule_xml += ("<%s srcipaddr='%s' srcipmask='%s' " %
+                             (rule.protocol, net, mask))
             if rule.protocol in ['tcp', 'udp']:
-                rule_xml += "dstportstart='%s' dstportend='%s' " % \
-                            (rule.from_port, rule.to_port)
+                rule_xml += ("dstportstart='%s' dstportend='%s' " %
+                             (rule.from_port, rule.to_port))
             elif rule.protocol == 'icmp':
                 LOG.info('rule.protocol: %r, rule.from_port: %r, '
                          'rule.to_port: %r', rule.protocol,
