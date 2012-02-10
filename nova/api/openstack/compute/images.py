@@ -101,8 +101,8 @@ class Controller(wsgi.Controller):
 
         """
         super(Controller, self).__init__(**kwargs)
-        self._image_service = image_service or \
-                nova.image.get_default_image_service()
+        self._image_service = (image_service or
+                               nova.image.get_default_image_service())
 
     def _get_filters(self, req):
         """

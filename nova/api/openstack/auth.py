@@ -173,15 +173,19 @@ class AuthMiddleware(base_wsgi.Middleware):
         if user and token:
             res = webob.Response()
             res.headers['X-Auth-Token'] = token['token_hash']
-            res.headers['X-Server-Management-Url'] = \
-                token['server_management_url']
+            _x_server_url = 'X-Server-Management-Url'
+            _server_url = 'server_management_url'
+            res.headers[_x_server_url] = token[_server_url]
 
             if token['storage_url']:
-                res.headers['X-Storage-Url'] = token['storage_url']
+                _x_storage_url = 'X-Storage-Url'
+                _storage_url = 'storage_url'
+                res.headers[_x_storage_url] = token[_storage_url]
 
             if token['cdn_management_url']:
-                res.headers['X-CDN-Management-Url'] = \
-                    token['cdn_management_url']
+                _x_cdn_url = 'X-CDN-Management-Url'
+                _cdn_url = 'cdn_management_url'
+                res.headers[_x_cdn_url] = token[_cdn_url]
 
             res.content_type = 'text/plain'
             res.status = '204'

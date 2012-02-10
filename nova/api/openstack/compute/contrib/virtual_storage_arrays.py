@@ -182,13 +182,13 @@ class VsaController(object):
         LOG.audit(_("Create VSA %(display_name)s of type %(vc_type)s"),
                     locals(), context=context)
 
+        _vsa_placement = vsa.get('placement', {})
         args = dict(display_name=display_name,
-                display_description=vsa.get('displayDescription'),
-                instance_type=instance_type,
-                storage=vsa.get('storage'),
-                shared=vsa.get('shared'),
-                availability_zone=vsa.get('placement', {}).\
-                                          get('AvailabilityZone'))
+                    display_description=vsa.get('displayDescription'),
+                    instance_type=instance_type,
+                    storage=vsa.get('storage'),
+                    shared=vsa.get('shared'),
+                    availability_zone=_vsa_placement.get('AvailabilityZone'))
 
         vsa = self.vsa_api.create(context, **args)
 
@@ -294,7 +294,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
         own_vsa_id = self.volume_api.get_volume_metadata_value(volume_ref,
                                                             self.direction)
         if  own_vsa_id != vsa_id:
-            LOG.error(_("%(obj)s with ID %(id)s belongs to VSA %(own_vsa_id)s"\
+            LOG.error(_("%(obj)s with ID %(id)s belongs to VSA %(own_vsa_id)s"
                         " and not to VSA %(vsa_id)s."), locals())
             raise exception.Invalid()
 
@@ -307,7 +307,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
                 search_opts={'metadata': {self.direction: str(vsa_id)}})
         limited_list = common.limited(vols, req)
 
-        res = [self._translation(context, vol, vsa_id, details) \
+        res = [self._translation(context, vol, vsa_id, details)
                for vol in limited_list]
 
         return {self.objects: res}

@@ -79,8 +79,8 @@ class Request(webob.Request):
             if not content_type:
                 content_type = self.accept.best_match(SUPPORTED_CONTENT_TYPES)
 
-            self.environ['nova.best_content_type'] = content_type or \
-                'application/json'
+            self.environ['nova.best_content_type'] = (content_type or
+                                                      'application/json')
 
         return self.environ['nova.best_content_type']
 

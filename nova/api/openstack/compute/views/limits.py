@@ -66,8 +66,8 @@ class ViewBuilder(object):
 
             # check for existing key
             for limit in limits:
-                if limit["uri"] == rate_limit["URI"] and \
-                   limit["regex"] == rate_limit["regex"]:
+                if (limit["uri"] == rate_limit["URI"] and
+                    limit["regex"] == rate_limit["regex"]):
                     _rate_limit_key = limit
                     break
 
@@ -85,8 +85,8 @@ class ViewBuilder(object):
         return limits
 
     def _build_rate_limit(self, rate_limit):
-        next_avail = \
-            datetime.datetime.utcfromtimestamp(rate_limit["resetTime"])
+        _get_utc = datetime.datetime.utcfromtimestamp
+        next_avail = _get_utc(rate_limit["resetTime"])
         return {
             "verb": rate_limit["verb"],
             "value": rate_limit["value"],

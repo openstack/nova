@@ -558,8 +558,8 @@ class Controller(wsgi.Controller):
                 # at the boot time
                 for id, ip in networks:
                     if id == network_uuid:
-                        expl = _("Duplicate networks (%s) are not allowed")\
-                                % network_uuid
+                        expl = (_("Duplicate networks (%s) are not allowed") %
+                                network_uuid)
                         raise exc.HTTPBadRequest(explanation=expl)
 
                 networks.append((network_uuid, address))
@@ -705,8 +705,8 @@ class Controller(wsgi.Controller):
         scheduler_hints = server_dict.get('scheduler_hints', {})
 
         try:
-            inst_type = \
-                    instance_types.get_instance_type_by_flavor_id(flavor_id)
+            _get_inst_type = instance_types.get_instance_type_by_flavor_id
+            inst_type = _get_inst_type(flavor_id)
 
             (instances, resv_id) = self.compute_api.create(context,
                             inst_type,
@@ -747,8 +747,8 @@ class Controller(wsgi.Controller):
         except exception.SecurityGroupNotFound as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
         except rpc_common.RemoteError as err:
-            msg = "%(err_type)s: %(err_msg)s" % \
-                  {'err_type': err.exc_type, 'err_msg': err.value}
+            msg = "%(err_type)s: %(err_msg)s" % {'err_type': err.exc_type,
+                                                 'err_msg': err.value}
             raise exc.HTTPBadRequest(explanation=msg)
         # Let the caller deal with unhandled exceptions.
 

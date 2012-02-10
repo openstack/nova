@@ -54,8 +54,8 @@ class Server_diagnostics(extensions.ExtensionDescriptor):
 
     name = "ServerDiagnostics"
     alias = "os-server-diagnostics"
-    namespace = "http://docs.openstack.org/compute/ext/" \
-                "server-diagnostics/api/v1.1"
+    namespace = ("http://docs.openstack.org/compute/ext/"
+                 "server-diagnostics/api/v1.1")
     updated = "2011-12-21T00:00:00+00:00"
 
     def get_resources(self):
