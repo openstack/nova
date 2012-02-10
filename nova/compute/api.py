@@ -1325,8 +1325,8 @@ class API(base.Base):
 
         self.update(context,
                     instance,
-                    vm_state=vm_states.ACTIVE,
-                    task_state=None)
+                    vm_state=vm_states.RESIZING,
+                    task_state=task_states.RESIZE_REVERTING)
 
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context,

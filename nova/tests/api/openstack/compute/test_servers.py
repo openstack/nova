@@ -1376,6 +1376,11 @@ class ServerStatusTest(test.TestCase):
                                         task_states.RESIZE_VERIFY)
         self.assertEqual(response['server']['status'], 'VERIFY_RESIZE')
 
+    def test_revert_resize(self):
+        response = self._get_with_state(vm_states.RESIZING,
+                                        task_states.RESIZE_REVERTING)
+        self.assertEqual(response['server']['status'], 'REVERT_RESIZE')
+
     def test_password_update(self):
         response = self._get_with_state(vm_states.ACTIVE,
                                         task_states.UPDATING_PASSWORD)
