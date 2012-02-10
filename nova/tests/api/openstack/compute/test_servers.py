@@ -19,6 +19,7 @@
 import datetime
 import json
 import urlparse
+import uuid
 
 from lxml import etree
 import webob
@@ -216,6 +217,27 @@ class ServersControllerTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+
+    def test_unique_host_id(self):
+        """Create two servers with the same host and different
+           project_ids and check that the hostId's are unique"""
+        def return_instance_with_host(self, *args):
+            project_id = str(uuid.uuid4())
+            return fakes.stub_instance(id=1, uuid=FAKE_UUID,
+                                       project_id=project_id,
+                                       host='fake_host')
+
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_instance_with_host)
+        self.stubs.Set(nova.db, 'instance_get',
+                       return_instance_with_host)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        server1 = self.controller.show(req, FAKE_UUID)
+        server2 = self.controller.show(req, FAKE_UUID)
+
+        self.assertNotEqual(server1['server']['hostId'],
+                            server2['server']['hostId'])
 
     def test_get_server_by_id(self):
         self.flags(use_ipv6=True)
