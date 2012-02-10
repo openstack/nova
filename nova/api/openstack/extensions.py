@@ -375,8 +375,9 @@ def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
 
 def extension_authorizer(api_name, extension_name):
     def authorize(context, target=None):
-        if target == None:
-            target = {}
+        if target is None:
+            target = {'project_id': context.project_id,
+                      'user_id': context.user_id}
         action = '%s_extension:%s' % (api_name, extension_name)
         nova.policy.enforce(context, action, target)
     return authorize
