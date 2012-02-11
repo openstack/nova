@@ -440,7 +440,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _check_instance_not_already_created(self, context, instance):
         """Ensure an instance with the same name is not already present."""
-        if instance['name'] in self.driver.list_instances():
+        if self.driver.instance_exists(instance['name']):
             raise exception.Error(_("Instance has already been created"))
 
     def _check_image_size(self, context, instance):
