@@ -100,6 +100,10 @@ libvirt_opts = [
                default='',
                help='Override the default libvirt URI '
                     '(which is dependent on libvirt_type)'),
+    cfg.BoolOpt('libvirt_inject_password',
+                default=False,
+                help='Inject the admin password at boot time, '
+                     'without an agent.'),
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
                 help='Sync virtual and real mouse cursors in Windows VMs'),
@@ -1155,7 +1159,14 @@ class LibvirtConnection(driver.ComputeDriver):
                                             'use_ipv6': FLAGS.use_ipv6}]))
 
         metadata = instance.get('metadata')
-        if any((key, net, metadata)):
+
+        if FLAGS.libvirt_inject_password:
+            admin_password = instance.get('admin_pass')
+        else:
+            admin_password = None
+
+        if any((key, net, metadata, admin_password)):
+
             instance_name = instance['name']
 
             if config_drive:  # Should be True or None by now.
@@ -1165,12 +1176,13 @@ class LibvirtConnection(driver.ComputeDriver):
                 injection_path = basepath('disk')
                 img_id = instance.image_ref
 
-            for injection in ('metadata', 'key', 'net'):
+            for injection in ('metadata', 'key', 'net', 'admin_password'):
                 if locals()[injection]:
                     LOG.info(_('Injecting %(injection)s into image %(img_id)s'
                                % locals()), instance=instance)
             try:
-                disk.inject_data(injection_path, key, net, metadata,
+                disk.inject_data(injection_path,
+                                 key, net, metadata, admin_password,
                                  partition=target_partition,
                                  use_cow=FLAGS.use_cow_images)
 
