@@ -1753,6 +1753,8 @@ class NWFilterTestCase(test.TestCase):
         self.fw.prepare_instance_filter(instance, network_info)
         self.fw.apply_instance_filter(instance, network_info)
         _ensure_all_called(mac)
+        db.instance_remove_security_group(self.context, inst_uuid,
+                                          self.security_group.id)
         self.teardown_security_group()
         db.instance_destroy(context.get_admin_context(), instance_ref['id'])
 

@@ -570,6 +570,15 @@ class ApiEc2TestCase(test.TestCase):
         self.expect_http()
         self.mox.ReplayAll()
 
+        # Can not delete the group while it is still used by
+        # another group.
+        self.assertRaises(EC2ResponseError,
+                          self.ec2.delete_security_group,
+                          other_security_group_name)
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
         rv = self.ec2.get_all_security_groups()
 
         for group in rv:
@@ -583,3 +592,4 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.ec2.delete_security_group(security_group_name)
+        self.ec2.delete_security_group(other_security_group_name)

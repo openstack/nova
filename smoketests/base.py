@@ -72,6 +72,16 @@ class SmokeTestCase(unittest.TestCase):
         else:
             return False
 
+    def wait_for_not_running(self, instance, tries=60, wait=1):
+        """Wait for instance to not be running"""
+        for x in xrange(tries):
+            instance.update()
+            if not instance.state.startswith('running'):
+                return True
+            time.sleep(wait)
+        else:
+            return False
+
     def wait_for_ping(self, ip, command="ping", tries=120):
         """Wait for ip to be pingable"""
         for x in xrange(tries):

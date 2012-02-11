@@ -1168,6 +1168,11 @@ def security_group_exists(context, project_id, group_name):
     return IMPL.security_group_exists(context, project_id, group_name)
 
 
+def security_group_in_use(context, group_id):
+    """Indicates if a security group is currently in use."""
+    return IMPL.security_group_in_use(context, group_id)
+
+
 def security_group_create(context, values):
     """Create a new security group."""
     return IMPL.security_group_create(context, values)

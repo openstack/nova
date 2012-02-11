@@ -437,6 +437,49 @@ class CloudTestCase(test.TestCase):
         self.assertRaises(exception.EC2APIError, revoke,
                 self.context, **kwargs)
 
+    def test_delete_security_group_in_use_by_group(self):
+        group1 = self.cloud.create_security_group(self.context, 'testgrp1',
+                                                  "test group 1")
+        group2 = self.cloud.create_security_group(self.context, 'testgrp2',
+                                                  "test group 2")
+        kwargs = {'groups': {'1': {'user_id': u'%s' % self.context.user_id,
+                                   'group_name': u'testgrp2'}},
+                 }
+        self.cloud.authorize_security_group_ingress(self.context,
+                group_name='testgrp1', **kwargs)
+
+        self.assertRaises(exception.InvalidGroup,
+                          self.cloud.delete_security_group,
+                          self.context, 'testgrp2')
+        self.cloud.delete_security_group(self.context, 'testgrp1')
+        self.cloud.delete_security_group(self.context, 'testgrp2')
+
+    def test_delete_security_group_in_use_by_instance(self):
+        """Ensure that a group can not be deleted if in use by an instance."""
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        args = {'reservation_id': 'a',
+                 'image_ref': image_uuid,
+                 'instance_type_id': 1,
+                 'host': 'host1',
+                 'vm_state': 'active'}
+        inst = db.instance_create(self.context, args)
+
+        args = {'user_id': self.context.user_id,
+                'project_id': self.context.project_id,
+                'name': 'testgrp',
+                'description': 'Test group'}
+        group = db.security_group_create(self.context, args)
+
+        db.instance_add_security_group(self.context, inst.uuid, group.id)
+
+        self.assertRaises(exception.InvalidGroup,
+                          self.cloud.delete_security_group,
+                          self.context, 'testgrp')
+
+        db.instance_destroy(self.context, inst.id)
+
+        self.cloud.delete_security_group(self.context, 'testgrp')
+
     def test_describe_volumes(self):
         """Makes sure describe_volumes works and filters results."""
         vol1 = db.volume_create(self.context, {})
