@@ -277,7 +277,7 @@ class QuantumNovaIPAMTestCase(QuantumNovaTestCase):
         self.net_man.driver.kill_dhcp = func1
         nw_info = self.net_man.allocate_for_instance(ctx.elevated(),
                         instance_id=instance_ref['id'], host="",
-                        instance_type_id=instance_ref['instance_type_id'],
+                        rxtx_factor=3,
                         project_id=project_id)
 
         self.assertEquals(len(nw_info), 2)
@@ -346,7 +346,7 @@ class QuantumNovaIPAMTestCase(QuantumNovaTestCase):
         self.net_man.driver.kill_dhcp = func1
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
-                        instance_type_id=instance_ref['instance_type_id'],
+                        rxtx_factor=3,
                         project_id=project_id,
                         requested_networks=requested_networks)
 
@@ -410,7 +410,7 @@ class QuantumNovaMACGenerationTestCase(QuantumNovaTestCase):
                                     {"project_id": project_id})
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
-                        instance_type_id=instance_ref['instance_type_id'],
+                        rxtx_factor=3,
                         project_id=project_id,
                         requested_networks=requested_networks)
         self.assertEqual(nw_info[0]['address'], fake_mac)
@@ -431,7 +431,7 @@ class QuantumNovaMACGenerationTestCase(QuantumNovaTestCase):
                                     {"project_id": project_id})
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
-                        instance_type_id=instance_ref['instance_type_id'],
+                        rxtx_factor=3,
                         project_id=project_id,
                         requested_networks=requested_networks)
         self.assertEqual(nw_info[0]['address'], fake_mac)
@@ -468,7 +468,7 @@ class QuantumNovaPortSecurityTestCase(QuantumNovaTestCase):
             _instrumented_create_and_attach_port
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
-                        instance_type_id=instance_ref['instance_type_id'],
+                        rxtx_factor=3,
                         project_id=project_id,
                         requested_networks=requested_networks)
         self.assertEqual(nw_info[0]['address'], fake_mac)
@@ -502,7 +502,7 @@ class QuantumNovaPortSecurityTestCase(QuantumNovaTestCase):
             _instrumented_create_and_attach_port
         nw_info = self.net_man.allocate_for_instance(ctx,
                         instance_id=instance_ref['id'], host="",
-                        instance_type_id=instance_ref['instance_type_id'],
+                        rxtx_factor=3,
                         project_id=project_id,
                         requested_networks=requested_networks)
         self.assertEqual(nw_info[0]['address'], fake_mac)

@@ -19,7 +19,6 @@ import time
 
 import netaddr
 
-from nova.compute import instance_types
 from nova import context
 from nova import db
 from nova import exception
@@ -283,10 +282,10 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
            create a port and attachment the vNIC, and use the IPAM
            lib to allocate IP addresses.
         """
-        instance_id = kwargs.pop('instance_id')
-        instance_type_id = kwargs['instance_type_id']
-        host = kwargs.pop('host')
-        project_id = kwargs.pop('project_id')
+        instance_id = kwargs['instance_id']
+        rxtx_factor = kwargs['rxtx_factor']
+        host = kwargs['host']
+        project_id = kwargs['project_id']
         LOG.debug(_("network allocations for instance %s"), project_id)
         requested_networks = kwargs.get('requested_networks')
 
@@ -341,8 +340,6 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
 
             # talk to Quantum API to create and attach port.
             instance = db.instance_get(context, instance_id)
-            instance_type = instance_types.get_instance_type(instance_type_id)
-            rxtx_factor = instance_type['rxtx_factor']
             nova_id = self._get_nova_id(instance)
             # Tell the ipam library to allocate an IP
             ips = self.ipam.allocate_fixed_ips(context, project_id,
@@ -369,7 +366,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                     vif_rec, net_tenant_id)
         return self.get_instance_nw_info(context, instance_id,
                                          instance['uuid'],
-                                         instance_type_id, host)
+                                         rxtx_factor, host)
 
     @utils.synchronized('quantum-enable-dhcp')
     def enable_dhcp(self, context, quantum_net_id, network_ref, vif_rec,
@@ -456,7 +453,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         return self.db.virtual_interface_create(context, vif)
 
     def get_instance_nw_info(self, context, instance_id, instance_uuid,
-                                            instance_type_id, host):
+                                            rxtx_factor, host):
         """This method is used by compute to fetch all network data
            that should be used when creating the VM.
 
@@ -472,7 +469,6 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         admin_context = context.elevated()
         project_id = context.project_id
         vifs = db.virtual_interface_get_by_instance(context, instance_id)
-        instance_type = instance_types.get_instance_type(instance_type_id)
 
         net_tenant_dict = dict((net_id, tenant_id)
                                for (net_id, tenant_id)
@@ -494,7 +490,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
 
         # update instance network cache and return network_info
         nw_info = self.build_network_info_model(context, vifs, networks,
-                                                     instance_type, host)
+                                                rxtx_factor, host)
         db.instance_info_cache_update(context, instance_uuid,
                                       {'network_info': nw_info.as_cache()})
 
