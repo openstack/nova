@@ -351,7 +351,7 @@ def run():
     # front of it, automatically add that so we don't have to type as much
     for i, arg in enumerate(argv):
         if arg.startswith('test_'):
-            argv[i] = append('nova.tests.%s' % arg)
+            argv[i] = 'nova.tests.%s' % arg
 
     testdir = os.path.abspath(os.path.join("nova", "tests"))
     c = config.Config(stream=sys.stdout,
