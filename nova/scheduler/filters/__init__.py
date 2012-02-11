@@ -29,15 +29,15 @@ this filter is a simple form as an example of how this could be done.
 In reality, most consumers will use the more rigid filters such as the
 InstanceType filter.
 """
-
-from abstract_filter import AbstractHostFilter
-from affinity_filter import DifferentHostFilter
-from affinity_filter import SameHostFilter
-from affinity_filter import SimpleCIDRAffinityFilter
-from all_hosts_filter import AllHostsFilter
-from availability_zone_filter import AvailabilityZoneFilter
-from isolated_hosts_filter import IsolatedHostsFilter
-from compute_filter import ComputeFilter
-from core_filter import CoreFilter
-from json_filter import JsonFilter
-from ram_filter import RamFilter
+from nova.scheduler.filters.abstract_filter import AbstractHostFilter
+from nova.scheduler.filters.affinity_filter import DifferentHostFilter
+from nova.scheduler.filters.affinity_filter import SameHostFilter
+from nova.scheduler.filters.affinity_filter import SimpleCIDRAffinityFilter
+from nova.scheduler.filters.all_hosts_filter import AllHostsFilter
+from nova.scheduler.filters.availability_zone_filter \
+    import AvailabilityZoneFilter
+from nova.scheduler.filters.isolated_hosts_filter import IsolatedHostsFilter
+from nova.scheduler.filters.compute_filter import ComputeFilter
+from nova.scheduler.filters.core_filter import CoreFilter
+from nova.scheduler.filters.json_filter import JsonFilter
+from nova.scheduler.filters.ram_filter import RamFilter
