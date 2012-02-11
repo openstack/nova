@@ -27,6 +27,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import vm_states
 from nova.compute import task_states
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import network
@@ -334,10 +335,16 @@ def get_networks_for_instance(context, instance):
         #                sqlalchemy FK (KeyError, AttributeError)
         #                fail fall back to calling out the the
         #                network api
-        network_api = network.API()
+        pass
 
+    network_api = network.API()
+
+    try:
         nw_info = network_api.get_instance_nw_info(context, instance)
-        return get_networks_for_instance_from_nw_info(nw_info)
+    except exception.InstanceNotFound:
+        nw_info = []
+
+    return get_networks_for_instance_from_nw_info(nw_info)
 
 
 def raise_http_conflict_for_instance_invalid_state(exc, action):
