@@ -552,6 +552,17 @@ class ComputeTestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
 
         self.assertEqual(instance['power_state'], power_state.NOSTATE)
+
+        def fake_driver_get_info(self2, _instance):
+            return {'state': power_state.NOSTATE,
+                    'max_mem': 0,
+                    'mem': 0,
+                    'num_cpu': 2,
+                    'cpu_time': 0}
+
+        self.stubs.Set(nova.virt.fake.FakeConnection, 'get_info',
+                       fake_driver_get_info)
+
         self.assertRaises(exception.Error,
                           self.compute.set_admin_password,
                           self.context,
@@ -1453,7 +1464,7 @@ class ComputeTestCase(BaseTestCase):
 
         # Force the compute manager to do its periodic poll
         ctxt = context.get_admin_context()
-        self.compute.periodic_tasks(ctxt, raise_on_error=True)
+        self.compute._sync_power_states(context.get_admin_context())
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("After force-killing instances: %s"), instances)

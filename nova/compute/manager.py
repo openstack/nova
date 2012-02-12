@@ -635,7 +635,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         # tear down allocated network structure
         self._deallocate_network(context, instance)
 
-        if instance['power_state'] == power_state.SHUTOFF:
+        current_power_state = self._get_power_state(context, instance)
+
+        if current_power_state == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error(_('trying to destroy already destroyed'
                                     ' instance: %s') % instance_uuid)
@@ -970,10 +972,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         for i in xrange(max_tries):
             instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
             instance_id = instance_ref["id"]
-            instance_state = instance_ref["power_state"]
+
+            current_power_state = self._get_power_state(context, instance_ref)
             expected_state = power_state.RUNNING
 
-            if instance_state != expected_state:
+            if current_power_state != expected_state:
                 self._instance_update(context, instance_id, task_state=None)
                 raise exception.Error(_('Failed to set admin password. '
                                       'Instance %s is not running') %
@@ -1016,11 +1019,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Write a file to the specified path in an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        instance_state = instance_ref['power_state']
+        current_power_state = self._get_power_state(context, instance_ref)
         expected_state = power_state.RUNNING
-        if instance_state != expected_state:
+        if current_power_state != expected_state:
             LOG.warn(_('trying to inject a file into a non-running '
-                    'instance: %(instance_uuid)s (state: %(instance_state)s '
+                    'instance: %(instance_uuid)s (state: '
+                    '%(current_power_state)s '
                     'expected: %(expected_state)s)') % locals())
         instance_uuid = instance_ref['uuid']
         msg = _('instance %(instance_uuid)s: injecting file to %(path)s')
@@ -1034,11 +1038,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Update agent running on an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        instance_state = instance_ref['power_state']
+        current_power_state = self._get_power_state(context, instance_ref)
         expected_state = power_state.RUNNING
-        if instance_state != expected_state:
+        if current_power_state != expected_state:
             LOG.warn(_('trying to update agent on a non-running '
-                    'instance: %(instance_uuid)s (state: %(instance_state)s '
+                    'instance: %(instance_uuid)s (state: '
+                    '%(current_power_state)s '
                     'expected: %(expected_state)s)') % locals())
         instance_uuid = instance_ref['uuid']
         msg = _('instance %(instance_uuid)s: updating agent to %(url)s')
@@ -1423,7 +1428,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     def get_diagnostics(self, context, instance_uuid):
         """Retrieve diagnostics for an instance on this host."""
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        if instance_ref["power_state"] == power_state.RUNNING:
+        current_power_state = self._get_power_state(context, instance_ref)
+        if current_power_state == power_state.RUNNING:
             LOG.audit(_("instance %s: retrieving diagnostics"), instance_uuid,
                       context=context)
             return self.driver.get_diagnostics(instance_ref)
@@ -2099,37 +2105,45 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.update_service_capabilities(
                 self.driver.get_host_stats(refresh=True))
 
-    @manager.periodic_task
+    @manager.periodic_task(ticks_between_runs=10)
     def _sync_power_states(self, context):
         """Align power states between the database and the hypervisor.
 
-        The hypervisor is authoritative for the power_state data, so we
-        simply loop over all known instances for this host and update the
-        power_state according to the hypervisor. If the instance is not found
-        then it will be set to power_state.NOSTATE, because it doesn't exist
-        on the hypervisor.
+        The hypervisor is authoritative for the power_state data, but we don't
+        want to do an expensive call to the virt driver's list_instances_detail
+        method. Instead, we do a less-expensive call to get the number of
+        virtual machines known by the hypervisor and if the number matches the
+        number of virtual machines known by the database, we proceed in a lazy
+        loop, one database record at a time, checking if the hypervisor has the
+        same power state as is in the database. We call eventlet.sleep(0) after
+        each loop to allow the periodic task eventlet to do other work.
 
+        If the instance is not found on the hypervisor, but is in the database,
+        then it will be set to power_state.NOSTATE.
         """
-        vm_instances = self.driver.list_instances_detail()
-        vm_instances = dict((vm.name, vm) for vm in vm_instances)
         db_instances = self.db.instance_get_all_by_host(context, self.host)
 
-        num_vm_instances = len(vm_instances)
+        num_vm_instances = self.driver.get_num_instances()
         num_db_instances = len(db_instances)
 
         if num_vm_instances != num_db_instances:
-            LOG.info(_("Found %(num_db_instances)s in the database and "
+            LOG.warn(_("Found %(num_db_instances)s in the database and "
                        "%(num_vm_instances)s on the hypervisor.") % locals())
 
         for db_instance in db_instances:
+            # Allow other periodic tasks to do some work...
+            greenthread.sleep(0)
             name = db_instance["name"]
             db_power_state = db_instance['power_state']
-            vm_instance = vm_instances.get(name)
-
-            if vm_instance is None:
-                vm_power_state = power_state.NOSTATE
-            else:
+            try:
+                vm_instance = self.driver.get_info(name)
                 vm_power_state = vm_instance.state
+            except exception.InstanceNotFound:
+                msg = _("Instance %(name)s found in database but "
+                        "not known by hypervisor. Setting power "
+                        "state to NOSTATE") % locals()
+                LOG.warn(msg)
+                vm_power_state = power_state.NOSTATE
 
             if vm_power_state == db_power_state:
                 continue
