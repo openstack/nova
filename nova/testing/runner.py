@@ -344,6 +344,7 @@ class NovaTestRunner(core.TextTestRunner):
 
 def run():
     flags.FLAGS.register_cli_opt(cfg.BoolOpt('hide-elapsed', default=False))
+    flags.FLAGS.register_cli_opt(cfg.BoolOpt("stop", short='x', default=False))
     argv = flags.FLAGS(sys.argv)
     logging.setup()
 
