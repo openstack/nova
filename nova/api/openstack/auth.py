@@ -52,8 +52,6 @@ class NoAuthMiddleware(base_wsgi.Middleware):
             #             2.0 auth here as well.
             res.headers['X-Auth-Token'] = '%s:%s' % (user_id, project_id)
             res.headers['X-Server-Management-Url'] = os_url
-            res.headers['X-Storage-Url'] = ''
-            res.headers['X-CDN-Management-Url'] = ''
             res.content_type = 'text/plain'
             res.status = '204'
             return res
@@ -177,8 +175,14 @@ class AuthMiddleware(base_wsgi.Middleware):
             res.headers['X-Auth-Token'] = token['token_hash']
             res.headers['X-Server-Management-Url'] = \
                 token['server_management_url']
-            res.headers['X-Storage-Url'] = token['storage_url']
-            res.headers['X-CDN-Management-Url'] = token['cdn_management_url']
+
+            if token['storage_url']:
+                res.headers['X-Storage-Url'] = token['storage_url']
+
+            if token['cdn_management_url']:
+                res.headers['X-CDN-Management-Url'] = \
+                    token['cdn_management_url']
+
             res.content_type = 'text/plain'
             res.status = '204'
             LOG.debug(_("Successfully authenticated '%s'") % username)

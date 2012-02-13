@@ -57,9 +57,6 @@ class Test(test.TestCase):
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
-        self.assertEqual(result.headers['X-CDN-Management-Url'],
-            "")
-        self.assertEqual(result.headers['X-Storage-Url'], "")
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
@@ -75,9 +72,6 @@ class Test(test.TestCase):
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-Server-Management-Url'],
             "http://foo/v2/user1_project")
-        self.assertEqual(result.headers['X-CDN-Management-Url'],
-            "")
-        self.assertEqual(result.headers['X-Storage-Url'], "")
 
         token = result.headers['X-Auth-Token']
         self.stubs.Set(nova.api.openstack.compute, 'APIRouter',
@@ -210,6 +204,21 @@ class Test(test.TestCase):
         result = req.get_response(fakes.wsgi_app(fake_auth=False))
         self.assertEqual(result.status, '401 Unauthorized')
 
+    def test_auth_token_no_empty_headers(self):
+        f = fakes.FakeAuthManager()
+        user = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
+        f.add_user(user)
+
+        req = webob.Request.blank('/v2/')
+        req.headers['X-Auth-User'] = 'user1'
+        req.headers['X-Auth-Key'] = 'user1_key'
+        req.headers['X-Auth-Project-Id'] = 'user1_project'
+        result = req.get_response(fakes.wsgi_app(fake_auth=False))
+        self.assertEqual(result.status, '204 No Content')
+        self.assertEqual(len(result.headers['X-Auth-Token']), 40)
+        self.assertFalse('X-CDN-Management-Url' in result.headers)
+        self.assertFalse('X-Storage-Url' in result.headers)
+
 
 class TestFunctional(test.TestCase):
     def test_token_expiry(self):
@@ -297,9 +306,6 @@ class TestNoAuthMiddleware(test.TestCase):
         result = req.get_response(fakes.wsgi_app(fake_auth=False,
                                                  use_no_auth=True))
         self.assertEqual(result.status, '204 No Content')
-        self.assertEqual(result.headers['X-CDN-Management-Url'],
-            "")
-        self.assertEqual(result.headers['X-Storage-Url'], "")
         self.assertEqual(result.headers['X-Server-Management-Url'],
             "http://localhost/v2/user1_project")
 
@@ -312,8 +318,16 @@ class TestNoAuthMiddleware(test.TestCase):
         result = req.get_response(fakes.wsgi_app(fake_auth=False,
                                                  use_no_auth=True))
         self.assertEqual(result.status, '204 No Content')
-        self.assertEqual(result.headers['X-CDN-Management-Url'],
-            "")
-        self.assertEqual(result.headers['X-Storage-Url'], "")
         self.assertEqual(result.headers['X-Server-Management-Url'],
             "http://localhost/v2/user1_project")
+
+    def test_auth_token_no_empty_headers(self):
+        req = webob.Request.blank('/v2')
+        req.headers['X-Auth-User'] = 'user1'
+        req.headers['X-Auth-Key'] = 'user1_key'
+        req.headers['X-Auth-Project-Id'] = 'user1_project'
+        result = req.get_response(fakes.wsgi_app(fake_auth=False,
+                                                 use_no_auth=True))
+        self.assertEqual(result.status, '204 No Content')
+        self.assertFalse('X-CDN-Management-Url' in result.headers)
+        self.assertFalse('X-Storage-Url' in result.headers)
