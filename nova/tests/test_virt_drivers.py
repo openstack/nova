@@ -211,7 +211,8 @@ class _VirtDriverTestCase(test.TestCase):
 
     @catch_notimplementederror
     def test_destroy_instance_nonexistant(self):
-        fake_instance = {'id': 42, 'name': 'I just made this up!'}
+        fake_instance = {'id': 42, 'name': 'I just made this up!',
+                         'uuid': 'bda5fb9e-b347-40e8-8256-42397848cb00'}
         network_info = test_utils.get_test_network_info()
         self.connection.destroy(fake_instance, network_info)
 

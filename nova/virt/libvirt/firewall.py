@@ -137,14 +137,15 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
     def setup_basic_filtering(self, instance, network_info):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
-        LOG.info(_('called setup_basic_filtering in nwfilter'))
+        LOG.info(_('Called setup_basic_filtering in nwfilter'),
+                 instance=instance)
 
         if self.handle_security_groups:
             # No point in setting up a filter set that we'll be overriding
             # anyway.
             return
 
-        LOG.info(_('ensuring static filters'))
+        LOG.info(_('Ensuring static filters'), instance=instance)
         self._ensure_static_filters()
 
         if instance['image_ref'] == str(FLAGS.vpn_image_id):
@@ -259,7 +260,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                 _nw.undefine()
             except libvirt.libvirtError:
                 LOG.debug(_('The nwfilter(%(instance_filter_name)s) '
-                            'for %(instance_name)s is not found.') % locals())
+                            'is not found.') % locals(),
+                          instance=instance)
 
         instance_secgroup_filter_name = ('%s-secgroup' %
                                          self._instance_filter_name(instance))
@@ -270,7 +272,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             _nw.undefine()
         except libvirt.libvirtError:
             LOG.debug(_('The nwfilter(%(instance_secgroup_filter_name)s) '
-                        'for %(instance_name)s is not found.') % locals())
+                        'is not found.') % locals(), instance=instance)
 
     def prepare_instance_filter(self, instance, network_info):
         """Creates an NWFilter for the given instance.
@@ -453,7 +455,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             except libvirt.libvirtError:
                 name = instance.name
                 LOG.debug(_('The nwfilter(%(instance_filter_name)s) for'
-                            '%(name)s is not found.') % locals())
+                            '%(name)s is not found.') % locals(),
+                          instance=instance)
                 return False
         return True
 
@@ -467,7 +470,8 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
         """Set up provider rules and basic NWFilter."""
         self.nwfilter.setup_basic_filtering(instance, network_info)
         if not self.basicly_filtered:
-            LOG.debug(_('iptables firewall: Setup Basic Filtering'))
+            LOG.debug(_('iptables firewall: Setup Basic Filtering'),
+                      instance=instance)
             self.refresh_provider_fw_rules()
             self.basicly_filtered = True
 
@@ -485,8 +489,8 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
             self.iptables.apply()
             self.nwfilter.unfilter_instance(instance, network_info)
         else:
-            LOG.info(_('Attempted to unfilter instance %s which is not '
-                     'filtered'), instance['id'])
+            LOG.info(_('Attempted to unfilter instance which is not '
+                     'filtered'), instance=instance)
 
     def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists"""
