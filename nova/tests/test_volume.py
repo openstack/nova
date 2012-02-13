@@ -280,13 +280,10 @@ class DriverTestCase(test.TestCase):
 
         log = logging.getLogger()
         self.stream = cStringIO.StringIO()
-        log.addHandler(logging.StreamHandler(self.stream))
+        log.logger.addHandler(logging.logging.StreamHandler(self.stream))
 
         inst = {}
         self.instance_id = db.instance_create(self.context, inst)['id']
-
-    def tearDown(self):
-        super(DriverTestCase, self).tearDown()
 
     def _attach_volume(self):
         """Attach volumes to an instance. This function also sets
@@ -303,12 +300,6 @@ class DriverTestCase(test.TestCase):
 class VolumeDriverTestCase(DriverTestCase):
     """Test case for VolumeDriver"""
     driver_name = "nova.volume.driver.VolumeDriver"
-
-    def setUp(self):
-        super(VolumeDriverTestCase, self).setUp()
-
-    def tearDown(self):
-        super(VolumeDriverTestCase, self).tearDown()
 
     def test_delete_busy_volume(self):
         """Test deleting a busy volume."""
@@ -331,12 +322,6 @@ class VolumeDriverTestCase(DriverTestCase):
 class ISCSITestCase(DriverTestCase):
     """Test Case for ISCSIDriver"""
     driver_name = "nova.volume.driver.ISCSIDriver"
-
-    def setUp(self):
-        super(ISCSITestCase, self).setUp()
-
-    def tearDown(self):
-        super(ISCSITestCase, self).tearDown()
 
     def _attach_volume(self):
         """Attach volumes to an instance. This function also sets

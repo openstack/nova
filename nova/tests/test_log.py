@@ -1,4 +1,5 @@
 import cStringIO
+import logging
 
 from nova import context
 from nova import flags
@@ -12,47 +13,42 @@ def _fake_context():
     return context.RequestContext(1, 1)
 
 
-class RootLoggerTestCase(test.TestCase):
+class LoggerTestCase(test.TestCase):
     def setUp(self):
-        super(RootLoggerTestCase, self).setUp()
-        self.log = log.logging.root
-
-    def test_is_nova_instance(self):
-        self.assert_(isinstance(self.log, log.NovaLogger))
-
-    def test_name_is_nova(self):
-        self.assertEqual("nova", self.log.name)
+        super(LoggerTestCase, self).setUp()
+        self.log = log.getLogger()
 
     def test_handlers_have_nova_formatter(self):
         formatters = []
-        for h in self.log.handlers:
+        for h in self.log.logger.handlers:
             f = h.formatter
-            if isinstance(f, log.NovaFormatter):
+            if isinstance(f, log.LegacyNovaFormatter):
                 formatters.append(f)
         self.assert_(formatters)
-        self.assertEqual(len(formatters), len(self.log.handlers))
+        self.assertEqual(len(formatters), len(self.log.logger.handlers))
 
     def test_handles_context_kwarg(self):
         self.log.info("foo", context=_fake_context())
         self.assert_(True)  # didn't raise exception
 
-    def test_module_level_methods_handle_context_arg(self):
-        log.info("foo", context=_fake_context())
-        self.assert_(True)  # didn't raise exception
-
-    def test_module_level_audit_handles_context_arg(self):
-        log.audit("foo", context=_fake_context())
+    def test_audit_handles_context_arg(self):
+        self.log.audit("foo", context=_fake_context())
         self.assert_(True)  # didn't raise exception
 
     def test_will_be_verbose_if_verbose_flag_set(self):
         self.flags(verbose=True)
-        log.reset()
-        self.assertEqual(log.DEBUG, self.log.level)
+        log.setup()
+        self.assertEqual(logging.DEBUG, self.log.logger.getEffectiveLevel())
 
     def test_will_not_be_verbose_if_verbose_flag_not_set(self):
         self.flags(verbose=False)
-        log.reset()
-        self.assertEqual(log.INFO, self.log.level)
+        log.setup()
+        self.assertEqual(logging.INFO, self.log.logger.getEffectiveLevel())
+
+    def test_no_logging_via_module(self):
+        for func in ('critical', 'error', 'exception', 'warning', 'warn',
+                     'info', 'debug', 'log', 'audit'):
+            self.assertRaises(AttributeError, getattr, log, func)
 
 
 class LogHandlerTestCase(test.TestCase):
@@ -84,16 +80,17 @@ class NovaFormatterTestCase(test.TestCase):
                                               "[%(request_id)s]: %(message)s",
                    logging_default_format_string="NOCTXT: %(message)s",
                    logging_debug_format_suffix="--DBG")
-        self.log = log.logging.root
+        self.log = log.getLogger()
         self.stream = cStringIO.StringIO()
-        self.handler = log.StreamHandler(self.stream)
-        self.log.addHandler(self.handler)
-        self.level = self.log.level
-        self.log.setLevel(log.DEBUG)
+        self.handler = logging.StreamHandler(self.stream)
+        self.handler.setFormatter(log.LegacyNovaFormatter())
+        self.log.logger.addHandler(self.handler)
+        self.level = self.log.logger.getEffectiveLevel()
+        self.log.logger.setLevel(logging.DEBUG)
 
     def tearDown(self):
-        self.log.setLevel(self.level)
-        self.log.removeHandler(self.handler)
+        self.log.logger.setLevel(self.level)
+        self.log.logger.removeHandler(self.handler)
         super(NovaFormatterTestCase, self).tearDown()
 
     def test_uncontextualized_log(self):
@@ -118,11 +115,12 @@ class NovaLoggerTestCase(test.TestCase):
         levels.append("nova-test=AUDIT")
         self.flags(default_log_levels=levels,
                    verbose=True)
+        log.setup()
         self.log = log.getLogger('nova-test')
 
     def test_has_level_from_flags(self):
-        self.assertEqual(log.AUDIT, self.log.level)
+        self.assertEqual(logging.AUDIT, self.log.logger.getEffectiveLevel())
 
     def test_child_log_has_level_of_parent_flag(self):
         l = log.getLogger('nova-test.foo')
-        self.assertEqual(log.AUDIT, l.level)
+        self.assertEqual(logging.AUDIT, l.logger.getEffectiveLevel())

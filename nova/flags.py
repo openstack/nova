@@ -34,7 +34,7 @@ from nova.compat import flagfile
 from nova.openstack.common import cfg
 
 
-class NovaConfigOpts(cfg.ConfigOpts):
+class NovaConfigOpts(cfg.CommonConfigOpts):
 
     def __init__(self, *args, **kwargs):
         super(NovaConfigOpts, self).__init__(*args, **kwargs)
@@ -66,23 +66,17 @@ def _get_my_ip():
         (addr, port) = csock.getsockname()
         csock.close()
         return addr
-    except socket.error as ex:
+    except socket.error:
         return "127.0.0.1"
 
 
 log_opts = [
-    cfg.BoolOpt('verbose',
-                default=False,
-                help='show debug output'),
     cfg.StrOpt('logdir',
                default=None,
                help='output to a per-service log file in named directory'),
     cfg.StrOpt('logfile',
                default=None,
                help='output to named file'),
-    cfg.BoolOpt('use_syslog',
-                default=False,
-                help='output to syslog'),
     cfg.BoolOpt('use_stderr',
                 default=True,
                 help='log to standard error'),

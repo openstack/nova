@@ -1118,8 +1118,10 @@ def save_and_reraise_exception():
     try:
         yield
     except Exception:
-        LOG.exception(_('Original exception being dropped'),
-                      exc_info=(type_, value, traceback))
+        # NOTE(jkoelker): Using LOG.error here since it accepts exc_info
+        #                 as a kwargs.
+        LOG.error(_('Original exception being dropped'),
+                  exc_info=(type_, value, traceback))
         raise
     raise type_, value, traceback
 
