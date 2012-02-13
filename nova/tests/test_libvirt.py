@@ -1920,17 +1920,34 @@ disk size: 4.4M''', ''))
             os.unlink(dst_path)
 
     def test_get_fs_info(self):
-        # Use a 1024-byte block size (df -k) because OS X does not support
-        # the -B flag
-        blocksize = 1024
-        stdout, stderr = utils.execute('df', '-k', '/tmp')
-        info_line = ' '.join(stdout.split('\n')[1:])
-        _dev, total, used, free, _percentage, _mntpnt = info_line.split()
 
-        fs_info = libvirt_utils.get_fs_info('/tmp')
-        self.assertEquals(int(total) * blocksize, fs_info['total'])
-        self.assertEquals(int(free) * blocksize, fs_info['free'])
-        self.assertEquals(int(used) * blocksize, fs_info['used'])
+        class FakeStatResult(object):
+
+            def __init__(self):
+                self.f_bsize = 4096
+                self.f_frsize = 4096
+                self.f_blocks = 2000
+                self.f_bfree = 1000
+                self.f_bavail = 900
+                self.f_files = 2000
+                self.f_ffree = 1000
+                self.f_favail = 900
+                self.f_flag = 4096
+                self.f_namemax = 255
+
+        self.path = None
+
+        def fake_statvfs(path):
+            self.path = path
+            return FakeStatResult()
+
+        self.stubs.Set(os, 'statvfs', fake_statvfs)
+
+        fs_info = libvirt_utils.get_fs_info('/some/file/path')
+        self.assertEquals('/some/file/path', self.path)
+        self.assertEquals(8192000, fs_info['total'])
+        self.assertEquals(3686400, fs_info['free'])
+        self.assertEquals(4096000, fs_info['used'])
 
     def test_fetch_image(self):
         self.mox.StubOutWithMock(images, 'fetch')
