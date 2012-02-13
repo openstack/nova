@@ -30,8 +30,8 @@ melange_opts = [
     cfg.StrOpt('melange_host',
                default='127.0.0.1',
                help='HOST for connecting to melange'),
-    cfg.StrOpt('melange_port',
-               default='9898',
+    cfg.IntOpt('melange_port',
+               default=9898,
                help='PORT for connecting to melange'),
     cfg.IntOpt('melange_num_retries',
                default=0,
@@ -54,7 +54,7 @@ class MelangeConnection(object):
         if host is None:
             host = FLAGS.melange_host
         if port is None:
-            port = int(FLAGS.melange_port)
+            port = FLAGS.melange_port
         self.host = host
         self.port = port
         self.use_ssl = use_ssl
