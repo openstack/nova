@@ -35,8 +35,6 @@ def upgrade(migrate_engine):
     dialect = migrate_engine.url.get_dialect().name
     instance_actions = _get_table('instance_actions')
     instances = _get_table('instances')
-    uuid_column = Column('instance_uuid', String(36),
-                         ForeignKey('instances.uuid'))
     uuid_column = Column('instance_uuid', String(36))
     uuid_column.create(instance_actions)
 
