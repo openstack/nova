@@ -1,4 +1,5 @@
 # Copyright 2011 OpenStack LLC.
+# Copyright 2012 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -501,6 +502,38 @@ class SecurityGroupRulesController(SecurityGroupController):
         return webob.Response(status_int=202)
 
 
+# NOTE(justinsb): Does WSGI see the base class methods?
+#  i.e. are we exposing create/delete here?
+class ServerSecurityGroupController(SecurityGroupController):
+    def __init__(self, *args, **kwargs):
+        super(ServerSecurityGroupController, self).__init__(*args, **kwargs)
+        self.compute_api = compute.API()
+
+    @wsgi.serializers(xml=SecurityGroupsTemplate)
+    def index(self, req, server_id):
+        """Returns a list of security groups for the given instance."""
+        context = req.environ['nova.context']
+        authorize(context)
+
+        self.compute_api.ensure_default_security_group(context)
+
+        try:
+            instance = self.compute_api.get(context, server_id)
+            groups = db.security_group_get_by_instance(context,
+                                                       instance['id'])
+        except exception.ApiError, e:
+            raise webob.exc.HTTPBadRequest(explanation=e.message)
+        except exception.NotAuthorized, e:
+            raise webob.exc.HTTPUnauthorized()
+
+        result = [self._format_security_group(context, group)
+                    for group in groups]
+
+        return {'security_groups':
+                list(sorted(result,
+                            key=lambda k: (k['tenant_id'], k['name'])))}
+
+
 class SecurityGroupActionController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(SecurityGroupActionController, self).__init__(*args, **kwargs)
@@ -594,4 +627,11 @@ class Security_groups(extensions.ExtensionDescriptor):
         res = extensions.ResourceExtension('os-security-group-rules',
                                 controller=SecurityGroupRulesController())
         resources.append(res)
+
+        res = extensions.ResourceExtension(
+            'os-security-groups',
+            controller=ServerSecurityGroupController(),
+            parent=dict(member_name='server', collection_name='servers'))
+        resources.append(res)
+
         return resources
