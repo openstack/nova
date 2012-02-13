@@ -114,6 +114,7 @@ class Client(object):
         :param testing_stub: A class that stubs basic server methods for tests
         :param key_file: The SSL key file to use if use_ssl is true
         :param cert_file: The SSL cert file to use if use_ssl is true
+        :param logger: logging object to be used by client library
         """
         self.host = host
         self.port = port
@@ -238,8 +239,7 @@ class Client(object):
     @api_call
     def list_networks(self, filter_ops=None):
         """Fetches a list of all networks for a tenant"""
-        url = self.networks_path
-        return self.do_request("GET", url, params=filter_ops)
+        return self.do_request("GET", self.networks_path, params=filter_ops)
 
     @api_call
     def show_network_details(self, network):
@@ -266,8 +266,8 @@ class Client(object):
     @api_call
     def list_ports(self, network, filter_ops=None):
         """Fetches a list of ports on a given network"""
-        url = self.ports_path % (network)
-        return self.do_request("GET", url, params=filter_ops)
+        return self.do_request("GET", self.ports_path % (network),
+                                     params=filter_ops)
 
     @api_call
     def show_port_details(self, network, port):
