@@ -106,6 +106,8 @@ class ServerDiskConfigController(wsgi.Controller):
         # Filter out any servers that already have the key set
         # (most likely from a remote zone)
         servers = [s for s in servers if API_DISK_CONFIG not in s]
+        if not servers:
+            return
 
         # Get DB information for servers
         uuids = [server['id'] for server in servers]

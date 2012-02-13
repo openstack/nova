@@ -36,6 +36,9 @@ class ExtendedStatusController(wsgi.Controller):
         self.compute_api = compute.API()
 
     def _get_instances(self, context, instance_uuids):
+        if not instance_uuids:
+            return {}
+
         filters = {'uuid': instance_uuids}
         instances = self.compute_api.get_all(context, filters)
         return dict((instance['uuid'], instance) for instance in instances)
