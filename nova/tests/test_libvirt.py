@@ -1975,14 +1975,14 @@ disk size: 4.4M''', ''))
         self.assertEquals(4096000, fs_info['used'])
 
     def test_fetch_image(self):
-        self.mox.StubOutWithMock(images, 'fetch')
+        self.mox.StubOutWithMock(images, 'fetch_to_raw')
 
         context = 'opaque context'
         target = '/tmp/targetfile'
         image_id = '4'
         user_id = 'fake'
         project_id = 'fake'
-        images.fetch(context, image_id, target, user_id, project_id)
+        images.fetch_to_raw(context, image_id, target, user_id, project_id)
 
         self.mox.ReplayAll()
         libvirt_utils.fetch_image(context, target, image_id,
