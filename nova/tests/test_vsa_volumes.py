@@ -107,14 +107,14 @@ class VsaVolumesTestCase(test.TestCase):
                          'deleting')
 
     def test_vsa_volume_delete_nonavail_volume(self):
-        """ Check volume deleton in different states. """
+        """ Check volume deletion in different states. """
         volume_param = self._default_volume_param()
         volume_ref = self.volume_api.create(self.context, **volume_param)
 
         self.volume_api.update(self.context,
                                volume_ref,
                                {'status': 'in-use'})
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.InvalidVolume,
                             self.volume_api.delete,
                             self.context, volume_ref)
 

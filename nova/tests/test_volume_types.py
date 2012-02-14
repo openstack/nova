@@ -85,7 +85,7 @@ class VolumeTypeTestCase(test.TestCase):
 
     def test_non_existant_vol_type_shouldnt_delete(self):
         """Ensures that volume type creation fails with invalid args"""
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.VolumeTypeNotFoundByName,
                           volume_types.destroy, self.ctxt, "sfsfsdfdfs")
 
     def test_repeated_vol_types_shouldnt_raise(self):

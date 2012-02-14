@@ -136,8 +136,8 @@ class API(base.Base):
             content_limit = quota.allowed_injected_file_content_bytes(
                                                     context, len(content))
             if len(content) > content_limit:
-                raise exception.QuotaError(
-                                  code="OnsetFileContentLimitExceeded")
+                code = "OnsetFileContentLimitExceeded"
+                raise exception.QuotaError(code=code)
 
     def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
@@ -150,7 +150,7 @@ class API(base.Base):
             msg = _("Quota exceeded for %(pid)s, tried to set "
                     "%(num_metadata)s metadata properties") % locals()
             LOG.warn(msg)
-            raise exception.QuotaError(msg, "MetadataLimitExceeded")
+            raise exception.QuotaError(code="MetadataLimitExceeded")
 
         # Because metadata is stored in the DB, we hard-code the size limits
         # In future, we may support more variable length strings, so we act
@@ -161,7 +161,7 @@ class API(base.Base):
                 msg = _("Quota exceeded for %(pid)s, metadata property "
                         "key or value too long") % locals()
                 LOG.warn(msg)
-                raise exception.QuotaError(msg, "MetadataLimitExceeded")
+                raise exception.QuotaError(code="MetadataLimitExceeded")
 
     def _check_requested_networks(self, context, requested_networks):
         """ Check if the networks requested belongs to the project
@@ -218,7 +218,7 @@ class API(base.Base):
             else:
                 message = _("Instance quota exceeded. You can only run %s "
                             "more instances of this type.") % num_instances
-            raise exception.QuotaError(message, "InstanceLimitExceeded")
+            raise exception.QuotaError(code="InstanceLimitExceeded")
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
@@ -1631,8 +1631,7 @@ class API(base.Base):
     def attach_volume(self, context, instance, volume_id, device):
         """Attach an existing volume to an existing instance."""
         if not re.match("^/dev/x{0,1}[a-z]d[a-z]+$", device):
-            raise exception.ApiError(_("Invalid device specified: %s. "
-                                     "Example device: /dev/vdb") % device)
+            raise exception.InvalidDevicePath(path=device)
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.check_attach(context, volume)
         params = {"volume_id": volume_id,
@@ -1647,7 +1646,7 @@ class API(base.Base):
         """Detach a volume from an instance."""
         instance = self.db.volume_get_instance(context.elevated(), volume_id)
         if not instance:
-            raise exception.ApiError(_("Volume isn't attached to anything!"))
+            raise exception.VolumeUnattached(volume_id=volume_id)
 
         check_policy(context, 'detach_volume', instance)
 
@@ -1672,30 +1671,29 @@ class API(base.Base):
         # in its info, if this changes, the next few lines will need to
         # accommodate the info containing floating as well as fixed ip
         # addresses
-
-        fail_bag = _('instance |%s| has no fixed ips. '
-                     'unable to associate floating ip') % instance_uuid
-
         nw_info = self.network_api.get_instance_nw_info(context.elevated(),
                                                         instance)
 
-        if nw_info:
-            ips = [ip for ip in nw_info[0].fixed_ips()]
+        if not nw_info:
+            raise exception.FixedIpNotFoundForInstance(
+                    instance_id=instance_uuid)
 
-            # TODO(tr3buchet): this will associate the floating IP with the
-            # first # fixed_ip (lowest id) an instance has. This should be
-            # changed to # support specifying a particular fixed_ip if
-            # multiple exist.
-            if not ips:
-                raise exception.ApiError(fail_bag)
-            if len(ips) > 1:
-                LOG.warning(_('multiple fixedips exist, using the first: %s'),
-                                                             ips[0]['address'])
-            self.network_api.associate_floating_ip(context,
-                                               floating_address=address,
-                                               fixed_address=ips[0]['address'])
-            return
-        raise exception.ApiError(fail_bag)
+        ips = [ip for ip in nw_info[0].fixed_ips()]
+
+        if not ips:
+            raise exception.FixedIpNotFoundForInstance(
+                    instance_id=instance_uuid)
+
+        # TODO(tr3buchet): this will associate the floating IP with the
+        # first fixed_ip (lowest id) an instance has. This should be
+        # changed to support specifying a particular fixed_ip if
+        # multiple exist.
+        if len(ips) > 1:
+            msg = _('multiple fixedips exist, using the first: %s')
+            LOG.warning(msg, ips[0]['address'])
+
+        self.network_api.associate_floating_ip(context,
+                floating_address=address, fixed_address=ips[0]['address'])
 
     @wrap_check_policy
     def get_instance_metadata(self, context, instance):

@@ -600,7 +600,7 @@ class CloudController(object):
                                       group_id=None, **kwargs):
         if not group_name and not group_id:
             err = "Not enough parameters, need group_name or group_id"
-            raise exception.ApiError(_(err))
+            raise exception.EC2APIError(_(err))
         self.compute_api.ensure_default_security_group(context)
         notfound = exception.SecurityGroupNotFound
         if group_name:
@@ -626,7 +626,7 @@ class CloudController(object):
             rulesvalues = self._rule_args_to_dict(context, values)
             if not rulesvalues:
                 err = "%s Not enough parameters to build a valid rule"
-                raise exception.ApiError(_(err % rulesvalues))
+                raise exception.EC2APIError(_(err % rulesvalues))
 
             for values_for_rule in rulesvalues:
                 values_for_rule['parent_group_id'] = security_group.id
@@ -640,7 +640,7 @@ class CloudController(object):
                     context,
                     security_group_id=security_group['id'])
             return True
-        raise exception.ApiError(_("No rule for the specified parameters."))
+        raise exception.EC2APIError(_("No rule for the specified parameters."))
 
     # TODO(soren): This has only been tested with Boto as the client.
     #              Unfortunately, it seems Boto is using an old API
@@ -650,7 +650,7 @@ class CloudController(object):
                                          group_id=None, **kwargs):
         if not group_name and not group_id:
             err = "Not enough parameters, need group_name or group_id"
-            raise exception.ApiError(_(err))
+            raise exception.EC2APIError(_(err))
         self.compute_api.ensure_default_security_group(context)
         notfound = exception.SecurityGroupNotFound
         if group_name:
@@ -676,13 +676,13 @@ class CloudController(object):
             rulesvalues = self._rule_args_to_dict(context, values)
             if not rulesvalues:
                 err = "%s Not enough parameters to build a valid rule"
-                raise exception.ApiError(_(err % rulesvalues))
+                raise exception.EC2APIError(_(err % rulesvalues))
             for values_for_rule in rulesvalues:
                 values_for_rule['parent_group_id'] = security_group.id
                 if self._security_group_rule_exists(security_group,
                                                     values_for_rule):
                     err = '%s - This rule already exists in group'
-                    raise exception.ApiError(_(err) % values_for_rule)
+                    raise exception.EC2APIError(_(err) % values_for_rule)
                 postvalues.append(values_for_rule)
 
         for values_for_rule in postvalues:
@@ -696,7 +696,7 @@ class CloudController(object):
                     security_group_id=security_group['id'])
             return True
 
-        raise exception.ApiError(_("No rule for the specified parameters."))
+        raise exception.EC2APIError(_("No rule for the specified parameters."))
 
     def _get_source_project_id(self, context, source_security_group_owner_id):
         if source_security_group_owner_id:
@@ -735,7 +735,8 @@ class CloudController(object):
         LOG.audit(_("Create Security Group %s"), group_name, context=context)
         self.compute_api.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
-            raise exception.ApiError(_('group %s already exists') % group_name)
+            msg = _('group %s already exists')
+            raise exception.EC2APIError(msg % group_name)
 
         group = {'user_id': context.user_id,
                  'project_id': context.project_id,
@@ -750,7 +751,7 @@ class CloudController(object):
                               **kwargs):
         if not group_name and not group_id:
             err = "Not enough parameters, need group_name or group_id"
-            raise exception.ApiError(_(err))
+            raise exception.EC2APIError(_(err))
         notfound = exception.SecurityGroupNotFound
         if group_name:
             security_group = db.security_group_get_by_name(context,
@@ -906,7 +907,7 @@ class CloudController(object):
     def describe_instance_attribute(self, context, instance_id, attribute,
                                     **kwargs):
         def _unsupported_attribute(instance, result):
-            raise exception.ApiError(_('attribute not supported: %s') %
+            raise exception.EC2APIError(_('attribute not supported: %s') %
                                      attribute)
 
         def _format_attr_block_device_mapping(instance, result):
@@ -962,7 +963,7 @@ class CloudController(object):
 
         fn = attribute_formatter.get(attribute)
         if fn is None:
-            raise exception.ApiError(
+            raise exception.EC2APIError(
                 _('attribute not supported: %s') % attribute)
 
         ec2_instance_id = instance_id
@@ -1225,7 +1226,7 @@ class CloudController(object):
             raise exception.ImageNotFound(image_id=kwargs['image_id'])
 
         if image_state != 'available':
-            raise exception.ApiError(_('Image must be available'))
+            raise exception.EC2APIError(_('Image must be available'))
 
         (instances, resv_id) = self.compute_api.create(context,
             instance_type=instance_types.get_instance_type_by_name(
@@ -1425,7 +1426,7 @@ class CloudController(object):
 
         fn = supported_attributes.get(attribute)
         if fn is None:
-            raise exception.ApiError(_('attribute not supported: %s')
+            raise exception.EC2APIError(_('attribute not supported: %s')
                                      % attribute)
         try:
             image = self._get_image(context, image_id)
@@ -1440,14 +1441,15 @@ class CloudController(object):
                                operation_type, **kwargs):
         # TODO(devcamcar): Support users and groups other than 'all'.
         if attribute != 'launchPermission':
-            raise exception.ApiError(_('attribute not supported: %s')
+            raise exception.EC2APIError(_('attribute not supported: %s')
                                      % attribute)
         if not 'user_group' in kwargs:
-            raise exception.ApiError(_('user or group not specified'))
+            raise exception.EC2APIError(_('user or group not specified'))
         if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':
-            raise exception.ApiError(_('only group "all" is supported'))
+            raise exception.EC2APIError(_('only group "all" is supported'))
         if not operation_type in ['add', 'remove']:
-            raise exception.ApiError(_('operation_type must be add or remove'))
+            msg = _('operation_type must be add or remove')
+            raise exception.EC2APIError(msg)
         LOG.audit(_("Updating image %s publicity"), image_id, context=context)
 
         try:
@@ -1504,7 +1506,7 @@ class CloudController(object):
                 #                 Or is there any better way?
                 timeout = 1 * 60 * 60 * 60
                 if time.time() > start_time + timeout:
-                    raise exception.ApiError(
+                    raise exception.EC2APIError(
                         _('Couldn\'t stop instance with in %d sec') % timeout)
 
         src_image = self._get_image(context, instance['image_ref'])

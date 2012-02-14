@@ -54,10 +54,10 @@ class ConsolesController(wsgi.Controller):
                                                       console_type)
         except exception.ConsoleTypeInvalid, e:
             raise webob.exc.HTTPBadRequest(_('Invalid type specification'))
-        except exception.ApiError, e:
-            raise webob.exc.HTTPBadRequest(explanation=e.message)
         except exception.NotAuthorized, e:
             raise webob.exc.HTTPUnauthorized()
+        except exception.NotFound:
+            raise webob.exc.HTTPNotFound(_('Instance not found'))
 
         return {'console': {'type': console_type, 'url': output['url']}}
 

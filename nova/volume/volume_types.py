@@ -39,21 +39,17 @@ def create(context, name, extra_specs={}):
                                    extra_specs=extra_specs))
     except exception.DBError, e:
         LOG.exception(_('DB error: %s') % e)
-        raise exception.ApiError(_("Cannot create volume_type with "
-                                    "name %(name)s and specs %(extra_specs)s")
-                                    % locals())
+        raise exception.VolumeTypeCreateFailed(name=name,
+                                               extra_specs=extra_specs)
 
 
 def destroy(context, name):
     """Marks volume types as deleted."""
     if name is None:
-        raise exception.InvalidVolumeType(volume_type=name)
+        msg = _("name cannot be None")
+        raise exception.InvalidVolumeType(reason=msg)
     else:
-        try:
-            db.volume_type_destroy(context, name)
-        except exception.NotFound:
-            LOG.exception(_('Volume type %s not found for deletion') % name)
-            raise exception.ApiError(_("Unknown volume type: %s") % name)
+        db.volume_type_destroy(context, name)
 
 
 def get_all_types(context, inactive=0, search_opts={}):
@@ -97,26 +93,22 @@ def get_all_types(context, inactive=0, search_opts={}):
 def get_volume_type(ctxt, id):
     """Retrieves single volume type by id."""
     if id is None:
-        raise exception.InvalidVolumeType(volume_type=id)
+        msg = _("id cannot be None")
+        raise exception.InvalidVolumeType(reason=msg)
 
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    try:
-        return db.volume_type_get(ctxt, id)
-    except exception.DBError:
-        raise exception.ApiError(_("Unknown volume type: %s") % id)
+    return db.volume_type_get(ctxt, id)
 
 
 def get_volume_type_by_name(context, name):
     """Retrieves single volume type by name."""
     if name is None:
-        raise exception.InvalidVolumeType(volume_type=name)
+        msg = _("name cannot be None")
+        raise exception.InvalidVolumeType(reason=msg)
 
-    try:
-        return db.volume_type_get_by_name(context, name)
-    except exception.DBError:
-        raise exception.ApiError(_("Unknown volume type: %s") % name)
+    return db.volume_type_get_by_name(context, name)
 
 
 def is_key_value_present(volume_type_id, key, value, volume_type=None):

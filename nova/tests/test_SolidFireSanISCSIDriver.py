@@ -176,5 +176,5 @@ class SolidFireVolumeTestCase(test.TestCase):
     def test_get_cluster_info_fail(self):
         SFID._issue_api_request = self.fake_issue_api_request_fails
         sfv = SFID()
-        self.assertRaises(exception.ApiError,
+        self.assertRaises(exception.SolidFireAPIException,
                           sfv._get_cluster_info)

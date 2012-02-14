@@ -1607,7 +1607,7 @@ class VsaDriveTypeCommands(object):
         """Marks volume types as deleted"""
         try:
             volume_types.destroy(self.context, name)
-        except exception.ApiError:
+        except exception.InvalidVolumeType:
             print "Valid volume type name is required"
             sys.exit(1)
         except exception.DBError, e:
@@ -1786,7 +1786,7 @@ class InstanceTypeCommands(object):
         """Marks instance types / flavors as deleted"""
         try:
             instance_types.destroy(name)
-        except exception.ApiError:
+        except exception.InstanceTypeNotFound:
             print "Valid instance type name is required"
             sys.exit(1)
         except exception.DBError, e:

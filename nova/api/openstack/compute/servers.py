@@ -496,12 +496,8 @@ class Controller(wsgi.Controller):
             "InstanceLimitExceeded": error.message,
         }
 
-        expl = code_mappings.get(error.code)
-        if expl:
-            raise exc.HTTPRequestEntityTooLarge(explanation=expl,
-                                                headers={'Retry-After': 0})
-        # if the original error is okay, just reraise it
-        raise exc.HTTPRequestEntityTooLarge(explanation=error.msg,
+        expl = code_mappings.get(error.kwargs['code'], error.message)
+        raise exc.HTTPRequestEntityTooLarge(explanation=expl,
                                             headers={'Retry-After': 0})
 
     def _validate_server_name(self, value):

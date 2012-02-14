@@ -20,15 +20,15 @@ from nova import test
 from nova import exception
 
 
-class ApiErrorTestCase(test.TestCase):
+class EC2APIErrorTestCase(test.TestCase):
     def test_return_valid_error(self):
         # without 'code' arg
-        err = exception.ApiError('fake error')
+        err = exception.EC2APIError('fake error')
         self.assertEqual(err.__str__(), 'fake error')
         self.assertEqual(err.code, None)
         self.assertEqual(err.msg, 'fake error')
         # with 'code' arg
-        err = exception.ApiError('fake error', 'blah code')
+        err = exception.EC2APIError('fake error', 'blah code')
         self.assertEqual(err.__str__(), 'blah code: fake error')
         self.assertEqual(err.code, 'blah code')
         self.assertEqual(err.msg, 'fake error')
