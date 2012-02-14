@@ -92,12 +92,14 @@ function run_tests {
 function run_pep8 {
   echo "Running pep8 ..."
   # Opt-out files from pep8
-  ignore_scripts="*.sh:*nova-debug:*clean-vlans"
+  ignore_scripts="*.patch:*.sh:*nova-debug:*clean-vlans"
   ignore_files="*eventlet-patch:*pip-requires"
   GLOBIGNORE="$ignore_scripts:$ignore_files"
   srcfiles=`find bin -type f ! -name "nova.conf*" ! -name "api-paste.ini*"`
   srcfiles+=" `find tools/*`"
-  srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
+  srcfiles+=" nova setup.py"
+  srcfiles+=" plugins/xenserver/networking/etc/xensource/scripts/*"
+  srcfiles+=" plugins/xenserver/xenapi/etc/xapi.d/plugins/*"
   # Just run PEP8 in current environment
   #
   # NOTE(sirp): W602 (deprecated 3-arg raise) is being ignored for the
