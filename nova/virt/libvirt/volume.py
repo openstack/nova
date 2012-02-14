@@ -114,7 +114,8 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
         try:
             self._run_iscsiadm(iscsi_properties, ())
         except exception.ProcessExecutionError as exc:
-            if exc.exit_code == 255:
+            # iscsiadm returns 21 for "No records found" after version 2.0-871
+            if exc.exit_code in [21, 255]:
                 self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
             else:
                 raise
