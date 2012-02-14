@@ -102,7 +102,8 @@ def get_disk_backing_file(path):
     out, err = execute(FLAGS.qemu_img, 'info', path)
     backing_file = [i.split('actual path:')[1].strip()[:-1]
         for i in out.split('\n') if 0 <= i.find('backing file')]
-    backing_file = os.path.basename(backing_file[0])
+    if backing_file:
+        backing_file = os.path.basename(backing_file[0])
     return backing_file
 
 

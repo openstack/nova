@@ -694,7 +694,7 @@ class XenAPIVMTestCase(test.TestCase):
 
         conn = xenapi_conn.get_connection(False)
         conn._vmops = VMOpsMock()
-        conn.finish_revert_migration(instance)
+        conn.finish_revert_migration(instance, None)
         self.assertTrue(conn._vmops.finish_revert_migration_called)
 
     def _create_instance(self, instance_id=1, spawn=True):
@@ -849,7 +849,7 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(self.context, instance,
-                                        '127.0.0.1', instance_type)
+                                        '127.0.0.1', instance_type, None)
 
     def test_migrate_disk_and_power_off_passes_exceptions(self):
         instance = db.instance_create(self.context, self.instance_values)
@@ -863,7 +863,8 @@ class XenAPIMigrateInstance(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         self.assertRaises(exception.MigrationError,
                           conn.migrate_disk_and_power_off,
-                          self.context, instance, '127.0.0.1', instance_type)
+                          self.context, instance,
+                          '127.0.0.1', instance_type, None)
 
     def test_revert_migrate(self):
         instance = db.instance_create(self.context, self.instance_values)
@@ -910,7 +911,7 @@ class XenAPIMigrateInstance(test.TestCase):
         self.assertEqual(self.called, True)
         self.assertEqual(self.fake_vm_start_called, True)
 
-        conn.finish_revert_migration(instance)
+        conn.finish_revert_migration(instance, network_info)
         self.assertEqual(self.fake_finish_revert_migration_called, True)
 
     def test_finish_migrate(self):

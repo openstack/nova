@@ -144,7 +144,10 @@ class FakeConnection(driver.ComputeDriver):
         pass
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type):
+                                   instance_type, network_info):
+        pass
+
+    def finish_revert_migration(self, instance, network_info):
         pass
 
     def poll_unconfirmed_resizes(self, resize_confirm_window):
