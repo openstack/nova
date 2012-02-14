@@ -1175,7 +1175,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = connection.LibvirtConnection(False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
-        instance = {"name": "instancename", "id": "instanceid"}
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
         conn.destroy(instance, [])
 
 
