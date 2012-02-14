@@ -46,7 +46,7 @@ def stubout_instance_snapshot(stubs):
 
     def fake_wait_for_vhd_coalesce(*args):
         #TODO(sirp): Should we actually fake out the data here
-        return "fakeparent"
+        return "fakeparent", "fakebase"
 
     stubs.Set(vm_utils, '_wait_for_vhd_coalesce', fake_wait_for_vhd_coalesce)
 

@@ -445,6 +445,12 @@ global_opts = [
     cfg.ListOpt('isolated_hosts',
                 default=[],
                 help='Host reserved for specific images'),
+    cfg.BoolOpt('cache_images',
+                default=True,
+                help='Cache glance images locally'),
+    cfg.BoolOpt('use_cow_images',
+                default=True,
+                help='Whether to use cow images')
     ]
 
 FLAGS.register_opts(global_opts)
