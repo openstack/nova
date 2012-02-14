@@ -45,7 +45,7 @@ vmware_vif_driver_opt = cfg.StrOpt('vmware_vif_driver',
 FLAGS = flags.FLAGS
 FLAGS.register_opt(vmware_vif_driver_opt)
 
-LOG = logging.getLogger("nova.virt.vmwareapi.vmops")
+LOG = logging.getLogger(__name__)
 
 VMWARE_POWER_STATES = {
                    'poweredOff': power_state.SHUTDOWN,

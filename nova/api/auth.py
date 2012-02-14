@@ -35,6 +35,7 @@ use_forwarded_for_opt = cfg.BoolOpt('use_forwarded_for',
 
 FLAGS = flags.FLAGS
 FLAGS.register_opt(use_forwarded_for_opt)
+LOG = logging.getLogger(__name__)
 
 
 class InjectContext(wsgi.Middleware):
@@ -58,7 +59,7 @@ class NovaKeystoneContext(wsgi.Middleware):
         user_id = req.headers.get('X_USER')
         user_id = req.headers.get('X_USER_ID', user_id)
         if user_id is None:
-            logging.debug("Neither X_USER_ID nor X_USER found in request")
+            LOG.debug("Neither X_USER_ID nor X_USER found in request")
             return webob.exc.HTTPUnauthorized()
         # get the roles
         roles = [r.strip() for r in req.headers.get('X_ROLE', '').split(',')]

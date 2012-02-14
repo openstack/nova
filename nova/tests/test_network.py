@@ -30,7 +30,7 @@ from nova.network import manager as network_manager
 from nova.tests import fake_network
 
 
-LOG = logging.getLogger('nova.tests.network')
+LOG = logging.getLogger(__name__)
 
 
 HOST = "testhost"

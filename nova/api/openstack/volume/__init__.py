@@ -29,7 +29,7 @@ from nova.api.openstack.volume import versions
 from nova import log as logging
 
 
-LOG = logging.getLogger('nova.api.openstack.volume')
+LOG = logging.getLogger(__name__)
 
 
 class APIRouter(nova.api.openstack.APIRouter):

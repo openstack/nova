@@ -17,7 +17,10 @@ from sqlalchemy import Boolean, Column, DateTime, Integer
 from sqlalchemy import MetaData, String, Table
 from nova import log as logging
 
+
 meta = MetaData()
+LOG = logging.getLogger(__name__)
+
 
 #
 # New Tables
@@ -64,7 +67,7 @@ def upgrade(migrate_engine):
         try:
             table.create()
         except Exception:
-            logging.info(repr(table))
+            LOG.info(repr(table))
 
     instances = Table('instances', meta, autoload=True,
                       autoload_with=migrate_engine)

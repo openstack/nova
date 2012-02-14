@@ -30,7 +30,7 @@ from nova.tests.integrated.api import client
 from nova import utils
 
 
-LOG = logging.getLogger('nova.tests.integrated')
+LOG = logging.getLogger(__name__)
 
 
 def generate_random_alphanumeric(length):

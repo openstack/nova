@@ -19,7 +19,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova.scheduler.filters import abstract_filter
 
-LOG = logging.getLogger('nova.scheduler.filter.ram_filter')
+LOG = logging.getLogger(__name__)
 
 ram_allocation_ratio_opt = cfg.FloatOpt("ram_allocation_ratio",
         default=1.0,

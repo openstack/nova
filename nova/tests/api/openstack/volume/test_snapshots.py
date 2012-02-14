@@ -28,7 +28,7 @@ from nova.tests.api.openstack import fakes
 
 FLAGS = flags.FLAGS
 
-LOG = logging.getLogger('nova.tests.api.openstack.snapshot')
+LOG = logging.getLogger(__name__)
 
 
 def _get_default_snapshot_param():

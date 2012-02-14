@@ -25,7 +25,7 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 
-LOG = logging.getLogger('nova.virt.libvirt.volume')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 flags.DECLARE('num_iscsi_scan_tries', 'nova.volume.driver')
 

@@ -31,7 +31,7 @@ from nova.tests.api.openstack import fakes
 
 FLAGS = flags.FLAGS
 
-LOG = logging.getLogger('nova.tests.api.openstack.snapshot')
+LOG = logging.getLogger(__name__)
 
 _last_param = {}
 

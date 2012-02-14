@@ -90,7 +90,7 @@ ldap_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(ldap_opts)
 
-LOG = logging.getLogger("nova.ldapdriver")
+LOG = logging.getLogger(__name__)
 
 
 if FLAGS.memcached_servers:

@@ -25,7 +25,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 
 
-LOG = logging.getLogger('nova.rpc')
+LOG = logging.getLogger(__name__)
 
 rpc_opts = [
     cfg.IntOpt('rpc_thread_pool_size',

@@ -42,6 +42,7 @@ console_manager_opts = [
 
 FLAGS = flags.FLAGS
 FLAGS.register_opts(console_manager_opts)
+LOG = logging.getLogger(__name__)
 
 
 class ConsoleProxyManager(manager.Manager):
@@ -73,7 +74,7 @@ class ConsoleProxyManager(manager.Manager):
                                                       pool['id'],
                                                       instance_id)
         except exception.NotFound:
-            logging.debug(_('Adding console'))
+            LOG.debug(_('Adding console'))
             if not password:
                 password = utils.generate_password(8)
             if not port:
@@ -93,7 +94,7 @@ class ConsoleProxyManager(manager.Manager):
         try:
             console = self.db.console_get(context, console_id)
         except exception.NotFound:
-            logging.debug(_('Tried to remove non-existant console '
+            LOG.debug(_('Tried to remove non-existant console '
                             '%(console_id)s.') %
                             {'console_id': console_id})
             return

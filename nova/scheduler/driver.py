@@ -36,7 +36,7 @@ from nova.scheduler import zone_manager
 from nova import utils
 
 
-LOG = logging.getLogger('nova.scheduler.driver')
+LOG = logging.getLogger(__name__)
 
 scheduler_driver_opts = [
     cfg.StrOpt('scheduler_host_manager',

@@ -27,7 +27,7 @@ from nova.api.openstack import extensions
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.api.openstack.compute.contrib')
+LOG = logging.getLogger(__name__)
 
 
 def standard_extensions(ext_mgr):

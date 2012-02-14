@@ -21,6 +21,7 @@ from sqlalchemy import Table, Text
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 instances = Table('instances', meta,
         Column('id', Integer(), primary_key=True, nullable=False),
@@ -74,8 +75,8 @@ def upgrade(migrate_engine):
     try:
         compute_nodes.create()
     except Exception:
-        logging.info(repr(compute_nodes))
-        logging.exception('Exception while creating table')
+        LOG.info(repr(compute_nodes))
+        LOG.exception('Exception while creating table')
         meta.drop_all(tables=[compute_nodes])
         raise
 

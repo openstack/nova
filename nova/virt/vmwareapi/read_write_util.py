@@ -32,7 +32,7 @@ from glance import client
 from nova import flags
 from nova import log as logging
 
-LOG = logging.getLogger("nova.virt.vmwareapi.read_write_util")
+LOG = logging.getLogger(__name__)
 
 FLAGS = flags.FLAGS
 

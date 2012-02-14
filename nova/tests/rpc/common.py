@@ -29,7 +29,7 @@ from nova.rpc.common import RemoteError, Timeout
 from nova import test
 
 
-LOG = logging.getLogger('nova.tests.rpc')
+LOG = logging.getLogger(__name__)
 
 
 class _BaseRpcTestCase(test.TestCase):

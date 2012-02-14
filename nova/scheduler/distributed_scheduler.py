@@ -38,7 +38,7 @@ from nova import utils
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.scheduler.distributed_scheduler')
+LOG = logging.getLogger(__name__)
 
 
 class DistributedScheduler(driver.Scheduler):

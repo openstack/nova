@@ -28,7 +28,7 @@ from nova import volume
 from nova.volume import volume_types
 
 
-LOG = logging.getLogger("nova.api.openstack.volume.volumes")
+LOG = logging.getLogger(__name__)
 
 
 FLAGS = flags.FLAGS

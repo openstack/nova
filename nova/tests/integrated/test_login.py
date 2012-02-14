@@ -20,7 +20,7 @@ from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 
 
-LOG = logging.getLogger('nova.tests.integrated')
+LOG = logging.getLogger(__name__)
 
 
 class LoginTest(integrated_helpers._IntegratedTestBase):

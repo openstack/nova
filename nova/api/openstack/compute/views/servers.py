@@ -26,7 +26,7 @@ from nova import log as logging
 from nova import utils
 
 
-LOG = logging.getLogger('nova.api.openstack.compute.views.servers')
+LOG = logging.getLogger(__name__)
 
 
 class ViewBuilder(common.ViewBuilder):

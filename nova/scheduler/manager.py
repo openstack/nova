@@ -34,7 +34,7 @@ from nova import rpc
 from nova import utils
 
 
-LOG = logging.getLogger('nova.scheduler.manager')
+LOG = logging.getLogger(__name__)
 
 scheduler_driver_opt = cfg.StrOpt('scheduler_driver',
         default='nova.scheduler.multi.MultiScheduler',

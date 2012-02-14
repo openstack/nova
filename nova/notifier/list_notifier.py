@@ -27,7 +27,7 @@ list_notifier_drivers_opt = cfg.MultiStrOpt('list_notifier_drivers',
 FLAGS = flags.FLAGS
 FLAGS.register_opt(list_notifier_drivers_opt)
 
-LOG = logging.getLogger('nova.notifier.list_notifier')
+LOG = logging.getLogger(__name__)
 
 drivers = None
 

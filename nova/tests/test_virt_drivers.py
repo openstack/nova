@@ -29,7 +29,7 @@ from nova.tests import utils as test_utils
 libvirt = None
 FLAGS = flags.FLAGS
 
-LOG = logging.getLogger('nova.tests.test_virt_drivers')
+LOG = logging.getLogger(__name__)
 
 
 def catch_notimplementederror(f):

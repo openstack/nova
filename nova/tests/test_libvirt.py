@@ -54,7 +54,7 @@ except ImportError:
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.tests.test_libvirt')
+LOG = logging.getLogger(__name__)
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
 _ipv4_like = fake_network.ipv4_like

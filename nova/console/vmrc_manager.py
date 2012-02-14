@@ -27,7 +27,7 @@ from nova import utils
 from nova.virt import vmwareapi_conn
 
 
-LOG = logging.getLogger("nova.console.vmrc_manager")
+LOG = logging.getLogger(__name__)
 
 vmrc_manager_opts = [
     cfg.StrOpt('console_public_hostname',

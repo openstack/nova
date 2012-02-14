@@ -34,7 +34,7 @@ XMLNS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
 XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 
-LOG = logging.getLogger('nova.api.openstack.wsgi')
+LOG = logging.getLogger(__name__)
 
 # The vendor content types should serialize identically to the non-vendor
 # content types. So to avoid littering the code with both options, we

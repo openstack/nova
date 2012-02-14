@@ -32,7 +32,7 @@ import webob.exc
 
 from nova import log as logging
 
-LOG = logging.getLogger('nova.exception')
+LOG = logging.getLogger(__name__)
 
 
 class ConvertedException(webob.exc.WSGIHTTPException):

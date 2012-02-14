@@ -33,7 +33,7 @@ from nova.vsa.api import VsaState
 from nova.volume import volume_types
 
 
-LOG = logging.getLogger('nova.scheduler.vsa')
+LOG = logging.getLogger(__name__)
 
 vsa_scheduler_opts = [
     cfg.IntOpt('drive_type_approx_capacity_percent',

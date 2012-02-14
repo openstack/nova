@@ -26,7 +26,7 @@ from nova.network import model as network_model
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger("nova.api.ec2.ec2utils")
+LOG = logging.getLogger(__name__)
 
 
 def image_type(image_type):

@@ -37,7 +37,7 @@ from nova.scheduler import api as scheduler_api
 from nova import utils
 
 
-LOG = logging.getLogger('nova.api.openstack.compute.servers')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

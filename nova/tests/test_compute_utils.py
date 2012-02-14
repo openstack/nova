@@ -32,7 +32,7 @@ from nova.notifier import test_notifier
 from nova.tests import fake_network
 
 
-LOG = logging.getLogger('nova.tests.compute_utils')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 flags.DECLARE('stub_network', 'nova.compute.manager')
 

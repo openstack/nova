@@ -26,7 +26,7 @@ from nova import log as logging
 from nova import network
 
 
-LOG = logging.getLogger('nova.api.openstack.compute.contrib.floating_ip_dns')
+LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'floating_ip_dns')
 
 

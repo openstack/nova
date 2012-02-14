@@ -54,7 +54,7 @@ from nova.virt.libvirt import utils as libvirt_utils
 
 Template = None
 
-LOG = logging.getLogger('nova.virt.baremetal.proxy')
+LOG = logging.getLogger(__name__)
 
 FLAGS = flags.FLAGS
 

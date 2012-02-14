@@ -26,7 +26,7 @@ from nova import utils
 from nova.virt import netutils
 
 
-LOG = logging.getLogger("nova.virt.firewall")
+LOG = logging.getLogger(__name__)
 
 allow_same_net_traffic_opt = cfg.BoolOpt('allow_same_net_traffic',
         default=True,

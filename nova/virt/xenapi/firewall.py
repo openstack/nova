@@ -28,7 +28,7 @@ from nova.virt import netutils
 from nova.virt.firewall import IptablesFirewallDriver
 
 
-LOG = logging.getLogger("nova.virt.xenapi.firewall")
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 # The default Firewall driver must be listed at position 0

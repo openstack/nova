@@ -20,10 +20,7 @@ from sqlalchemy import select, Column, Integer
 
 from nova import exception
 from nova import flags
-from nova import log as logging
 
-
-LOG = logging.getLogger('nova.db.sqlalchemy.migrate_repo.versions')
 
 FLAGS = flags.FLAGS
 

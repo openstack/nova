@@ -20,6 +20,8 @@ from sqlalchemy import Column, Integer, MetaData, Table
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
+
 
 # Add disk_available_least column to compute_nodes table.
 # Thinking about qcow2 image support, both compressed and virtual disk size
@@ -40,7 +42,7 @@ def upgrade(migrate_engine):
     try:
         compute_nodes.create_column(disk_available_least)
     except Exception:
-        logging.error(_("progress column not added to compute_nodes table"))
+        LOG.error(_("progress column not added to compute_nodes table"))
         raise
 
 

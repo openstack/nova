@@ -47,7 +47,7 @@ FLAGS = flags.FLAGS
 flags.DECLARE('reserved_host_disk_mb', 'nova.scheduler.host_manager')
 flags.DECLARE('reserved_host_memory_mb', 'nova.scheduler.host_manager')
 
-LOG = logging.getLogger("nova.db.sqlalchemy")
+LOG = logging.getLogger(__name__)
 
 
 def is_admin_context(context):

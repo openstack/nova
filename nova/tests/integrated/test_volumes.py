@@ -25,7 +25,7 @@ from nova.tests.integrated.api import client
 from nova.volume import driver
 
 
-LOG = logging.getLogger('nova.tests.integrated')
+LOG = logging.getLogger(__name__)
 
 
 class VolumesTest(integrated_helpers._IntegratedTestBase):

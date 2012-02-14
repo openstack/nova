@@ -33,7 +33,7 @@ from nova.volume import iscsi
 from nova.volume import volume_types
 
 
-LOG = logging.getLogger("nova.volume.driver")
+LOG = logging.getLogger(__name__)
 
 volume_opts = [
     cfg.StrOpt('volume_group',

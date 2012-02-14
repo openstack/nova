@@ -20,7 +20,7 @@ from nova import log as logging
 from nova import test
 from nova.tests.api.openstack import fakes
 
-LOG = logging.getLogger('nova.tests.api.openstack.compute.test_urlmap')
+LOG = logging.getLogger(__name__)
 
 
 class UrlmapTest(test.TestCase):

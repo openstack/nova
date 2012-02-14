@@ -39,7 +39,7 @@ from nova import test
 from nova import utils
 
 
-LOG = logging.getLogger('nova.tests.cloud')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

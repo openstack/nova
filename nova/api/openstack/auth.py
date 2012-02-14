@@ -32,7 +32,7 @@ from nova import log as logging
 from nova import utils
 from nova import wsgi as base_wsgi
 
-LOG = logging.getLogger('nova.api.openstack.compute.auth')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 flags.DECLARE('use_forwarded_for', 'nova.api.auth')
 

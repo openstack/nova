@@ -96,7 +96,7 @@ FLAGS.register_opts(auth_opts)
 
 flags.DECLARE('osapi_compute_listen_port', 'nova.service')
 
-LOG = logging.getLogger('nova.auth.manager')
+LOG = logging.getLogger(__name__)
 
 
 if FLAGS.memcached_servers:

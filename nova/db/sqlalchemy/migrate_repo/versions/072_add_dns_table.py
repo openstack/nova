@@ -18,6 +18,7 @@ from sqlalchemy import MetaData, String, Table
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 #
 # New Tables
@@ -54,7 +55,7 @@ def upgrade(migrate_engine):
     try:
         dns_domains.create()
     except Exception:
-        logging.error(_("Table |%s| not created!"), repr(dns_domains))
+        LOG.error(_("Table |%s| not created!"), repr(dns_domains))
         raise
 
 
@@ -62,5 +63,5 @@ def downgrade(migrate_engine):
     try:
         dns_domains.drop()
     except Exception:
-        logging.error(_("dns_domains table not dropped"))
+        LOG.error(_("dns_domains table not dropped"))
         raise

@@ -41,7 +41,7 @@ from nova import utils
 from nova import wsgi
 
 
-LOG = logging.getLogger("nova.api")
+LOG = logging.getLogger(__name__)
 
 ec2_opts = [
     cfg.IntOpt('lockout_attempts',

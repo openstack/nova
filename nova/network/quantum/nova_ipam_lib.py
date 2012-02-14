@@ -25,7 +25,7 @@ from nova import log as logging
 from nova.network import manager
 
 
-LOG = logging.getLogger("nova.network.quantum.nova_ipam_lib")
+LOG = logging.getLogger(__name__)
 
 FLAGS = flags.FLAGS
 

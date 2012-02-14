@@ -23,7 +23,7 @@ from nova import log as logging
 import nova.image.fake
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.tests.vsa.volumes')
+LOG = logging.getLogger(__name__)
 
 
 class VsaVolumesTestCase(test.TestCase):

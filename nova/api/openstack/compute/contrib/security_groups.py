@@ -33,7 +33,7 @@ from nova import log as logging
 from nova import utils
 
 
-LOG = logging.getLogger("nova.api.openstack.compute.contrib.security_groups")
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 authorize = extensions.extension_authorizer('compute', 'security_groups')
 

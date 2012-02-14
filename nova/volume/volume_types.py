@@ -28,7 +28,7 @@ from nova import flags
 from nova import log as logging
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.volume.volume_types')
+LOG = logging.getLogger(__name__)
 
 
 def create(context, name, extra_specs={}):

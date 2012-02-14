@@ -21,6 +21,7 @@ from sqlalchemy import Integer, MetaData, String, Table, Text
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 # Just for the ForeignKey and column creation to succeed, these are not the
 # actual definitions of instances or services.
@@ -213,8 +214,8 @@ def upgrade(migrate_engine):
         try:
             table.create()
         except Exception:
-            logging.info(repr(table))
-            logging.exception('Exception while creating table')
+            LOG.info(repr(table))
+            LOG.exception('Exception while creating table')
             meta.drop_all(tables=tables)
             raise
 

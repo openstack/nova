@@ -29,7 +29,7 @@ import nova.log as logging
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger("nova.db.sqlalchemy.session")
+LOG = logging.getLogger(__name__)
 
 _ENGINE = None
 _MAKER = None

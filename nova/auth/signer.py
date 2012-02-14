@@ -57,7 +57,7 @@ from nova import exception
 from nova import log as logging
 
 
-LOG = logging.getLogger('nova.signer')
+LOG = logging.getLogger(__name__)
 
 
 class Signer(object):

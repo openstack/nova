@@ -25,7 +25,7 @@ from nova.rpc import impl_kombu
 from nova.tests.rpc import common
 
 
-LOG = logging.getLogger('nova.tests.rpc')
+LOG = logging.getLogger(__name__)
 
 
 class MyException(Exception):

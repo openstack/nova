@@ -63,7 +63,7 @@ from nova import version
 FLAGS = flags.FLAGS
 
 
-LOG = logging.getLogger('nova.manager')
+LOG = logging.getLogger(__name__)
 
 
 def periodic_task(*args, **kwargs):

@@ -104,8 +104,6 @@ class SimpleTenantUsageTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
         usages = res_dict['tenant_usages']
-        from nova import log as logging
-        logging.warn(usages)
         for i in xrange(TENANTS):
             self.assertEqual(int(usages[i]['total_hours']),
                              SERVERS * HOURS)

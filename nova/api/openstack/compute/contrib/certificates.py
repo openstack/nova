@@ -25,7 +25,7 @@ from nova import network
 from nova import rpc
 
 
-LOG = logging.getLogger('nova.api.openstack.compute.contrib.certificates')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 authorize = extensions.extension_authorizer('compute', 'certificates')
 

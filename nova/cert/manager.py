@@ -30,7 +30,7 @@ from nova import flags
 from nova import log as logging
 from nova import manager
 
-LOG = logging.getLogger('nova.cert.manager')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

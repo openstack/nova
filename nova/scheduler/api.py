@@ -40,7 +40,7 @@ enable_zone_routing_opt = cfg.BoolOpt('enable_zone_routing',
 FLAGS = flags.FLAGS
 FLAGS.register_opt(enable_zone_routing_opt)
 
-LOG = logging.getLogger('nova.scheduler.api')
+LOG = logging.getLogger(__name__)
 
 
 def _call_scheduler(method, context, params=None):

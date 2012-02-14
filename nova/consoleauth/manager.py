@@ -29,7 +29,7 @@ from nova.openstack.common import cfg
 from nova import utils
 
 
-LOG = logging.getLogger('nova.consoleauth')
+LOG = logging.getLogger(__name__)
 
 consoleauth_opts = [
     cfg.IntOpt('console_token_ttl',

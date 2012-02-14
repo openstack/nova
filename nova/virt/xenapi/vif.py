@@ -33,7 +33,7 @@ xenapi_ovs_integration_bridge_opt = cfg.StrOpt('xenapi_ovs_integration_bridge',
 
 FLAGS = flags.FLAGS
 FLAGS.register_opt(xenapi_ovs_integration_bridge_opt)
-LOG = logging.getLogger("nova.virt.xenapi.vif")
+LOG = logging.getLogger(__name__)
 
 
 class XenVIFDriver(VIFDriver):

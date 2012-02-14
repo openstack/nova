@@ -48,7 +48,7 @@ from nova import volume
 FLAGS = flags.FLAGS
 flags.DECLARE('dhcp_domain', 'nova.network.manager')
 
-LOG = logging.getLogger("nova.api.ec2.cloud")
+LOG = logging.getLogger(__name__)
 
 
 def _gen_key(context, user_id, key_name):

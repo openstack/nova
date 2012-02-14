@@ -28,7 +28,7 @@ from nova.db.sqlalchemy.session import get_session
 from nova.db.sqlalchemy import models
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.tests.test_volume_types')
+LOG = logging.getLogger(__name__)
 
 
 class VolumeTypeTestCase(test.TestCase):

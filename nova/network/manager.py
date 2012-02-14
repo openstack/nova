@@ -73,7 +73,7 @@ from nova import utils
 from nova import rpc
 
 
-LOG = logging.getLogger("nova.network.manager")
+LOG = logging.getLogger(__name__)
 
 network_opts = [
     cfg.StrOpt('flat_network_bridge',

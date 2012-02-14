@@ -35,7 +35,7 @@ from nova.virt.libvirt import utils as virtutils
 flags.DECLARE('instances_path', 'nova.compute.manager')
 FLAGS = flags.FLAGS
 
-LOG = logging.getLogger('nova.tests.test_imagecache')
+LOG = logging.getLogger(__name__)
 
 
 class ImageCacheManagerTestCase(test.TestCase):

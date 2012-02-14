@@ -31,7 +31,7 @@ from nova import utils
 from nova.virt.xenapi import HelperBase
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger("nova.virt.xenapi.volume_utils")
+LOG = logging.getLogger(__name__)
 
 
 class StorageError(Exception):

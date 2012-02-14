@@ -35,7 +35,7 @@ from nova.network import model as network_model
 from nova import quota
 
 
-LOG = logging.getLogger('nova.api.openstack.common')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

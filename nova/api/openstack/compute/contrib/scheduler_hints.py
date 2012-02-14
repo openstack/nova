@@ -20,7 +20,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.log as logging
 
-LOG = logging.getLogger('nova.api.openstack.compute.contrib.scheduler_hints')
+LOG = logging.getLogger(__name__)
 
 
 class SchedulerHintsController(wsgi.Controller):

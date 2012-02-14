@@ -41,7 +41,7 @@ from nova.utils import ssh_execute
 from nova.volume.driver import ISCSIDriver
 
 
-LOG = logging.getLogger("nova.volume.driver")
+LOG = logging.getLogger(__name__)
 
 san_opts = [
     cfg.BoolOpt('san_thin_provision',

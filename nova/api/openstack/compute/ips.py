@@ -26,7 +26,7 @@ from nova import log as logging
 from nova import flags
 
 
-LOG = logging.getLogger('nova.api.openstack.compute.ips')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

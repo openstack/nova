@@ -23,11 +23,11 @@ from nova import compute
 from nova import exception
 from nova import flags
 import nova.image
-from nova import log
+from nova import log as logging
 import nova.utils
 
 
-LOG = log.getLogger('nova.api.openstack.compute.images')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 SUPPORTED_FILTERS = {

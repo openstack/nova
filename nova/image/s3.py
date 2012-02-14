@@ -40,7 +40,7 @@ from nova import utils
 from nova.api.ec2 import ec2utils
 
 
-LOG = logging.getLogger("nova.image.s3")
+LOG = logging.getLogger(__name__)
 
 s3_opts = [
     cfg.StrOpt('image_decryption_dir',

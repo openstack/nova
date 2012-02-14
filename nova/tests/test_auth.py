@@ -28,7 +28,7 @@ from nova.api.ec2 import cloud
 from nova.auth import fakeldap
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.tests.auth_unittest')
+LOG = logging.getLogger(__name__)
 
 
 class user_generator(object):

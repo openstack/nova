@@ -30,7 +30,7 @@ from nova.network import linux_net
 
 FLAGS = flags.FLAGS
 
-LOG = logging.getLogger('nova.tests.network')
+LOG = logging.getLogger(__name__)
 
 
 HOST = "testhost"

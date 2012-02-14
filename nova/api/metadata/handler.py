@@ -36,7 +36,7 @@ from nova import volume
 from nova import wsgi
 
 
-LOG = logging.getLogger('nova.api.metadata')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 flags.DECLARE('use_forwarded_for', 'nova.api.auth')
 flags.DECLARE('dhcp_domain', 'nova.network.manager')

@@ -19,6 +19,8 @@ from sqlalchemy import MetaData, Table
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
+
 
 # Table definition
 volumes = Table('volumes', meta,
@@ -45,8 +47,8 @@ def downgrade(migrate_engine):
     try:
         export_devices.create()
     except Exception:
-        logging.info(repr(export_devices))
-        logging.exception('Exception while creating table')
+        LOG.info(repr(export_devices))
+        LOG.exception('Exception while creating table')
         raise
 
 

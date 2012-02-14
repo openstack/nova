@@ -23,7 +23,7 @@ import socket
 
 from nova import exception
 
-LOG = logging.getLogger("nova.api.validator")
+LOG = logging.getLogger(__name__)
 
 
 def _get_path_validator_regex():

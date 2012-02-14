@@ -22,7 +22,7 @@ import sqlalchemy
 from nova import log as logging
 
 
-LOG = logging.getLogger('nova.db.sqlalchemy.migrate_repo.versions')
+LOG = logging.getLogger(__name__)
 
 meta = sqlalchemy.MetaData()
 

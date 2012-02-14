@@ -29,7 +29,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 
-LOG = logging.getLogger("nova.api.request")
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

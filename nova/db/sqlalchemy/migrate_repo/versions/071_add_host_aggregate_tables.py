@@ -19,6 +19,7 @@ from nova import log as logging
 
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 
 aggregates = Table('aggregates', meta,
@@ -85,7 +86,7 @@ def upgrade(migrate_engine):
         try:
             table.create()
         except Exception:
-            logging.exception(repr(table))
+            LOG.exception(repr(table))
 
 
 def downgrade(migrate_engine):
@@ -94,4 +95,4 @@ def downgrade(migrate_engine):
         try:
             table.drop()
         except Exception:
-            logging.exception(repr(table))
+            LOG.exception(repr(table))

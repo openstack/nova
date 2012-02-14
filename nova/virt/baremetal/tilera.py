@@ -43,7 +43,7 @@ tilera_opts = [
 
 FLAGS.register_opts(tilera_opts)
 
-LOG = logging.getLogger('nova.virt.tilera')
+LOG = logging.getLogger(__name__)
 
 
 def get_baremetal_nodes():

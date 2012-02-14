@@ -23,7 +23,7 @@ from nova import exception
 from nova import log as logging
 
 
-LOG = logging.getLogger('nova.api.openstack.compute.contrib.server_start_stop')
+LOG = logging.getLogger(__name__)
 
 
 class ServerStartStopActionController(wsgi.Controller):

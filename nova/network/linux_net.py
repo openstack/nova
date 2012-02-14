@@ -32,7 +32,7 @@ from nova.openstack.common import cfg
 from nova import utils
 
 
-LOG = logging.getLogger("nova.linux_net")
+LOG = logging.getLogger(__name__)
 
 
 def _bin_file(script):

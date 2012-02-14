@@ -24,9 +24,7 @@ from nova.volume import volume_types
 from nova.tests.api.openstack import fakes
 
 
-LOG = logging.getLogger('nova.tests.api.openstack.volume.'
-                        'test_volume_types')
-
+LOG = logging.getLogger(__name__)
 last_param = {}
 
 

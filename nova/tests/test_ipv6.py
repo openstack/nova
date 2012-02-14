@@ -20,7 +20,7 @@ from nova import ipv6
 from nova import log as logging
 from nova import test
 
-LOG = logging.getLogger('nova.tests.test_ipv6')
+LOG = logging.getLogger(__name__)
 
 
 class IPv6RFC2462TestCase(test.TestCase):

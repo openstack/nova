@@ -27,7 +27,7 @@ from eventlet.queue import LightQueue
 from nova import exception
 from nova import log as logging
 
-LOG = logging.getLogger("nova.virt.vmwareapi.io_util")
+LOG = logging.getLogger(__name__)
 
 IO_THREAD_SLEEP_TIME = .01
 GLANCE_POLL_INTERVAL = 5

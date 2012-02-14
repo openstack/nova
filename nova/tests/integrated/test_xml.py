@@ -22,7 +22,7 @@ from nova.tests.integrated import integrated_helpers
 from nova.api.openstack import common
 
 
-LOG = logging.getLogger('nova.tests.integrated')
+LOG = logging.getLogger(__name__)
 
 
 class XmlTests(integrated_helpers._IntegratedTestBase):

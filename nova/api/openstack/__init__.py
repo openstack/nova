@@ -29,7 +29,7 @@ from nova import log as logging
 from nova import wsgi as base_wsgi
 
 
-LOG = logging.getLogger('nova.api.openstack')
+LOG = logging.getLogger(__name__)
 
 
 class FaultWrapper(base_wsgi.Middleware):

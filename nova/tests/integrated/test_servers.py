@@ -24,7 +24,7 @@ from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
 
 
-LOG = logging.getLogger('nova.tests.integrated')
+LOG = logging.getLogger(__name__)
 
 
 class ServersTest(integrated_helpers._IntegratedTestBase):

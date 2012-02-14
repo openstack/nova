@@ -20,7 +20,10 @@ from sqlalchemy import Integer, DateTime, Boolean, String
 
 from nova import log as logging
 
+
 meta = MetaData()
+LOG = logging.getLogger(__name__)
+
 
 snapshots = Table('snapshots', meta,
         Column('created_at', DateTime(timezone=False)),
@@ -59,8 +62,8 @@ def upgrade(migrate_engine):
     try:
         snapshots.create()
     except Exception:
-        logging.info(repr(snapshots))
-        logging.exception('Exception while creating table')
+        LOG.info(repr(snapshots))
+        LOG.exception('Exception while creating table')
         meta.drop_all(tables=[snapshots])
         raise
 

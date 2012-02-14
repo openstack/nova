@@ -18,7 +18,7 @@ from nova.scheduler.filters import abstract_filter
 from nova import utils
 
 
-LOG = logging.getLogger('nova.scheduler.filter.compute_filter')
+LOG = logging.getLogger(__name__)
 
 
 class ComputeFilter(abstract_filter.AbstractHostFilter):

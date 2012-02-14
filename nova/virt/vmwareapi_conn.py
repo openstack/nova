@@ -50,7 +50,7 @@ from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi.vmops import VMWareVMOps
 
 
-LOG = logging.getLogger("nova.virt.vmwareapi_conn")
+LOG = logging.getLogger(__name__)
 
 vmwareapi_opts = [
     cfg.StrOpt('vmwareapi_host_ip',

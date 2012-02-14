@@ -27,7 +27,7 @@ from nova.volume import volume_types
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.tests.scheduler.vsa')
+LOG = logging.getLogger(__name__)
 
 scheduled_volumes = []
 scheduled_volume = {}

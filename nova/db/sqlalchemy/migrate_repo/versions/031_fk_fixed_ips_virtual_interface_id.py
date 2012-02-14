@@ -19,6 +19,7 @@ from migrate import *
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 
 def upgrade(migrate_engine):
@@ -35,7 +36,7 @@ def upgrade(migrate_engine):
             ForeignKeyConstraint(columns=[fixed_ips.c.virtual_interface_id],
                                  refcolumns=[virtual_interfaces.c.id]).create()
     except Exception:
-        logging.error(_("foreign key constraint couldn't be added"))
+        LOG.error(_("foreign key constraint couldn't be added"))
         raise
 
 
@@ -49,5 +50,5 @@ def downgrade(migrate_engine):
             ForeignKeyConstraint(columns=[fixed_ips.c.virtual_interface_id],
                                  refcolumns=[virtual_interfaces.c.id]).drop()
     except Exception:
-        logging.error(_("foreign key constraint couldn't be dropped"))
+        LOG.error(_("foreign key constraint couldn't be dropped"))
         raise

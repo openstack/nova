@@ -27,7 +27,7 @@ from nova.rpc import common as rpc_common
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.network')
+LOG = logging.getLogger(__name__)
 
 
 class API(base.Base):

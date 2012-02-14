@@ -26,7 +26,7 @@ from nova import utils
 from nova.openstack.common import cfg
 
 
-LOG = logging.getLogger("nova.network.manager")
+LOG = logging.getLogger(__name__)
 
 ldap_dns_opts = [
     cfg.StrOpt('ldap_dns_url',

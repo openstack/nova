@@ -31,7 +31,7 @@ from nova import utils
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.virt.images')
+LOG = logging.getLogger(__name__)
 
 
 def fetch(context, image_href, path, _user_id, _project_id):

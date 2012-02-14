@@ -25,7 +25,7 @@ from nova import log as logging
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.api.openstack.compute.contrib.accounts')
+LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'accounts')
 
 

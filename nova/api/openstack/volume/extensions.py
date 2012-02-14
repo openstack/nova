@@ -20,7 +20,7 @@ from nova import flags
 from nova import log as logging
 
 
-LOG = logging.getLogger('nova.api.openstack.volume.extensions')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

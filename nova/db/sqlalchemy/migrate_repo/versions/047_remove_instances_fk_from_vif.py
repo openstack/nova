@@ -17,7 +17,9 @@ from migrate import ForeignKeyConstraint
 
 from nova import log as logging
 
+
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 
 def upgrade(migrate_engine):
@@ -38,7 +40,7 @@ def upgrade(migrate_engine):
                              name=fkey_name).drop()
 
     except Exception:
-        logging.error(_("foreign key constraint couldn't be removed"))
+        LOG.error(_("foreign key constraint couldn't be removed"))
         raise
 
 
@@ -56,5 +58,5 @@ def downgrade(migrate_engine):
         ForeignKeyConstraint(columns=[vifs.c.instance_id],
                              refcolumns=[instances.c.id]).create()
     except Exception:
-        logging.error(_("foreign key constraint couldn't be added"))
+        LOG.error(_("foreign key constraint couldn't be added"))
         raise

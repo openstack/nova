@@ -22,7 +22,7 @@ import urlparse
 from nova import log as logging
 
 
-LOG = logging.getLogger('nova.tests.api')
+LOG = logging.getLogger(__name__)
 
 
 class OpenStackApiException(Exception):

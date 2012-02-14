@@ -27,7 +27,7 @@ from nova import utils
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger("nova.api.openstack.compute.contrib.rescue")
+LOG = logging.getLogger(__name__)
 authorize = exts.extension_authorizer('compute', 'rescue')
 
 

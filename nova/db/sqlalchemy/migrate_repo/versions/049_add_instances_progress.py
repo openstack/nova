@@ -20,6 +20,7 @@ from migrate import *
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 instances = Table('instances', meta,
     Column("id", Integer(), primary_key=True, nullable=False))
@@ -34,7 +35,7 @@ def upgrade(migrate_engine):
     try:
         instances.create_column(progress)
     except Exception:
-        logging.error(_("progress column not added to instances table"))
+        LOG.error(_("progress column not added to instances table"))
         raise
 
 

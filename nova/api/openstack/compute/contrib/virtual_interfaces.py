@@ -24,8 +24,7 @@ from nova import log as logging
 from nova import network
 
 
-LOG = logging.getLogger("nova.api.openstack.compute."
-                        "contrib.virtual_interfaces")
+LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'virtual_interfaces')
 
 

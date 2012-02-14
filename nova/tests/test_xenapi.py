@@ -45,7 +45,7 @@ from nova.tests.glance import stubs as glance_stubs
 from nova.tests import fake_network
 from nova.tests import fake_utils
 
-LOG = logging.getLogger('nova.tests.test_xenapi')
+LOG = logging.getLogger(__name__)
 
 FLAGS = flags.FLAGS
 

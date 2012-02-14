@@ -18,6 +18,7 @@ from sqlalchemy import MetaData, String, Table, Text
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 #
 # New Tables
@@ -54,7 +55,7 @@ def upgrade(migrate_engine):
     try:
         instance_faults.create()
     except Exception:
-        logging.info(repr(instance_faults))
+        LOG.info(repr(instance_faults))
 
 
 def downgrade(migrate_engine):

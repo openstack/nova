@@ -24,7 +24,7 @@ from nova import exception
 from nova import log as logging
 from nova import utils
 
-LOG = logging.getLogger('nova.tests.fake_utils')
+LOG = logging.getLogger(__name__)
 
 _fake_execute_repliers = []
 _fake_execute_log = []

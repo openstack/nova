@@ -24,7 +24,7 @@ from nova import log as logging
 from nova import test
 
 
-LOG = logging.getLogger('nova.tests.aggregates')
+LOG = logging.getLogger(__name__)
 AGGREGATE_LIST = [
         {"name": "aggregate1", "id": "1", "availability_zone": "nova1"},
         {"name": "aggregate2", "id": "2", "availability_zone": "nova1"},

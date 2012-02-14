@@ -25,7 +25,7 @@ from nova.virt.xenapi.volume_utils import VolumeHelper
 from nova.virt.xenapi.volume_utils import StorageError
 
 
-LOG = logging.getLogger("nova.virt.xenapi.volumeops")
+LOG = logging.getLogger(__name__)
 
 
 class VolumeOps(object):

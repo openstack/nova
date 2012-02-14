@@ -20,6 +20,8 @@ from nova import log as logging
 from nova import utils
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
+
 
 # instance info cache table to add to DB
 instance_info_caches = Table('instance_info_caches', meta,
@@ -48,7 +50,7 @@ def upgrade(migrate_engine):
     try:
         instance_info_caches.create()
     except Exception:
-        logging.error(_("Table |%s| not created!"), repr(instance_info_caches))
+        LOG.error(_("Table |%s| not created!"), repr(instance_info_caches))
         raise
 
 
@@ -56,5 +58,5 @@ def downgrade(migrate_engine):
     try:
         instance_info_caches.drop()
     except Exception:
-        logging.error(_("instance_info_caches tables not dropped"))
+        LOG.error(_("instance_info_caches tables not dropped"))
         raise

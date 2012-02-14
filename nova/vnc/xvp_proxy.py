@@ -35,7 +35,7 @@ from nova import version
 from nova import wsgi
 
 
-LOG = logging.getLogger('nova.xvpvncproxy')
+LOG = logging.getLogger(__name__)
 
 xvp_proxy_opts = [
     cfg.IntOpt('xvpvncproxy_port',

@@ -19,6 +19,7 @@ from migrate import *
 from nova import log as logging
 from nova import utils
 
+LOG = logging.getLogger(__name__)
 meta = MetaData()
 
 # virtual interface table to add to DB
@@ -71,21 +72,21 @@ def upgrade(migrate_engine):
     try:
         networks.create_column(interface)
     except Exception:
-        logging.error(_("interface column not added to networks table"))
+        LOG.error(_("interface column not added to networks table"))
         raise
 
     # create virtual_interfaces table
     try:
         virtual_interfaces.create()
     except Exception:
-        logging.error(_("Table |%s| not created!"), repr(virtual_interfaces))
+        LOG.error(_("Table |%s| not created!"), repr(virtual_interfaces))
         raise
 
     # add virtual_interface_id column to fixed_ips table
     try:
         fixed_ips.create_column(virtual_interface_id)
     except Exception:
-        logging.error(_("VIF column not added to fixed_ips table"))
+        LOG.error(_("VIF column not added to fixed_ips table"))
         raise
 
     # populate the virtual_interfaces table
@@ -95,7 +96,7 @@ def upgrade(migrate_engine):
                fixed_ips.c.instance_id == instances.c.id)
     keys = ('instance_id', 'address', 'network_id')
     join_list = [dict(zip(keys, row)) for row in s.execute()]
-    logging.debug(_("join list for moving mac_addresses |%s|"), join_list)
+    LOG.debug(_("join list for moving mac_addresses |%s|"), join_list)
 
     # insert data into the table
     if join_list:
@@ -119,5 +120,5 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
-    logging.error(_("Can't downgrade without losing data"))
+    LOG.error(_("Can't downgrade without losing data"))
     raise Exception

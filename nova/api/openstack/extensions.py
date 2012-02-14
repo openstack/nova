@@ -34,7 +34,7 @@ from nova import utils
 from nova import wsgi as base_wsgi
 
 
-LOG = logging.getLogger('nova.api.openstack.extensions')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

@@ -54,7 +54,7 @@ from nova import utils
 import nova.volume
 
 
-LOG = logging.getLogger('nova.tests.compute')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 flags.DECLARE('stub_network', 'nova.compute.manager')
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')

@@ -38,7 +38,7 @@ from nova import volume
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger("nova.api.openstack.compute.contrib.vsa")
+LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute',
         'virtual_storage_arrays')
 

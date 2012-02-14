@@ -35,7 +35,7 @@ except ImportError:
     impl_qpid = None
 
 
-LOG = logging.getLogger('nova.tests.rpc')
+LOG = logging.getLogger(__name__)
 
 
 class RpcQpidTestCase(test.TestCase):

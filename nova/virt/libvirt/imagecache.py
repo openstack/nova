@@ -41,7 +41,7 @@ from nova import utils
 from nova.virt.libvirt import utils as virtutils
 
 
-LOG = logging.getLogger('nova.compute.imagecache')
+LOG = logging.getLogger(__name__)
 
 imagecache_opts = [
     cfg.BoolOpt('remove_unused_base_images',

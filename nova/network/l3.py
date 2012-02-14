@@ -22,7 +22,7 @@ from nova import log as logging
 from nova import utils
 from nova.network import linux_net
 
-LOG = logging.getLogger("nova.network.l3")
+LOG = logging.getLogger(__name__)
 
 FLAGS = flags.FLAGS
 

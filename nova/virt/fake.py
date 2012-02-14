@@ -33,7 +33,7 @@ from nova import utils
 from nova.virt import driver
 
 
-LOG = logging.getLogger('nova.compute.disk')
+LOG = logging.getLogger(__name__)
 
 
 def get_connection(_=None):

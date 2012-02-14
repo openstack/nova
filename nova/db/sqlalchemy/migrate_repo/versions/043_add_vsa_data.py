@@ -21,6 +21,7 @@ from sqlalchemy import Boolean
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 #
 # New Tables
@@ -64,8 +65,8 @@ def upgrade(migrate_engine):
     try:
         virtual_storage_arrays.create()
     except Exception:
-        logging.info(repr(table))
-        logging.exception('Exception while creating table')
+        LOG.info(repr(virtual_storage_arrays))
+        LOG.exception('Exception while creating table')
         raise
 
 

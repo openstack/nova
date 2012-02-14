@@ -29,7 +29,7 @@ from nova import network
 from nova import rpc
 
 
-LOG = logging.getLogger('nova.api.openstack.compute.contrib.floating_ips')
+LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'floating_ips')
 
 

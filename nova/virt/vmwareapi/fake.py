@@ -34,7 +34,7 @@ _FAKE_FILE_SIZE = 1024
 
 _db_content = {}
 
-LOG = logging.getLogger("nova.virt.vmwareapi.fake")
+LOG = logging.getLogger(__name__)
 
 
 def log_db_contents(msg=None):

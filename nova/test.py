@@ -35,7 +35,7 @@ import stubout
 
 from nova import flags
 import nova.image.fake
-from nova import log
+from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
 from nova import service
@@ -55,7 +55,7 @@ test_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(test_opts)
 
-LOG = log.getLogger('nova.tests')
+LOG = logging.getLogger(__name__)
 
 
 class skip_test(object):

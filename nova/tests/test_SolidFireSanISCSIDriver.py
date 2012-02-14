@@ -20,7 +20,7 @@ from nova import log as logging
 from nova.volume.san import SolidFireSanISCSIDriver as SFID
 from nova import test
 
-LOG = logging.getLogger('nova.tests.test_solidfire')
+LOG = logging.getLogger(__name__)
 
 
 class SolidFireVolumeTestCase(test.TestCase):

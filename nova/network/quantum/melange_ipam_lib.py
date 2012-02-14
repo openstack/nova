@@ -23,7 +23,7 @@ from nova import log as logging
 from nova.network.quantum import melange_connection
 
 
-LOG = logging.getLogger("nova.network.quantum.melange_ipam_lib")
+LOG = logging.getLogger(__name__)
 
 FLAGS = flags.FLAGS
 

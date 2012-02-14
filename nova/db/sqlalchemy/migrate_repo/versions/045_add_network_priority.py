@@ -20,6 +20,8 @@ from nova import log as logging
 
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
+
 
 networks = Table('networks', meta,
     Column("id", Integer(), primary_key=True, nullable=False))
@@ -34,7 +36,7 @@ def upgrade(migrate_engine):
     try:
         networks.create_column(priority)
     except Exception:
-        logging.error(_("priority column not added to networks table"))
+        LOG.error(_("priority column not added to networks table"))
         raise
 
 

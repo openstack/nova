@@ -27,7 +27,7 @@ from nova import test
 from nova import utils
 from nova.network import manager
 
-LOG = logging.getLogger('nova.tests.quantum_network')
+LOG = logging.getLogger(__name__)
 
 
 # this class can be used for unit functional/testing on nova,

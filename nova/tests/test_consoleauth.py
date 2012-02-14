@@ -32,7 +32,7 @@ from nova.consoleauth import manager
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.tests.consoleauth')
+LOG = logging.getLogger(__name__)
 
 
 class ConsoleauthTestCase(test.TestCase):

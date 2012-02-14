@@ -18,7 +18,7 @@ from nova import db
 from nova import log as logging
 
 
-LOG = logging.getLogger('nova.notifier.capacity_notifier')
+LOG = logging.getLogger(__name__)
 
 
 def notify(message):

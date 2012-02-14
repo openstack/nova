@@ -42,7 +42,7 @@ vsa_driver_opt = cfg.StrOpt('vsa_driver',
 FLAGS = flags.FLAGS
 FLAGS.register_opt(vsa_driver_opt)
 
-LOG = logging.getLogger('nova.vsa.manager')
+LOG = logging.getLogger(__name__)
 
 
 class VsaManager(manager.SchedulerDependentManager):

@@ -34,7 +34,7 @@ from nova import log as logging
 from nova import utils
 
 
-LOG = logging.getLogger('nova.image.glance')
+LOG = logging.getLogger(__name__)
 
 
 FLAGS = flags.FLAGS

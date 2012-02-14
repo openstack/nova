@@ -49,7 +49,7 @@ from nova import utils
 from nova.volume import volume_types
 
 
-LOG = logging.getLogger('nova.volume.manager')
+LOG = logging.getLogger(__name__)
 
 volume_manager_opts = [
     cfg.StrOpt('storage_availability_zone',

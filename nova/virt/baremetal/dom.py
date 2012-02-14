@@ -23,7 +23,7 @@ from nova.virt.baremetal import nodes
 
 FLAGS = flags.FLAGS
 
-LOG = logging.getLogger('nova.virt.baremetal.dom')
+LOG = logging.getLogger(__name__)
 
 
 def read_domains(fname):

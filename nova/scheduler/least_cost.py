@@ -27,7 +27,7 @@ from nova.openstack.common import cfg
 from nova import log as logging
 
 
-LOG = logging.getLogger('nova.scheduler.least_cost')
+LOG = logging.getLogger(__name__)
 
 least_cost_opts = [
     cfg.ListOpt('least_cost_functions',

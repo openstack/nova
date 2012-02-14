@@ -36,7 +36,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 
 
-LOG = logging.getLogger('nova.api.openstack.compute')
+LOG = logging.getLogger(__name__)
 
 allow_instance_snapshots_opt = \
     cfg.BoolOpt('allow_instance_snapshots',

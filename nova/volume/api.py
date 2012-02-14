@@ -36,7 +36,7 @@ from nova.db import base
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
-LOG = logging.getLogger('nova.volume')
+LOG = logging.getLogger(__name__)
 
 
 def wrap_check_policy(func):

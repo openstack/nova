@@ -32,7 +32,7 @@ from nova import log as logging
 import nova.scheduler.api
 
 
-LOG = logging.getLogger("nova.api.openstack.compute.contrib.zones")
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 authorize = extensions.extension_authorizer('compute', 'zones')
 

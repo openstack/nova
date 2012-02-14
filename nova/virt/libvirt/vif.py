@@ -29,7 +29,7 @@ from nova.virt import netutils
 from nova.virt.vif import VIFDriver
 
 
-LOG = logging.getLogger('nova.virt.libvirt.vif')
+LOG = logging.getLogger(__name__)
 
 libvirt_ovs_bridge_opt = cfg.StrOpt('libvirt_ovs_bridge',
         default='br-int',

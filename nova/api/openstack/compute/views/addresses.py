@@ -23,7 +23,7 @@ from nova import log as logging
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.api.openstack.compute.views.addresses')
+LOG = logging.getLogger(__name__)
 
 
 class ViewBuilder(common.ViewBuilder):

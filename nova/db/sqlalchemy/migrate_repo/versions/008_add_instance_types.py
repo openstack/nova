@@ -18,6 +18,7 @@ from sqlalchemy import MetaData, String, Table
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 
 #
@@ -50,8 +51,8 @@ def upgrade(migrate_engine):
     try:
         instance_types.create()
     except Exception:
-        logging.info(repr(instance_types))
-        logging.exception('Exception while creating instance_types table')
+        LOG.info(repr(instance_types))
+        LOG.exception('Exception while creating instance_types table')
         raise
 
     # Here are the old static instance types
@@ -71,8 +72,8 @@ def upgrade(migrate_engine):
                         'local_gb': values["local_gb"],
                         'flavorid': values["flavorid"]})
     except Exception:
-        logging.info(repr(instance_types))
-        logging.exception('Exception while seeding instance_types table')
+        LOG.info(repr(instance_types))
+        LOG.exception('Exception while seeding instance_types table')
         raise
 
 

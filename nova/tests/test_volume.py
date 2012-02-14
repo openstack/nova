@@ -34,7 +34,7 @@ from nova import utils
 import nova.volume.api
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.tests.volume')
+LOG = logging.getLogger(__name__)
 
 
 class VolumeTestCase(test.TestCase):

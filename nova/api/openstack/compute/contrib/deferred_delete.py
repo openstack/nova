@@ -25,7 +25,7 @@ from nova import exception
 from nova import log as logging
 
 
-LOG = logging.getLogger("nova.api.openstack.compute.contrib.deferred-delete")
+LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'deferred_delete')
 
 

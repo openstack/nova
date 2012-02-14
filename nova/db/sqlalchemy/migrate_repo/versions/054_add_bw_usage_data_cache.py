@@ -21,6 +21,8 @@ from sqlalchemy import Integer, BigInteger, DateTime, Boolean, String
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
+
 
 bw_cache = Table('bw_usage_cache', meta,
         Column('created_at', DateTime(timezone=False)),
@@ -46,8 +48,8 @@ def upgrade(migrate_engine):
     try:
         bw_cache.create()
     except Exception:
-        logging.info(repr(bw_cache))
-        logging.exception('Exception while creating table')
+        LOG.info(repr(bw_cache))
+        LOG.exception('Exception while creating table')
         meta.drop_all(tables=[bw_cache])
         raise
 

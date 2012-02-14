@@ -30,7 +30,7 @@ import nova.virt.firewall as base_firewall
 from nova.virt import netutils
 
 
-LOG = logging.getLogger("nova.virt.libvirt.firewall")
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 # The default Firewall driver must be listed at position 0

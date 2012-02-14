@@ -48,7 +48,7 @@ from nova.virt.xenapi import HelperBase
 from nova.virt.xenapi import volume_utils
 
 
-LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
+LOG = logging.getLogger(__name__)
 
 xenapi_vm_utils_opts = [
     cfg.StrOpt('default_os_type',

@@ -34,7 +34,7 @@ from nova import vsa
 
 FLAGS = flags.FLAGS
 
-LOG = logging.getLogger('nova.tests.api.openstack.compute.contrib.test_vsa')
+LOG = logging.getLogger(__name__)
 
 last_param = {}
 

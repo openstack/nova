@@ -48,7 +48,7 @@ from nova import utils
 from nova import volume
 
 
-LOG = logging.getLogger('nova.compute.api')
+LOG = logging.getLogger(__name__)
 
 find_host_timeout_opt = cfg.StrOpt('find_host_timeout',
         default=30,

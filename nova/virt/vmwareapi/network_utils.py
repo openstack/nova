@@ -25,7 +25,7 @@ from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
-LOG = logging.getLogger("nova.virt.vmwareapi.network_utils")
+LOG = logging.getLogger(__name__)
 
 
 def get_network_with_the_name(session, network_name="vmnet0"):

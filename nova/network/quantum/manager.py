@@ -30,7 +30,7 @@ from nova.network.quantum import quantum_connection
 from nova.openstack.common import cfg
 from nova import utils
 
-LOG = logging.getLogger("nova.network.quantum.manager")
+LOG = logging.getLogger(__name__)
 
 quantum_opts = [
     cfg.StrOpt('quantum_ipam_lib',

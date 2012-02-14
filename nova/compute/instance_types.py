@@ -27,7 +27,7 @@ from nova import flags
 from nova import log as logging
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.instance_types')
+LOG = logging.getLogger(__name__)
 
 
 def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid, swap=None,

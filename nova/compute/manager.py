@@ -121,7 +121,7 @@ compute_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(compute_opts)
 
-LOG = logging.getLogger('nova.compute.manager')
+LOG = logging.getLogger(__name__)
 
 
 def publisher_id(host=None):

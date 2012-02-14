@@ -39,7 +39,7 @@ from nova.virt.disk import loop
 from nova.virt.disk import nbd
 
 
-LOG = logging.getLogger('nova.compute.disk')
+LOG = logging.getLogger(__name__)
 
 disk_opts = [
     cfg.StrOpt('injected_network_template',

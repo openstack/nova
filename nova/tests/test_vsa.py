@@ -30,7 +30,7 @@ from nova.vsa import utils as vsa_utils
 import nova.image.fake
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.tests.vsa')
+LOG = logging.getLogger(__name__)
 
 
 class VsaTestCase(test.TestCase):

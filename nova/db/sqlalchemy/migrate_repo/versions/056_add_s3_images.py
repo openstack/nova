@@ -21,6 +21,7 @@ from nova import log as logging
 
 
 meta = sqlalchemy.MetaData()
+LOG = logging.getLogger(__name__)
 
 
 s3_images = sqlalchemy.Table('s3_images', meta,
@@ -46,7 +47,7 @@ def upgrade(migrate_engine):
     try:
         s3_images.create()
     except Exception:
-        logging.exception("Exception while creating table 's3_images'")
+        LOG.exception("Exception while creating table 's3_images'")
         meta.drop_all(tables=[s3_images])
         raise
 

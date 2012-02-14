@@ -30,7 +30,7 @@ from nova import log as logging
 from nova.scheduler import api as scheduler_api
 
 
-LOG = logging.getLogger("nova.api.openstack.compute.contrib.hosts")
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 authorize = extensions.extension_authorizer('compute', 'hosts')
 

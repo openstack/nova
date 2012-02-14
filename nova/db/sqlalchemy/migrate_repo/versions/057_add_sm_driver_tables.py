@@ -19,6 +19,8 @@ from nova import log as logging
 
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
+
 
 # Table stub-definitions
 # Just for the ForeignKey and column creation to succeed, these are not the
@@ -95,7 +97,7 @@ def upgrade(migrate_engine):
         try:
             table.create()
         except Exception:
-            logging.info(repr(table))
+            LOG.info(repr(table))
 
 
 def downgrade(migrate_engine):
@@ -104,4 +106,4 @@ def downgrade(migrate_engine):
         try:
             table.drop()
         except Exception:
-            logging.info(repr(table))
+            LOG.info(repr(table))

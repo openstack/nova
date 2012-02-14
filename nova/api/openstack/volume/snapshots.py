@@ -27,7 +27,7 @@ from nova import log as logging
 from nova import volume
 
 
-LOG = logging.getLogger("nova.api.openstack.volume.snapshots")
+LOG = logging.getLogger(__name__)
 
 
 FLAGS = flags.FLAGS

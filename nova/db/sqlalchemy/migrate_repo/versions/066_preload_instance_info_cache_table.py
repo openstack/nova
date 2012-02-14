@@ -23,6 +23,7 @@ from nova import log as logging
 from nova import utils
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 
 def upgrade(migrate_engine):
@@ -192,20 +193,20 @@ def upgrade(migrate_engine):
     # preload caches table
     # list is made up of a row(instance_id, nw_info_json) for each instance
     for instance in get_instances():
-        logging.info("Updating %s" % (instance['uuid']))
+        LOG.info("Updating %s" % (instance['uuid']))
         instance_id = instance['id']
         instance_uuid = instance['uuid']
 
         # instances have vifs so aninstance nw_info is
         # is a list of dicts, 1 dict for each vif
         nw_info = get_vifs_by_instance_id(instance_id)
-        logging.info("VIFs for Instance %s: \n %s" %
+        LOG.info("VIFs for Instance %s: \n %s" %
                      (instance['uuid'], nw_info))
         for vif in nw_info:
             networks_ = get_network_by_id(vif['network_id'])
             if networks_:
                 network = networks_[0]
-                logging.info("Network for Instance %s: \n %s" %
+                LOG.info("Network for Instance %s: \n %s" %
                              (instance['uuid'], network))
                 _update_network(vif, network)
             else:
@@ -218,7 +219,7 @@ def upgrade(migrate_engine):
             # vif['meta'] could also be set to contain rxtx data here
             # but it isn't exposed in the api and is still being rewritten
 
-            logging.info("VIF network for instance %s: \n %s" %
+            LOG.info("VIF network for instance %s: \n %s" %
                          (instance['uuid'], vif['network']))
 
         # jsonify nw_info

@@ -23,7 +23,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
 
-LOG = logging.getLogger('nova.api.openstack.compute.contrib.console')
+LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'consoles')
 
 

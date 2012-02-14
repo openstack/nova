@@ -68,7 +68,7 @@ _CLASSES = ['host', 'network', 'session', 'SR', 'VBD', 'pool',
 
 _db_content = {}
 
-LOG = logging.getLogger("nova.virt.xenapi.fake")
+LOG = logging.getLogger(__name__)
 
 
 def log_db_contents(msg=None):

@@ -51,7 +51,7 @@ VolumeHelper = volume_utils.VolumeHelper
 NetworkHelper = network_utils.NetworkHelper
 VMHelper = vm_utils.VMHelper
 XenAPI = None
-LOG = logging.getLogger("nova.virt.xenapi.vmops")
+LOG = logging.getLogger(__name__)
 
 xenapi_vmops_opts = [
     cfg.IntOpt('agent_version_timeout',

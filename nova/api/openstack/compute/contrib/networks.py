@@ -27,7 +27,7 @@ import nova.network.api
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.api.openstack.compute.contrib.networks')
+LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'networks')
 
 

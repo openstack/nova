@@ -29,7 +29,7 @@ from nova import log as logging
 from nova.compute import power_state
 
 
-LOG = logging.getLogger("nova.virt.driver")
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

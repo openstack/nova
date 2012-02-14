@@ -29,7 +29,7 @@ from nova.scheduler import api as scheduler_api
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger("nova.api.openstack.compute.contrib.admin_actions")
+LOG = logging.getLogger(__name__)
 
 
 def authorize(context, action_name):

@@ -20,7 +20,7 @@ import os
 from nova import log as logging
 from nova import utils
 
-LOG = logging.getLogger('nova.compute.disk')
+LOG = logging.getLogger(__name__)
 
 
 class Mount(object):

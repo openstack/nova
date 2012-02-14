@@ -29,7 +29,7 @@ from nova.scheduler import api as scheduler_api
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.tests.hosts')
+LOG = logging.getLogger(__name__)
 # Simulate the hosts returned by the zone manager.
 HOST_LIST = [
         {"host_name": "host_c1", "service": "compute"},

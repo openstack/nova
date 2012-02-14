@@ -36,7 +36,7 @@ from nova import utils
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.wsgi')
+LOG = logging.getLogger(__name__)
 
 
 class Server(object):

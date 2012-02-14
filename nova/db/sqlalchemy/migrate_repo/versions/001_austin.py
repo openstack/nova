@@ -23,6 +23,7 @@ from sqlalchemy import Table, Text
 from nova import log as logging
 
 meta = MetaData()
+LOG = logging.getLogger(__name__)
 
 auth_tokens = Table('auth_tokens', meta,
         Column('created_at', DateTime(timezone=False)),
@@ -516,8 +517,8 @@ def upgrade(migrate_engine):
         try:
             table.create()
         except Exception:
-            logging.info(repr(table))
-            logging.exception('Exception while creating table')
+            LOG.info(repr(table))
+            LOG.exception('Exception while creating table')
             meta.drop_all(tables=tables)
             raise
 

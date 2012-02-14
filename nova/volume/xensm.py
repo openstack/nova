@@ -20,7 +20,7 @@ from nova.volume.driver import VolumeDriver
 from nova.virt.xenapi_conn import XenAPISession
 from nova.virt.xenapi.volumeops import VolumeOps
 
-LOG = logging.getLogger("nova.volume.xensm")
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 

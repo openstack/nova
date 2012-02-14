@@ -24,7 +24,7 @@ from nova import log as logging
 from nova.virt.vmwareapi import io_util
 from nova.virt.vmwareapi import read_write_util
 
-LOG = logging.getLogger("nova.virt.vmwareapi.vmware_images")
+LOG = logging.getLogger(__name__)
 
 QUEUE_BUFFER_SIZE = 10
 

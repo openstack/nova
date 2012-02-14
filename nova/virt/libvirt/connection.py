@@ -76,7 +76,7 @@ libvirt = None
 Template = None
 
 
-LOG = logging.getLogger('nova.virt.libvirt_conn')
+LOG = logging.getLogger(__name__)
 
 libvirt_opts = [
     cfg.StrOpt('rescue_image_id',

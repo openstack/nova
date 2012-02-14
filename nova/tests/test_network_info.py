@@ -21,7 +21,7 @@ from nova.network import model
 from nova import test
 from nova.tests import fake_network_cache_model
 
-LOG = logging.getLogger('nova.tests.network')
+LOG = logging.getLogger(__name__)
 
 
 class RouteTests(test.TestCase):
