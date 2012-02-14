@@ -125,10 +125,10 @@ def get_vlanid_and_vswitch_for_portgroup(session, pg_name):
                 "get_dynamic_property", host_mor,
                 "HostSystem", "config.network.portgroup")
     if not port_grps_on_host_ret:
-        excep = ("ESX SOAP server returned an empty port group "
-                "for the host system in its response")
+        excep = _("ESX SOAP server returned an empty port group "
+                  "for the host system in its response")
         LOG.exception(excep)
-        raise exception.Error(_(excep))
+        raise exception.Error(excep)
     port_grps_on_host = port_grps_on_host_ret.HostPortGroup
     for p_gp in port_grps_on_host:
         if p_gp.spec.name == pg_name:
