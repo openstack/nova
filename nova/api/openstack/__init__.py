@@ -41,6 +41,8 @@ class FaultWrapper(base_wsgi.Middleware):
             return req.get_response(self.application)
         except Exception as ex:
             LOG.exception(_("Caught error: %s"), unicode(ex))
+            msg_dict = dict(url=req.url, status=500)
+            LOG.info(_("%(url)s returned with HTTP %(status)d") % msg_dict)
             exc = webob.exc.HTTPInternalServerError()
             # NOTE(johannes): We leave the explanation empty here on
             # purpose. It could possibly have sensitive information
