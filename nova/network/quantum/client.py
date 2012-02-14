@@ -177,7 +177,7 @@ class Client(object):
 
             if self.logger:
                 self.logger.debug(
-                    _("Quantum Client Request:\n%(method)s %(action)s\n" %
+                    _("Quantum Client Request: %(method)s %(action)s" %
                                     locals()))
                 if body:
                     self.logger.debug(body)

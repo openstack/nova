@@ -327,7 +327,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             #                  network ID and it is not nullable
             vif_rec = self.add_virtual_interface(context,
                                                  instance_id,
-                                                 network_ref['id'])
+                                                 network_ref['id'],
+                                                 project_id)
 
             # talk to Quantum API to create and attach port.
             instance = db.instance_get(context, instance_id)
@@ -357,7 +358,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                     vif_rec, net_tenant_id)
         return self.get_instance_nw_info(context, instance_id,
                                          instance['uuid'],
-                                         rxtx_factor, host)
+                                         rxtx_factor, host,
+                                         project_id=project_id)
 
     @utils.synchronized('quantum-enable-dhcp')
     def enable_dhcp(self, context, quantum_net_id, network_ref, vif_rec,
@@ -415,17 +417,19 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             self.driver.update_dhcp_hostfile_with_text(interface_id, hosts)
             self.driver.restart_dhcp(context, interface_id, network_ref)
 
-    def add_virtual_interface(self, context, instance_id, network_id):
+    def add_virtual_interface(self, context, instance_id, network_id,
+                              net_tenant_id):
         # If we're not using melange, use the default means...
         if FLAGS.use_melange_mac_generation:
             return self._add_virtual_interface(context, instance_id,
-                                               network_id)
+                                               network_id, net_tenant_id)
 
         return super(QuantumManager, self).add_virtual_interface(context,
                                                                  instance_id,
                                                                  network_id)
 
-    def _add_virtual_interface(self, context, instance_id, network_id):
+    def _add_virtual_interface(self, context, instance_id, network_id,
+                               net_tenant_id):
         vif = {'instance_id': instance_id,
                'network_id': network_id,
                'uuid': str(utils.gen_uuid())}
@@ -437,12 +441,12 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         m_ipam = melange_ipam_lib.get_ipam_lib(self)
         vif['address'] = m_ipam.create_vif(vif['uuid'],
                                            vif['instance_id'],
-                                           context.project_id)
+                                           net_tenant_id)
 
         return self.db.virtual_interface_create(context, vif)
 
     def get_instance_nw_info(self, context, instance_id, instance_uuid,
-                                            rxtx_factor, host):
+                                            rxtx_factor, host, **kwargs):
         """This method is used by compute to fetch all network data
            that should be used when creating the VM.
 
@@ -455,8 +459,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
            Ideally this 'interface' will be more formally defined
            in the future.
         """
-        admin_context = context.elevated()
-        project_id = context.project_id
+        project_id = kwargs['project_id']
         vifs = db.virtual_interface_get_by_instance(context, instance_id)
 
         net_tenant_dict = dict((net_id, tenant_id)
@@ -466,7 +469,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         networks = {}
         for vif in vifs:
             if vif.get('network_id') is not None:
-                network = db.network_get(admin_context, vif['network_id'])
+                network = db.network_get(context.elevated(), vif['network_id'])
                 net_tenant_id = net_tenant_dict[network['uuid']]
                 if net_tenant_id is None:
                     net_tenant_id = FLAGS.quantum_default_tenant_id

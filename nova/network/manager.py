@@ -857,11 +857,14 @@ class NetworkManager(manager.SchedulerDependentManager):
         requested_networks = kwargs.get('requested_networks')
         vpn = kwargs['vpn']
         admin_context = context.elevated()
-        LOG.debug(_("network allocations for instance %s"), instance_id,
+        LOG.debug(_("network allocations for instance |%s|"), instance_id,
                                                             context=context)
         networks = self._get_networks_for_instance(admin_context,
                                         instance_id, project_id,
                                         requested_networks=requested_networks)
+        msg = _('networks retrieved for instance |%(instance_id)s|: '
+                '|%(networks)s|')
+        LOG.debug(msg, locals(), context=context)
         self._allocate_mac_addresses(context, instance_id, networks)
         self._allocate_fixed_ips(admin_context, instance_id,
                                  host, networks, vpn=vpn,
@@ -894,7 +897,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     @wrap_check_policy
     def get_instance_nw_info(self, context, instance_id, instance_uuid,
-                             rxtx_factor, host):
+                                            rxtx_factor, host, **kwargs):
         """Creates network info list for instance.
 
         called by allocate_for_instance and network_api

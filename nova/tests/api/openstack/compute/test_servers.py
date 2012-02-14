@@ -281,9 +281,9 @@ class ServersControllerTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {
@@ -349,9 +349,9 @@ class ServersControllerTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {
@@ -420,9 +420,9 @@ class ServersControllerTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {
@@ -490,9 +490,9 @@ class ServersControllerTest(test.TestCase):
 
         expected = {
             'addresses': {
-                'test0': [
-                    {'version': 4, 'addr': '192.168.0.100'},
-                    {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                'test1': [
+                    {'version': 4, 'addr': '192.168.1.100'},
+                    {'version': 6, 'addr': '2001:db8:0:1::1'}
                 ]
             },
         }
@@ -562,9 +562,9 @@ class ServersControllerTest(test.TestCase):
 
         expected = {
             'addresses': {
-                'test0': [
-                    {'version': 4, 'addr': '192.168.0.100'},
-                    {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'},
+                'test1': [
+                    {'version': 4, 'addr': '192.168.1.100'},
+                    {'version': 6, 'addr': '2001:db8:0:1::1'},
                     {'version': 4, 'addr': '10.10.10.100'},
                 ],
             },
@@ -583,14 +583,14 @@ class ServersControllerTest(test.TestCase):
                                                                 floaters)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
-        url = '/v2/fake/servers/%s/ips/test0' % FAKE_UUID
+        url = '/v2/fake/servers/%s/ips/test1' % FAKE_UUID
         req = fakes.HTTPRequest.blank(url)
-        res_dict = self.ips_controller.show(req, FAKE_UUID, 'test0')
+        res_dict = self.ips_controller.show(req, FAKE_UUID, 'test1')
 
         expected = {
-            'test0': [
-                {'version': 4, 'addr': '192.168.0.100'},
-                {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+            'test1': [
+                {'version': 4, 'addr': '192.168.1.100'},
+                {'version': 6, 'addr': '2001:db8:0:1::1'}
             ]
         }
         self.assertDictMatch(res_dict, expected)
@@ -2864,9 +2864,9 @@ class ServersViewBuilderTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {},
@@ -2933,9 +2933,9 @@ class ServersViewBuilderTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {},
@@ -3010,9 +3010,9 @@ class ServersViewBuilderTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {},
@@ -3074,9 +3074,9 @@ class ServersViewBuilderTest(test.TestCase):
                   ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {},
@@ -3136,9 +3136,9 @@ class ServersViewBuilderTest(test.TestCase):
                     ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {},
@@ -3200,9 +3200,9 @@ class ServersViewBuilderTest(test.TestCase):
                     ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {},
@@ -3268,9 +3268,9 @@ class ServersViewBuilderTest(test.TestCase):
                     ],
                 },
                 "addresses": {
-                    'test0': [
-                        {'version': 4, 'addr': '192.168.0.100'},
-                        {'version': 6, 'addr': 'fe80::dcad:beff:feef:1'}
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
                     ]
                 },
                 "metadata": {"Open": "Stack"},

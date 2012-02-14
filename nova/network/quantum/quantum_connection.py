@@ -141,12 +141,15 @@ class QuantumClientConnection(object):
         rv = []
         port_list = self.client.list_ports(network_id, tenant=tenant_id)
         for p in port_list["ports"]:
-            port_id = p["id"]
-            port = self.client.show_port_attachment(network_id,
+            try:
+                port_id = p["id"]
+                port = self.client.show_port_attachment(network_id,
                                 port_id, tenant=tenant_id)
-            # Skip ports without an attachment
-            if "id" not in port["attachment"]:
-                continue
-            rv.append({'port-id': port_id, 'attachment':
-                       port["attachment"]["id"]})
+                # Skip ports without an attachment
+                if "id" not in port["attachment"]:
+                    continue
+                rv.append({'port-id': port_id,
+                           'attachment': port["attachment"]["id"]})
+            except quantum_client.QuantumNotFoundException:
+                pass
         return rv

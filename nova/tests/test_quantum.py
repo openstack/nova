@@ -301,7 +301,8 @@ class QuantumManagerTestCase(QuantumNovaTestCase):
 
         nw_info = self.net_man.get_instance_nw_info(ctx, instance_ref['id'],
                                 instance_ref['uuid'],
-                                instance_ref['instance_type_id'], "")
+                                instance_ref['instance_type_id'], "",
+                                project_id=project_id)
 
         self._check_vifs(len(nw_info))
         self._validate_nw_info(nw_info, expected_labels)

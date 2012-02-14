@@ -168,7 +168,7 @@ def legacy_network_info(network_model):
                          mac=vif['address'],
                          vif_uuid=vif['id'],
                          rxtx_cap=get_meta(network, 'rxtx_cap', 0),
-                         dns=[get_ip(ip) for ip in subnet['dns']],
+                         dns=[get_ip(ip) for ip in subnet_v4['dns']],
                          ips=[fixed_ip_dict(ip, subnet)
                               for subnet in v4_subnets
                               for ip in subnet['ips']],
