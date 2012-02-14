@@ -146,6 +146,14 @@ class DbApiTestCase(test.TestCase):
         db_network = db.network_get(ctxt, network.id)
         self.assertEqual(network.uuid, db_network.uuid)
 
+    def test_network_create_with_duplicate_vlan(self):
+        ctxt = context.get_admin_context()
+        values1 = {'host': 'localhost', 'project_id': 'project1', 'vlan': 1}
+        values2 = {'host': 'something', 'project_id': 'project1', 'vlan': 1}
+        db.network_create_safe(ctxt, values1)
+        self.assertRaises(exception.DuplicateVlan,
+                          db.network_create_safe, ctxt, values2)
+
     def test_instance_update_with_instance_id(self):
         """ test instance_update() works when an instance id is passed """
         ctxt = context.get_admin_context()

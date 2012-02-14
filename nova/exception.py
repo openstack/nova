@@ -984,3 +984,7 @@ class SolidFireAPIStatusException(SolidFireAPIException):
 
 class SolidFireAPIDataException(SolidFireAPIException):
     message = _("Error in SolidFire API response: data=%(data)s")
+
+
+class DuplicateVlan(Duplicate):
+    message = _("Detected existing vlan with id %(vlan)")
