@@ -40,6 +40,13 @@ LOG = logging.getLogger(__name__)
 
 class ImageCacheManagerTestCase(test.TestCase):
 
+    def setUp(self):
+        super(ImageCacheManagerTestCase, self).setUp()
+        self.stock_instance_names = {'instance-00000001': '123',
+                                     'instance-00000002': '456',
+                                     'instance-00000003': '789',
+                                     'banana-42-hamster': '444'}
+
     def test_read_stored_checksum_missing(self):
         self.stubs.Set(os.path, 'exists', lambda x: False)
 
@@ -113,13 +120,16 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.stubs.Set(db, 'instance_get_all',
                        lambda x: [{'image_ref': 'image-1',
                                    'host': FLAGS.host,
-                                   'name': 'inst-1'},
+                                   'name': 'inst-1',
+                                   'uuid': '123'},
                                   {'image_ref': 'image-2',
                                    'host': FLAGS.host,
-                                   'name': 'inst-2'},
+                                   'name': 'inst-2',
+                                   'uuid': '456'},
                                   {'image_ref': 'image-2',
                                    'host': 'remotehost',
-                                   'name': 'inst-3'}])
+                                   'name': 'inst-3',
+                                   'uuid': '789'}])
 
         image_cache_manager = imagecache.ImageCacheManager()
 
@@ -150,6 +160,7 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         image_cache_manager = imagecache.ImageCacheManager()
         image_cache_manager.unexplained_images = [found]
+        image_cache_manager.instance_names = self.stock_instance_names
 
         inuse_images = image_cache_manager._list_backing_images()
 
@@ -172,6 +183,27 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         image_cache_manager = imagecache.ImageCacheManager()
         image_cache_manager.unexplained_images = [found]
+        image_cache_manager.instance_names = self.stock_instance_names
+
+        inuse_images = image_cache_manager._list_backing_images()
+
+        self.assertEquals(inuse_images, [found])
+        self.assertEquals(len(image_cache_manager.unexplained_images), 0)
+
+    def test_list_backing_images_instancename(self):
+        self.stubs.Set(os, 'listdir',
+                       lambda x: ['_base', 'banana-42-hamster'])
+        self.stubs.Set(os.path, 'exists',
+                       lambda x: x.find('banana-42-hamster') != -1)
+        self.stubs.Set(virtutils, 'get_disk_backing_file',
+                       lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
+
+        found = os.path.join(FLAGS.instances_path, '_base',
+                             'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
+
+        image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager.unexplained_images = [found]
+        image_cache_manager.instance_names = self.stock_instance_names
 
         inuse_images = image_cache_manager._list_backing_images()
 
