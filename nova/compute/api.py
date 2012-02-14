@@ -1729,6 +1729,9 @@ class API(base.Base):
     def get_instance_faults(self, context, instances):
         """Get all faults for a list of instance uuids."""
 
+        if not instances:
+            return {}
+
         for instance in instances:
             check_policy(context, 'get_instance_faults', instance)
 
