@@ -394,6 +394,11 @@ class _AuthManagerBaseTestCase(test.TestCase):
             self.assertEqual(old_user.secret, user.secret)
             self.assertEqual(old_user.is_admin(), user.is_admin())
 
+    def test_get_nonexistent_user_raises_notfound_exception(self):
+        self.assertRaises(exception.NotFound,
+                          self.manager.get_user,
+                          'joeblow')
+
 
 class AuthManagerLdapTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
