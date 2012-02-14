@@ -354,10 +354,9 @@ class LibvirtConnection(driver.ComputeDriver):
                         is_okay = True
 
                 if not is_okay:
-                    LOG.warning(_("Error from libvirt during destroy of "
-                                  "%(instance_name)s. Code=%(errcode)s "
-                                  "Error=%(e)s") %
-                                locals())
+                    LOG.warning(_("Error from libvirt during destroy. "
+                                  "Code=%(errcode)s Error=%(e)s") %
+                                locals(), instance=instance)
                     raise
 
             try:
@@ -368,8 +367,8 @@ class LibvirtConnection(driver.ComputeDriver):
             except libvirt.libvirtError as e:
                 errcode = e.get_error_code()
                 LOG.warning(_("Error from libvirt during saved instance "
-                              "removal %(instance_name)s. Code=%(errcode)s"
-                              " Error=%(e)s") % locals())
+                              "removal. Code=%(errcode)s Error=%(e)s") %
+                            locals(), instance=instance)
 
             try:
                 # NOTE(justinsb): We remove the domain definition. We probably
@@ -378,10 +377,9 @@ class LibvirtConnection(driver.ComputeDriver):
                 virt_dom.undefine()
             except libvirt.libvirtError as e:
                 errcode = e.get_error_code()
-                LOG.warning(_("Error from libvirt during undefine of "
-                              "%(instance_name)s. Code=%(errcode)s "
-                              "Error=%(e)s") %
-                            locals())
+                LOG.warning(_("Error from libvirt during undefine. "
+                              "Code=%(errcode)s Error=%(e)s") %
+                            locals(), instance=instance)
                 raise
 
         self.unplug_vifs(instance, network_info)
@@ -393,8 +391,8 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 state = self.get_info(instance_name)['state']
             except exception.NotFound:
-                msg = _("Instance %s destroyed successfully.") % instance_name
-                LOG.info(msg)
+                LOG.info(_("Instance destroyed successfully."),
+                         instance=instance)
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_destroy)
@@ -424,18 +422,19 @@ class LibvirtConnection(driver.ComputeDriver):
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
         instance_name = instance['name']
-        LOG.info(_('instance %(instance_name)s: deleting instance files'
-                ' %(target)s') % locals())
+        LOG.info(_('Deleting instance files %(target)s') % locals(),
+                 instance=instance)
         if FLAGS.libvirt_type == 'lxc':
             disk.destroy_container(self.container)
         if os.path.exists(target):
             shutil.rmtree(target)
 
-    def get_volume_connector(self, _instance):
+    def get_volume_connector(self, instance):
         if not self._initiator:
             self._initiator = libvirt_utils.get_iscsi_initiator()
             if not self._initiator:
-                LOG.warn(_('Could not determine iscsi initiator name'))
+                LOG.warn(_('Could not determine iscsi initiator name'),
+                         instance=instance)
         return {
             'ip': FLAGS.my_ip,
             'initiator': self._initiator,
@@ -607,13 +606,13 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 state = self.get_info(instance_name)['state']
             except exception.NotFound:
-                msg = _("During reboot, %s disappeared.") % instance_name
-                LOG.error(msg)
+                LOG.error(_("During reboot, instance disappeared."),
+                          instance=instance)
                 raise utils.LoopingCallDone
 
             if state == power_state.RUNNING:
-                msg = _("Instance %s rebooted successfully.") % instance_name
-                LOG.info(msg)
+                LOG.info(_("Instance rebooted successfully."),
+                         instance=instance)
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_reboot)
@@ -729,7 +728,7 @@ class LibvirtConnection(driver.ComputeDriver):
                            block_device_info=block_device_info)
 
         domain = self._create_new_domain(xml)
-        LOG.debug(_("instance is running"), instance=instance)
+        LOG.debug(_("Instance is running"), instance=instance)
         self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_boot():
@@ -794,7 +793,7 @@ class LibvirtConnection(driver.ComputeDriver):
             fpath = self._append_to_file(data, console_log)
         elif FLAGS.libvirt_type == 'lxc':
             # LXC is also special
-            LOG.info(_("Unable to read LXC console"))
+            LOG.info(_("Unable to read LXC console"), instance=instance)
         else:
             fpath = console_log
 
@@ -1270,11 +1269,11 @@ class LibvirtConnection(driver.ComputeDriver):
     def to_xml(self, instance, network_info, image_meta=None, rescue=False,
                block_device_info=None):
         # TODO(termie): cache?
-        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
+        LOG.debug(_('Starting toXML method'), instance=instance)
         xml_info = self._prepare_xml_info(instance, network_info, image_meta,
                                           rescue, block_device_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
-        LOG.debug(_('instance %s: finished toXML method'), instance['name'])
+        LOG.debug(_('Finished toXML method'), instance=instance)
         return xml
 
     def _lookup_by_name(self, instance_name):
