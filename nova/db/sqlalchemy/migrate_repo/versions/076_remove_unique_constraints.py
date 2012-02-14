@@ -21,46 +21,62 @@ from migrate.changeset.constraint import UniqueConstraint
 meta = MetaData()
 
 
-def upgrade(migrate_engine):
-    meta.bind = migrate_engine
-    table = Table('instance_types', meta, autoload=True)
+def _get_constraint_names(engine_name):
+
     # NOTE(vish): These constraint names may be dependent on the backend, but
     #             there doesn't seem to be we a way to determine the proper
     #             name for existing constraints. These names are correct for
-    #             mysql.
+    #             mysql and postgres.
+    if engine_name == "mysql":
+        return {
+            "instance_types_name": "name",
+            "instance_types_flavorid": "instance_types_flavorid_str_key",
+            "volume_types_name": "name",
+        }
+    else:
+        return {
+            "instance_types_name": "instance_types_name_key",
+            "instance_types_flavorid": "instance_types_flavorid_str_key",
+            "volume_types_name": "volume_types_name_key",
+        }
+
+
+def upgrade(migrate_engine):
+    meta.bind = migrate_engine
+    c_names = _get_constraint_names(migrate_engine.name)
+
+    table = Table('instance_types', meta, autoload=True)
     cons = UniqueConstraint('name',
-                            name='name',
+                            name=c_names['instance_types_name'],
                             table=table)
     cons.drop()
     cons = UniqueConstraint('flavorid',
-                            name='instance_types_flavorid_str_key',
+                            name=c_names['instance_types_flavorid'],
                             table=table)
     cons.drop()
     table = Table('volume_types', meta, autoload=True)
     cons = UniqueConstraint('name',
-                            name='name',
+                            name=c_names['volume_types_name'],
                             table=table)
     cons.drop()
 
 
 def downgrade(migrate_engine):
     meta.bind = migrate_engine
+    c_names = _get_constraint_names(migrate_engine.name)
+
     table = Table('instance_types', meta, autoload=True)
-    # NOTE(vish): These constraint names may be dependent on the backend, but
-    #             there doesn't seem to be we a way to determine the proper
-    #             name for existing constraints. These names are correct for
-    #             mysql.
     cons = UniqueConstraint('name',
-                            name='name',
+                            name=c_names['instance_types_name'],
                             table=table)
     cons.create()
     table = Table('instance_types', meta, autoload=True)
     cons = UniqueConstraint('flavorid',
-                            name='instance_types_flavorid_str_key',
+                            name=c_names['instance_types_flavorid'],
                             table=table)
     cons.create()
     table = Table('volume_types', meta, autoload=True)
     cons = UniqueConstraint('name',
-                            name='name',
+                            name=c_names['volume_types_name'],
                             table=table)
     cons.create()
