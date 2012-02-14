@@ -21,6 +21,7 @@
 Handling of VM disk images.
 """
 
+import errno
 import os
 
 from nova import exception
@@ -45,8 +46,13 @@ def fetch(context, image_href, path, _user_id, _project_id):
         with open(path, "wb") as image_file:
             metadata = image_service.get(context, image_id, image_file)
     except Exception:
-        os.unlink(path)
-        raise
+        with utils.save_and_reraise_exception():
+            try:
+                os.unlink(path)
+            except OSError, e:
+                if e.errno != errno.ENOENT:
+                    LOG.warn("unable to remove stale image '%s': %s" %
+                             (path, e.strerror))
     return metadata
 
 
