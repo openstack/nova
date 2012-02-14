@@ -895,11 +895,11 @@ class Controller(wsgi.Controller):
             reboot_type = body['reboot']['type'].upper()
             if not valid_reboot_types.count(reboot_type):
                 msg = _("Argument 'type' for reboot is not HARD or SOFT")
-                LOG.exception(msg)
+                LOG.error(msg)
                 raise exc.HTTPBadRequest(explanation=msg)
         else:
             msg = _("Missing argument 'type' for reboot")
-            LOG.exception(msg)
+            LOG.error(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
         context = req.environ['nova.context']
