@@ -97,7 +97,7 @@ class CloudTestCase(test.TestCase):
 
         # set up services
         self.compute = self.start_service('compute')
-        self.scheduter = self.start_service('scheduler')
+        self.scheduler = self.start_service('scheduler')
         self.network = self.start_service('network')
         self.volume = self.start_service('volume')
         self.image_service = utils.import_object(FLAGS.image_service)
