@@ -565,6 +565,7 @@ class API(base.Base):
                           "admin_password": admin_password,
                           "injected_files": injected_files,
                           "requested_networks": requested_networks,
+                          "is_first_time": True,
                           "filter_properties": filter_properties}})
 
     def _check_create_policies(self, context, availability_zone,

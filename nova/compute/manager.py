@@ -405,6 +405,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                       requested_networks=None,
                       injected_files=[],
                       admin_password=None,
+                      is_first_time=False,
                       **kwargs):
         """Launch a new instance with specified options."""
         context = context.elevated()
@@ -425,6 +426,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 with utils.save_and_reraise_exception():
                     self._deallocate_network(context, instance)
 
+            if (is_first_time and not instance['access_ip_v4']
+                              and not instance['access_ip_v6']):
+                self._update_access_ip(context, instance, network_info)
+
             self._notify_about_instance_usage(instance, "create.end",
                                               network_info=network_info)
 
@@ -439,6 +444,30 @@ class ComputeManager(manager.SchedulerDependentManager):
         except Exception as e:
             with utils.save_and_reraise_exception():
                 self._set_instance_error_state(context, instance_uuid)
+
+    def _update_access_ip(self, context, instance, nw_info):
+        """Update the access ip values for a given instance.
+
+        If FLAGS.default_access_ip_network_name is set, this method will
+        grab the corresponding network and set the access ip values
+        accordingly. Note that when there are multiple ips to choose from,
+        an arbitrary one will be chosen.
+        """
+
+        network_name = FLAGS.default_access_ip_network_name
+        if not network_name:
+            return
+
+        update_info = {}
+        for vif in nw_info:
+            if vif['network']['label'] == network_name:
+                for ip in vif.fixed_ips():
+                    if ip['version'] == 4:
+                        update_info['access_ip_v4'] = ip['address']
+                    if ip['version'] == 6:
+                        update_info['access_ip_v6'] = ip['address']
+        if update_info:
+            self.db.instance_update(context, instance.uuid, update_info)
 
     def _check_instance_not_already_created(self, context, instance):
         """Ensure an instance with the same name is not already present."""

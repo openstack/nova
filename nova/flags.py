@@ -454,7 +454,10 @@ global_opts = [
                 help='The volume API class to use'),
     cfg.StrOpt('security_group_handler',
                default='nova.network.quantum.sg.NullSecurityGroupHandler',
-               help='security group handler class')
-    ]
+               help='security group handler class'),
+    cfg.StrOpt('default_access_ip_network_name',
+               default=None,
+               help='Name of network to use to set access ips for instances'),
+]
 
 FLAGS.register_opts(global_opts)
