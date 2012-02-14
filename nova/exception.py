@@ -76,8 +76,7 @@ class ProcessExecutionError(IOError):
 
 
 class Error(Exception):
-    def __init__(self, message=None):
-        super(Error, self).__init__(message)
+    pass
 
 
 class EC2APIError(Error):
@@ -206,9 +205,6 @@ class MelangeConnectionFailed(NovaException):
 
 class NotAuthorized(NovaException):
     message = _("Not authorized.")
-
-    def __init__(self, *args, **kwargs):
-        super(NotAuthorized, self).__init__(*args, **kwargs)
 
 
 class AdminRequired(NotAuthorized):
@@ -405,9 +401,6 @@ class InvalidEc2Id(Invalid):
 
 class NotFound(NovaException):
     message = _("Resource could not be found.")
-
-    def __init__(self, *args, **kwargs):
-        super(NotFound, self).__init__(*args, **kwargs)
 
 
 class FlagNotSet(NotFound):
@@ -911,11 +904,8 @@ class ImageTooLarge(NovaException):
     message = _("Image is larger than instance type allows")
 
 
-class ZoneRequestError(Error):
-    def __init__(self, message=None):
-        if message is None:
-            message = _("1 or more Zones could not complete the request")
-        super(ZoneRequestError, self).__init__(message=message)
+class ZoneRequestError(NovaException):
+    message = _("1 or more Zones could not complete the request")
 
 
 class InstanceTypeMemoryTooSmall(NovaException):

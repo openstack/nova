@@ -259,7 +259,7 @@ class RedirectResult(exception.Error):
     def __init__(self, results):
         self.results = results
         super(RedirectResult, self).__init__(
-               message=_("Uncaught Zone redirection exception"))
+               _("Uncaught Zone redirection exception"))
 
 
 class reroute_compute(object):
