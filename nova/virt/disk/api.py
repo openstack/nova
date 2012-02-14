@@ -106,6 +106,26 @@ def extend(image, size):
     utils.execute('resize2fs', image, check_exit_code=False)
 
 
+def bind(src, target, instance_name):
+    """Bind device to a filesytem"""
+    if src:
+        utils.execute('touch', target, run_as_root=True)
+        utils.execute('mount', '-o', 'bind', src, target,
+                run_as_root=True)
+        s = os.stat(src)
+        cgroup_info = "c %s:%s rwm" % (os.major(s.st_rdev),
+                                       os.minor(s.st_rdev))
+        cgroups_path = \
+            "/sys/fs/cgroup/devices/sysdefault/libvirt/lxc/%s/devices.allow" \
+            % instance_name
+        utils.execute('echo', '>', cgroup_info, cgroups_path, run_as_root=True)
+
+
+def unbind(target):
+    if target:
+        utils.execute('umount', target, run_as_root=True)
+
+
 class _DiskImage(object):
     """Provide operations on a disk image file."""
 
