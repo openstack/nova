@@ -492,7 +492,7 @@ class LibvirtConnection(driver.ComputeDriver):
             if not xml:
                 raise exception.DiskNotFound(location=mount_device)
             if FLAGS.libvirt_type == 'lxc':
-                self._detach_lxc_volume(xml, vort_dom, instance_name)
+                self._detach_lxc_volume(xml, virt_dom, instance_name)
             else:
                 virt_dom.detachDevice(xml)
         finally:
