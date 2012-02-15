@@ -124,8 +124,8 @@ Support for a streamlined flow via dashboard will land in essex.
 
 Important Options
 -----------------
-* :option:`--vnc_enabled=[True|False]` - defaults to True. If this flag is
-  not set your instances will launch without vnc support.
+* :option:`--[no]vnc_enabled` - defaults to enabled. If this flag is
+  disabled your instances will launch without vnc support.
 * :option:`--vncserver_listen` - defaults to 127.0.0.1
   This is the address that vncservers will bind, and should be overridden in
   production deployments as a private address.  Applies to libvirt only.
