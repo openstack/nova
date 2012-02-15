@@ -500,55 +500,63 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         admin_context = context.elevated()
         vifs = db.virtual_interface_get_by_instance(admin_context,
                                                     instance_id)
-        for vif_ref in vifs:
-            interface_id = vif_ref['uuid']
-            q_tenant_id = project_id
 
-            network_ref = db.network_get(admin_context, vif_ref['network_id'])
-            net_id = network_ref['uuid']
+        for vif in vifs:
+            network = db.network_get(admin_context, vif['network_id'])
 
-            # port deallocate block
-            try:
-                port_id = None
-                port_id = self.q_conn.get_port_by_attachment(q_tenant_id,
-                                                    net_id, interface_id)
-                if not port_id:
-                    q_tenant_id = FLAGS.quantum_default_tenant_id
-                    port_id = self.q_conn.get_port_by_attachment(
-                        q_tenant_id, net_id, interface_id)
+            self.deallocate_port(vif['uuid'], network['uuid'], project_id,
+                                 instance_id)
 
-                if not port_id:
-                    LOG.error("Unable to find port with attachment: %s" %
-                              (interface_id))
-                else:
-                    self.q_conn.detach_and_delete_port(q_tenant_id,
-                                                       net_id, port_id)
-            except:
-                # except anything so the rest of deallocate can succeed
-                msg = _('port deallocation failed for instance: '
-                        '|%(instance_id)s|, port_id: |%(port_id)s|')
-                LOG.critical(msg % locals())
+            ipam_tenant_id = self.deallocate_ip_address(context,
+                                network['uuid'], project_id, vif, instance_id)
 
-            # ipam deallocation block
-            try:
-                ipam_tenant_id = self.ipam.get_tenant_id_by_net_id(context,
-                    net_id, vif_ref['uuid'], project_id)
+            if FLAGS.quantum_use_dhcp:
+                self.update_dhcp(context, ipam_tenant_id, network,
+                                 vif, project_id)
 
-                self.ipam.deallocate_ips_by_vif(context, ipam_tenant_id,
-                                                net_id, vif_ref)
+            db.virtual_interface_delete(admin_context, vif['id'])
 
-                db.virtual_interface_delete(admin_context, vif_ref['id'])
-                # If DHCP is enabled on this network then we need to update the
-                # leases and restart the server.
-                if FLAGS.quantum_use_dhcp:
-                    self.update_dhcp(context, ipam_tenant_id, network_ref,
-                                     vif_ref, project_id)
-            except:
-                # except anything so the rest of deallocate can succeed
-                vif_uuid = vif_ref['uuid']
-                msg = _('ipam deallocation failed for instance: '
-                        '|%(instance_id)s|, vif_uuid: |%(vif_uuid)s|')
-                LOG.critical(msg % locals())
+    def deallocate_port(self, interface_id, net_id, q_tenant_id, instance_id):
+        try:
+            port_id = self.q_conn.get_port_by_attachment(q_tenant_id,
+                                                         net_id, interface_id)
+            if not port_id:
+                q_tenant_id = FLAGS.quantum_default_tenant_id
+                port_id = self.q_conn.get_port_by_attachment(
+                    q_tenant_id, net_id, interface_id)
+
+            if not port_id:
+                LOG.error("Unable to find port with attachment: %s" %
+                          (interface_id))
+            else:
+                self.q_conn.detach_and_delete_port(q_tenant_id,
+                                                   net_id, port_id)
+        except Exception:
+            # except anything so the rest of deallocate can succeed
+
+            msg = _('port deallocation failed for instance: '
+                    '|%(instance_id)s|, port_id: |%(port_id)s|')
+            LOG.critical(msg % locals())
+
+    def deallocate_ip_address(self, context, net_id,
+                              project_id, vif_ref, instance_id):
+        ipam_tenant_id = None
+        try:
+            ipam_tenant_id = self.ipam.get_tenant_id_by_net_id(context,
+                                                               net_id,
+                                                               vif_ref['uuid'],
+                                                               project_id)
+
+            self.ipam.deallocate_ips_by_vif(context, ipam_tenant_id,
+                                            net_id, vif_ref)
+
+        except Exception:
+            # except anything so the rest of deallocate can succeed
+            vif_uuid = vif_ref['uuid']
+            msg = _('ipam deallocation failed for instance: '
+                    '|%(instance_id)s|, vif_uuid: |%(vif_uuid)s|')
+            LOG.critical(msg % locals())
+        return ipam_tenant_id
 
     # TODO(bgh): At some point we should consider merging enable_dhcp() and
     # update_dhcp()
