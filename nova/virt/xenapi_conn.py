@@ -506,8 +506,10 @@ class XenAPISession(object):
     def __init__(self, url, user, pw):
         self.XenAPI = self.get_imported_xenapi()
         self._sessions = queue.Queue()
+        self.host_uuid = None
         exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
-                            "(is the Dom0 disk full?)"))
+                                          "(is the Dom0 disk full?)"))
+        is_slave = False
         for i in xrange(FLAGS.xenapi_connection_concurrent):
             try:
                 session = self._create_session(url)
@@ -520,9 +522,20 @@ class XenAPISession(object):
                     session = self.XenAPI.Session(pool.swap_xapi_host(url,
                                                                       master))
                     session.login_with_password(user, pw)
+                    is_slave = True
                 else:
                     raise
             self._sessions.put(session)
+
+        if is_slave:
+            try:
+                aggr = db.aggregate_get_by_host(context.get_admin_context(),
+                                                FLAGS.host)
+                self.host_uuid = aggr.metadetails[FLAGS.host]
+            except exception.AggregateHostNotFound:
+                LOG.exception(_('Host is member of a pool, but DB '
+                                'says otherwise'))
+                raise
 
     def get_product_version(self):
         """Return a tuple of (major, minor, rev) for the host version"""
@@ -551,9 +564,12 @@ class XenAPISession(object):
             self._sessions.put(session)
 
     def get_xenapi_host(self):
-        """Return the xenapi host"""
+        """Return the xenapi host on which nova-compute runs on."""
         with self._get_session() as session:
-            return session.xenapi.session.get_this_host(session.handle)
+            if self.host_uuid:
+                return session.xenapi.host.get_by_uuid(self.host_uuid)
+            else:
+                return session.xenapi.session.get_this_host(session.handle)
 
     def call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread."""
@@ -578,6 +594,10 @@ class XenAPISession(object):
         # _get_session() acquires a session too, it can result in a deadlock
         # if multiple greenthreads race with each other. See bug 924918
         host = self.get_xenapi_host()
+        # NOTE(armando): pass the host uuid along with the args so that
+        # the plugin gets executed on the right host when using XS pools
+        if self.host_uuid:
+            args['host_uuid'] = self.host_uuid
         with self._get_session() as session:
             return tpool.execute(self._unwrap_plugin_exceptions,
                                  session.xenapi.Async.host.call_plugin,

@@ -1757,10 +1757,13 @@ class XenAPIAggregateTestCase(test.TestCase):
                                    'Dom0IptablesFirewallDriver',
                    host='host')
         xenapi_fake.reset()
+        host_ref = xenapi_fake.get_all('host')[0]
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()
         self.conn = xenapi_conn.get_connection(False)
-        self.fake_metadata = {'master_compute': 'host'}
+        self.fake_metadata = {'master_compute': 'host',
+                              'host': xenapi_fake.get_record('host',
+                                                             host_ref)['uuid']}
 
     def tearDown(self):
         super(XenAPIAggregateTestCase, self).tearDown()
@@ -1871,7 +1874,7 @@ class XenAPIAggregateTestCase(test.TestCase):
         aggregate = self._aggregate_setup(aggr_state=aggregate_states.ACTIVE,
                                           hosts=['host', 'host2'],
                                           metadata=self.fake_metadata)
-        self.assertRaises(exception.AggregateError,
+        self.assertRaises(exception.InvalidAggregateAction,
                           self.conn._pool.remove_from_aggregate,
                           self.context, aggregate, "host")
 

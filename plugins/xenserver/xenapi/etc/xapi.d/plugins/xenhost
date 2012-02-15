@@ -117,9 +117,9 @@ def _resume_compute(session, compute_ref, compute_uuid):
                 logging.exception('Waited %d seconds for the slave to '
                                   'become available.' % (c * DEFAULT_SLEEP))
                 time.sleep(DEFAULT_SLEEP)
-    raise pluginlib.PluginError('Unrecoverable error: the host has '
-                                'not come back for more than %d seconds'
-                                % (DEFAULT_SLEEP * (DEFAULT_TRIES + 1)))
+        raise pluginlib.PluginError('Unrecoverable error: the host has '
+                                    'not come back for more than %d seconds'
+                                    % (DEFAULT_SLEEP * (DEFAULT_TRIES + 1)))
 
 
 def _get_host_uuid():
@@ -315,7 +315,7 @@ def host_data(self, arg_dict):
     """Runs the commands on the xenstore host to return the current status
     information.
     """
-    host_uuid = _get_host_uuid()
+    host_uuid = arg_dict.get('host_uuid', _get_host_uuid())
     cmd = "xe host-param-list uuid=%s" % host_uuid
     resp = _run_command(cmd)
     parsed_data = parse_response(resp)

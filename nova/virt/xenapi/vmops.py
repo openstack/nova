@@ -181,7 +181,9 @@ class VMOps(object):
             raise Exception(_('Attempted to power on non-existent instance'
             ' bad instance id %s') % instance.id)
         LOG.debug(_("Starting instance %s"), instance.name)
-        self._session.call_xenapi('VM.start', vm_ref, False, False)
+        self._session.call_xenapi('VM.start_on', vm_ref,
+                                  self._session.get_xenapi_host(),
+                                  False, False)
 
     def _create_disks(self, context, instance, image_meta):
         disk_image_type = VMHelper.determine_disk_image_type(image_meta)

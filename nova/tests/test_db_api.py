@@ -338,6 +338,15 @@ class AggregateDBApiTestCase(test.TestCase):
         result = _create_aggregate(metadata=None)
         self.assertEqual(result['operational_state'], 'created')
 
+    def test_aggregate_create_avoid_name_conflict(self):
+        """Test we can avoid conflict on deleted aggregates."""
+        r1 = _create_aggregate(metadata=None)
+        db.aggregate_delete(context.get_admin_context(), r1.id)
+        values = {'name': r1.name, 'availability_zone': 'new_zone'}
+        r2 = _create_aggregate(values=values)
+        self.assertEqual(r2.name, values['name'])
+        self.assertEqual(r2.availability_zone, values['availability_zone'])
+
     def test_aggregate_create_raise_exist_exc(self):
         """Ensure aggregate names are distinct."""
         _create_aggregate(metadata=None)
@@ -382,6 +391,20 @@ class AggregateDBApiTestCase(test.TestCase):
         expected = db.aggregate_get(ctxt, result.id)
         self.assertEqual(_get_fake_aggr_hosts(), expected.hosts)
         self.assertEqual(_get_fake_aggr_metadata(), expected.metadetails)
+
+    def test_aggregate_get_by_host(self):
+        """Ensure we can get an aggregate by host."""
+        ctxt = context.get_admin_context()
+        r1 = _create_aggregate_with_hosts(context=ctxt)
+        r2 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org')
+        self.assertEqual(r1.id, r2.id)
+
+    def test_aggregate_get_by_host_not_found(self):
+        """Ensure AggregateHostNotFound is raised with unknown host."""
+        ctxt = context.get_admin_context()
+        _create_aggregate_with_hosts(context=ctxt)
+        self.assertRaises(exception.AggregateHostNotFound,
+                          db.aggregate_get_by_host, ctxt, 'unknown_host')
 
     def test_aggregate_delete_raise_not_found(self):
         """Ensure AggregateNotFound is raised when deleting an aggregate."""

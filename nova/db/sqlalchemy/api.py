@@ -4271,12 +4271,24 @@ def _aggregate_get_query(context, model_class, id_field, id,
 
 @require_admin_context
 def aggregate_create(context, values, metadata=None):
-    try:
+    session = get_session()
+    aggregate = _aggregate_get_query(context,
+                                     models.Aggregate,
+                                     models.Aggregate.name,
+                                     values['name'],
+                                     session=session,
+                                     read_deleted='yes').first()
+    if not aggregate:
         aggregate = models.Aggregate()
         values.setdefault('operational_state', aggregate_states.CREATED)
         aggregate.update(values)
-        aggregate.save()
-    except exception.DBError:
+        aggregate.save(session=session)
+    elif aggregate.deleted:
+        aggregate.update({'deleted': False,
+                          'deleted_at': None,
+                          'availability_zone': values['availability_zone']})
+        aggregate.save(session=session)
+    else:
         raise exception.AggregateNameExists(aggregate_name=values['name'])
     if metadata:
         aggregate_metadata_add(context, aggregate.id, metadata)
@@ -4294,6 +4306,20 @@ def aggregate_get(context, aggregate_id, read_deleted='no'):
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
 
     return aggregate
+
+
+@require_admin_context
+def aggregate_get_by_host(context, host, read_deleted='no'):
+    aggregate_host = _aggregate_get_query(context,
+                                          models.AggregateHost,
+                                          models.AggregateHost.host,
+                                          host,
+                                          read_deleted='no').first()
+
+    if not aggregate_host:
+        raise exception.AggregateHostNotFound(host=host)
+
+    return aggregate_get(context, aggregate_host.aggregate_id, read_deleted)
 
 
 @require_admin_context

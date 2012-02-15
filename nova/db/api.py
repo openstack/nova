@@ -1793,6 +1793,11 @@ def aggregate_get(context, aggregate_id, read_deleted='no'):
     return IMPL.aggregate_get(context, aggregate_id, read_deleted)
 
 
+def aggregate_get_by_host(context, host, read_deleted='no'):
+    """Get a specific aggregate by host"""
+    return IMPL.aggregate_get_by_host(context, host, read_deleted)
+
+
 def aggregate_update(context, aggregate_id, values):
     """Update the attributes of an aggregates. If values contains a metadata
     key, it updates the aggregate metadata too."""

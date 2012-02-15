@@ -202,6 +202,12 @@ class FakeSessionForVMTests(fake.SessionBase):
         vm['is_a_template'] = False
         vm['is_control_domain'] = False
         vm['domid'] = random.randrange(1, 1 << 16)
+        return vm
+
+    def VM_start_on(self, _1, vm_ref, host_ref, _2, _3):
+        vm_rec = self.VM_start(_1, vm_ref, _2, _3)
+        host_rec = fake.get_record('host', host_ref)
+        vm_rec['resident_on'] = host_rec['uuid']
 
     def VM_snapshot(self, session_ref, vm_ref, label):
         status = "Running"
@@ -334,23 +340,13 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
         pass
 
 
-class FakeSessionForMigrationTests(fake.SessionBase):
+class FakeSessionForMigrationTests(FakeSessionForVMTests):
     """Stubs out a XenAPISession for Migration tests"""
     def __init__(self, uri):
         super(FakeSessionForMigrationTests, self).__init__(uri)
 
     def VDI_get_by_uuid(self, *args):
         return 'hurr'
-
-    def VM_start(self, _1, ref, _2, _3):
-        vm = fake.get_record('VM', ref)
-        if vm['power_state'] != 'Halted':
-            raise fake.Failure(['VM_BAD_POWER_STATE', ref, 'Halted',
-                                  vm['power_state']])
-        vm['power_state'] = 'Running'
-        vm['is_a_template'] = False
-        vm['is_control_domain'] = False
-        vm['domid'] = random.randrange(1, 1 << 16)
 
     def VM_set_name_label(self, *args):
         pass
