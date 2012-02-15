@@ -721,10 +721,14 @@ class FloatingIpCommands(object):
         """Lists all floating ips (optionally by host)
         Note: if host is given, only active floating IPs are returned"""
         ctxt = context.get_admin_context()
-        if host is None:
-            floating_ips = db.floating_ip_get_all(ctxt)
-        else:
-            floating_ips = db.floating_ip_get_all_by_host(ctxt, host)
+        try:
+            if host is None:
+                floating_ips = db.floating_ip_get_all(ctxt)
+            else:
+                floating_ips = db.floating_ip_get_all_by_host(ctxt, host)
+        except exception.NoFloatingIpsDefined:
+            print _("No floating IP addresses have been defined.")
+            return
         for floating_ip in floating_ips:
             instance_id = None
             if floating_ip['fixed_ip_id']:
