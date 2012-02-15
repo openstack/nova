@@ -616,7 +616,7 @@ class ProjectCommands(object):
             print e
             print _("The above error may show that the certificate db has "
                     "not been created.\nPlease create a database by running "
-                    "a nova-api server on this host.")
+                    "a nova-cert server on this host.")
 
 AccountCommands = ProjectCommands
 
