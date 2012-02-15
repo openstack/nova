@@ -3695,7 +3695,7 @@ def bw_usage_get_all_by_filters(context, filters):
     filters = filters.copy()
 
     # Filters for exact matches that we can do along with the SQL query.
-    exact_match_filter_names = ["instance_id", "network_label",
+    exact_match_filter_names = ["instance_id", "mac",
             "start_period", "last_refreshed", "bw_in", "bw_out"]
 
     # Filter the query
