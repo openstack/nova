@@ -28,6 +28,7 @@ Extensions
     :maxdepth: 3
     
     ext_config_drive.rst
+    ext_floating_ip_dns.rst
     ext_floating_ips.rst
     ext_keypairs.rst
     ext_multinic.rst
