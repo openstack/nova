@@ -2005,11 +2005,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 continue
 
             disk_type = driver_nodes[cnt].get('type')
-            if disk_type == 'raw':
-                dk_size = int(os.path.getsize(path))
-                backing_file = ""
-                virt_size = 0
-            else:
+            if disk_type == "qcow2":
                 out, err = utils.execute('qemu-img', 'info', path)
 
                 # virtual size:
@@ -2022,6 +2018,10 @@ class LibvirtConnection(driver.ComputeDriver):
 
                 # backing file:(actual path:)
                 backing_file = libvirt_utils.get_disk_backing_file(path)
+            else:
+                dk_size = int(os.path.getsize(path))
+                backing_file = ""
+                virt_size = 0
 
             disk_info.append({'type': disk_type,
                               'path': path,
