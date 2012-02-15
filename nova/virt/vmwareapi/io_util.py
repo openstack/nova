@@ -98,7 +98,7 @@ class GlanceWriteThread(object):
                         self.stop()
                         exc_msg = (_("Glance image %s is in killed state") %
                                    self.image_id)
-                        LOG.exception(exc_msg)
+                        LOG.error(exc_msg)
                         self.done.send_exception(exception.Error(exc_msg))
                     elif image_status in ["saving", "queued"]:
                         greenthread.sleep(GLANCE_POLL_INTERVAL)
@@ -109,7 +109,7 @@ class GlanceWriteThread(object):
                                     "- %(state)s") % {
                                             "image_id": self.image_id,
                                             "state": image_status}
-                        LOG.exception(exc_msg)
+                        LOG.error(exc_msg)
                         self.done.send_exception(exception.Error(exc_msg))
                 except Exception, exc:
                     self.stop()
