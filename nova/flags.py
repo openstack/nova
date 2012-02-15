@@ -451,6 +451,9 @@ global_opts = [
     cfg.StrOpt('volume_api_class',
                 default='nova.volume.api.API',
                 help='The volume API class to use'),
+    cfg.StrOpt('security_group_handler',
+               default='nova.network.quantum.sg.NullSecurityGroupHandler',
+               help='security group handler class')
     ]
 
 FLAGS.register_opts(global_opts)
