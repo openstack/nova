@@ -31,6 +31,7 @@
     "compute_extension:createserverext": [],
     "compute_extension:deferred_delete": [],
     "compute_extension:disk_config": [],
+    "compute_extension:extended_server_attributes": [["rule:admin_api"]],
     "compute_extension:extended_status": [["rule:admin_api"]],
     "compute_extension:flavorextraspecs": [],
     "compute_extension:flavormanage": [["rule:admin_api"]],

@@ -161,6 +161,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "DeferredDelete",
             "DiskConfig",
             "ExtendedStatus",
+            "ExtendedServerAttributes",
             "FlavorExtraSpecs",
             "FlavorExtraData",
             "FlavorManage",
