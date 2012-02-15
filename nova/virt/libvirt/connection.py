@@ -1909,24 +1909,19 @@ class LibvirtConnection(driver.ComputeDriver):
                                            info['disk_size'])
             else:
                 # Creating backing file follows same way as spawning instances.
-                backing_file = os.path.join(FLAGS.instances_path,
-                                            '_base', info['backing_file'])
-
+                cache_name = os.path.basename(info['backing_file'])
                 # Remove any size tags which the cache manages
-                cached_file = info['backing_file'].split('_')[0]
+                cache_name = cache_name.split('_')[0]
 
-                if not os.path.exists(backing_file):
-                    self._cache_image(fn=libvirt_utils.fetch_image,
-                        context=ctxt,
-                        target=info['path'],
-                        fname=cached_file,
-                        cow=FLAGS.use_cow_images,
-                        image_id=instance_ref['image_ref'],
-                        user_id=instance_ref['user_id'],
-                        project_id=instance_ref['project_id'],
-                        size=instance_ref['ephemeral_gb'])
-
-                libvirt_utils.create_cow_image(backing_file, instance_disk)
+                self._cache_image(fn=libvirt_utils.fetch_image,
+                    context=ctxt,
+                    target=instance_disk,
+                    fname=cache_name,
+                    cow=FLAGS.use_cow_images,
+                    image_id=instance_ref['image_ref'],
+                    user_id=instance_ref['user_id'],
+                    project_id=instance_ref['project_id'],
+                    size=info['disk_size'])
 
         # if image has kernel and ramdisk, just download
         # following normal way.
