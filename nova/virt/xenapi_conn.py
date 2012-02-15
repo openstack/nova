@@ -211,8 +211,9 @@ class XenAPIConnection(driver.ComputeDriver):
         # TODO(Vek): Need to pass context in for access to auth_token
         self._vmops.confirm_migration(migration, instance, network_info)
 
-    def finish_revert_migration(self, instance):
+    def finish_revert_migration(self, instance, network_info):
         """Finish reverting a resize, powering back on the instance"""
+        # NOTE(vish): Xen currently does not use network info.
         self._vmops.finish_revert_migration(instance)
 
     def finish_migration(self, context, migration, instance, disk_info,
@@ -252,9 +253,10 @@ class XenAPIConnection(driver.ComputeDriver):
         self._vmops.unpause(instance)
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type):
+                                   instance_type, network_info):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
+        # NOTE(vish): Xen currently does not use network info.
         return self._vmops.migrate_disk_and_power_off(context, instance,
                                                       dest, instance_type)
 
