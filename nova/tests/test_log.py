@@ -1,4 +1,5 @@
 import cStringIO
+import json
 import logging
 
 from nova import context
@@ -124,3 +125,56 @@ class NovaLoggerTestCase(test.TestCase):
     def test_child_log_has_level_of_parent_flag(self):
         l = log.getLogger('nova-test.foo')
         self.assertEqual(logging.AUDIT, l.logger.getEffectiveLevel())
+
+
+class JSONFormatterTestCase(test.TestCase):
+    def setUp(self):
+        super(JSONFormatterTestCase, self).setUp()
+        self.log = log.getLogger('test-json')
+        self.stream = cStringIO.StringIO()
+        handler = logging.StreamHandler(self.stream)
+        handler.setFormatter(log.JSONFormatter())
+        self.log.logger.addHandler(handler)
+        self.log.logger.setLevel(logging.DEBUG)
+
+    def test_json(self):
+        test_msg = 'This is a %(test)s line'
+        test_data = {'test': 'log'}
+        self.log.debug(test_msg, test_data)
+
+        data = json.loads(self.stream.getvalue())
+        self.assertTrue(data)
+        self.assertTrue('extra' in data)
+        self.assertEqual('test-json', data['name'])
+
+        self.assertEqual(test_msg % test_data, data['message'])
+        self.assertEqual(test_msg, data['msg'])
+        self.assertEqual(test_data, data['args'])
+
+        self.assertEqual('test_log.py', data['filename'])
+        self.assertEqual('test_json', data['funcname'])
+
+        self.assertEqual('DEBUG', data['levelname'])
+        self.assertEqual(logging.DEBUG, data['levelno'])
+        self.assertFalse(data['traceback'])
+
+    def test_json_exception(self):
+        test_msg = 'This is %s'
+        test_data = 'exceptional'
+        try:
+            raise Exception('This is exceptional')
+        except Exception:
+            self.log.exception(test_msg, test_data)
+
+        data = json.loads(self.stream.getvalue())
+        self.assertTrue(data)
+        self.assertTrue('extra' in data)
+        self.assertEqual('test-json', data['name'])
+
+        self.assertEqual(test_msg % test_data, data['message'])
+        self.assertEqual(test_msg, data['msg'])
+        self.assertEqual([test_data], data['args'])
+
+        self.assertEqual('ERROR', data['levelname'])
+        self.assertEqual(logging.ERROR, data['levelno'])
+        self.assertTrue(data['traceback'])
