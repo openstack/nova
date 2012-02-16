@@ -16,6 +16,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import mox
+import sys
 
 from nova import context
 from nova import db
@@ -1512,6 +1513,11 @@ class LdapDNSTestCase(test.TestCase):
     """Tests nova.network.ldapdns.LdapDNS"""
     def setUp(self):
         super(LdapDNSTestCase, self).setUp()
+
+        self.saved_ldap = sys.modules.get('ldap')
+        import nova.auth.fakeldap
+        sys.modules['ldap'] = nova.auth.fakeldap
+
         temp = utils.import_object('nova.network.ldapdns.FakeLdapDNS')
         self.driver = temp
         self.driver.create_domain(domain1)
@@ -1521,6 +1527,7 @@ class LdapDNSTestCase(test.TestCase):
         super(LdapDNSTestCase, self).tearDown()
         self.driver.delete_domain(domain1)
         self.driver.delete_domain(domain2)
+        sys.modules['ldap'] = self.saved_ldap
 
     def test_ldap_dns_domains(self):
         domains = self.driver.get_domains()
