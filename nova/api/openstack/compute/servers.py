@@ -222,9 +222,9 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
             security_groups = []
             for sg_node in self.find_children_named(node, "security_group"):
                 item = {}
-                name_node = self.find_first_child_named(sg_node, "name")
-                if name_node:
-                    item["name"] = self.extract_text(name_node)
+                name = self.find_attribute_or_element(sg_node, 'name')
+                if name:
+                    item["name"] = name
                     security_groups.append(item)
             return security_groups
         else:
