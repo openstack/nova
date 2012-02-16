@@ -197,7 +197,8 @@ class RPCAllocateFixedIP(object):
             if host is None:
                 host = rpc.call(context, FLAGS.network_topic,
                                 {'method': 'set_network_host',
-                                 'args': {'network_ref': network}})
+                                 'args': {'network_ref':
+                                 utils.to_primitive(network)}})
             if host != self.host:
                 # need to call allocate_fixed_ip to correct network host
                 topic = self.db.queue_get_for(context,
