@@ -277,6 +277,9 @@ class Instance(BASE, NovaBase):
     # EC2 disable_api_termination
     disable_terminate = Column(Boolean(), default=False, nullable=False)
 
+    # Openstack zone name
+    zone_name = Column(String(255))
+
 
 class InstanceInfoCache(BASE, NovaBase):
     """
@@ -876,6 +879,10 @@ class Zone(BASE, NovaBase):
     password = Column(String(255))
     weight_offset = Column(Float(), default=0.0)
     weight_scale = Column(Float(), default=1.0)
+    is_parent = Column(Boolean())
+    rpc_host = Column(String(255))
+    rpc_port = Column(Integer())
+    rpc_virtual_host = Column(String(255))
 
 
 class Aggregate(BASE, NovaBase):

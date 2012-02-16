@@ -441,7 +441,16 @@ global_opts = [
                 help='Cache glance images locally'),
     cfg.BoolOpt('use_cow_images',
                 default=True,
-                help='Whether to use cow images')
+                help='Whether to use cow images'),
+    cfg.StrOpt('compute_api_class',
+                default='nova.compute.api.API',
+                help='The compute API class to use'),
+    cfg.StrOpt('network_api_class',
+                default='nova.network.api.API',
+                help='The network API class to use'),
+    cfg.StrOpt('volume_api_class',
+                default='nova.volume.api.API',
+                help='The volume API class to use'),
     ]
 
 FLAGS.register_opts(global_opts)

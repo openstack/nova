@@ -27,8 +27,6 @@ import kombu.entity
 import kombu.messaging
 import kombu.connection
 
-from nova import context
-from nova import exception
 from nova import flags
 from nova.rpc import common as rpc_common
 from nova.rpc import amqp as rpc_amqp
@@ -310,7 +308,7 @@ class NotifyPublisher(TopicPublisher):
 class Connection(object):
     """Connection object."""
 
-    def __init__(self):
+    def __init__(self, server_params=None):
         self.consumers = []
         self.consumer_thread = None
         self.max_retries = FLAGS.rabbit_max_retries
@@ -323,11 +321,25 @@ class Connection(object):
         self.interval_max = 30
         self.memory_transport = False
 
-        self.params = dict(hostname=FLAGS.rabbit_host,
-                          port=FLAGS.rabbit_port,
-                          userid=FLAGS.rabbit_userid,
-                          password=FLAGS.rabbit_password,
-                          virtual_host=FLAGS.rabbit_virtual_host)
+        if server_params is None:
+            server_params = {}
+
+        # Keys to translate from server_params to kombu params
+        server_params_to_kombu_params = {'username': 'userid'}
+
+        params = {}
+        for sp_key, value in server_params.iteritems():
+            p_key = server_params_to_kombu_params.get(sp_key, sp_key)
+            params[p_key] = value
+
+        params.setdefault('hostname', FLAGS.rabbit_host)
+        params.setdefault('port', FLAGS.rabbit_port)
+        params.setdefault('userid', FLAGS.rabbit_userid)
+        params.setdefault('password', FLAGS.rabbit_password)
+        params.setdefault('virtual_host', FLAGS.rabbit_virtual_host)
+
+        self.params = params
+
         if FLAGS.fake_rabbit:
             self.params['transport'] = 'memory'
             self.memory_transport = True
@@ -588,10 +600,10 @@ class Connection(object):
         """Create a consumer that calls a method in a proxy object"""
         if fanout:
             self.declare_fanout_consumer(topic,
-                            rpc_amqp.ProxyCallback(proxy, Connection.pool))
+                    rpc_amqp.ProxyCallback(proxy, Connection.pool))
         else:
             self.declare_topic_consumer(topic,
-                            rpc_amqp.ProxyCallback(proxy, Connection.pool))
+                    rpc_amqp.ProxyCallback(proxy, Connection.pool))
 
 
 Connection.pool = rpc_amqp.Pool(connection_cls=Connection)
@@ -620,6 +632,18 @@ def cast(context, topic, msg):
 def fanout_cast(context, topic, msg):
     """Sends a message on a fanout exchange without waiting for a response."""
     return rpc_amqp.fanout_cast(context, topic, msg, Connection.pool)
+
+
+def cast_to_server(context, server_params, topic, msg):
+    """Sends a message on a topic to a specific server."""
+    return rpc_amqp.cast_to_server(context, server_params, topic, msg,
+            Connection.pool)
+
+
+def fanout_cast_to_server(context, server_params, topic, msg):
+    """Sends a message on a fanout exchange to a specific server."""
+    return rpc_amqp.cast_to_server(context, server_params, topic, msg,
+            Connection.pool)
 
 
 def notify(context, topic, msg):
