@@ -18,6 +18,7 @@ queues.  Casts will block, but this is very useful for tests.
 """
 
 import inspect
+import json
 import signal
 import sys
 import time
@@ -124,8 +125,15 @@ def create_connection(new=True):
     return Connection()
 
 
+def check_serialize(msg):
+    """Make sure a message intended for rpc can be serialized."""
+    json.dumps(msg)
+
+
 def multicall(context, topic, msg, timeout=None):
     """Make a call that returns multiple times."""
+
+    check_serialize(msg)
 
     method = msg.get('method')
     if not method:
@@ -158,7 +166,7 @@ def cast(context, topic, msg):
 
 
 def notify(context, topic, msg):
-    pass
+    check_serialize(msg)
 
 
 def cleanup():
@@ -167,6 +175,7 @@ def cleanup():
 
 def fanout_cast(context, topic, msg):
     """Cast to all consumers of a topic"""
+    check_serialize(msg)
     method = msg.get('method')
     if not method:
         return

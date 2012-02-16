@@ -549,7 +549,7 @@ class API(base.Base):
                 locals())
 
         request_spec = {
-            'image': image,
+            'image': utils.to_primitive(image),
             'instance_properties': base_options,
             'instance_type': instance_type,
             'num_instances': num_instances,
@@ -1384,14 +1384,16 @@ class API(base.Base):
         if not FLAGS.allow_resize_to_same_host:
             filter_properties['ignore_hosts'].append(instance['host'])
 
-        self._cast_scheduler_message(context,
-                    {"method": "prep_resize",
-                     "args": {"topic": FLAGS.compute_topic,
-                              "instance_uuid": instance['uuid'],
-                              "update_db": False,
-                              "instance_type_id": new_instance_type['id'],
-                              "request_spec": request_spec,
-                              "filter_properties": filter_properties}})
+        args = {
+            "topic": FLAGS.compute_topic,
+            "instance_uuid": instance['uuid'],
+            "update_db": False,
+            "instance_type_id": new_instance_type['id'],
+            "request_spec": utils.to_primitive(request_spec),
+            "filter_properties": filter_properties,
+        }
+        self._cast_scheduler_message(context, {"method": "prep_resize",
+                                     "args": args})
 
     @wrap_check_policy
     def add_fixed_ip(self, context, instance, network_id):
