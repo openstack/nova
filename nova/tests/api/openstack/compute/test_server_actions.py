@@ -36,15 +36,7 @@ FLAGS = flags.FLAGS
 FAKE_UUID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
 
-def return_server_by_id(context, id):
-    return stub_instance(id)
-
-
-def return_server_by_uuid(context, uuid):
-    return stub_instance(1, uuid=uuid)
-
-
-def return_server_by_uuid_not_found(context, uuid):
+def return_server_not_found(context, uuid):
     raise exception.NotFound()
 
 
@@ -52,24 +44,9 @@ def instance_update(context, instance_id, kwargs):
     return stub_instance(instance_id)
 
 
-def return_server_with_attributes(id, **kwargs):
-    """NOTE: This won't work unless you stub out both
-    nova.db.instance_get() and nova.db.instance_get_by_uuid()
-    to be safe. Most all tests only require instance_get_by_uuid().
-    """
-    def _return_server(context, id_or_uuid):
-        return stub_instance(id, **kwargs)
-    return _return_server
-
-
-def return_server_with_state(vm_state, task_state=None):
-    return return_server_with_attributes(vm_state=vm_state,
-                                         task_state=task_state)
-
-
-def return_server_with_uuid_and_state(vm_state, task_state=None):
-    def _return_server(context, id):
-        return return_server_with_state(vm_state, task_state)
+def return_server_with_attributes(**kwargs):
+    def _return_server(context, uuid):
+        return stub_instance(1, **kwargs)
     return _return_server
 
 
@@ -154,8 +131,8 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_auth(self.stubs)
-        self.stubs.Set(nova.db, 'instance_get', return_server_by_id)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server_by_uuid)
+        return_server = return_server_with_attributes()
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
         self.stubs.Set(nova.db, 'instance_update', instance_update)
 
         fakes.stub_out_glance(self.stubs)
@@ -262,7 +239,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_reboot_not_found(self):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_by_uuid_not_found)
+                       return_server_not_found)
 
         body = dict(reboot=dict(type="HARD"))
         req = fakes.HTTPRequest.blank(self.url)
@@ -284,9 +261,8 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_rebuild_accepted_minimum(self):
-        new_return_server = return_server_with_attributes(id=1, image_ref='2')
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
+        return_server = return_server_with_attributes(image_ref='2')
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
 
         body = {
@@ -310,9 +286,8 @@ class ServerActionsControllerTest(test.TestCase):
         # is missing from response. See lp bug 921814
         self.flags(enable_instance_password=False)
 
-        new_return_server = return_server_with_attributes(id=1, image_ref='2')
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
+        return_server = return_server_with_attributes(image_ref='2')
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
 
         body = {
@@ -350,10 +325,8 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_accepted_with_metadata(self):
         metadata = {'new': 'metadata'}
 
-        new_return_server = return_server_with_attributes(id=1,
-                                                        metadata=metadata)
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
+        return_server = return_server_with_attributes(metadata=metadata)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -425,9 +398,8 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertTrue('personality' not in body['server'])
 
     def test_rebuild_admin_pass(self):
-        new_return_server = return_server_with_attributes(id=1, image_ref='2')
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
+        return_server = return_server_with_attributes(image_ref='2')
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -447,9 +419,8 @@ class ServerActionsControllerTest(test.TestCase):
         # is missing from response. See lp bug 921814
         self.flags(enable_instance_password=False)
 
-        new_return_server = return_server_with_attributes(id=1, image_ref='2')
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
+        return_server = return_server_with_attributes(image_ref='2')
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
 
         body = {
             "rebuild": {
@@ -467,7 +438,6 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_server_not_found(self):
         def server_not_found(self, instance_id):
             raise exception.InstanceNotFound(instance_id=instance_id)
-        self.stubs.Set(nova.db, 'instance_get', server_not_found)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', server_not_found)
 
         body = {
