@@ -29,13 +29,13 @@ def _get_constraint_names(engine_name):
     #             mysql and postgres.
     if engine_name == "mysql":
         return {
-            "instance_types_name": "name",
+            "instance_types_name": ("name", "instance_types_name_key"),
             "instance_types_flavorid": "instance_types_flavorid_str_key",
             "volume_types_name": "name",
         }
     else:
         return {
-            "instance_types_name": "instance_types_name_key",
+            "instance_types_name": ("instance_types_name_key",),
             "instance_types_flavorid": "instance_types_flavorid_str_key",
             "volume_types_name": "volume_types_name_key",
         }
@@ -46,10 +46,11 @@ def upgrade(migrate_engine):
     c_names = _get_constraint_names(migrate_engine.name)
 
     table = Table('instance_types', meta, autoload=True)
-    cons = UniqueConstraint('name',
-                            name=c_names['instance_types_name'],
-                            table=table)
-    cons.drop()
+    for constraint_name in c_names['instance_types_name']:
+        cons = UniqueConstraint('name',
+                                name=constraint_name,
+                                table=table)
+        cons.drop()
     cons = UniqueConstraint('flavorid',
                             name=c_names['instance_types_flavorid'],
                             table=table)
@@ -66,10 +67,11 @@ def downgrade(migrate_engine):
     c_names = _get_constraint_names(migrate_engine.name)
 
     table = Table('instance_types', meta, autoload=True)
-    cons = UniqueConstraint('name',
-                            name=c_names['instance_types_name'],
-                            table=table)
-    cons.create()
+    for constraint_name in c_names['instance_types_name']:
+        cons = UniqueConstraint('name',
+                                name=constraint_name,
+                                table=table)
+        cons.create()
     table = Table('instance_types', meta, autoload=True)
     cons = UniqueConstraint('flavorid',
                             name=c_names['instance_types_flavorid'],
