@@ -685,6 +685,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.floating_dns_manager = temp
         self.network_api = network_api.API()
         self.compute_api = compute_api.API()
+        self.sgh = utils.import_object(FLAGS.security_group_handler)
 
         # NOTE(tr3buchet: unless manager subclassing NetworkManager has
         #                 already imported ipam, import nova ipam here
@@ -761,7 +762,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         groups = instance_ref['security_groups']
         group_ids = [group['id'] for group in groups]
         self.compute_api.trigger_security_group_members_refresh(admin_context,
-                                                                    group_ids)
+                                                                group_ids)
+        self.sgh.trigger_security_group_members_refresh(admin_context,
+                                                        group_ids)
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         # NOTE(jkoelker) This is just a stub function. Managers supporting

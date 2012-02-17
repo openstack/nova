@@ -202,6 +202,7 @@ class CloudController(object):
         self.volume_api = volume.API()
         self.compute_api = compute.API(network_api=self.network_api,
                                        volume_api=self.volume_api)
+        self.sgh = utils.import_object(FLAGS.security_group_handler)
 
     def __str__(self):
         return 'CloudController'
@@ -622,6 +623,7 @@ class CloudController(object):
         except KeyError:
             prevalues.append(kwargs)
         rule_id = None
+        rule_ids = []
         for values in prevalues:
             rulesvalues = self._rule_args_to_dict(context, values)
             if not rulesvalues:
@@ -634,11 +636,14 @@ class CloudController(object):
                                                            values_for_rule)
                 if rule_id:
                     db.security_group_rule_destroy(context, rule_id)
+                    rule_ids.append(rule_id)
         if rule_id:
             # NOTE(vish): we removed a rule, so refresh
             self.compute_api.trigger_security_group_rules_refresh(
                     context,
                     security_group_id=security_group['id'])
+            self.sgh.trigger_security_group_rule_destroy_refresh(
+                    context, rule_ids)
             return True
         raise exception.EC2APIError(_("No rule for the specified parameters."))
 
@@ -685,15 +690,19 @@ class CloudController(object):
                     raise exception.EC2APIError(_(err) % values_for_rule)
                 postvalues.append(values_for_rule)
 
+        rule_ids = []
         for values_for_rule in postvalues:
             security_group_rule = db.security_group_rule_create(
                     context,
                     values_for_rule)
+            rule_ids.append(security_group_rule['id'])
 
         if postvalues:
             self.compute_api.trigger_security_group_rules_refresh(
                     context,
                     security_group_id=security_group['id'])
+            self.sgh.trigger_security_group_rule_create_refresh(
+                    context, rule_ids)
             return True
 
         raise exception.EC2APIError(_("No rule for the specified parameters."))
@@ -744,6 +753,8 @@ class CloudController(object):
                  'description': group_description}
         group_ref = db.security_group_create(context, group)
 
+        self.sgh.trigger_security_group_create_refresh(context, group)
+
         return {'securityGroupSet': [self._format_security_group(context,
                                                                  group_ref)]}
 
@@ -765,6 +776,9 @@ class CloudController(object):
                 raise notfound(security_group_id=group_id)
         LOG.audit(_("Delete security group %s"), group_name, context=context)
         db.security_group_destroy(context, security_group.id)
+
+        self.sgh.trigger_security_group_destroy_refresh(context,
+                                                        security_group.id)
         return True
 
     def get_console_output(self, context, instance_id, **kwargs):

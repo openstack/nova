@@ -180,6 +180,7 @@ class SecurityGroupController(object):
     def __init__(self):
         self.compute_api = compute.API()
         super(SecurityGroupController, self).__init__()
+        self.sgh = utils.import_object(FLAGS.security_group_handler)
 
     def _format_security_group_rule(self, context, rule):
         sg_rule = {}
@@ -237,6 +238,8 @@ class SecurityGroupController(object):
         security_group = self._get_security_group(context, id)
         LOG.audit(_("Delete security group %s"), id, context=context)
         db.security_group_destroy(context, security_group.id)
+        self.sgh.trigger_security_group_destroy_refresh(
+            context, security_group.id)
 
         return webob.Response(status_int=202)
 
@@ -291,6 +294,7 @@ class SecurityGroupController(object):
                  'name': group_name,
                  'description': group_description}
         group_ref = db.security_group_create(context, group)
+        self.sgh.trigger_security_group_create_refresh(context, group)
 
         return {'security_group': self._format_security_group(context,
                                                                  group_ref)}
@@ -367,7 +371,8 @@ class SecurityGroupRulesController(SecurityGroupController):
             raise exc.HTTPBadRequest(explanation=msg)
 
         security_group_rule = db.security_group_rule_create(context, values)
-
+        self.sgh.trigger_security_group_rule_create_refresh(
+            context, [security_group_rule['id']])
         self.compute_api.trigger_security_group_rules_refresh(context,
                                     security_group_id=security_group['id'])
 
@@ -496,6 +501,8 @@ class SecurityGroupRulesController(SecurityGroupController):
         LOG.audit(msg, security_group['name'], context=context)
 
         db.security_group_rule_destroy(context, rule['id'])
+        self.sgh.trigger_security_group_rule_destroy_refresh(
+            context, [rule['id']])
         self.compute_api.trigger_security_group_rules_refresh(context,
                                     security_group_id=security_group['id'])
 
@@ -538,6 +545,7 @@ class SecurityGroupActionController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(SecurityGroupActionController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
+        self.sgh = utils.import_object(FLAGS.security_group_handler)
 
     @wsgi.action('addSecurityGroup')
     def _addSecurityGroup(self, req, id, body):
@@ -561,6 +569,8 @@ class SecurityGroupActionController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, id)
             self.compute_api.add_security_group(context, instance, group_name)
+            self.sgh.trigger_instance_add_security_group_refresh(
+                context, instance, group_name)
         except exception.SecurityGroupNotFound as exp:
             raise exc.HTTPNotFound(explanation=unicode(exp))
         except exception.InstanceNotFound as exp:
@@ -593,6 +603,8 @@ class SecurityGroupActionController(wsgi.Controller):
             instance = self.compute_api.get(context, id)
             self.compute_api.remove_security_group(context, instance,
                                                    group_name)
+            self.sgh.trigger_instance_remove_security_group_refresh(
+                context, instance, group_name)
         except exception.SecurityGroupNotFound as exp:
             raise exc.HTTPNotFound(explanation=unicode(exp))
         except exception.InstanceNotFound as exp:
