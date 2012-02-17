@@ -693,7 +693,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         elevated = context.elevated()
         instance = self.db.instance_get_by_uuid(elevated, instance_uuid)
         compute_utils.notify_usage_exists(instance, current_period=True)
-        self._delete_instance(context, instance)
+        try:
+            self._delete_instance(context, instance)
+        except exception.InstanceNotFound as e:
+            LOG.warn(e)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
