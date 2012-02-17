@@ -32,6 +32,11 @@
 """
 
 import gettext
+import logging
 
 
-gettext.install("nova", unicode=1)
+gettext.install('nova', unicode=1)
+# NOTE(jkoelker) This configures the root logger if it is not already
+#                configured so messages from logging setup can be written
+#                to the console
+logging.basicConfig(format='%(message)s')

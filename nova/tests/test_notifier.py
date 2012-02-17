@@ -105,7 +105,7 @@ class NotifierTestCase(test.TestCase):
             'nova.notifier.rabbit_notifier')
         self.stubs.Set(nova.flags.FLAGS, 'publish_errors', True)
         LOG = log.getLogger('nova')
-        LOG.setup_from_flags()
+        log.setup()
         msgs = []
 
         def mock_notify(context, topic, data):
