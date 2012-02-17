@@ -25,11 +25,12 @@ from nova import log as logging
 from nova.network.quantum import client as quantum_client
 from nova.network.quantum import fake_client
 from nova.network.quantum import manager as quantum_manager
-from nova.network.quantum import melange_connection
 from nova.network.quantum import quantum_connection
+from nova.network.quantum import melange_connection
+from nova.network.quantum import melange_ipam_lib
+
 from nova import test
 from nova import utils
-from nova.network import manager
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
@@ -217,6 +218,30 @@ class QuantumNovaTestCase(test.TestCase):
             project_id=n['project_id'],
             priority=n['priority'])
         n['uuid'] = nwks[0]['uuid']
+
+
+class QuantumDeallocationTestCase(QuantumNovaTestCase):
+    def test_deallocate_port(self):
+        quantum = self.mox.CreateMock(quantum_connection\
+        .QuantumClientConnection)
+        quantum.get_port_by_attachment('q_tenant_id', 'net_id',
+                                       'interface_id').AndReturn('port_id')
+        quantum.detach_and_delete_port('q_tenant_id', 'net_id', 'port_id')
+        self.net_man.q_conn = quantum
+
+        self.mox.ReplayAll()
+
+        self.net_man.deallocate_port('interface_id', 'net_id', 'q_tenant_id',
+                                     'instance_id')
+
+    def test_deallocate_ip_address(self):
+        ipam = self.mox.CreateMock(melange_ipam_lib.QuantumMelangeIPAMLib)
+        ipam.get_tenant_id_by_net_id('context', 'net_id', {'uuid': 1},
+                                     'project_id').AndReturn('ipam_tenant_id')
+        self.net_man.ipam = ipam
+        self.mox.ReplayAll()
+        self.net_man.deallocate_ip_address('context', 'net_id', 'project_id',
+                {'uuid': 1}, 'instance_id')
 
 
 class QuantumManagerTestCase(QuantumNovaTestCase):
