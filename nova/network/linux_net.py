@@ -448,6 +448,7 @@ def init_host(ip_range=None):
 
     iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
                                           '-s %(range)s -d %(range)s '
+                                          '-m conntrack ! --ctstate DNAT '
                                           '-j ACCEPT' %
                                           {'range': ip_range})
     iptables_manager.apply()

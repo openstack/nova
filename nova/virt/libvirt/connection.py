@@ -782,6 +782,17 @@ class LibvirtConnection(driver.ComputeDriver):
             LOG.info(_("Automatically confirming migration %d"), migration.id)
             self.compute_api.confirm_resize(ctxt, migration.instance_uuid)
 
+    def _enable_hairpin(self, instance):
+        interfaces = self.get_interfaces(instance['name'])
+        for interface in interfaces:
+            utils.execute('tee',
+                          '/sys/class/net/%s/brport/hairpin_mode' % interface,
+                          '>',
+                          '/dev/null',
+                          process_input='1',
+                          run_as_root=True,
+                          check_exit_code=[0, 1])
+
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception()
@@ -796,6 +807,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         domain = self._create_new_domain(xml)
         LOG.debug(_("Instance is running"), instance=instance)
+        self._enable_hairpin(instance)
         self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_boot():
@@ -1435,9 +1447,9 @@ class LibvirtConnection(driver.ComputeDriver):
         for node in ret:
             devdst = None
 
-            for child in node.children:
-                if child.name == 'target':
-                    devdst = child.prop('dev')
+            for child in list(node):
+                if child.tag == 'target':
+                    devdst = child.attrib['dev']
 
             if devdst is None:
                 continue
