@@ -63,6 +63,12 @@ class API(base.Base):
                         {'method': 'get_fixed_ip',
                          'args': {'id': id}})
 
+    def get_fixed_ip_by_address(self, context, address):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_fixed_ip_by_address',
+                         'args': {'address': address}})
+
     def get_floating_ip(self, context, id):
         return rpc.call(context,
                         FLAGS.network_topic,

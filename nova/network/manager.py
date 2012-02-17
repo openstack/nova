@@ -49,7 +49,6 @@ import datetime
 import functools
 import itertools
 import math
-import random
 import re
 import socket
 
@@ -1475,6 +1474,11 @@ class NetworkManager(manager.SchedulerDependentManager):
     def get_fixed_ip(self, context, id):
         """Return a fixed ip"""
         fixed = self.db.fixed_ip_get(context, id)
+        return dict(fixed.iteritems())
+
+    @wrap_check_policy
+    def get_fixed_ip_by_address(self, context, address):
+        fixed = self.db.fixed_ip_get_by_address(context, address)
         return dict(fixed.iteritems())
 
     def get_vif_by_mac_address(self, context, mac_address):

@@ -37,7 +37,7 @@ USER_DATA_STRING = ("This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
 
 
-def return_non_existing_server_by_address(context, address, *args, **kwarg):
+def return_non_existing_address(*args, **kwarg):
     raise exception.NotFound()
 
 
@@ -70,10 +70,15 @@ class MetadataTestCase(test.TestCase):
         def instance_get_list(*args, **kwargs):
             return [self.instance]
 
+        def get_fixed_ip_by_address(*args, **kwargs):
+            return {'instance_id': self.instance['id']}
+
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
         self.stubs.Set(network.API, 'get_floating_ips_by_fixed_address',
                 fake_get_floating_ips_by_fixed_address)
+        self.stubs.Set(network.API, 'get_fixed_ip_by_address',
+                       get_fixed_ip_by_address)
         self.stubs.Set(api, 'instance_get', instance_get)
         self.stubs.Set(api, 'instance_get_all_by_filters', instance_get_list)
         self.app = handler.MetadataRequestHandler()
@@ -102,16 +107,14 @@ class MetadataTestCase(test.TestCase):
                          'default\nother')
 
     def test_user_data_non_existing_fixed_address(self):
-        self.stubs.Set(api, 'instance_get_all_by_filters',
-                       return_non_existing_server_by_address)
+        self.stubs.Set(network.API, 'get_fixed_ip_by_address',
+                       return_non_existing_address)
         request = webob.Request.blank('/user-data')
         request.remote_addr = "127.1.1.1"
         response = request.get_response(self.app)
         self.assertEqual(response.status_int, 404)
 
     def test_user_data_none_fixed_address(self):
-        self.stubs.Set(api, 'instance_get_all_by_filters',
-                       return_non_existing_server_by_address)
         request = webob.Request.blank('/user-data')
         request.remote_addr = None
         response = request.get_response(self.app)
