@@ -80,15 +80,6 @@ class QuantumNovaIPAMLib(object):
                "uuid": quantum_net_id}
         db.network_update(admin_context, network['id'], net)
 
-    def get_network_id_by_cidr(self, context, cidr, project_id):
-        """ Grabs Quantum network UUID based on IPv4 CIDR. """
-        admin_context = context.elevated()
-        network = db.network_get_by_cidr(admin_context, cidr)
-        if not network:
-            raise Exception(_("No network with fixed_range = %s" %
-                              cidr))
-        return network['uuid']
-
     def delete_subnets_by_net_id(self, context, net_id, project_id):
         """Deletes a network based on Quantum UUID.  Uses FlatManager
            delete_network to avoid duplication.

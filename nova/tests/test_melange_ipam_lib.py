@@ -53,22 +53,6 @@ class MelangeIpamLibTestCase(test.TestCase):
                                             'address': 'vif_ref_address'})
         self.assertEqual(ips[0], 'ip_address')
 
-    def test_get_network_id_by_cidr_finds_block(self):
-        self.m_conn.get_blocks('tenant_id').AndReturn(self._block_list())
-
-        self.mox.ReplayAll()
-
-        net_id = self.ipam.get_network_id_by_cidr('context', 'cidr',
-                                                  'tenant_id')
-        self.assertEqual(net_id, 'network_id')
-
-    def test_get_network_id_by_cidr_raises_on_not_found(self):
-        self.m_conn.get_blocks('tenant_id').AndReturn({'ip_blocks': []})
-        self.mox.ReplayAll()
-        self.assertRaises(exception.NotFound,
-                          self.ipam.get_network_id_by_cidr,
-                          'context', 'cidr', 'tenant_id')
-
     def test_delete_subnets_by_net_id_deletes_block(self):
         context = self.mox.CreateMockAnything()
         context.elevated().AndReturn('elevated')
@@ -142,14 +126,29 @@ class MelangeIpamLibTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.ipam.get_project_and_global_net_ids(context, 'project_id')
 
-    def test_get_tenant_id_by_net_id(self):
+    def test_get_tenant_id_by_net_id_returns_id(self):
         FLAGS.quantum_default_tenant_id = 'qdti'
 
         self.m_conn.get_allocated_ips('net_id', 'vif_id',
-                                      None).AndReturn('tenant_id')
+                                      'qdti').AndReturn({})
         self.mox.ReplayAll()
-        self.ipam.get_tenant_id_by_net_id('context', 'net_id', 'vif_id',
-                                          'project_id')
+        value = self.ipam.get_tenant_id_by_net_id('context', 'net_id',
+                                          'vif_id', 'project_id')
+        self.assertEqual(value, 'qdti')
+
+    def test_get_tenant_id_by_net_id_returns_none_if_none_found(self):
+        FLAGS.quantum_default_tenant_id = 'qdti'
+
+        self.m_conn.get_allocated_ips('net_id', 'vif_id',
+                                        'qdti').AndRaise(KeyError())
+        self.m_conn.get_allocated_ips('net_id', 'vif_id',
+                                        'project_id').AndRaise(KeyError())
+        self.m_conn.get_allocated_ips('net_id', 'vif_id',
+                                        None).AndRaise(KeyError())
+        self.mox.ReplayAll()
+        value = self.ipam.get_tenant_id_by_net_id('context', 'net_id',
+                                          'vif_id', 'project_id')
+        self.assertEqual(value, None)
 
     def test_get_subnets_by_net_id(self):
         ips = [{'ip_block': {'network_id': 'network_id',
