@@ -82,6 +82,11 @@ class ImageCacheManager(object):
         self.unexplained_images = []
         self.originals = []
 
+        # These are populated by a call to _list_running_instances()
+        self.used_images = {}
+        self.image_popularity = {}
+        self.instance_names = {}
+
     def _store_image(self, base_dir, ent, original=False):
         """Store a base image for later examination."""
         entpath = os.path.join(base_dir, ent)
@@ -112,9 +117,12 @@ class ImageCacheManager(object):
         """List running instances (on all compute nodes)."""
         self.used_images = {}
         self.image_popularity = {}
+        self.instance_names = {}
 
         instances = db.instance_get_all(context)
         for instance in instances:
+            self.instance_names[instance['name']] = instance['uuid']
+
             image_ref_str = str(instance['image_ref'])
             local, remote, insts = self.used_images.get(image_ref_str,
                                                         (0, 0, []))
@@ -132,9 +140,11 @@ class ImageCacheManager(object):
         """List the backing images currently in use."""
         inuse_images = []
         for ent in os.listdir(FLAGS.instances_path):
-            if ent.startswith('instance-'):
+            if ent in self.instance_names:
+                LOG.debug(_('%s is a valid instance name'), ent)
                 disk_path = os.path.join(FLAGS.instances_path, ent, 'disk')
                 if os.path.exists(disk_path):
+                    LOG.debug(_('%s has a disk file'), ent)
                     backing_file = virtutils.get_disk_backing_file(disk_path)
                     LOG.debug(_('Instance %(instance)s is backed by '
                                 '%(backing)s'),
