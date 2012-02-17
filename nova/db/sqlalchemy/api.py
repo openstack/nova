@@ -1610,7 +1610,9 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     session = get_session()
     query = session.query(models.Instance)
 
-    query = query.options(joinedload('security_groups')).\
+    query = query.options(joinedload('info_cache')).\
+                  options(joinedload('security_groups')).\
+                  options(joinedload('metadata')).\
                   options(joinedload('instance_type')).\
                   filter(or_(models.Instance.terminated_at == None,
                              models.Instance.terminated_at > begin))
