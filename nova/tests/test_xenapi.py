@@ -236,6 +236,12 @@ class XenAPIVMTestCase(test.TestCase):
         instances = self.conn.list_instances()
         self.assertEquals(instances, [])
 
+    def test_get_rrd_server(self):
+        self.flags(xenapi_connection_url='myscheme://myaddress/')
+        server_info = vm_utils.get_rrd_server()
+        self.assertEqual(server_info[0], 'myscheme')
+        self.assertEqual(server_info[1], 'myaddress')
+
     def test_get_diagnostics(self):
         instance = self._create_instance()
         self.conn.get_diagnostics(instance)
