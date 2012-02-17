@@ -122,6 +122,19 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def get_num_instances(self):
+        """Return the total number of virtual machines.
+
+        Return the number of virtual machines that the hypervisor knows
+        about.
+
+        :note This implementation works for all drivers, but it is
+              not particularly efficient. Maintainers of the virt drivers are
+              encouraged to override this method with something more
+              efficient.
+        """
+        return len(self.list_instances())
+
     def instance_exists(self, instance_id):
         """Checks existence of an instance on the host.
 

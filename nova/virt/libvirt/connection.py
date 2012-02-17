@@ -279,6 +279,10 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             return libvirt.openAuth(uri, auth, 0)
 
+    def get_num_instances(self):
+        """Efficient override of base instance_exists method."""
+        return self._conn.numOfDomains()
+
     def instance_exists(self, instance_id):
         """Efficient override of base instance_exists method."""
         try:
