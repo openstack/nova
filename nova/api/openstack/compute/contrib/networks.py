@@ -111,7 +111,7 @@ class Networks(extensions.ExtensionDescriptor):
     name = "Networks"
     alias = "os-networks"
     namespace = "http://docs.openstack.org/compute/ext/networks/api/v1.1"
-    updated = "2011-12-23 00:00:00"
+    updated = "2011-12-23T00:00:00+00:00"
 
     def get_resources(self):
         member_actions = {'action': 'POST'}
