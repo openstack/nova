@@ -203,11 +203,16 @@ class VMWareESXConnection(driver.ComputeDriver):
 
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""
-        pass
+        raise NotImplementedError()
+
+    def host_maintenance_mode(self, host, mode):
+        """Start/Stop host maintenance window. On start, it triggers
+        guest VMs evacuation."""
+        raise NotImplementedError()
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
-        pass
+        raise NotImplementedError()
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""

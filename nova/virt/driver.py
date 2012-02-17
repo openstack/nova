@@ -544,6 +544,11 @@ class ComputeDriver(object):
         """Reboots, shuts down or powers up the host."""
         raise NotImplementedError()
 
+    def host_maintenance_mode(self, host, mode):
+        """Start/Stop host maintenance window. On start, it triggers
+        guest VMs evacuation."""
+        raise NotImplementedError()
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         # TODO(Vek): Need to pass context in for access to auth_token

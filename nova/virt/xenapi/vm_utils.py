@@ -175,8 +175,8 @@ class VMHelper(HelperBase):
             'memory_target': mem,
             'name_description': '',
             'name_label': instance.name,
-            'other_config': {'allowvssprovider': False},
-            'other_config': {},
+            'other_config': {'allowvssprovider': str(False),
+                             'nova_uuid': str(instance.uuid), },
             'PCI_bus': '',
             'platform': {'acpi': 'true', 'apic': 'true', 'pae': 'true',
                          'viridian': 'true', 'timeoffset': '0'},
@@ -952,7 +952,8 @@ class VMHelper(HelperBase):
     @classmethod
     def list_vms(cls, session):
         for vm_ref, vm_rec in cls.get_all_refs_and_recs(session, 'VM'):
-            if vm_rec["is_a_template"] or vm_rec["is_control_domain"]:
+            if (vm_rec["resident_on"] != session.get_xenapi_host() or
+                vm_rec["is_a_template"] or vm_rec["is_control_domain"]):
                 continue
             else:
                 yield vm_ref, vm_rec

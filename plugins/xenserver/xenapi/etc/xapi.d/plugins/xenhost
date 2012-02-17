@@ -253,7 +253,8 @@ def _power_action(action):
     result = _run_command("xe vm-shutdown --multiple power-state=running")
     if result:
         raise pluginlib.PluginError(result)
-    cmds = {"reboot": "xe host-reboot", "startup": "xe host-power-on",
+    cmds = {"reboot": "xe host-reboot",
+            "startup": "xe host-power-on",
             "shutdown": "xe host-shutdown"}
     result = _run_command(cmds[action])
     # Should be empty string

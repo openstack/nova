@@ -1464,6 +1464,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.host_power_action(host, action)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def host_maintenance_mode(self, context, host, mode):
+        """Start/Stop host maintenance window. On start, it triggers
+        guest VMs evacuation."""
+        return self.driver.host_maintenance_mode(host, mode)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def set_host_enabled(self, context, host=None, enabled=None):
         """Sets the specified host's ability to accept new instances."""
         return self.driver.set_host_enabled(host, enabled)

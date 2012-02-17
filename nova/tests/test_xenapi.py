@@ -20,7 +20,6 @@ import ast
 import contextlib
 import datetime
 import functools
-import json
 import os
 import re
 import stubout
@@ -1114,58 +1113,58 @@ class CompareVersionTestCase(test.TestCase):
         self.assertTrue(vmops.cmp_version('1.2.3', '1.2.3.4') < 0)
 
 
-class FakeXenApi(object):
-    """Fake XenApi for testing HostState."""
-
-    class FakeSR(object):
-        def get_record(self, ref):
-            return {'virtual_allocation': 10000,
-                    'physical_utilisation': 20000}
-
-    SR = FakeSR()
-
-
-class FakeSession(object):
-    """Fake Session class for HostState testing."""
-
-    def async_call_plugin(self, *args):
-        return None
-
-    def wait_for_task(self, *args):
-        vm = {'total': 10,
-              'overhead': 20,
-              'free': 30,
-              'free-computed': 40}
-        return json.dumps({'host_memory': vm})
-
-    def call_xenapi(self, method, *args):
-        f = FakeXenApi()
-        for m in method.split('.'):
-            f = getattr(f, m)
-        return f(*args)
-
-
-class HostStateTestCase(test.TestCase):
+class XenAPIHostTestCase(test.TestCase):
     """Tests HostState, which holds metrics from XenServer that get
     reported back to the Schedulers."""
 
-    @classmethod
-    def _fake_safe_find_sr(cls, session):
-        """None SR ref since we're ignoring it in FakeSR."""
-        return None
+    def setUp(self):
+        super(XenAPIHostTestCase, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        self.flags(xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        xenapi_fake.reset()
+        xenapi_fake.create_local_srs()
+        self.conn = xenapi_conn.get_connection(False)
 
     def test_host_state(self):
-        self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(vm_utils.VMHelper, 'safe_find_sr',
-                       self._fake_safe_find_sr)
-        host_state = xenapi_conn.HostState(FakeSession())
-        stats = host_state._stats
+        stats = self.conn.get_host_stats()
         self.assertEquals(stats['disk_total'], 10000)
         self.assertEquals(stats['disk_used'], 20000)
         self.assertEquals(stats['host_memory_total'], 10)
         self.assertEquals(stats['host_memory_overhead'], 20)
         self.assertEquals(stats['host_memory_free'], 30)
         self.assertEquals(stats['host_memory_free_computed'], 40)
+
+    def _test_host_action(self, method, action, expected=None):
+        result = method('host', action)
+        if not expected:
+            expected = action
+        self.assertEqual(result, expected)
+
+    def test_host_reboot(self):
+        self._test_host_action(self.conn.host_power_action, 'reboot')
+
+    def test_host_shutdown(self):
+        self._test_host_action(self.conn.host_power_action, 'shutdown')
+
+    def test_host_startup(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.host_power_action, 'host', 'startup')
+
+    def test_host_maintenance_on(self):
+        self._test_host_action(self.conn.host_maintenance_mode,
+                               True, 'on_maintenance')
+
+    def test_host_maintenance_off(self):
+        self._test_host_action(self.conn.host_maintenance_mode,
+                               False, 'off_maintenance')
+
+    def test_set_enable_host_enable(self):
+        self._test_host_action(self.conn.set_host_enabled, True, 'enabled')
+
+    def test_set_enable_host_disable(self):
+        self._test_host_action(self.conn.set_host_enabled, False, 'disabled')
 
 
 class XenAPIAutoDiskConfigTestCase(test.TestCase):

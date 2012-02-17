@@ -80,11 +80,12 @@ def log_db_contents(msg=None):
 def reset():
     for c in _CLASSES:
         _db_content[c] = {}
-    create_host('fake')
+    host = create_host('fake')
     create_vm('fake',
               'Running',
               is_a_template=False,
-              is_control_domain=True)
+              is_control_domain=True,
+              host_ref=host)
 
 
 def reset_table(table):
@@ -112,14 +113,15 @@ def create_network(name_label, bridge):
 
 
 def create_vm(name_label, status,
-              is_a_template=False, is_control_domain=False):
+              is_a_template=False, is_control_domain=False, host_ref=None):
     domid = status == 'Running' and random.randrange(1, 1 << 16) or -1
     return _create_object('VM',
                           {'name_label': name_label,
                            'domid': domid,
                            'power-state': status,
                            'is_a_template': is_a_template,
-                           'is_control_domain': is_control_domain})
+                           'is_control_domain': is_control_domain,
+                           'resident_on': host_ref})
 
 
 def destroy_vm(vm_ref):
@@ -220,12 +222,16 @@ def create_local_srs():
                   other_config={'i18n-original-value-name_label':
                                 'Local storage',
                                 'i18n-key': 'local-storage'},
+                  physical_utilisation=20000,
+                  virtual_allocation=10000,
                   host_ref=host_ref)
         create_sr(name_label='Local storage ISO',
                   type='iso',
                   other_config={'i18n-original-value-name_label':
                                 'Local storage ISO',
                                 'i18n-key': 'local-storage-iso'},
+                  physical_utilisation=40000,
+                  virtual_allocation=80000,
                   host_ref=host_ref)
 
 
@@ -234,13 +240,14 @@ def create_sr(**kwargs):
              'SR',
              {'name_label': kwargs.get('name_label'),
               'type': kwargs.get('type'),
-              'content_type': 'user',
-              'shared': False,
-              'physical_size': str(1 << 30),
-              'physical_utilisation': str(0),
-              'virtual_allocation': str(0),
-              'other_config': kwargs.get('other_config'),
-              'VDIs': []})
+              'content_type': kwargs.get('type', 'user'),
+              'shared': kwargs.get('shared', False),
+              'physical_size': kwargs.get('physical_size', str(1 << 30)),
+              'physical_utilisation': str(
+                                        kwargs.get('physical_utilisation', 0)),
+              'virtual_allocation': str(kwargs.get('virtual_allocation', 0)),
+              'other_config': kwargs.get('other_config', {}),
+              'VDIs': kwargs.get('VDIs', [])})
     pbd_ref = create_pbd('', kwargs.get('host_ref'), sr_ref, True)
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
     return sr_ref
@@ -254,6 +261,7 @@ def _create_local_pif(host_ref):
                               'VLAN': -1,
                               'device': 'fake0',
                               'host_uuid': host_ref})
+    return pif_ref
 
 
 def _create_object(table, obj):
@@ -494,6 +502,18 @@ class SessionBase(object):
             return ''
         elif (plugin, method) == ('migration', 'transfer_vhd'):
             return ''
+        elif (plugin, method) == ('xenhost', 'host_data'):
+            return json.dumps({'host_memory': {'total': 10,
+                                               'overhead': 20,
+                                               'free': 30,
+                                               'free-computed': 40}, })
+        elif (plugin == 'xenhost' and method in ['host_reboot',
+                                                 'host_startup',
+                                                 'host_shutdown']):
+            return json.dumps({"power_action": method[5:]})
+        elif (plugin, method) == ('xenhost', 'set_host_enabled'):
+            enabled = 'enabled' if _5.get('enabled') == 'true' else 'disabled'
+            return json.dumps({"status": enabled})
         else:
             raise Exception('No simulation in host_call_plugin for %s,%s' %
                             (plugin, method))
@@ -679,7 +699,6 @@ class SessionBase(object):
         # Add RO fields
         if cls == 'VM':
             obj['power_state'] = 'Halted'
-
         return ref
 
     def _destroy(self, name, params):

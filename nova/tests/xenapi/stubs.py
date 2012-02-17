@@ -206,8 +206,7 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def VM_start_on(self, _1, vm_ref, host_ref, _2, _3):
         vm_rec = self.VM_start(_1, vm_ref, _2, _3)
-        host_rec = fake.get_record('host', host_ref)
-        vm_rec['resident_on'] = host_rec['uuid']
+        vm_rec['resident_on'] = host_ref
 
     def VM_snapshot(self, session_ref, vm_ref, label):
         status = "Running"

@@ -2108,6 +2108,11 @@ class LibvirtConnection(driver.ComputeDriver):
         """Reboots, shuts down or powers up the host."""
         raise NotImplementedError()
 
+    def host_maintenance_mode(self, host, mode):
+        """Start/Stop host maintenance window. On start, it triggers
+        guest VMs evacuation."""
+        raise NotImplementedError()
+
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
         pass

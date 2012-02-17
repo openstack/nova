@@ -58,9 +58,6 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 """
 
 import contextlib
-import json
-import random
-import sys
 import time
 import urlparse
 import xmlrpclib
@@ -73,11 +70,11 @@ from eventlet import timeout
 from nova import context
 from nova import db
 from nova import exception
-from nova import utils
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.virt import driver
+from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi.vmops import VMOps
@@ -178,6 +175,7 @@ class XenAPIConnection(driver.ComputeDriver):
         self._session = XenAPISession(url, user, pw)
         self._volumeops = VolumeOps(self._session)
         self._host_state = None
+        self._host = host.Host(self._session)
         self._product_version = self._session.get_product_version()
         self._vmops = VMOps(self._session, self._product_version)
         self._initiator = None
@@ -186,7 +184,7 @@ class XenAPIConnection(driver.ComputeDriver):
     @property
     def host_state(self):
         if not self._host_state:
-            self._host_state = HostState(self._session)
+            self._host_state = host.HostState(self._session)
         return self._host_state
 
     def init_host(self, host):
@@ -481,14 +479,19 @@ class XenAPIConnection(driver.ComputeDriver):
         raise an exception.
         """
         if action in ("reboot", "shutdown"):
-            return self._vmops.host_power_action(host, action)
+            return self._host.host_power_action(host, action)
         else:
             msg = _("Host startup on XenServer is not supported.")
             raise NotImplementedError(msg)
 
     def set_host_enabled(self, host, enabled):
         """Sets the specified host's ability to accept new instances."""
-        return self._vmops.set_host_enabled(host, enabled)
+        return self._host.set_host_enabled(host, enabled)
+
+    def host_maintenance_mode(self, host, mode):
+        """Start/Stop host maintenance window. On start, it triggers
+        guest VMs evacuation."""
+        return self._host.host_maintenance_mode(host, mode)
 
     def add_to_aggregate(self, context, aggregate, host, **kwargs):
         """Add a compute host to an aggregate."""
@@ -669,65 +672,6 @@ class XenAPISession(object):
         except xmlrpclib.ProtocolError, exc:
             LOG.debug(_("Got exception: %s"), exc)
             raise
-
-
-class HostState(object):
-    """Manages information about the XenServer host this compute
-    node is running on.
-    """
-    def __init__(self, session):
-        super(HostState, self).__init__()
-        self._session = session
-        self._stats = {}
-        self.update_status()
-
-    def get_host_stats(self, refresh=False):
-        """Return the current state of the host. If 'refresh' is
-        True, run the update first.
-        """
-        if refresh:
-            self.update_status()
-        return self._stats
-
-    def update_status(self):
-        """Since under Xenserver, a compute node runs on a given host,
-        we can get host status information using xenapi.
-        """
-        LOG.debug(_("Updating host stats"))
-        # Make it something unlikely to match any actual instance UUID
-        task_id = random.randint(-80000, -70000)
-        task = self._session.async_call_plugin("xenhost", "host_data", {})
-        task_result = self._session.wait_for_task(task, str(task_id))
-        if not task_result:
-            task_result = json.dumps("")
-        try:
-            data = json.loads(task_result)
-        except ValueError as e:
-            # Invalid JSON object
-            LOG.error(_("Unable to get updated status: %s") % e)
-            return
-        # Get the SR usage
-        try:
-            sr_ref = vm_utils.VMHelper.safe_find_sr(self._session)
-        except exception.NotFound as e:
-            # No SR configured
-            LOG.error(_("Unable to get SR for this host: %s") % e)
-            return
-        sr_rec = self._session.call_xenapi("SR.get_record", sr_ref)
-        total = int(sr_rec["virtual_allocation"])
-        used = int(sr_rec["physical_utilisation"])
-        data["disk_total"] = total
-        data["disk_used"] = used
-        data["disk_available"] = total - used
-        host_memory = data.get('host_memory', None)
-        if host_memory:
-            data["host_memory_total"] = host_memory.get('total', 0)
-            data["host_memory_overhead"] = host_memory.get('overhead', 0)
-            data["host_memory_free"] = host_memory.get('free', 0)
-            data["host_memory_free_computed"] = host_memory.get(
-                                                'free-computed', 0)
-            del data['host_memory']
-        self._stats = data
 
 
 def _parse_xmlrpc_value(val):
