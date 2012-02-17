@@ -38,6 +38,7 @@ LOG = logging.getLogger(__name__)
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('use_deprecated_auth', 'nova.auth.manager')
 
 
 GlanceClient = utils.import_class('glance.client.Client')
