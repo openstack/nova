@@ -3732,7 +3732,7 @@ def bw_usage_update(context,
 
     with session.begin():
         bwusage = model_query(context, models.BandwidthUsage,
-                              read_deleted="yes").\
+                              session=session, read_deleted="yes").\
                       filter_by(instance_id=instance_id).\
                       filter_by(start_period=start_period).\
                       filter_by(mac=mac).\
