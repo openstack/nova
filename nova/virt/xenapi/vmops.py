@@ -25,7 +25,6 @@ import json
 import os
 import pickle
 import random
-import sys
 import time
 import uuid
 
@@ -245,7 +244,7 @@ class VMOps(object):
 
         except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
             LOG.exception(_("instance %s: Failed to spawn"),
-                          instance.uuid, exc_info=sys.exc_info())
+                          instance.uuid)
             LOG.debug(_('Instance %s failed to spawn - performing clean-up'),
                       instance.id)
             self._handle_spawn_error(vdis, spawn_error)
@@ -320,9 +319,9 @@ class VMOps(object):
         except (self.XenAPI.Failure, OSError, IOError) as vm_create_error:
             # Collect VDI/file resources to clean up;
             # These resources will be removed by _handle_spawn_error.
-            LOG.exception(_("instance %s: Failed to spawn - " +
+            LOG.exception(_("instance %s: Failed to spawn - "
                             "Unable to create VM"),
-                          instance.id, exc_info=sys.exc_info())
+                          instance.uuid)
             last_arg = None
             resources = []
 
@@ -1410,8 +1409,7 @@ class VMOps(object):
                                                start_time,
                                                stop_time)
         except exception.CouldNotFetchMetrics:
-            LOG.exception(_("Could not get bandwidth info."),
-                          exc_info=sys.exc_info())
+            LOG.exception(_("Could not get bandwidth info."))
             return {}
         bw = {}
         for uuid, data in metrics.iteritems():
