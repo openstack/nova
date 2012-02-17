@@ -27,11 +27,21 @@ from nova import exception
 from nova import flags
 import nova.image
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova import utils
 
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
+
+image_opts = [
+    cfg.BoolOpt('force_raw_images',
+                default=True,
+                help='Force backing images to raw format'),
+]
+
+FLAGS = flags.FLAGS
+FLAGS.register_opts(image_opts)
 
 
 def fetch(context, image_href, path, _user_id, _project_id):
@@ -72,20 +82,20 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
 
     data = _qemu_img_info(path_tmp)
 
-    fmt = data.get("file format", None)
+    fmt = data.get("file format")
     if fmt is None:
         os.unlink(path_tmp)
         raise exception.ImageUnacceptable(
             reason=_("'qemu-img info' parsing failed."), image_id=image_href)
 
-    if fmt != "raw":
-        staged = "%s.converted" % path
-        if "backing file" in data:
-            backing_file = data['backing file']
-            os.unlink(path_tmp)
-            raise exception.ImageUnacceptable(image_id=image_href,
-                reason=_("fmt=%(fmt)s backed by: %(backing_file)s") % locals())
+    if "backing file" in data:
+        backing_file = data['backing file']
+        os.unlink(path_tmp)
+        raise exception.ImageUnacceptable(image_id=image_href,
+            reason=_("fmt=%(fmt)s backed by: %(backing_file)s") % locals())
 
+    if fmt != "raw" and FLAGS.force_raw_images:
+        staged = "%s.converted" % path
         LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
         out, err = utils.execute('qemu-img', 'convert', '-O', 'raw',
                                  path_tmp, staged)

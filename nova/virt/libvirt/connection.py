@@ -941,21 +941,6 @@ class LibvirtConnection(driver.ComputeDriver):
                     disk.extend(target, size)
 
     @staticmethod
-    def _fetch_image(context, target, image_id, user_id, project_id):
-        """Grab image to raw format"""
-        images.fetch_to_raw(context, image_id, target, user_id, project_id)
-
-        if FLAGS.checksum_base_images:
-            f = open(target, 'r')
-            checksum = utils.hash_file(f)
-            f.close()
-
-            checksum_fname = '%s.sha1' % target
-            fd = os.open(checksum_filename, os.O_WRONLY, mode=0444)
-            os.write(fd, checksum)
-            os.close(fd)
-
-    @staticmethod
     def _create_local(target, local_size, unit='G', fs_format=None):
         """Create a blank image of specified size"""
 
@@ -1919,7 +1904,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 cached_file = info['backing_file'].split('_')[0]
 
                 if not os.path.exists(backing_file):
-                    self._cache_image(fn=self._fetch_image,
+                    self._cache_image(fn=libvirt_utils.fetch_image,
                         context=ctxt,
                         target=info['path'],
                         fname=cached_file,

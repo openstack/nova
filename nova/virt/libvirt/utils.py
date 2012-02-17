@@ -21,13 +21,11 @@
 
 import os
 import random
-import shutil
 
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
 from nova import utils
-from nova.virt.disk import api as disk
 from nova.virt import images
 
 
@@ -258,4 +256,4 @@ def get_fs_info(path):
 
 def fetch_image(context, target, image_id, user_id, project_id):
     """Grab image"""
-    images.fetch(context, image_id, target, user_id, project_id)
+    images.fetch_to_raw(context, image_id, target, user_id, project_id)
