@@ -538,7 +538,7 @@ class CloudController(object):
 
             if not utils.is_valid_cidr(cidr_ip):
                 # Raise exception for non-valid address
-                raise exception.InvalidCidr(cidr=cidr_ip)
+                raise exception.EC2APIError(_("Invalid CIDR"))
 
             values['cidr'] = cidr_ip
         else:
