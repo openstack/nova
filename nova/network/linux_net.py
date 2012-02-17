@@ -1098,10 +1098,11 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                 # If we weren't instructed to act as a gateway then add the
                 # appropriate flows to block all non-dhcp traffic.
                 _execute('ovs-ofctl',
-                    'add-flow', bridge, "priority=1,actions=drop")
+                    'add-flow', bridge, "priority=1,actions=drop",
+                     run_as_root=True)
                 _execute('ovs-ofctl', 'add-flow', bridge,
                     "udp,tp_dst=67,dl_dst=%s,priority=2,actions=normal" %
-                    mac_address)
+                    mac_address, run_as_root=True)
                 # .. and make sure iptbles won't forward it as well.
                 iptables_manager.ipv4['filter'].add_rule('FORWARD',
                         '--in-interface %s -j DROP' % bridge)
