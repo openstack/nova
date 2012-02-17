@@ -828,8 +828,8 @@ class API(base.Base):
                                     vm_states.ERROR])
     def soft_delete(self, context, instance):
         """Terminate an instance."""
-        instance_uuid = instance["uuid"]
-        LOG.debug(_("Going to try to soft delete %s"), instance_uuid)
+        LOG.debug(_('Going to try to soft delete instance'),
+                  instance=instance)
 
         if instance['disable_terminate']:
             return
@@ -848,8 +848,8 @@ class API(base.Base):
             self._cast_compute_message('power_off_instance', context,
                                        instance)
         else:
-            LOG.warning(_("No host for instance %s, deleting immediately"),
-                        instance["uuid"])
+            LOG.warning(_('No host for instance, deleting immediately'),
+                        instance=instance)
             try:
                 self.db.instance_destroy(context, instance['id'])
             except exception.InstanceNotFound:
@@ -882,7 +882,7 @@ class API(base.Base):
                                     vm_states.SHUTOFF, vm_states.STOPPED])
     def delete(self, context, instance):
         """Terminate an instance."""
-        LOG.debug(_("Going to try to terminate %s"), instance["uuid"])
+        LOG.debug(_("Going to try to terminate instance"), instance=instance)
 
         if instance['disable_terminate']:
             return
@@ -920,7 +920,7 @@ class API(base.Base):
     def stop(self, context, instance, do_cast=True):
         """Stop an instance."""
         instance_uuid = instance["uuid"]
-        LOG.debug(_("Going to try to stop %s"), instance_uuid)
+        LOG.debug(_("Going to try to stop instance"), instance=instance)
 
         self.update(context,
                     instance,
@@ -939,7 +939,7 @@ class API(base.Base):
         """Start an instance."""
         vm_state = instance["vm_state"]
         instance_uuid = instance["uuid"]
-        LOG.debug(_("Going to try to start %s"), instance_uuid)
+        LOG.debug(_("Going to try to start instance"), instance=instance)
 
         if vm_state == vm_states.SHUTOFF:
             if instance['shutdown_terminate']:
