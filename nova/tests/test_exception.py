@@ -94,3 +94,25 @@ class WrapExceptionTestCase(test.TestCase):
         self.assertEquals(notifier.provided_publisher, None)
         self.assertEquals(notifier.provided_event, "bad_function_exception")
         self.assertEquals(notifier.provided_priority, notifier.ERROR)
+
+
+class NovaExceptionTestCase(test.TestCase):
+    def test_default_error_msg(self):
+        class FakeNovaException(exception.NovaException):
+            message = "default message"
+
+        exc = FakeNovaException()
+        self.assertEquals(unicode(exc),
+                          'default message')
+
+    def test_error_msg(self):
+        self.assertEquals(unicode(exception.NovaException('test')),
+                          'test')
+
+    def test_default_error_msg_with_kwargs(self):
+        class FakeNovaException(exception.NovaException):
+            message = "default message: %(code)s"
+
+        exc = FakeNovaException(code=500)
+        self.assertEquals(unicode(exc),
+                          'default message: 500')
