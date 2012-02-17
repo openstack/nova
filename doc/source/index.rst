@@ -70,7 +70,7 @@ API Extensions
 .. toctree::
    :maxdepth: 1
 
-    api_ext/index
+   api_ext/index
 
 Outstanding Documentation Tasks
 ===============================
