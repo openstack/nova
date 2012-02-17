@@ -346,7 +346,7 @@ class XenAPIConnection(driver.ComputeDriver):
     def get_volume_connector(self, _instance):
         """Return volume connector information"""
         if not self._initiator:
-            stats = self.get_host_stats(update=True)
+            stats = self.get_host_stats(refresh=True)
             try:
                 self._initiator = stats['host_other-config']['iscsi_iqn']
             except (TypeError, KeyError):
