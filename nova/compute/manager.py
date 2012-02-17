@@ -118,6 +118,10 @@ compute_opts = [
                default=3600,
                help="Number of periodic scheduler ticks to wait between "
                     "runs of the image cache manager."),
+    cfg.IntOpt("heal_instance_info_cache_interval",
+               default=60,
+               help="Number of seconds between instance info_cache self "
+                        "healing updates")
     ]
 
 FLAGS = flags.FLAGS
@@ -205,6 +209,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
+        self._last_info_cache_heal = 0
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -2086,6 +2091,59 @@ class ComputeManager(manager.SchedulerDependentManager):
                             context, instance_id)
         self.driver.destroy(instance_ref, self._legacy_nw_info(network_info),
                             block_device_info)
+
+    @manager.periodic_task
+    def _heal_instance_info_cache(self, context):
+        """Called periodically.  On every call, try to update the
+        info_cache's network information for another instance by
+        calling to the network manager.
+
+        This is implemented by keeping a cache of uuids of instances
+        that live on this host.  On each call, we pop one off of a
+        list, pull the DB record, and try the call to the network API.
+        If anything errors, we don't care.  It's possible the instance
+        has been deleted, etc.
+        """
+        heal_interval = FLAGS.heal_instance_info_cache_interval
+        if not heal_interval:
+            return
+        curr_time = time.time()
+        if self._last_info_cache_heal + heal_interval > curr_time:
+            return
+        self._last_info_cache_heal = curr_time
+
+        instance_uuids = getattr(self, '_instance_uuids_to_heal', None)
+        instance = None
+
+        while not instance or instance['host'] != self.host:
+            if instance_uuids:
+                try:
+                    instance = self.db.instance_get_by_uuid(context,
+                        instance_uuids.pop(0))
+                except exception.InstanceNotFound:
+                    # Instance is gone.  Try to grab another.
+                    continue
+            else:
+                # No more in our copy of uuids.  Pull from the DB.
+                db_instances = self.db.instance_get_all_by_host(
+                        context, self.host)
+                if not db_instances:
+                    # None.. just return.
+                    return
+                instance = db_instances.pop(0)
+                instance_uuids = [inst['uuid'] for inst in db_instances]
+                self._instance_uuids_to_heal = instance_uuids
+
+        # We have an instance now and it's ours
+        try:
+            # Call to network API to get instance info.. this will
+            # force an update to the instance's info_cache
+            self.network_api.get_instance_nw_info(context, instance)
+            LOG.debug(_("Updated the info_cache for instance %s") %
+                    instance['uuid'])
+        except Exception:
+            # We don't care about any failures
+            pass
 
     @manager.periodic_task
     def _poll_rebooting_instances(self, context):

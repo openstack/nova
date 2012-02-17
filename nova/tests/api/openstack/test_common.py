@@ -329,16 +329,6 @@ class MiscFunctionsTest(test.TestCase):
         else:
             self.fail("webob.exc.HTTPConflict was not raised")
 
-    def test_get_networks_for_instance_handles_instance_not_found(self):
-
-        def raise_not_found(*args, **kwargs):
-            raise exception.InstanceNotFound(instance_id='abcd')
-
-        self.stubs.Set(network.API, 'get_instance_nw_info', raise_not_found)
-
-        networks = common.get_networks_for_instance(context={}, instance={})
-        self.assertEqual(networks, {})
-
 
 class MetadataXMLDeserializationTest(test.TestCase):
 

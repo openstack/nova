@@ -16,7 +16,6 @@
 #    under the License.
 
 import base64
-import datetime
 import json
 from xml.dom import minidom
 
@@ -32,7 +31,7 @@ from nova.tests.api.openstack import fakes
 
 FLAGS = flags.FLAGS
 
-FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+FAKE_UUID = fakes.FAKE_UUID
 
 FAKE_NETWORKS = [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10.0.1.12'),
                  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '10.0.2.12')]
@@ -41,27 +40,6 @@ DUPLICATE_NETWORKS = [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10.0.1.12'),
                       ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10.0.1.12')]
 
 INVALID_NETWORKS = [('invalid', 'invalid-ip-address')]
-
-INSTANCE = {
-             "id": 1,
-             "name": "fake",
-             "display_name": "test_server",
-             "uuid": FAKE_UUID,
-             "user_id": 'fake_user_id',
-             "tenant_id": 'fake_tenant_id',
-             "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
-             "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-             "security_groups": [{"id": 1, "name": "test"}],
-             "progress": 0,
-             "image_ref": 'http://foo.com/123',
-             "fixed_ips": [],
-             "instance_type": {"flavorid": '124'},
-        }
-
-
-def return_server_by_id(context, id, session=None):
-    INSTANCE['id'] = id
-    return INSTANCE
 
 
 def return_security_group_non_existing(context, project_id, group_name):
@@ -138,9 +116,6 @@ class CreateserverextTest(test.TestCase):
                        self._make_stub_method(compute_api))
         return compute_api
 
-    def _setup_mock_network_api(self):
-        fakes.stub_out_nw_api(self.stubs)
-
     def _create_security_group_request_dict(self, security_groups):
         server = {}
         server['name'] = 'new-server-test'
@@ -182,7 +157,6 @@ class CreateserverextTest(test.TestCase):
 
     def _run_create_instance_with_mock_compute_api(self, request):
         compute_api = self._setup_mock_compute_api()
-        self._setup_mock_network_api()
         response = request.get_response(fakes.wsgi_app())
         return compute_api, response
 
@@ -395,7 +369,6 @@ class CreateserverextTest(test.TestCase):
                        return_security_group_get_by_name)
         self.stubs.Set(nova.db, 'instance_add_security_group',
                        return_instance_add_security_group)
-        self._setup_mock_network_api()
         body_dict = self._create_security_group_request_dict(security_groups)
         request = self._get_create_request_json(body_dict)
         _run_create_inst = self._run_create_instance_with_mock_compute_api
@@ -403,8 +376,7 @@ class CreateserverextTest(test.TestCase):
         self.assertEquals(response.status_int, 202)
 
     def test_get_server_by_id_verify_security_groups_json(self):
-        self.stubs.Set(nova.db, 'instance_get', return_server_by_id)
-        self._setup_mock_network_api()
+        self.stubs.Set(nova.db, 'instance_get', fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/os-create-server-ext/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app())
@@ -415,8 +387,7 @@ class CreateserverextTest(test.TestCase):
                           expected_security_group)
 
     def test_get_server_by_id_verify_security_groups_xml(self):
-        self.stubs.Set(nova.db, 'instance_get', return_server_by_id)
-        self._setup_mock_network_api()
+        self.stubs.Set(nova.db, 'instance_get', fakes.fake_instance_get())
         req = webob.Request.blank('/v2/fake/os-create-server-ext/1')
         req.headers['Accept'] = 'application/xml'
         response = req.get_response(fakes.wsgi_app())
@@ -425,5 +396,4 @@ class CreateserverextTest(test.TestCase):
         server = dom.childNodes[0]
         sec_groups = server.getElementsByTagName('security_groups')[0]
         sec_group = sec_groups.getElementsByTagName('security_group')[0]
-        self.assertEqual(INSTANCE['security_groups'][0]['name'],
-                         sec_group.getAttribute("name"))
+        self.assertEqual('test', sec_group.getAttribute("name"))

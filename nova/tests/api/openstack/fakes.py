@@ -28,7 +28,6 @@ from nova.api import auth as api_auth
 from nova.api import openstack as openstack_api
 from nova.api.openstack import compute
 from nova.api.openstack import auth
-from nova.api.openstack.compute import extensions
 from nova.api.openstack.compute import limits
 from nova.api.openstack import urlmap
 from nova.api.openstack.compute import versions
@@ -44,6 +43,10 @@ from nova.tests import fake_network
 from nova.tests.glance import stubs as glance_stubs
 from nova import utils
 from nova import wsgi
+
+
+FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+FAKE_UUIDS = {}
 
 
 class Context(object):
@@ -447,12 +450,25 @@ class FakeRateLimiter(object):
         return self.application
 
 
-FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-
-
 def create_info_cache(nw_cache):
     if nw_cache is None:
-        return {}
+        pub0 = ('192.168.1.100',)
+        pub1 = ('2001:db8:0:1::1',)
+
+        def _ip(ip):
+            return {'address': ip, 'type': 'fixed'}
+
+        nw_cache = [
+            {'address': 'aa:aa:aa:aa:aa:aa',
+             'id': 1,
+             'network': {'bridge': 'br0',
+                         'id': 1,
+                         'label': 'test1',
+                         'subnets': [{'cidr': '192.168.1.0/24',
+                                      'ips': [_ip(ip) for ip in pub0]},
+                                      {'cidr': 'b33f::/64',
+                                       'ips': [_ip(ip) for ip in pub1]}]}}]
+        return {"info_cache": {"network_info": nw_cache}}
 
     if not isinstance(nw_cache, basestring):
         nw_cache = utils.dumps(nw_cache)
@@ -460,15 +476,47 @@ def create_info_cache(nw_cache):
     return {"info_cache": {"network_info": nw_cache}}
 
 
-def stub_instance(id, user_id='fake', project_id='fake', host=None,
+def get_fake_uuid(token=0):
+    if not token in FAKE_UUIDS:
+        FAKE_UUIDS[token] = str(utils.gen_uuid())
+    return FAKE_UUIDS[token]
+
+
+def fake_instance_get(**kwargs):
+    def _return_server(context, uuid):
+        return stub_instance(1, **kwargs)
+    return _return_server
+
+
+def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
+    def _return_servers(context, *args, **kwargs):
+        servers_list = []
+        for i in xrange(num_servers):
+            server = stub_instance(id=i + 1, uuid=get_fake_uuid(i),
+                    **kwargs)
+            servers_list.append(server)
+        return servers_list
+    return _return_servers
+
+
+def stub_instance(id, user_id=None, project_id=None, host=None,
                   vm_state=None, task_state=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
                   flavor_id="1", name=None, key_name='',
                   access_ipv4=None, access_ipv6=None, progress=0,
                   auto_disk_config=False, display_name=None,
                   include_fake_metadata=True,
-                  power_state=None, nw_cache=None):
-    if include_fake_metadata:
+                  power_state=None, nw_cache=None, metadata=None,
+                  security_groups=None):
+
+    if user_id is None:
+        user_id = 'fake_user'
+    if project_id is None:
+        project_id = 'fake_project'
+
+    if metadata:
+        metadata = [{'key':k, 'value':v} for k, v in metadata.items()]
+    elif include_fake_metadata:
         metadata = [models.InstanceMetadata(key='seq', value=str(id))]
     else:
         metadata = []
@@ -482,6 +530,9 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
         key_data = 'FAKE'
     else:
         key_data = ''
+
+    if security_groups is None:
+        security_groups = [{"id": 1, "name": "test"}]
 
     # ReservationID isn't sent back, hack it in there.
     server_name = name or "server%s" % id
@@ -532,7 +583,8 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
         "auto_disk_config": auto_disk_config,
         "name": "instance-%s" % id,
         "shutdown_terminate": True,
-        "disable_terminate": False}
+        "disable_terminate": False,
+        "security_groups": security_groups}
 
     instance.update(info_cache)
 

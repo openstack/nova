@@ -83,33 +83,15 @@ def get_ip_info_for_instance_from_nw_info(nw_info):
     return ip_info
 
 
-def get_ip_info_for_instance_from_cache(instance):
-    if (not instance.get('info_cache') or
-        not instance['info_cache'].get('network_info')):
-        # NOTE(jkoelker) Raising ValueError so that we trigger the
-        #                fallback lookup
-        raise ValueError
-
-    cached_info = instance['info_cache']['network_info']
-    nw_info = network_model.NetworkInfo.hydrate(cached_info)
-
-    return get_ip_info_for_instance_from_nw_info(nw_info)
-
-
 def get_ip_info_for_instance(context, instance):
-    """Return a list of all fixed IPs for an instance"""
+    """Return a dictionary of IP information for an instance"""
 
-    try:
-        return get_ip_info_for_instance_from_cache(instance)
-    except (ValueError, KeyError, AttributeError):
-        # NOTE(jkoelker) If the json load (ValueError) or the
-        #                sqlalchemy FK (KeyError, AttributeError)
-        #                fail fall back to calling out to he
-        #                network api
-        network_api = network.API()
-
-        nw_info = network_api.get_instance_nw_info(context, instance)
-        return get_ip_info_for_instance_from_nw_info(nw_info)
+    cached_nwinfo = instance['info_cache']['network_info']
+    # Make sure empty response is turned into []
+    if not cached_nwinfo:
+        cached_nwinfo = []
+    nw_info = network_model.NetworkInfo.hydrate(cached_nwinfo)
+    return get_ip_info_for_instance_from_nw_info(nw_info)
 
 
 def get_availability_zone_by_host(services, host):

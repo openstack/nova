@@ -304,18 +304,6 @@ def get_networks_for_instance_from_nw_info(nw_info):
     return networks
 
 
-def get_networks_for_instance_from_cache(instance):
-    if (not instance.get('info_cache') or
-        not instance['info_cache'].get('network_info')):
-        # NOTE(jkoelker) Raising ValueError so that we trigger the
-        #                fallback lookup
-        raise ValueError
-
-    cached_info = instance['info_cache']['network_info']
-    nw_info = network_model.NetworkInfo.hydrate(cached_info)
-    return get_networks_for_instance_from_nw_info(nw_info)
-
-
 def get_networks_for_instance(context, instance):
     """Returns a prepared nw_info list for passing into the view
     builders
@@ -328,22 +316,10 @@ def get_networks_for_instance(context, instance):
      ...}
     """
 
-    try:
-        return get_networks_for_instance_from_cache(instance)
-    except (ValueError, KeyError, AttributeError):
-        # NOTE(jkoelker) If the json load (ValueError) or the
-        #                sqlalchemy FK (KeyError, AttributeError)
-        #                fail fall back to calling out the the
-        #                network api
-        pass
-
-    network_api = network.API()
-
-    try:
-        nw_info = network_api.get_instance_nw_info(context, instance)
-    except exception.InstanceNotFound:
-        nw_info = []
-
+    cached_nwinfo = instance['info_cache']['network_info']
+    if not cached_nwinfo:
+        return {}
+    nw_info = network_model.NetworkInfo.hydrate(cached_nwinfo)
     return get_networks_for_instance_from_nw_info(nw_info)
 
 

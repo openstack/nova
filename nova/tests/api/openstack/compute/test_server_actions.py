@@ -14,7 +14,6 @@
 #    under the License.
 
 import base64
-import datetime
 
 import mox
 import stubout
@@ -22,7 +21,6 @@ import webob
 
 from nova.api.openstack.compute import servers
 from nova.compute import vm_states
-from nova.compute import instance_types
 from nova import context
 import nova.db
 from nova import exception
@@ -33,7 +31,7 @@ from nova import utils
 
 
 FLAGS = flags.FLAGS
-FAKE_UUID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+FAKE_UUID = fakes.FAKE_UUID
 
 
 def return_server_not_found(context, uuid):
@@ -41,76 +39,7 @@ def return_server_not_found(context, uuid):
 
 
 def instance_update(context, instance_id, kwargs):
-    return stub_instance(instance_id)
-
-
-def return_server_with_attributes(**kwargs):
-    def _return_server(context, uuid):
-        return stub_instance(1, **kwargs)
-    return _return_server
-
-
-def stub_instance(id, metadata=None, image_ref="10", flavor_id="1",
-                  name=None, vm_state=None, task_state=None, uuid=None,
-                  access_ip_v4="", access_ip_v6=""):
-    if metadata is not None:
-        metadata_items = [{'key':k, 'value':v} for k, v in metadata.items()]
-    else:
-        metadata_items = [{'key':'seq', 'value':id}]
-
-    if uuid is None:
-        uuid = FAKE_UUID
-
-    inst_type = instance_types.get_instance_type_by_flavor_id(int(flavor_id))
-
-    instance = {
-        "id": int(id),
-        "name": str(id),
-        "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
-        "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-        "admin_pass": "",
-        "user_id": "fake",
-        "project_id": "fake",
-        "image_ref": image_ref,
-        "kernel_id": "",
-        "ramdisk_id": "",
-        "launch_index": 0,
-        "key_name": "",
-        "key_data": "",
-        "vm_state": vm_state or vm_states.ACTIVE,
-        "task_state": task_state,
-        "memory_mb": 0,
-        "vcpus": 0,
-        "root_gb": 0,
-        "hostname": "",
-        "host": "fake_host",
-        "instance_type": dict(inst_type),
-        "user_data": "",
-        "reservation_id": "",
-        "mac_address": "",
-        "scheduled_at": utils.utcnow(),
-        "launched_at": utils.utcnow(),
-        "terminated_at": utils.utcnow(),
-        "availability_zone": "",
-        "display_name": name or "server%s" % id,
-        "display_description": "",
-        "locked": False,
-        "metadata": metadata_items,
-        "access_ip_v4": access_ip_v4,
-        "access_ip_v6": access_ip_v6,
-        "uuid": uuid,
-        "virtual_interfaces": [],
-        "progress": 0,
-    }
-
-    instance["fixed_ips"] = [{"address": '192.168.0.1',
-                              "network":
-                                      {'label': 'public', 'cidr_v6': None},
-                              "virtual_interface":
-                                      {'address': 'aa:aa:aa:aa:aa:aa'},
-                              "floating_ips": []}]
-
-    return instance
+    return fakes.stub_instance(instance_id)
 
 
 class MockSetAdminPassword(object):
@@ -131,8 +60,9 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_auth(self.stubs)
-        return_server = return_server_with_attributes()
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                        host='fake_host'))
         self.stubs.Set(nova.db, 'instance_update', instance_update)
 
         fakes.stub_out_glance(self.stubs)
@@ -261,7 +191,8 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_rebuild_accepted_minimum(self):
-        return_server = return_server_with_attributes(image_ref='2')
+        return_server = fakes.fake_instance_get(image_ref='2',
+                vm_state=vm_states.ACTIVE, host='fake_host')
         self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
 
@@ -286,7 +217,8 @@ class ServerActionsControllerTest(test.TestCase):
         # is missing from response. See lp bug 921814
         self.flags(enable_instance_password=False)
 
-        return_server = return_server_with_attributes(image_ref='2')
+        return_server = fakes.fake_instance_get(image_ref='2',
+                vm_state=vm_states.ACTIVE, host='fake_host')
         self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
         self_href = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
 
@@ -325,7 +257,8 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_accepted_with_metadata(self):
         metadata = {'new': 'metadata'}
 
-        return_server = return_server_with_attributes(metadata=metadata)
+        return_server = fakes.fake_instance_get(metadata=metadata,
+                vm_state=vm_states.ACTIVE, host='fake_host')
         self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
 
         body = {
@@ -398,7 +331,8 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertTrue('personality' not in body['server'])
 
     def test_rebuild_admin_pass(self):
-        return_server = return_server_with_attributes(image_ref='2')
+        return_server = fakes.fake_instance_get(image_ref='2',
+                vm_state=vm_states.ACTIVE, host='fake_host')
         self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
 
         body = {
@@ -419,7 +353,8 @@ class ServerActionsControllerTest(test.TestCase):
         # is missing from response. See lp bug 921814
         self.flags(enable_instance_password=False)
 
-        return_server = return_server_with_attributes(image_ref='2')
+        return_server = fakes.fake_instance_get(image_ref='2',
+                vm_state=vm_states.ACTIVE, host='fake_host')
         self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
 
         body = {

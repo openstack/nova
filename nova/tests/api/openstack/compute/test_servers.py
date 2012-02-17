@@ -19,7 +19,6 @@
 import datetime
 import json
 import urlparse
-import uuid
 
 import iso8601
 from lxml import etree
@@ -47,7 +46,6 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 FAKE_UUID = fakes.FAKE_UUID
-FAKE_UUIDS = {0: FAKE_UUID}
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
 XPATH_NS = {
@@ -56,64 +54,13 @@ XPATH_NS = {
 }
 
 
-def get_fake_uuid(token=0):
-    if not token in FAKE_UUIDS:
-        FAKE_UUIDS[token] = str(utils.gen_uuid())
-    return FAKE_UUIDS[token]
-
-
 def fake_gen_uuid():
     return FAKE_UUID
 
 
-def return_server_by_id(context, id):
-    return fakes.stub_instance(id, project_id='fake_project')
-
-
-def return_server_by_uuid(context, uuid):
-    id = 1
-    return fakes.stub_instance(id, uuid=uuid,
-                               project_id='fake_project')
-
-
-def return_server_with_attributes(**kwargs):
-    def _return_server(context, instance_id):
-        return fakes.stub_instance(instance_id, **kwargs)
-    return _return_server
-
-
-def return_server_with_attributes_by_uuid(**kwargs):
-    def _return_server(context, uuid):
-        return fakes.stub_instance(1, uuid=uuid, **kwargs)
-    return _return_server
-
-
-def return_server_with_state(vm_state, task_state=None):
-    def _return_server(context, uuid):
-        return fakes.stub_instance(1, uuid=uuid, vm_state=vm_state,
-                             task_state=task_state)
-    return _return_server
-
-
-def return_server_with_uuid_and_state(vm_state, task_state):
-    def _return_server(context, id):
-        return fakes.stub_instance(id,
-                             uuid=FAKE_UUID,
-                             vm_state=vm_state,
-                             task_state=task_state)
-    return _return_server
-
-
-def return_servers(context, *args, **kwargs):
-    servers_list = []
-    for i in xrange(5):
-        server = fakes.stub_instance(i, 'fake', 'fake', uuid=get_fake_uuid(i))
-        servers_list.append(server)
-    return servers_list
-
-
 def return_servers_by_reservation(context, reservation_id=""):
-    return [fakes.stub_instance(i, reservation_id) for i in xrange(5)]
+    return [fakes.stub_instance(i + 1,
+            reservation_id=reservation_id) for i in xrange(5)]
 
 
 def return_servers_by_reservation_empty(context, reservation_id=""):
@@ -150,11 +97,12 @@ class ServersControllerTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
+        return_server = fakes.fake_instance_get()
+        return_servers = fakes.fake_instance_get_all_by_filters()
         self.stubs.Set(nova.db, 'instance_get_all_by_filters',
                 return_servers)
-        self.stubs.Set(nova.db, 'instance_get', return_server_by_id)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                       return_server_by_uuid)
+                       return_server)
         self.stubs.Set(nova.db, 'instance_get_all_by_project',
                        return_servers)
         self.stubs.Set(nova.db, 'instance_add_security_group',
@@ -178,7 +126,7 @@ class ServersControllerTest(test.TestCase):
         """Create two servers with the same host and different
            project_ids and check that the hostId's are unique"""
         def return_instance_with_host(self, *args):
-            project_id = str(uuid.uuid4())
+            project_id = str(utils.gen_uuid())
             return fakes.stub_instance(id=1, uuid=FAKE_UUID,
                                        project_id=project_id,
                                        host='fake_host')
@@ -207,7 +155,7 @@ class ServersControllerTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": uuid,
-                "user_id": "fake",
+                "user_id": "fake_user",
                 "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
@@ -265,11 +213,8 @@ class ServersControllerTest(test.TestCase):
         image_bookmark = "http://localhost/fake/images/10"
         flavor_bookmark = "http://localhost/fake/flavors/1"
 
-        new_return_server = return_server_with_attributes(
-            vm_state=vm_states.ACTIVE, progress=100)
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-        new_return_server = return_server_with_attributes_by_uuid(
-            vm_state=vm_states.ACTIVE, progress=100)
+        new_return_server = fakes.fake_instance_get(
+                vm_state=vm_states.ACTIVE, progress=100)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
         uuid = FAKE_UUID
@@ -278,8 +223,8 @@ class ServersControllerTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": uuid,
-                "user_id": "fake",
-                "tenant_id": "fake",
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -338,13 +283,9 @@ class ServersControllerTest(test.TestCase):
         flavor_id = "1"
         flavor_bookmark = "http://localhost/fake/flavors/1"
 
-        new_return_server = return_server_with_attributes(
-            vm_state=vm_states.ACTIVE, image_ref=image_ref,
-            flavor_id=flavor_id, progress=100)
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-        new_return_server = return_server_with_attributes_by_uuid(
-            vm_state=vm_states.ACTIVE, image_ref=image_ref,
-            flavor_id=flavor_id, progress=100)
+        new_return_server = fakes.fake_instance_get(
+                vm_state=vm_states.ACTIVE, image_ref=image_ref,
+                flavor_id=flavor_id, progress=100)
         self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
 
         uuid = FAKE_UUID
@@ -353,8 +294,8 @@ class ServersControllerTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": uuid,
-                "user_id": "fake",
-                "tenant_id": "fake",
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -407,60 +348,6 @@ class ServersControllerTest(test.TestCase):
 
         self.assertDictMatch(res_dict, expected_server)
 
-    # NOTE(bcwaldon): lp830817
-    def test_get_server_by_id_malformed_networks(self):
-        def fake_instance_get(context, instance_uuid):
-            instance = return_server_by_uuid(context, instance_uuid)
-            instance['fixed_ips'] = [dict(network=None, address='1.2.3.4')]
-            return instance
-
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', fake_instance_get)
-
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
-        res_dict = self.controller.show(req, FAKE_UUID)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['name'], 'server1')
-
-    def test_get_server_by_id_malformed_vif(self):
-        def fake_instance_get(context, uuid):
-            instance = return_server_by_uuid(context, uuid)
-            instance['fixed_ips'] = [dict(network={'label': 'meow'},
-                    address='1.2.3.4', virtual_interface=None)]
-            return instance
-
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', fake_instance_get)
-
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
-        res_dict = self.controller.show(req, FAKE_UUID)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['name'], 'server1')
-
-    def test_get_server_addresses_from_nw_info(self):
-        self.flags(use_ipv6=True)
-
-        new_return_server = return_server_with_attributes_by_uuid()
-        fake_network.fake_get_instance_nw_info(self.stubs, num_networks=2,
-                                               spectacular=True)
-        floaters = []
-        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
-                                                                floaters)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
-
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/ips' % FAKE_UUID)
-        res_dict = self.ips_controller.index(req, FAKE_UUID)
-
-        expected = {
-            'addresses': {
-                'test1': [
-                    {'version': 4, 'addr': '192.168.1.100'},
-                    {'version': 6, 'addr': '2001:db8:0:1::1'}
-                ]
-            },
-        }
-        self.assertDictMatch(res_dict, expected)
-
     def test_get_server_addresses_from_cache(self):
         pub0 = ('172.19.0.1', '172.19.0.2',)
         pub1 = ('1.2.3.4',)
@@ -490,9 +377,8 @@ class ServersControllerTest(test.TestCase):
                          'subnets': [{'cidr': '192.168.0.0/24',
                                       'ips': [_ip(ip) for ip in priv0]}]}}]
 
-        kwargs = {'nw_cache': nw_cache}
-        new_return_server = return_server_with_attributes_by_uuid(**kwargs)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
+        return_server = fakes.fake_instance_get(nw_cache=nw_cache)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', return_server)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/ips' % FAKE_UUID)
         res_dict = self.ips_controller.index(req, FAKE_UUID)
@@ -510,51 +396,6 @@ class ServersControllerTest(test.TestCase):
                     {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
                 ],
             },
-        }
-        self.assertDictMatch(res_dict, expected)
-
-    def test_get_server_addresses_with_floating_from_nwinfo(self):
-        new_return_server = return_server_with_attributes_by_uuid()
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
-
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                   floating_ips_per_fixed_ip=1,
-                                                   spectacular=True)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/ips' % FAKE_UUID)
-        res_dict = self.ips_controller.index(req, FAKE_UUID)
-
-        expected = {
-            'addresses': {
-                'test1': [
-                    {'version': 4, 'addr': '192.168.1.100'},
-                    {'version': 6, 'addr': '2001:db8:0:1::1'},
-                    {'version': 4, 'addr': '10.10.10.100'},
-                ],
-            },
-        }
-        self.assertDictMatch(res_dict, expected)
-
-    def test_get_server_addresses_single_network_from_nwinfo(self):
-        self.flags(use_ipv6=True)
-
-        def floaters(*args, **kwargs):
-            return []
-
-        new_return_server = return_server_with_attributes_by_uuid()
-        fake_network.fake_get_instance_nw_info(self.stubs, num_networks=1)
-        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
-                                                                floaters)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
-
-        url = '/v2/fake/servers/%s/ips/test1' % FAKE_UUID
-        req = fakes.HTTPRequest.blank(url)
-        res_dict = self.ips_controller.show(req, FAKE_UUID, 'test1')
-
-        expected = {
-            'test1': [
-                {'version': 4, 'addr': '192.168.1.100'},
-                {'version': 6, 'addr': '2001:db8:0:1::1'}
-            ]
         }
         self.assertDictMatch(res_dict, expected)
 
@@ -584,12 +425,8 @@ class ServersControllerTest(test.TestCase):
 
         i = 0
         for s in res_dict['servers']:
-            if '_is_precooked' in s:
-                self.assertEqual(s.get('reservation_id'), 'child')
-            else:
-                print s
-                self.assertEqual(s.get('name'), 'server%d' % i)
-                i += 1
+            self.assertEqual(s.get('name'), 'server%d' % (i + 1))
+            i += 1
 
     def test_get_server_list_with_reservation_id_empty(self):
         self.stubs.Set(nova.db, 'instance_get_all_by_reservation',
@@ -601,11 +438,8 @@ class ServersControllerTest(test.TestCase):
 
         i = 0
         for s in res_dict['servers']:
-            if '_is_precooked' in s:
-                self.assertEqual(s.get('reservation_id'), 'child')
-            else:
-                self.assertEqual(s.get('name'), 'server%d' % i)
-                i += 1
+            self.assertEqual(s.get('name'), 'server%d' % (i + 1))
+            i += 1
 
     def test_get_server_list_with_reservation_id_details(self):
         self.stubs.Set(nova.db, 'instance_get_all_by_reservation',
@@ -617,11 +451,8 @@ class ServersControllerTest(test.TestCase):
 
         i = 0
         for s in res_dict['servers']:
-            if '_is_precooked' in s:
-                self.assertEqual(s.get('reservation_id'), 'child')
-            else:
-                self.assertEqual(s.get('name'), 'server%d' % i)
-                i += 1
+            self.assertEqual(s.get('name'), 'server%d' % (i + 1))
+            i += 1
 
     def test_get_server_list(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers')
@@ -629,8 +460,8 @@ class ServersControllerTest(test.TestCase):
 
         self.assertEqual(len(res_dict['servers']), 5)
         for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], get_fake_uuid(i))
-            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
+            self.assertEqual(s['name'], 'server%d' % (i + 1))
             self.assertEqual(s.get('image', None), None)
 
             expected_links = [
@@ -652,14 +483,15 @@ class ServersControllerTest(test.TestCase):
 
         servers = res_dict['servers']
         self.assertEqual([s['id'] for s in servers],
-                         [get_fake_uuid(i) for i in xrange(len(servers))])
+                [fakes.get_fake_uuid(i) for i in xrange(len(servers))])
 
         servers_links = res_dict['servers_links']
         self.assertEqual(servers_links[0]['rel'], 'next')
         href_parts = urlparse.urlparse(servers_links[0]['href'])
         self.assertEqual('/v2/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
-        expected_params = {'limit': ['3'], 'marker': [get_fake_uuid(2)]}
+        expected_params = {'limit': ['3'],
+                           'marker': [fakes.get_fake_uuid(2)]}
         self.assertDictMatch(expected_params, params)
 
     def test_get_servers_with_limit_bad_value(self):
@@ -673,7 +505,7 @@ class ServersControllerTest(test.TestCase):
 
         servers = res['servers']
         self.assertEqual([s['id'] for s in servers],
-                         [get_fake_uuid(i) for i in xrange(len(servers))])
+                [fakes.get_fake_uuid(i) for i in xrange(len(servers))])
 
         servers_links = res['servers_links']
         self.assertEqual(servers_links[0]['rel'], 'next')
@@ -681,7 +513,7 @@ class ServersControllerTest(test.TestCase):
         href_parts = urlparse.urlparse(servers_links[0]['href'])
         self.assertEqual('/v2/fake/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
-        expected = {'limit': ['3'], 'marker': [get_fake_uuid(2)]}
+        expected = {'limit': ['3'], 'marker': [fakes.get_fake_uuid(2)]}
         self.assertDictMatch(expected, params)
 
     def test_get_server_details_with_limit_bad_value(self):
@@ -696,7 +528,7 @@ class ServersControllerTest(test.TestCase):
 
         servers = res['servers']
         self.assertEqual([s['id'] for s in servers],
-                         [get_fake_uuid(i) for i in xrange(len(servers))])
+                [fakes.get_fake_uuid(i) for i in xrange(len(servers))])
 
         servers_links = res['servers_links']
         self.assertEqual(servers_links[0]['rel'], 'next')
@@ -706,7 +538,7 @@ class ServersControllerTest(test.TestCase):
         params = urlparse.parse_qs(href_parts.query)
 
         self.assertDictMatch({'limit': ['3'], 'blah': ['2:t'],
-                              'marker': [get_fake_uuid(2)]}, params)
+                              'marker': [fakes.get_fake_uuid(2)]}, params)
 
     def test_get_servers_with_too_big_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=30')
@@ -719,16 +551,16 @@ class ServersControllerTest(test.TestCase):
                           self.controller.index, req)
 
     def test_get_servers_with_marker(self):
-        url = '/v2/fake/servers?marker=%s' % get_fake_uuid(2)
+        url = '/v2/fake/servers?marker=%s' % fakes.get_fake_uuid(2)
         req = fakes.HTTPRequest.blank(url)
         servers = self.controller.index(req)['servers']
-        self.assertEqual([s['name'] for s in servers], ["server3", "server4"])
+        self.assertEqual([s['name'] for s in servers], ["server4", "server5"])
 
     def test_get_servers_with_limit_and_marker(self):
-        url = '/v2/fake/servers?limit=2&marker=%s' % get_fake_uuid(1)
+        url = '/v2/fake/servers?limit=2&marker=%s' % fakes.get_fake_uuid(1)
         req = fakes.HTTPRequest.blank(url)
         servers = self.controller.index(req)['servers']
-        self.assertEqual([s['name'] for s in servers], ['server2', 'server3'])
+        self.assertEqual([s['name'] for s in servers], ['server3', 'server4'])
 
     def test_get_servers_with_bad_marker(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers?limit=2&marker=asdf')
@@ -1016,9 +848,9 @@ class ServersControllerTest(test.TestCase):
 
     def test_update_server_all_attributes(self):
         self.stubs.Set(nova.db, 'instance_get',
-                return_server_with_attributes(name='server_test',
-                                              access_ipv4='0.0.0.0',
-                                              access_ipv6='beef::0123'))
+                fakes.fake_instance_get(name='server_test',
+                                        access_ipv4='0.0.0.0',
+                                        access_ipv6='beef::0123'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
@@ -1037,7 +869,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_update_server_name(self):
         self.stubs.Set(nova.db, 'instance_get',
-                return_server_with_attributes(name='server_test'))
+                fakes.fake_instance_get(name='server_test'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
@@ -1050,7 +882,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_update_server_access_ipv4(self):
         self.stubs.Set(nova.db, 'instance_get',
-                return_server_with_attributes(access_ipv4='0.0.0.0'))
+                fakes.fake_instance_get(access_ipv4='0.0.0.0'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
@@ -1063,7 +895,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_update_server_access_ipv4_bad_format(self):
         self.stubs.Set(nova.db, 'instance_get',
-                return_server_with_attributes(access_ipv4='0.0.0.0'))
+                fakes.fake_instance_get(access_ipv4='0.0.0.0'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
@@ -1074,7 +906,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_update_server_access_ipv6(self):
         self.stubs.Set(nova.db, 'instance_get',
-                return_server_with_attributes(access_ipv6='beef::0123'))
+                fakes.fake_instance_get(access_ipv6='beef::0123'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
@@ -1087,7 +919,7 @@ class ServersControllerTest(test.TestCase):
 
     def test_update_server_access_ipv6_bad_format(self):
         self.stubs.Set(nova.db, 'instance_get',
-                return_server_with_attributes(access_ipv6='beef::0123'))
+                fakes.fake_instance_get(access_ipv6='beef::0123'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
@@ -1109,8 +941,9 @@ class ServersControllerTest(test.TestCase):
             return filtered_dict
 
         self.stubs.Set(nova.db, 'instance_update', server_update)
-        self.stubs.Set(nova.db, 'instance_get',
-                return_server_with_attributes(name='server_test'))
+        # FIXME (comstud)
+        #        self.stubs.Set(nova.db, 'instance_get',
+        #                return_server_with_attributes(name='server_test'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
@@ -1122,11 +955,8 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(res_dict['server']['name'], 'server_test')
 
     def test_rebuild_instance_with_access_ipv4_bad_format(self):
-
-        def fake_get_instance(*args, **kwargs):
-            return fakes.stub_instance(1, vm_state=vm_states.ACTIVE)
-
-        self.stubs.Set(nova.db, 'instance_get', fake_get_instance)
+        self.stubs.Set(nova.db, 'instance_get',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
@@ -1156,15 +986,11 @@ class ServersControllerTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
         self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller._action_rebuild, req, 1, body)
+            self.controller._action_rebuild, req, FAKE_UUID, body)
 
     def test_rebuild_instance_with_access_ipv6_bad_format(self):
-
-        def fake_get_instance(*args, **kwargs):
-            return fakes.stub_instance(1, vm_state=vm_states.ACTIVE,
-                                       project_id='fake_project')
-
-        self.stubs.Set(nova.db, 'instance_get', fake_get_instance)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
@@ -1194,7 +1020,7 @@ class ServersControllerTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
         self.assertRaises(webob.exc.HTTPBadRequest,
-            self.controller._action_rebuild, req, 1, body)
+            self.controller._action_rebuild, req, FAKE_UUID, body)
 
     def test_get_all_server_details(self):
         expected_flavor = {
@@ -1219,13 +1045,13 @@ class ServersControllerTest(test.TestCase):
         res_dict = self.controller.detail(req)
 
         for i, s in enumerate(res_dict['servers']):
-            self.assertEqual(s['id'], get_fake_uuid(i))
+            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
             self.assertEqual(s['hostId'], '')
-            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s['name'], 'server%d' % (i + 1))
             self.assertEqual(s['image'], expected_image)
             self.assertEqual(s['flavor'], expected_flavor)
             self.assertEqual(s['status'], 'BUILD')
-            self.assertEqual(s['metadata']['seq'], str(i))
+            self.assertEqual(s['metadata']['seq'], str(i + 1))
 
     def test_get_all_server_details_with_host(self):
         '''
@@ -1236,12 +1062,12 @@ class ServersControllerTest(test.TestCase):
         '''
 
         def return_servers_with_host(context, *args, **kwargs):
-            return [fakes.stub_instance(i, 'fake', 'fake', i % 2,
-                                  uuid=get_fake_uuid(i))
+            return [fakes.stub_instance(i + 1, 'fake', 'fake', host=i % 2,
+                                  uuid=fakes.get_fake_uuid(i))
                     for i in xrange(5)]
 
         self.stubs.Set(nova.db, 'instance_get_all_by_filters',
-            return_servers_with_host)
+                return_servers_with_host)
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
         res_dict = self.controller.detail(req)
@@ -1252,9 +1078,9 @@ class ServersControllerTest(test.TestCase):
         self.assertNotEqual(host_ids[0], host_ids[1])
 
         for i, s in enumerate(server_list):
-            self.assertEqual(s['id'], get_fake_uuid(i))
+            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
             self.assertEqual(s['hostId'], host_ids[i % 2])
-            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s['name'], 'server%d' % (i + 1))
 
     def test_delete_server_instance(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
@@ -1262,9 +1088,8 @@ class ServersControllerTest(test.TestCase):
 
         self.server_delete_called = False
 
-        new_return_server = return_server_with_attributes(
-            vm_state=vm_states.ACTIVE)
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
 
         def instance_destroy_mock(context, id):
             self.server_delete_called = True
@@ -1280,10 +1105,6 @@ class ServersControllerTest(test.TestCase):
 
         self.server_delete_called = False
 
-        new_return_server = return_server_with_attributes(
-            vm_state=vm_states.BUILDING)
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-
         def instance_destroy_mock(context, id):
             self.server_delete_called = True
         self.stubs.Set(nova.db, 'instance_destroy', instance_destroy_mock)
@@ -1298,12 +1119,8 @@ class ServersControllerTest(test.TestCase):
 
         self.server_delete_called = False
 
-        new_return_server = return_server_with_attributes(
-            vm_state=vm_states.RESIZING)
-        self.stubs.Set(nova.db, 'instance_get', new_return_server)
-        new_return_server = return_server_with_attributes_by_uuid(
-            vm_state=vm_states.RESIZING)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_return_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.RESIZING))
 
         def instance_destroy_mock(context, id):
             self.server_delete_called = True
@@ -1324,9 +1141,9 @@ class ServerStatusTest(test.TestCase):
         self.controller = servers.Controller()
 
     def _get_with_state(self, vm_state, task_state=None):
-        new_server = return_server_with_state(vm_state, task_state)
-        self.stubs.Set(nova.db, 'instance_get_by_uuid', new_server)
-        self.stubs.Set(nova.db, 'instance_get', new_server)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_state,
+                                        task_state=task_state))
 
         request = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         return self.controller.show(request, FAKE_UUID)
@@ -2745,8 +2562,8 @@ class ServersViewBuilderTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake",
-                "tenant_id": "fake",
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -2815,8 +2632,8 @@ class ServersViewBuilderTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake",
-                "tenant_id": "fake",
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "name": "test_server",
@@ -2939,6 +2756,12 @@ class ServersViewBuilderTest(test.TestCase):
             'details': "Stock details for test",
             'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
         }
+
+        image_bookmark = "http://localhost/fake/images/5"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
+        self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
+        bookmark_link = "http://localhost/fake/servers/%s" % self.uuid
+
         output = self.view_builder.show(self.request, self.instance)
         self.assertFalse('fault' in output['server'])
 
@@ -2953,8 +2776,8 @@ class ServersViewBuilderTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake",
-                "tenant_id": "fake",
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -3017,8 +2840,8 @@ class ServersViewBuilderTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake",
-                "tenant_id": "fake",
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3081,8 +2904,8 @@ class ServersViewBuilderTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake",
-                "tenant_id": "fake",
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3147,8 +2970,8 @@ class ServersViewBuilderTest(test.TestCase):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake",
-                "tenant_id": "fake",
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -3557,15 +3380,15 @@ class ServerXMLSerializationTest(test.TestCase):
     def test_index(self):
         serializer = servers.MinimalServersTemplate()
 
-        uuid1 = get_fake_uuid(1)
-        uuid2 = get_fake_uuid(2)
+        uuid1 = fakes.get_fake_uuid(1)
+        uuid2 = fakes.get_fake_uuid(2)
         expected_server_href = 'http://localhost/v2/servers/%s' % uuid1
         expected_server_bookmark = 'http://localhost/servers/%s' % uuid1
         expected_server_href_2 = 'http://localhost/v2/servers/%s' % uuid2
         expected_server_bookmark_2 = 'http://localhost/servers/%s' % uuid2
         fixture = {"servers": [
             {
-                "id": get_fake_uuid(1),
+                "id": fakes.get_fake_uuid(1),
                 "name": "test_server",
                 'links': [
                     {
@@ -3579,7 +3402,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 ],
             },
             {
-                "id": get_fake_uuid(2),
+                "id": fakes.get_fake_uuid(2),
                 "name": "test_server_2",
                 'links': [
                     {
@@ -3614,8 +3437,8 @@ class ServerXMLSerializationTest(test.TestCase):
     def test_index_with_servers_links(self):
         serializer = servers.MinimalServersTemplate()
 
-        uuid1 = get_fake_uuid(1)
-        uuid2 = get_fake_uuid(2)
+        uuid1 = fakes.get_fake_uuid(1)
+        uuid2 = fakes.get_fake_uuid(2)
         expected_server_href = 'http://localhost/v2/servers/%s' % uuid1
         expected_server_next = self.SERVER_NEXT % (2, 2)
         expected_server_bookmark = 'http://localhost/servers/%s' % uuid1
@@ -3623,7 +3446,7 @@ class ServerXMLSerializationTest(test.TestCase):
         expected_server_bookmark_2 = 'http://localhost/servers/%s' % uuid2
         fixture = {"servers": [
             {
-                "id": get_fake_uuid(1),
+                "id": fakes.get_fake_uuid(1),
                 "name": "test_server",
                 'links': [
                     {
@@ -3637,7 +3460,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 ],
             },
             {
-                "id": get_fake_uuid(2),
+                "id": fakes.get_fake_uuid(2),
                 "name": "test_server_2",
                 'links': [
                     {
@@ -3684,18 +3507,18 @@ class ServerXMLSerializationTest(test.TestCase):
     def test_detail(self):
         serializer = servers.ServersTemplate()
 
-        uuid1 = get_fake_uuid(1)
+        uuid1 = fakes.get_fake_uuid(1)
         expected_server_href = 'http://localhost/v2/servers/%s' % uuid1
         expected_server_bookmark = 'http://localhost/servers/%s' % uuid1
         expected_image_bookmark = self.IMAGE_BOOKMARK
         expected_flavor_bookmark = self.FLAVOR_BOOKMARK
 
-        uuid2 = get_fake_uuid(2)
+        uuid2 = fakes.get_fake_uuid(2)
         expected_server_href_2 = 'http://localhost/v2/servers/%s' % uuid2
         expected_server_bookmark_2 = 'http://localhost/servers/%s' % uuid2
         fixture = {"servers": [
             {
-                "id": get_fake_uuid(1),
+                "id": fakes.get_fake_uuid(1),
                 "user_id": "fake",
                 "tenant_id": "fake",
                 'created': self.TIMESTAMP,
@@ -3751,7 +3574,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 ],
             },
             {
-                "id": get_fake_uuid(2),
+                "id": fakes.get_fake_uuid(2),
                 "user_id": 'fake',
                 "tenant_id": 'fake',
                 'created': self.TIMESTAMP,

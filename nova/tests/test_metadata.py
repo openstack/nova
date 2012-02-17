@@ -59,6 +59,7 @@ class MetadataTestCase(test.TestCase):
                          'vcpus': 1,
                          'fixed_ips': [],
                          'root_device_name': '/dev/sda1',
+                         'info_cache': {'network_info': []},
                          'hostname': 'test'})
 
         def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
