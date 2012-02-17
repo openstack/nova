@@ -31,6 +31,8 @@ It also allows setting of formatting information through flags.
 
 import cStringIO
 import inspect
+import itertools
+import json
 import logging
 import logging.config
 import logging.handlers
@@ -159,8 +161,54 @@ class NovaContextAdapter(logging.LoggerAdapter):
         extra.update({'instance': instance_extra})
 
         extra.update({"nova_version": version.version_string_with_vcs()})
-
+        extra['extra'] = extra.copy()
         return msg, kwargs
+
+
+class JSONFormatter(logging.Formatter):
+    def __init__(self, fmt=None, datefmt=None):
+        # NOTE(jkoelker) we ignore the fmt argument, but its still there
+        #                since logging.config.fileConfig passes it.
+        self.datefmt = datefmt
+
+    def formatException(self, ei, strip_newlines=True):
+        lines = traceback.format_exception(*ei)
+        if strip_newlines:
+            lines = [itertools.ifilter(lambda x: x,
+                                      line.rstrip().splitlines())
+                    for line in lines]
+            lines = list(itertools.chain(*lines))
+        return lines
+
+    def format(self, record):
+        message = {'message': record.getMessage(),
+                   'asctime': self.formatTime(record, self.datefmt),
+                   'name': record.name,
+                   'msg': record.msg,
+                   'args': record.args,
+                   'levelname': record.levelname,
+                   'levelno': record.levelno,
+                   'pathname': record.pathname,
+                   'filename': record.filename,
+                   'module': record.module,
+                   'lineno': record.lineno,
+                   'funcname': record.funcName,
+                   'created': record.created,
+                   'msecs': record.msecs,
+                   'relative_created': record.relativeCreated,
+                   'thread': record.thread,
+                   'thread_name': record.threadName,
+                   'process_name': record.processName,
+                   'process': record.process,
+                   'traceback': None}
+
+        if hasattr(record, 'extra'):
+            message['extra'] = record.extra
+
+        if record.exc_info:
+            message['traceback'] = self.formatException(record.exc_info)
+
+        return json.dumps(message)
 
 
 class LegacyNovaFormatter(logging.Formatter):
