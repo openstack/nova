@@ -14,6 +14,7 @@
 #    under the License.
 
 import datetime
+import json
 
 import webob
 
@@ -90,19 +91,25 @@ class FlavorManageTest(test.TestCase):
                           self.controller._delete, req, "failtest")
 
     def test_create(self):
-        body = {
+        expected = {
             "flavor": {
                 "name": "test",
                 "ram": 512,
                 "vcpus": 2,
-                "disk": 10,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
                 "id": 1235,
                 "swap": 512,
                 "rxtx_factor": 1,
             }
         }
 
-        req = fakes.HTTPRequest.blank('/v2/123/flavors')
-        res = self.controller._create(req, body)
-        for key in body["flavor"]:
-            self.assertEquals(res["flavor"][key], body["flavor"][key])
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = json.dumps(expected)
+        res = req.get_response(fakes.wsgi_app())
+        body = json.loads(res.body)
+        for key in expected["flavor"]:
+            self.assertEquals(body["flavor"][key], expected["flavor"][key])

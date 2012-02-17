@@ -62,7 +62,7 @@ class FlavorManageController(wsgi.Controller):
         memory_mb = vals.get('ram')
         vcpus = vals.get('vcpus')
         root_gb = vals.get('disk')
-        ephemeral_gb = vals.get('disk')
+        ephemeral_gb = vals.get('OS-FLV-EXT-DATA:ephemeral')
         swap = vals.get('swap')
         rxtx_factor = vals.get('rxtx_factor')
 

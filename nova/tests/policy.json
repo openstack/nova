@@ -89,6 +89,7 @@
     "compute_extension:deferred_delete": [],
     "compute_extension:disk_config": [],
     "compute_extension:extended_status": [],
+    "compute_extension:flavorextradata": [],
     "compute_extension:flavorextraspecs": [],
     "compute_extension:flavormanage": [],
     "compute_extension:floating_ip_dns": [],
