@@ -29,31 +29,32 @@ def upgrade(migrate_engine):
     # not supporting key columns larger than 1000.
 
     if migrate_engine.name == "mysql":
-        # The instances table has to be converted early on. Also, the
-        # foreign_key_checks has to be disabled inside of the execute command
-        # that converts the instances table.
-        migrate_engine.execute("SET foreign_key_checks = 0;"
-            "ALTER TABLE instances CONVERT TO CHARACTER SET utf8")
-        tables = ["agent_builds", "aggregate_hosts", "aggregate_metadata",
-            "aggregates", "auth_tokens", "block_device_mapping",
-            "bw_usage_cache", "certificates", "compute_nodes", "console_pools",
-            "consoles", "fixed_ips", "floating_ips", "instance_actions",
-            "instance_faults", "instance_info_caches", "instance_metadata",
-            "instance_type_extra_specs", "instance_types", "iscsi_targets",
-            "key_pairs", "migrate_version", "migrations", "networks",
-            "projects", "provider_fw_rules", "quotas", "s3_images",
-            "security_group_instance_association", "security_group_rules",
-            "security_groups", "services", "sm_backend_config", "sm_flavors",
-            "sm_volume", "snapshots", "snapshots", "user_project_association",
-            "user_project_role_association", "user_role_association", "users",
+        tables = [
+            # tables that are FK parents, must be converted early
+            "aggregates", "console_pools", "instance_types", "instances",
+            "projects", "security_groups", "sm_backend_config", "sm_flavors",
+            "snapshots", "user_project_association", "users", "volume_types",
+            "volumes",
+            # those that are children and others later
+            "agent_builds", "aggregate_hosts", "aggregate_metadata",
+            "auth_tokens", "block_device_mapping", "bw_usage_cache",
+            "certificates", "compute_nodes", "consoles", "fixed_ips",
+            "floating_ips", "instance_actions", "instance_faults",
+            "instance_info_caches", "instance_metadata",
+            "instance_type_extra_specs", "iscsi_targets", "key_pairs",
+            "migrate_version", "migrations", "networks", "provider_fw_rules",
+            "quotas", "s3_images", "security_group_instance_association",
+            "security_group_rules", "services", "sm_volume",
+            "user_project_role_association", "user_role_association",
             "virtual_interfaces", "virtual_storage_arrays", "volume_metadata",
-            "volumes", "volume_type_extra_specs", "volume_types", "zones"]
+            "volume_type_extra_specs", "zones"]
+        sql = "SET foreign_key_checks = 0;"
         for table in tables:
-            migrate_engine.execute(
-                "ALTER TABLE %s CONVERT TO CHARACTER SET utf8" % table)
-        migrate_engine.execute("SET foreign_key_checks = 1")
-        migrate_engine.execute(
-            "ALTER DATABASE nova DEFAULT CHARACTER SET utf8")
+            sql += "ALTER TABLE %s CONVERT TO CHARACTER SET utf8;" % table
+        sql += "SET foreign_key_checks = 1;"
+        sql += "ALTER DATABASE %s DEFAULT CHARACTER SET utf8;" \
+            % migrate_engine.url.database
+        migrate_engine.execute(sql)
 
 
 def downgrade(migrate_engine):
