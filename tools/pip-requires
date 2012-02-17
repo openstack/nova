@@ -32,3 +32,4 @@ nosexcover
 paramiko
 feedparser
 pycrypto
+Babel>=0.9.6

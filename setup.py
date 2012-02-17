@@ -16,26 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import gettext
 import glob
 import os
 
 from setuptools import find_packages
 
-# In order to run the i18n commands for compiling and
-# installing message catalogs, we use DistUtilsExtra.
-# Don't make this a hard requirement, but warn that
-# i18n commands won't be available if DistUtilsExtra is
-# not installed...
-try:
-    from DistUtilsExtra.auto import setup
-except ImportError:
-    from setuptools import setup
-    print "Warning: DistUtilsExtra required to use i18n builders. "
-    print "To build nova with support for message catalogs, you need "
-    print "  https://launchpad.net/python-distutils-extra >= 2.18"
-
-gettext.install('nova', unicode=1)
+from setuptools import setup
 
 from nova import version
 
