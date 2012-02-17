@@ -40,6 +40,7 @@ import socket
 import sys
 import tempfile
 import time
+import traceback
 
 from eventlet import greenthread
 
@@ -170,7 +171,8 @@ def wrap_instance_fault(function):
             raise
         except Exception, e:
             with utils.save_and_reraise_exception():
-                self.add_instance_fault_from_exc(context, instance_uuid, e)
+                self.add_instance_fault_from_exc(context, instance_uuid, e,
+                                                 sys.exc_info())
 
     return decorated_function
 
@@ -441,7 +443,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _check_instance_not_already_created(self, context, instance):
         """Ensure an instance with the same name is not already present."""
         if self.driver.instance_exists(instance['name']):
-            raise exception.Error(_("Instance has already been created"))
+            _msg = _("Instance has already been created")
+            raise exception.Invalid(_msg)
 
     def _check_image_size(self, context, instance):
         """Ensure image is smaller than the maximum size allowed by the
@@ -638,8 +641,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if current_power_state == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
-            raise exception.Error(_('trying to destroy already destroyed'
-                                    ' instance: %s') % instance_uuid)
+            _msg = _('trying to destroy already destroyed instance: %s')
+            raise exception.Invalid(_msg % instance_uuid)
+
         # NOTE(vish) get bdms before destroying the instance
         bdms = self._get_instance_volume_bdms(context, instance_id)
         block_device_info = self._get_instance_volume_block_device_info(
@@ -981,9 +985,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             if current_power_state != expected_state:
                 self._instance_update(context, instance_id, task_state=None)
-                raise exception.Error(_('Failed to set admin password. '
-                                      'Instance %s is not running') %
-                                      instance_ref["uuid"])
+                _msg = _('Failed to set admin password. Instance %s is not'
+                         ' running') % instance_ref["uuid"]
+                raise exception.Invalid(_msg)
             else:
                 try:
                     self.driver.set_admin_password(instance_ref, new_pass)
@@ -1011,7 +1015,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         # potentially reveal password information to the
                         # API caller.  The real exception is logged above
                         _msg = _('Error setting admin password')
-                        raise exception.Error(_msg)
+                        raise exception.NovaException(_msg)
                     time.sleep(1)
                     continue
 
@@ -2192,18 +2196,24 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         self.driver.update_available_resource(context, self.host)
 
-    def add_instance_fault_from_exc(self, context, instance_uuid, fault):
+    def add_instance_fault_from_exc(self, context, instance_uuid, fault,
+                                    exc_info=None):
         """Adds the specified fault to the database."""
-        if hasattr(fault, "code"):
-            code = fault.code
-        else:
-            code = 500
+
+        code = 500
+        if hasattr(fault, "kwargs"):
+            code = fault.kwargs.get('code', 500)
+
+        details = unicode(fault)
+        if exc_info and code == 500:
+            tb = exc_info[2]
+            details += '\n' + ''.join(traceback.format_tb(tb))
 
         values = {
             'instance_uuid': instance_uuid,
             'code': code,
             'message': fault.__class__.__name__,
-            'details': unicode(fault),
+            'details': unicode(details),
         }
         self.db.instance_fault_create(context, values)
 
