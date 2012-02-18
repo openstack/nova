@@ -232,6 +232,11 @@ class ImageCacheManager(object):
 
         Returns nothing.
         """
+        if not os.path.exists(base_file):
+            LOG.debug(_('Cannot remove %(base_file)s, it does not exist'),
+                      base_file)
+            return
+
         mtime = os.path.getmtime(base_file)
         age = time.time() - mtime
 

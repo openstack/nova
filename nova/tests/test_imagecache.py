@@ -17,7 +17,9 @@
 #    under the License.
 
 
+import cStringIO
 import hashlib
+import logging
 import os
 import shutil
 import tempfile
@@ -27,7 +29,7 @@ from nova import test
 
 from nova import db
 from nova import flags
-from nova import log as logging
+from nova import log
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils
 
@@ -35,7 +37,7 @@ from nova.virt.libvirt import utils as virtutils
 flags.DECLARE('instances_path', 'nova.compute.manager')
 FLAGS = flags.FLAGS
 
-LOG = logging.getLogger(__name__)
+LOG = log.getLogger(__name__)
 
 
 class ImageCacheManagerTestCase(test.TestCase):
@@ -319,18 +321,25 @@ class ImageCacheManagerTestCase(test.TestCase):
         finally:
             shutil.rmtree(dirname)
 
-    def test_remove_base_file(self):
-        try:
-            dirname = tempfile.mkdtemp()
-            fname = os.path.join(dirname, 'aaa')
+    def _make_base_file(checksum=True):
+        """Make a base file for testing."""
 
-            f = open(fname, 'w')
-            f.write('data')
-            f.close()
+        dirname = tempfile.mkdtemp()
+        fname = os.path.join(dirname, 'aaa')
 
+        f = open(fname, 'w')
+        f.write('data')
+        f.close()
+
+        if checksum:
             f = open('%s.sha1' % fname, 'w')
             f.close()
 
+        return dirname, fname
+
+    def test_remove_base_file(self):
+        dirname, fname = self._make_base_file()
+        try:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager._remove_base_file(fname)
 
@@ -339,7 +348,7 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertTrue(os.path.exists('%s.sha1' % fname))
 
             # Old files get cleaned up though
-            os.utime(fname, (-1, time.time() - 100000))
+            os.utime(fname, (-1, time.time() - 3601))
             image_cache_manager._remove_base_file(fname)
 
             self.assertFalse(os.path.exists(fname))
@@ -347,3 +356,71 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         finally:
             shutil.rmtree(dirname)
+
+    def test_remove_base_file_original(self):
+        dirname, fname = self._make_base_file()
+        try:
+            image_cache_manager = imagecache.ImageCacheManager()
+            image_cache_manager.originals = [fname]
+            image_cache_manager._remove_base_file(fname)
+
+            # Files are initially too new to delete
+            self.assertTrue(os.path.exists(fname))
+            self.assertTrue(os.path.exists('%s.sha1' % fname))
+
+            # This file should stay longer than a resized image
+            os.utime(fname, (-1, time.time() - 3601))
+            image_cache_manager._remove_base_file(fname)
+
+            self.assertTrue(os.path.exists(fname))
+            self.assertTrue(os.path.exists('%s.sha1' % fname))
+
+            # Originals don't stay forever though
+            os.utime(fname, (-1, time.time() - 3600 * 25))
+            image_cache_manager._remove_base_file(fname)
+
+            self.assertFalse(os.path.exists(fname))
+            self.assertFalse(os.path.exists('%s.sha1' % fname))
+
+        finally:
+            shutil.rmtree(dirname)
+
+    def test_remove_base_file_dne(self):
+        # This test is solely to execute the "does not exist" code path. We
+        # don't expect the method being tested to do anything in this case.
+        dirname = tempfile.mkdtemp()
+        try:
+            fname = os.path.join(dirname, 'aaa')
+            image_cache_manager = imagecache.ImageCacheManager()
+            image_cache_manager._remove_base_file(fname)
+
+        finally:
+            shutil.rmtree(dirname)
+
+    def test_remove_base_file_oserror(self):
+        dirname = tempfile.mkdtemp()
+
+        # Intercept log messages
+        mylog = log.getLogger()
+        stream = cStringIO.StringIO()
+        handler = logging.StreamHandler(stream)
+        handler.setFormatter(log.LegacyNovaFormatter())
+        mylog.logger.addHandler(handler)
+
+        fname = os.path.join(dirname, 'aaa')
+
+        try:
+            os.mkdir(fname)
+            os.utime(fname, (-1, time.time() - 3601))
+
+            # This will raise an OSError because of file permissions
+            image_cache_manager = imagecache.ImageCacheManager()
+            image_cache_manager._remove_base_file(fname)
+
+            self.assertTrue(os.path.exists(fname))
+            self.assertNotEqual(stream.getvalue().find('Failed to remove'),
+                                -1)
+
+        finally:
+            shutil.rmtree(dirname)
+            mylog.logger.removeHandler(handler)
