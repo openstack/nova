@@ -404,10 +404,6 @@ class FlagNotSet(NotFound):
     message = _("Required flag %(flag)s not set.")
 
 
-class InstanceNotFound(NotFound):
-    message = _("Instance %(instance_id)s could not be found.")
-
-
 class VolumeNotFound(NotFound):
     message = _("Volume %(volume_id)s could not be found.")
 
@@ -985,3 +981,11 @@ class SolidFireAPIDataException(SolidFireAPIException):
 
 class DuplicateVlan(Duplicate):
     message = _("Detected existing vlan with id %(vlan)")
+
+
+class InstanceNotFound(NotFound):
+    message = _("Instance %(instance_id)s could not be found.")
+
+
+class InvalidInstanceIDMalformed(Invalid):
+        message = _("Invalid id: %(val) (expecting \"i-...\").")

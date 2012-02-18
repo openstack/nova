@@ -43,12 +43,22 @@ from nova import network
 from nova import rpc
 from nova import utils
 from nova import volume
+from nova.api import validator
 
 
 FLAGS = flags.FLAGS
 flags.DECLARE('dhcp_domain', 'nova.network.manager')
 
 LOG = logging.getLogger(__name__)
+
+
+def validate_ec2_id(val):
+    if not validator.validate_str()(val):
+        raise exception.InvalidInstanceIDMalformed(val)
+    try:
+        ec2utils.ec2_id_to_id(val)
+    except exception.InvalidEc2Id:
+        raise exception.InvalidInstanceIDMalformed(val)
 
 
 def _gen_key(context, user_id, key_name):
@@ -323,6 +333,7 @@ class CloudController(object):
         return s
 
     def create_snapshot(self, context, volume_id, **kwargs):
+        validate_ec2_id(volume_id)
         LOG.audit(_("Create snapshot of volume %s"), volume_id,
                   context=context)
         volume_id = ec2utils.ec2_id_to_id(volume_id)
@@ -789,6 +800,7 @@ class CloudController(object):
             ec2_id = instance_id[0]
         else:
             ec2_id = instance_id
+        validate_ec2_id(ec2_id)
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
         instance = self.compute_api.get(context, instance_id)
         output = self.compute_api.get_console_output(context, instance)
@@ -801,6 +813,7 @@ class CloudController(object):
         if volume_id:
             volumes = []
             for ec2_id in volume_id:
+                validate_ec2_id(ec2_id)
                 internal_id = ec2utils.ec2_id_to_id(ec2_id)
                 volume = self.volume_api.get(context, internal_id)
                 volumes.append(volume)
@@ -871,12 +884,15 @@ class CloudController(object):
         return self._format_volume(context, dict(volume))
 
     def delete_volume(self, context, volume_id, **kwargs):
+        validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_id_to_id(volume_id)
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.delete(context, volume)
         return True
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
+        validate_ec2_id(instance_id)
+        validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_id_to_id(volume_id)
         instance_id = ec2utils.ec2_id_to_id(instance_id)
         instance = self.compute_api.get(context, instance_id)
@@ -893,6 +909,7 @@ class CloudController(object):
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
     def detach_volume(self, context, volume_id, **kwargs):
+        validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_id_to_id(volume_id)
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
         volume = self.volume_api.get(context, volume_id)
@@ -981,6 +998,7 @@ class CloudController(object):
                 _('attribute not supported: %s') % attribute)
 
         ec2_instance_id = instance_id
+        validate_ec2_id(instance_id)
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
         instance = self.compute_api.get(context, instance_id)
         result = {'instance_id': ec2_instance_id}
@@ -1264,6 +1282,7 @@ class CloudController(object):
         LOG.debug(_("Going to start terminating instances"))
         previous_states = []
         for ec2_id in instance_id:
+            validate_ec2_id(ec2_id)
             _instance_id = ec2utils.ec2_id_to_id(ec2_id)
             instance = self.compute_api.get(context, _instance_id)
             previous_states.append(instance)
@@ -1276,6 +1295,7 @@ class CloudController(object):
         """instance_id is a list of instance ids"""
         LOG.audit(_("Reboot instance %r"), instance_id, context=context)
         for ec2_id in instance_id:
+            validate_ec2_id(ec2_id)
             _instance_id = ec2utils.ec2_id_to_id(ec2_id)
             instance = self.compute_api.get(context, _instance_id)
             self.compute_api.reboot(context, instance, 'HARD')
@@ -1286,6 +1306,7 @@ class CloudController(object):
         Here instance_id is a list of instance ids"""
         LOG.debug(_("Going to stop instances"))
         for ec2_id in instance_id:
+            validate_ec2_id(ec2_id)
             _instance_id = ec2utils.ec2_id_to_id(ec2_id)
             instance = self.compute_api.get(context, _instance_id)
             self.compute_api.stop(context, instance)
@@ -1296,6 +1317,7 @@ class CloudController(object):
         Here instance_id is a list of instance ids"""
         LOG.debug(_("Going to start instances"))
         for ec2_id in instance_id:
+            validate_ec2_id(ec2_id)
             _instance_id = ec2utils.ec2_id_to_id(ec2_id)
             instance = self.compute_api.get(context, _instance_id)
             self.compute_api.start(context, instance)
@@ -1490,7 +1512,7 @@ class CloudController(object):
         # NOTE(yamahata): name/description are ignored by register_image(),
         #                 do so here
         no_reboot = kwargs.get('no_reboot', False)
-
+        validate_ec2_id(instance_id)
         ec2_instance_id = instance_id
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
         instance = self.compute_api.get(context, instance_id)
