@@ -25,8 +25,10 @@ Includes injection of SSH PGP keys into authorized_keys file.
 
 """
 
+import crypt
 import json
 import os
+import random
 import tempfile
 
 from nova import exception
@@ -207,7 +209,8 @@ class _DiskImage(object):
 
 # Public module functions
 
-def inject_data(image, key=None, net=None, metadata=None,
+def inject_data(image,
+                key=None, net=None, metadata=None, admin_password=None,
                 partition=None, use_cow=False):
     """Injects a ssh key and optionally net data into a disk image.
 
@@ -220,7 +223,8 @@ def inject_data(image, key=None, net=None, metadata=None,
     img = _DiskImage(image=image, partition=partition, use_cow=use_cow)
     if img.mount():
         try:
-            inject_data_into_fs(img.mount_dir, key, net, metadata,
+            inject_data_into_fs(img.mount_dir,
+                                key, net, metadata, admin_password,
                                 utils.execute)
         finally:
             img.umount()
@@ -274,7 +278,7 @@ def destroy_container(img):
         LOG.exception(_('Failed to remove container: %s'), exn)
 
 
-def inject_data_into_fs(fs, key, net, metadata, execute):
+def inject_data_into_fs(fs, key, net, metadata, admin_password, execute):
     """Injects data into a filesystem already mounted by the caller.
     Virt connections can call this directly if they mount their fs
     in a different way to inject_data
@@ -285,6 +289,8 @@ def inject_data_into_fs(fs, key, net, metadata, execute):
         _inject_net_into_fs(net, fs, execute=execute)
     if metadata:
         _inject_metadata_into_fs(metadata, fs, execute=execute)
+    if admin_password:
+        _inject_admin_password_into_fs(admin_password, fs, execute=execute)
 
 
 def _inject_file_into_fs(fs, path, contents):
@@ -336,3 +342,110 @@ def _inject_net_into_fs(net, fs, execute=None):
     utils.execute('chmod', 755, netdir, run_as_root=True)
     netfile = os.path.join(netdir, 'interfaces')
     utils.execute('tee', netfile, process_input=net, run_as_root=True)
+
+
+def _inject_admin_password_into_fs(admin_passwd, fs, execute=None):
+    """Set the root password to admin_passwd
+
+    admin_password is a root password
+    fs is the path to the base of the filesystem into which to inject
+    the key.
+
+    This method modifies the instance filesystem directly,
+    and does not require a guest agent running in the instance.
+
+    """
+    # The approach used here is to copy the password and shadow
+    # files from the instance filesystem to local files, make any
+    # necessary changes, and then copy them back.
+
+    admin_user = 'root'
+
+    fd, tmp_passwd = tempfile.mkstemp()
+    os.close(fd)
+    fd, tmp_shadow = tempfile.mkstemp()
+    os.close(fd)
+
+    utils.execute('cp', os.path.join(fs, 'etc', 'passwd'), tmp_passwd,
+                  run_as_root=True)
+    utils.execute('cp', os.path.join(fs, 'etc', 'shadow'), tmp_shadow,
+                  run_as_root=True)
+    _set_passwd(admin_user, admin_passwd, tmp_passwd, tmp_shadow)
+    utils.execute('cp', tmp_passwd, os.path.join(fs, 'etc', 'passwd'),
+                  run_as_root=True)
+    utils.execute('rm', tmp_passwd, run_as_root=True)
+    utils.execute('cp', tmp_shadow, os.path.join(fs, 'etc', 'shadow'),
+                  run_as_root=True)
+    utils.execute('rm', tmp_shadow, run_as_root=True)
+
+
+def _set_passwd(username, admin_passwd, passwd_file, shadow_file):
+    """set the password for username to admin_passwd
+
+    The passwd_file is not modified.  The shadow_file is updated.
+    if the username is not found in both files, an exception is raised.
+
+    :param username: the username
+    :param encrypted_passwd: the  encrypted password
+    :param passwd_file: path to the passwd file
+    :param shadow_file: path to the shadow password file
+    :returns: nothing
+    :raises: exception.Error(), IOError()
+
+    """
+    salt_set = ('abcdefghijklmnopqrstuvwxyz'
+                'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                '0123456789./')
+    # encryption algo - id pairs for crypt()
+    algos = {'SHA-512': '$6$', 'SHA-256': '$5$', 'MD5': '$1$', 'DES': '' }
+
+    salt = 16 * ' '
+    salt = ''.join([random.choice(salt_set) for c in salt])
+
+    # crypt() depends on the underlying libc, and may not support all
+    # forms of hash. We try md5 first. If we get only 13 characters back,
+    # then the underlying crypt() didn't understand the '$n$salt' magic,
+    # so we fall back to DES.
+    # md5 is the default because it's widely supported. Although the
+    # local crypt() might support stronger SHA, the target instance
+    # might not.
+    encrypted_passwd = crypt.crypt(admin_passwd, algos['MD5'] + salt)
+    if len(encrypted_passwd) == 13:
+        encrypted_passwd = crypt.crypt(admin_passwd, algos['DES'] + salt)
+
+    try:
+        p_file = open(passwd_file, 'rb')
+        s_file = open(shadow_file, 'rb')
+
+        # username MUST exist in passwd file or it's an error
+        found = False
+        for entry in p_file:
+            split_entry = entry.split(':')
+            if split_entry[0] == username:
+                found = True
+                break
+        if not found:
+            msg = _('User %(username)s not found in password file.')
+            raise exception.Error(msg % username)
+
+        # update password in the shadow file.It's an error if the
+        # the user doesn't exist.
+        new_shadow = list()
+        found = False
+        for entry in s_file:
+            split_entry = entry.split(':')
+            if split_entry[0] == username:
+                split_entry[1] = encrypted_passwd
+                found = True
+            new_entry = ':'.join(split_entry)
+            new_shadow.append(new_entry)
+        s_file.close()
+        if not found:
+            msg = _('User %(username)s not found in shadow file.')
+            raise exception.Error(msg % username)
+        s_file = open(shadow_file, 'wb')
+        for entry in new_shadow:
+            s_file.write(entry)
+    finally:
+        p_file.close()
+        s_file.close()

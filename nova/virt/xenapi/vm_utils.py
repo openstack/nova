@@ -1706,8 +1706,11 @@ def _mounted_processing(device, key, net, metadata):
                 if not _find_guest_agent(tmpdir, FLAGS.xenapi_agent_path):
                     LOG.info(_('Manipulating interface files '
                             'directly'))
-                    disk.inject_data_into_fs(tmpdir, key, net, metadata,
-                        utils.execute)
+                    # for xenapi, we don't 'inject' admin_password here,
+                    # it's handled at instance startup time
+                    disk.inject_data_into_fs(tmpdir,
+                                             key, net, None, metadata,
+                                             utils.execute)
             finally:
                 utils.execute('umount', dev_path, run_as_root=True)
         else:
