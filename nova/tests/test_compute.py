@@ -192,13 +192,15 @@ class BaseTestCase(test.TestCase):
 
 class ComputeTestCase(BaseTestCase):
     def setUp(self):
-        def fake_get_nw_info(cls, ctxt, instance):
+        def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
             self.assertTrue(ctxt.is_admin)
             return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
                                                           spectacular=True)
 
         super(ComputeTestCase, self).setUp()
         self.stubs.Set(nova.network.API, 'get_instance_nw_info',
+                       fake_get_nw_info)
+        self.stubs.Set(nova.network.API, 'allocate_for_instance',
                        fake_get_nw_info)
 
     def test_wrap_instance_fault(self):
@@ -268,6 +270,35 @@ class ComputeTestCase(BaseTestCase):
             instance = instances[0]
 
             self.assertTrue(instance.config_drive)
+        finally:
+            db.instance_destroy(self.context, instance['id'])
+
+    def test_default_access_ip(self):
+        self.flags(default_access_ip_network_name='test1', stub_network=False)
+        instance = self._create_fake_instance()
+
+        try:
+            self.compute.run_instance(self.context, instance['uuid'],
+                    is_first_time=True)
+            instances = db.instance_get_all(context.get_admin_context())
+            instance = instances[0]
+
+            self.assertEqual(instance.access_ip_v4, '192.168.1.100')
+            self.assertEqual(instance.access_ip_v6, '2001:db8:0:1::1')
+        finally:
+            db.instance_destroy(self.context, instance['id'])
+
+    def test_no_default_access_ip(self):
+        instance = self._create_fake_instance()
+
+        try:
+            self.compute.run_instance(self.context, instance['uuid'],
+                    is_first_time=True)
+            instances = db.instance_get_all(context.get_admin_context())
+            instance = instances[0]
+
+            self.assertFalse(instance.access_ip_v4)
+            self.assertFalse(instance.access_ip_v6)
         finally:
             db.instance_destroy(self.context, instance['id'])
 
