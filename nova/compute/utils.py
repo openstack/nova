@@ -37,7 +37,7 @@ def notify_usage_exists(instance_ref, current_period=False):
 
         Generates usage for last completed period, unless 'current_period'
         is True."""
-    admin_context = context.get_admin_context()
+    admin_context = context.get_admin_context(read_deleted='yes')
     begin, end = utils.current_audit_period()
     bw = {}
     if current_period:
