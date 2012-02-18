@@ -365,7 +365,7 @@ class ImageCacheManager(object):
 
             fingerprint = hashlib.sha1(str(img['id'])).hexdigest()
             for result in self._find_base_file(base_dir, fingerprint):
-                base_file, image_small, image_resized = res
+                base_file, image_small, image_resized = result
                 self._handle_base_image(img, base_file)
 
                 if not image_small and not image_resized:
