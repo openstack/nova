@@ -30,6 +30,7 @@ from nova import test
 from nova import db
 from nova import flags
 from nova import log
+from nova import image
 from nova import utils
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils
@@ -570,3 +571,170 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         finally:
             shutil.rmtree(dirname)
+
+    def test_verify_base_images(self):
+        self.flags(instances_path='/instance_path')
+        self.flags(remove_unused_base_images=True)
+
+        base_file_list = ['00000001',
+                          'ephemeral_0_20_None',
+                          'e97222e91fc4241f49a7f520d1dcf446751129b3_sm',
+                          'e09c675c2d1cfac32dae3c2d83689c8c94bc693b_sm',
+                          '92cfceb39d57d914ed8b14d0e37643de0797ae56',
+                          '17d1b00b81642842e514494a78e804e9a511637c',
+                          ('17d1b00b81642842e514494a78e804e9a511637c_'
+                           '5368709120'),
+                          ('17d1b00b81642842e514494a78e804e9a511637c_'
+                           '10737418240'),
+                          '00000004']
+
+        def fq_path(path):
+            return os.path.join('/instance_path/_base/', path)
+
+        # Fake base directory existance
+        orig_exists = os.path.exists
+
+        def exists(path):
+            # The python coverage tool got angry with my overly broad mocks
+            if not path.startswith('/instance_path'):
+                return orig_exists(path)
+
+            if path in ['/instance_path',
+                        '/instance_path/_base',
+                        '/instance_path/instance-1/disk',
+                        '/instance_path/instance-2/disk',
+                        '/instance_path/instance-3/disk',
+                        ('/instance_path/_base/'
+                         '92cfceb39d57d914ed8b14d0e37643de0797ae56.sha1')]:
+                return True
+
+            for p in base_file_list:
+                if path == fq_path(p):
+                    return True
+                if path == fq_path(p) + '.sha1':
+                    return False
+
+            if path in [('/instance_path/_base/'
+                         '92cfceb39d57d914ed8b14d0e37643de0797ae56_sm')]:
+                return False
+
+            self.fail('Unexpected path existance check: %s' % path)
+
+        self.stubs.Set(os.path, 'exists', lambda x: exists(x))
+
+        # Fake up some instances in the instances directory
+        orig_listdir = os.listdir
+
+        def listdir(path):
+            # The python coverage tool got angry with my overly broad mocks
+            if not path.startswith('/instance_path'):
+                return orig_list(path)
+
+            if path == '/instance_path':
+                return ['instance-1', 'instance-2', 'instance-3', '_base']
+
+            if path == '/instance_path/_base':
+                return base_file_list
+
+            self.fail('Unexpected directory listed: %s' % path)
+
+        self.stubs.Set(os, 'listdir', lambda x: listdir(x))
+
+        # Fake isfile for these faked images in _base
+        orig_isfile = os.path.isfile
+
+        def isfile(path):
+            # The python coverage tool got angry with my overly broad mocks
+            if not path.startswith('/instance_path'):
+                return orig_isfile(path)
+
+            for p in base_file_list:
+                if path == fq_path(p):
+                    return True
+
+            self.fail('Unexpected isfile call: %s' % path)
+
+        self.stubs.Set(os.path, 'isfile', lambda x: isfile(x))
+
+        # Fake the database call which lists running instances
+        self.stubs.Set(db, 'instance_get_all',
+                       lambda x: [{'image_ref': 'image-1',
+                                   'host': FLAGS.host,
+                                   'name': 'instance-1',
+                                   'uuid': '123'},
+                                  {'image_ref': 'image-2',
+                                   'host': FLAGS.host,
+                                   'name': 'instance-2',
+                                   'uuid': '456'}])
+
+        image_cache_manager = imagecache.ImageCacheManager()
+
+        # Fake the image service call which lists all registered images
+        class FakeImageService(object):
+            def detail(self, _context):
+                return [{'container_format': 'ami', 'id': '42'},
+                        {'container_format': 'amk', 'id': '43'}]
+
+        self.stubs.Set(image, 'get_default_image_service',
+                       lambda: FakeImageService())
+
+        # Fake the utils call which finds the backing image
+        def get_disk_backing_file(path):
+            if path in ['/instance_path/instance-1/disk',
+                        '/instance_path/instance-2/disk']:
+                return fq_path('17d1b00b81642842e514494a78e804e9a511637c_'
+                               '5368709120')
+            self.fail('Unexpected backing file lookup: %s' % path)
+
+        self.stubs.Set(virtutils, 'get_disk_backing_file',
+                       lambda x: get_disk_backing_file(x))
+
+        # Fake out verifying checksums, as that is tested elsewhere
+        self.stubs.Set(image_cache_manager, '_verify_checksum',
+                       lambda x, y:
+                           y == '92cfceb39d57d914ed8b14d0e37643de0797ae56')
+
+        # Fake getmtime as well
+        orig_getmtime = os.path.getmtime
+
+        def getmtime(path):
+            if not path.startswith('/instance_path'):
+                return orig_getmtime(path)
+
+            return 1000000
+
+        self.stubs.Set(os.path, 'getmtime', lambda x: getmtime(x))
+
+        # Make sure we don't accidentally remove a real file
+        orig_remove = os.remove
+
+        def remove(path):
+            if not path.startswith('/instance_path'):
+                return orig_remove(path)
+
+            # Don't try to remove fake files
+            return
+
+        self.stubs.Set(os, 'remove', lambda x: remove(x))
+
+        # And finally we can make the call we're actually testing...
+        # The argument here should be a context, but it is mocked out
+        image_cache_manager.verify_base_images(None)
+
+        # Verify
+        active = [fq_path('17d1b00b81642842e514494a78e804e9a511637c_'
+                          '5368709120')]
+        self.assertEquals(image_cache_manager.active_base_files, active)
+
+        for rem in [fq_path('e97222e91fc4241f49a7f520d1dcf446751129b3_sm'),
+                    fq_path('e09c675c2d1cfac32dae3c2d83689c8c94bc693b_sm'),
+                    fq_path('92cfceb39d57d914ed8b14d0e37643de0797ae56'),
+                    fq_path('17d1b00b81642842e514494a78e804e9a511637c'),
+                    fq_path('17d1b00b81642842e514494a78e804e9a511637c_'
+                            '10737418240')]:
+            self.assertTrue(rem in image_cache_manager.removable_base_files)
+
+    def test_verify_base_images_no_base(self):
+        self.flags(instances_path='/tmp/no/such/dir/name/please')
+        image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager.verify_base_images(None)

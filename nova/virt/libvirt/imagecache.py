@@ -99,17 +99,20 @@ def write_stored_checksum(target):
 
 class ImageCacheManager(object):
     def __init__(self):
-        self.unexplained_images = []
-        self.originals = []
+        self._reset_state()
 
-        # These are populated by a call to _list_running_instances()
+    def _reset_state(self):
+        """Reset state variables used for each pass."""
+
         self.used_images = {}
         self.image_popularity = {}
         self.instance_names = {}
 
-        self.removable_base_files = []
         self.active_base_files = []
         self.corrupt_base_files = []
+        self.originals = []
+        self.removable_base_files = []
+        self.unexplained_images = []
 
     def _store_image(self, base_dir, ent, original=False):
         """Store a base image for later examination."""
@@ -297,10 +300,10 @@ class ImageCacheManager(object):
         image_bad = False
         image_in_use = False
 
-        LOG.debug(_('%(container_format)s-%(id)s (%(base_file)s): checking'),
-                  {'container_format': img['container_format'],
-                   'id': img['id'],
-                   'base_file': base_file})
+        LOG.info(_('%(container_format)s-%(id)s (%(base_file)s): checking'),
+                 {'container_format': img['container_format'],
+                  'id': img['id'],
+                  'base_file': base_file})
 
         if base_file in self.unexplained_images:
             self.unexplained_images.remove(base_file)
@@ -377,12 +380,7 @@ class ImageCacheManager(object):
         # CoW is disabled, the resize occurs as part of the copy from the
         # cache to the instance directory. Files ending in _sm are no longer
         # created, but may remain from previous versions.
-
-        self.unexplained_images = []
-        self.active_base_files = []
-        self.corrupt_base_files = []
-        self.removable_base_files = []
-        self.originals = []
+        self._reset_state()
 
         base_dir = os.path.join(FLAGS.instances_path, '_base')
         if not os.path.exists(base_dir):
