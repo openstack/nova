@@ -98,9 +98,11 @@ def create_pool(name_label):
                           {'name_label': name_label})
 
 
-def create_host(name_label):
+def create_host(name_label, hostname='fake_name', address='fake_addr'):
     return _create_object('host',
-                          {'name_label': name_label})
+                          {'name_label': name_label,
+                           'hostname': hostname,
+                           'address': address})
 
 
 def create_network(name_label, bridge):

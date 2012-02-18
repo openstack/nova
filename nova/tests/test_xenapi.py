@@ -244,8 +244,25 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEqual(server_info[1], 'myaddress')
 
     def test_get_diagnostics(self):
+        def fake_get_rrd(host, vm_uuid):
+            with open('xenapi/vm_rrd.xml') as f:
+                return re.sub(r'\s', '', f.read())
+        self.stubs.Set(vm_utils, 'get_rrd', fake_get_rrd)
+
+        fake_diagnostics = {
+            'vbd_xvdb_write': '0.0',
+            'memory_target': '10961792000.0000',
+            'memory_internal_free': '3612860.6020',
+            'memory': '10961792000.0000',
+            'vbd_xvda_write': '0.0',
+            'cpu0': '0.0110',
+            'vif_0_tx': '752.4007',
+            'vbd_xvda_read': '0.0',
+            'vif_0_rx': '4837.8805'
+        }
         instance = self._create_instance()
-        self.conn.get_diagnostics(instance)
+        expected = self.conn.get_diagnostics(instance)
+        self.assertDictMatch(fake_diagnostics, expected)
 
     def test_instance_snapshot_fails_with_no_primary_vdi(self):
         def create_bad_vbd(vm_ref, vdi_ref):
