@@ -1718,28 +1718,6 @@ class NWFilterTestCase(test.TestCase):
         security_group = db.security_group_get_by_name(self.context,
                                                        'fake',
                                                        'testgroup')
-
-        xml = self.fw.security_group_to_nwfilter_xml(security_group.id)
-
-        dom = xml_to_dom(xml)
-        self.assertEqual(dom.firstChild.tagName, 'filter')
-
-        rules = dom.getElementsByTagName('rule')
-        self.assertEqual(len(rules), 1)
-
-        # It's supposed to allow inbound traffic.
-        self.assertEqual(rules[0].getAttribute('action'), 'accept')
-        self.assertEqual(rules[0].getAttribute('direction'), 'in')
-
-        # Must be lower priority than the base filter (which blocks everything)
-        self.assertTrue(int(rules[0].getAttribute('priority')) < 1000)
-
-        ip_conditions = rules[0].getElementsByTagName('tcp')
-        self.assertEqual(len(ip_conditions), 1)
-        self.assertEqual(ip_conditions[0].getAttribute('srcipaddr'), '0.0.0.0')
-        self.assertEqual(ip_conditions[0].getAttribute('srcipmask'), '0.0.0.0')
-        self.assertEqual(ip_conditions[0].getAttribute('dstportstart'), '80')
-        self.assertEqual(ip_conditions[0].getAttribute('dstportend'), '81')
         self.teardown_security_group()
 
     def teardown_security_group(self):
@@ -1819,8 +1797,7 @@ class NWFilterTestCase(test.TestCase):
         def _ensure_all_called(mac):
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
                                                    mac.translate(None, ':'))
-            secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
-            for required in [secgroup_filter, 'allow-dhcp-server',
+            for required in ['allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',
                              'no-mac-spoofing']:
                 self.assertTrue(required in
@@ -1841,19 +1818,9 @@ class NWFilterTestCase(test.TestCase):
         mac = network_info[0][1]['mac']
 
         self.fw.setup_basic_filtering(instance, network_info)
-        self.fw.prepare_instance_filter(instance, network_info)
-        self.fw.apply_instance_filter(instance, network_info)
         _ensure_all_called(mac)
         self.teardown_security_group()
         db.instance_destroy(context.get_admin_context(), instance_ref['id'])
-
-    def test_create_network_filters(self):
-        instance_ref = self._create_instance()
-        network_info = _fake_network_info(self.stubs, 3)
-        result = self.fw._create_network_filters(instance_ref,
-                                                 network_info,
-                                                 "fake")
-        self.assertEquals(len(result), 3)
 
     def test_unfilter_instance_undefines_nwfilters(self):
         admin_ctxt = context.get_admin_context()
@@ -1875,13 +1842,9 @@ class NWFilterTestCase(test.TestCase):
 
         network_info = _fake_network_info(self.stubs, 1)
         self.fw.setup_basic_filtering(instance, network_info)
-        self.fw.prepare_instance_filter(instance, network_info)
-        self.fw.apply_instance_filter(instance, network_info)
         original_filter_count = len(fakefilter.filters)
         self.fw.unfilter_instance(instance, network_info)
-
-        # should undefine 2 filters: instance and instance-secgroup
-        self.assertEqual(original_filter_count - len(fakefilter.filters), 2)
+        self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
 
         db.instance_destroy(admin_ctxt, instance_ref['id'])
 
