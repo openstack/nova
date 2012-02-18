@@ -71,8 +71,9 @@ class MetadataRequestHandler(wsgi.Application):
     """Serve metadata."""
 
     def __init__(self):
+        self.network_api = network.API()
         self.compute_api = compute.API(
-                network_api=network.API(),
+                network_api=self.network_api,
                 volume_api=volume.API())
 
     def _get_mpi_data(self, context, project_id):
@@ -139,19 +140,15 @@ class MetadataRequestHandler(wsgi.Application):
         return mappings
 
     def get_metadata(self, address):
-        ctxt = context.get_admin_context()
-        search_opts = {'fixed_ip': address, 'deleted': False}
-        try:
-            instance_ref = self.compute_api.get_all(ctxt,
-                    search_opts=search_opts)
-        except exception.NotFound:
-            instance_ref = None
-        if not instance_ref:
-            return None
+        if not address:
+            raise exception.FixedIpNotFoundForAddress(address=address)
 
-        # This ensures that all attributes of the instance
-        # are populated.
-        instance_ref = db.instance_get(ctxt, instance_ref[0]['id'])
+        ctxt = context.get_admin_context()
+        try:
+            fixed_ip = self.network_api.get_fixed_ip_by_address(ctxt, address)
+            instance_ref = db.instance_get(ctxt, fixed_ip['instance_id'])
+        except exception.NotFound:
+            return None
 
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         hostname = "%s.%s" % (instance_ref['hostname'], FLAGS.dhcp_domain)
