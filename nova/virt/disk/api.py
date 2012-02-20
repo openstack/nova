@@ -397,7 +397,7 @@ def _set_passwd(username, admin_passwd, passwd_file, shadow_file):
                 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                 '0123456789./')
     # encryption algo - id pairs for crypt()
-    algos = {'SHA-512': '$6$', 'SHA-256': '$5$', 'MD5': '$1$', 'DES': '' }
+    algos = {'SHA-512': '$6$', 'SHA-256': '$5$', 'MD5': '$1$', 'DES': ''}
 
     salt = 16 * ' '
     salt = ''.join([random.choice(salt_set) for c in salt])

@@ -2140,7 +2140,7 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(req, body).obj
 
         server = res['server']
-        self.assertTrue('adminPass' in body['server'] )
+        self.assertTrue('adminPass' in body['server'])
         self.assertTrue('adminPass' not in server)
 
     def test_create_instance_admin_pass_empty(self):
