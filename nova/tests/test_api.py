@@ -279,7 +279,7 @@ class ApiEc2TestCase(test.TestCase):
          a key pair, that the API call to list key pairs works properly"""
         self.expect_http()
         self.mox.ReplayAll()
-        keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+        keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                           for x in range(random.randint(4, 8)))
         # NOTE(vish): create depends on pool, so call helper directly
         cloud._gen_key(context.get_admin_context(), 'fake', keyname)
@@ -293,7 +293,7 @@ class ApiEc2TestCase(test.TestCase):
         requesting a second keypair with the same name fails sanely"""
         self.expect_http()
         self.mox.ReplayAll()
-        keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+        keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                           for x in range(random.randint(4, 8)))
         # NOTE(vish): create depends on pool, so call helper directly
         self.ec2.create_key_pair('test')

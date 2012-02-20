@@ -26,26 +26,29 @@ class TileraBareMetalNodesTestCase(test.TestCase):
 
     def setUp(self):
         super(TileraBareMetalNodesTestCase, self).setUp()
-        self.board_info = """\
-# board_id  ip_address mac_address 00:1A:CA:00:57:90 \
-00:1A:CA:00:58:98 00:1A:CA:00:58:50
-6            10.0.2.7   00:1A:CA:00:58:5C 10 16218 917 476 1 tilera_hv 1 \
-{"vendor":"tilera","model":"TILEmpower","arch":"TILEPro64","features":\
-["8x8Grid","32bVLIW","5.6MBCache","443BOPS","37TbMesh","700MHz-866MHz",\
-"4DDR2","2XAUIMAC/PHY","2GbEMAC"],"topology":{"cores":"64"}}
-7            10.0.2.8   00:1A:CA:00:58:A4 10 16218 917 476 1 tilera_hv 1 \
-{"vendor":"tilera","model":"TILEmpower","arch":"TILEPro64","features":\
-["8x8Grid","32bVLIW","5.6MBCache","443BOPS","37TbMesh","700MHz-866MHz",\
-"4DDR2","2XAUIMAC/PHY","2GbEMAC"],"topology":{"cores":"64"}}
-8            10.0.2.9   00:1A:CA:00:58:1A 10 16218 917 476 1 tilera_hv 1 \
-{"vendor":"tilera","model":"TILEmpower","arch":"TILEPro64","features":\
-["8x8Grid","32bVLIW","5.6MBCache","443BOPS","37TbMesh","700MHz-866MHz",\
-"4DDR2","2XAUIMAC/PHY","2GbEMAC"],"topology":{"cores":"64"}}
-9            10.0.2.10  00:1A:CA:00:58:38 10 16385 1000 0 0 tilera_hv 1 \
-{"vendor":"tilera","model":"TILEmpower","arch":"TILEPro64","features":\
-["8x8Grid","32bVLIW","5.6MBCache","443BOPS","37TbMesh","700MHz-866MHz",\
-"4DDR2","2XAUIMAC/PHY","2GbEMAC"],"topology":{"cores":"64"}}
-"""
+        self.board_info = "\n".join([
+'# board_id  ip_address mac_address 00:1A:CA:00:57:90 '
+'00:1A:CA:00:58:98 00:1A:CA:00:58:50',
+'6            10.0.2.7   00:1A:CA:00:58:5C 10 16218 917 476 1 tilera_hv 1 '
+'{"vendor":"tilera","model":"TILEmpower","arch":"TILEPro64",'
+ '"features":["8x8Grid","32bVLIW","5.6MBCache","443BOPS","37TbMesh",'
+             '"700MHz-866MHz","4DDR2","2XAUIMAC/PHY","2GbEMAC"],'
+ '"topology":{"cores":"64"}}',
+'7            10.0.2.8   00:1A:CA:00:58:A4 10 16218 917 476 1 tilera_hv 1 '
+'{"vendor":"tilera","model":"TILEmpower","arch":"TILEPro64",'
+ '"features":["8x8Grid","32bVLIW","5.6MBCache","443BOPS","37TbMesh",'
+             '"700MHz-866MHz","4DDR2","2XAUIMAC/PHY","2GbEMAC"],'
+ '"topology":{"cores":"64"}}',
+'8            10.0.2.9   00:1A:CA:00:58:1A 10 16218 917 476 1 tilera_hv 1 '
+'{"vendor":"tilera","model":"TILEmpower","arch":"TILEPro64",'
+ '"features":["8x8Grid","32bVLIW","5.6MBCache","443BOPS","37TbMesh",'
+             '"700MHz-866MHz","4DDR2","2XAUIMAC/PHY","2GbEMAC"],'
+ '"topology":{"cores":"64"}}',
+'9            10.0.2.10  00:1A:CA:00:58:38 10 16385 1000 0 0 tilera_hv 1 '
+'{"vendor":"tilera","model":"TILEmpower","arch":"TILEPro64",'
+ '"features":["8x8Grid","32bVLIW","5.6MBCache","443BOPS","37TbMesh",'
+             '"700MHz-866MHz","4DDR2","2XAUIMAC/PHY","2GbEMAC"],'
+ '"topology":{"cores":"64"}}'])
 
     def tearDown(self):
         super(TileraBareMetalNodesTestCase, self).tearDown()
@@ -63,8 +66,8 @@ class TileraBareMetalNodesTestCase(test.TestCase):
         try:
             self.mox.StubOutWithMock(__builtin__, 'open')
 
-            open("/tftpboot/tilera_boards", "r").AndReturn(\
-                 StringIO.StringIO(self.board_info))
+            open("/tftpboot/tilera_boards",
+                 "r").AndReturn(StringIO.StringIO(self.board_info))
 
             self.mox.ReplayAll()
 
@@ -78,8 +81,8 @@ class TileraBareMetalNodesTestCase(test.TestCase):
 
             self.mox.StubOutWithMock(__builtin__, 'open')
 
-            open("/tftpboot/tilera_boards", "r").AndReturn(\
-                StringIO.StringIO(self.board_info))
+            open("/tftpboot/tilera_boards",
+                 "r").AndReturn(StringIO.StringIO(self.board_info))
 
             self.mox.ReplayAll()
             nodes = tilera.BareMetalNodes()

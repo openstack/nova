@@ -1425,8 +1425,8 @@ class ServersControllerCreateTest(test.TestCase):
 
         def rpc_call_wrapper(context, topic, msg):
             """Stub out the scheduler creating the instance entry"""
-            if topic == FLAGS.scheduler_topic and \
-                    msg['method'] == 'run_instance':
+            if (topic == FLAGS.scheduler_topic and
+                msg['method'] == 'run_instance'):
                 request_spec = msg['args']['request_spec']
                 num_instances = request_spec.get('num_instances', 1)
                 instances = []
@@ -2401,8 +2401,8 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         self.assertDictMatch(request['body'], expected)
 
     def test_spec_request(self):
-        image_bookmark_link = "http://servers.api.openstack.org/1234/" + \
-                              "images/52415800-8b69-11e0-9b19-734f6f006e54"
+        image_bookmark_link = ("http://servers.api.openstack.org/1234/"
+                               "images/52415800-8b69-11e0-9b19-734f6f006e54")
         serial_request = """
 <server xmlns="http://docs.openstack.org/compute/api/v2"
         imageRef="%s"
@@ -2419,8 +2419,8 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
         expected = {
             "server": {
                 "name": "new-server-test",
-                "imageRef": "http://servers.api.openstack.org/1234/" + \
-                            "images/52415800-8b69-11e0-9b19-734f6f006e54",
+                "imageRef": ("http://servers.api.openstack.org/1234/"
+                             "images/52415800-8b69-11e0-9b19-734f6f006e54"),
                 "flavorRef": "52415800-8b69-11e0-9b19-734f1195ff37",
                 "metadata": {"My Server Name": "Apache1"},
                 "personality": [

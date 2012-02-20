@@ -77,8 +77,9 @@ class LogHandlerTestCase(test.TestCase):
 class NovaFormatterTestCase(test.TestCase):
     def setUp(self):
         super(NovaFormatterTestCase, self).setUp()
-        self.flags(logging_context_format_string="HAS CONTEXT "\
-                                              "[%(request_id)s]: %(message)s",
+        self.flags(logging_context_format_string="HAS CONTEXT "
+                                                 "[%(request_id)s]: "
+                                                 "%(message)s",
                    logging_default_format_string="NOCTXT: %(message)s",
                    logging_debug_format_suffix="--DBG")
         self.log = log.getLogger()

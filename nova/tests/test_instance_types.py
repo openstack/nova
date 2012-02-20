@@ -49,8 +49,8 @@ class InstanceTypeTestCase(test.TestCase):
     def _generate_flavorid(self):
         """return a flavorid not in the DB"""
         nonexistent_flavor = 2700
-        flavor_ids = [value["id"] for key, value in\
-                    instance_types.get_all_types().iteritems()]
+        flavor_ids = [value["id"] for key, value in
+                      instance_types.get_all_types().iteritems()]
         while nonexistent_flavor in flavor_ids:
             nonexistent_flavor += 1
         else:

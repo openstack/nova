@@ -125,8 +125,8 @@ class DirectTestCase(test.TestCase):
         req = webob.Request.blank('/fake/echo')
         req.environ['openstack.context'] = self.context
         req.method = 'POST'
-        req.body = 'data=foo&_underscored=ignoreMe&self=ignoreMe&context='\
-                   'ignoreMe'
+        req.body = ('data=foo&_underscored=ignoreMe&self=ignoreMe&context='
+                    'ignoreMe')
         resp = req.get_response(self.router)
         self.assertEqual(resp.status_int, 200)
         resp_parsed = json.loads(resp.body)

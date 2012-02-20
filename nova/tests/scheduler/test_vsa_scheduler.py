@@ -122,10 +122,10 @@ class VsaSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 dtype['DriveType'] = 'type_' + str(j)
                 dtype['TotalDrives'] = 2 * (self.init_num_drives + i)
                 dtype['DriveCapacity'] = vsa_sched.GB_TO_BYTES(1 + 100 * j)
-                dtype['TotalCapacity'] = dtype['TotalDrives'] * \
-                                            dtype['DriveCapacity']
-                dtype['AvailableCapacity'] = (dtype['TotalDrives'] - i) * \
-                                            dtype['DriveCapacity']
+                dtype['TotalCapacity'] = (dtype['TotalDrives'] *
+                                          dtype['DriveCapacity'])
+                dtype['AvailableCapacity'] = ((dtype['TotalDrives'] - i) *
+                                              dtype['DriveCapacity'])
                 dtype['DriveRpm'] = 7200
                 dtype['DifCapable'] = 0
                 dtype['SedCapable'] = 0
@@ -150,18 +150,20 @@ class VsaSchedulerTestCase(test_scheduler.SchedulerTestCase):
             qos = host_val['volume']['drive_qos_info']
 
             for k, d in qos.iteritems():
-                LOG.info("\t%s: type %s: drives (used %2d, total %2d) "\
-                    "size %3d, total %4d, used %4d, avail %d",
-                    k, d['DriveType'],
-                    d['FullDrive']['NumOccupiedDrives'], d['TotalDrives'],
-                    vsa_sched.BYTES_TO_GB(d['DriveCapacity']),
-                    vsa_sched.BYTES_TO_GB(d['TotalCapacity']),
-                    vsa_sched.BYTES_TO_GB(d['TotalCapacity'] - \
-                        d['AvailableCapacity']),
-                    vsa_sched.BYTES_TO_GB(d['AvailableCapacity']))
+                LOG.info("\t%s: type %s: drives (used %2d, total %2d) "
+                         "size %3d, total %4d, used %4d, avail %d",
+                         k,
+                         d['DriveType'],
+                         d['FullDrive']['NumOccupiedDrives'],
+                         d['TotalDrives'],
+                         vsa_sched.BYTES_TO_GB(d['DriveCapacity']),
+                         vsa_sched.BYTES_TO_GB(d['TotalCapacity']),
+                         vsa_sched.BYTES_TO_GB(d['TotalCapacity'] -
+                                               d['AvailableCapacity']),
+                         vsa_sched.BYTES_TO_GB(d['AvailableCapacity']))
 
-                total_used += vsa_sched.BYTES_TO_GB(d['TotalCapacity'] - \
-                                    d['AvailableCapacity'])
+                total_used += vsa_sched.BYTES_TO_GB(d['TotalCapacity'] -
+                                                    d['AvailableCapacity'])
                 total_available += vsa_sched.BYTES_TO_GB(
                                         d['AvailableCapacity'])
             LOG.info("Host %s: used %d, avail %d",
@@ -196,7 +198,7 @@ class VsaSchedulerTestCase(test_scheduler.SchedulerTestCase):
         LOG.debug(_("\t vol=%(vol)s"), locals())
 
     def _fake_vsa_update(self, context, vsa_id, values):
-        LOG.debug(_("Test: VSA update request: vsa_id=%(vsa_id)s "\
+        LOG.debug(_("Test: VSA update request: vsa_id=%(vsa_id)s "
                     "values=%(values)s"), locals())
 
     def _fake_volume_create(self, context, options):
@@ -214,7 +216,7 @@ class VsaSchedulerTestCase(test_scheduler.SchedulerTestCase):
         return global_volume
 
     def _fake_volume_update(self, context, volume_id, values):
-        LOG.debug(_("Test: Volume update request: id=%(volume_id)s "\
+        LOG.debug(_("Test: Volume update request: id=%(volume_id)s "
                     "values=%(values)s"), locals())
         global scheduled_volume
         scheduled_volume = {'id': volume_id, 'host': values['host']}

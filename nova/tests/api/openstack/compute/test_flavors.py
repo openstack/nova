@@ -59,8 +59,8 @@ def fake_instance_type_get_by_flavor_id(flavorid):
 
 def fake_instance_type_get_all(inactive=False, filters=None):
     def reject_min(db_attr, filter_attr):
-        return filter_attr in filters and\
-               int(flavor[db_attr]) < int(filters[filter_attr])
+        return (filter_attr in filters and
+                int(flavor[db_attr]) < int(filters[filter_attr]))
 
     filters = filters or {}
     output = {}

@@ -776,8 +776,8 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
         delay, error = self.proxy.check_for_delay("GET", "/delayed")
         error = error.strip()
 
-        expected = ("60.00", "403 Forbidden\n\nOnly 1 GET request(s) can be "\
-            "made to /delayed every minute.")
+        expected = ("60.00", "403 Forbidden\n\nOnly 1 GET request(s) can be "
+                    "made to /delayed every minute.")
 
         self.assertEqual((delay, error), expected)
 

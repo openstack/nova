@@ -209,9 +209,9 @@ class AggregateTestCase(test.TestCase):
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
-        aggregate = self.\
-                        controller.action(self.req, "1",
-                                          body={"add_host": {"host": "host1"}})
+        aggregate = self.controller.action(self.req, "1",
+                                           body={"add_host": {"host":
+                                                              "host1"}})
 
         self.assertEqual(aggregate["aggregate"], AGGREGATE)
 

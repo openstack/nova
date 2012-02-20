@@ -537,8 +537,8 @@ class XenAPIVMTestCase(test.TestCase):
         # Change the default host_call_plugin to one that'll return
         # a swap disk
         orig_func = stubs.FakeSessionForVMTests.host_call_plugin
-        stubs.FakeSessionForVMTests.host_call_plugin = \
-                stubs.FakeSessionForVMTests.host_call_plugin_swap
+        _host_call_plugin = stubs.FakeSessionForVMTests.host_call_plugin_swap
+        stubs.FakeSessionForVMTests.host_call_plugin = _host_call_plugin
         # Stubbing out firewall driver as previous stub sets a particular
         # stub for async plugin calls
         stubs.stubout_firewall_driver(self.stubs, self.conn)
@@ -978,8 +978,8 @@ class XenAPIMigrateInstance(test.TestCase):
         self.assertEqual(self.fake_vm_start_called, True)
 
     def test_finish_migrate_no_local_storage(self):
-        tiny_type_id = \
-                instance_types.get_instance_type_by_name('m1.tiny')['id']
+        tiny_type = instance_types.get_instance_type_by_name('m1.tiny')
+        tiny_type_id = tiny_type['id']
         self.instance_values.update({'instance_type_id': tiny_type_id,
                                      'root_gb': 0})
         instance = db.instance_create(self.context, self.instance_values)
@@ -1574,10 +1574,10 @@ class XenAPIDom0IptablesFirewallTestCase(test.TestCase):
         ipv6_addr_per_network = 1
         networks_count = 5
         instance_ref = self._create_instance_ref()
-        network_info = fake_network.\
-                        fake_get_instance_nw_info(self.stubs,
-                                                  networks_count,
-                                                  ipv4_addr_per_network)
+        _get_instance_nw_info = fake_network.fake_get_instance_nw_info
+        network_info = _get_instance_nw_info(self.stubs,
+                                             networks_count,
+                                             ipv4_addr_per_network)
         ipv4_len = len(self.fw.iptables.ipv4['filter'].rules)
         ipv6_len = len(self.fw.iptables.ipv6['filter'].rules)
         inst_ipv4, inst_ipv6 = self.fw.instance_rules(instance_ref,
@@ -1705,8 +1705,8 @@ class XenAPISRSelectionTestCase(test.TestCase):
         helper = vm_utils.VMHelper
         helper.XenAPI = session.get_imported_xenapi()
         host_ref = xenapi_fake.get_all('host')[0]
-        local_sr = xenapi_fake.\
-                    create_sr(name_label='Fake Storage',
+        local_sr = xenapi_fake.create_sr(
+                              name_label='Fake Storage',
                               type='lvm',
                               other_config={'i18n-original-value-name_label':
                                             'Local storage',
@@ -1723,11 +1723,10 @@ class XenAPISRSelectionTestCase(test.TestCase):
         helper = vm_utils.VMHelper
         helper.XenAPI = session.get_imported_xenapi()
         host_ref = xenapi_fake.get_all('host')[0]
-        local_sr = xenapi_fake.\
-                    create_sr(name_label='Fake Storage',
-                              type='lvm',
-                              other_config={'my_fake_sr': 'true'},
-                              host_ref=host_ref)
+        local_sr = xenapi_fake.create_sr(name_label='Fake Storage',
+                                         type='lvm',
+                                         other_config={'my_fake_sr': 'true'},
+                                         host_ref=host_ref)
         expected = helper.safe_find_sr(session)
         self.assertEqual(local_sr, expected)
 

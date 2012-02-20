@@ -993,10 +993,11 @@ class LibvirtConnTestCase(test.TestCase):
         # Preparing mocks
         vdmock = self.mox.CreateMock(libvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
+        _bandwidth = FLAGS.live_migration_bandwidth
         vdmock.migrateToURI(FLAGS.live_migration_uri % 'dest',
                             mox.IgnoreArg(),
-                            None, FLAGS.live_migration_bandwidth).\
-                            AndRaise(libvirt.libvirtError('ERR'))
+                            None,
+                            _bandwidth).AndRaise(libvirt.libvirtError('ERR'))
 
         def fake_lookup(instance_name):
             if instance_name == instance_ref.name:
@@ -1112,8 +1113,8 @@ class LibvirtConnTestCase(test.TestCase):
         os.path.getsize('/test/disk').AndReturn((10737418240))
 
         self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('qemu-img', 'info', '/test/disk.local').\
-            AndReturn((ret, ''))
+        utils.execute('qemu-img', 'info',
+                      '/test/disk.local').AndReturn((ret, ''))
 
         os.path.getsize('/test/disk.local').AndReturn((21474836480))
 
@@ -1272,10 +1273,11 @@ class LibvirtConnTestCase(test.TestCase):
 
 class HostStateTestCase(test.TestCase):
 
-    cpu_info = '{"vendor": "Intel", "model": "pentium", "arch": "i686", '\
-    '"features": ["ssse3", "monitor", "pni", "sse2", "sse", "fxsr", '\
-    '"clflush", "pse36", "pat", "cmov", "mca", "pge", "mtrr", "sep", '\
-    '"apic"], "topology": {"cores": "1", "threads": "1", "sockets": "1"}}'
+    cpu_info = ('{"vendor": "Intel", "model": "pentium", "arch": "i686", '
+                 '"features": ["ssse3", "monitor", "pni", "sse2", "sse", '
+                 '"fxsr", "clflush", "pse36", "pat", "cmov", "mca", "pge", '
+                 '"mtrr", "sep", "apic"], '
+                 '"topology": {"cores": "1", "threads": "1", "sockets": "1"}}')
 
     class FakeConnection(object):
         """Fake connection object"""
@@ -1319,13 +1321,13 @@ class HostStateTestCase(test.TestCase):
         stats = hs._stats
         self.assertEquals(stats["vcpus"], 1)
         self.assertEquals(stats["vcpus_used"], 0)
-        self.assertEquals(stats["cpu_info"], \
-          {"vendor": "Intel", "model": "pentium", "arch": "i686",
-           "features": ["ssse3", "monitor", "pni", "sse2", "sse", "fxsr",
-                        "clflush", "pse36", "pat", "cmov", "mca", "pge",
-                        "mtrr", "sep", "apic"],
-           "topology": {"cores": "1", "threads": "1", "sockets": "1"}
-          })
+        self.assertEquals(stats["cpu_info"],
+                {"vendor": "Intel", "model": "pentium", "arch": "i686",
+                 "features": ["ssse3", "monitor", "pni", "sse2", "sse",
+                              "fxsr", "clflush", "pse36", "pat", "cmov",
+                              "mca", "pge", "mtrr", "sep", "apic"],
+                 "topology": {"cores": "1", "threads": "1", "sockets": "1"}
+                })
         self.assertEquals(stats["disk_total"], 100)
         self.assertEquals(stats["disk_used"], 20)
         self.assertEquals(stats["disk_available"], 80)
@@ -1610,10 +1612,10 @@ class IptablesFirewallTestCase(test.TestCase):
         admin_ctxt = context.get_admin_context()
 
         fakefilter = NWFilterFakes()
-        self.fw.nwfilter._conn.nwfilterDefineXML =\
-                               fakefilter.filterDefineXMLMock
-        self.fw.nwfilter._conn.nwfilterLookupByName =\
-                               fakefilter.nwfilterLookupByName
+        _xml_mock = fakefilter.filterDefineXMLMock
+        self.fw.nwfilter._conn.nwfilterDefineXML = _xml_mock
+        _lookup_name = fakefilter.nwfilterLookupByName
+        self.fw.nwfilter._conn.nwfilterLookupByName = _lookup_name
         instance_ref = self._create_instance_ref()
 
         network_info = _fake_network_info(self.stubs, 1)
