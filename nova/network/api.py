@@ -38,7 +38,7 @@ class API(base.Base):
                         FLAGS.network_topic,
                         {'method': 'get_all_networks'})
 
-    def get(self, context, fixed_range, network_uuid):
+    def get(self, context, network_uuid):
         return rpc.call(context,
                         FLAGS.network_topic,
                         {'method': 'get_network',
