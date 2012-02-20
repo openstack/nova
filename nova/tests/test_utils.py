@@ -696,6 +696,10 @@ class DeprecationTest(test.TestCase):
         result = utils.service_is_up(service)
         self.assertFalse(result)
 
+    def test_xhtml_escape(self):
+        self.assertEqual('&quot;foo&quot;', utils.xhtml_escape('"foo"'))
+        self.assertEqual('&apos;foo&apos;', utils.xhtml_escape("'foo'"))
+
     def test_hash_file(self):
         data = 'Mary had a little lamb, its fleece as white as snow'
         flo = StringIO.StringIO(data)

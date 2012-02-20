@@ -669,11 +669,8 @@ class LoopingCall(object):
 def xhtml_escape(value):
     """Escapes a string so it is valid within XML or XHTML.
 
-    Code is directly from the utf8 function in
-    http://github.com/facebook/tornado/blob/master/tornado/escape.py
-
     """
-    return saxutils.escape(value, {'"': '&quot;'})
+    return saxutils.escape(value, {'"': '&quot;', "'": '&apos;'})
 
 
 def utf8(value):
