@@ -1528,7 +1528,7 @@ def instance_get_all_by_filters(context, filters):
     filters = filters.copy()
 
     if 'changes-since' in filters:
-        changes_since = filters['changes-since']
+        changes_since = utils.normalize_time(filters['changes-since'])
         query_prefix = query_prefix.\
                             filter(models.Instance.updated_at > changes_since)
 

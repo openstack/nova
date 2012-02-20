@@ -44,6 +44,7 @@ from eventlet import event
 from eventlet import greenthread
 from eventlet import semaphore
 from eventlet.green import subprocess
+import iso8601
 import netaddr
 
 from nova import exception
@@ -53,7 +54,7 @@ from nova.openstack.common import cfg
 
 
 LOG = logging.getLogger(__name__)
-ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 PERFECT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 FLAGS = flags.FLAGS
 
@@ -534,13 +535,27 @@ def parse_strtime(timestr, fmt=PERFECT_TIME_FORMAT):
 
 
 def isotime(at=None):
-    """Returns iso formatted utcnow."""
-    return strtime(at, ISO_TIME_FORMAT)
+    """Stringify time in ISO 8601 format"""
+    if not at:
+        at = datetime.datetime.utcnow()
+    str = at.strftime(ISO_TIME_FORMAT)
+    tz = at.tzinfo.tzname(None) if at.tzinfo else 'UTC'
+    str += ('Z' if tz == 'UTC' else tz)
+    return str
 
 
 def parse_isotime(timestr):
     """Turn an iso formatted time back into a datetime."""
-    return parse_strtime(timestr, ISO_TIME_FORMAT)
+    try:
+        return iso8601.parse_date(timestr)
+    except (iso8601.ParseError, TypeError) as e:
+        raise ValueError(e.message)
+
+
+def normalize_time(timestamp):
+    """Normalize time in arbitrary timezone to UTC"""
+    offset = timestamp.utcoffset()
+    return timestamp.replace(tzinfo=None) - offset if offset else timestamp
 
 
 def parse_mailmap(mailmap='.mailmap'):

@@ -21,6 +21,7 @@ import json
 import urlparse
 import uuid
 
+import iso8601
 from lxml import etree
 import webob
 
@@ -889,7 +890,8 @@ class ServersControllerTest(test.TestCase):
         def fake_get_all(compute_self, context, search_opts=None):
             self.assertNotEqual(search_opts, None)
             self.assertTrue('changes-since' in search_opts)
-            changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1)
+            changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1,
+                                              tzinfo=iso8601.iso8601.UTC)
             self.assertEqual(search_opts['changes-since'], changes_since)
             self.assertTrue('deleted' not in search_opts)
             return [fakes.stub_instance(100, uuid=server_uuid)]
