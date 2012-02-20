@@ -124,8 +124,8 @@ class ProxyConnection(driver.ComputeDriver):
 
     def _map_to_instance_info(self, domain_name):
         """Gets info from a virsh domain object into an InstanceInfo"""
-        (state, _max_mem, _mem, _num_cpu, _cpu_time) \
-            = self._conn.get_domain_info(domain_name)
+        _domain_info = self._conn.get_domain_info(domain_name)
+        state, _max_mem, _mem, _num_cpu, _cpu_time = _domain_info
         name = domain_name
         return driver.InstanceInfo(name, state)
 
@@ -539,8 +539,8 @@ class ProxyConnection(driver.ComputeDriver):
         baremetal error is.
 
         """
-        (state, max_mem, mem, num_cpu, cpu_time) \
-                = self._conn.get_domain_info(instance_name)
+        _domain_info = self._conn.get_domain_info(instance_name)
+        state, max_mem, mem, num_cpu, cpu_time = _domain_info
         return {'state': state,
                 'max_mem': max_mem,
                 'mem': mem,
@@ -787,8 +787,8 @@ class HostState(object):
         data["disk_used"] = connection.get_local_gb_used()
         data["disk_available"] = data["disk_total"] - data["disk_used"]
         data["host_memory_total"] = connection.get_memory_mb_total()
-        data["host_memory_free"] = data["host_memory_total"] - \
-            connection.get_memory_mb_used()
+        data["host_memory_free"] = (data["host_memory_total"] -
+                                    connection.get_memory_mb_used())
         data["hypervisor_type"] = connection.get_hypervisor_type()
         data["hypervisor_version"] = connection.get_hypervisor_version()
         self._stats = data

@@ -127,7 +127,7 @@ class BareMetalNodes(object):
         """
         pass
 
-    def activate_node(self, node_id, node_ip, name, mac_address, \
+    def activate_node(self, node_id, node_ip, name, mac_address,
                       ip_address):
         """
         Activates the given node using ID, IP, and MAC address.
