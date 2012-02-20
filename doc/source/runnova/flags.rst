@@ -20,4 +20,6 @@ Flags and Flagfiles
 
 Nova uses a configuration file containing flags located in /etc/nova/nova.conf. You can get the most recent listing of avaialble flags by running nova-(servicename) --help, for example, nova-api --help. 
 
+A script for generating a sample nova.conf file is located in *<nova_root>/tools/conf/run.sh*. This script traverses through the source code and retrieves information of every option that is defined. A file named *nova.conf.sample* will be placed in the same directory.
+
 The OpenStack wiki has a page with the flags listed by their purpose and use at http://wiki.openstack.org/FlagsGrouping.

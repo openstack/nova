@@ -13,3 +13,4 @@ nova.egg-info
 *.sqlite
 *.log
 *.mo
+tools/conf/nova.conf*
