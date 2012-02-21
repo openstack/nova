@@ -26,6 +26,7 @@ try:
     import json
 except ImportError:
     import simplejson as json
+# NOTE: XenServer 6 and below use python 2.4 so md5 is needed and not hashlib
 import md5
 import os
 import os.path

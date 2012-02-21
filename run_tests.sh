@@ -102,7 +102,7 @@ xen_net_path="plugins/xenserver/networking/etc/xensource/scripts"
 srcfiles=`find nova -type f -name "*.py"`
 srcfiles+=" `find bin -type f ! -name "nova.conf*" ! -name "*api-paste.ini*"`"
 srcfiles+=" `find tools -type f -name "*.py"`"
-srcfiles+=" `find ${xen_api_path} ${xen_net_path} -type f ! -name "*.patch"`"
+srcfiles+=" `find ${xen_api_path} ${xen_net_path} -type f ! -name "*.patch" ! -name "*.pyc"`"
 srcfiles+=" setup.py"
 
 function run_pep8 {
