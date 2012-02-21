@@ -1,0 +1,10 @@
+# Packages needed for dev testing
+distribute>=0.6.24
+
+coverage
+mox==0.5.3
+nose
+nosexcover
+openstack.nose_plugin
+pep8==0.6.1
+sphinx>=1.1.2
