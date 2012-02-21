@@ -35,7 +35,7 @@ rpc_opts = [
                default=30,
                help='Size of RPC connection pool'),
     cfg.IntOpt('rpc_response_timeout',
-               default=3600,
+               default=60,
                help='Seconds to wait for a response from call or multicall'),
     ]
 
