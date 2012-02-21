@@ -174,12 +174,11 @@ class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
         return sg_rule
 
 
-class SecurityGroupController(object):
-    """The Security group API controller for the OpenStack API."""
+class SecurityGroupControllerBase(object):
+    """Base class for Security Group controllers."""
 
     def __init__(self):
         self.compute_api = compute.API()
-        super(SecurityGroupController, self).__init__()
         self.sgh = utils.import_object(FLAGS.security_group_handler)
 
     def _format_security_group_rule(self, context, rule):
@@ -210,6 +209,10 @@ class SecurityGroupController(object):
             security_group['rules'] += [self._format_security_group_rule(
                     context, rule)]
         return security_group
+
+
+class SecurityGroupController(SecurityGroupControllerBase):
+    """The Security group API controller for the OpenStack API."""
 
     def _get_security_group(self, context, id):
         try:
@@ -317,7 +320,7 @@ class SecurityGroupController(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
 
-class SecurityGroupRulesController(SecurityGroupController):
+class SecurityGroupRulesController(SecurityGroupControllerBase):
 
     @wsgi.serializers(xml=SecurityGroupRuleTemplate)
     @wsgi.deserializers(xml=SecurityGroupRulesXMLDeserializer)
@@ -509,12 +512,7 @@ class SecurityGroupRulesController(SecurityGroupController):
         return webob.Response(status_int=202)
 
 
-# NOTE(justinsb): Does WSGI see the base class methods?
-#  i.e. are we exposing create/delete here?
-class ServerSecurityGroupController(SecurityGroupController):
-    def __init__(self, *args, **kwargs):
-        super(ServerSecurityGroupController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
+class ServerSecurityGroupController(SecurityGroupControllerBase):
 
     @wsgi.serializers(xml=SecurityGroupsTemplate)
     def index(self, req, server_id):
