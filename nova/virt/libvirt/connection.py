@@ -2167,7 +2167,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     utils.execute('rm', '-rf', inst_base)
                     utils.execute('mv', inst_base_resize, inst_base)
                     utils.execute('ssh', dest, 'rm', '-rf', inst_base)
-            except:
+            except Exception:
                 pass
             raise e
 

@@ -2308,7 +2308,7 @@ def main():
         print "Could not read %s. Re-running with sudo" % flagfile
         try:
             os.execvp('sudo', ['sudo', '-u', '#%s' % st.st_uid] + sys.argv)
-        except:
+        except Exception:
             print 'sudo failed, continuing as if nothing happened'
 
     argv = FLAGS(sys.argv)

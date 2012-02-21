@@ -56,7 +56,7 @@ def upgrade(migrate_engine):
                 ForeignKeyConstraint(columns=[instance_actions.c.instance_id],
                                      refcolumns=[instances.c.id],
                                      name=fkey_name).drop()
-            except:
+            except Exception:
                 LOG.error(_("foreign key constraint couldn't be removed"))
                 raise
 

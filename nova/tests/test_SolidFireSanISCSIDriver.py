@@ -111,7 +111,7 @@ class SolidFireVolumeTestCase(test.TestCase):
         try:
             sfv.create_volume(testvol)
             self.fail("Should have thrown Error")
-        except:
+        except Exception:
             pass
 
     def test_create_sfaccount(self):
@@ -155,7 +155,7 @@ class SolidFireVolumeTestCase(test.TestCase):
         try:
             model_update = sfv.delete_volume(testvol)
             self.fail("Should have thrown Error")
-        except:
+        except Exception:
             pass
 
     def test_delete_volume_fails_account_lookup(self):

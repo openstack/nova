@@ -188,7 +188,7 @@ class ProxyConnection(driver.ComputeDriver):
                 if state == power_state.RUNNING:
                     LOG.debug(_('instance %s: rebooted'), instance['name'])
                     timer.stop()
-            except:
+            except Exception:
                 LOG.exception(_('_wait_for_reboot failed'))
                 timer.stop()
         timer.f = _wait_for_reboot
@@ -221,7 +221,7 @@ class ProxyConnection(driver.ComputeDriver):
                 if state == power_state.RUNNING:
                     LOG.debug(_('instance %s: rescued'), instance['name'])
                     timer.stop()
-            except:
+            except Exception:
                 LOG.exception(_('_wait_for_rescue failed'))
                 timer.stop()
         timer.f = _wait_for_reboot

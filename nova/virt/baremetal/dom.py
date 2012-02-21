@@ -130,7 +130,7 @@ class BareMetalDom(object):
 
         try:
             self.baremetal_nodes.deactivate_node(fd['node_id'])
-        except:
+        except Exception:
             msg = _("Failed power down Bare-metal node %s")
             raise exception.NotFound(msg % fd['node_id'])
         self.change_domain_state(name, power_state.BUILDING)
@@ -139,7 +139,7 @@ class BareMetalDom(object):
                 node_ip, name, fd['mac_address'], fd['ip_address'])
             self.change_domain_state(name, state)
             return state
-        except:
+        except Exception:
             LOG.debug(_("deactivate -> activate fails"))
             self.destroy_domain(name)
             raise
@@ -165,7 +165,7 @@ class BareMetalDom(object):
             self.store_domain()
             msg = _("After storing domains: %s")
             LOG.debug(msg % (self.domains))
-        except:
+        except Exception:
             LOG.debug(_("deactivation/removing domain failed"))
             raise
 
@@ -207,7 +207,7 @@ class BareMetalDom(object):
                 node_ip, new_dom['name'], new_dom['mac_address'],
                 new_dom['ip_address'], new_dom['user_data'])
             self.change_domain_state(new_dom['name'], state)
-        except:
+        except Exception:
             self.domains.remove(new_dom)
             self.baremetal_nodes.free_node(node_id)
             LOG.debug(_("Failed to boot Bare-metal node %s"), node_id)

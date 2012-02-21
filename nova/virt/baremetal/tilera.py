@@ -228,7 +228,7 @@ class BareMetalNodes(object):
         try:
             utils.execute('sudo', 'umount', '-f', pathx)
             utils.execute('sudo', 'rm', '-f', pathx)
-        except:
+        except Exception:
             LOG.debug(_("rootfs is already removed"))
 
     def network_set(self, node_ip, mac_address, ip_address):
