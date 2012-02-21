@@ -160,18 +160,18 @@ class RpcContext(context.RequestContext):
     """Context that supports replying to a rpc.call"""
     def __init__(self, *args, **kwargs):
         self.msg_id = kwargs.pop('msg_id', None)
-        self.connection_pool = kwargs.pop('connection_pool', None)
         super(RpcContext, self).__init__(*args, **kwargs)
 
-    def reply(self, reply=None, failure=None, ending=False):
+    def reply(self, reply=None, failure=None, ending=False,
+              connection_pool=None):
         if self.msg_id:
-            msg_reply(self.msg_id, self.connection_pool, reply, failure,
+            msg_reply(self.msg_id, connection_pool, reply, failure,
                       ending)
             if ending:
                 self.msg_id = None
 
 
-def unpack_context(msg, connection_pool):
+def unpack_context(msg):
     """Unpack context from msg."""
     context_dict = {}
     for key in list(msg.keys()):
@@ -182,7 +182,6 @@ def unpack_context(msg, connection_pool):
             value = msg.pop(key)
             context_dict[key[9:]] = value
     context_dict['msg_id'] = msg.pop('_msg_id', None)
-    context_dict['connection_pool'] = connection_pool
     ctx = RpcContext.from_dict(context_dict)
     LOG.debug(_('unpacked context: %s'), ctx.to_dict())
     return ctx
@@ -228,12 +227,13 @@ class ProxyCallback(object):
         if hasattr(local.store, 'context'):
             del local.store.context
         rpc_common._safe_log(LOG.debug, _('received %s'), message_data)
-        ctxt = unpack_context(message_data, self.connection_pool)
+        ctxt = unpack_context(message_data)
         method = message_data.get('method')
         args = message_data.get('args', {})
         if not method:
             LOG.warn(_('no method for message: %s') % message_data)
-            ctxt.reply(_('No method for message: %s') % message_data)
+            ctxt.reply(_('No method for message: %s') % message_data,
+                       connection_pool=self.connection_pool)
             return
         self.pool.spawn_n(self._process_data, ctxt, method, args)
 
@@ -251,14 +251,15 @@ class ProxyCallback(object):
             # Check if the result was a generator
             if inspect.isgenerator(rval):
                 for x in rval:
-                    ctxt.reply(x, None)
+                    ctxt.reply(x, None, connection_pool=self.connection_pool)
             else:
-                ctxt.reply(rval, None)
+                ctxt.reply(rval, None, connection_pool=self.connection_pool)
             # This final None tells multicall that it is done.
-            ctxt.reply(ending=True)
+            ctxt.reply(ending=True, connection_pool=self.connection_pool)
         except Exception as e:
             LOG.exception('Exception during message handling')
-            ctxt.reply(None, sys.exc_info())
+            ctxt.reply(None, sys.exc_info(),
+                       connection_pool=self.connection_pool)
         return
 
 

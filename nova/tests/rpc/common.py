@@ -52,13 +52,6 @@ class _BaseRpcTestCase(test.TestCase):
                                                  "args": {"value": value}})
         self.assertEqual(value, result)
 
-    def test_call_succeed_despite_multiple_returns(self):
-        value = 42
-        result = self.rpc.call(self.context, 'test',
-                {"method": "echo_three_times",
-                 "args": {"value": value}})
-        self.assertEqual(value + 2, result)
-
     def test_call_succeed_despite_multiple_returns_yield(self):
         value = 42
         result = self.rpc.call(self.context, 'test',
@@ -75,15 +68,6 @@ class _BaseRpcTestCase(test.TestCase):
         for i, x in enumerate(result):
             if i > 0:
                 self.fail('should only receive one response')
-            self.assertEqual(value + i, x)
-
-    def test_multicall_succeed_three_times(self):
-        value = 42
-        result = self.rpc.multicall(self.context,
-                              'test',
-                              {"method": "echo_three_times",
-                               "args": {"value": value}})
-        for i, x in enumerate(result):
             self.assertEqual(value + i, x)
 
     def test_multicall_three_nones(self):
@@ -208,13 +192,6 @@ class TestReceiver(object):
         """Returns dictionary version of context."""
         LOG.debug(_("Received %s"), context)
         return context.to_dict()
-
-    @staticmethod
-    def echo_three_times(context, value):
-        context.reply(value)
-        context.reply(value + 1)
-        context.reply(value + 2)
-        context.reply(ending=True)
 
     @staticmethod
     def multicall_three_nones(context, value):
