@@ -29,6 +29,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova.notifier import api as notifier
 from nova.openstack.common import cfg
 from nova import utils
 
@@ -117,6 +118,15 @@ class SchedulerManager(manager.Manager):
                     "ERROR state.") % locals())
             db.instance_update(context, instance_uuid,
                     {'vm_state': vm_states.ERROR})
+
+        payload = dict(request_spec=request_spec,
+                       instance_properties=properties,
+                       instance_id=instance_uuid,
+                       state=vm_states.ERROR,
+                       method=method,
+                       reason=ex)
+        notifier.notify(notifier.publisher_id("scheduler"),
+                        'scheduler.run_instance', notifier.ERROR, payload)
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
     #                    Based on bexar design summit discussion,
