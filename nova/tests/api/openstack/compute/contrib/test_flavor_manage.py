@@ -115,3 +115,30 @@ class FlavorManageTest(test.TestCase):
         body = json.loads(res.body)
         for key in expected["flavor"]:
             self.assertEquals(body["flavor"][key], expected["flavor"][key])
+
+    def test_instance_type_exists_exception_returns_409(self):
+        expected = {
+            "flavor": {
+                "name": "test",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "id": 1235,
+                "swap": 512,
+                "rxtx_factor": 1,
+            }
+        }
+
+        def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
+                        flavorid, swap, rxtx_factor):
+            raise exception.InstanceTypeExists()
+
+        self.stubs.Set(instance_types, "create", fake_create)
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = json.dumps(expected)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 409)
