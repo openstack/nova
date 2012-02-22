@@ -849,7 +849,7 @@ class CommonNetworkTestCase(test.TestCase):
         super(CommonNetworkTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
 
-    def fake_create_fixed_ips(self, context, network_id):
+    def fake_create_fixed_ips(self, context, network_id, fixed_cidr=None):
         return None
 
     def test_remove_fixed_ip_from_instance(self):
