@@ -2247,12 +2247,80 @@ class GetLogCommands(object):
             print "No nova entries in syslog!"
 
 
+class ExportCommands(object):
+    """Commands used to export data from Nova"""
+
+    def auth(self):
+        """Export Nova auth data in format that can be consumed by Keystone"""
+        print json.dumps(self._get_auth_data())
+
+    def _get_auth_data(self):
+        output = {
+            'users': [],
+            'tenants': [],
+            'user_tenant_list': [],
+            'ec2_credentials': [],
+            'roles': [],
+            'role_user_tenant_list': [],
+        }
+
+        am = manager.AuthManager()
+
+        for user in am.get_users():
+            user_dict = {
+                'id': user.id,
+                'name': user.name,
+                'password': user.access,
+            }
+            output['users'].append(user_dict)
+
+            ec2_cred = {
+                'user_id': user.id,
+                'access_key': user.access,
+                'secret_key': user.secret,
+            }
+            output['ec2_credentials'].append(ec2_cred)
+
+        for project in am.get_projects():
+            tenant = {
+                'id': project.id,
+                'name': project.name,
+                'description': project.description,
+            }
+            output['tenants'].append(tenant)
+
+            for user_id in project.member_ids:
+                membership = {
+                    'tenant_id': project.id,
+                    'user_id': user_id,
+                }
+                output['user_tenant_list'].append(membership)
+
+        for role in am.get_roles():
+            if role not in output['roles']:
+                output['roles'].append(role)
+
+        for project in am.get_projects():
+            for user_id in project.member_ids:
+                user = am.get_user(user_id)
+                for role in am.get_user_roles(user_id, project.id):
+                    role_grant = {
+                        'role': role,
+                        'user_id': user_id,
+                        'tenant_id': project.id,
+                    }
+                    output['role_user_tenant_list'].append(role_grant)
+
+        return output
+
+
 CATEGORIES = [
     ('account', AccountCommands),
     ('agent', AgentBuildCommands),
     ('config', ConfigCommands),
     ('db', DbCommands),
     ('drive', VsaDriveTypeCommands),
+    ('export', ExportCommands),
     ('fixed', FixedIpCommands),
     ('flavor', InstanceTypeCommands),
     ('floating', FloatingIpCommands),

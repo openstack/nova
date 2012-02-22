@@ -15,8 +15,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import imp
+import json
 import os
+import StringIO
 import sys
+
+import stubout
+
+import nova.auth.manager
+from nova import context
+from nova import db
+from nova import test
+from nova.tests.db import fakes as db_fakes
+
 
 TOPDIR = os.path.normpath(os.path.join(
                             os.path.dirname(os.path.abspath(__file__)),
@@ -25,16 +37,8 @@ TOPDIR = os.path.normpath(os.path.join(
 NOVA_MANAGE_PATH = os.path.join(TOPDIR, 'bin', 'nova-manage')
 
 sys.dont_write_bytecode = True
-import imp
 nova_manage = imp.load_source('nova_manage.py', NOVA_MANAGE_PATH)
 sys.dont_write_bytecode = False
-import stubout
-
-import StringIO
-from nova import context
-from nova import db
-from nova import test
-from nova.tests.db import fakes as db_fakes
 
 
 class FixedIpCommandsTestCase(test.TestCase):
@@ -244,3 +248,52 @@ class NetworkCommandsTestCase(test.TestCase):
         self._test_modify_base(update_value={'project_id': None, 'host': None},
                                project=None, host=None, dis_project=True,
                                dis_host=True)
+
+
+class ExportAuthTestCase(test.TestCase):
+
+    def test_export(self):
+        self.flags(allowed_roles=['role1', 'role2'])
+        am = nova.auth.manager.AuthManager(new=True)
+        user1 = am.create_user('user1', 'a1', 's1')
+        user2 = am.create_user('user2', 'a2', 's2')
+        user3 = am.create_user('user3', 'a3', 's3')
+        proj1 = am.create_project('proj1', user1, member_users=[user1, user2])
+        proj2 = am.create_project('proj2', user2, member_users=[user2, user3])
+        am.add_role(user1, 'role1', proj1)
+        am.add_role(user1, 'role1', proj2)
+        am.add_role(user3, 'role1', proj1)
+        am.add_role(user3, 'role2', proj2)
+
+        commands = nova_manage.ExportCommands()
+        output = commands._get_auth_data()
+
+        expected = {
+            "users": [
+                {"id": "user1", "name": "user1", 'password': 'a1'},
+                {"id": "user2", "name": "user2", 'password': 'a2'},
+                {"id": "user3", "name": "user3", 'password': 'a3'},
+            ],
+            "roles": ["role1", "role2"],
+            "role_user_tenant_list": [
+                {"user_id": "user1", "role": "role1", "tenant_id": "proj1"},
+                {"user_id": "user3", "role": "role2", "tenant_id": "proj2"},
+            ],
+            "user_tenant_list": [
+                {"tenant_id": "proj1", "user_id": "user1"},
+                {"tenant_id": "proj1", "user_id": "user2"},
+                {"tenant_id": "proj2", "user_id": "user2"},
+                {"tenant_id": "proj2", "user_id": "user3"},
+            ],
+            "ec2_credentials": [
+                {"access_key": "a1", "secret_key": "s1", "user_id": "user1"},
+                {"access_key": "a2", "secret_key": "s2", "user_id": "user2"},
+                {"access_key": "a3", "secret_key": "s3", "user_id": "user3"},
+            ],
+            "tenants": [
+                {"description": "proj1", "id": "proj1", "name": "proj1"},
+                {"description": "proj2", "id": "proj2", "name": "proj2"},
+            ],
+        }
+
+        self.assertDictMatch(output, expected)
