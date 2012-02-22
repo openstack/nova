@@ -2369,8 +2369,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(instance_properties['host'], 'host2')
             self.assertIn('host2', filter_properties['ignore_hosts'])
 
-        self.stubs.Set(self.compute_api, '_cast_scheduler_message',
-                       _fake_cast)
+        self.stubs.Set(compute.api, '_cast_scheduler_message', _fake_cast)
 
         context = self.context.elevated()
         instance = self._create_fake_instance(dict(host='host2'))
@@ -2389,8 +2388,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(instance_properties['host'], 'host2')
             self.assertNotIn('host2', filter_properties['ignore_hosts'])
 
-        self.stubs.Set(self.compute_api, '_cast_scheduler_message',
-                       _fake_cast)
+        self.stubs.Set(compute.api, '_cast_scheduler_message', _fake_cast)
         self.flags(allow_resize_to_same_host=True)
 
         context = self.context.elevated()
