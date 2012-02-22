@@ -107,6 +107,10 @@ class ImageCacheManager(object):
         self.image_popularity = {}
         self.instance_names = {}
 
+        self.removable_base_files = []
+        self.active_base_files = []
+        self.corrupt_base_files = []
+
     def _store_image(self, base_dir, ent, original=False):
         """Store a base image for later examination."""
         entpath = os.path.join(base_dir, ent)
@@ -290,7 +294,6 @@ class ImageCacheManager(object):
     def _handle_base_image(self, img, base_file):
         """Handle the checks for a single base image."""
 
-        # TODO(mikal): Write a unit test for this method
         image_bad = False
         image_in_use = False
 
@@ -301,7 +304,11 @@ class ImageCacheManager(object):
 
         if base_file in self.unexplained_images:
             self.unexplained_images.remove(base_file)
-        self._verify_checksum(img, base_file)
+
+        if (base_file and os.path.exists(base_file)
+            and os.path.isfile(base_file)):
+            # _verify_checksum returns True if the checksum is ok.
+            image_bad = not self._verify_checksum(img, base_file)
 
         instances = []
         if str(img['id']) in self.used_images:
@@ -332,8 +339,7 @@ class ImageCacheManager(object):
 
             else:
                 LOG.debug(_('%(container_format)s-%(id)s (%(base_file)s): '
-                            'in: on other nodes (%(remote)d on other '
-                            'nodes)'),
+                            'in use on (%(remote)d on other nodes)'),
                           {'container_format': img['container_format'],
                            'id': img['id'],
                            'base_file': base_file,
