@@ -2834,6 +2834,41 @@ def security_group_exists(context, project_id, group_name):
 
 
 @require_context
+def security_group_in_use(context, group_id):
+    session = get_session()
+    with session.begin():
+        # Are there any other groups that haven't been deleted
+        # that include this group in their rules?
+        rules = session.query(models.SecurityGroupIngressRule).\
+                filter_by(group_id=group_id).\
+                filter_by(deleted=False).\
+                all()
+        for r in rules:
+            num_groups = session.query(models.SecurityGroup).\
+                        filter_by(deleted=False).\
+                        filter_by(id=r.parent_group_id).\
+                        count()
+            if num_groups:
+                return True
+
+        # Are there any instances that haven't been deleted
+        # that include this group?
+        inst_assoc = session.query(models.SecurityGroupInstanceAssociation).\
+                filter_by(security_group_id=group_id).\
+                filter_by(deleted=False).\
+                all()
+        for ia in inst_assoc:
+            num_instances = session.query(models.Instance).\
+                        filter_by(deleted=False).\
+                        filter_by(id=ia.instance_id).\
+                        count()
+            if num_instances:
+                return True
+
+    return False
+
+
+@require_context
 def security_group_create(context, values):
     security_group_ref = models.SecurityGroup()
     # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception

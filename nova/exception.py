@@ -286,6 +286,10 @@ class InvalidAggregateAction(Invalid):
                 "%(aggregate_id)s. Reason: %(reason)s.")
 
 
+class InvalidGroup(Invalid):
+    message = _("Group not valid. Reason: %(reason)s")
+
+
 class InstanceInvalidState(Invalid):
     message = _("Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot "
                 "%(method)s while the instance is in this state.")

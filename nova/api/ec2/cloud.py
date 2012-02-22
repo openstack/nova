@@ -785,6 +785,8 @@ class CloudController(object):
             security_group = db.security_group_get(context, group_id)
             if not security_group:
                 raise notfound(security_group_id=group_id)
+        if db.security_group_in_use(context, security_group.id):
+            raise exception.InvalidGroup(reason="In Use")
         LOG.audit(_("Delete security group %s"), group_name, context=context)
         db.security_group_destroy(context, security_group.id)
 
