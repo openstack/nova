@@ -305,29 +305,14 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                     net_proj_pairs.append((net_id, None))
 
         # Create a port via quantum and attach the vif
-        for (quantum_net_id, net_tenant_id) in net_proj_pairs:
-            net_tenant_id = net_tenant_id or FLAGS.quantum_default_tenant_id
-            # FIXME(danwent): We'd like to have the manager be
-            # completely decoupled from the nova networks table.
-            # However, other parts of nova sometimes go behind our
-            # back and access network data directly from the DB.  So
-            # for now, the quantum manager knows that there is a nova
-            # networks DB table and accesses it here.  updating the
-            # virtual_interfaces table to use UUIDs would be one
-            # solution, but this would require significant work
-            # elsewhere.
-            admin_context = context.elevated()
-
-            # We may not be able to get a network_ref here if this network
-            # isn't in the database (i.e. it came from Quantum).
-            network_ref = db.network_get_by_uuid(admin_context,
-                                                 quantum_net_id)
+        for proj_pair in net_proj_pairs:
+            network = self.get_network(context, proj_pair)
 
             # TODO(tr3buchet): broken. Virtual interfaces require an integer
             #                  network ID and it is not nullable
             vif_rec = self.add_virtual_interface(context,
                                                  instance_id,
-                                                 network_ref['id'],
+                                                 network['id'],
                                                  project_id)
 
             # talk to Quantum API to create and attach port.
@@ -335,7 +320,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             nova_id = self._get_nova_id(instance)
             # Tell the ipam library to allocate an IP
             ips = self.ipam.allocate_fixed_ips(context, project_id,
-                    quantum_net_id, net_tenant_id, vif_rec)
+                    network['quantum_net_id'], network['net_tenant_id'],
+                    vif_rec)
             pairs = []
             # Set up port security if enabled
             if FLAGS.quantum_use_port_security:
@@ -346,7 +332,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                 pairs = [{'mac_address': vif_rec['address'],
                           'ip_address': ip} for ip in ips]
 
-            self.q_conn.create_and_attach_port(net_tenant_id, quantum_net_id,
+            self.q_conn.create_and_attach_port(network['net_tenant_id'],
+                                               network['quantum_net_id'],
                                                vif_rec['uuid'],
                                                vm_id=instance['uuid'],
                                                rxtx_factor=rxtx_factor,
@@ -354,12 +341,53 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                                                allowed_address_pairs=pairs)
             # Set up/start the dhcp server for this network if necessary
             if FLAGS.quantum_use_dhcp:
-                self.enable_dhcp(context, quantum_net_id, network_ref,
-                    vif_rec, net_tenant_id)
+                self.enable_dhcp(context, network['quantum_net_id'], network,
+                    vif_rec, network['net_tenant_id'])
         return self.get_instance_nw_info(context, instance_id,
                                          instance['uuid'],
                                          rxtx_factor, host,
                                          project_id=project_id)
+
+    def get_network(self, context, proj_pair):
+        (quantum_net_id, net_tenant_id) = proj_pair
+
+        net_tenant_id = net_tenant_id or FLAGS.quantum_default_tenant_id
+        # FIXME(danwent): We'd like to have the manager be
+        # completely decoupled from the nova networks table.
+        # However, other parts of nova sometimes go behind our
+        # back and access network data directly from the DB.  So
+        # for now, the quantum manager knows that there is a nova
+        # networks DB table and accesses it here.  updating the
+        # virtual_interfaces table to use UUIDs would be one
+        # solution, but this would require significant work
+        # elsewhere.
+        admin_context = context.elevated()
+
+        # We may not be able to get a network_ref here if this network
+        # isn't in the database (i.e. it came from Quantum).
+        network_ref = db.network_get_by_uuid(admin_context,
+                                             quantum_net_id)
+
+        if network_ref is None:
+            network_ref = {}
+            network_ref = {"uuid": quantum_net_id,
+                           "project_id": net_tenant_id,
+            # NOTE(bgh): We need to document this somewhere but since
+            # we don't know the priority of any networks we get from
+            # quantum we just give them a priority of 0.  If its
+            # necessary to specify the order of the vifs and what
+            # network they map to then the user will have to use the
+            # OSCreateServer extension and specify them explicitly.
+            #
+            # In the future users will be able to tag quantum networks
+            # with a priority .. and at that point we can update the
+            # code here to reflect that.
+                           "priority": 0,
+                           "id": 'NULL',
+                           "label": "quantum-net-%s" % quantum_net_id}
+        network_ref['net_tenant_id'] = net_tenant_id
+        network_ref['quantum_net_id'] = quantum_net_id
+        return network_ref
 
     @utils.synchronized('quantum-enable-dhcp')
     def enable_dhcp(self, context, quantum_net_id, network_ref, vif_rec,
