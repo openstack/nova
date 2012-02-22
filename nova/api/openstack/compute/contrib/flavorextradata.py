@@ -84,8 +84,8 @@ class FlavorextradataController(wsgi.Controller):
             resp_obj.attach(xml=FlavorextradatumTemplate())
 
             try:
-                flavor_ref = instance_types.\
-                                get_instance_type_by_flavor_id(id)
+                fid = resp_obj.obj['flavor']['id']
+                flavor_ref = instance_types.get_instance_type_by_flavor_id(fid)
             except exception.FlavorNotFound:
                 explanation = _("Flavor not found.")
                 raise exception.HTTPNotFound(explanation=explanation)
