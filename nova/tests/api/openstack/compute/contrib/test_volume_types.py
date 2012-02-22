@@ -87,10 +87,13 @@ class VolumeTypesApiTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-volume-types')
         res_dict = self.controller.index(req)
 
-        self.assertEqual(3, len(res_dict))
-        for name in ['vol_type_1', 'vol_type_2', 'vol_type_3']:
-            self.assertEqual(name, res_dict[name]['name'])
-            self.assertEqual('value1', res_dict[name]['extra_specs']['key1'])
+        self.assertEqual(3, len(res_dict['volume_types']))
+
+        expected_names = ['vol_type_1', 'vol_type_2', 'vol_type_3']
+        actual_names = map(lambda e: e['name'], res_dict['volume_types'])
+        self.assertEqual(set(actual_names), set(expected_names))
+        for entry in res_dict['volume_types']:
+            self.assertEqual('value1', entry['extra_specs']['key1'])
 
     def test_volume_types_index_no_data(self):
         self.stubs.Set(volume_types, 'get_all_types',
@@ -99,7 +102,7 @@ class VolumeTypesApiTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-volume-types')
         res_dict = self.controller.index(req)
 
-        self.assertEqual(0, len(res_dict))
+        self.assertEqual(0, len(res_dict['volume_types']))
 
     def test_volume_types_show(self):
         self.stubs.Set(volume_types, 'get_volume_type',
@@ -183,7 +186,7 @@ class VolumeTypesSerializerTest(test.TestCase):
 
         # Just getting some input data
         vtypes = return_volume_types_get_all_types(None)
-        text = serializer.serialize(vtypes)
+        text = serializer.serialize({'volume_types': vtypes.values()})
 
         print text
         tree = etree.fromstring(text)

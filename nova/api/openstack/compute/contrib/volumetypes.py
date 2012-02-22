@@ -47,8 +47,8 @@ class VolumeTypeTemplate(xmlutil.TemplateBuilder):
 class VolumeTypesTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('volume_types')
-        sel = lambda obj, do_raise=False: obj.values()
-        elem = xmlutil.SubTemplateElement(root, 'volume_type', selector=sel)
+        elem = xmlutil.SubTemplateElement(root, 'volume_type',
+                                          selector='volume_types')
         make_voltype(elem)
         return xmlutil.MasterTemplate(root, 1)
 
@@ -61,7 +61,7 @@ class VolumeTypesController(object):
         """ Returns the list of volume types """
         context = req.environ['nova.context']
         authorize(context)
-        return volume_types.get_all_types(context)
+        return {'volume_types': volume_types.get_all_types(context).values()}
 
     @wsgi.serializers(xml=VolumeTypeTemplate)
     def create(self, req, body):
