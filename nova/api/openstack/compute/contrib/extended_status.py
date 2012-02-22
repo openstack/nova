@@ -89,8 +89,8 @@ class Extended_status(extensions.ExtensionDescriptor):
 
     name = "ExtendedStatus"
     alias = "OS-EXT-STS"
-    namespace = "http://docs.openstack.org/compute/ext/" \
-                "extended_status/api/v1.1"
+    namespace = ("http://docs.openstack.org/compute/ext/"
+                 "extended_status/api/v1.1")
     updated = "2011-11-03T00:00:00+00:00"
 
     def get_controller_extensions(self):

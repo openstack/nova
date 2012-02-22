@@ -137,8 +137,9 @@ class Limit(object):
         self.water_level = 0
         self.capacity = self.unit
         self.request_value = float(self.capacity) / float(self.value)
-        self.error_message = _("Only %(value)s %(verb)s request(s) can be "\
-            "made to %(uri)s every %(unit_string)s." % self.__dict__)
+        self.error_message = _("Only %(value)s %(verb)s request(s) can be "
+                               "made to %(uri)s every %(unit_string)s." %
+                               self.__dict__)
 
     def __call__(self, verb, url):
         """

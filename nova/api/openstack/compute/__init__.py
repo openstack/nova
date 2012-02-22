@@ -38,10 +38,9 @@ from nova.openstack.common import cfg
 
 LOG = logging.getLogger(__name__)
 
-allow_instance_snapshots_opt = \
-    cfg.BoolOpt('allow_instance_snapshots',
-                default=True,
-                help='Permit instance snapshot operations.')
+allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
+        default=True,
+        help='Permit instance snapshot operations.')
 
 FLAGS = flags.FLAGS
 FLAGS.register_opt(allow_instance_snapshots_opt)

@@ -97,8 +97,8 @@ class Certificates(extensions.ExtensionDescriptor):
 
     name = "Certificates"
     alias = "os-certificates"
-    namespace = \
-        "http://docs.openstack.org/compute/ext/certificates/api/v1.1"
+    namespace = ("http://docs.openstack.org/compute/ext/"
+                 "certificates/api/v1.1")
     updated = "2012-01-19T00:00:00+00:00"
 
     def get_resources(self):

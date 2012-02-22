@@ -97,8 +97,8 @@ class SimpleTenantUsageController(object):
                 # instance is still running, so charge them up to current time
                 stop = period_stop
             dt = stop - start
-            seconds = dt.days * 3600 * 24 + dt.seconds\
-                      + dt.microseconds / 100000.0
+            seconds = (dt.days * 3600 * 24 + dt.seconds +
+                       dt.microseconds / 100000.0)
 
             return seconds / 3600.0
         else:
@@ -178,8 +178,8 @@ class SimpleTenantUsageController(object):
             summary = rval[info['tenant_id']]
             summary['total_local_gb_usage'] += info['local_gb'] * info['hours']
             summary['total_vcpus_usage'] += info['vcpus'] * info['hours']
-            summary['total_memory_mb_usage'] += info['memory_mb']\
-                                                * info['hours']
+            summary['total_memory_mb_usage'] += (info['memory_mb'] *
+                                                 info['hours'])
 
             summary['total_hours'] += info['hours']
             if detailed:
@@ -249,8 +249,8 @@ class Simple_tenant_usage(extensions.ExtensionDescriptor):
 
     name = "SimpleTenantUsage"
     alias = "os-simple-tenant-usage"
-    namespace = "http://docs.openstack.org/compute/ext/" \
-                "os-simple-tenant-usage/api/v1.1"
+    namespace = ("http://docs.openstack.org/compute/ext/"
+                 "os-simple-tenant-usage/api/v1.1")
     updated = "2011-08-19T00:00:00+00:00"
 
     def get_resources(self):
