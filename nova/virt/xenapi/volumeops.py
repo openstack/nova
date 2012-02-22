@@ -159,15 +159,20 @@ class VolumeOps(object):
             LOG.exception(exc)
             raise StorageError(_('Unable to introduce Storage Repository'))
 
+        vdi_uuid = None
+        target_lun = None
         if 'vdi_uuid' in data:
             vdi_uuid = data['vdi_uuid']
+        elif 'target_lun' in data:
+            target_lun = data['target_lun']
         else:
             vdi_uuid = None
 
         # Introduce VDI  and attach VBD to VM
         try:
             vdi_ref = VolumeHelper.introduce_vdi(self._session, sr_ref,
-                                                 vdi_uuid)
+                                                 vdi_uuid,
+                                                 target_lun)
         except StorageError, exc:
             LOG.exception(exc)
             self.forget_sr(uuid)

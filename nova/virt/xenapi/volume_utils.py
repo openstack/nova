@@ -235,13 +235,22 @@ class VolumeHelper(HelperBase):
                         ' PBD %(pbd)s') % locals())
 
     @classmethod
-    def introduce_vdi(cls, session, sr_ref, vdi_uuid=None):
+    def introduce_vdi(cls, session, sr_ref, vdi_uuid=None, target_lun=None):
         """Introduce VDI in the host"""
         try:
             session.call_xenapi("SR.scan", sr_ref)
             if vdi_uuid:
                 LOG.debug("vdi_uuid: %s" % vdi_uuid)
                 vdi_ref = session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
+            elif target_lun:
+                vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)
+                for curr_ref in vdi_refs:
+                    curr_rec = session.call_xenapi("VDI.get_record", curr_ref)
+                    if ('sm_config' in curr_rec and
+                            'LUNid' in curr_rec['sm_config'] and
+                            curr_rec['sm_config']['LUNid'] == str(target_lun)):
+                        vdi_ref = curr_ref
+                        break
             else:
                 vdi_ref = (session.call_xenapi("SR.get_VDIs", sr_ref))[0]
         except cls.XenAPI.Failure, exc:
