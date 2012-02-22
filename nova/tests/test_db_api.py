@@ -267,6 +267,30 @@ class DbApiTestCase(test.TestCase):
         expected = {uuids[0]: [], uuids[1]: []}
         self.assertEqual(expected, instance_faults)
 
+    def test_dns_registration(self):
+        domain1 = 'test.domain.one'
+        domain2 = 'test.domain.two'
+        testzone = 'testzone'
+        ctxt = context.get_admin_context()
+
+        db.dnsdomain_register_for_zone(ctxt, domain1, testzone)
+        domain_ref = db.dnsdomain_get(ctxt, domain1)
+        zone = domain_ref.availability_zone
+        scope = domain_ref.scope
+        self.assertEqual(scope, 'private')
+        self.assertEqual(zone, testzone)
+
+        db.dnsdomain_register_for_project(ctxt, domain2,
+                                           self.project_id)
+        domain_ref = db.dnsdomain_get(ctxt, domain2)
+        project = domain_ref.project_id
+        scope = domain_ref.scope
+        self.assertEqual(project, self.project_id)
+        self.assertEqual(scope, 'public')
+
+        db.dnsdomain_unregister(ctxt, domain1)
+        db.dnsdomain_unregister(ctxt, domain2)
+
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate',
@@ -350,6 +374,14 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertRaises(exception.AdminRequired,
                           db.aggregate_create,
                           self.context, _get_fake_aggr_values())
+
+    def test_aggregate_get(self):
+        """Ensure we can get aggregate with all its relations."""
+        ctxt = context.get_admin_context()
+        result = _create_aggregate_with_hosts(context=ctxt)
+        expected = db.aggregate_get(ctxt, result.id)
+        self.assertEqual(_get_fake_aggr_hosts(), expected.hosts)
+        self.assertEqual(_get_fake_aggr_metadata(), expected.metadetails)
 
     def test_aggregate_delete_raise_not_found(self):
         """Ensure AggregateNotFound is raised when deleting an aggregate."""
@@ -540,30 +572,6 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertRaises(exception.AggregateHostNotFound,
                           db.aggregate_host_delete,
                           ctxt, result.id, _get_fake_aggr_hosts()[0])
-
-    def test_dns_registration(self):
-        domain1 = 'test.domain.one'
-        domain2 = 'test.domain.two'
-        testzone = 'testzone'
-        ctxt = context.get_admin_context()
-
-        db.dnsdomain_register_for_zone(ctxt, domain1, testzone)
-        domain_ref = db.dnsdomain_get(ctxt, domain1)
-        zone = domain_ref.availability_zone
-        scope = domain_ref.scope
-        self.assertEqual(scope, 'private')
-        self.assertEqual(zone, testzone)
-
-        db.dnsdomain_register_for_project(ctxt, domain2,
-                                           self.project_id)
-        domain_ref = db.dnsdomain_get(ctxt, domain2)
-        project = domain_ref.project_id
-        scope = domain_ref.scope
-        self.assertEqual(project, self.project_id)
-        self.assertEqual(scope, 'public')
-
-        db.dnsdomain_unregister(ctxt, domain1)
-        db.dnsdomain_unregister(ctxt, domain2)
 
 
 class CapacityTestCase(test.TestCase):

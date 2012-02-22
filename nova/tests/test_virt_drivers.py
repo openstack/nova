@@ -401,6 +401,14 @@ class _VirtDriverTestCase(test.TestCase):
     def test_host_power_action_startup(self):
         self.connection.host_power_action('a useless argument?', 'startup')
 
+    @catch_notimplementederror
+    def test_add_to_aggregate(self):
+        self.connection.add_to_aggregate(self.ctxt, 'aggregate', 'host')
+
+    @catch_notimplementederror
+    def test_remove_from_aggregate(self):
+        self.connection.remove_from_aggregate(self.ctxt, 'aggregate', 'host')
+
 
 class AbstractDriverTestCase(_VirtDriverTestCase):
     def setUp(self):

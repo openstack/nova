@@ -1706,10 +1706,18 @@ class AggregateAPI(base.Base):
 
     def create_aggregate(self, context, aggregate_name, availability_zone):
         """Creates the model for the aggregate."""
-        values = {"name": aggregate_name,
-                  "availability_zone": availability_zone}
-        aggregate = self.db.aggregate_create(context, values)
-        return dict(aggregate.iteritems())
+        zones = [s.availability_zone for s in
+                 self.db.service_get_all_by_topic(context,
+                                                  FLAGS.compute_topic)]
+        if availability_zone in zones:
+            values = {"name": aggregate_name,
+                      "availability_zone": availability_zone}
+            aggregate = self.db.aggregate_create(context, values)
+            return dict(aggregate.iteritems())
+        else:
+            raise exception.InvalidAggregateAction(action='create_aggregate',
+                                                   aggregate_id="'N/A'",
+                                                   reason='invalid zone')
 
     def get_aggregate(self, context, aggregate_id):
         """Get an aggregate by id."""
@@ -1805,7 +1813,8 @@ class AggregateAPI(base.Base):
                                                "host": host}, })
             return self.get_aggregate(context, aggregate_id)
         else:
-            invalid = {aggregate_states.CHANGING: 'setup in progress',
+            invalid = {aggregate_states.CREATED: 'no hosts to remove',
+                       aggregate_states.CHANGING: 'setup in progress',
                        aggregate_states.DISMISSED: 'aggregate deleted', }
             if aggregate.operational_state in invalid.keys():
                 raise exception.InvalidAggregateAction(

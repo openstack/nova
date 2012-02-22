@@ -46,6 +46,7 @@ from eventlet import greenthread
 
 from nova import block_device
 import nova.context
+from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
@@ -2320,13 +2321,40 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.error(msg % error)
                 self._set_instance_error_state(context, instance_uuid)
 
-    def add_aggregate_host(self, context, aggregate_id, host):
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def add_aggregate_host(self, context, aggregate_id, host, **kwargs):
         """Adds a host to a physical hypervisor pool."""
-        raise NotImplementedError()
+        aggregate = self.db.aggregate_get(context, aggregate_id)
+        try:
+            self.driver.add_to_aggregate(context, aggregate, host, **kwargs)
+        except exception.AggregateError:
+            error = sys.exc_info()
+            self._undo_aggregate_operation(context,
+                                           self.db.aggregate_host_delete,
+                                           aggregate.id, host)
+            raise error[0], error[1], error[2]
 
-    def remove_aggregate_host(self, context, aggregate_id, host):
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def remove_aggregate_host(self, context, aggregate_id, host, **kwargs):
         """Removes a host from a physical hypervisor pool."""
-        raise NotImplementedError()
+        aggregate = self.db.aggregate_get(context, aggregate_id)
+        try:
+            self.driver.remove_from_aggregate(context,
+                                              aggregate, host, **kwargs)
+        except exception.AggregateError:
+            error = sys.exc_info()
+            self._undo_aggregate_operation(context, self.db.aggregate_host_add,
+                                           aggregate.id, host)
+            raise error[0], error[1], error[2]
+
+    def _undo_aggregate_operation(self, context, op, aggregate_id, host):
+        try:
+            status = {'operational_state': aggregate_states.ERROR}
+            self.db.aggregate_update(context, aggregate_id, status)
+            op(context, aggregate_id, host)
+        except Exception:
+            LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable state '
+                            'during operation on %(host)s') % locals())
 
     @manager.periodic_task(
         ticks_between_runs=FLAGS.image_cache_manager_interval)
