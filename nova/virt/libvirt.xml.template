@@ -166,7 +166,7 @@
             <source path='/dev/pts/2'/>
             <target port='0'/>
         </serial>
-#if $getVar('use_usb_tablet', True)
+#if $getVar('use_usb_tablet', True) and $type != 'lxc' and $type != 'xen'
         <input type='tablet' bus='usb'/>
 #end if
 
