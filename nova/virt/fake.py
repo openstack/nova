@@ -188,10 +188,10 @@ class FakeConnection(driver.ComputeDriver):
             pass
         return True
 
-    def get_info(self, instance_name):
-        if instance_name not in self.instances:
-            raise exception.InstanceNotFound(instance_id=instance_name)
-        i = self.instances[instance_name]
+    def get_info(self, instance):
+        if instance['name'] not in self.instances:
+            raise exception.InstanceNotFound(instance_id=instance['name'])
+        i = self.instances[instance['name']]
         return {'state': i.state,
                 'max_mem': 0,
                 'mem': 0,

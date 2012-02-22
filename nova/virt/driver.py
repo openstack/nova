@@ -108,7 +108,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def get_info(self, instance_name):
+    def get_info(self, instance):
         """Get the current status of an instance, by name (not ID!)
 
         Returns a dict containing:

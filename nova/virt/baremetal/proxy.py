@@ -531,7 +531,7 @@ class ProxyConnection(driver.ComputeDriver):
         LOG.debug(_('instance %s: finished toXML method'), instance['name'])
         return xml_info
 
-    def get_info(self, instance_name):
+    def get_info(self, instance):
         """Retrieve information from baremetal for a specific instance name.
 
         If a baremetal error is encountered during lookup, we might raise a
@@ -539,7 +539,7 @@ class ProxyConnection(driver.ComputeDriver):
         baremetal error is.
 
         """
-        _domain_info = self._conn.get_domain_info(instance_name)
+        _domain_info = self._conn.get_domain_info(instance['name'])
         state, max_mem, mem, num_cpu, cpu_time = _domain_info
         return {'state': state,
                 'max_mem': max_mem,

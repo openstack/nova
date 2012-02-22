@@ -2206,10 +2206,10 @@ class LibvirtConnectionTestCase(test.TestCase):
         """Test for nova.virt.libvirt.connection.LivirtConnection
         ._wait_for_running. """
 
-        def fake_get_info(instance_name):
-            if instance_name == "not_found":
+        def fake_get_info(instance):
+            if instance['name'] == "not_found":
                 raise exception.NotFound
-            elif instance_name == "running":
+            elif instance['name'] == "running":
                 return {'state': power_state.RUNNING}
             else:
                 return {'state': power_state.SHUTOFF}
@@ -2220,15 +2220,18 @@ class LibvirtConnectionTestCase(test.TestCase):
         """ instance not found case """
         self.assertRaises(utils.LoopingCallDone,
                 self.libvirtconnection._wait_for_running,
-                    "not_found")
+                    {'name': 'not_found',
+                     'uuid': 'not_found_uuid'})
 
         """ instance is running case """
         self.assertRaises(utils.LoopingCallDone,
                 self.libvirtconnection._wait_for_running,
-                    "running")
+                    {'name': 'running',
+                     'uuid': 'running_uuid'})
 
         """ else case """
-        self.libvirtconnection._wait_for_running("else")
+        self.libvirtconnection._wait_for_running({'name': 'else',
+                                                  'uuid': 'other_uuid'})
 
     def test_finish_migration(self):
         """Test for nova.virt.libvirt.connection.LivirtConnection
