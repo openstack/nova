@@ -23,7 +23,6 @@ from copy import copy
 import datetime
 import sys
 import time
-from webob import exc
 
 import mox
 import webob.exc
@@ -1576,6 +1575,34 @@ class ComputeTestCase(BaseTestCase):
         ctxt = context.get_admin_context()
         self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
                                                  NotImplementedError('test'))
+
+    def test_running_deleted_instances(self):
+        self.mox.StubOutWithMock(self.compute.driver, 'list_instances')
+        self.compute.driver.list_instances().AndReturn(['herp', 'derp'])
+        self.compute.host = 'host'
+
+        instance1 = mox.MockAnything()
+        instance1.name = 'herp'
+        instance1.deleted = True
+        instance1.deleted_at = "sometimeago"
+
+        instance2 = mox.MockAnything()
+        instance2.name = 'derp'
+        instance2.deleted = False
+        instance2.deleted_at = None
+
+        self.mox.StubOutWithMock(utils, 'is_older_than')
+        utils.is_older_than('sometimeago',
+                    FLAGS.running_deleted_instance_timeout).AndReturn(True)
+
+        self.mox.StubOutWithMock(self.compute.db, "instance_get_all_by_host")
+        self.compute.db.instance_get_all_by_host('context',
+                                                 'host').AndReturn(
+                                                                [instance1,
+                                                                 instance2])
+        self.mox.ReplayAll()
+        val = self.compute._running_deleted_instances('context')
+        self.assertEqual(val, [instance1])
 
 
 class ComputeAPITestCase(BaseTestCase):

@@ -2274,42 +2274,41 @@ class ComputeManager(manager.SchedulerDependentManager):
         if action == "noop":
             return
 
-        present_name_labels = set(self.driver.list_instances())
-
         # NOTE(sirp): admin contexts don't ordinarily return deleted records
         with utils.temporary_mutation(context, read_deleted="yes"):
-            instances = self.db.instance_get_all_by_host(context, self.host)
-            for instance in instances:
-                present = instance.name in present_name_labels
-                erroneously_running = instance.deleted and present
-                old_enough = (not instance.deleted_at or utils.is_older_than(
-                        instance.deleted_at,
-                        FLAGS.running_deleted_instance_timeout))
+            for instance in self._errored_instances(context):
+                if action == "log":
+                    LOG.warning(_("Detected instance  with name label "
+                                  "'%(name_label)s' which is marked as "
+                                  "DELETED but still present on host."),
+                                locals(), instance=instance)
 
-                if erroneously_running and old_enough:
-                    instance_id = instance['id']
-                    instance_uuid = instance['uuid']
-                    name_label = instance['name']
+                elif action == 'reap':
+                    LOG.info(_("Destroying instance with name label "
+                               "'%(name_label)s' which is marked as "
+                               "DELETED but still present on host."),
+                             locals(), instance=instance)
+                    self._shutdown_instance(context, instance, 'Terminating')
+                    self._cleanup_volumes(context, instance['id'])
+                else:
+                    raise Exception(_("Unrecognized value '%(action)s'"
+                                      " for FLAGS.running_deleted_"
+                                      "instance_action"), locals(),
+                                    instance=instance)
 
-                    if action == "log":
-                        LOG.warning(_("Detected instance  with name label "
-                                      "'%(name_label)s' which is marked as "
-                                      "DELETED but still present on host."),
-                                    locals(), instance=instance)
-
-                    elif action == 'reap':
-                        LOG.info(_("Destroying instance with name label "
-                                   "'%(name_label)s' which is marked as "
-                                   "DELETED but still present on host."),
-                                 locals(), instance=instance)
-                        self._shutdown_instance(
-                                context, instance, 'Terminating', True)
-                        self._cleanup_volumes(context, instance_id)
-                    else:
-                        raise Exception(_("Unrecognized value '%(action)s'"
-                                          " for FLAGS.running_deleted_"
-                                          "instance_action"), locals(),
-                                        instance=instance)
+    def _running_deleted_instances(self, context):
+        def deleted_instance(instance):
+            present = instance.name in present_name_labels
+            erroneously_running = instance.deleted and present
+            old_enough = (not instance.deleted_at or utils.is_older_than(
+                instance.deleted_at,
+                FLAGS.running_deleted_instance_timeout))
+            if erroneously_running and old_enough:
+                return True
+            return False
+        present_name_labels = set(self.driver.list_instances())
+        instances = self.db.instance_get_all_by_host(context, self.host)
+        return [i for i in instances if deleted_instance(i)]
 
     @contextlib.contextmanager
     def error_out_instance_on_exception(self, context, instance_uuid):
