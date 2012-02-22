@@ -837,7 +837,10 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
                 break
 
         model_update = {}
-        model_update['provider_location'] = ('%s %s' % (iscsi_portal, iqn))
+
+        # NOTE(john-griffith): SF volumes are always at lun 0
+        model_update['provider_location'] = ('%s %s %s'
+                % (iscsi_portal, iqn, 0))
         model_update['provider_auth'] = ('CHAP %s %s'
                 % (account_name, chap_secret))
 
