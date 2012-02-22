@@ -16,6 +16,7 @@
 Tests For Least Cost functions.
 """
 from nova import context
+from nova.scheduler import host_manager
 from nova.scheduler import least_cost
 from nova import test
 from nova.tests.scheduler import fakes
@@ -89,3 +90,24 @@ class LeastCostTestCase(test.TestCase):
                                                                     options)
         self.assertEqual(weighted_host.weight, 10512)
         self.assertEqual(weighted_host.host_state.host, 'host1')
+
+
+class TestWeightedHost(test.TestCase):
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_dict_conversion_without_host_state(self):
+        host = least_cost.WeightedHost('someweight')
+        expected = {'weight': 'someweight'}
+        self.assertDictMatch(host.to_dict(), expected)
+
+    def test_dict_conversion_with_host_state(self):
+        host_state = host_manager.HostState('somehost', 'sometopic')
+        host = least_cost.WeightedHost('someweight', host_state)
+        expected = {'weight': 'someweight',
+                    'host': 'somehost'}
+        self.assertDictMatch(host.to_dict(), expected)

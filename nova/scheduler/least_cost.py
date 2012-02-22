@@ -63,8 +63,6 @@ class WeightedHost(object):
         x = dict(weight=self.weight)
         if self.host_state:
             x['host'] = self.host_state.host
-        if self.zone:
-            x['zone'] = self.zone
         return x
 
 
