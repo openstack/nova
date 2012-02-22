@@ -66,9 +66,12 @@ class FlavorManageController(wsgi.Controller):
         swap = vals.get('swap')
         rxtx_factor = vals.get('rxtx_factor')
 
-        flavor = instance_types.create(name, memory_mb, vcpus,
-                                       root_gb, ephemeral_gb, flavorid,
-                                       swap, rxtx_factor)
+        try:
+            flavor = instance_types.create(name, memory_mb, vcpus,
+                                           root_gb, ephemeral_gb, flavorid,
+                                           swap, rxtx_factor)
+        except exception.InstanceTypeExists as err:
+            raise webob.exc.HTTPConflict(explanation=str(err))
 
         return self._view_builder.show(req, flavor)
 
