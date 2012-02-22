@@ -69,6 +69,12 @@ xenapi_vm_utils_opts = [
                     'other-config:my_favorite_sr=true. On the other hand, to '
                     'fall back on the Default SR, as displayed by XenCenter, '
                     'set this flag to: default-sr:true'),
+    cfg.BoolOpt('xenapi_sparse_copy',
+                default=True,
+                help='Whether to use sparse_copy for copying data on a '
+                     'resize down (False will use standard dd). This speeds '
+                     'up resizes down considerably since large runs of zeros '
+                     'won\'t have to be rsynced')
     ]
 
 FLAGS = flags.FLAGS
@@ -1632,6 +1638,45 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
     utils.execute('tune2fs', '-j', partition_path, run_as_root=True)
 
 
+def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
+    """Copy data, skipping long runs of zeros to create a sparse file."""
+    start_time = time.time()
+    EMPTY_BLOCK = '\0' * block_size
+    bytes_read = 0
+    skipped_bytes = 0
+    left = virtual_size
+
+    LOG.debug(_("Starting sparse_copy src=%(src_path)s dst=%(dst_path)s "
+                "virtual_size=%(virtual_size)d block_size=%(block_size)d"),
+                locals())
+
+    with open(src_path, "r") as src:
+        with open(dst_path, "w") as dst:
+            data = src.read(min(block_size, left))
+            while data:
+                if data == EMPTY_BLOCK:
+                    dst.seek(block_size, os.SEEK_CUR)
+                    left -= block_size
+                    bytes_read += block_size
+                    skipped_bytes += block_size
+                else:
+                    dst.write(data)
+                    data_len = len(data)
+                    left -= data_len
+                    bytes_read += data_len
+
+                if left <= 0:
+                    break
+
+                data = src.read(min(block_size, left))
+
+    duration = time.time() - start_time
+    compression_pct = float(skipped_bytes) / bytes_read * 100
+
+    LOG.debug(_("Finished sparse_copy in %(duration).2f secs, "
+                "%(compression_pct).2f%% reduction in size"), locals())
+
+
 def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
     # Part of disk taken up by MBR
     virtual_size -= MBR_SIZE_BYTES
@@ -1644,12 +1689,15 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
 
             _write_partition(virtual_size, dst)
 
-            num_blocks = virtual_size / SECTOR_SIZE
-            utils.execute('dd',
-                          'if=%s' % src_path,
-                          'of=%s' % dst_path,
-                          'count=%d' % num_blocks,
-                          run_as_root=True)
+            if FLAGS.xenapi_sparse_copy:
+                _sparse_copy(src_path, dst_path, virtual_size)
+            else:
+                num_blocks = virtual_size / SECTOR_SIZE
+                utils.execute('dd',
+                              'if=%s' % src_path,
+                              'of=%s' % dst_path,
+                              'count=%d' % num_blocks,
+                              run_as_root=True)
 
 
 def _mount_filesystem(dev_path, dir):
