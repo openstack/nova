@@ -451,6 +451,11 @@ class VolumeIsBusy(NovaException):
     message = _("deleting volume %(volume_name)s that has snapshot")
 
 
+class SnapshotIsBusy(NovaException):
+    message = _("deleting snapshot %(snapshot_name)s that has "
+                "dependent volumes")
+
+
 class ISCSITargetNotFoundForVolume(NotFound):
     message = _("No target id found for volume %(volume_id)s.")
 

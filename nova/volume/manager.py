@@ -231,6 +231,12 @@ class VolumeManager(manager.SchedulerDependentManager):
         try:
             LOG.debug(_("snapshot %s: deleting"), snapshot_ref['name'])
             self.driver.delete_snapshot(snapshot_ref)
+        except exception.SnapshotIsBusy:
+            LOG.debug(_("snapshot %s: snapshot is busy"), snapshot_ref['name'])
+            self.db.snapshot_update(context,
+                                    snapshot_ref['id'],
+                                    {'status': 'available'})
+            return True
         except Exception:
             with utils.save_and_reraise_exception():
                 self.db.snapshot_update(context,
