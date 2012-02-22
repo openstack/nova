@@ -2341,16 +2341,21 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self.driver.remove_from_aggregate(context,
                                               aggregate, host, **kwargs)
-        except exception.AggregateError:
+        except (exception.AggregateError,
+                exception.InvalidAggregateAction) as e:
             error = sys.exc_info()
-            self._undo_aggregate_operation(context, self.db.aggregate_host_add,
-                                           aggregate.id, host)
+            self._undo_aggregate_operation(
+                                    context, self.db.aggregate_host_add,
+                                    aggregate.id, host,
+                                    isinstance(e, exception.AggregateError))
             raise error[0], error[1], error[2]
 
-    def _undo_aggregate_operation(self, context, op, aggregate_id, host):
+    def _undo_aggregate_operation(self, context, op, aggregate_id,
+                                  host, set_error=True):
         try:
-            status = {'operational_state': aggregate_states.ERROR}
-            self.db.aggregate_update(context, aggregate_id, status)
+            if set_error:
+                status = {'operational_state': aggregate_states.ERROR}
+                self.db.aggregate_update(context, aggregate_id, status)
             op(context, aggregate_id, host)
         except Exception:
             LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable state '

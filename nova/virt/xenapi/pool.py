@@ -61,11 +61,11 @@ class ResourcePool(object):
         if len(aggregate.hosts) == 1:
             # this is the first host of the pool -> make it master
             self._init_pool(aggregate.id, aggregate.name)
-            # save metadata so that we can find the master again:
-            # the password should be encrypted, really.
+            # save metadata so that we can find the master again
             values = {
                 'operational_state': aggregate_states.ACTIVE,
-                'metadata': {'master_compute': host},
+                'metadata': {'master_compute': host,
+                             host: self._host_uuid},
                 }
             db.aggregate_update(context, aggregate.id, values)
         else:
@@ -85,7 +85,6 @@ class ResourcePool(object):
             elif master_compute and master_compute != host:
                 # send rpc cast to master, asking to add the following
                 # host with specified credentials.
-                # NOTE: password in clear is not great, but it'll do for now
                 forward_request(context, "add_aggregate_host", master_compute,
                                 aggregate.id, host,
                                 self._host_addr, self._host_uuid)
@@ -104,15 +103,17 @@ class ResourcePool(object):
             # master is on its own, otherwise raise fault. Destroying a
             # pool made only by master is fictional
             if len(aggregate.hosts) > 1:
-                raise exception.AggregateError(
+                # NOTE: this could be avoided by doing a master
+                # re-election, but this is simpler for now.
+                raise exception.InvalidAggregateAction(
                                     aggregate_id=aggregate.id,
                                     action='remove_from_aggregate',
                                     reason=_('Unable to eject %(host)s '
                                              'from the pool; pool not empty')
                                              % locals())
             self._clear_pool(aggregate.id)
-            db.aggregate_metadata_delete(context,
-                                         aggregate.id, 'master_compute')
+            for key in ['master_compute', host]:
+                db.aggregate_metadata_delete(context, aggregate.id, key)
         elif master_compute and master_compute != host:
             # A master exists -> forward pool-eject request to master
             forward_request(context, "remove_aggregate_host", master_compute,
@@ -194,6 +195,7 @@ def forward_request(context, request_type, master, aggregate_id,
     """Casts add/remove requests to the pool master."""
     # replace the address from the xenapi connection url
     # because this might be 169.254.0.1, i.e. xenapi
+    # NOTE: password in clear is not great, but it'll do for now
     sender_url = swap_xapi_host(FLAGS.xenapi_connection_url, slave_address)
     rpc.cast(context, db.queue_get_for(context, FLAGS.compute_topic, master),
              {"method": request_type,
