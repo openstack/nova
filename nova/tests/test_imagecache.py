@@ -284,6 +284,8 @@ class ImageCacheManagerTestCase(test.TestCase):
                     'operating system.')
         img = {'container_format': 'ami', 'id': '42'}
 
+        self.flags(checksum_base_images=True)
+
         try:
             dirname = tempfile.mkdtemp()
             fname = os.path.join(dirname, 'aaa')
@@ -317,6 +319,10 @@ class ImageCacheManagerTestCase(test.TestCase):
             image_cache_manager = imagecache.ImageCacheManager()
             res = image_cache_manager._verify_checksum(img, fname)
             self.assertEquals(res, None)
+
+            # Checksum requests for a file with no checksum now have the
+            # side effect of creating the checksum
+            self.assertTrue(os.path.exists('%s.sha1' % fname))
 
         finally:
             shutil.rmtree(dirname)

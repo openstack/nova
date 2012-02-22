@@ -921,6 +921,11 @@ class LibvirtConnection(driver.ComputeDriver):
         If size is specified, we attempt to resize up to that size.
         """
 
+        # NOTE(mikal): Checksums aren't created here, even if the image cache
+        # manager is enabled, as that would slow down VM startup. If both
+        # cache management and checksumming are enabled, then the checksum
+        # will be created on the first pass of the image cache manager.
+
         generating = 'image_id' not in kwargs
         if not os.path.exists(target):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
