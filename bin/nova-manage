@@ -650,12 +650,14 @@ class FixedIpCommands(object):
             hostname = None
             host = None
             mac_address = None
-            if fixed_ip['instance']:
+            network = db.network_get(context.get_admin_context(),
+                                     fixed_ip['network_id'])
+            if fixed_ip['instance_id']:
                 instance = instances_by_id[fixed_ip['instance_id']]
                 hostname = instance['hostname']
                 host = instance['host']
             print "%-18s\t%-15s\t%-15s\t%s" % (
-                    fixed_ip['network']['cidr'],
+                    network['cidr'],
                     fixed_ip['address'],
                     hostname, host)
 
