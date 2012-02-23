@@ -181,6 +181,8 @@ class XenAPIConnection(driver.ComputeDriver):
         self._initiator = None
         self._pool = pool.ResourcePool(self._session)
 
+        self._capture_dom0_hostname()
+
     @property
     def host_state(self):
         if not self._host_state:
@@ -193,6 +195,22 @@ class XenAPIConnection(driver.ComputeDriver):
         #to call when shutting down the host?
         #e.g. to do session logout?
         pass
+
+    def _capture_dom0_hostname(self):
+        """Find dom0's hostname and log it to the DB."""
+        ctxt = context.get_admin_context()
+        service = db.service_get_by_host_and_topic(ctxt, FLAGS.host, "compute")
+
+        try:
+            compute_node = db.compute_node_get_for_service(ctxt, service["id"])
+        except TypeError:
+            return
+
+        host_stats = self.get_host_stats()
+
+        db.compute_node_update(ctxt, compute_node["id"],
+                {"hypervisor_hostname": host_stats["host_hostname"]},
+                auto_adjust=False)
 
     def list_instances(self):
         """List VM instances"""
@@ -390,7 +408,6 @@ class XenAPIConnection(driver.ComputeDriver):
         :param host: hostname that compute manager is currently running
 
         """
-
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
