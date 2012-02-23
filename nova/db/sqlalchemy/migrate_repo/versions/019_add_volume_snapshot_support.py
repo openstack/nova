@@ -20,45 +20,51 @@ from sqlalchemy import Integer, DateTime, Boolean, String
 
 from nova import log as logging
 
-
-meta = MetaData()
 LOG = logging.getLogger(__name__)
-
-
-snapshots = Table('snapshots', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('volume_id', Integer(), nullable=False),
-        Column('user_id',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('project_id',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('status',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('progress',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('volume_size', Integer()),
-        Column('scheduled_at', DateTime(timezone=False)),
-        Column('display_name',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('display_description',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)))
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
 
+    #
+    # New Tables
+    #
+    snapshots = Table('snapshots', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('id', Integer(), primary_key=True, nullable=False),
+            Column('volume_id', Integer(), nullable=False),
+            Column('user_id',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('project_id',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('status',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('progress',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('volume_size', Integer()),
+            Column('scheduled_at', DateTime(timezone=False)),
+            Column('display_name',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('display_description',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)))
     try:
         snapshots.create()
     except Exception:
@@ -70,4 +76,7 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
+    meta = MetaData()
+    meta.bind = migrate_engine
+    snapshots = Table('snapshots', meta, autoload=True)
     snapshots.drop()

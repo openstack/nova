@@ -1,4 +1,3 @@
-COMMIT;
 BEGIN TRANSACTION;
     CREATE TEMPORARY TABLE virtual_interfaces_backup (
         created_at DATETIME,

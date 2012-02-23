@@ -14,23 +14,15 @@
 
 from sqlalchemy import Column, Integer, Float, MetaData, Table
 
-meta = MetaData()
-
-
-def _get_table(table_name):
-    return Table(table_name, meta, autoload=True)
-
-rxtx_base = Column('rxtx_base', Integer)
-rxtx_factor = Column('rxtx_factor', Float, default=1)
-rxtx_quota = Column('rxtx_quota', Integer)
-rxtx_cap = Column('rxtx_cap', Integer)
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instance_types = _get_table('instance_types')
-    networks = _get_table('networks')
+    instance_types = Table('instance_types', meta, autoload=True)
+    networks = Table('networks', meta, autoload=True)
 
+    rxtx_base = Column('rxtx_base', Integer)
+    rxtx_factor = Column('rxtx_factor', Float, default=1)
     instance_types.create_column(rxtx_factor)
     networks.create_column(rxtx_base)
 
@@ -47,10 +39,13 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instance_types = _get_table('instance_types')
-    networks = _get_table('networks')
+    instance_types = Table('instance_types', meta, autoload=True)
+    networks = Table('networks', meta, autoload=True)
 
+    rxtx_quota = Column('rxtx_quota', Integer)
+    rxtx_cap = Column('rxtx_cap', Integer)
     instance_types.create_column(rxtx_quota)
     instance_types.create_column(rxtx_cap)
 

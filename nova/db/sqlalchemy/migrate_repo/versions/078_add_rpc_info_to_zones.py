@@ -12,22 +12,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import *
-
-meta = MetaData()
-
-zones = Table('zones', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-is_parent = Column('is_parent', Boolean(), default=False)
-rpc_host = Column('rpc_host', String(255))
-rpc_port = Column('rpc_port', Integer())
-rpc_virtual_host = Column('rpc_virtual_host', String(255))
+from sqlalchemy import Boolean, Column
+from sqlalchemy import Integer, MetaData, String
+from sqlalchemy import Table
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    zones = Table('zones', meta, autoload=True)
+
+    is_parent = Column('is_parent', Boolean(), default=False)
+    rpc_host = Column('rpc_host', String(255))
+    rpc_port = Column('rpc_port', Integer())
+    rpc_virtual_host = Column('rpc_virtual_host', String(255))
 
     zones.create_column(is_parent)
     zones.create_column(rpc_host)
@@ -36,9 +35,12 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    zones.drop_column(rpc_virtual_host)
-    zones.drop_column(rpc_port)
-    zones.drop_column(rpc_host)
-    zones.drop_column(is_parent)
+    zones = Table('zones', meta, autoload=True)
+
+    zones.drop_column('rpc_virtual_host')
+    zones.drop_column('rpc_port')
+    zones.drop_column('rpc_host')
+    zones.drop_column('is_parent')

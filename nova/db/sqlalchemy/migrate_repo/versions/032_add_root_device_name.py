@@ -15,33 +15,28 @@
 
 from sqlalchemy import Column, Integer, MetaData, Table, String
 
-meta = MetaData()
-
-
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of instances or services.
-instances = Table('instances', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-#
-# New Column
-#
-root_device_name = Column(
-    'root_device_name',
-    String(length=255, convert_unicode=False, assert_unicode=None,
-           unicode_error=None, _warn_on_bytestring=False),
-    nullable=True)
-
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    instances = Table('instances', meta, autoload=True)
+
+    root_device_name = Column(
+        'root_device_name',
+        String(length=255, convert_unicode=False, assert_unicode=None,
+               unicode_error=None, _warn_on_bytestring=False),
+        nullable=True)
     instances.create_column(root_device_name)
 
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    instances = Table('instances', meta, autoload=True)
+
     instances.drop_column('root_device_name')

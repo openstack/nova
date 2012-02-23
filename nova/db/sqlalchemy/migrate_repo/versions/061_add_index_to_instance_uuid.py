@@ -14,16 +14,16 @@
 
 from sqlalchemy import Index, MetaData, Table
 
-meta = MetaData()
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
     Index('uuid', instances.c.uuid, unique=True).create(migrate_engine)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
     Index('uuid', instances.c.uuid, unique=True).drop(migrate_engine)

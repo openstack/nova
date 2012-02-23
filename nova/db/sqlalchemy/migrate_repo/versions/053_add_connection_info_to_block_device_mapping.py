@@ -13,23 +13,26 @@
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
-#    under the License.from sqlalchemy import *
+#    under the License.
 
 from sqlalchemy import Column, MetaData, Table, Text
 
 
-meta = MetaData()
-
-new_column = Column('connection_info', Text())
-
-
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
     table = Table('block_device_mapping', meta, autoload=True)
+
+    new_column = Column('connection_info', Text())
+
     table.create_column(new_column)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
     table = Table('block_device_mapping', meta, autoload=True)
+
     table.c.connection_info.drop()

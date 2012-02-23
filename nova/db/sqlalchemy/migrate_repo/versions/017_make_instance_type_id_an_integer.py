@@ -18,14 +18,14 @@
 from sqlalchemy import Column, Integer, MetaData, String, Table
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+
+    instances = Table('instances', meta, autoload=True)
 
     types = {}
     for instance in migrate_engine.execute(instances.select()):
@@ -56,9 +56,10 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+
+    instances = Table('instances', meta, autoload=True)
 
     integer_column = instances.c.instance_type_id
     string_column = Column('instance_type_id_str',

@@ -12,12 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import *
-
-meta = MetaData()
+from sqlalchemy import Column, MetaData, String, Table
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
     zone_name = Column('zone_name', String(255))
@@ -25,7 +24,7 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     instances = Table('instances', meta, autoload=True)
-    zone_name = Column('zone_name', String(255))
-    instances.drop_column(zone_name)
+    instances.drop_column('zone_name')

@@ -17,10 +17,9 @@
 
 from sqlalchemy import MetaData
 
-meta = MetaData()
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
     # NOTE (ironcamel): The only table we are not converting to utf8 here is

@@ -17,71 +17,75 @@ from sqlalchemy import MetaData, Column, ForeignKey, Table
 
 from nova import log as logging
 
-
-meta = MetaData()
 LOG = logging.getLogger(__name__)
 
 
-aggregates = Table('aggregates', meta,
-          Column('created_at', DateTime(timezone=False)),
-          Column('updated_at', DateTime(timezone=False)),
-          Column('deleted_at', DateTime(timezone=False)),
-          Column('deleted', Boolean(create_constraint=True, name=None)),
-          Column('id', Integer(),
-                 primary_key=True, nullable=False, autoincrement=True),
-          Column('name',
-                 String(length=255, convert_unicode=False, assert_unicode=None,
-                        unicode_error=None, _warn_on_bytestring=False),
-                 unique=True),
-          Column('operational_state',
-                 String(length=255, convert_unicode=False, assert_unicode=None,
-                        unicode_error=None, _warn_on_bytestring=False),
-                 nullable=False),
-          Column('availability_zone',
-                 String(length=255, convert_unicode=False, assert_unicode=None,
-                        unicode_error=None, _warn_on_bytestring=False),
-                 nullable=False),
-          )
-
-hosts = Table('aggregate_hosts', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('host',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-               unique=True),
-        Column('aggregate_id', Integer(), ForeignKey('aggregates.id'),
-               nullable=False),
-        )
-
-metadata = Table('aggregate_metadata', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('aggregate_id',
-               Integer(),
-               ForeignKey('aggregates.id'),
-               nullable=False),
-        Column('key',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-               nullable=False),
-        Column('value',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-               nullable=False))
-
-
-tables = (aggregates, hosts, metadata)
-
-
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+    #
+    # New Tables
+    #
+    aggregates = Table('aggregates', meta,
+              Column('created_at', DateTime(timezone=False)),
+              Column('updated_at', DateTime(timezone=False)),
+              Column('deleted_at', DateTime(timezone=False)),
+              Column('deleted', Boolean(create_constraint=True, name=None)),
+              Column('id', Integer(),
+                     primary_key=True, nullable=False, autoincrement=True),
+              Column('name',
+                     String(length=255, convert_unicode=False,
+                            assert_unicode=None,
+                            unicode_error=None, _warn_on_bytestring=False),
+                     unique=True),
+              Column('operational_state',
+                     String(length=255, convert_unicode=False,
+                            assert_unicode=None,
+                            unicode_error=None, _warn_on_bytestring=False),
+                     nullable=False),
+              Column('availability_zone',
+                     String(length=255, convert_unicode=False,
+                            assert_unicode=None,
+                            unicode_error=None, _warn_on_bytestring=False),
+                     nullable=False),
+              )
+
+    hosts = Table('aggregate_hosts', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('id', Integer(), primary_key=True, nullable=False),
+            Column('host',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False),
+                   unique=True),
+            Column('aggregate_id', Integer(), ForeignKey('aggregates.id'),
+                   nullable=False),
+            )
+
+    metadata = Table('aggregate_metadata', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('id', Integer(), primary_key=True, nullable=False),
+            Column('aggregate_id',
+                   Integer(),
+                   ForeignKey('aggregates.id'),
+                   nullable=False),
+            Column('key',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False),
+                   nullable=False),
+            Column('value',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False),
+                   nullable=False))
+    tables = (aggregates, hosts, metadata)
     for table in tables:
         try:
             table.create()
@@ -90,8 +94,14 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    for table in tables:
+
+    aggregates = Table('aggregates', meta, autoload=True)
+    hosts = Table('aggregate_hosts', meta, autoload=True)
+    metadata = Table('aggregate_metadata', meta, autoload=True)
+    # table order matters, don't change
+    for table in (hosts, metadata, aggregates):
         try:
             table.drop()
         except Exception:

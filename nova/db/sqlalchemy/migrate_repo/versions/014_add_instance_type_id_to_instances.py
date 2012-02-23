@@ -15,37 +15,22 @@
 #    under the License.
 
 from sqlalchemy import Column, Integer, MetaData, String, Table
-#from nova import log as logging
-
-meta = MetaData()
-
-c_instance_type = Column('instance_type',
-                           String(length=255, convert_unicode=False,
-                                  assert_unicode=None, unicode_error=None,
-                                  _warn_on_bytestring=False),
-                           nullable=True)
-
-c_instance_type_id = Column('instance_type_id',
-                           String(length=255, convert_unicode=False,
-                                  assert_unicode=None, unicode_error=None,
-                                  _warn_on_bytestring=False),
-                           nullable=True)
-
-instance_types = Table('instance_types', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('name',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-                      unique=True))
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+    instance_types = Table('instance_types', meta, autoload=True)
+    instances = Table('instances', meta, autoload=True)
+
+    c_instance_type_id = Column('instance_type_id',
+                               String(length=255, convert_unicode=False,
+                                      assert_unicode=None, unicode_error=None,
+                                      _warn_on_bytestring=False),
+                               nullable=True)
 
     instances.create_column(c_instance_type_id)
 
@@ -63,17 +48,25 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+    instance_types = Table('instance_types', meta, autoload=True)
+    instances = Table('instances', meta, autoload=True)
 
+    c_instance_type = Column('instance_type',
+                               String(length=255, convert_unicode=False,
+                                      assert_unicode=None, unicode_error=None,
+                                      _warn_on_bytestring=False),
+                               nullable=True)
     instances.create_column(c_instance_type)
 
+    type_names = {}
     recs = migrate_engine.execute(instance_types.select())
     for row in recs:
-        type_id = row[0]
-        type_name = row[1]
+        type_names[row[0]] = row[1]
+
+    for type_id, type_name in type_names.iteritems():
         migrate_engine.execute(instances.update()\
             .where(instances.c.instance_type_id == type_id)\
             .values(instance_type=type_name))

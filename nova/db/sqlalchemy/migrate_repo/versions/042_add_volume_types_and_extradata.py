@@ -20,82 +20,71 @@ from sqlalchemy import Boolean, ForeignKey
 
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
 
 
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of tables .
-#
-
-volumes = Table('volumes', meta,
-       Column('id', Integer(), primary_key=True, nullable=False),
-       )
-
-volume_type_id = Column('volume_type_id', Integer(), nullable=True)
-
-
-# New Tables
-#
-
-volume_types = Table('volume_types', meta,
-       Column('created_at', DateTime(timezone=False)),
-       Column('updated_at', DateTime(timezone=False)),
-       Column('deleted_at', DateTime(timezone=False)),
-       Column('deleted', Boolean(create_constraint=True, name=None)),
-       Column('id', Integer(), primary_key=True, nullable=False),
-       Column('name',
-              String(length=255, convert_unicode=False, assert_unicode=None,
-                     unicode_error=None, _warn_on_bytestring=False),
-              unique=True))
-
-volume_type_extra_specs_table = Table('volume_type_extra_specs', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('volume_type_id',
-               Integer(),
-               ForeignKey('volume_types.id'),
-               nullable=False),
-        Column('key',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('value',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)))
-
-
-volume_metadata_table = Table('volume_metadata', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('volume_id',
-               Integer(),
-               ForeignKey('volumes.id'),
-               nullable=False),
-        Column('key',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('value',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)))
-
-
-new_tables = (volume_types,
-              volume_type_extra_specs_table,
-              volume_metadata_table)
-
-#
-# Tables to alter
-#
-
-
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    volumes = Table('volumes', meta, autoload=True)
+
+    #
+    # New Tables
+    #
+    volume_types = Table('volume_types', meta,
+           Column('created_at', DateTime(timezone=False)),
+           Column('updated_at', DateTime(timezone=False)),
+           Column('deleted_at', DateTime(timezone=False)),
+           Column('deleted', Boolean(create_constraint=True, name=None)),
+           Column('id', Integer(), primary_key=True, nullable=False),
+           Column('name',
+                  String(length=255, convert_unicode=False,
+                         assert_unicode=None,
+                         unicode_error=None, _warn_on_bytestring=False),
+                  unique=True))
+
+    volume_type_extra_specs_table = Table('volume_type_extra_specs', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('id', Integer(), primary_key=True, nullable=False),
+            Column('volume_type_id',
+                   Integer(),
+                   ForeignKey('volume_types.id'),
+                   nullable=False),
+            Column('key',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('value',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)))
+
+    volume_metadata_table = Table('volume_metadata', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('id', Integer(), primary_key=True, nullable=False),
+            Column('volume_id',
+                   Integer(),
+                   ForeignKey('volumes.id'),
+                   nullable=False),
+            Column('key',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('value',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)))
+
+    new_tables = (volume_types,
+                  volume_type_extra_specs_table,
+                  volume_metadata_table)
 
     for table in new_tables:
         try:
@@ -105,13 +94,29 @@ def upgrade(migrate_engine):
             LOG.exception('Exception while creating table')
             raise
 
+    #
+    # New Columns
+    #
+    volume_type_id = Column('volume_type_id', Integer(), nullable=True)
     volumes.create_column(volume_type_id)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    volumes.drop_column(volume_type_id)
+    volumes = Table('volumes', meta, autoload=True)
 
-    for table in new_tables:
+    volumes.drop_column('volume_type_id')
+
+    volume_types = Table('volume_types', meta, autoload=True)
+    volume_type_extra_specs_table = Table('volume_type_extra_specs',
+                                          meta,
+                                          autoload=True)
+    volume_metadata_table = Table('volume_metadata', meta, autoload=True)
+
+    # table order matters, don't change
+    for table in (volume_type_extra_specs_table,
+                  volume_types,
+                  volume_metadata_table):
         table.drop()

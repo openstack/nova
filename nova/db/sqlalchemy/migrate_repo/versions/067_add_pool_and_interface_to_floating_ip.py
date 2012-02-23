@@ -13,26 +13,24 @@
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
-#    under the License.from sqlalchemy import *
+#    under the License.
 
-from sqlalchemy import Column, MetaData, Table, String
+from sqlalchemy import Column, MetaData, String, Table
 
 from nova import flags
-
 
 flags.DECLARE('default_floating_pool', 'nova.network.manager')
 flags.DECLARE('public_interface', 'nova.network.linux_net')
 FLAGS = flags.FLAGS
 
-meta = MetaData()
-
-pool_column = Column('pool', String(255))
-interface_column = Column('interface', String(255))
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     table = Table('floating_ips', meta, autoload=True)
+
+    pool_column = Column('pool', String(255))
+    interface_column = Column('interface', String(255))
     table.create_column(pool_column)
     table.create_column(interface_column)
     table.update().values(pool=FLAGS.default_floating_pool,
@@ -40,6 +38,7 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     table = Table('floating_ips', meta, autoload=True)
     table.c.pool.drop()

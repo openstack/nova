@@ -19,26 +19,22 @@
 from sqlalchemy import Column, Integer, MetaData, Table
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
 
 
-# Add disk_available_least column to compute_nodes table.
-# Thinking about qcow2 image support, both compressed and virtual disk size
-# has to be considered.
-# disk_available stores "total disk size - used disk(compressed disk size)",
-# while disk_available_least stores
-# "total disk size - used disk(virtual disk size)".
-# virtual disk size is used for kvm block migration.
-
-compute_nodes = Table('compute_nodes', meta,
-        Column('id', Integer(), primary_key=True, nullable=False))
-
-disk_available_least = Column('disk_available_least', Integer(), default=0)
-
-
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    disk_available_least = Column('disk_available_least', Integer(), default=0)
+    compute_nodes = Table('compute_nodes', meta, autoload=True)
+    # Add disk_available_least column to compute_nodes table.
+    # Thinking about qcow2 image support, both compressed and virtual disk size
+    # has to be considered.
+    # disk_available stores "total disk size - used disk(compressed disk size)"
+    # while disk_available_least stores
+    # "total disk size - used disk(virtual disk size)".
+    # virtual disk size is used for kvm block migration.
     try:
         compute_nodes.create_column(disk_available_least)
     except Exception:
@@ -47,5 +43,8 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    compute_nodes.drop_column(disk_available_least)
+
+    compute_nodes = Table('compute_nodes', meta, autoload=True)
+    compute_nodes.drop_column('disk_available_least')

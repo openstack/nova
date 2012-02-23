@@ -20,16 +20,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 
 
-meta = MetaData()
-
-
-c_task_state = Column('task_state',
-                      String(length=255, convert_unicode=False,
-                             assert_unicode=None, unicode_error=None,
-                             _warn_on_bytestring=False),
-                      nullable=True)
-
-
 _upgrade_translations = {
     "stopping": {
         "state_description": vm_states.ACTIVE,
@@ -92,10 +82,10 @@ _downgrade_translations = {
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    instance_table = Table('instances', meta, autoload=True,
-                           autoload_with=migrate_engine)
+    instance_table = Table('instances', meta, autoload=True)
 
     c_state = instance_table.c.state
     c_state.alter(name='power_state')
@@ -103,6 +93,11 @@ def upgrade(migrate_engine):
     c_vm_state = instance_table.c.state_description
     c_vm_state.alter(name='vm_state')
 
+    c_task_state = Column('task_state',
+                          String(length=255, convert_unicode=False,
+                                 assert_unicode=None, unicode_error=None,
+                                 _warn_on_bytestring=False),
+                          nullable=True)
     instance_table.create_column(c_task_state)
 
     for old_state, values in _upgrade_translations.iteritems():
@@ -113,10 +108,10 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    instance_table = Table('instances', meta, autoload=True,
-                           autoload_with=migrate_engine)
+    instance_table = Table('instances', meta, autoload=True)
 
     c_task_state = instance_table.c.task_state
 

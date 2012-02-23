@@ -17,19 +17,19 @@
 
 from sqlalchemy import Boolean, Column, MetaData, Table
 
-meta = MetaData()
-
-c_auto_assigned = Column('auto_assigned', Boolean, default=False)
-
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
-
-    floating_ips = Table('floating_ips',
-                         meta,
-                         autoload=True,
-                         autoload_with=migrate_engine)
-
+    floating_ips = Table('floating_ips', meta, autoload=True)
+    c_auto_assigned = Column('auto_assigned', Boolean, default=False)
     floating_ips.create_column(c_auto_assigned)
+
+
+def downgrade(migrate_engine):
+    meta = MetaData()
+    meta.bind = migrate_engine
+    floating_ips = Table('floating_ips', meta, autoload=True)
+    floating_ips.drop_column('auto_assigned')

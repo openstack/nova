@@ -15,18 +15,17 @@
 
 import json
 
-from sqlalchemy import *
-from migrate import *
+from sqlalchemy import select, MetaData, Table
 
 from nova import ipv6
 from nova import log as logging
 from nova import utils
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     # grab tables
     instance_info_caches = Table('instance_info_caches', meta, autoload=True)
@@ -235,6 +234,7 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     # facepalm
+    meta = MetaData()
     meta.bind = migrate_engine
     instance_info_caches = Table('instance_info_caches', meta, autoload=True)
 

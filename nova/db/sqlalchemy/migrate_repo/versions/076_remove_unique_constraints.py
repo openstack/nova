@@ -18,8 +18,6 @@
 from sqlalchemy import MetaData, Table
 from migrate.changeset.constraint import UniqueConstraint
 
-meta = MetaData()
-
 
 def _get_constraint_names(engine_name):
 
@@ -42,6 +40,7 @@ def _get_constraint_names(engine_name):
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     c_names = _get_constraint_names(migrate_engine.name)
 
@@ -63,6 +62,7 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
     c_names = _get_constraint_names(migrate_engine.name)
 

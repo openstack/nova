@@ -17,37 +17,36 @@ from sqlalchemy import Boolean, Column, DateTime, Integer
 from sqlalchemy import MetaData, String, Table
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
-
-
-#
-# New Tables
-#
-instance_types = Table('instance_types', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('name',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False),
-                      unique=True),
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('memory_mb', Integer(), nullable=False),
-        Column('vcpus', Integer(), nullable=False),
-        Column('local_gb', Integer(), nullable=False),
-        Column('flavorid', Integer(), nullable=False, unique=True),
-        Column('swap', Integer(), nullable=False, default=0),
-        Column('rxtx_quota', Integer(), nullable=False, default=0),
-        Column('rxtx_cap', Integer(), nullable=False, default=0))
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here
     # Don't create your own engine; bind migrate_engine
     # to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
+    #
+    # New Tables
+    #
+    instance_types = Table('instance_types', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('name',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False),
+                          unique=True),
+            Column('id', Integer(), primary_key=True, nullable=False),
+            Column('memory_mb', Integer(), nullable=False),
+            Column('vcpus', Integer(), nullable=False),
+            Column('local_gb', Integer(), nullable=False),
+            Column('flavorid', Integer(), nullable=False, unique=True),
+            Column('swap', Integer(), nullable=False, default=0),
+            Column('rxtx_quota', Integer(), nullable=False, default=0),
+            Column('rxtx_cap', Integer(), nullable=False, default=0))
     try:
         instance_types.create()
     except Exception:
@@ -79,5 +78,8 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
-    for table in (instance_types):
+    meta = MetaData()
+    meta.bind = migrate_engine
+    instance_types = Table('instance_types', meta, autoload=True)
+    for table in (instance_types, ):
         table.drop()

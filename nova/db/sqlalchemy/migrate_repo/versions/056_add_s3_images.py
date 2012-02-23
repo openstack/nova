@@ -15,35 +15,35 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sqlalchemy
-
+from sqlalchemy import Boolean, Column, DateTime, Integer
+from sqlalchemy import MetaData, String, Table
 from nova import log as logging
 
-
-meta = sqlalchemy.MetaData()
 LOG = logging.getLogger(__name__)
 
 
-s3_images = sqlalchemy.Table('s3_images', meta,
-                sqlalchemy.Column('created_at',
-                                  sqlalchemy.DateTime(timezone=False)),
-                sqlalchemy.Column('updated_at',
-                                  sqlalchemy.DateTime(timezone=False)),
-                sqlalchemy.Column('deleted_at',
-                                  sqlalchemy.DateTime(timezone=False)),
-                sqlalchemy.Column('deleted',
-                       sqlalchemy.Boolean(create_constraint=True, name=None)),
-                sqlalchemy.Column('id', sqlalchemy.Integer(),
-                                  primary_key=True,
-                                  nullable=False,
-                                  autoincrement=True),
-                sqlalchemy.Column('uuid', sqlalchemy.String(36),
-                                  nullable=False))
-
-
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
+    #
+    # New Tables
+    #
+    s3_images = Table('s3_images', meta,
+                    Column('created_at',
+                                      DateTime(timezone=False)),
+                    Column('updated_at',
+                                      DateTime(timezone=False)),
+                    Column('deleted_at',
+                                      DateTime(timezone=False)),
+                    Column('deleted',
+                           Boolean(create_constraint=True, name=None)),
+                    Column('id', Integer(),
+                                      primary_key=True,
+                                      nullable=False,
+                                      autoincrement=True),
+                    Column('uuid', String(36),
+                                      nullable=False))
     try:
         s3_images.create()
     except Exception:
@@ -53,6 +53,8 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
+    s3_images = Table('s3_images', meta, autoload=True)
     s3_images.drop()

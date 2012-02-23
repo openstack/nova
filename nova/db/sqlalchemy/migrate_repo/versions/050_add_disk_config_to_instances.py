@@ -14,26 +14,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import Column, Integer, MetaData, Table, Boolean
-
-meta = MetaData()
-
-# temporary table for creating the new columns
-
-instances = Table("instances", meta,
-        Column("id", Integer(), primary_key=True, nullable=False))
-
-# The new column
-
-managed_disk = Column("managed_disk", Boolean(create_constraint=False,
-                                              name=None))
+from sqlalchemy import Boolean, Column, Integer, MetaData, Table
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    instances = Table('instances', meta, autoload=True)
+
+    managed_disk = Column("managed_disk", Boolean(create_constraint=False,
+                                              name=None))
     instances.create_column(managed_disk)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances.drop_column(managed_disk)
+
+    instances = Table('instances', meta, autoload=True)
+
+    instances.drop_column('managed_disk')

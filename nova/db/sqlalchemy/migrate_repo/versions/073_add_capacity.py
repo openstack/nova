@@ -12,17 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import Table, Column, MetaData, Integer
+from sqlalchemy import Column, Integer, MetaData, Table
 
 from nova import log as logging
-
-
-new_columns = [
-    Column('free_ram_mb', Integer()),
-    Column('free_disk_gb', Integer()),
-    Column('current_workload', Integer()),
-    Column('running_vms', Integer()),
-    ]
 
 
 def upgrade(migrate_engine):
@@ -32,6 +24,15 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
     compute_nodes = Table('compute_nodes', meta, autoload=True)
 
+    #
+    # New Columns
+    #
+    new_columns = [
+        Column('free_ram_mb', Integer()),
+        Column('free_disk_gb', Integer()),
+        Column('current_workload', Integer()),
+        Column('running_vms', Integer()),
+        ]
     for column in new_columns:
         compute_nodes.create_column(column)
 
@@ -41,5 +42,8 @@ def downgrade(migrate_engine):
     meta.bind = migrate_engine
     compute_nodes = Table('compute_nodes', meta, autoload=True)
 
-    for column in new_columns:
-        compute_notes.drop_column(column)
+    for column in ('free_ram_mb',
+                   'free_disk_gb',
+                   'current_workload',
+                   'running_vms'):
+        compute_nodes.drop_column(column)

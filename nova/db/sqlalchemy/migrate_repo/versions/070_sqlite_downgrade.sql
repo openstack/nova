@@ -64,7 +64,7 @@ BEGIN TRANSACTION;
         PRIMARY KEY (id),
         FOREIGN KEY(virtual_interface_id) REFERENCES virtual_interfaces (id),
         FOREIGN KEY(network_id) REFERENCES networks (id),
-        FOREIGN KEY(instance_id) REFERENCES instanced (id)
+        FOREIGN KEY(instance_id) REFERENCES instances (id)
     );
 
     CREATE TABLE floating_ips (

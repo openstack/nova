@@ -18,41 +18,40 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer
 from sqlalchemy import MetaData, String, Table
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
-
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of instances or services.
-instance_types = Table('instance_types', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-#
-# New Tables
-#
-
-instance_type_extra_specs_table = Table('instance_type_extra_specs', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(), primary_key=True, nullable=False),
-        Column('instance_type_id',
-               Integer(),
-               ForeignKey('instance_types.id'),
-               nullable=False),
-        Column('key',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('value',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)))
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    # load tables for fk
+    instance_types = Table('instance_types', meta, autoload=True)
+
+    #
+    # New Tables
+    #
+    instance_type_extra_specs_table = Table('instance_type_extra_specs', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
+            Column('id', Integer(), primary_key=True, nullable=False),
+            Column('instance_type_id',
+                   Integer(),
+                   ForeignKey('instance_types.id'),
+                   nullable=False),
+            Column('key',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)),
+            Column('value',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None,
+                          unicode_error=None, _warn_on_bytestring=False)))
+
     for table in (instance_type_extra_specs_table, ):
         try:
             table.create()
@@ -64,5 +63,14 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    # load tables for fk
+    instance_types = Table('instance_types', meta, autoload=True)
+
+    instance_type_extra_specs_table = Table('instance_type_extra_specs',
+                                            meta,
+                                            autoload=True)
     for table in (instance_type_extra_specs_table, ):
         table.drop()

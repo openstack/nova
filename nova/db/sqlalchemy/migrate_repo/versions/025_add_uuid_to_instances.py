@@ -19,15 +19,13 @@ from sqlalchemy import Column, Integer, MetaData, String, Table
 from nova import utils
 
 
-meta = MetaData()
-
-instances = Table("instances", meta,
-        Column("id", Integer(), primary_key=True, nullable=False))
-uuid_column = Column("uuid", String(36))
-
-
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    instances = Table('instances', meta, autoload=True)
+
+    uuid_column = Column("uuid", String(36))
     instances.create_column(uuid_column)
 
     rows = migrate_engine.execute(instances.select())
@@ -39,5 +37,9 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instances.drop_column(uuid_column)
+
+    instances = Table('instances', meta, autoload=True)
+
+    instances.drop_column('uuid')

@@ -16,12 +16,11 @@
 
 from sqlalchemy import MetaData
 
-meta = MetaData()
-
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
     if migrate_engine.name == "mysql":
         migrate_engine.execute("ALTER TABLE auth_tokens Engine=InnoDB")
@@ -62,4 +61,4 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
-    meta.bind = migrate_engine
+    pass

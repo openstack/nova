@@ -16,30 +16,27 @@
 
 from sqlalchemy import Column, MetaData, String, Table
 
-meta = MetaData()
-
-instances_vm_mode = Column('vm_mode',
-                           String(length=255, convert_unicode=False,
-                                  assert_unicode=None, unicode_error=None,
-                                  _warn_on_bytestring=False),
-                           nullable=True)
-
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+    instances = Table('instances', meta, autoload=True)
 
+    instances_vm_mode = Column('vm_mode',
+                               String(length=255, convert_unicode=False,
+                                      assert_unicode=None, unicode_error=None,
+                                      _warn_on_bytestring=False),
+                               nullable=True)
     instances.create_column(instances_vm_mode)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
-    instances = Table('instances', meta, autoload=True,
-                      autoload_with=migrate_engine)
+    instances = Table('instances', meta, autoload=True)
 
     instances.drop_column('vm_mode')

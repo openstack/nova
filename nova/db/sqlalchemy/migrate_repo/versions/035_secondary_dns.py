@@ -17,22 +17,23 @@
 
 from sqlalchemy import Column, Table, MetaData, String
 
-meta = MetaData()
-
-dns2 = Column('dns2', String(255))
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
     networks = Table('networks', meta, autoload=True)
+
     networks.c.dns.alter(name='dns1')
+    dns2 = Column('dns2', String(255))
     networks.create_column(dns2)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
     networks = Table('networks', meta, autoload=True)
+
     networks.c.dns1.alter(name='dns')
-    networks.drop_column(dns2)
+    networks.drop_column('dns2')

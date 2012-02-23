@@ -17,25 +17,19 @@
 
 import migrate
 import migrate.changeset
-import sqlalchemy
+from sqlalchemy import Column, Integer, String, MetaData, Table
 
 from nova import log as logging
 
-
 LOG = logging.getLogger(__name__)
-
-meta = sqlalchemy.MetaData()
-
-
-def _get_table():
-    return sqlalchemy.Table('instance_types', meta, autoload=True)
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instance_types = _get_table()
+    instance_types = Table('instance_types', meta, autoload=True)
 
-    string_column = sqlalchemy.Column('flavorid_str', sqlalchemy.String(255))
+    string_column = Column('flavorid_str', String(255))
 
     string_column.create(instance_types)
 
@@ -74,11 +68,12 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    instance_types = _get_table()
 
-    integer_column = sqlalchemy.Column('flavorid_int',
-                                       sqlalchemy.Integer())
+    instance_types = Table('instance_types', meta, autoload=True)
+
+    integer_column = Column('flavorid_int', Integer())
 
     integer_column.create(instance_types)
 

@@ -17,28 +17,26 @@
 
 from sqlalchemy import Column, Table, MetaData, Boolean, String
 
-meta = MetaData()
-
-fixed_ips_host = Column('host', String(255))
-
-networks_multi_host = Column('multi_host', Boolean, default=False)
-
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
+    fixed_ips_host = Column('host', String(255))
     fixed_ips = Table('fixed_ips', meta, autoload=True)
     fixed_ips.create_column(fixed_ips_host)
 
+    networks_multi_host = Column('multi_host', Boolean, default=False)
     networks = Table('networks', meta, autoload=True)
     networks.create_column(networks_multi_host)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
 
     fixed_ips = Table('fixed_ips', meta, autoload=True)
-    fixed_ips.drop_column(fixed_ips_host)
+    fixed_ips.drop_column('host')
 
     networks = Table('networks', meta, autoload=True)
-    networks.drop_column(networks_multi_host)
+    networks.drop_column('multi_host')

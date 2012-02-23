@@ -13,44 +13,41 @@
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
-#    under the License.from sqlalchemy import *
+#    under the License.
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer
 from sqlalchemy import MetaData, String, Table
 from nova import log as logging
 
-meta = MetaData()
 LOG = logging.getLogger(__name__)
-
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of instances or services.
-instances = Table('instances', meta,
-        Column('id', Integer(), primary_key=True, nullable=False),
-        )
-
-#
-# New Tables
-#
-
-migrations = Table('migrations', meta,
-            Column('created_at', DateTime(timezone=False)),
-            Column('updated_at', DateTime(timezone=False)),
-            Column('deleted_at', DateTime(timezone=False)),
-            Column('deleted', Boolean(create_constraint=True, name=None)),
-            Column('id', Integer(), primary_key=True, nullable=False),
-            Column('source_compute', String(255)),
-            Column('dest_compute', String(255)),
-            Column('dest_host', String(255)),
-            Column('instance_id', Integer, ForeignKey('instances.id'),
-                nullable=True),
-            Column('status', String(255)),
-      )
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
+
+    # load tables for fk
+    instances = Table('instances', meta, autoload=True)
+
+    #
+    # New Tables
+    #
+    migrations = Table('migrations', meta,
+                Column('created_at', DateTime(timezone=False)),
+                Column('updated_at', DateTime(timezone=False)),
+                Column('deleted_at', DateTime(timezone=False)),
+                Column('deleted', Boolean(create_constraint=True, name=None)),
+                Column('id', Integer(), primary_key=True, nullable=False),
+                Column('source_compute', String(255)),
+                Column('dest_compute', String(255)),
+                Column('dest_host', String(255)),
+                Column('instance_id', Integer, ForeignKey('instances.id'),
+                    nullable=True),
+                Column('status', String(255)),
+          )
+
     for table in (migrations, ):
         try:
             table.create()
@@ -58,3 +55,16 @@ def upgrade(migrate_engine):
             LOG.info(repr(table))
             LOG.exception('Exception while creating table')
             raise
+
+
+def downgrade(migrate_engine):
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    # load tables for fk
+    instances = Table('instances', meta, autoload=True)
+
+    migrations = Table('migrations', meta, autoload=True)
+
+    for table in (migrations, ):
+            table.drop()

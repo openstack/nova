@@ -16,26 +16,20 @@
 
 from sqlalchemy import MetaData, Table
 
-meta = MetaData()
-
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+    meta = MetaData()
     meta.bind = migrate_engine
-
-    tokens = Table('auth_tokens', meta, autoload=True,
-                      autoload_with=migrate_engine)
-
+    tokens = Table('auth_tokens', meta, autoload=True)
     c_manageent = tokens.c.server_manageent_url
     c_manageent.alter(name='server_management_url')
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-
-    tokens = Table('auth_tokens', meta, autoload=True,
-                      autoload_with=migrate_engine)
-
+    tokens = Table('auth_tokens', meta, autoload=True)
     c_management = tokens.c.server_management_url
     c_management.alter(name='server_manageent_url')
