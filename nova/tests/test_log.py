@@ -1,13 +1,17 @@
 import cStringIO
 import json
 import logging
+import sys
 
 from nova import context
 from nova import flags
 from nova import log
+from nova.notifier import api as notifier
 from nova import test
 
 FLAGS = flags.FLAGS
+flags.DECLARE('list_notifier_drivers',
+              'nova.notifier.list_notifier')
 
 
 def _fake_context():
@@ -72,6 +76,40 @@ class LogHandlerTestCase(test.TestCase):
                    logfile='/some/path/foo-bar.log')
         self.assertEquals(log._get_log_file_path(binary='foo-bar'),
                          '/some/path/foo-bar.log')
+
+
+class PublishErrorsHandlerTestCase(test.TestCase):
+    """Tests for nova.log.PublishErrorsHandler"""
+    def setUp(self):
+        super(PublishErrorsHandlerTestCase, self).setUp()
+        self.handler = logging.Handler()
+        self.publiserrorshandler = log.PublishErrorsHandler(logging.ERROR)
+
+    def test_emit_cfg_list_notifier_drivers_in_flags(self):
+        self.stub_flg = False
+
+        def fake_notifier(*args, **kwargs):
+            self.stub_flg = True
+
+        self.stubs.Set(notifier, 'notify', fake_notifier)
+        logrecord = logging.LogRecord('name', 'WARN', '/tmp', 1,
+                                      'Message', None, None)
+        self.publiserrorshandler.emit(logrecord)
+        self.assertTrue(self.stub_flg)
+
+    def test_emit_cfg_log_notifier_in_list_notifier_drivers(self):
+        self.flags(list_notifier_drivers=['nova.notifier.rabbit_notifier',
+                                          'nova.notifier.log_notifier'])
+        self.stub_flg = True
+
+        def fake_notifier(*args, **kwargs):
+            self.stub_flg = False
+
+        self.stubs.Set(notifier, 'notify', fake_notifier)
+        logrecord = logging.LogRecord('name', 'WARN', '/tmp', 1,
+                                      'Message', None, None)
+        self.publiserrorshandler.emit(logrecord)
+        self.assertTrue(self.stub_flg)
 
 
 class NovaFormatterTestCase(test.TestCase):
