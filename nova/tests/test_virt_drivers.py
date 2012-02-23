@@ -245,7 +245,7 @@ class _VirtDriverTestCase(test.TestCase):
     @catch_notimplementederror
     def test_get_info(self):
         instance_ref, network_info = self._get_running_instance()
-        info = self.connection.get_info(instance_ref['name'])
+        info = self.connection.get_info(instance_ref)
         self.assertIn('state', info)
         self.assertIn('max_mem', info)
         self.assertIn('mem', info)
@@ -255,7 +255,8 @@ class _VirtDriverTestCase(test.TestCase):
     @catch_notimplementederror
     def test_get_info_for_unknown_instance(self):
         self.assertRaises(exception.NotFound,
-                          self.connection.get_info, 'I just made this name up')
+                          self.connection.get_info,
+                          {'name': 'I just made this name up'})
 
     @catch_notimplementederror
     def test_get_diagnostics(self):

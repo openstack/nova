@@ -114,7 +114,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         self.assertEquals(len(instances), 1)
 
         # Get Nova record for VM
-        vm_info = self.conn.get_info(1)
+        vm_info = self.conn.get_info({'name': 1})
 
         # Get record for VM
         vms = vmwareapi_fake._get_objects("VirtualMachine")
@@ -157,15 +157,15 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_spawn(self):
         self._create_vm()
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_snapshot(self):
         self._create_vm()
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.snapshot(self.context, self.instance, "Test-Snapshot")
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_snapshot_non_existent(self):
@@ -175,11 +175,11 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_reboot(self):
         self._create_vm()
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
         reboot_type = "SOFT"
         self.conn.reboot(self.instance, self.network_info, reboot_type)
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_reboot_non_existent(self):
@@ -188,19 +188,19 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_reboot_not_poweredon(self):
         self._create_vm()
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.suspend(self.instance)
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.PAUSED)
         self.assertRaises(Exception, self.conn.reboot, self.instance)
 
     def test_suspend(self):
         self._create_vm()
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.suspend(self.instance)
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.PAUSED)
 
     def test_suspend_non_existent(self):
@@ -209,13 +209,13 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_resume(self):
         self._create_vm()
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.suspend(self.instance)
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.PAUSED)
         self.conn.resume(self.instance)
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_resume_non_existent(self):
@@ -224,18 +224,18 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_resume_not_suspended(self):
         self._create_vm()
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
         self.assertRaises(Exception, self.conn.resume, self.instance)
 
     def test_get_info(self):
         self._create_vm()
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_destroy(self):
         self._create_vm()
-        info = self.conn.get_info(1)
+        info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
         instances = self.conn.list_instances()
         self.assertEquals(len(instances), 1)

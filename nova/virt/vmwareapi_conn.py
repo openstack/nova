@@ -162,9 +162,9 @@ class VMWareESXConnection(driver.ComputeDriver):
         """Resume the suspended VM instance."""
         self._vmops.resume(instance)
 
-    def get_info(self, instance_name):
+    def get_info(self, instance):
         """Return info about the VM instance."""
-        return self._vmops.get_info(instance_name)
+        return self._vmops.get_info(instance)
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""

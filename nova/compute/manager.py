@@ -258,7 +258,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Retrieve the power state for the given instance."""
         LOG.debug(_('Checking state'), instance=instance)
         try:
-            return self.driver.get_info(instance['name'])["state"]
+            return self.driver.get_info(instance)["state"]
         except exception.NotFound:
             return power_state.FAILED
 
@@ -2229,16 +2229,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         for db_instance in db_instances:
             # Allow other periodic tasks to do some work...
             greenthread.sleep(0)
-            name = db_instance["name"]
             db_power_state = db_instance['power_state']
             try:
-                vm_instance = self.driver.get_info(name)
+                vm_instance = self.driver.get_info(db_instance)
                 vm_power_state = vm_instance.state
             except exception.InstanceNotFound:
-                msg = _("Instance %(name)s found in database but "
-                        "not known by hypervisor. Setting power "
-                        "state to NOSTATE") % locals()
-                LOG.warn(msg)
+                LOG.warn(_("Instance found in database but not known by "
+                           "hypervisor. Setting power state to NOSTATE"),
+                         locals(), instance=db_instance)
                 vm_power_state = power_state.NOSTATE
 
             if vm_power_state == db_power_state:

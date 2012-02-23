@@ -282,7 +282,8 @@ class ProxyBareMetalTestCase(test.TestCase):
 
         # Code under test
         conn = proxy.get_connection(True)
-        info = conn.get_info('instance-00000001')
+        # TODO: this is not a very good fake instance
+        info = conn.get_info({'name': 'instance-00000001'})
 
         # Expected values
         self.assertEquals(info['mem'], 16777216)

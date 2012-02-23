@@ -332,7 +332,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEquals(instances, [str(instance_id)])
 
         # Get Nova record for VM
-        vm_info = conn.get_info(instance_id)
+        vm_info = conn.get_info({'name': instance_id})
         # Get XenAPI record for VM
         vms = [rec for ref, rec
                in xenapi_fake.get_all_records('VM').iteritems()

@@ -314,9 +314,9 @@ class XenAPIConnection(driver.ComputeDriver):
         """Unplug VIFs from networks."""
         self._vmops.unplug_vifs(instance_ref, network_info)
 
-    def get_info(self, instance_name):
+    def get_info(self, instance):
         """Return data about VM instance"""
-        return self._vmops.get_info(instance_name)
+        return self._vmops.get_info(instance)
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""

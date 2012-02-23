@@ -661,11 +661,11 @@ class VMWareVMOps(object):
             reason = _("instance is not in a suspended state")
             raise exception.InstanceResumeFailure(reason=reason)
 
-    def get_info(self, instance_name):
+    def get_info(self, instance):
         """Return data about the VM instance."""
-        vm_ref = self._get_vm_ref_from_the_name(instance_name)
+        vm_ref = self._get_vm_ref_from_the_name(instance['name'])
         if vm_ref is None:
-            raise exception.InstanceNotFound(instance_id=instance_name)
+            raise exception.InstanceNotFound(instance_id=instance['name'])
 
         lst_properties = ["summary.config.numCpu",
                     "summary.config.memorySizeMB",

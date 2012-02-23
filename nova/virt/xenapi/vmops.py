@@ -477,7 +477,6 @@ class VMOps(object):
         """Spawn a new instance."""
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
-        instance_name = instance.name
         instance_uuid = instance.uuid
         LOG.info(_('Spawning VM %(instance_uuid)s created %(vm_ref)s.')
                  % locals())
@@ -499,7 +498,7 @@ class VMOps(object):
         LOG.debug(_('Instance %s: waiting for running'), instance_uuid)
         expiration = time.time() + FLAGS.xenapi_running_timeout
         while time.time() < expiration:
-            state = self.get_info(instance_name)['state']
+            state = self.get_info(instance)['state']
             if state == power_state.RUNNING:
                 break
 
@@ -1021,7 +1020,7 @@ class VMOps(object):
     def _shutdown(self, instance, vm_ref, hard=True):
         """Shutdown an instance."""
         instance_uuid = instance.uuid
-        state = self.get_info(instance['name'])['state']
+        state = self.get_info(instance)['state']
         if state == power_state.SHUTDOWN:
             LOG.warn(_("VM %(instance_uuid)s already halted,"
                     "skipping shutdown...") % locals())
@@ -1393,7 +1392,7 @@ class VMOps(object):
 
     def get_info(self, instance):
         """Return data about VM instance."""
-        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_ref = self._get_vm_opaque_ref(instance['name'])
         vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
         return VMHelper.compile_info(vm_rec)
 
