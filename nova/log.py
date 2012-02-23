@@ -262,6 +262,9 @@ class LegacyNovaFormatter(logging.Formatter):
 
 class PublishErrorsHandler(logging.Handler):
     def emit(self, record):
+        if 'list_notifier_drivers' in FLAGS:
+            if 'nova.notifier.log_notifier' in FLAGS.list_notifier_drivers:
+                return
         nova.notifier.api.notify('nova.error.publisher', 'error_notification',
             nova.notifier.api.ERROR, dict(error=record.msg))
 
