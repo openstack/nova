@@ -1515,6 +1515,7 @@ class API(base.Base):
             raise exception.InvalidDevicePath(path=device)
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.check_attach(context, volume)
+        self.volume_api.reserve_volume(context, volume)
         params = {"volume_id": volume_id,
                   "mountpoint": device}
         _cast_compute_message(self.db, 'attach_volume', context, instance,

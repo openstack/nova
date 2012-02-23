@@ -24,6 +24,7 @@ import datetime
 import functools
 import hashlib
 import inspect
+import itertools
 import json
 import lockfile
 import os
@@ -708,6 +709,11 @@ def to_primitive(value, convert_instances=False, level=0):
     for test in nasty:
         if test(value):
             return unicode(value)
+
+    # value of itertools.count doesn't get caught by inspects
+    # above and results in infinite loop when list(value) is called.
+    if type(value) == itertools.count:
+        return unicode(value)
 
     # FIXME(vish): Workaround for LP bug 852095. Without this workaround,
     #              tests that raise an exception in a mocked method that

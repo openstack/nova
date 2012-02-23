@@ -229,6 +229,15 @@ class API(base.Base):
                            'volume_id': volume['id']}})
 
     @wrap_check_policy
+    def reserve_volume(self, context, volume):
+        self.update(context, volume, {"status": "attaching"})
+
+    @wrap_check_policy
+    def unreserve_volume(self, context, volume):
+        if volume['status'] == "attaching":
+            self.update(context, volume, {"status": "available"})
+
+    @wrap_check_policy
     def attach(self, context, volume, instance_id, mountpoint):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
@@ -257,6 +266,7 @@ class API(base.Base):
 
     @wrap_check_policy
     def terminate_connection(self, context, volume, connector):
+        self.unreserve_volume(context, volume)
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
         return rpc.call(context, queue,

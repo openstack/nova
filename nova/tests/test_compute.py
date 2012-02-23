@@ -3149,12 +3149,16 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_check_attach(*args, **kwargs):
             pass
 
+        def fake_reserve_volume(*args, **kwargs):
+            pass
+
         def fake_volume_get(self, context, volume_id):
             return {'id': volume_id}
 
         self.stubs.Set(nova.volume.api.API, 'get', fake_volume_get)
         self.stubs.Set(nova.volume.api.API, 'check_attach', fake_check_attach)
-
+        self.stubs.Set(nova.volume.api.API, 'reserve_volume',
+                       fake_reserve_volume)
         instance = self._create_fake_instance()
         self.compute_api.attach_volume(self.context, instance, 1, '/dev/vdb')
 
