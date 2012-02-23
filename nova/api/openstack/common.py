@@ -488,5 +488,5 @@ class ViewBuilder(object):
             return orig_url
         url_parts = list(urlparse.urlsplit(orig_url))
         prefix_parts = list(urlparse.urlsplit(prefix))
-        url_parts[1] = prefix_parts[1]
+        url_parts[0:2] = prefix_parts[0:2]
         return urlparse.urlunsplit(url_parts)
