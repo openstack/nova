@@ -194,12 +194,12 @@ def compute_node_create(context, values):
     return IMPL.compute_node_create(context, values)
 
 
-def compute_node_update(context, compute_id, values):
+def compute_node_update(context, compute_id, values, auto_adjust=True):
     """Set the given properties on an computeNode and update it.
 
     Raises NotFound if computeNode does not exist.
     """
-    return IMPL.compute_node_update(context, compute_id, values)
+    return IMPL.compute_node_update(context, compute_id, values, auto_adjust)
 
 
 def compute_node_get_by_host(context, host):
