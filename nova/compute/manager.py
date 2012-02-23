@@ -2347,7 +2347,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(sirp): admin contexts don't ordinarily return deleted records
         with utils.temporary_mutation(context, read_deleted="yes"):
-            for instance in self._errored_instances(context):
+            for instance in self._running_deleted_instances(context):
                 if action == "log":
                     LOG.warning(_("Detected instance  with name label "
                                   "'%(name_label)s' which is marked as "
@@ -2355,8 +2355,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 locals(), instance=instance)
 
                 elif action == 'reap':
+                    name = instance['name']
                     LOG.info(_("Destroying instance with name label "
-                               "'%(name_label)s' which is marked as "
+                               "'%(name)s' which is marked as "
                                "DELETED but still present on host."),
                              locals(), instance=instance)
                     self._shutdown_instance(context, instance, 'Terminating')
@@ -2368,6 +2369,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                     instance=instance)
 
     def _running_deleted_instances(self, context):
+        """Returns a list of instances nova thinks is deleted,
+        but the hypervisor thinks is still running. This method
+        should be pushed down to the virt layer for efficiency.
+        """
         def deleted_instance(instance):
             present = instance.name in present_name_labels
             erroneously_running = instance.deleted and present

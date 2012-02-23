@@ -1576,6 +1576,35 @@ class ComputeTestCase(BaseTestCase):
         self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
                                                  NotImplementedError('test'))
 
+    def test_cleanup_running_deleted_instances(self):
+        admin_context = context.get_admin_context()
+        deleted_at = utils.utcnow() - datetime.timedelta(hours=1, minutes=5)
+        instance = self._create_fake_instance({"deleted_at": deleted_at,
+                                          "deleted": True})
+
+        self.compute.host = instance['host']
+
+        self.mox.StubOutWithMock(self.compute.driver, 'list_instances')
+        self.compute.driver.list_instances().AndReturn([instance['name']])
+        FLAGS.running_deleted_instance_timeout = 3600
+        FLAGS.running_deleted_instance_action = 'reap'
+
+        self.mox.StubOutWithMock(self.compute.db, "instance_get_all_by_host")
+        self.compute.db.instance_get_all_by_host(admin_context,
+                                                 self.compute.host
+                                                ).AndReturn([instance])
+
+        self.mox.StubOutWithMock(self.compute, "_shutdown_instance")
+        self.compute._shutdown_instance(admin_context, instance,
+                                        'Terminating').AndReturn(None)
+
+        self.mox.StubOutWithMock(self.compute, "_cleanup_volumes")
+        self.compute._cleanup_volumes(admin_context,
+                                      instance['id']).AndReturn(None)
+
+        self.mox.ReplayAll()
+        self.compute._cleanup_running_deleted_instances(admin_context)
+
     def test_running_deleted_instances(self):
         self.mox.StubOutWithMock(self.compute.driver, 'list_instances')
         self.compute.driver.list_instances().AndReturn(['herp', 'derp'])
