@@ -343,9 +343,10 @@ class NovaTestRunner(core.TextTestRunner):
 
 
 def run():
-    flags.FLAGS.register_cli_opt(cfg.BoolOpt('hide-elapsed', default=False))
-    flags.FLAGS.register_cli_opt(cfg.BoolOpt("stop", short='x', default=False))
-    argv = flags.FLAGS(sys.argv)
+    # This is a fix to allow the --hide-elapsed flag while accepting
+    # arbitrary nosetest flags as well
+    argv = [x for x in sys.argv if x != '--hide-elapsed']
+    hide_elapsed = argv != sys.argv
     logging.setup()
 
     # If any argument looks like a test name but doesn't have "nova.tests" in
@@ -364,7 +365,7 @@ def run():
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,
                             config=c,
-                            show_elapsed=not flags.FLAGS.hide_elapsed)
+                            show_elapsed=not hide_elapsed)
     sys.exit(not core.run(config=c, testRunner=runner, argv=argv))
 
 
