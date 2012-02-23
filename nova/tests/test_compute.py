@@ -80,7 +80,8 @@ def rpc_call_wrapper(context, topic, msg, do_cast=True):
         scheduler = scheduler_driver.Scheduler
         num_instances = request_spec.get('num_instances', 1)
         instances = []
-        for x in xrange(num_instances):
+        for num in xrange(num_instances):
+            request_spec['instance_properties']['launch_index'] = num
             instance = scheduler().create_instance_db_entry(
                     context, request_spec)
             encoded = scheduler_driver.encode_instance(instance)

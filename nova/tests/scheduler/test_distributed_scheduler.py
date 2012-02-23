@@ -16,20 +16,25 @@
 Tests For Distributed Scheduler.
 """
 
+import mox
+
 from nova import context
 from nova import exception
 from nova.scheduler import least_cost
 from nova.scheduler import host_manager
+from nova.scheduler import distributed_scheduler
 from nova import test
-from nova.tests.scheduler import fakes
+from nova.tests.scheduler import fakes, test_scheduler
 
 
 def fake_filter_hosts(hosts, filter_properties):
     return list(hosts)
 
 
-class DistributedSchedulerTestCase(test.TestCase):
+class DistributedSchedulerTestCase(test_scheduler.SchedulerTestCase):
     """Test case for Distributed Scheduler."""
+
+    driver_cls = distributed_scheduler.DistributedScheduler
 
     def test_run_instance_no_hosts(self):
         """
@@ -75,6 +80,51 @@ class DistributedSchedulerTestCase(test.TestCase):
         fake_context = context.RequestContext('user', 'project')
         self.assertRaises(NotImplementedError, sched._schedule, fake_context,
                           "foo", {})
+
+    def test_scheduler_includes_launch_index(self):
+        ctxt = "fake-context"
+        fake_kwargs = {'fake_kwarg1': 'fake_value1',
+                       'fake_kwarg2': 'fake_value2'}
+        instance_opts = {'fake_opt1': 'meow'}
+        request_spec = {'num_instances': 2,
+                        'instance_properties': instance_opts}
+        instance1 = {'uuid': 'fake-uuid1'}
+        instance2 = {'uuid': 'fake-uuid2'}
+
+        def _has_launch_index(expected_index):
+            """Return a function that verifies the expected index."""
+            def _check_launch_index(value):
+                if 'instance_properties' in value:
+                    if 'launch_index' in value['instance_properties']:
+                        index = value['instance_properties']['launch_index']
+                        if index == expected_index:
+                            return True
+                return False
+            return _check_launch_index
+
+        class ContextFake(object):
+            def elevated(self):
+                return ctxt
+        context_fake = ContextFake()
+
+        self.mox.StubOutWithMock(self.driver, '_schedule')
+        self.mox.StubOutWithMock(self.driver, '_provision_resource')
+
+        self.driver._schedule(context_fake, 'compute',
+                              request_spec, **fake_kwargs
+                              ).AndReturn(['host1', 'host2'])
+        # instance 1
+        self.driver._provision_resource(
+            ctxt, 'host1',
+            mox.Func(_has_launch_index(0)), fake_kwargs).AndReturn(instance1)
+        # instance 2
+        self.driver._provision_resource(
+            ctxt, 'host2',
+            mox.Func(_has_launch_index(1)), fake_kwargs).AndReturn(instance2)
+        self.mox.ReplayAll()
+
+        self.driver.schedule_run_instance(context_fake, request_spec,
+                                          **fake_kwargs)
 
     def test_schedule_happy_day(self):
         """Make sure there's nothing glaringly wrong with _schedule()

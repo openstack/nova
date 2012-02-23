@@ -97,6 +97,7 @@ class SimpleScheduler(chance.ChanceScheduler):
         for num in xrange(num_instances):
             host = self._schedule_instance(context,
                     request_spec['instance_properties'], *_args, **_kwargs)
+            request_spec['instance_properties']['launch_index'] = num
             instance_ref = self.create_instance_db_entry(context,
                     request_spec)
             driver.cast_to_compute_host(context, host, 'run_instance',

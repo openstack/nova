@@ -462,7 +462,7 @@ class API(base.Base):
     #NOTE(bcwaldon): No policy check since this is only used by scheduler and
     # the compute api. That should probably be cleaned up, though.
     def create_db_entry_for_new_instance(self, context, instance_type, image,
-            base_options, security_group, block_device_mapping, num=1):
+            base_options, security_group, block_device_mapping):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
         etc).
@@ -483,8 +483,8 @@ class API(base.Base):
                     security_group_name)
             security_groups.append(group['id'])
 
-        instance = dict(launch_index=num, **base_options)
-        instance = self.db.instance_create(context, instance)
+        base_options.setdefault('launch_index', 0)
+        instance = self.db.instance_create(context, base_options)
         instance_id = instance['id']
         instance_uuid = instance['uuid']
 
