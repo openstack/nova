@@ -1291,6 +1291,12 @@ class FloatingIPTestCase(test.TestCase):
         self.network.deallocate_for_instance(self.context,
                 instance_id=instance_ref['id'])
 
+    def test_deallocation_deleted_instance(self):
+        instance_ref = db.api.instance_create(self.context,
+                {"project_id": self.project_id, "deleted": True})
+        self.network.deallocate_for_instance(self.context,
+                instance_id=instance_ref['id'])
+
     def test_floating_dns_create_conflict(self):
         zone = "example.org"
         address1 = "10.10.10.11"
