@@ -65,8 +65,7 @@ Configuration flags required for nova-compute
   --vmwareapi_host_ip=<VMware ESX Host IP> 
   --vmwareapi_host_username=<VMware ESX Username>
   --vmwareapi_host_password=<VMware ESX Password>
-  --network_driver=nova.network.vmwareapi_net [Optional, only for VLAN Networking]
-  --vlan_interface=<Physical ethernet adapter name in VMware ESX host for vlan networking E.g vmnic0> [Optional, only for VLAN Networking]
+  --vmwareapi_vlan_interface=<Physical ethernet adapter name in VMware ESX host for vlan networking E.g vmnic0> [Optional, only for VLAN Networking]
   
 
 Configuration flags required for nova-network 
