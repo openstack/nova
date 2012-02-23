@@ -20,6 +20,8 @@ Tests For Chance Scheduler.
 
 import random
 
+import mox
+
 from nova import context
 from nova import exception
 from nova.scheduler import driver
@@ -113,6 +115,57 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 *fake_args, **fake_kwargs)
         expected = [instance1_encoded, instance2_encoded]
         self.assertEqual(result, expected)
+
+    def test_scheduler_includes_launch_index(self):
+        ctxt = "fake-context"
+        instance_opts = {'fake_opt1': 'meow'}
+        request_spec = {'num_instances': 2,
+                        'instance_properties': instance_opts}
+        instance1 = {'uuid': 'fake-uuid1'}
+        instance2 = {'uuid': 'fake-uuid2'}
+
+        # create_instance_db_entry() usually does this, but we're
+        # stubbing it.
+        def _add_uuid(num):
+            """Return a function that adds the provided uuid number."""
+            def _add_uuid_num(_, spec):
+                spec['instance_properties']['uuid'] = 'fake-uuid%d' % num
+            return _add_uuid_num
+
+        def _has_launch_index(expected_index):
+            """Return a function that verifies the expected index."""
+            def _check_launch_index(value):
+                if 'instance_properties' in value:
+                    if 'launch_index' in value['instance_properties']:
+                        index = value['instance_properties']['launch_index']
+                        if index == expected_index:
+                            return True
+                return False
+            return _check_launch_index
+
+        self.mox.StubOutWithMock(self.driver, '_schedule')
+        self.mox.StubOutWithMock(self.driver, 'create_instance_db_entry')
+        self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
+        self.mox.StubOutWithMock(driver, 'encode_instance')
+        # instance 1
+        self.driver._schedule(ctxt, 'compute', request_spec).AndReturn('host')
+        self.driver.create_instance_db_entry(
+            ctxt, mox.Func(_has_launch_index(0))
+            ).WithSideEffects(_add_uuid(1)).AndReturn(instance1)
+        driver.cast_to_compute_host(ctxt, 'host', 'run_instance',
+                                    instance_uuid=instance1['uuid'])
+        driver.encode_instance(instance1).AndReturn(instance1)
+        # instance 2
+        self.driver._schedule(ctxt, 'compute', request_spec).AndReturn('host')
+        self.driver.create_instance_db_entry(
+            ctxt, mox.Func(_has_launch_index(1))
+            ).WithSideEffects(_add_uuid(2)).AndReturn(instance2)
+        driver.cast_to_compute_host(ctxt, 'host', 'run_instance',
+                                    instance_uuid=instance2['uuid'])
+        driver.encode_instance(instance2).AndReturn(instance2)
+        self.mox.ReplayAll()
+
+        self.driver.schedule_run_instance(ctxt, request_spec)
 
     def test_basic_schedule_run_instance_no_hosts(self):
         ctxt = context.RequestContext('fake', 'fake', False)
