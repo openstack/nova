@@ -122,12 +122,12 @@ class ImagesControllerTest(test.TestCase):
         self.assertDictMatch(expected_image, actual_image)
 
     def test_get_image_with_custom_prefix(self):
-        self.flags(osapi_compute_link_prefix='http://zoo.com:42',
+        self.flags(osapi_compute_link_prefix='https://zoo.com:42',
                    osapi_glance_link_prefix='http://circus.com:34')
         fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
         actual_image = self.controller.show(fake_req, '124')
-        href = "http://zoo.com:42/v2/fake/images/124"
-        bookmark = "http://zoo.com:42/fake/images/124"
+        href = "https://zoo.com:42/v2/fake/images/124"
+        bookmark = "https://zoo.com:42/fake/images/124"
         alternate = "http://circus.com:34/fake/images/124"
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
         server_href = "http://localhost/v2/servers/" + server_uuid
