@@ -22,8 +22,8 @@ from nova.api.openstack import wsgi
 
 
 VERSIONS = {
-    "v1": {
-        "id": "v1",
+    "v1.0": {
+        "id": "v1.0",
         "status": "CURRENT",
         "updated": "2012-01-04T11:33:21Z",
         "links": [
@@ -72,7 +72,7 @@ class VolumeVersionV1(object):
                       atom=versions.VersionAtomSerializer)
     def show(self, req):
         builder = views_versions.get_view_builder(req)
-        return builder.build_version(VERSIONS['v2.0'])
+        return builder.build_version(VERSIONS['v1.0'])
 
 
 def create_resource():

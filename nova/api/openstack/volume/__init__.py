@@ -58,4 +58,5 @@ class APIRouter(nova.api.openstack.APIRouter):
 
         self.resources['snapshots'] = snapshots.create_resource()
         mapper.resource("snapshot", "snapshots",
-                        controller=self.resources['snapshots'])
+                        controller=self.resources['snapshots'],
+                        collection={'detail': 'GET'})
