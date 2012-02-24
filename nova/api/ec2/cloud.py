@@ -1531,7 +1531,7 @@ class CloudController(object):
 
             if vm_state in (vm_states.ACTIVE, vm_states.SHUTOFF):
                 restart_instance = True
-                self.compute_api.stop(context, instance_id=instance_id)
+                self.compute_api.stop(context, instance)
 
             # wait instance for really stopped
             start_time = time.time()
