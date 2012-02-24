@@ -1,6 +1,9 @@
+include HACKING.rst
 include LICENSE run_tests.sh
 include README.rst
 include MANIFEST.in pylintrc Authors
+include openstack-common.conf
+include tox.ini
 graft nova/CA
 graft doc
 graft smoketests
@@ -22,9 +25,11 @@ include nova/console/xvp.conf.template
 include nova/db/sqlalchemy/migrate_repo/migrate.cfg
 include nova/db/sqlalchemy/migrate_repo/README
 include nova/db/sqlalchemy/migrate_repo/versions/*.sql
+include nova/openstack/common/README
 include nova/virt/interfaces.template
 include nova/virt/libvirt*.xml.template
 include nova/virt/cpuinfo.xml.template
+include nova/testing/README.rst
 include nova/tests/CA/
 include nova/tests/CA/cacert.pem
 include nova/tests/CA/private/
@@ -38,6 +43,7 @@ include nova/tests/api/ec2/public_key/*
 include nova/tests/db/nova.austin.sqlite
 include nova/tests/image/*.tar.gz
 include nova/tests/policy.json
+include nova/tests/test_migrations.conf
 include nova/tests/xenapi/vm_rrd.xml
 include plugins/xenapi/README
 include plugins/xenapi/etc/xapi.d/plugins/objectstore
