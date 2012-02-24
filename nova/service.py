@@ -158,6 +158,7 @@ class Service(object):
         vcs_string = version.version_string_with_vcs()
         LOG.audit(_('Starting %(topic)s node (version %(vcs_string)s)'),
                   {'topic': self.topic, 'vcs_string': vcs_string})
+        utils.cleanup_file_locks()
         self.manager.init_host()
         self.model_disconnected = False
         ctxt = context.get_admin_context()
@@ -360,6 +361,7 @@ class WSGIService(object):
         :returns: None
 
         """
+        utils.cleanup_file_locks()
         if self.manager:
             self.manager.init_host()
         self.server.start()

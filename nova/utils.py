@@ -26,7 +26,6 @@ import hashlib
 import inspect
 import itertools
 import json
-import lockfile
 import os
 import pyclbr
 import random
@@ -46,6 +45,7 @@ from eventlet import greenthread
 from eventlet import semaphore
 from eventlet.green import subprocess
 import iso8601
+import lockfile
 import netaddr
 
 from nova import exception
@@ -855,6 +855,89 @@ def synchronized(name, external=False):
             return retval
         return inner
     return wrap
+
+
+def cleanup_file_locks():
+    """clean up stale locks left behind by process failures
+
+    The lockfile module, used by @synchronized, can leave stale lockfiles
+    behind after process failure. These locks can cause process hangs
+    at startup, when a process deadlocks on a lock which will never
+    be unlocked.
+
+    Intended to be called at service startup.
+
+    """
+
+    # NOTE(mikeyp) this routine incorporates some internal knowledge
+    #              from the lockfile module, and this logic really
+    #              should be part of that module.
+    #
+    # cleanup logic:
+    # 1) look for the lockfile modules's 'sentinel' files, of the form
+    #    hostname.[thread-.*]-pid, extract the pid.
+    #    if pid doesn't match a running process, delete the file since
+    #    it's from a dead process.
+    # 2) check for the actual lockfiles. if lockfile exists with linkcount
+    #    of 1, it's bogus, so delete it. A link count >= 2 indicates that
+    #    there are probably sentinels still linked to it from active
+    #    processes.  This check isn't perfect, but there is no way to
+    #    reliably tell which sentinels refer to which lock in the
+    #    lockfile implementation.
+
+    if  FLAGS.disable_process_locking:
+        return
+
+    hostname = socket.gethostname()
+    sentinel_re = hostname + r'\..*-(\d+$)'
+    lockfile_re = r'nova-.*\.lock'
+    files = os.listdir(FLAGS.lock_path)
+
+    # cleanup sentinels
+    for filename in files:
+        match = re.match(sentinel_re, filename)
+        if match is None:
+            continue
+        pid = match.group(1)
+        LOG.debug(_('Found sentinel %(filename)s for pid %(pid)s' %
+                    {'filename': filename, 'pid': pid}))
+        if not os.path.exists(os.path.join('/proc', pid)):
+            delete_if_exists(os.path.join(FLAGS.lock_path, filename))
+            LOG.debug(_('Cleaned sentinel %(filename)s for pid %(pid)s' %
+                        {'filename': filename, 'pid': pid}))
+
+    # cleanup lock files
+    for filename in files:
+        match = re.match(lockfile_re, filename)
+        if match is None:
+            continue
+        try:
+            stat_info = os.stat(os.path.join(FLAGS.lock_path, filename))
+        except OSError as (errno, strerror):
+            if errno == 2:  # doesn't exist
+                continue
+            else:
+                raise
+        msg = _('Found lockfile %(file)s with link count %(count)d' %
+                {'file': filename, 'count': stat_info.st_nlink})
+        LOG.debug(msg)
+        if stat_info.st_nlink == 1:
+            delete_if_exists(os.path.join(FLAGS.lock_path, filename))
+            msg = _('Cleaned lockfile %(file)s with link count %(count)d' %
+                    {'file': filename, 'count': stat_info.st_nlink})
+            LOG.debug(msg)
+
+
+def delete_if_exists(pathname):
+    """delete a file, but ignore file not found error"""
+
+    try:
+        os.unlink(pathname)
+    except OSError as (errno, strerror):
+        if errno == 2:  # doesn't exist
+            return
+        else:
+            raise
 
 
 def get_from_path(items, path):
