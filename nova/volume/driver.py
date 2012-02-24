@@ -267,7 +267,7 @@ class ISCSIDriver(VolumeDriver):
             iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
         except exception.NotFound:
-            LOG.info(_("Skipping ensure_export. No iscsi_target " +
+            LOG.info(_("Skipping ensure_export. No iscsi_target "
                        "provisioned for volume: %d"), volume['id'])
             return
 
@@ -315,7 +315,7 @@ class ISCSIDriver(VolumeDriver):
             iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
         except exception.NotFound:
-            LOG.info(_("Skipping remove_export. No iscsi_target " +
+            LOG.info(_("Skipping remove_export. No iscsi_target "
                        "provisioned for volume: %d"), volume['id'])
             return
 
@@ -324,7 +324,7 @@ class ISCSIDriver(VolumeDriver):
             # this export has already been removed
             self.tgtadm.show_target(iscsi_target)
         except Exception as e:
-            LOG.info(_("Skipping remove_export. No iscsi_target " +
+            LOG.info(_("Skipping remove_export. No iscsi_target "
                        "is presently exported for volume: %d"), volume['id'])
             return
 

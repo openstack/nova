@@ -74,6 +74,6 @@ if __name__ == '__main__':
         try:
             servers.append(service.Service.create(binary=binary))
         except (Exception, SystemExit):
-            LOG.exception(_('Failed to load %s' % binary))
+            LOG.exception(_('Failed to load %s'), binary)
     service.serve(*servers)
     service.wait()

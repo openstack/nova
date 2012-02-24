@@ -1336,8 +1336,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
             for injection in ('metadata', 'key', 'net', 'admin_password'):
                 if locals()[injection]:
-                    LOG.info(_('Injecting %(injection)s into image %(img_id)s')
-                             % locals(), instance=instance)
+                    LOG.info(_('Injecting %(injection)s into image'
+                               ' %(img_id)s'), locals(), instance=instance)
             try:
                 disk.inject_data(injection_path,
                                  key, net, metadata, admin_password,

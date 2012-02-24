@@ -43,4 +43,4 @@ def notify(message):
             rpc.notify(context, topic, message)
         except Exception, e:
             LOG.exception(_("Could not send notification to %(topic)s. "
-                            "Payload=%(message)s" % locals()))
+                            "Payload=%(message)s"), locals())

@@ -139,7 +139,7 @@ class API(base.Base):
 
         snapshots = self.db.snapshot_get_all_for_volume(context, volume_id)
         if len(snapshots):
-            msg = _("Volume still has %d dependent snapshots" % len(snapshots))
+            msg = _("Volume still has %d dependent snapshots") % len(snapshots)
             raise exception.InvalidVolume(reason=msg)
 
         now = utils.utcnow()

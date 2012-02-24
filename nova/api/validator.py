@@ -137,10 +137,8 @@ def validate(args, validator):
         assert callable(f)
 
         if not f(args[key]):
-            value = args[key]
-            validator = f.__name__
-            msg = _("%(key)s with value %(value)s failed validator"
-                    "  %(validator)s")
-            LOG.debug(msg % locals())
+            LOG.debug(_("%(key)s with value %(value)s failed"
+                        " validator %(name)s"),
+                      {'key': key, 'value': args[key], 'name': f.__name__})
             return False
     return True

@@ -177,8 +177,8 @@ class Client(object):
 
             if self.logger:
                 self.logger.debug(
-                    _("Quantum Client Request: %(method)s %(action)s") %
-                                    locals())
+                    _("Quantum Client Request: %(method)s %(action)s"),
+                    locals())
                 if body:
                     self.logger.debug(body)
 
@@ -193,7 +193,7 @@ class Client(object):
 
             if status_code in NOT_FOUND_CODES:
                 raise QuantumNotFoundException(
-                    _("Quantum entity not found: %s") % data)
+                    _("Quantum entity not found: %s"), data)
 
             if status_code in (httplib.OK,
                                httplib.CREATED,
