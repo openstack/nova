@@ -170,9 +170,10 @@ Nova VPN
 Nova Floating IPs
 ~~~~~~~~~~~~~~~~~
 
-``nova-manage floating create <host> <ip_range>``
+``nova-manage floating create <ip_range> [--pool <pool>] [--interface <interface>]``
 
-    Creates floating IP addresses for the named host by the given range.
+    Creates floating IP addresses for the given range, optionally specifying
+    a floating pool and a network interface.
 
 ``nova-manage floating delete <ip_range>``
 
