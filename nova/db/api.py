@@ -1533,9 +1533,9 @@ def agent_build_update(context, agent_build_id, values):
 ####################
 
 
-def bw_usage_get_by_instance(context, instance_id, start_period):
+def bw_usage_get_by_macs(context, macs, start_period):
     """Return bw usages for an instance in a given audit period."""
-    return IMPL.bw_usage_get_by_instance(context, instance_id, start_period)
+    return IMPL.bw_usage_get_by_macs(context, macs, start_period)
 
 
 def bw_usage_get_all_by_filters(context, filters):
@@ -1544,14 +1544,12 @@ def bw_usage_get_all_by_filters(context, filters):
 
 
 def bw_usage_update(context,
-                    instance_id,
                     mac,
                     start_period,
                     bw_in, bw_out):
     """Update cached bw usage for an instance and network
        Creates new record if needed."""
     return IMPL.bw_usage_update(context,
-                                instance_id,
                                 mac,
                                 start_period,
                                 bw_in, bw_out)

@@ -56,9 +56,10 @@ def notify_usage_exists(instance_ref, current_period=False):
         nw_info = network.API().get_instance_nw_info(admin_context,
                                                          instance_ref)
 
-    for b in db.bw_usage_get_by_instance(admin_context,
-                                         instance_ref['id'],
-                                         audit_start):
+    macs = [vif['address'] for vif in nw_info]
+    for b in db.bw_usage_get_by_macs(admin_context,
+                                     macs,
+                                     audit_start):
         label = 'net-name-not-found-%s' % b['mac']
         for vif in nw_info:
             if vif['address'] == b['mac']:
