@@ -403,7 +403,7 @@ class AuthManager(object):
         key_parts = ['rolecache', User.safe_id(user), str(role)]
         if project:
             key_parts.append(Project.safe_id(project))
-        return '-'.join(key_parts)
+        return utils.utf8('-'.join(key_parts))
 
     def _clear_mc_key(self, user, role, project=None):
         # NOTE(anthony): it would be better to delete the key
