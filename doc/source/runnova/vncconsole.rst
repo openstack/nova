@@ -52,10 +52,6 @@ Getting an Access Url
 Nova provides the ability to create access_urls through the os-consoles extension.
 Support for accessing this url is provided by novaclient:
 
-    # FIXME (sleepsonthefloor) update this branch name once client code merges
-    git clone https://github.com/cloudbuilders/python-novaclient
-    git checkout vnc_redux
-    . openrc # or whatever you use to load standard nova creds
     nova get-vnc-console [server_id] [xvpvnc|novnc]
 
 
