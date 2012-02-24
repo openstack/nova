@@ -1,0 +1,65 @@
+#!/bin/sh -e
+### BEGIN INIT INFO
+# Provides:          openstack
+# Required-Start:    mountkernfs $local_fs
+# Required-Stop:     $local_fs
+# X-Start-Before:    networking
+# Should-Start:
+# Default-Start:     S
+# Default-Stop:
+# Short-Description: Apply configuration from OpenStack Config Drive
+### END INIT INFO
+
+PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+
+. /lib/lsb/init-functions
+
+copy_cloud_config() {
+  LABEL="config"
+  if [ ! -e /dev/disk/by-label/${LABEL} ]; then
+    log_warning_msg "OpenStack Cloud Config drive not found"
+    return 1
+  fi
+
+  MNT=/tmp/config
+  mkdir -p ${MNT}
+  mount /dev/disk/by-label/${LABEL} ${MNT}
+  if [ -e ${MNT}/root/.ssh/authorized_keys ]; then
+    mkdir -m 700 -p /root/.ssh/
+    cp ${MNT}/root/.ssh/authorized_keys /root/.ssh/
+    chmod 600 ${MNT}/root/.ssh/authorized_keys
+  fi
+  if [ -e ${MNT}/etc/network/interfaces ]; then
+    cp ${MNT}/etc/network/interfaces /etc/network/
+    chmod 644 /etc/network/interfaces
+  fi
+  umount ${MNT}
+  return 0
+}
+
+case "$1" in
+  start|"")
+    log_action_begin_msg "Applying OpenStack Cloud Config"
+    if copy_cloud_config; then
+      log_action_end_msg $?
+    else
+      log_action_end_msg $?
+    fi
+  ;;
+
+  restart|reload|force-reload|status)
+    echo "Error: argument '$1' not supported" >&2
+    exit 3
+  ;;
+
+  stop)
+    # No-op
+  ;;
+
+  *)
+    echo "Usage: openstack.sh [start|stop]" >&2
+    exit 3
+  ;;
+esac
+
+:

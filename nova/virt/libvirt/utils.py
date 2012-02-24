@@ -118,17 +118,22 @@ def copy_image(src, dest):
     execute('cp', src, dest)
 
 
-def mkfs(fs, path):
+def mkfs(fs, path, label=None):
     """Format a file or block device
 
     :param fs: Filesystem type (examples include 'swap', 'ext3', 'ext4'
                'btrfs', etc.)
     :param path: Path to file or block device to format
+    :param label: Volume label to use
     """
     if fs == 'swap':
         execute('mkswap', path)
     else:
-        execute('mkfs', '-t', fs, path)
+        args = ['mkfs', '-t', fs]
+        if label:
+            args.extend(['-n', label])
+        args.append(path)
+        execute(*args)
 
 
 def ensure_tree(path):
