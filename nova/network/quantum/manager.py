@@ -287,6 +287,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         project_id = kwargs['project_id']
         LOG.debug(_("network allocations for instance %s"), project_id)
         requested_networks = kwargs.get('requested_networks')
+        instance = db.instance_get(context, instance_id)
 
         net_proj_pairs = self.ipam.get_project_and_global_net_ids(context,
                                                                 project_id)
@@ -315,7 +316,6 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                                                  project_id)
 
             # talk to Quantum API to create and attach port.
-            instance = db.instance_get(context, instance_id)
             nova_id = self._get_nova_id(instance)
             # Tell the ipam library to allocate an IP
             ips = self.ipam.allocate_fixed_ips(context, project_id,
