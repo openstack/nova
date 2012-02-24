@@ -331,6 +331,25 @@ class TestSecurityGroups(test.TestCase):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, '11111111')
 
+    def test_delete_security_group_in_use(self):
+        sg = security_group_template(id=1, rules=[])
+
+        def security_group_in_use(context, id):
+            return True
+
+        def return_security_group(context, group_id):
+            self.assertEquals(sg['id'], group_id)
+            return security_group_db(sg)
+
+        self.stubs.Set(nova.db, 'security_group_in_use',
+                       security_group_in_use)
+        self.stubs.Set(nova.db, 'security_group_get',
+                       return_security_group)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/1')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
+                          req, '1')
+
     def test_associate_by_non_existing_security_group_name(self):
         body = dict(addSecurityGroup=dict(name='non-existing'))
 

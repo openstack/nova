@@ -239,6 +239,9 @@ class SecurityGroupController(SecurityGroupControllerBase):
         context = req.environ['nova.context']
         authorize(context)
         security_group = self._get_security_group(context, id)
+        if db.security_group_in_use(context, security_group.id):
+            msg = _("Security group is still in use")
+            raise exc.HTTPBadRequest(explanation=msg)
         LOG.audit(_("Delete security group %s"), id, context=context)
         db.security_group_destroy(context, security_group.id)
         self.sgh.trigger_security_group_destroy_refresh(
