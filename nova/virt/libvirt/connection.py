@@ -954,7 +954,8 @@ class LibvirtConnection(driver.ComputeDriver):
                     disk.extend(target, size)
 
     @staticmethod
-    def _create_local(target, local_size, unit='G', fs_format=None):
+    def _create_local(target, local_size, unit='G',
+                      fs_format=None, label=None):
         """Create a blank image of specified size"""
 
         if not fs_format:
@@ -963,7 +964,7 @@ class LibvirtConnection(driver.ComputeDriver):
         libvirt_utils.create_image('raw', target,
                                    '%d%c' % (local_size, unit))
         if fs_format:
-            libvirt_utils.mkfs(fs_format, target)
+            libvirt_utils.mkfs(fs_format, target, label)
 
     def _create_ephemeral(self, target, ephemeral_size, fs_label, os_type):
         self._create_local(target, ephemeral_size)
@@ -1109,8 +1110,9 @@ class LibvirtConnection(driver.ComputeDriver):
                               user_id=instance['user_id'],
                               project_id=instance['project_id'],)
         elif config_drive:
+            label = 'config'
             self._create_local(basepath('disk.config'), 64, unit='M',
-                               fs_format='msdos')  # 64MB
+                               fs_format='msdos', label=label)  # 64MB
 
         if instance['key_data']:
             key = str(instance['key_data'])
