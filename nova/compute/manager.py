@@ -1229,7 +1229,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def prep_resize(self, context, instance_uuid, instance_type_id, **kwargs):
+    def prep_resize(self, context, instance_uuid, instance_type_id, image,
+                    **kwargs):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
@@ -1269,7 +1270,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         rpc.cast(context, topic,
                 {'method': 'resize_instance',
                  'args': {'instance_uuid': instance_ref['uuid'],
-                          'migration_id': migration_ref['id']}})
+                          'migration_id': migration_ref['id'],
+                          'image': image}})
 
         usage_info = utils.usage_from_instance(instance_ref,
                               new_instance_type=new_instance_type['name'],
@@ -1280,7 +1282,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def resize_instance(self, context, instance_uuid, migration_id):
+    def resize_instance(self, context, instance_uuid, migration_id, image):
         """Starts the migration of a running instance to another host."""
         migration_ref = self.db.migration_get(context, migration_id)
         instance_ref = self.db.instance_get_by_uuid(context,
@@ -1314,11 +1316,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       migration_ref['dest_compute'])
         params = {'migration_id': migration_id,
                   'disk_info': disk_info,
-                  'instance_uuid': instance_ref['uuid']}
+                  'instance_uuid': instance_ref['uuid'],
+                  'image': image}
         rpc.cast(context, topic, {'method': 'finish_resize',
                                   'args': params})
 
-    def _finish_resize(self, context, instance_ref, migration_ref, disk_info):
+    def _finish_resize(self, context, instance_ref, migration_ref, disk_info,
+                       image):
         resize_instance = False
         old_instance_type_id = migration_ref['old_instance_type_id']
         new_instance_type_id = migration_ref['new_instance_type_id']
@@ -1337,13 +1341,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._get_instance_nw_info(context, instance_ref)
 
-        # Have to look up image here since we depend on disk_format later
-        image_meta = _get_image_meta(context, instance_ref['image_ref'])
-
         self.driver.finish_migration(context, migration_ref, instance_ref,
                                      disk_info,
                                      self._legacy_nw_info(network_info),
-                                     image_meta, resize_instance)
+                                     image, resize_instance)
 
         self._instance_update(context,
                               instance_ref.uuid,
@@ -1357,7 +1358,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def finish_resize(self, context, instance_uuid, migration_id, disk_info):
+    def finish_resize(self, context, instance_uuid, migration_id, disk_info,
+                      image):
         """Completes the migration process.
 
         Sets up the newly transferred disk and turns on the instance at its
@@ -1371,7 +1373,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             self._finish_resize(context, instance_ref, migration_ref,
-                                disk_info)
+                                disk_info, image)
         except Exception, error:
             with utils.save_and_reraise_exception():
                 msg = _('%s. Setting instance vm_state to ERROR')
