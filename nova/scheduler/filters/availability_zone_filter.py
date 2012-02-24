@@ -14,10 +14,10 @@
 #    under the License.
 
 
-import abstract_filter
+from nova.scheduler import filters
 
 
-class AvailabilityZoneFilter(abstract_filter.AbstractHostFilter):
+class AvailabilityZoneFilter(filters.BaseHostFilter):
     """Filters Hosts by availabilty zone."""
 
     def host_passes(self, host_state, filter_properties):

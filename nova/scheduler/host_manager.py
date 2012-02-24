@@ -18,7 +18,6 @@ Manage hosts in the current zone.
 """
 
 import datetime
-import types
 import UserDict
 
 from nova import db
@@ -26,6 +25,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.scheduler import filters
 from nova import utils
 
 
@@ -36,14 +36,20 @@ host_manager_opts = [
     cfg.IntOpt('reserved_host_memory_mb',
                default=512,
                help='Amount of memory in MB to reserve for host/dom0'),
-    cfg.ListOpt('default_host_filters',
+    cfg.MultiStrOpt('scheduler_available_filters',
+            default=['nova.scheduler.filters.standard_filters'],
+            help='Filter classes available to the scheduler which may '
+                    'be specified more than once.  An entry of '
+                    '"nova.scheduler.filters.standard_filters" '
+                    'maps to all filters included with nova.'),
+    cfg.ListOpt('scheduler_default_filters',
                 default=[
                   'AvailabilityZoneFilter',
                   'RamFilter',
                   'ComputeFilter'
                   ],
-                help='Which filters to use for filtering hosts when not '
-                     'specified in the request.'),
+                help='Which filter class names to use for filtering hosts '
+                      'when not specified in the request.'),
     ]
 
 FLAGS = flags.FLAGS
@@ -157,20 +163,8 @@ class HostManager(object):
 
     def __init__(self):
         self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
-        self.filter_classes = self._get_filter_classes()
-
-    def _get_filter_classes(self):
-        """Get the list of possible filter classes"""
-        # Imported here to avoid circular imports
-        from nova.scheduler import filters
-
-        def get_itm(nm):
-            return getattr(filters, nm)
-
-        return [get_itm(itm) for itm in dir(filters)
-                if (type(get_itm(itm)) is types.TypeType)
-                and issubclass(get_itm(itm), filters.AbstractHostFilter)
-                and get_itm(itm) is not filters.AbstractHostFilter]
+        self.filter_classes = filters.get_filter_classes(
+                FLAGS.scheduler_available_filters)
 
     def _choose_host_filters(self, filters):
         """Since the caller may specify which filters to use we need
@@ -179,7 +173,7 @@ class HostManager(object):
         of acceptable filters.
         """
         if filters is None:
-            filters = FLAGS.default_host_filters
+            filters = FLAGS.scheduler_default_filters
         if not isinstance(filters, (list, tuple)):
             filters = [filters]
         good_filters = []

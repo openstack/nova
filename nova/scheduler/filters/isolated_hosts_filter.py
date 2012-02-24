@@ -14,14 +14,14 @@
 #    under the License.
 
 
-import abstract_filter
 from nova import flags
+from nova.scheduler import filters
 
 
 FLAGS = flags.FLAGS
 
 
-class IsolatedHostsFilter(abstract_filter.AbstractHostFilter):
+class IsolatedHostsFilter(filters.BaseHostFilter):
     """Returns host."""
 
     def host_passes(self, host_state, filter_properties):

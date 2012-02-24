@@ -17,10 +17,10 @@
 import json
 import operator
 
-from nova.scheduler.filters import abstract_filter
+from nova.scheduler import filters
 
 
-class JsonFilter(abstract_filter.AbstractHostFilter):
+class JsonFilter(filters.BaseHostFilter):
     """Host Filter to allow simple JSON-based grammar for
     selecting hosts.
     """

@@ -55,15 +55,28 @@ The filtering (excluding compute nodes incapable of fulfilling the request) and 
 Host Filter
 -----------
 
-As we mentioned earlier, filtering hosts is a very deployment-specific process. Service Providers may have a different set of criteria for filtering Compute nodes than a University. To faciliate this the `nova.scheduler.filters` module supports a variety of filtering strategies as well as an easy means for plugging in your own algorithms.
+As we mentioned earlier, filtering hosts is a very deployment-specific process. Service Providers may have a different set of criteria for filtering Compute nodes than a University. To facilitate this, the `DistributedScheduler` supports a variety of filtering strategies as well as an easy means for plugging in your own algorithms.  Specifying filters involves 2 settings.  One makes filters available for use.  The second specifies which filters to use by default (out of the filters available).  The reason for this second option is that there may be support to allow end-users to specify specific filters during a build at some point in the future.
 
-The filter used is determined by the `--default_host_filters` flag, which points to a Python Class. By default this flag is set to `[AllHostsFilter]` which simply returns all available hosts. But there are others:
+Making filters available:
 
- * `ComputeFilter` provides host filtering based on the memory and disk size specified in the `InstanceType` record passed into `run_instance`.
+Filters are made available to the scheduler via the `--scheduler_available_filters` setting.  This setting can be specified more than once and should contain lists of filter class names (with full paths) to make available.  Specifying 'nova.scheduler.filters.standard_filters' will cause all standard filters under 'nova.scheduler.filters' to be made available.  That is the default setting.  Additionally, you can specify your own classes to be made available.  For example, 'myfilter.MyFilterClass' can be specified.  Now that you've configured which filters are available, you should set which ones you actually want to use by default.
 
+Setting the default filtering classes:
+
+The default filters to use are set via the `--scheduler_default_filters` setting.  This setting should contain a list of class names.  You should not specify the full paths with these class names.  By default this flag is set to `['AvailabilityZoneFilter', 'RamFilter', 'ComputeFilter']`.  Below is a list of standard filter classes:
+
+ * `AllHostsFilter` includes all hosts (essentially is a No-op filter)
+ * `AvailabilityZoneFilter` provides host filtering based on availability_zone
+ * `ComputeFilter` provides host filtering based on `InstanceType` extra_specs, comparing against host capability announcements
+ * `CoreFilter` provides host filtering based on number of cpu cores
+ * `DifferentHostFilter` provides host filtering based on scheduler_hint's 'different_host' value.  With the scheduler_hints extension, this allows one to put a new instance on a different host from another instance
+ * `IsolatedHostsFilter` provides host filtering based on the 'isolated_hosts' and 'isolated_images' flags/settings.
  * `JSONFilter` filters hosts based on simple JSON expression grammar. Using a LISP-like JSON structure the caller can request instances based on criteria well beyond what `ComputeFilter` specifies. See `nova.tests.scheduler.test_host_filters` for examples.
+ * `RamFilter` provides host filtering based on the memory needed vs memory free
+ * `SameHostFilter` provides host filtering based on scheduler_hint's 'same_host' value.  With the scheduler_hints extension, this allows one to put a new instance on the same host as another instance
+ * `SimpleCIDRAffinityFilter` provides host filtering based on scheduler_hint's 'build_near_host_ip' value.  With the scheduler_hints extension, this allows one to put a new instance on a host within the same IP block.
 
-To create your own `HostFilter` the user simply has to derive from `nova.scheduler.filters.AbstractHostFilter` and implement one method: `host_passes`.  This method accepts a `HostState` instance describing a host as well as a `filter_properties` dictionary.  Host capabilities can be found in `HostState`.capabilities and other properites can be found in `filter_properties` like `instance_type`, etc.  Your method should return True if it passes the filter.
+To create your own `HostFilter` the user simply has to derive from `nova.scheduler.filters.BaseHostFilter` and implement one method: `host_passes`.  This method accepts a `HostState` instance describing a host as well as a `filter_properties` dictionary.  Host capabilities can be found in `HostState`.capabilities and other properites can be found in `filter_properties` like `instance_type`, etc.  Your method should return True if it passes the filter.
 
 Flags
 -----
@@ -73,10 +86,12 @@ Here are some of the main flags you should set in your `nova.conf` file:
 ::
 
   --scheduler_driver=nova.scheduler.distributed_scheduler.DistributedScheduler
-  --default_host_filters=nova.scheduler.filters.AllHostsFilter
+  --scheduler_available_filters=nova.scheduler.filters.standard_filters
+  # --scheduler_available_filters=myfilter.MyOwnFilter
+  --scheduler_default_filters=RamFilter,ComputeFilter,MyOwnFilter
 
 `scheduler_driver` is the real workhorse of the operation. For Distributed Scheduler, you need to specify a class derived from `nova.scheduler.distributed_scheduler.DistributedScheduler`.
-`default_host_filter` is the host filter to be used for filtering candidate Compute nodes. 
+`scheduler_default_filters` are the host filters to be used for filtering candidate Compute nodes.
 
 Some optional flags which are handy for debugging are:
 

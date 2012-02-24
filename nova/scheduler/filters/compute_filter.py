@@ -14,14 +14,14 @@
 #    under the License.
 
 from nova import log as logging
-from nova.scheduler.filters import abstract_filter
+from nova.scheduler import filters
 from nova import utils
 
 
 LOG = logging.getLogger(__name__)
 
 
-class ComputeFilter(abstract_filter.AbstractHostFilter):
+class ComputeFilter(filters.BaseHostFilter):
     """HostFilter hard-coded to work with InstanceType records."""
 
     def _satisfies_extra_specs(self, capabilities, instance_type):
