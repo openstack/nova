@@ -103,7 +103,9 @@ class LibvirtBridgeDriver(VIFDriver):
 
 
 class LibvirtOpenVswitchDriver(VIFDriver):
-    """VIF driver for Open vSwitch."""
+    """VIF driver for Open vSwitch that uses type='ethernet'
+       libvirt XML.  Used for libvirt versions that do not support
+       OVS virtual port XML (0.9.10 or earlier)."""
 
     def get_dev_name(_self, iface_id):
         return "tap" + iface_id[0:11]
@@ -132,6 +134,8 @@ class LibvirtOpenVswitchDriver(VIFDriver):
                 "external-ids:iface-status=active",
                 '--', 'set', 'Interface', dev,
                 "external-ids:attached-mac=%s" % mapping['mac'],
+                '--', 'set', 'Interface', dev,
+                "external-ids:vm-uuid=%s" % instance['uuid'],
                 run_as_root=True)
 
         result = {
@@ -152,3 +156,19 @@ class LibvirtOpenVswitchDriver(VIFDriver):
             LOG.warning(_("Failed while unplugging vif of instance '%s'"),
                         instance['name'])
             raise
+
+
+class LibvirtOpenVswitchVirtualPortDriver(VIFDriver):
+    """VIF driver for Open vSwitch that uses integrated libvirt
+       OVS virtual port XML (introduced in libvirt 0.9.11)."""
+
+    def plug(self, instance, network, mapping):
+        """ Pass data required to create OVS virtual port element"""
+        return {
+            'bridge_name': FLAGS.libvirt_ovs_bridge,
+            'ovs_interfaceid': mapping['vif_uuid'],
+            'mac_address': mapping['mac']}
+
+    def unplug(self, instance, network, mapping):
+        """No action needed.  Libvirt takes care of cleanup"""
+        pass

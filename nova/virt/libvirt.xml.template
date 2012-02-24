@@ -130,6 +130,14 @@
             </virtualport>
             <model type='virtio'/>
        </interface>
+    #else if $vif_type == 'ovs_virtualport'
+        <interface type='bridge'>
+            <source bridge='${nic.bridge_name}'/>
+            <mac address='${nic.mac_address}'/>
+            <virtualport type="openvswitch">
+                <parameters interfaceid='${nic.ovs_interfaceid}'/>
+            </virtualport>
+        </interface>
     #else
         <interface type='bridge'>
             <source bridge='${nic.bridge_name}'/>
