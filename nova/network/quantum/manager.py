@@ -504,6 +504,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                            'uuid': network['uuid'],
                            'bridge': '',  # Quantum ignores this field
                            'label': network['label'],
+                           'injected': FLAGS.flat_injected,
                            'project_id': net_tenant_id}
                 networks[vif['uuid']] = network
 
