@@ -23,6 +23,7 @@ import os
 import os.path
 import pickle
 import shlex
+import shutil
 import subprocess
 
 import XenAPIPlugin
@@ -33,8 +34,12 @@ configure_logging('migration')
 
 def move_file(item, src, dst):
     """Move file with logging."""
+    #NOTE(markwash): shutil.move can be less efficient than it should be if
+    #                dst is a directory. See http://bugs.python.org/issue1577.
+    if os.path.isdir(dst):
+        dst = os.path.join(dst, os.path.basename(src))
     logging.debug('Moving %(item)s: %(src)s -> %(dst)s' % locals())
-    os.rename(src, dst)
+    shutil.move(src, dst)
 
 
 def move_vhds_into_sr(session, args):
@@ -78,13 +83,9 @@ def move_vhds_into_sr(session, args):
 
         # NOTE(sirp): COW should be copied before base_copy to avoid
         # snapwatchd GC'ing an unreferenced base copy VDI
-        new_cow_sr_path = os.path.join(
-                sr_path, os.path.basename(new_cow_path))
-        move_file('COW', new_cow_path, new_cow_sr_path)
+        move_file('COW', new_cow_path, sr_path)
 
-    new_base_copy_sr_path = os.path.join(
-            sr_path, os.path.basename(new_base_copy_path))
-    move_file('base', new_base_copy_path, new_base_copy_sr_path)
+    move_file('base', new_base_copy_path, sr_path)
 
     logging.debug('Cleaning up source path %s' % source_image_path)
     os.rmdir(source_image_path)
