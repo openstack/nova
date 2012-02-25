@@ -24,7 +24,7 @@ import webob.exc
 
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
-from nova import auth
+from nova.auth import manager
 from nova import context
 from nova import exception
 from nova import flags
@@ -78,7 +78,7 @@ class AuthMiddleware(base_wsgi.Middleware):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)
-        self.auth = auth.manager.AuthManager()
+        self.auth = manager.AuthManager()
         super(AuthMiddleware, self).__init__(application)
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
