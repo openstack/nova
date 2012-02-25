@@ -304,6 +304,11 @@ def get_networks_for_instance_from_nw_info(nw_info):
     return networks
 
 
+def get_nw_info_for_instance(context, instance):
+    cached_nwinfo = instance['info_cache'].get('network_info') or []
+    return network_model.NetworkInfo.hydrate(cached_nwinfo)
+
+
 def get_networks_for_instance(context, instance):
     """Returns a prepared nw_info list for passing into the view
     builders
@@ -315,11 +320,7 @@ def get_networks_for_instance(context, instance):
                                  {'addr': '172.16.2.1', 'version': 4}]},
      ...}
     """
-
-    cached_nwinfo = instance['info_cache']['network_info']
-    if not cached_nwinfo:
-        return {}
-    nw_info = network_model.NetworkInfo.hydrate(cached_nwinfo)
+    nw_info = get_nw_info_for_instance(context, instance)
     return get_networks_for_instance_from_nw_info(nw_info)
 
 

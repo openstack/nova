@@ -16,6 +16,7 @@
 
 import os
 
+from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.api.openstack import extensions
@@ -27,6 +28,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import network
 from nova import utils
 
 
@@ -54,6 +56,7 @@ class CloudpipeController(object):
 
     def __init__(self):
         self.compute_api = compute.API()
+        self.network_api = network.API()
         self.auth_manager = manager.AuthManager()
         self.cloudpipe = pipelib.CloudPipe()
         self.setup()
@@ -66,58 +69,76 @@ class CloudpipeController(object):
         if not os.path.exists(FLAGS.keys_path):
             os.makedirs(FLAGS.keys_path)
 
+    def _get_all_cloudpipes(self, context):
+        """Get all cloudpipes"""
+        return [instance for instance in self.compute_api.get_all(context)
+                if instance['image_ref'] == str(FLAGS.vpn_image_id)
+                and instance['vm_state'] != vm_states.DELETED]
+
     def _get_cloudpipe_for_project(self, context, project_id):
         """Get the cloudpipe instance for a project ID."""
-        # NOTE(todd): this should probably change to compute_api.get_all
-        #             or db.instance_get_project_vpn
-        for instance in db.instance_get_all_by_project(context, project_id):
-            if (instance['image_id'] == str(FLAGS.vpn_image_id)
-                and instance['vm_state'] != vm_states.DELETED):
-                return instance
+        cloudpipes = self._get_all_cloudpipes(context) or [None]
+        return cloudpipes[0]
 
-    def _vpn_dict(self, project, vpn_instance):
-        rv = {'project_id': project.id,
-              'public_ip': project.vpn_ip,
-              'public_port': project.vpn_port}
-        if vpn_instance:
-            rv['instance_id'] = vpn_instance['uuid']
-            rv['created_at'] = utils.isotime(vpn_instance['created_at'])
-            address = vpn_instance.get('fixed_ip', None)
-            if address:
-                rv['internal_ip'] = address['address']
-            if project.vpn_ip and project.vpn_port:
-                if utils.vpn_ping(project.vpn_ip, project.vpn_port):
+    def _get_ip_and_port(self, instance):
+        pass
+
+    def _vpn_dict(self, context, project_id, instance):
+        elevated = context.elevated()
+        rv = {'project_id': project_id}
+        if not instance:
+            rv['state'] = 'pending'
+            return rv
+        rv['instance_id'] = instance['uuid']
+        rv['created_at'] = utils.isotime(instance['created_at'])
+        nw_info = common.get_nw_info_for_instance(elevated, instance)
+        if not nw_info:
+            return rv
+        vif = nw_info[0]
+        ips = [ip for ip in vif.fixed_ips() if ip['version'] == 4]
+        if ips:
+            rv['internal_ip'] = ips[0]['address']
+        network = self.network_api.get(elevated, vif['network']['id'])
+        if network:
+            vpn_ip = network['vpn_public_address']
+            vpn_port = network['vpn_public_port']
+            rv['public_ip'] = vpn_ip
+            rv['public_port'] = vpn_port
+            if vpn_ip and vpn_port:
+                if utils.vpn_ping(vpn_ip, vpn_port):
                     rv['state'] = 'running'
                 else:
                     rv['state'] = 'down'
             else:
                 rv['state'] = 'invalid'
-        else:
-            rv['state'] = 'pending'
         return rv
 
     @wsgi.serializers(xml=CloudpipeTemplate)
     def create(self, req, body):
         """Create a new cloudpipe instance, if none exists.
 
-        Parameters: {cloudpipe: {project_id: XYZ}}
+        Parameters: {cloudpipe: {'project_id': ''}}
         """
 
-        ctxt = req.environ['nova.context']
-        authorize(ctxt)
+        context = req.environ['nova.context']
+        authorize(context)
         params = body.get('cloudpipe', {})
-        project_id = params.get('project_id', ctxt.project_id)
-        instance = self._get_cloudpipe_for_project(ctxt, project_id)
+        project_id = params.get('project_id', context.project_id)
+        # NOTE(vish): downgrade to project context. Note that we keep
+        #             the same token so we can still talk to glance
+        context.project_id = project_id
+        context.user_id = 'project-vpn'
+        context.is_admin = False
+        context.roles = []
+        instance = self._get_cloudpipe_for_project(context, project_id)
         if not instance:
-            proj = self.auth_manager.get_project(project_id)
-            user_id = proj.project_manager_id
             try:
-                self.cloudpipe.launch_vpn_instance(project_id, user_id)
+                result = self.cloudpipe.launch_vpn_instance(context)
+                instance = result[0][0]
             except db.NoMoreNetworks:
                 msg = _("Unable to claim IP for VPN instances, ensure it "
                         "isn't running, and try again in a few minutes")
                 raise exception.HTTPBadRequest(explanation=msg)
-            instance = self._get_cloudpipe_for_project(ctxt, proj)
         return {'instance_id': instance['uuid']}
 
     @wsgi.serializers(xml=CloudpipesTemplate)
@@ -125,11 +146,8 @@ class CloudpipeController(object):
         """List running cloudpipe instances."""
         context = req.environ['nova.context']
         authorize(context)
-        vpns = []
-        # TODO(todd): could use compute_api.get_all with admin context?
-        for project in self.auth_manager.get_projects():
-            instance = self._get_cloudpipe_for_project(context, project.id)
-            vpns.append(self._vpn_dict(project, instance))
+        vpns = [self._vpn_dict(context, x['project_id'], x)
+                for x in self._get_all_cloudpipes(context)]
         return {'cloudpipes': vpns}
 
 

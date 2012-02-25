@@ -25,7 +25,7 @@
     "compute_extension:admin_actions:migrate": [["rule:admin_api"]],
     "compute_extension:aggregates": [["rule:admin_api"]],
     "compute_extension:certificates": [],
-    "compute_extension:cloudpipe": [],
+    "compute_extension:cloudpipe": [["rule:admin_api"]],
     "compute_extension:console_output": [],
     "compute_extension:consoles": [],
     "compute_extension:createserverext": [],

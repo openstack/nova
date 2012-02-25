@@ -281,7 +281,7 @@ def generate_vpn_files(project_id):
     #             this will be changed to be launched by a real user.  At
     #             that point we will can delete this helper method.
     key, csr = generate_x509_cert('project-vpn', project_id, 2048)
-    with open(key_fn, 'f') as keyfile:
+    with open(key_fn, 'w') as keyfile:
         keyfile.write(key)
     with open(crt_fn, 'w') as crtfile:
         crtfile.write(csr)

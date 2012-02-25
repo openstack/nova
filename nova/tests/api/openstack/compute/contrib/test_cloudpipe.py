@@ -14,58 +14,34 @@
 #    under the License.
 
 import datetime
-import json
 
-import webob
 from lxml import etree
 
-from nova.api import auth
-from nova.api.openstack import compute
+from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova.api.openstack.compute.contrib import cloudpipe
-from nova import context
 from nova import db
 from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_network
 from nova import utils
 
 
-EMPTY_INSTANCE_LIST = True
 FLAGS = flags.FLAGS
 
 
-class FakeProject(object):
-    def __init__(self, id, name, manager, desc, members, ip, port):
-        self.id = id
-        self.name = name
-        self.project_manager_id = manager
-        self.description = desc
-        self.member_ids = members
-        self.vpn_ip = ip
-        self.vpn_port = port
-
-
 def fake_vpn_instance():
-    return {'id': 7, 'image_id': FLAGS.vpn_image_id, 'vm_state': 'active',
+    return {'id': 7, 'image_ref': FLAGS.vpn_image_id, 'vm_state': 'active',
             'created_at': utils.parse_strtime('1981-10-20T00:00:00.000000'),
-            'uuid': 7777}
+            'uuid': 7777, 'project_id': 'fake'}
 
 
-def fake_vpn_instance_low_id():
-    return {'id': 4, 'image_id': FLAGS.vpn_image_id, 'vm_state': 'active',
-            'created_at': utils.parse_strtime('1981-10-20T00:00:00.000000')}
+def compute_api_get_all_empty(context):
+    return []
 
 
-def fake_project():
-    proj = FakeProject(1, '1', 'fakeuser', '', [1], '127.0.0.1', 22)
-    return proj
-
-
-def db_instance_get_all_by_project(self, project_id):
-    if EMPTY_INSTANCE_LIST:
-        return []
-    else:
+def compute_api_get_all(context):
         return [fake_vpn_instance()]
 
 
@@ -74,112 +50,88 @@ def db_security_group_exists(context, project_id, group_name):
     return True
 
 
-def pipelib_launch_vpn_instance(self, project_id, user_id):
-    global EMPTY_INSTANCE_LIST
-    EMPTY_INSTANCE_LIST = False
-
-
-def auth_manager_get_project(self, project_id):
-    return fake_project()
-
-
-def auth_manager_get_projects(self):
-    return [fake_project()]
-
-
 def utils_vpn_ping(addr, port, timoeout=0.05, session_id=None):
     return True
-
-
-def better_not_call_this(*args, **kwargs):
-    raise Exception("You should not have done that")
-
-
-class FakeAuthManager(object):
-    def get_projects(self):
-        return [fake_project()]
-
-    def get_project(self, project_id):
-        return fake_project()
 
 
 class CloudpipeTest(test.TestCase):
 
     def setUp(self):
         super(CloudpipeTest, self).setUp()
-        self.app = fakes.wsgi_app()
-        inner_app = compute.APIRouter()
-        self.context = context.RequestContext('fake', 'fake', is_admin=True)
-        self.app = auth.InjectContext(self.context, inner_app)
-        route = inner_app.map.match('/1234/os-cloudpipe')
-        self.controller = route['controller'].controller
-        fakes.stub_out_networking(self.stubs)
-        fakes.stub_out_rate_limiting(self.stubs)
-        self.stubs.Set(db, "instance_get_all_by_project",
-                       db_instance_get_all_by_project)
+        self.controller = cloudpipe.CloudpipeController()
+        self.stubs.Set(self.controller.compute_api, "get_all",
+                       compute_api_get_all_empty)
         self.stubs.Set(db, "security_group_exists",
                        db_security_group_exists)
-        self.stubs.SmartSet(self.controller.cloudpipe, "launch_vpn_instance",
-                            pipelib_launch_vpn_instance)
-        #self.stubs.SmartSet(self.controller.auth_manager, "get_project",
-        #                    auth_manager_get_project)
-        #self.stubs.SmartSet(self.controller.auth_manager, "get_projects",
-        #                    auth_manager_get_projects)
-        # NOTE(todd): The above code (just setting the stub, not invoking it)
-        # causes failures in AuthManagerLdapTestCase.  So use a fake object.
-        self.controller.auth_manager = FakeAuthManager()
         self.stubs.Set(utils, 'vpn_ping', utils_vpn_ping)
-        global EMPTY_INSTANCE_LIST
-        EMPTY_INSTANCE_LIST = True
 
-    def test_cloudpipe_list_none_running(self):
-        """Should still get an entry per-project, just less descriptive."""
-        req = webob.Request.blank('/fake/os-cloudpipe')
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
-        response = {'cloudpipes': [{'project_id': 1, 'public_ip': '127.0.0.1',
-                     'public_port': 22, 'state': 'pending'}]}
+    def test_cloudpipe_list_no_network(self):
+
+        def common_get_nw_info_for_instance(context, instance):
+            return {}
+
+        self.stubs.Set(common, "get_nw_info_for_instance",
+                       common_get_nw_info_for_instance)
+        self.stubs.Set(self.controller.compute_api, "get_all",
+                       compute_api_get_all)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-cloudpipe')
+        res_dict = self.controller.index(req)
+        response = {'cloudpipes': [{'project_id': 'fake',
+                                    'instance_id': 7777,
+                                    'created_at': '1981-10-20T00:00:00Z'}]}
         self.assertEqual(res_dict, response)
 
     def test_cloudpipe_list(self):
-        global EMPTY_INSTANCE_LIST
-        EMPTY_INSTANCE_LIST = False
-        req = webob.Request.blank('/fake/os-cloudpipe')
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
-        response = {'cloudpipes': [{'project_id': 1, 'public_ip': '127.0.0.1',
-                     'public_port': 22, 'state': 'running',
-                     'instance_id': 7777,
-                     'created_at': '1981-10-20T00:00:00Z'}]}
-        self.assertEqual(res_dict, response)
+
+        def network_api_get(context, network_id):
+            return {'vpn_public_address': '127.0.0.1',
+                    'vpn_public_port': 22}
+
+        def common_get_nw_info_for_instance(context, instance):
+            return fake_network.fake_get_instance_nw_info(self.stubs,
+                                                          spectacular=True)
+
+        self.stubs.Set(common, "get_nw_info_for_instance",
+                       common_get_nw_info_for_instance)
+        self.stubs.Set(self.controller.network_api, "get",
+                       network_api_get)
+        self.stubs.Set(self.controller.compute_api, "get_all",
+                       compute_api_get_all)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-cloudpipe')
+        res_dict = self.controller.index(req)
+        response = {'cloudpipes': [{'project_id': 'fake',
+                                    'internal_ip': '192.168.1.100',
+                                    'public_ip': '127.0.0.1',
+                                    'public_port': 22,
+                                    'state': 'running',
+                                    'instance_id': 7777,
+                                    'created_at': '1981-10-20T00:00:00Z'}]}
+        self.assertDictEqual(res_dict, response)
 
     def test_cloudpipe_create(self):
+        def launch_vpn_instance(context):
+            return ([fake_vpn_instance()], 'fake-reservation')
+
+        self.stubs.Set(self.controller.cloudpipe, 'launch_vpn_instance',
+                       launch_vpn_instance)
         body = {'cloudpipe': {'project_id': 1}}
-        req = webob.Request.blank('/fake/os-cloudpipe')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-cloudpipe')
+        res_dict = self.controller.create(req, body)
+
         response = {'instance_id': 7777}
         self.assertEqual(res_dict, response)
 
     def test_cloudpipe_create_already_running(self):
-        global EMPTY_INSTANCE_LIST
-        EMPTY_INSTANCE_LIST = False
-        self.stubs.SmartSet(self.controller.cloudpipe, 'launch_vpn_instance',
-                            better_not_call_this)
+        def launch_vpn_instance(*args, **kwargs):
+            self.fail("Method should not have been called")
+
+        self.stubs.Set(self.controller.cloudpipe, 'launch_vpn_instance',
+                       launch_vpn_instance)
+        self.stubs.Set(self.controller.compute_api, "get_all",
+                       compute_api_get_all)
         body = {'cloudpipe': {'project_id': 1}}
-        req = webob.Request.blank('/fake/os-cloudpipe')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-cloudpipe')
+        res_dict = self.controller.create(req, body)
         response = {'instance_id': 7777}
         self.assertEqual(res_dict, response)
 
