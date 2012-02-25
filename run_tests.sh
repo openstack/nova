@@ -185,16 +185,6 @@ if [ $recreate_db -eq 1 ]; then
     rm -f tests.sqlite
 fi
 
-# Workaround for sqlalchemy-migrate issue 72
-# see: http://code.google.com/p/sqlalchemy-migrate/issues/detail?id=72
-if [ $patch_migrate -eq 1 ]; then
-  pyver=python`python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))'`
-  target=${venv}/lib/${pyver}/site-packages/migrate/versioning/util/__init__.py
-  if [ -f $target ]; then
-    sed -i -e '/^\s\+finally:$/ {N; /^\(\s\+finally:\n\s\+if isinstance(engine, Engine)\):$/ {s//\1 and engine is not url:/}}' $target
-  fi
-fi
-
 run_tests
 
 # NOTE(sirp): we only want to run pep8 when we're running the full-test suite,

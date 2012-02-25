@@ -26,31 +26,63 @@ if possible.
 
 import ConfigParser
 import commands
+import distutils.version as dist_version
 import os
 import unittest
 import urlparse
 
-import migrate.versioning.api as migration_api
-from migrate.versioning.repository import Repository
+import migrate
+from migrate.versioning import util as migrate_util
 from sqlalchemy import create_engine
 
+import nova.db.sqlalchemy.migrate_repo
 from nova import log as logging
 from nova import test
 
+
 LOG = logging.getLogger('nova.tests.test_migrations')
+
+MIGRATE_PKG_VER = dist_version.StrictVersion(migrate.__version__)
+USE_MIGRATE_PATCH = MIGRATE_PKG_VER < dist_version.StrictVersion('0.7.3')
+
+
+@migrate_util.decorator
+def patched_with_engine(f, *a, **kw):
+    url = a[0]
+    engine = migrate_util.construct_engine(url, **kw)
+
+    try:
+        kw['engine'] = engine
+        return f(*a, **kw)
+    finally:
+        if isinstance(engine, migrate_util.Engine) and engine is not url:
+            migrate_util.log.debug('Disposing SQLAlchemy engine %s', engine)
+            engine.dispose()
+
+
+# TODO(jkoelker) When migrate 0.7.3 is released and nova depends
+#                on that version or higher, this can be removed
+if USE_MIGRATE_PATCH:
+    migrate_util.with_engine = patched_with_engine
+
+
+# NOTE(jkoelker) Delay importing migrate until we are patched
+from migrate.versioning import api as migration_api
+from migrate.versioning.repository import Repository
 
 
 class TestMigrations(unittest.TestCase):
     """Test sqlalchemy-migrate migrations"""
 
     TEST_DATABASES = {}
+    DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
+                                       'test_migrations.conf')
     # Test machines can set the NOVA_TEST_MIGRATIONS_CONF variable
     # to override the location of the config file for migration testing
     CONFIG_FILE_PATH = os.environ.get('NOVA_TEST_MIGRATIONS_CONF',
-                                      os.path.join('test_migrations.conf'))
-    REPOSITORY_PATH = os.path.abspath(os.path.join('..', 'db', 'sqlalchemy',
-        'migrate_repo'))
-    REPOSITORY = Repository(REPOSITORY_PATH)
+                                      DEFAULT_CONFIG_FILE)
+    MIGRATE_FILE = nova.db.sqlalchemy.migrate_repo.__file__
+    REPOSITORY = Repository(os.path.abspath(os.path.dirname(MIGRATE_FILE)))
 
     def __init__(self, *args, **kwargs):
         super(TestMigrations, self).__init__(*args, **kwargs)
