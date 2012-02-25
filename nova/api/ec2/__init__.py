@@ -307,7 +307,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
         try:
             token_id = result['access']['token']['id']
             user_id = result['access']['user']['id']
-            project_id = result['access']['token']['tenant']
+            project_id = result['access']['token']['tenant']['id']
             roles = [role['name'] for role
                      in result['access']['user']['roles']]
         except (AttributeError, KeyError), e:
