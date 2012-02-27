@@ -18,7 +18,6 @@ import datetime
 from lxml import etree
 import webob
 
-from nova.api.openstack import volume as openstack_volume
 from nova.api.openstack.volume import snapshots
 from nova import exception
 from nova import flags
