@@ -1651,25 +1651,30 @@ def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
                 "virtual_size=%(virtual_size)d block_size=%(block_size)d"),
                 locals())
 
-    with open(src_path, "r") as src:
-        with open(dst_path, "w") as dst:
-            data = src.read(min(block_size, left))
-            while data:
-                if data == EMPTY_BLOCK:
-                    dst.seek(block_size, os.SEEK_CUR)
-                    left -= block_size
-                    bytes_read += block_size
-                    skipped_bytes += block_size
-                else:
-                    dst.write(data)
-                    data_len = len(data)
-                    left -= data_len
-                    bytes_read += data_len
+    # NOTE(sirp): we need read/write access to the devices; since we don't have
+    # the luxury of shelling out to a sudo'd command, we temporarily take
+    # ownership of the devices.
+    with utils.temporary_chown(src_path):
+        with utils.temporary_chown(dst_path):
+            with open(src_path, "r") as src:
+                with open(dst_path, "w") as dst:
+                    data = src.read(min(block_size, left))
+                    while data:
+                        if data == EMPTY_BLOCK:
+                            dst.seek(block_size, os.SEEK_CUR)
+                            left -= block_size
+                            bytes_read += block_size
+                            skipped_bytes += block_size
+                        else:
+                            dst.write(data)
+                            data_len = len(data)
+                            left -= data_len
+                            bytes_read += data_len
 
-                if left <= 0:
-                    break
+                        if left <= 0:
+                            break
 
-                data = src.read(min(block_size, left))
+                        data = src.read(min(block_size, left))
 
     duration = time.time() - start_time
     compression_pct = float(skipped_bytes) / bytes_read * 100
