@@ -171,3 +171,32 @@ class LibvirtOpenVswitchVirtualPortDriver(VIFDriver):
     def unplug(self, instance, network, mapping):
         """No action needed.  Libvirt takes care of cleanup"""
         pass
+
+
+class QuantumLinuxBridgeVIFDriver(VIFDriver):
+    """VIF driver for Linux Bridge when running Quantum."""
+
+    def get_dev_name(self, iface_id):
+        return "tap" + iface_id[0:11]
+
+    def plug(self, instance, network, mapping):
+        iface_id = mapping['vif_uuid']
+        dev = self.get_dev_name(iface_id)
+        linux_net.QuantumLinuxBridgeInterfaceDriver.create_tap_dev(dev)
+
+        result = {
+            'script': '',
+            'name': dev,
+            'mac_address': mapping['mac']}
+        return result
+
+    def unplug(self, instance, network, mapping):
+        """Unplug the VIF from the network by deleting the port from
+        the bridge."""
+        dev = self.get_dev_name(mapping['vif_uuid'])
+        try:
+            utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
+        except exception.ProcessExecutionError:
+            LOG.warning(_("Failed while unplugging vif of instance '%s'"),
+                        instance['name'])
+            raise

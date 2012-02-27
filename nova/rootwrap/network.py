@@ -35,6 +35,7 @@ filterlist = [
     # nova/network/linux_net.py: 'ip', 'addr', 'show', 'dev', interface, ..
     # nova/network/linux_net.py: 'ip', 'link', 'set', dev, "address", ..
     # nova/network/linux_net.py: 'ip', 'link', 'set', dev, 'up'
+    # nova/network/linux_net.py: 'ip', 'tuntap', 'add', dev, 'mode', 'tap'
     filters.CommandFilter("/sbin/ip", "root"),
 
     # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd,), '-t', ...

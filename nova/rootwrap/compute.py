@@ -98,6 +98,7 @@ filterlist = [
     filters.CommandFilter("/sbin/ip", "root"),
 
     # nova/virt/libvirt/vif.py: 'tunctl', '-b', '-t', dev
+    # nova/network/linux_net.py: 'tunctl', '-b', '-t', dev
     filters.CommandFilter("/usr/sbin/tunctl", "root"),
 
     # nova/virt/libvirt/vif.py: 'ovs-vsctl', ...

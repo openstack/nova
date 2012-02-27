@@ -23,7 +23,9 @@ from nova.virt import firewall
 from nova.virt import vif
 from nova.virt.libvirt import connection
 from nova.virt.libvirt.vif import LibvirtBridgeDriver, \
-                LibvirtOpenVswitchDriver, LibvirtOpenVswitchVirtualPortDriver
+                LibvirtOpenVswitchDriver, \
+                LibvirtOpenVswitchVirtualPortDriver, \
+                QuantumLinuxBridgeVIFDriver
 
 FLAGS = flags.FLAGS
 
@@ -156,4 +158,22 @@ class LibvirtVifTestCase(test.TestCase):
                 iface_id_found = True
 
         self.assertTrue(iface_id_found)
+        d.unplug(None, self.net, self.mapping)
+
+    def test_quantum_bridge_ethernet_driver(self):
+        d = QuantumLinuxBridgeVIFDriver()
+        xml = self._get_instance_xml(d, 'ethernet')
+
+        doc = ElementTree.fromstring(xml)
+        ret = doc.findall('./devices/interface')
+        self.assertEqual(len(ret), 1)
+        node = ret[0]
+        self.assertEqual(node.get("type"), "ethernet")
+        dev_name = node.find("target").get("dev")
+        self.assertTrue(dev_name.startswith("tap"))
+        mac = node.find("mac").get("address")
+        self.assertEqual(mac, self.mapping['mac'])
+        script = node.find("script").get("path")
+        self.assertEquals(script, "")
+
         d.unplug(None, self.net, self.mapping)
