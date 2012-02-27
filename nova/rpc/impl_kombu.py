@@ -16,6 +16,7 @@
 
 import itertools
 import socket
+import ssl
 import sys
 import time
 import uuid
@@ -28,11 +29,28 @@ import kombu.messaging
 import kombu.connection
 
 from nova import flags
-from nova.rpc import common as rpc_common
+from nova.openstack.common import cfg
 from nova.rpc import amqp as rpc_amqp
+from nova.rpc import common as rpc_common
 
+kombu_opts = [
+    cfg.StrOpt('kombu_ssl_version',
+               default='',
+               help='SSL version to use (valid only if SSL enabled)'),
+    cfg.StrOpt('kombu_ssl_keyfile',
+               default='',
+               help='SSL key file (valid only if SSL enabled)'),
+    cfg.StrOpt('kombu_ssl_certfile',
+               default='',
+               help='SSL cert file (valid only if SSL enabled)'),
+    cfg.StrOpt('kombu_ssl_ca_certs',
+               default='',
+               help=('SSL certification authority file '
+                    '(valid only if SSL enabled)')),
+    ]
 
 FLAGS = flags.FLAGS
+FLAGS.register_opts(kombu_opts)
 LOG = rpc_common.LOG
 
 
@@ -345,8 +363,37 @@ class Connection(object):
             self.memory_transport = True
         else:
             self.memory_transport = False
+
+        if FLAGS.rabbit_use_ssl:
+            self.params['ssl'] = self._fetch_ssl_params()
+
         self.connection = None
         self.reconnect()
+
+    def _fetch_ssl_params(self):
+        """Handles fetching what ssl params
+        should be used for the connection (if any)"""
+        ssl_params = dict()
+
+        # http://docs.python.org/library/ssl.html - ssl.wrap_socket
+        if FLAGS.kombu_ssl_version:
+            ssl_params['ssl_version'] = FLAGS.kombu_ssl_version
+        if FLAGS.kombu_ssl_keyfile:
+            ssl_params['keyfile'] = FLAGS.kombu_ssl_keyfile
+        if FLAGS.kombu_ssl_certfile:
+            ssl_params['certfile'] = FLAGS.kombu_ssl_certfile
+        if FLAGS.kombu_ssl_ca_certs:
+            ssl_params['ca_certs'] = FLAGS.kombu_ssl_ca_certs
+            # We might want to allow variations in the
+            # future with this?
+            ssl_params['cert_reqs'] = ssl.CERT_REQUIRED
+
+        if not ssl_params:
+            # Just have the default behavior
+            return True
+        else:
+            # Return the extended behavior
+            return ssl_params
 
     def _connect(self):
         """Connect to rabbit.  Re-establish any queues that may have
