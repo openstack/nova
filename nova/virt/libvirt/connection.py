@@ -41,6 +41,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 import hashlib
 import functools
+import glob
 import multiprocessing
 import os
 import shutil
@@ -749,6 +750,10 @@ class LibvirtConnection(driver.ComputeDriver):
         unrescue_xml = libvirt_utils.load_file(unrescue_xml_path)
         libvirt_utils.file_delete(unrescue_xml_path)
         self.reboot(instance, network_info, xml=unrescue_xml)
+        rescue_files = os.path.join(FLAGS.instances_path, instance['name'],
+                                    "*.rescue")
+        for rescue_file in glob.iglob(rescue_files):
+            libvirt_utils.file_delete(rescue_file)
 
     @exception.wrap_exception()
     def poll_rebooting_instances(self, timeout):
