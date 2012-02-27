@@ -17,6 +17,8 @@
 
 """ Keypair management extension"""
 
+import string
+
 import webob
 import webob.exc
 
@@ -61,6 +63,13 @@ class KeypairController(object):
                 'public_key': public_key,
                 'fingerprint': fingerprint}
 
+    def _validate_keypair_name(self, value):
+        safechars = "_-" + string.digits + string.ascii_letters
+        clean_value = "".join(x for x in value if x in safechars)
+        if clean_value != value:
+            msg = _("Keypair name contains unsafe characters")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
     @wsgi.serializers(xml=KeypairTemplate)
     def create(self, req, body):
         """
@@ -80,6 +89,7 @@ class KeypairController(object):
         authorize(context)
         params = body['keypair']
         name = params['name']
+        self._validate_keypair_name(name)
 
         if not 0 < len(name) < 256:
             msg = _('Keypair name must be between 1 and 255 characters long')
