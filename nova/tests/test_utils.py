@@ -857,7 +857,7 @@ class TestLockCleanup(test.TestCase):
         """verify locks for dead processes are cleaned up"""
 
         # create sentinels for two processes, us and a 'dead' one
-        # no actve lock
+        # no active lock
         sentinel1 = self._create_sentinel(self.hostname, self.pid)
         sentinel2 = self._create_sentinel(self.hostname, self.dead_pid)
 

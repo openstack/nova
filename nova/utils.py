@@ -901,10 +901,13 @@ def cleanup_file_locks():
         pid = match.group(1)
         LOG.debug(_('Found sentinel %(filename)s for pid %(pid)s' %
                     {'filename': filename, 'pid': pid}))
-        if not os.path.exists(os.path.join('/proc', pid)):
+        try:
+            os.kill(int(pid), 0)
+        except OSError, e:
+            # PID wasn't found
             delete_if_exists(os.path.join(FLAGS.lock_path, filename))
             LOG.debug(_('Cleaned sentinel %(filename)s for pid %(pid)s' %
-                        {'filename': filename, 'pid': pid}))
+                    {'filename': filename, 'pid': pid}))
 
     # cleanup lock files
     for filename in files:
