@@ -315,6 +315,10 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         response = request.get_response(self.app)
         self.assertEqual(response.status_int, 413)
 
+        self.assertTrue('Retry-After' in response.headers)
+        retry_after = int(response.headers['Retry-After'])
+        self.assertAlmostEqual(retry_after, 60, 1)
+
         body = json.loads(response.body)
         expected = "Only 1 GET request(s) can be made to * every minute."
         value = body["overLimitFault"]["details"].strip()
