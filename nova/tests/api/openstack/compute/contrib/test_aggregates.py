@@ -87,6 +87,17 @@ class AggregateTestCase(test.TestCase):
                                      {"name": "test",
                                       "availability_zone": "nova1"}})
 
+    def test_create_with_incorrect_availability_zone(self):
+        def stub_create_aggregate(context, name, availability_zone):
+            raise exception.InvalidAggregateAction
+        self.stubs.Set(self.controller.api, "create_aggregate",
+                       stub_create_aggregate)
+
+        self.assertRaises(exc.HTTPConflict, self.controller.create,
+                          self.req, {"aggregate":
+                                     {"name": "test",
+                                      "availability_zone": "nova_bad"}})
+
     def test_create_with_no_aggregate(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
                           self.req, {"foo":

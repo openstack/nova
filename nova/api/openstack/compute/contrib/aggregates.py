@@ -72,7 +72,8 @@ class AggregateController(object):
 
         try:
             aggregate = self.api.create_aggregate(context, name, avail_zone)
-        except exception.AggregateNameExists:
+        except (exception.AggregateNameExists,
+                exception.InvalidAggregateAction):
             LOG.exception(_("Cannot create aggregate with name %(name)s and "
                             "availability zone %(avail_zone)s") % locals())
             raise exc.HTTPConflict
