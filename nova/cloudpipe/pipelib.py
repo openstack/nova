@@ -65,36 +65,39 @@ class CloudPipe(object):
 
     def get_encoded_zip(self, project_id):
         # Make a payload.zip
-        tmpfolder = tempfile.mkdtemp()
-        filename = "payload.zip"
-        zippath = os.path.join(tmpfolder, filename)
-        z = zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED)
-        shellfile = open(FLAGS.boot_script_template, "r")
-        s = string.Template(shellfile.read())
-        shellfile.close()
-        boot_script = s.substitute(cc_dmz=FLAGS.ec2_dmz_host,
-                                   cc_port=FLAGS.ec2_port,
-                                   dmz_net=FLAGS.dmz_net,
-                                   dmz_mask=FLAGS.dmz_mask,
-                                   num_vpn=FLAGS.cnt_vpn_clients)
-        # genvpn, sign csr
-        crypto.generate_vpn_files(project_id)
-        z.writestr('autorun.sh', boot_script)
-        crl = os.path.join(crypto.ca_folder(project_id), 'crl.pem')
-        z.write(crl, 'crl.pem')
-        server_key = os.path.join(crypto.ca_folder(project_id), 'server.key')
-        z.write(server_key, 'server.key')
-        ca_crt = os.path.join(crypto.ca_path(project_id))
-        z.write(ca_crt, 'ca.crt')
-        server_crt = os.path.join(crypto.ca_folder(project_id), 'server.crt')
-        z.write(server_crt, 'server.crt')
-        z.close()
-        zippy = open(zippath, "r")
-        # NOTE(vish): run instances expects encoded userdata, it is decoded
-        # in the get_metadata_call. autorun.sh also decodes the zip file,
-        # hence the double encoding.
-        encoded = zippy.read().encode("base64").encode("base64")
-        zippy.close()
+        with utils.tempdir() as tmpdir:
+            filename = "payload.zip"
+            zippath = os.path.join(tmpdir, filename)
+            z = zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED)
+            shellfile = open(FLAGS.boot_script_template, "r")
+            s = string.Template(shellfile.read())
+            shellfile.close()
+            boot_script = s.substitute(cc_dmz=FLAGS.ec2_dmz_host,
+                                       cc_port=FLAGS.ec2_port,
+                                       dmz_net=FLAGS.dmz_net,
+                                       dmz_mask=FLAGS.dmz_mask,
+                                       num_vpn=FLAGS.cnt_vpn_clients)
+            # genvpn, sign csr
+            crypto.generate_vpn_files(project_id)
+            z.writestr('autorun.sh', boot_script)
+            crl = os.path.join(crypto.ca_folder(project_id), 'crl.pem')
+            z.write(crl, 'crl.pem')
+            server_key = os.path.join(crypto.ca_folder(project_id),
+                                      'server.key')
+            z.write(server_key, 'server.key')
+            ca_crt = os.path.join(crypto.ca_path(project_id))
+            z.write(ca_crt, 'ca.crt')
+            server_crt = os.path.join(crypto.ca_folder(project_id),
+                                      'server.crt')
+            z.write(server_crt, 'server.crt')
+            z.close()
+            zippy = open(zippath, "r")
+            # NOTE(vish): run instances expects encoded userdata, it is decoded
+            # in the get_metadata_call. autorun.sh also decodes the zip file,
+            # hence the double encoding.
+            encoded = zippy.read().encode("base64").encode("base64")
+            zippy.close()
+
         return encoded
 
     def launch_vpn_instance(self, project_id, user_id):

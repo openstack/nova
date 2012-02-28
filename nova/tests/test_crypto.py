@@ -17,8 +17,6 @@ Tests for Crypto module.
 """
 
 import os
-import shutil
-import tempfile
 
 import mox
 
@@ -50,9 +48,8 @@ class SymmetricKeyTestCase(test.TestCase):
 
 class X509Test(test.TestCase):
     def test_can_generate_x509(self):
-        tmpdir = tempfile.mkdtemp()
-        self.flags(ca_path=tmpdir)
-        try:
+        with utils.tempdir() as tmpdir:
+            self.flags(ca_path=tmpdir)
             crypto.ensure_ca_filesystem()
             _key, cert_str = crypto.generate_x509_cert('fake', 'fake')
 
@@ -70,14 +67,10 @@ class X509Test(test.TestCase):
                     project_cert_file, '-verbose', signed_cert_file)
             self.assertFalse(err)
 
-        finally:
-            shutil.rmtree(tmpdir)
-
     def test_encrypt_decrypt_x509(self):
-        tmpdir = tempfile.mkdtemp()
-        self.flags(ca_path=tmpdir)
-        project_id = "fake"
-        try:
+        with utils.tempdir() as tmpdir:
+            self.flags(ca_path=tmpdir)
+            project_id = "fake"
             crypto.ensure_ca_filesystem()
             cert = crypto.fetch_ca(project_id)
             public_key = os.path.join(tmpdir, "public.pem")
@@ -92,8 +85,6 @@ class X509Test(test.TestCase):
                                      process_input=text)
             dec = crypto.decrypt_text(project_id, enc)
             self.assertEqual(text, dec)
-        finally:
-            shutil.rmtree(tmpdir)
 
 
 class RevokeCertsTest(test.TestCase):
