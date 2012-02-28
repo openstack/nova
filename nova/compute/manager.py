@@ -1155,6 +1155,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(instance_ref,
                                           "resize.confirm.start")
 
+        # NOTE(tr3buchet): tear down networks on source host
+        self.network_api.setup_networks_on_host(context, instance_ref,
+                             migration_ref['source_compute'], teardown=True)
+
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.confirm_migration(migration_ref, instance_ref,
                                       self._legacy_nw_info(network_info))
@@ -1175,6 +1179,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         migration_ref = self.db.migration_get(context, migration_id)
         instance_ref = self.db.instance_get_by_uuid(context,
                 migration_ref.instance_uuid)
+
+        # NOTE(tr3buchet): tear down networks on destination host
+        self.network_api.setup_networks_on_host(context, instance_ref,
+                                                         teardown=True)
 
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.destroy(instance_ref, self._legacy_nw_info(network_info))
@@ -1209,7 +1217,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Just roll back the record. There's no need to resize down since
         # the 'old' VM already has the preferred attributes
         self._instance_update(context,
-                              instance_ref["uuid"],
+                              instance_ref['uuid'],
                               memory_mb=instance_type['memory_mb'],
                               host=migration_ref['source_compute'],
                               vcpus=instance_type['vcpus'],
@@ -1334,6 +1342,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                     root_gb=instance_type['root_gb'],
                     ephemeral_gb=instance_type['ephemeral_gb'])
             resize_instance = True
+
+        # NOTE(tr3buchet): setup networks on destination host
+        self.network_api.setup_networks_on_host(context, instance_ref,
+                                                migration_ref['dest_compute'])
 
         network_info = self._get_instance_nw_info(context, instance_ref)
 
@@ -1844,6 +1856,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.driver.pre_live_migration(block_device_info)
 
+        # NOTE(tr3buchet): setup networks on destination host
+        self.network_api.setup_networks_on_host(context, instance_ref,
+                                                         self.host)
+
         # Bridge settings.
         # Call this method prior to ensure_filtering_rules_for_instance,
         # since bridge is not set up, ensure_filtering_rules_for instance
@@ -1907,8 +1923,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             if self._get_instance_volume_bdms(context, instance_id):
                 rpc.call(context,
                           FLAGS.volume_topic,
-                          {"method": "check_for_export",
-                           "args": {'instance_id': instance_id}})
+                          {'method': 'check_for_export',
+                           'args': {'instance_id': instance_id}})
 
             if block_migration:
                 disk = self.driver.get_instance_disk_info(instance_ref.name)
@@ -1917,8 +1933,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             rpc.call(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, dest),
-                     {"method": "pre_live_migration",
-                      "args": {'instance_id': instance_id,
+                     {'method': 'pre_live_migration',
+                      'args': {'instance_id': instance_id,
                                'block_migration': block_migration,
                                'disk': disk}})
 
@@ -1966,6 +1982,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # Releasing vlan.
         # (not necessary in current implementation?)
+
+        # NOTE(tr3buchet): tear down networks on source host
+        self.network_api.setup_networks_on_host(ctxt, instance_ref,
+                                                self.host, teardown=True)
 
         network_info = self._get_instance_nw_info(ctxt, instance_ref)
         # Releasing security group ingress rule.
@@ -2049,6 +2069,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.info(_('Post operation of migraton started'),
                  instance=instance_ref)
+
+        # NOTE(tr3buchet): setup networks on destination host
+        #                  this is called a second time because
+        #                  multi_host does not create the bridge in
+        #                  plug_vifs
+        self.network_api.setup_networks_on_host(context, instance_ref,
+                                                         self.host)
+
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.post_live_migration_at_destination(context, instance_ref,
                                             self._legacy_nw_info(network_info),
@@ -2072,6 +2100,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                               host=host,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
+
+        # NOTE(tr3buchet): setup networks on source host (really it's re-setup)
+        self.network_api.setup_networks_on_host(context, instance_ref,
+                                                         self.host)
 
         for bdm in self._get_instance_volume_bdms(context, instance_ref['id']):
             volume_id = bdm['volume_id']
@@ -2099,6 +2131,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         instance_ref = self.db.instance_get(context, instance_id)
         network_info = self._get_instance_nw_info(context, instance_ref)
+
+        # NOTE(tr3buchet): tear down networks on destination host
+        self.network_api.setup_networks_on_host(context, instance_ref,
+                                                self.host, teardown=True)
 
         # NOTE(vish): The mapping is passed in so the driver can disconnect
         #             from remote volumes if necessary

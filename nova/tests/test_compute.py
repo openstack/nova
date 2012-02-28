@@ -1388,6 +1388,10 @@ class ComputeTestCase(BaseTestCase):
                            'disk': None}
                  }).AndRaise(rpc.common.RemoteError('', '', ''))
         # mocks for rollback
+        rpc.call(c, 'network', {'method': 'setup_networks_on_host',
+                                'args': {'instance_id': instance_id,
+                                         'host': self.compute.host,
+                                         'teardown': False}})
         rpc.call(c, topic, {"method": "remove_volume_connection",
                             "args": {'instance_id': instance_id,
                                      'volume_id': volume_id}})
@@ -1456,6 +1460,10 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
         self.compute.driver.unfilter_instance(i_ref, [])
         self.mox.StubOutWithMock(rpc, 'call')
+        rpc.call(c, 'network', {'method': 'setup_networks_on_host',
+                                'args': {'instance_id': instance_id,
+                                         'host': self.compute.host,
+                                         'teardown': True}})
         rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
              "args": {'instance_id': i_ref['id'], 'block_migration': False}})
