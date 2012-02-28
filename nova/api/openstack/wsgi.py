@@ -21,7 +21,6 @@ from xml.parsers import expat
 
 from lxml import etree
 import webob
-from webob import exc
 
 from nova import exception
 from nova import log as logging
@@ -574,7 +573,9 @@ class ResourceExceptionHandler(object):
             msg = unicode(ex_value)
             raise Fault(webob.exc.HTTPForbidden(explanation=msg))
         elif isinstance(ex_value, TypeError):
-            LOG.exception(ex_value)
+            exc_info = (ex_type, ex_value, ex_traceback)
+            LOG.error(_('Exception handling resource: %s') % ex_value,
+                    exc_info=exc_info)
             raise Fault(webob.exc.HTTPBadRequest())
         elif isinstance(ex_value, Fault):
             LOG.info(_("Fault thrown: %s"), unicode(ex_value))
