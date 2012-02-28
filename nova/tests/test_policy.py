@@ -17,8 +17,8 @@
 
 """Test of Policy Engine For Nova"""
 
+import os.path
 import StringIO
-import tempfile
 import urllib2
 
 from nova.common import policy as common_policy
@@ -28,6 +28,7 @@ from nova import flags
 import nova.common.policy
 from nova import policy
 from nova import test
+from nova import utils
 
 FLAGS = flags.FLAGS
 
@@ -36,8 +37,6 @@ class PolicyFileTestCase(test.TestCase):
     def setUp(self):
         super(PolicyFileTestCase, self).setUp()
         policy.reset()
-        _, self.tmpfilename = tempfile.mkstemp()
-        self.flags(policy_file=self.tmpfilename)
         self.context = context.RequestContext('fake', 'fake')
         self.target = {}
 
@@ -46,16 +45,21 @@ class PolicyFileTestCase(test.TestCase):
         policy.reset()
 
     def test_modified_policy_reloads(self):
-        action = "example:test"
-        with open(self.tmpfilename, "w") as policyfile:
-            policyfile.write("""{"example:test": []}""")
-        policy.enforce(self.context, action, self.target)
-        with open(self.tmpfilename, "w") as policyfile:
-            policyfile.write("""{"example:test": ["false:false"]}""")
-        # NOTE(vish): reset stored policy cache so we don't have to sleep(1)
-        policy._POLICY_CACHE = {}
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
-                          self.context, action, self.target)
+        with utils.tempdir() as tmpdir:
+            tmpfilename = os.path.join(tmpdir, 'policy')
+            self.flags(policy_file=tmpfilename)
+
+            action = "example:test"
+            with open(tmpfilename, "w") as policyfile:
+                policyfile.write("""{"example:test": []}""")
+            policy.enforce(self.context, action, self.target)
+            with open(tmpfilename, "w") as policyfile:
+                policyfile.write("""{"example:test": ["false:false"]}""")
+            # NOTE(vish): reset stored policy cache so we don't have to
+            # sleep(1)
+            policy._POLICY_CACHE = {}
+            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+                              self.context, action, self.target)
 
 
 class PolicyTestCase(test.TestCase):
