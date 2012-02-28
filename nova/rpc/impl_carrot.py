@@ -47,9 +47,6 @@ from nova.rpc import common as rpc_common
 from nova.rpc.common import RemoteError, LOG
 from nova.testing import fake
 
-# Needed for tests
-eventlet.monkey_patch()
-
 FLAGS = flags.FLAGS
 
 
