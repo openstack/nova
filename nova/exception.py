@@ -362,6 +362,10 @@ class InvalidDevicePath(Invalid):
     message = _("The supplied device path (%(path)s) is invalid.")
 
 
+class DeviceIsBusy(Invalid):
+    message = _("The supplied device (%(device)s) is busy.")
+
+
 class InvalidCPUInfo(Invalid):
     message = _("Unacceptable CPU info") + ": %(reason)s"
 

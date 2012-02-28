@@ -472,7 +472,18 @@ class LibvirtConnection(driver.ComputeDriver):
         if FLAGS.libvirt_type == 'lxc':
             self._attach_lxc_volume(xml, virt_dom, instance_name)
         else:
-            virt_dom.attachDevice(xml)
+            try:
+                virt_dom.attachDevice(xml)
+            except Exception, ex:
+                self.volume_driver_method('disconnect_volume',
+                                           connection_info,
+                                           mount_device)
+
+                if isinstance(ex, libvirt.libvirtError):
+                    errcode = ex.get_error_code()
+                    if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
+                        raise exception.DeviceIsBusy(device=mount_device)
+                raise
 
     @staticmethod
     def _get_disk_xml(xml, device):
