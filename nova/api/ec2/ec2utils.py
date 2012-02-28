@@ -86,7 +86,8 @@ def get_ip_info_for_instance_from_nw_info(nw_info):
 def get_ip_info_for_instance(context, instance):
     """Return a dictionary of IP information for an instance"""
 
-    cached_nwinfo = instance['info_cache']['network_info']
+    info_cache = instance['info_cache'] or {}
+    cached_nwinfo = info_cache.get('network_info')
     # Make sure empty response is turned into []
     if not cached_nwinfo:
         cached_nwinfo = []

@@ -305,7 +305,8 @@ def get_networks_for_instance_from_nw_info(nw_info):
 
 
 def get_nw_info_for_instance(context, instance):
-    cached_nwinfo = instance['info_cache'].get('network_info') or []
+    info_cache = instance['info_cache'] or {}
+    cached_nwinfo = info_cache.get('network_info') or []
     return network_model.NetworkInfo.hydrate(cached_nwinfo)
 
 
