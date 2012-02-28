@@ -15,14 +15,14 @@
 # limitations under the License.
 
 
-import abstract_filter
 import netaddr
 
 from nova.compute import api as compute
 from nova import flags
+from nova.scheduler import filters
 
 
-class AffinityFilter(abstract_filter.AbstractHostFilter):
+class AffinityFilter(filters.BaseHostFilter):
     def __init__(self):
         self.compute_api = compute.API()
 

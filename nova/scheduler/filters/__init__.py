@@ -14,30 +14,74 @@
 #    under the License.
 
 """
-There are three filters included: AllHosts, InstanceType & JSON.
-
-AllHosts just returns the full, unfiltered list of hosts.
-InstanceType is a hard coded matching mechanism based on flavor criteria.
-JSON is an ad-hoc filter grammar.
-
-Why JSON? The requests for instances may come in through the
-REST interface from a user or a parent Zone.
-Currently InstanceTypes are used for specifing the type of instance desired.
-Specific Nova users have noted a need for a more expressive way of specifying
-instance requirements. Since we don't want to get into building full DSL,
-this filter is a simple form as an example of how this could be done.
-In reality, most consumers will use the more rigid filters such as the
-InstanceType filter.
+Scheduler host filters
 """
-from nova.scheduler.filters.abstract_filter import AbstractHostFilter
-from nova.scheduler.filters.affinity_filter import DifferentHostFilter
-from nova.scheduler.filters.affinity_filter import SameHostFilter
-from nova.scheduler.filters.affinity_filter import SimpleCIDRAffinityFilter
-from nova.scheduler.filters.all_hosts_filter import AllHostsFilter
-from nova.scheduler.filters.availability_zone_filter \
-    import AvailabilityZoneFilter
-from nova.scheduler.filters.isolated_hosts_filter import IsolatedHostsFilter
-from nova.scheduler.filters.compute_filter import ComputeFilter
-from nova.scheduler.filters.core_filter import CoreFilter
-from nova.scheduler.filters.json_filter import JsonFilter
-from nova.scheduler.filters.ram_filter import RamFilter
+
+import os
+import types
+
+from nova import exception
+from nova import utils
+
+
+class BaseHostFilter(object):
+    """Base class for host filters."""
+
+    def host_passes(self, host_state, filter_properties):
+        raise NotImplemented()
+
+    def _full_name(self):
+        """module.classname of the filter."""
+        return "%s.%s" % (self.__module__, self.__class__.__name__)
+
+
+def _is_filter_class(cls):
+    """Return whether a class is a valid Host Filter class."""
+    return type(cls) is types.TypeType and issubclass(cls, BaseHostFilter)
+
+
+def _get_filter_classes_from_module(module_name):
+    """Get all filter classes from a module."""
+    classes = []
+    module = utils.import_object(module_name)
+    for obj_name in dir(module):
+        itm = getattr(module, obj_name)
+        if _is_filter_class(itm):
+            classes.append(itm)
+    return classes
+
+
+def standard_filters():
+    """Return a list of filter classes found in this directory."""
+    classes = []
+    filters_dir = __path__[0]
+    for dirpath, dirnames, filenames in os.walk(filters_dir):
+        relpath = os.path.relpath(dirpath, filters_dir)
+        if relpath == '.':
+            relpkg = ''
+        else:
+            relpkg = '.%s' % '.'.join(relpath.split(os.sep))
+        for fname in filenames:
+            root, ext = os.path.splitext(fname)
+            if ext != '.py' or root == '__init__':
+                continue
+            module_name = "%s%s.%s" % (__package__, relpkg, root)
+            mod_classes = _get_filter_classes_from_module(module_name)
+            classes.extend(mod_classes)
+    return classes
+
+
+def get_filter_classes(filter_class_names):
+    """Get filter classes from class names."""
+    classes = []
+    for cls_name in filter_class_names:
+        obj = utils.import_class(cls_name)
+        if _is_filter_class(obj):
+            classes.append(obj)
+        elif type(obj) is types.FunctionType:
+            # Get list of classes from a function
+            classes.extend(obj())
+        else:
+            raise exception.ClassNotFound(class_name=cls_name,
+                    exception='Not a valid scheduler filter')
+    return classes
