@@ -92,7 +92,6 @@ from nova import version
 from nova import vsa
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
-from nova.cloudpipe import pipelib
 from nova.compute import instance_types
 from nova.compute import vm_states
 from nova.db import migration
@@ -132,65 +131,6 @@ class VpnCommands(object):
 
     def __init__(self):
         self.manager = manager.AuthManager()
-        self.pipe = pipelib.CloudPipe()
-
-    @args('--project', dest="project", metavar='<Project name>',
-            help='Project name')
-    def list(self, project=None):
-        """Print a listing of the VPN data for one or all projects."""
-        print "WARNING: This method only works with deprecated auth"
-        print "%-12s\t" % 'project',
-        print "%-20s\t" % 'ip:port',
-        print "%-20s\t" % 'private_ip',
-        print "%s" % 'state'
-        if project:
-            projects = [self.manager.get_project(project)]
-        else:
-            projects = self.manager.get_projects()
-            # NOTE(vish): This hits the database a lot.  We could optimize
-            #             by getting all networks in one query and all vpns
-            #             in aother query, then doing lookups by project
-        for project in projects:
-            print "%-12s\t" % project.name,
-            ipport = "%s:%s" % (project.vpn_ip, project.vpn_port)
-            print "%-20s\t" % ipport,
-            ctxt = context.get_admin_context()
-            vpn = db.instance_get_project_vpn(ctxt, project.id)
-            if vpn:
-                address = None
-                state = 'down'
-                if vpn.get('fixed_ip', None):
-                    address = vpn['fixed_ip']['address']
-                if project.vpn_ip and utils.vpn_ping(project.vpn_ip,
-                                                     project.vpn_port):
-                    state = 'up'
-                print address,
-                print vpn['host'],
-                print ec2utils.id_to_ec2_id(vpn['id']),
-                print vpn['vm_state'],
-                print state
-            else:
-                print None
-
-    def spawn(self):
-        """Run all VPNs."""
-        print "WARNING: This method only works with deprecated auth"
-        ctxt = context.get_admin_context()
-        for p in reversed(self.manager.get_projects()):
-            if self._vpn_for(ctxt, p.id):
-                print 'spawning %s' % p.id
-                self.pipe.launch_vpn_instance(p.id, p.project_manager_id)
-                time.sleep(10)
-
-    @args('--project', dest="project_id", metavar='<Project name>',
-            help='Project name')
-    @args('--user', dest="user_id", metavar='<user name>', help='User name')
-    def run(self, project_id, user_id):
-        """Start the VPN for a given project and user."""
-        if not user_id:
-            print "WARNING: This method only works with deprecated auth"
-            user_id = self.manager.get_project(project_id).project_manager_id
-        self.pipe.launch_vpn_instance(project_id, user_id)
 
     @args('--project', dest="project_id", metavar='<Project name>',
             help='Project name')
@@ -212,13 +152,6 @@ class VpnCommands(object):
                               network['id'],
                               {'vpn_public_address': ip,
                                'vpn_public_port': int(port)})
-
-    def _vpn_for(self, context, project_id):
-        """Get the VPN instance for a project ID."""
-        for instance in db.instance_get_all_by_project(context, project_id):
-            if (instance['image_id'] == str(FLAGS.vpn_image_id)
-                and not instance['vm_state'] in [vm_states.DELETED]):
-                return instance
 
 
 class ShellCommands(object):

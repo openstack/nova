@@ -1659,14 +1659,6 @@ def instance_get_all_by_reservation(context, reservation_id):
                     all()
 
 
-@require_admin_context
-def instance_get_project_vpn(context, project_id):
-    return _instance_get_all_query(context).\
-                   filter_by(project_id=project_id).\
-                   filter_by(image_ref=str(FLAGS.vpn_image_id)).\
-                   first()
-
-
 # NOTE(jkoelker) This is only being left here for compat with floating
 #                ips. Currently the network_api doesn't return floaters
 #                in network_info. Once it starts return the model. This

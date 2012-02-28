@@ -27,7 +27,10 @@ import string
 import tempfile
 import zipfile
 
-from nova import context
+# NOTE(vish): cloud is only for the _gen_key functionality
+from nova.api.ec2 import cloud
+from nova import compute
+from nova.compute import instance_types
 from nova import crypto
 from nova import db
 from nova import exception
@@ -35,12 +38,12 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
-# TODO(eday): Eventually changes these to something not ec2-specific
-from nova.api.ec2 import cloud
-from nova.api.ec2 import ec2utils
 
 
 cloudpipe_opts = [
+    cfg.StrOpt('vpn_instance_type',
+               default='m1.tiny',
+               help=_('Instance type for vpn instances')),
     cfg.StrOpt('boot_script_template',
                default=utils.abspath('cloudpipe/bootscript.template'),
                help=_('Template for cloudpipe instance boot script')),
@@ -61,7 +64,7 @@ LOG = logging.getLogger(__name__)
 
 class CloudPipe(object):
     def __init__(self):
-        self.controller = cloud.CloudController()
+        self.compute_api = compute.API()
 
     def get_encoded_zip(self, project_id):
         # Make a payload.zip
@@ -100,22 +103,21 @@ class CloudPipe(object):
 
         return encoded
 
-    def launch_vpn_instance(self, project_id, user_id):
-        LOG.debug(_("Launching VPN for %s") % (project_id))
-        ctxt = context.RequestContext(user_id=user_id,
-                                      project_id=project_id)
-        key_name = self.setup_key_pair(ctxt)
-        group_name = self.setup_security_group(ctxt)
-
-        ec2_id = ec2utils.image_ec2_id(FLAGS.vpn_image_id)
-        reservation = self.controller.run_instances(ctxt,
-            user_data=self.get_encoded_zip(project_id),
-            max_count=1,
-            min_count=1,
-            instance_type='m1.tiny',
-            image_id=ec2_id,
-            key_name=key_name,
-            security_group=[group_name])
+    def launch_vpn_instance(self, context):
+        LOG.debug(_("Launching VPN for %s") % (context.project_id))
+        key_name = self.setup_key_pair(context)
+        group_name = self.setup_security_group(context)
+        instance_type = instance_types.get_instance_type_by_name(
+                FLAGS.vpn_instance_type)
+        instance_name = '%s%s' % (context.project_id, FLAGS.vpn_key_suffix)
+        user_data = self.get_encoded_zip(context.project_id)
+        return self.compute_api.create(context,
+                                       instance_type,
+                                       FLAGS.vpn_image_id,
+                                       display_name=instance_name,
+                                       user_data=user_data,
+                                       key_name=key_name,
+                                       security_group=[group_name])
 
     def setup_security_group(self, context):
         group_name = '%s%s' % (context.project_id, FLAGS.vpn_key_suffix)

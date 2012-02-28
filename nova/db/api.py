@@ -642,11 +642,6 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
-def instance_get_project_vpn(context, project_id):
-    """Get a vpn instance by project or return None."""
-    return IMPL.instance_get_project_vpn(context, project_id)
-
-
 def instance_get_all_hung_in_rebooting(context, reboot_window):
     """Get all instances stuck in a rebooting state."""
     return IMPL.instance_get_all_hung_in_rebooting(context, reboot_window)
@@ -871,11 +866,6 @@ def network_get_all_by_host(context, host):
 def network_get_index(context, network_id):
     """Get non-conflicting index for network."""
     return IMPL.network_get_index(context, network_id)
-
-
-def network_get_vpn_ip(context, network_id):
-    """Get non-conflicting index for network."""
-    return IMPL.network_get_vpn_ip(context, network_id)
 
 
 def network_set_cidr(context, network_id, cidr):
