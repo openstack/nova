@@ -3539,47 +3539,47 @@ def instance_type_destroy(context, name):
 
 
 @require_admin_context
-def zone_create(context, values):
-    zone = models.Zone()
-    zone.update(values)
-    zone.save()
-    return zone
+def cell_create(context, values):
+    cell = models.Cell()
+    cell.update(values)
+    cell.save()
+    return cell
 
 
-def _zone_get_by_id_query(context, zone_id, session=None):
-    return model_query(context, models.Zone, session=session).\
-                       filter_by(id=zone_id)
-
-
-@require_admin_context
-def zone_update(context, zone_id, values):
-    zone = zone_get(context, zone_id)
-    zone.update(values)
-    zone.save()
-    return zone
+def _cell_get_by_id_query(context, cell_id, session=None):
+    return model_query(context, models.Cell, session=session).\
+                       filter_by(id=cell_id)
 
 
 @require_admin_context
-def zone_delete(context, zone_id):
+def cell_update(context, cell_id, values):
+    cell = cell_get(context, cell_id)
+    cell.update(values)
+    cell.save()
+    return cell
+
+
+@require_admin_context
+def cell_delete(context, cell_id):
     session = get_session()
     with session.begin():
-        _zone_get_by_id_query(context, zone_id, session=session).\
+        _cell_get_by_id_query(context, cell_id, session=session).\
                 delete()
 
 
 @require_admin_context
-def zone_get(context, zone_id):
-    result = _zone_get_by_id_query(context, zone_id).first()
+def cell_get(context, cell_id):
+    result = _cell_get_by_id_query(context, cell_id).first()
 
     if not result:
-        raise exception.ZoneNotFound(zone_id=zone_id)
+        raise exception.CellNotFound(cell_id=cell_id)
 
     return result
 
 
 @require_admin_context
-def zone_get_all(context):
-    return model_query(context, models.Zone, read_deleted="no").all()
+def cell_get_all(context):
+    return model_query(context, models.Cell, read_deleted="no").all()
 
 
 ####################

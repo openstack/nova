@@ -748,8 +748,8 @@ class FlavorNotFound(NotFound):
     message = _("Flavor %(flavor_id)s could not be found.")
 
 
-class ZoneNotFound(NotFound):
-    message = _("Zone %(zone_id)s could not be found.")
+class CellNotFound(NotFound):
+    message = _("Cell %(cell_id)s could not be found.")
 
 
 class SchedulerHostFilterNotFound(NotFound):
@@ -1006,4 +1006,4 @@ class InstanceNotFound(NotFound):
 
 
 class InvalidInstanceIDMalformed(Invalid):
-        message = _("Invalid id: %(val) (expecting \"i-...\").")
+    message = _("Invalid id: %(val) (expecting \"i-...\").")

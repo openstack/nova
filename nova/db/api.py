@@ -1448,29 +1448,29 @@ def instance_type_destroy(context, name):
 ####################
 
 
-def zone_create(context, values):
-    """Create a new child Zone entry."""
-    return IMPL.zone_create(context, values)
+def cell_create(context, values):
+    """Create a new child Cell entry."""
+    return IMPL.cell_create(context, values)
 
 
-def zone_update(context, zone_id, values):
-    """Update a child Zone entry."""
-    return IMPL.zone_update(context, zone_id, values)
+def cell_update(context, cell_id, values):
+    """Update a child Cell entry."""
+    return IMPL.cell_update(context, cell_id, values)
 
 
-def zone_delete(context, zone_id):
-    """Delete a child Zone."""
-    return IMPL.zone_delete(context, zone_id)
+def cell_delete(context, cell_id):
+    """Delete a child Cell."""
+    return IMPL.cell_delete(context, cell_id)
 
 
-def zone_get(context, zone_id):
-    """Get a specific child Zone."""
-    return IMPL.zone_get(context, zone_id)
+def cell_get(context, cell_id):
+    """Get a specific child Cell."""
+    return IMPL.cell_get(context, cell_id)
 
 
-def zone_get_all(context):
-    """Get all child Zones."""
-    return IMPL.zone_get_all(context)
+def cell_get_all(context):
+    """Get all child Cells."""
+    return IMPL.cell_get_all(context)
 
 
 ####################
