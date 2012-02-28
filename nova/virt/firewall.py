@@ -440,3 +440,15 @@ class IptablesFirewallDriver(FirewallDriver):
             args += ['-j DROP']
             fw_rules += [' '.join(args)]
         return ipv4_rules, ipv6_rules
+
+
+class NoopFirewallDriver(object):
+    """Firewall driver which just provides No-op methods."""
+    def __init__(*args, **kwargs):
+        pass
+
+    def _noop(*args, **kwargs):
+        pass
+
+    def __getattr__(self, key):
+        return self._noop
