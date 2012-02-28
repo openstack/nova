@@ -31,9 +31,11 @@ import pyclbr
 import random
 import re
 import shlex
+import shutil
 import socket
 import struct
 import sys
+import tempfile
 import time
 import types
 import uuid
@@ -1543,3 +1545,15 @@ def temporary_chown(path, owner_uid=None):
     finally:
         if orig_uid != owner_uid:
             execute('chown', orig_uid, path, run_as_root=True)
+
+
+@contextlib.contextmanager
+def tempdir(**kwargs):
+    tmpdir = tempfile.mkdtemp(**kwargs)
+    try:
+        yield tmpdir
+    finally:
+        try:
+            shutil.rmtree(tmpdir)
+        except OSError, e:
+            LOG.debug(_('Could not remove tmpdir: %s'), str(e))

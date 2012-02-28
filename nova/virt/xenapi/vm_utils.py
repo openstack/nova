@@ -25,7 +25,6 @@ import json
 import os
 import pickle
 import re
-import tempfile
 import time
 import urllib
 import urlparse
@@ -1750,8 +1749,7 @@ def _mounted_processing(device, key, net, metadata):
     """Callback which runs with the image VDI attached"""
     # NB: Partition 1 hardcoded
     dev_path = utils.make_dev_path(device, partition=1)
-    tmpdir = tempfile.mkdtemp()
-    try:
+    with utils.tempdir() as tmpdir:
         # Mount only Linux filesystems, to avoid disturbing NTFS images
         err = _mount_filesystem(dev_path, tmpdir)
         if not err:
@@ -1770,9 +1768,6 @@ def _mounted_processing(device, key, net, metadata):
         else:
             LOG.info(_('Failed to mount filesystem (expected for '
                 'non-linux instances): %s') % err)
-    finally:
-        # remove temporary directory
-        os.rmdir(tmpdir)
 
 
 def _prepare_injectables(inst, networks_info):

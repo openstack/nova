@@ -175,6 +175,8 @@ def handle_flagfiles_managed(args):
              # Do stuff
         # Any temporary fils have been removed
     '''
+    # NOTE(johannes): Would be nice to use utils.tempdir(), but it
+    # causes an import loop
     tempdir = tempfile.mkdtemp(prefix='nova-conf-')
     try:
         yield handle_flagfiles(args, tempdir=tempdir)

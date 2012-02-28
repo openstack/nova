@@ -46,7 +46,6 @@ import multiprocessing
 import os
 import shutil
 import sys
-import tempfile
 import uuid
 
 from eventlet import greenthread
@@ -622,23 +621,21 @@ class LibvirtConnection(driver.ComputeDriver):
         disk_path = source.get('file')
 
         # Export the snapshot to a raw image
-        temp_dir = tempfile.mkdtemp()
-        try:
-            out_path = os.path.join(temp_dir, snapshot_name)
-            libvirt_utils.extract_snapshot(disk_path, source_format,
-                                           snapshot_name, out_path,
-                                           image_format)
-            # Upload that image to the image service
-            with libvirt_utils.file_open(out_path) as image_file:
-                image_service.update(context,
-                                     image_href,
-                                     metadata,
-                                     image_file)
+        with utils.tempdir() as tmpdir:
+            try:
+                out_path = os.path.join(tmpdir, snapshot_name)
+                libvirt_utils.extract_snapshot(disk_path, source_format,
+                                               snapshot_name, out_path,
+                                               image_format)
+                # Upload that image to the image service
+                with libvirt_utils.file_open(out_path) as image_file:
+                    image_service.update(context,
+                                         image_href,
+                                         metadata,
+                                         image_file)
 
-        finally:
-            # Clean up
-            shutil.rmtree(temp_dir)
-            snapshot_ptr.delete(0)
+            finally:
+                snapshot_ptr.delete(0)
 
     @exception.wrap_exception()
     def reboot(self, instance, network_info, reboot_type=None, xml=None):

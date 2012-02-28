@@ -27,9 +27,7 @@ from __future__ import absolute_import
 import base64
 import hashlib
 import os
-import shutil
 import string
-import tempfile
 
 import Crypto.Cipher.AES
 
@@ -127,36 +125,26 @@ def _generate_fingerprint(public_key_file):
 
 
 def generate_fingerprint(public_key):
-    tmpdir = tempfile.mkdtemp()
-    try:
-        pubfile = os.path.join(tmpdir, 'temp.pub')
-        with open(pubfile, 'w') as f:
-            f.write(public_key)
-        return _generate_fingerprint(pubfile)
-    except exception.ProcessExecutionError:
-        raise exception.InvalidKeypair()
-    finally:
+    with utils.tempdir() as tmpdir:
         try:
-            shutil.rmtree(tmpdir)
-        except IOError, e:
-            LOG.debug(_('Could not remove tmpdir: %s'), str(e))
+            pubfile = os.path.join(tmpdir, 'temp.pub')
+            with open(pubfile, 'w') as f:
+                f.write(public_key)
+            return _generate_fingerprint(pubfile)
+        except exception.ProcessExecutionError:
+            raise exception.InvalidKeypair()
 
 
 def generate_key_pair(bits=1024):
     # what is the magic 65537?
 
-    tmpdir = tempfile.mkdtemp()
-    keyfile = os.path.join(tmpdir, 'temp')
-    utils.execute('ssh-keygen', '-q', '-b', bits, '-N', '',
-                  '-t', 'rsa', '-f', keyfile)
-    fingerprint = _generate_fingerprint('%s.pub' % (keyfile))
-    private_key = open(keyfile).read()
-    public_key = open(keyfile + '.pub').read()
-
-    try:
-        shutil.rmtree(tmpdir)
-    except OSError, e:
-        LOG.debug(_('Could not remove tmpdir: %s'), str(e))
+    with utils.tempdir() as tmpdir:
+        keyfile = os.path.join(tmpdir, 'temp')
+        utils.execute('ssh-keygen', '-q', '-b', bits, '-N', '',
+                      '-t', 'rsa', '-f', keyfile)
+        fingerprint = _generate_fingerprint('%s.pub' % (keyfile))
+        private_key = open(keyfile).read()
+        public_key = open(keyfile + '.pub').read()
 
     return (private_key, public_key, fingerprint)
 
@@ -233,19 +221,15 @@ def _user_cert_subject(user_id, project_id):
 def generate_x509_cert(user_id, project_id, bits=1024):
     """Generate and sign a cert for user in project."""
     subject = _user_cert_subject(user_id, project_id)
-    tmpdir = tempfile.mkdtemp()
-    keyfile = os.path.abspath(os.path.join(tmpdir, 'temp.key'))
-    csrfile = os.path.join(tmpdir, 'temp.csr')
-    utils.execute('openssl', 'genrsa', '-out', keyfile, str(bits))
-    utils.execute('openssl', 'req', '-new', '-key', keyfile, '-out', csrfile,
-                  '-batch', '-subj', subject)
-    private_key = open(keyfile).read()
-    csr = open(csrfile).read()
 
-    try:
-        shutil.rmtree(tmpdir)
-    except OSError, e:
-        LOG.debug(_('Could not remove tmpdir: %s'), str(e))
+    with utils.tempdir() as tmpdir:
+        keyfile = os.path.abspath(os.path.join(tmpdir, 'temp.key'))
+        csrfile = os.path.join(tmpdir, 'temp.csr')
+        utils.execute('openssl', 'genrsa', '-out', keyfile, str(bits))
+        utils.execute('openssl', 'req', '-new', '-key', keyfile, '-out',
+                      csrfile, '-batch', '-subj', subject)
+        private_key = open(keyfile).read()
+        csr = open(csrfile).read()
 
     (serial, signed_csr) = sign_csr(csr, project_id)
     fname = os.path.join(ca_folder(project_id), 'newcerts/%s.pem' % serial)
@@ -298,26 +282,30 @@ def sign_csr(csr_text, project_id=None):
 
 
 def _sign_csr(csr_text, ca_folder):
-    tmpfolder = tempfile.mkdtemp()
-    inbound = os.path.join(tmpfolder, 'inbound.csr')
-    outbound = os.path.join(tmpfolder, 'outbound.csr')
-    csrfile = open(inbound, 'w')
-    csrfile.write(csr_text)
-    csrfile.close()
-    LOG.debug(_('Flags path: %s'), ca_folder)
-    start = os.getcwd()
-    # Change working dir to CA
-    if not os.path.exists(ca_folder):
-        os.makedirs(ca_folder)
-    os.chdir(ca_folder)
-    utils.execute('openssl', 'ca', '-batch', '-out', outbound, '-config',
-                  './openssl.cnf', '-infiles', inbound)
-    out, _err = utils.execute('openssl', 'x509', '-in', outbound,
-                              '-serial', '-noout')
-    serial = string.strip(out.rpartition('=')[2])
-    os.chdir(start)
-    with open(outbound, 'r') as crtfile:
-        return (serial, crtfile.read())
+    with utils.tempdir() as tmpdir:
+        inbound = os.path.join(tmpdir, 'inbound.csr')
+        outbound = os.path.join(tmpdir, 'outbound.csr')
+
+        with open(inbound, 'w') as csrfile:
+            csrfile.write(csr_text)
+
+        LOG.debug(_('Flags path: %s'), ca_folder)
+        start = os.getcwd()
+
+        # Change working dir to CA
+        if not os.path.exists(ca_folder):
+            os.makedirs(ca_folder)
+
+        os.chdir(ca_folder)
+        utils.execute('openssl', 'ca', '-batch', '-out', outbound, '-config',
+                      './openssl.cnf', '-infiles', inbound)
+        out, _err = utils.execute('openssl', 'x509', '-in', outbound,
+                                  '-serial', '-noout')
+        serial = string.strip(out.rpartition('=')[2])
+        os.chdir(start)
+
+        with open(outbound, 'r') as crtfile:
+            return (serial, crtfile.read())
 
 
 def _build_cipher(key, iv):

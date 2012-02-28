@@ -17,12 +17,11 @@
 #    under the License.
 
 
+import contextlib
 import cStringIO
 import hashlib
 import logging
 import os
-import shutil
-import tempfile
 import time
 
 from nova import test
@@ -58,9 +57,8 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.assertEquals(csum, None)
 
     def test_read_stored_checksum(self):
-        try:
-            dirname = tempfile.mkdtemp()
-            fname = os.path.join(dirname, 'aaa')
+        with utils.tempdir() as tmpdir:
+            fname = os.path.join(tmpdir, 'aaa')
 
             csum_input = 'fdghkfhkgjjksfdgjksjkghsdf'
             f = open('%s.sha1' % fname, 'w')
@@ -70,9 +68,6 @@ class ImageCacheManagerTestCase(test.TestCase):
             csum_output = imagecache.read_stored_checksum(fname)
 
             self.assertEquals(csum_input, csum_output)
-
-        finally:
-            shutil.rmtree(dirname)
 
     def test_list_base_images(self):
         listing = ['00000001',
@@ -281,13 +276,17 @@ class ImageCacheManagerTestCase(test.TestCase):
                                 (base_file2, True, False),
                                 (base_file3, False, True)])
 
+    @contextlib.contextmanager
     def _intercept_log_messages(self):
-        mylog = log.getLogger()
-        stream = cStringIO.StringIO()
-        handler = logging.StreamHandler(stream)
-        handler.setFormatter(log.LegacyNovaFormatter())
-        mylog.logger.addHandler(handler)
-        return mylog, handler, stream
+        try:
+            mylog = log.getLogger()
+            stream = cStringIO.StringIO()
+            handler = logging.StreamHandler(stream)
+            handler.setFormatter(log.LegacyNovaFormatter())
+            mylog.logger.addHandler(handler)
+            yield stream
+        finally:
+            mylog.logger.removeHandler(handler)
 
     def test_verify_checksum(self):
         testdata = ('OpenStack Software delivers a massively scalable cloud '
@@ -295,74 +294,69 @@ class ImageCacheManagerTestCase(test.TestCase):
         img = {'container_format': 'ami', 'id': '42'}
 
         self.flags(checksum_base_images=True)
-        mylog, handler, stream = self._intercept_log_messages()
 
-        try:
-            dirname = tempfile.mkdtemp()
-            fname = os.path.join(dirname, 'aaa')
+        with self._intercept_log_messages() as stream:
+            with utils.tempdir() as tmpdir:
+                fname = os.path.join(tmpdir, 'aaa')
 
-            f = open(fname, 'w')
-            f.write(testdata)
-            f.close()
+                f = open(fname, 'w')
+                f.write(testdata)
+                f.close()
 
-            # Checksum is valid
-            f = open('%s.sha1' % fname, 'w')
-            csum = hashlib.sha1()
-            csum.update(testdata)
-            f.write(csum.hexdigest())
-            f.close()
+                # Checksum is valid
+                f = open('%s.sha1' % fname, 'w')
+                csum = hashlib.sha1()
+                csum.update(testdata)
+                f.write(csum.hexdigest())
+                f.close()
 
-            image_cache_manager = imagecache.ImageCacheManager()
-            res = image_cache_manager._verify_checksum(img, fname)
-            self.assertTrue(res)
+                image_cache_manager = imagecache.ImageCacheManager()
+                res = image_cache_manager._verify_checksum(img, fname)
+                self.assertTrue(res)
 
-            # Checksum is invalid
-            f = open('%s.sha1' % fname, 'w')
-            f.write('banana')
-            f.close()
+                # Checksum is invalid
+                f = open('%s.sha1' % fname, 'w')
+                f.write('banana')
+                f.close()
 
-            image_cache_manager = imagecache.ImageCacheManager()
-            res = image_cache_manager._verify_checksum(img, fname)
-            self.assertFalse(res)
-            self.assertNotEqual(stream.getvalue().find('image verification '
-                                                       'failed'), -1)
+                image_cache_manager = imagecache.ImageCacheManager()
+                res = image_cache_manager._verify_checksum(img, fname)
+                self.assertFalse(res)
+                log = stream.getvalue()
+                self.assertNotEqual(log.find('image verification failed'), -1)
 
-            # Checksum file missing
-            os.remove('%s.sha1' % fname)
-            image_cache_manager = imagecache.ImageCacheManager()
-            res = image_cache_manager._verify_checksum(img, fname)
-            self.assertEquals(res, None)
+                # Checksum file missing
+                os.remove('%s.sha1' % fname)
+                image_cache_manager = imagecache.ImageCacheManager()
+                res = image_cache_manager._verify_checksum(img, fname)
+                self.assertEquals(res, None)
 
-            # Checksum requests for a file with no checksum now have the
-            # side effect of creating the checksum
-            self.assertTrue(os.path.exists('%s.sha1' % fname))
+                # Checksum requests for a file with no checksum now have the
+                # side effect of creating the checksum
+                self.assertTrue(os.path.exists('%s.sha1' % fname))
 
-        finally:
-            shutil.rmtree(dirname)
-            mylog.logger.removeHandler(handler)
-
-    def _make_base_file(checksum=True):
+    @contextlib.contextmanager
+    def _make_base_file(self, checksum=True):
         """Make a base file for testing."""
 
-        dirname = tempfile.mkdtemp()
-        fname = os.path.join(dirname, 'aaa')
+        with utils.tempdir() as tmpdir:
+            fname = os.path.join(tmpdir, 'aaa')
 
-        base_file = open(fname, 'w')
-        base_file.write('data')
-        base_file.close()
-        base_file = open(fname, 'r')
+            base_file = open(fname, 'w')
+            base_file.write('data')
+            base_file.close()
+            base_file = open(fname, 'r')
 
-        if checksum:
-            checksum_file = open('%s.sha1' % fname, 'w')
-            checksum_file.write(utils.hash_file(base_file))
-            checksum_file.close()
+            if checksum:
+                checksum_file = open('%s.sha1' % fname, 'w')
+                checksum_file.write(utils.hash_file(base_file))
+                checksum_file.close()
 
-        base_file.close()
-        return dirname, fname
+            base_file.close()
+            yield fname
 
     def test_remove_base_file(self):
-        dirname, fname = self._make_base_file()
-        try:
+        with self._make_base_file() as fname:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager._remove_base_file(fname)
 
@@ -377,12 +371,8 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertFalse(os.path.exists(fname))
             self.assertFalse(os.path.exists('%s.sha1' % fname))
 
-        finally:
-            shutil.rmtree(dirname)
-
     def test_remove_base_file_original(self):
-        dirname, fname = self._make_base_file()
-        try:
+        with self._make_base_file() as fname:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.originals = [fname]
             image_cache_manager._remove_base_file(fname)
@@ -405,51 +395,38 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertFalse(os.path.exists(fname))
             self.assertFalse(os.path.exists('%s.sha1' % fname))
 
-        finally:
-            shutil.rmtree(dirname)
-
     def test_remove_base_file_dne(self):
         # This test is solely to execute the "does not exist" code path. We
         # don't expect the method being tested to do anything in this case.
-        dirname = tempfile.mkdtemp()
-        try:
-            fname = os.path.join(dirname, 'aaa')
+        with utils.tempdir() as tmpdir:
+            fname = os.path.join(tmpdir, 'aaa')
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager._remove_base_file(fname)
-
-        finally:
-            shutil.rmtree(dirname)
 
     def test_remove_base_file_oserror(self):
-        dirname = tempfile.mkdtemp()
-        fname = os.path.join(dirname, 'aaa')
-        mylog, handler, stream = self._intercept_log_messages()
+        with self._intercept_log_messages() as stream:
+            with utils.tempdir() as tmpdir:
+                fname = os.path.join(tmpdir, 'aaa')
 
-        try:
-            os.mkdir(fname)
-            os.utime(fname, (-1, time.time() - 3601))
+                os.mkdir(fname)
+                os.utime(fname, (-1, time.time() - 3601))
 
-            # This will raise an OSError because of file permissions
-            image_cache_manager = imagecache.ImageCacheManager()
-            image_cache_manager._remove_base_file(fname)
+                # This will raise an OSError because of file permissions
+                image_cache_manager = imagecache.ImageCacheManager()
+                image_cache_manager._remove_base_file(fname)
 
-            self.assertTrue(os.path.exists(fname))
-            self.assertNotEqual(stream.getvalue().find('Failed to remove'),
-                                -1)
-
-        finally:
-            shutil.rmtree(dirname)
-            mylog.logger.removeHandler(handler)
+                self.assertTrue(os.path.exists(fname))
+                self.assertNotEqual(stream.getvalue().find('Failed to remove'),
+                                    -1)
 
     def test_handle_base_image_unused(self):
         img = {'container_format': 'ami',
                'id': '123',
                'uuid': '1234-4567-2378'}
 
-        dirname, fname = self._make_base_file()
-        os.utime(fname, (-1, time.time() - 3601))
+        with self._make_base_file() as fname:
+            os.utime(fname, (-1, time.time() - 3601))
 
-        try:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.unexplained_images = [fname]
             image_cache_manager._handle_base_image(img, fname)
@@ -459,18 +436,14 @@ class ImageCacheManagerTestCase(test.TestCase):
                               [fname])
             self.assertEquals(image_cache_manager.corrupt_base_files, [])
 
-        finally:
-            shutil.rmtree(dirname)
-
     def test_handle_base_image_used(self):
         img = {'container_format': 'ami',
                'id': '123',
                'uuid': '1234-4567-2378'}
 
-        dirname, fname = self._make_base_file()
-        os.utime(fname, (-1, time.time() - 3601))
+        with self._make_base_file() as fname:
+            os.utime(fname, (-1, time.time() - 3601))
 
-        try:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.unexplained_images = [fname]
             image_cache_manager.used_images = {'123': (1, 0, ['banana-42'])}
@@ -480,18 +453,14 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertEquals(image_cache_manager.removable_base_files, [])
             self.assertEquals(image_cache_manager.corrupt_base_files, [])
 
-        finally:
-            shutil.rmtree(dirname)
-
     def test_handle_base_image_used_remotely(self):
         img = {'container_format': 'ami',
                'id': '123',
                'uuid': '1234-4567-2378'}
 
-        dirname, fname = self._make_base_file()
-        os.utime(fname, (-1, time.time() - 3601))
+        with self._make_base_file() as fname:
+            os.utime(fname, (-1, time.time() - 3601))
 
-        try:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.used_images = {'123': (0, 1, ['banana-42'])}
             image_cache_manager._handle_base_image(img, None)
@@ -500,9 +469,6 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertEquals(image_cache_manager.removable_base_files, [])
             self.assertEquals(image_cache_manager.corrupt_base_files, [])
 
-        finally:
-            shutil.rmtree(dirname)
-
     def test_handle_base_image_absent(self):
         """Ensure we warn for use of a missing base image."""
 
@@ -510,9 +476,7 @@ class ImageCacheManagerTestCase(test.TestCase):
                'id': '123',
                'uuid': '1234-4567-2378'}
 
-        mylog, handler, stream = self._intercept_log_messages()
-
-        try:
+        with self._intercept_log_messages() as stream:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.used_images = {'123': (1, 0, ['banana-42'])}
             image_cache_manager._handle_base_image(img, None)
@@ -523,18 +487,14 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertNotEqual(stream.getvalue().find('an absent base file'),
                                 -1)
 
-        finally:
-            mylog.logger.removeHandler(handler)
-
     def test_handle_base_image_used_missing(self):
         img = {'container_format': 'ami',
                'id': '123',
                'uuid': '1234-4567-2378'}
 
-        dirname = tempfile.mkdtemp()
-        fname = os.path.join(dirname, 'aaa')
+        with utils.tempdir() as tmpdir:
+            fname = os.path.join(tmpdir, 'aaa')
 
-        try:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.unexplained_images = [fname]
             image_cache_manager.used_images = {'123': (1, 0, ['banana-42'])}
@@ -544,17 +504,12 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertEquals(image_cache_manager.removable_base_files, [])
             self.assertEquals(image_cache_manager.corrupt_base_files, [])
 
-        finally:
-            shutil.rmtree(dirname)
-
     def test_handle_base_image_checksum_fails(self):
         img = {'container_format': 'ami',
                'id': '123',
                'uuid': '1234-4567-2378'}
 
-        dirname, fname = self._make_base_file()
-
-        try:
+        with self._make_base_file() as fname:
             f = open(fname, 'w')
             f.write('banana')
             f.close()
@@ -568,9 +523,6 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertEquals(image_cache_manager.removable_base_files, [])
             self.assertEquals(image_cache_manager.corrupt_base_files,
                               [fname])
-
-        finally:
-            shutil.rmtree(dirname)
 
     def test_verify_base_images(self):
         self.flags(instances_path='/instance_path')

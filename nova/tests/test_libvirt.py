@@ -1050,26 +1050,25 @@ class LibvirtConnTestCase(test.TestCase):
     def test_pre_block_migration_works_correctly(self):
         """Confirms pre_block_migration works correctly."""
         # Replace instances_path since this testcase creates tmpfile
-        tmpdir = tempfile.mkdtemp()
-        self.flags(instances_path=tmpdir)
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
 
-        # Test data
-        instance_ref = db.instance_create(self.context, self.test_instance)
-        dummyjson = ('[{"path": "%s/disk", "disk_size": "10737418240",'
-                     ' "type": "raw", "backing_file": ""}]')
+            # Test data
+            instance_ref = db.instance_create(self.context, self.test_instance)
+            dummyjson = ('[{"path": "%s/disk", "disk_size": "10737418240",'
+                         ' "type": "raw", "backing_file": ""}]')
 
-        # Preparing mocks
-        # qemu-img should be mockd since test environment might not have
-        # large disk space.
-        self.mox.ReplayAll()
-        conn = connection.LibvirtConnection(False)
-        conn.pre_block_migration(self.context, instance_ref,
-                                 dummyjson % tmpdir)
+            # Preparing mocks
+            # qemu-img should be mockd since test environment might not have
+            # large disk space.
+            self.mox.ReplayAll()
+            conn = connection.LibvirtConnection(False)
+            conn.pre_block_migration(self.context, instance_ref,
+                                     dummyjson % tmpdir)
 
-        self.assertTrue(os.path.exists('%s/%s/' %
-                                       (tmpdir, instance_ref.name)))
+            self.assertTrue(os.path.exists('%s/%s/' %
+                                           (tmpdir, instance_ref.name)))
 
-        shutil.rmtree(tmpdir)
         db.instance_destroy(self.context, instance_ref['id'])
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
@@ -1926,13 +1925,10 @@ disk size: 4.4M''', ''))
         libvirt_utils.mkfs('swap', '/my/swap/block/dev')
 
     def test_ensure_tree(self):
-        tmpdir = tempfile.mkdtemp()
-        try:
+        with utils.tempdir() as tmpdir:
             testdir = '%s/foo/bar/baz' % (tmpdir,)
             libvirt_utils.ensure_tree(testdir)
             self.assertTrue(os.path.isdir(testdir))
-        finally:
-            shutil.rmtree(tmpdir)
 
     def test_write_to_file(self):
         dst_fd, dst_path = tempfile.mkstemp()
