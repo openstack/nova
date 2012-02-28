@@ -328,7 +328,7 @@ class AuthManager(object):
             LOG.debug(_('user.secret: %s'), user.secret)
             LOG.debug(_('expected_signature: %s'), expected_signature)
             LOG.debug(_('signature: %s'), signature)
-            if signature != expected_signature:
+            if not utils.strcmp_const_time(signature, expected_signature):
                 LOG.audit(_("Invalid signature for user %s"), user.name)
                 raise exception.InvalidSignature(signature=signature,
                                                  user=user)
@@ -340,7 +340,7 @@ class AuthManager(object):
             LOG.debug(_('user.secret: %s'), user.secret)
             LOG.debug(_('expected_signature: %s'), expected_signature)
             LOG.debug(_('signature: %s'), signature)
-            if signature != expected_signature:
+            if not utils.strcmp_const_time(signature, expected_signature):
                 (addr_str, port_str) = utils.parse_server_string(server_string)
                 # If the given server_string contains port num, try without it.
                 if port_str != '':
@@ -349,7 +349,7 @@ class AuthManager(object):
                                                        addr_str, path)
                     LOG.debug(_('host_only_signature: %s'),
                               host_only_signature)
-                    if signature == host_only_signature:
+                    if utils.strcmp_const_time(signature, host_only_signature):
                         return (user, project)
                 LOG.audit(_("Invalid signature for user %s"), user.name)
                 raise exception.InvalidSignature(signature=signature,

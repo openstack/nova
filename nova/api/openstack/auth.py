@@ -242,7 +242,7 @@ class AuthMiddleware(base_wsgi.Middleware):
             LOG.warn(_("User not found with provided API key."))
             user = None
 
-        if user and user.name == username:
+        if user and utils.strcmp_const_time(user.name, username):
             token_hash = hashlib.sha1('%s%s%f' % (username, key,
                 time.time())).hexdigest()
             token_dict = {}
