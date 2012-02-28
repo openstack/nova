@@ -106,7 +106,7 @@ class CloudpipeTest(test.TestCase):
                                     'state': 'running',
                                     'instance_id': 7777,
                                     'created_at': '1981-10-20T00:00:00Z'}]}
-        self.assertDictEqual(res_dict, response)
+        self.assertDictMatch(res_dict, response)
 
     def test_cloudpipe_create(self):
         def launch_vpn_instance(context):
