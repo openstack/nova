@@ -18,7 +18,7 @@
 #    under the License.
 
 #
-# XenAPI plugin for reading/writing information to xenstore
+# XenAPI plugin for host operations
 #
 
 try:
@@ -122,12 +122,6 @@ def _resume_compute(session, compute_ref, compute_uuid):
                                     % (DEFAULT_SLEEP * (DEFAULT_TRIES + 1)))
 
 
-def _get_host_uuid():
-    cmd = "xe host-list | grep uuid"
-    resp = _run_command(cmd)
-    return resp.split(":")[-1].strip()
-
-
 @jsonify
 def set_host_enabled(self, arg_dict):
     """Sets this host's ability to accept new instances.
@@ -137,17 +131,18 @@ def set_host_enabled(self, arg_dict):
     if enabled is None:
         raise pluginlib.PluginError(
                 _("Missing 'enabled' argument to set_host_enabled"))
+
+    host_uuid = arg_dict['host_uuid']
     if enabled == "true":
-        result = _run_command("xe host-enable")
+        result = _run_command("xe host-enable uuid=%s" % host_uuid)
     elif enabled == "false":
-        result = _run_command("xe host-disable")
+        result = _run_command("xe host-disable uuid=%s" % host_uuid)
     else:
         raise pluginlib.PluginError(_("Illegal enabled status: %s") % enabled)
     # Should be empty string
     if result:
         raise pluginlib.PluginError(result)
     # Return the current enabled status
-    host_uuid = _get_host_uuid()
     cmd = "xe host-param-list uuid=%s | grep enabled" % host_uuid
     resp = _run_command(cmd)
     # Response should be in the format: "enabled ( RO): true"
@@ -243,20 +238,21 @@ def iptables_config(session, args):
         raise pluginlib.PluginError(_("Invalid iptables command"))
 
 
-def _power_action(action):
-    host_uuid = _get_host_uuid()
+def _power_action(action, arg_dict):
     # Host must be disabled first
-    result = _run_command("xe host-disable")
+    host_uuid = arg_dict['host_uuid']
+    result = _run_command("xe host-disable uuid=%s" % host_uuid)
     if result:
         raise pluginlib.PluginError(result)
     # All running VMs must be shutdown
-    result = _run_command("xe vm-shutdown --multiple power-state=running")
+    result = _run_command("xe vm-shutdown --multiple "
+                          "resident-on=%s" % host_uuid)
     if result:
         raise pluginlib.PluginError(result)
-    cmds = {"reboot": "xe host-reboot",
-            "startup": "xe host-power-on",
-            "shutdown": "xe host-shutdown"}
-    result = _run_command(cmds[action])
+    cmds = {"reboot": "xe host-reboot uuid=%s",
+            "startup": "xe host-power-on uuid=%s",
+            "shutdown": "xe host-shutdown uuid=%s"}
+    result = _run_command(cmds[action] % host_uuid)
     # Should be empty string
     if result:
         raise pluginlib.PluginError(result)
@@ -266,13 +262,13 @@ def _power_action(action):
 @jsonify
 def host_reboot(self, arg_dict):
     """Reboots the host."""
-    return _power_action("reboot")
+    return _power_action("reboot", arg_dict)
 
 
 @jsonify
 def host_shutdown(self, arg_dict):
     """Reboots the host."""
-    return _power_action("shutdown")
+    return _power_action("shutdown", arg_dict)
 
 
 @jsonify
@@ -280,7 +276,7 @@ def host_start(self, arg_dict):
     """Starts the host. Currently not feasible, since the host
     runs on the same machine as Xen.
     """
-    return _power_action("startup")
+    return _power_action("startup", arg_dict)
 
 
 @jsonify
@@ -316,9 +312,8 @@ def host_data(self, arg_dict):
     """Runs the commands on the xenstore host to return the current status
     information.
     """
-    host_uuid = arg_dict.get('host_uuid', _get_host_uuid())
-    cmd = "xe host-param-list uuid=%s" % host_uuid
-    resp = _run_command(cmd)
+    host_uuid = arg_dict['host_uuid']
+    resp = _run_command("xe host-param-list uuid=%s" % host_uuid)
     parsed_data = parse_response(resp)
     # We have the raw dict of values. Extract those that we need,
     # and convert the data types as needed.
