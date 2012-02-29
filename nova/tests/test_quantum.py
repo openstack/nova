@@ -446,6 +446,23 @@ class QuantumManagerTestCase(QuantumNovaTestCase):
         self.assertTrue(net is not None)
         self.assertEquals(net['uuid'], net_id)
 
+    def test_create_net_external_uuid_and_host_is_set(self):
+        """Make sure network['host'] is set when creating a network via the
+           network manager"""
+        project_id = "foo_project"
+        ctx = context.RequestContext('user1', project_id)
+        net_id = self.net_man.q_conn.create_network(project_id, 'net2')
+        self.net_man.create_networks(
+            ctx, label='achtungbaby2', cidr="9.9.8.0/24", multi_host=False,
+            num_networks=1, network_size=256, cidr_v6=None,
+            gateway="9.9.8.1", gateway_v6=None, bridge=None,
+            bridge_interface=None, dns1="8.8.8.8", project_id=project_id,
+            priority=8, uuid=net_id)
+        net = db.network_get_by_uuid(ctx.elevated(), net_id)
+        self.assertTrue(net is not None)
+        self.assertEquals(net['uuid'], net_id)
+        self.assertTrue(net['host'] != None)
+
 
 class QuantumNovaMACGenerationTestCase(QuantumNovaTestCase):
     def test_local_mac_address_creation(self):

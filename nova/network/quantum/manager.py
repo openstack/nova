@@ -101,9 +101,20 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                 LOG.debug("Initializing NAT: %s (cidr: %s, gw: %s)" % (
                     net['label'], net['cidr'], net['gateway']))
                 cidrs.append(net['cidr'])
+            self._update_network_host(context.get_admin_context(),
+                                      net['uuid'])
         # .. and for each network
         for c in cidrs:
             self.l3driver.initialize_network(c)
+
+    def _update_network_host(self, context, net_uuid):
+        """Set the host column in the networks table: note that this won't
+           work with multi-host but QuantumManager doesn't support that
+           anyways.  The floating IPs mixin required network['host'] to be
+           set."""
+        entry = db.network_get_by_uuid(context.elevated(), net_uuid)
+        entry['host'] = self.host
+        db.network_update(context.elevated(), entry['id'], entry)
 
     def _get_nova_id(self, instance=None):
         # When creating the network we need to pass in an identifier for
@@ -202,9 +213,11 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         ipam_tenant_id = kwargs.get("project_id", None)
         priority = kwargs.get("priority", 0)
         # NOTE(tr3buchet): this call creates a nova network in the nova db
-        self.ipam.create_subnet(context, label, ipam_tenant_id, quantum_net_id,
-            priority, cidr, gateway, gateway_v6,
-            cidr_v6, dns1, dns2)
+        self.ipam.create_subnet(context, label, ipam_tenant_id,
+                                quantum_net_id, priority, cidr,
+                                gateway, gateway_v6, cidr_v6, dns1, dns2)
+
+        self._update_network_host(context, quantum_net_id)
 
         # Initialize forwarding
         self.l3driver.initialize_network(cidr)
