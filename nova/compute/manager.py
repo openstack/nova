@@ -401,7 +401,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.info(_("Instance %(instance_uuid)s did not exist in the "
                          "DB, but I will shut it down anyway using a special "
                          "context") % locals())
-                ctxt = nova.context.get_admin_context(True)
+                ctxt = nova.context.get_admin_context('yes')
                 self.terminate_instance(ctxt, instance_uuid)
         except Exception as ex:
             LOG.info(_("exception terminating the instance "

@@ -48,6 +48,10 @@ class RequestContext(object):
         :param overwrite: Set to False to ensure that the greenthread local
             copy of the index is not overwritten.
         """
+        if read_deleted not in ('no', 'yes', 'only'):
+            raise ValueError(_("read_deleted can only be one of 'no', "
+                               "'yes' or 'only', not %r") % read_deleted)
+
         self.user_id = user_id
         self.project_id = project_id
         self.roles = roles or []
