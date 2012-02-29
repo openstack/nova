@@ -558,6 +558,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             db.virtual_interface_delete(admin_context, vif['id'])
 
     def deallocate_port(self, interface_id, net_id, q_tenant_id, instance_id):
+        port_id = None
         try:
             port_id = self.q_conn.get_port_by_attachment(q_tenant_id,
                                                          net_id, interface_id)
@@ -574,10 +575,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                                                    net_id, port_id)
         except Exception:
             # except anything so the rest of deallocate can succeed
-
-            msg = _('port deallocation failed for instance: '
-                    '|%(instance_id)s|, port_id: |%(port_id)s|')
-            LOG.critical(msg % locals())
+            LOG.exception(_('port deallocation failed for instance: '
+                    '|%(instance_id)s|, port_id: |%(port_id)s|') % locals())
 
     def deallocate_ip_address(self, context, net_id,
                               project_id, vif_ref, instance_id):
@@ -595,8 +594,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             # except anything so the rest of deallocate can succeed
             vif_uuid = vif_ref['uuid']
             msg = _('ipam deallocation failed for instance: '
-                    '|%(instance_id)s|, vif_uuid: |%(vif_uuid)s|')
-            LOG.critical(msg % locals())
+                    '|%(instance_id)s|, vif_uuid: |%(vif_uuid)s|') % locals()
+            LOG.exception(msg)
         return ipam_tenant_id
 
     # TODO(bgh): At some point we should consider merging enable_dhcp() and
