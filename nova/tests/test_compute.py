@@ -889,7 +889,7 @@ class ComputeTestCase(BaseTestCase):
         test_notifier.NOTIFICATIONS = []
         self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 5)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.exists')
@@ -898,6 +898,11 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.delete.start')
         msg1 = test_notifier.NOTIFICATIONS[2]
+        self.assertEquals(msg1['event_type'],
+                                            'compute.instance.shutdown.start')
+        msg1 = test_notifier.NOTIFICATIONS[3]
+        self.assertEquals(msg1['event_type'], 'compute.instance.shutdown.end')
+        msg1 = test_notifier.NOTIFICATIONS[4]
         self.assertEquals(msg1['event_type'], 'compute.instance.delete.end')
         payload = msg['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
