@@ -2244,7 +2244,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             db_power_state = db_instance['power_state']
             try:
                 vm_instance = self.driver.get_info(db_instance)
-                vm_power_state = vm_instance.state
+                vm_power_state = vm_instance['state']
             except exception.InstanceNotFound:
                 LOG.warn(_("Instance found in database but not known by "
                            "hypervisor. Setting power state to NOSTATE"),
