@@ -84,6 +84,7 @@ class DistributedScheduler(driver.Scheduler):
                 break
             weighted_host = weighted_hosts.pop(0)
 
+            request_spec['instance_properties']['launch_index'] = num
             instance = self._provision_resource(elevated, weighted_host,
                                                 request_spec, kwargs)
 
