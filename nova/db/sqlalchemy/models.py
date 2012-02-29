@@ -1024,6 +1024,7 @@ def register_models():
               AggregateMetadata,
               AuthToken,
               Certificate,
+              Cell,
               Console,
               ConsolePool,
               FixedIp,
@@ -1051,7 +1052,6 @@ def register_models():
               VolumeMetadata,
               VolumeTypeExtraSpecs,
               VolumeTypes,
-              Zone,
               )
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
