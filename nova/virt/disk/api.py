@@ -373,10 +373,10 @@ def _inject_admin_password_into_fs(admin_passwd, fs, execute=None):
     _set_passwd(admin_user, admin_passwd, tmp_passwd, tmp_shadow)
     utils.execute('cp', tmp_passwd, os.path.join(fs, 'etc', 'passwd'),
                   run_as_root=True)
-    utils.execute('rm', tmp_passwd, run_as_root=True)
+    os.unlink(tmp_passwd)
     utils.execute('cp', tmp_shadow, os.path.join(fs, 'etc', 'shadow'),
                   run_as_root=True)
-    utils.execute('rm', tmp_shadow, run_as_root=True)
+    os.unlink(tmp_shadow)
 
 
 def _set_passwd(username, admin_passwd, passwd_file, shadow_file):

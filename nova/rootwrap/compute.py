@@ -73,6 +73,9 @@ filterlist = [
     # nova/virt/disk/api.py: 'chmod', 755, netdir
     filters.CommandFilter("/bin/chmod", "root"),
 
+    # nova/virt/disk/api.py: 'cp', os.path.join(fs...
+    filters.CommandFilter("/bin/cp", "root"),
+
     # nova/virt/libvirt/vif.py: 'ip', 'tuntap', 'add', dev, 'mode', 'tap'
     # nova/virt/libvirt/vif.py: 'ip', 'link', 'set', dev, 'up'
     # nova/virt/libvirt/vif.py: 'ip', 'link', 'delete', dev
@@ -101,6 +104,9 @@ filterlist = [
     # nova/virt/libvirt/vif.py: 'ovs-vsctl', 'del-port', ...
     # nova/network/linux_net.py: 'ovs-vsctl', ....
     filters.CommandFilter("/usr/bin/ovs-vsctl", "root"),
+
+    # nova/network/linux_net.py: 'ovs-ofctl', ....
+    filters.CommandFilter("/usr/bin/ovs-ofctl", "root"),
 
     # nova/virt/libvirt/connection.py: 'dd', "if=%s" % virsh_output, ...
     filters.CommandFilter("/bin/dd", "root"),
@@ -168,6 +174,9 @@ filterlist = [
     # nova/virt/libvirt/utils.py: 'mkswap'
     # nova/virt/xenapi/vm_utils.py: 'mkswap'
     filters.CommandFilter("/sbin/mkswap", "root"),
+
+    # nova/virt/xenapi/vm_utils.py: 'mkfs'
+    filters.CommandFilter("/sbin/mkfs", "root"),
 
     # nova/virt/libvirt/connection.py:
     filters.ReadFileFilter("/etc/iscsi/initiatorname.iscsi"),

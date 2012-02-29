@@ -164,6 +164,8 @@ def fetchfile(url, target):
 def execute(*cmd, **kwargs):
     """
     Helper method to execute command with optional retry.
+    If you add a run_as_root=True command, don't forget to add the
+    corresponding filter to nova.rootwrap !
 
     :cmd                Passed to subprocess.Popen.
     :process_input      Send to opened process.
