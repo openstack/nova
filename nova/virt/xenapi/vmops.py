@@ -467,11 +467,11 @@ class VMOps(object):
 
         # Set VCPU weight
         inst_type = db.instance_type_get(ctx, instance.instance_type_id)
-        vcpu_weight = inst_type["vcpu_weight"]
-        if str(vcpu_weight) != "None":
+        vcpu_weight = inst_type['vcpu_weight']
+        if vcpu_weight is not None:
             LOG.debug(_("Setting VCPU weight"))
             self._session.call_xenapi("VM.add_to_VCPUs_params", vm_ref,
-                    "weight", vcpu_weight)
+                    "weight", str(vcpu_weight))
 
     def _spawn(self, instance, vm_ref):
         """Spawn a new instance."""
