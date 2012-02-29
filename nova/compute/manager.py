@@ -111,9 +111,6 @@ compute_opts = [
                help="Action to take if a running deleted instance is detected."
                     "Valid options are 'noop', 'log' and 'reap'. "
                     "Set to 'noop' to disable."),
-    cfg.BoolOpt("use_image_cache_manager",
-                default=False,
-                help="Whether to manage images in the local cache."),
     cfg.IntOpt("image_cache_manager_interval",
                default=3600,
                help="Number of periodic scheduler ticks to wait between "
@@ -2438,7 +2435,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _run_image_cache_manager_pass(self, context):
         """Run a single pass of the image cache manager."""
 
-        if not FLAGS.use_image_cache_manager:
+        if FLAGS.image_cache_manager_interval == 0:
             return
 
         try:
