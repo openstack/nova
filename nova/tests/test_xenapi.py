@@ -139,6 +139,28 @@ class XenAPIVolumeTestCase(test.TestCase):
             }
         }
 
+    def test_mountpoint_to_number(self):
+        cases = {
+            'sda': 0,
+            'sdp': 15,
+            'hda': 0,
+            'hdp': 15,
+            'vda': 0,
+            'xvda': 0,
+            '0': 0,
+            '10': 10,
+            'vdq': -1,
+            'sdq': -1,
+            'hdq': -1,
+            'xvdq': -1,
+        }
+
+        for (input, expected) in cases.iteritems():
+            func = volume_utils.VolumeHelper.mountpoint_to_number
+            actual = func(input)
+            self.assertEqual(actual, expected,
+                    '%s yielded %s, not %s' % (input, actual, expected))
+
     def test_parse_volume_info_raise_exception(self):
         """This shows how to test helper classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)

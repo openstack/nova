@@ -357,8 +357,8 @@ class VolumeHelper(HelperBase):
             mountpoint = mountpoint[5:]
         if re.match('^[hs]d[a-p]$', mountpoint):
             return (ord(mountpoint[2:3]) - ord('a'))
-        elif re.match('^vd[a-p]$', mountpoint):
-            return (ord(mountpoint[2:3]) - ord('a'))
+        elif re.match('^x?vd[a-p]$', mountpoint):
+            return (ord(mountpoint[-1]) - ord('a'))
         elif re.match('^[0-9]+$', mountpoint):
             return string.atoi(mountpoint, 10)
         else:
