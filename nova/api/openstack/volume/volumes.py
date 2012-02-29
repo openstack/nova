@@ -48,7 +48,8 @@ def _translate_attachment_summary_view(_context, vol):
     """Maps keys for attachment summary view."""
     d = {}
 
-    volume_id = vol['id']
+    # TODO(bcwaldon): remove str cast once we use uuids
+    volume_id = str(vol['id'])
 
     # NOTE(justinsb): We use the volume id as the id of the attachment object
     d['id'] = volume_id
@@ -76,7 +77,8 @@ def _translate_volume_summary_view(context, vol):
     """Maps keys for volumes summary view."""
     d = {}
 
-    d['id'] = vol['id']
+    # TODO(bcwaldon): remove str cast once we use uuids
+    d['id'] = str(vol['id'])
     d['status'] = vol['status']
     d['size'] = vol['size']
     d['availabilityZone'] = vol['availability_zone']
@@ -93,9 +95,14 @@ def _translate_volume_summary_view(context, vol):
     if vol['volume_type_id'] and vol.get('volume_type'):
         d['volumeType'] = vol['volume_type']['name']
     else:
-        d['volumeType'] = vol['volume_type_id']
+        # TODO(bcwaldon): remove str cast once we use uuids
+        d['volumeType'] = str(vol['volume_type_id'])
 
     d['snapshotId'] = vol['snapshot_id']
+    # TODO(bcwaldon): remove str cast once we use uuids
+    if d['snapshotId'] is not None:
+        d['snapshotId'] = str(d['snapshotId'])
+
     LOG.audit(_("vol=%s"), vol, context=context)
 
     if vol.get('volume_metadata'):
