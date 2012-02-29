@@ -107,6 +107,20 @@ class KeypairsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_keypair_create_with_non_alphanumeric_name(self):
+        body = {
+            'keypair': {
+                'name': 'test/keypair'
+            }
+        }
+        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res.status_int, 400)
+
     def test_keypair_import(self):
         body = {
             'keypair': {
