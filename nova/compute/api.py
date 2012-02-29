@@ -1310,6 +1310,9 @@ class API(base.Base):
         if not new_instance_type:
             raise exception.FlavorNotFound(flavor_id=flavor_id)
 
+        # NOTE(markwash): look up the image early to avoid auth problems later
+        image = self.image_service.show(context, instance['image_ref'])
+
         current_memory_mb = current_instance_type['memory_mb']
         new_memory_mb = new_instance_type['memory_mb']
 
@@ -1335,8 +1338,9 @@ class API(base.Base):
         args = {
             "topic": FLAGS.compute_topic,
             "instance_uuid": instance['uuid'],
-            "update_db": False,
             "instance_type_id": new_instance_type['id'],
+            "image": image,
+            "update_db": False,
             "request_spec": utils.to_primitive(request_spec),
             "filter_properties": filter_properties,
         }

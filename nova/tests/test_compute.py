@@ -1033,12 +1033,12 @@ class ComputeTestCase(BaseTestCase):
         context = self.context.elevated()
 
         instance = self._create_fake_instance()
-        self.compute.prep_resize(context, instance['uuid'], 1,
+        self.compute.prep_resize(context, instance['uuid'], 1, {},
                                  filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
         self.compute.finish_resize(context, instance['uuid'],
-                                   int(migration_ref['id']), {})
+                                   int(migration_ref['id']), {}, {})
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_finish_resize_handles_error(self):
@@ -1070,14 +1070,14 @@ class ComputeTestCase(BaseTestCase):
                                                           func=fake_nw_info)
         context = self.context.elevated()
         instance = self._create_fake_instance()
-        self.compute.prep_resize(context, instance['uuid'], 1,
+        self.compute.prep_resize(context, instance['uuid'], 1, {},
                                  filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
 
         self.assertRaises(Exception, self.compute.finish_resize,
                           context, instance['uuid'],
-                          int(migration_ref['id']), {})
+                          int(migration_ref['id']), {}, {})
 
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
@@ -1100,7 +1100,7 @@ class ComputeTestCase(BaseTestCase):
         test_notifier.NOTIFICATIONS = []
 
         db.instance_update(self.context, instance_uuid, {'host': 'foo'})
-        self.compute.prep_resize(context, instance_uuid, 1,
+        self.compute.prep_resize(context, instance_uuid, 1, {},
                                  filter_properties={})
         db.migration_get_by_instance_and_status(context,
                                                 instance_uuid,
@@ -1143,7 +1143,7 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance_uuid, {'host': 'foo'})
 
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
-                          context, instance_uuid, 1)
+                          context, instance_uuid, 1, {})
         self.compute.terminate_instance(context, instance_uuid)
 
     def test_resize_instance_driver_error(self):
@@ -1161,14 +1161,14 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, instance_uuid)
         db.instance_update(self.context, instance_uuid, {'host': 'foo'})
-        self.compute.prep_resize(context, instance_uuid, 1,
+        self.compute.prep_resize(context, instance_uuid, 1, {},
                                  filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance_uuid, 'pre-migrating')
 
         #verify
         self.assertRaises(Exception, self.compute.resize_instance, context,
-                          instance_uuid, migration_ref['id'])
+                          instance_uuid, migration_ref['id'], {})
         instance = db.instance_get_by_uuid(context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
@@ -1183,12 +1183,12 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_uuid)
         db.instance_update(self.context, instance_uuid,
                            {'host': 'foo'})
-        self.compute.prep_resize(context, instance_uuid, 1,
+        self.compute.prep_resize(context, instance_uuid, 1, {},
                                  filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance_uuid, 'pre-migrating')
         self.compute.resize_instance(context, instance_uuid,
-                migration_ref['id'])
+                migration_ref['id'], {})
         self.compute.terminate_instance(context, instance_uuid)
 
     def test_finish_revert_resize(self):
@@ -1235,16 +1235,16 @@ class ComputeTestCase(BaseTestCase):
 
         new_instance_type_ref = db.instance_type_get_by_flavor_id(context, 3)
         self.compute.prep_resize(context, inst_ref['uuid'],
-                                 new_instance_type_ref['id'],
+                                 new_instance_type_ref['id'], {},
                                  filter_properties={})
 
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
 
         self.compute.resize_instance(context, inst_ref['uuid'],
-                migration_ref['id'])
+                migration_ref['id'], {})
         self.compute.finish_resize(context, inst_ref['uuid'],
-                    int(migration_ref['id']), {})
+                    int(migration_ref['id']), {}, {})
 
         # Prove that the instance size is now the new size
         inst_ref = db.instance_get_by_uuid(context, instance_uuid)
@@ -1281,7 +1281,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
-                self.context, instance['uuid'], 1)
+                self.context, instance['uuid'], 1, {})
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_resize_instance_handles_migration_error(self):
@@ -1297,12 +1297,12 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, inst_ref['uuid'])
         db.instance_update(self.context, inst_ref['uuid'], {'host': 'foo'})
-        self.compute.prep_resize(context, inst_ref['uuid'], 1,
+        self.compute.prep_resize(context, inst_ref['uuid'], 1, {},
                                  filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
         self.assertRaises(Exception, self.compute.resize_instance,
-                          context, inst_ref['uuid'], migration_ref['id'])
+                          context, inst_ref['uuid'], migration_ref['id'], {})
         inst_ref = db.instance_get_by_uuid(context, inst_ref['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(context, inst_ref['uuid'])
