@@ -135,6 +135,28 @@ class VolumeApiTest(test.TestCase):
                                'size': 1}}
         self.assertEqual(res_dict, expected)
 
+    def test_volume_show_no_attachments(self):
+        def stub_volume_get(self, context, volume_id):
+            return fakes.stub_volume(volume_id, attach_status='detached')
+
+        self.stubs.Set(volume_api.API, 'get', stub_volume_get)
+
+        req = fakes.HTTPRequest.blank('/v1/volumes/1')
+        res_dict = self.controller.show(req, 1)
+        expected = {'volume': {'status': 'fakestatus',
+                               'displayDescription': 'displaydesc',
+                               'availabilityZone': 'fakeaz',
+                               'displayName': 'displayname',
+                               'attachments': [],
+                               'volumeType': 'vol_type_name',
+                               'snapshotId': None,
+                               'metadata': {},
+                               'id': '1',
+                               'createdAt': datetime.datetime(1, 1, 1,
+                                                              1, 1, 1),
+                               'size': 1}}
+        self.assertEqual(res_dict, expected)
+
     def test_volume_show_no_volume(self):
         self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get_notfound)
 

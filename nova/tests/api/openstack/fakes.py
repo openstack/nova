@@ -591,25 +591,29 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
     return instance
 
 
-def stub_volume(id):
-    return {'id': id,
-            'user_id': 'fakeuser',
-            'project_id': 'fakeproject',
-            'host': 'fakehost',
-            'size': 1,
-            'availability_zone': 'fakeaz',
-            'instance': {'uuid': 'fakeuuid'},
-            'mountpoint': '/',
-            'status': 'fakestatus',
-            'attach_status': 'attached',
-            'name': 'vol name',
-            'display_name': 'displayname',
-            'display_description': 'displaydesc',
-            'created_at': datetime.datetime(1, 1, 1, 1, 1, 1),
-            'snapshot_id': None,
-            'volume_type_id': 'fakevoltype',
-            'volume_metadata': [],
-            'volume_type': {'name': 'vol_type_name'}}
+def stub_volume(id, **kwargs):
+    volume = {
+        'id': id,
+        'user_id': 'fakeuser',
+        'project_id': 'fakeproject',
+        'host': 'fakehost',
+        'size': 1,
+        'availability_zone': 'fakeaz',
+        'instance': {'uuid': 'fakeuuid'},
+        'mountpoint': '/',
+        'status': 'fakestatus',
+        'attach_status': 'attached',
+        'name': 'vol name',
+        'display_name': 'displayname',
+        'display_description': 'displaydesc',
+        'created_at': datetime.datetime(1, 1, 1, 1, 1, 1),
+        'snapshot_id': None,
+        'volume_type_id': 'fakevoltype',
+        'volume_metadata': [],
+        'volume_type': {'name': 'vol_type_name'}}
+
+    volume.update(kwargs)
+    return volume
 
 
 def stub_volume_create(self, context, size, name, description, snapshot,

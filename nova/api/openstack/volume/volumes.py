@@ -84,10 +84,10 @@ def _translate_volume_summary_view(context, vol):
     d['availabilityZone'] = vol['availability_zone']
     d['createdAt'] = vol['created_at']
 
+    d['attachments'] = []
     if vol['attach_status'] == 'attached':
-        d['attachments'] = [_translate_attachment_detail_view(context, vol)]
-    else:
-        d['attachments'] = [{}]
+        attachment = _translate_attachment_detail_view(context, vol)
+        d['attachments'].append(attachment)
 
     d['displayName'] = vol['display_name']
     d['displayDescription'] = vol['display_description']
