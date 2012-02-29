@@ -897,7 +897,7 @@ class Resource(wsgi.Application):
                 meth = getattr(self, action)
             else:
                 meth = getattr(self.controller, action)
-        except AttributeError as ex:
+        except AttributeError:
             if (not self.wsgi_actions or
                 action not in ['action', 'create', 'delete']):
                 # Propagate the error

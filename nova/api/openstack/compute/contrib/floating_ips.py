@@ -238,7 +238,7 @@ class FloatingIPActionController(wsgi.Controller):
         if floating_ip.get('fixed_ip_id'):
             try:
                 self.network_api.disassociate_floating_ip(context, address)
-            except exception.NotAuthorized, e:
+            except exception.NotAuthorized:
                 raise webob.exc.HTTPUnauthorized()
 
         return webob.Response(status_int=202)

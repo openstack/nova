@@ -22,7 +22,6 @@ import time
 import webob.dec
 import webob.exc
 
-from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova.auth import manager
 from nova import context
@@ -159,7 +158,7 @@ class AuthMiddleware(base_wsgi.Middleware):
             """Ensures that the KeyError returned is meaningful."""
             try:
                 return req.headers[key]
-            except KeyError as ex:
+            except KeyError:
                 raise KeyError(key)
         try:
             username = _get_auth_header('X-Auth-User')

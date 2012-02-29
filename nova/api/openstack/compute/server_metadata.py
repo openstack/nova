@@ -76,9 +76,7 @@ class Controller(object):
             expl = _('Malformed request body')
             raise exc.HTTPBadRequest(explanation=expl)
 
-        try:
-            meta_value = meta_item[id]
-        except (AttributeError, KeyError):
+        if id not in meta_item:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
 
@@ -150,9 +148,7 @@ class Controller(object):
 
         metadata = self._get_metadata(context, server_id)
 
-        try:
-            meta_value = metadata[id]
-        except KeyError:
+        if id not in metadata:
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 

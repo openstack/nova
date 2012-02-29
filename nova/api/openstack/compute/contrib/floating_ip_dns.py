@@ -189,7 +189,6 @@ class FloatingIPDNSDomainController(object):
         """Delete the domain identified by id. """
         context = req.environ['nova.context']
         authorize(context)
-        params = req.str_GET
         domain = _unquote_domain(id)
 
         # Delete the whole domain

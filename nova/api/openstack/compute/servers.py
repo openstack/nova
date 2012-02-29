@@ -968,7 +968,7 @@ class Controller(wsgi.Controller):
         """Ensure that we can work with the metadata given."""
         try:
             metadata.iteritems()
-        except AttributeError as ex:
+        except AttributeError:
             msg = _("Unable to parse metadata key/value pairs.")
             LOG.debug(msg)
             raise exc.HTTPBadRequest(explanation=msg)
@@ -1060,7 +1060,7 @@ class Controller(wsgi.Controller):
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
-        except exception.ImageNotFound as error:
+        except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
 
