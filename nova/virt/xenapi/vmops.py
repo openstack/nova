@@ -200,6 +200,7 @@ class VMOps(object):
 
     def spawn(self, context, instance, image_meta, network_info):
         vdis = None
+        vm_ref = None
         try:
             # 1. Vanity Step
             # NOTE(sirp): _create_disk will potentially take a *very* long
@@ -249,7 +250,7 @@ class VMOps(object):
                           instance.uuid)
             LOG.debug(_('Instance %s failed to spawn - performing clean-up'),
                       instance.id)
-            self._handle_spawn_error(vdis, spawn_error)
+            self._handle_spawn_error(instance, vm_ref, vdis, spawn_error)
             raise spawn_error
 
     def spawn_rescue(self, context, instance, image_meta, network_info):
@@ -524,7 +525,11 @@ class VMOps(object):
         no_agent = version is None
         self._configure_instance(ctx, instance, vm_ref, no_agent)
 
-    def _handle_spawn_error(self, vdis, spawn_error):
+    def _handle_spawn_error(self, instance, vm_ref, vdis, spawn_error):
+        if vm_ref:
+            self._shutdown(instance, vm_ref)
+            self._destroy_vm(instance, vm_ref)
+
         # Extract resource list from spawn_error.
         resources = []
         if spawn_error.args:
