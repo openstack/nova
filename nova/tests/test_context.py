@@ -31,3 +31,16 @@ class ContextTestCase(test.TestCase):
                                       '222',
                                       roles=['Admin', 'weasel'])
         self.assertEquals(ctxt.is_admin, True)
+
+    def test_request_context_read_deleted(self):
+        ctxt = context.RequestContext('111',
+                                      '222',
+                                      read_deleted='yes')
+        self.assertEquals(ctxt.read_deleted, 'yes')
+
+    def test_request_context_read_deleted_invalid(self):
+        self.assertRaises(ValueError,
+                          context.RequestContext,
+                          '111',
+                          '222',
+                          read_deleted=True)
