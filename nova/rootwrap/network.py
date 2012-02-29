@@ -83,4 +83,7 @@ filterlist = [
 
     # nova/network/linux_net.py: 'ovs-vsctl', ....
     filters.CommandFilter("/usr/bin/ovs-vsctl", "root"),
+
+    # nova/network/linux_net.py: 'ovs-ofctl', ....
+    filters.CommandFilter("/usr/bin/ovs-ofctl", "root"),
     ]
