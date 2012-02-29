@@ -335,6 +335,7 @@ class API(base.Base):
             'architecture': architecture,
             'vm_mode': vm_mode,
             'root_device_name': root_device_name,
+            'progress': 0,
             'auto_disk_config': auto_disk_config}
 
         LOG.debug(_("Going to run %s instances...") % num_instances)
@@ -1323,6 +1324,7 @@ class API(base.Base):
                     instance,
                     vm_state=vm_states.RESIZING,
                     task_state=task_states.RESIZE_PREP,
+                    progress=0,
                     **kwargs)
 
         request_spec = {
