@@ -46,8 +46,9 @@ def _translate_snapshot_summary_view(context, vol):
     """Maps keys for snapshots summary view."""
     d = {}
 
-    d['id'] = vol['id']
-    d['volumeId'] = vol['volume_id']
+    # TODO(bcwaldon): remove str cast once we use uuids
+    d['id'] = str(vol['id'])
+    d['volumeId'] = str(vol['volume_id'])
     d['status'] = vol['status']
     # NOTE(gagupta): We map volume_size as the snapshot size
     d['size'] = vol['volume_size']

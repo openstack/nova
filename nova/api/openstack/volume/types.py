@@ -67,6 +67,8 @@ class VolumeTypesController(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
+        # TODO(bcwaldon): remove str cast once we use uuids
+        vol_type['id'] = str(vol_type['id'])
         return {'volume_type': vol_type}
 
 

@@ -112,6 +112,7 @@ class VolumeTypesApiTest(test.TestCase):
         res_dict = self.controller.show(req, 1)
 
         self.assertEqual(1, len(res_dict))
+        self.assertEqual('1', res_dict['volume_type']['id'])
         self.assertEqual('vol_type_1', res_dict['volume_type']['name'])
 
     def test_volume_types_show_not_found(self):

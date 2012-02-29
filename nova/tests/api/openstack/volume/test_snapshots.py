@@ -81,7 +81,7 @@ class SnapshotApiTest(test.TestCase):
     def test_snapshot_create(self):
         self.stubs.Set(volume.api.API, "create_snapshot", stub_snapshot_create)
         self.stubs.Set(volume.api.API, 'get', fakes.stub_volume_get)
-        snapshot = {"volume_id": 12,
+        snapshot = {"volume_id": '12',
                 "force": False,
                 "display_name": "Snapshot Test Name",
                 "display_description": "Snapshot Test Desc"}
@@ -99,7 +99,7 @@ class SnapshotApiTest(test.TestCase):
         self.stubs.Set(volume.api.API, "create_snapshot_force",
             stub_snapshot_create)
         self.stubs.Set(volume.api.API, 'get', fakes.stub_volume_get)
-        snapshot = {"volume_id": 12,
+        snapshot = {"volume_id": '12',
                 "force": True,
                 "display_name": "Snapshot Test Name",
                 "display_description": "Snapshot Test Desc"}
@@ -131,12 +131,11 @@ class SnapshotApiTest(test.TestCase):
                           snapshot_id)
 
     def test_snapshot_show(self):
-        snapshot_id = 123
-        req = fakes.HTTPRequest.blank('/v1/snapshots/%d' % snapshot_id)
-        resp_dict = self.controller.show(req, snapshot_id)
+        req = fakes.HTTPRequest.blank('/v1/snapshots/123')
+        resp_dict = self.controller.show(req, 123)
 
         self.assertTrue('snapshot' in resp_dict)
-        self.assertEqual(resp_dict['snapshot']['id'], snapshot_id)
+        self.assertEqual(resp_dict['snapshot']['id'], '123')
 
     def test_snapshot_show_invalid_id(self):
         snapshot_id = 234
@@ -155,7 +154,7 @@ class SnapshotApiTest(test.TestCase):
         self.assertEqual(len(resp_snapshots), 1)
 
         resp_snapshot = resp_snapshots.pop()
-        self.assertEqual(resp_snapshot['id'], 123)
+        self.assertEqual(resp_snapshot['id'], '123')
 
 
 class SnapshotSerializerTest(test.TestCase):
