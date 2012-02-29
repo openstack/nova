@@ -20,6 +20,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -43,7 +44,18 @@ class ExtendedServerAttributesController(wsgi.Controller):
         instances = self.compute_api.get_all(context, filters)
         return dict((instance['uuid'], instance) for instance in instances)
 
-    def _extend_server(self, server, instance):
+    def _get_hypervisor_hostname(self, context, instance):
+        compute_node = db.compute_node_get_by_host(context, instance["host"])
+
+        try:
+            return compute_node["hypervisor_hostname"]
+        except TypeError:
+            return
+
+    def _extend_server(self, context, server, instance):
+        key = "%s:hypervisor_hostname" % Extended_server_attributes.alias
+        server[key] = self._get_hypervisor_hostname(context, instance)
+
         for attr in ['host', 'name']:
             if attr == 'name':
                 key = "%s:instance_%s" % (Extended_server_attributes.alias,
@@ -65,7 +77,7 @@ class ExtendedServerAttributesController(wsgi.Controller):
                 explanation = _("Server not found.")
                 raise exc.HTTPNotFound(explanation=explanation)
 
-            self._extend_server(resp_obj.obj['server'], instance)
+            self._extend_server(context, resp_obj.obj['server'], instance)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
@@ -85,7 +97,7 @@ class ExtendedServerAttributesController(wsgi.Controller):
                     # Ignore missing instance data
                     continue
 
-                self._extend_server(server_object, instance_data)
+                self._extend_server(context, server_object, instance_data)
 
 
 class Extended_server_attributes(extensions.ExtensionDescriptor):
