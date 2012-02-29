@@ -56,6 +56,10 @@ ec2_opts = [
     cfg.StrOpt('keystone_ec2_url',
                default='http://localhost:5000/v2.0/ec2tokens',
                help='URL to get token from ec2 request.'),
+    cfg.BoolOpt('ec2_private_dns_show_ip',
+                default=False,
+                help='Return the IP address as private dns hostname in '
+                     'describe instances'),
     ]
 
 FLAGS = flags.FLAGS
