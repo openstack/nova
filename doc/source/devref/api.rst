@@ -93,14 +93,6 @@ The :mod:`images` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`ratelimiting` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. automodule:: nova.api.openstack.ratelimiting
-    :noindex:
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 The :mod:`servers` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. automodule:: nova.api.openstack.servers
@@ -253,15 +245,6 @@ The :mod:`test_images` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.api.openstack.test_images
-    :noindex:
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`test_ratelimiting` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.tests.api.openstack.test_ratelimiting
     :noindex:
     :members:
     :undoc-members:

@@ -57,7 +57,6 @@ Generating source/api/nova..tests.api.openstack.test_auth.rst
 Generating source/api/nova..tests.api.openstack.test_faults.rst
 Generating source/api/nova..tests.api.openstack.test_flavors.rst
 Generating source/api/nova..tests.api.openstack.test_images.rst
-Generating source/api/nova..tests.api.openstack.test_ratelimiting.rst
 Generating source/api/nova..tests.api.openstack.test_servers.rst
 Generating source/api/nova..tests.api.openstack.test_sharedipgroups.rst
 Generating source/api/nova..tests.api.test_wsgi.rst
