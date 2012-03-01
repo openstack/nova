@@ -668,7 +668,6 @@ class LibvirtConnection(driver.ComputeDriver):
         # better because we cannot ensure flushing dirty buffers
         # in the guest OS. But, in case of KVM, shutdown() does not work...
         self._destroy(instance, network_info, cleanup=False)
-        self.unplug_vifs(instance, network_info)
         self.plug_vifs(instance, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
