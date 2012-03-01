@@ -26,7 +26,6 @@ from eventlet import greenthread
 from nova import exception
 from nova import test
 from nova import utils
-from nova.utils import parse_mailmap, str_dict_replace
 
 
 class ExceptionTestCase(test.TestCase):
@@ -46,7 +45,7 @@ class ProjectTestCase(test.TestCase):
         topdir = os.path.normpath(os.path.dirname(__file__) + '/../../')
         missing = set()
         contributors = set()
-        mailmap = parse_mailmap(os.path.join(topdir, '.mailmap'))
+        mailmap = utils.parse_mailmap(os.path.join(topdir, '.mailmap'))
         authors_file = open(os.path.join(topdir,
                                          'Authors'), 'r').read().lower()
 
@@ -57,7 +56,7 @@ class ProjectTestCase(test.TestCase):
                 if "jenkins" in email and "openstack.org" in email:
                     continue
                 email = '<' + email.lower() + '>'
-                contributors.add(str_dict_replace(email, mailmap))
+                contributors.add(utils.str_dict_replace(email, mailmap))
         else:
             return
 

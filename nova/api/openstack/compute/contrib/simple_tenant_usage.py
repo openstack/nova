@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from datetime import datetime
+import datetime
 import urlparse
 
 from nova.api.openstack import extensions
@@ -71,12 +71,12 @@ class SimpleTenantUsageController(object):
         launched_at = instance['launched_at']
         terminated_at = instance['terminated_at']
         if terminated_at is not None:
-            if not isinstance(terminated_at, datetime):
+            if not isinstance(terminated_at, datetime.datetime):
                 terminated_at = datetime.strptime(terminated_at,
                                                   "%Y-%m-%d %H:%M:%S.%f")
 
         if launched_at is not None:
-            if not isinstance(launched_at, datetime):
+            if not isinstance(launched_at, datetime.datetime):
                 launched_at = datetime.strptime(launched_at,
                                                 "%Y-%m-%d %H:%M:%S.%f")
 
@@ -151,7 +151,7 @@ class SimpleTenantUsageController(object):
             else:
                 info['state'] = instance['vm_state']
 
-            now = datetime.utcnow()
+            now = datetime.datetime.utcnow()
 
             if info['state'] == 'terminated':
                 delta = info['ended_at'] - info['started_at']
@@ -186,23 +186,25 @@ class SimpleTenantUsageController(object):
         return rval.values()
 
     def _parse_datetime(self, dtstr):
-        if isinstance(dtstr, datetime):
+        if isinstance(dtstr, datetime.datetime):
             return dtstr
         try:
-            return datetime.strptime(dtstr, "%Y-%m-%dT%H:%M:%S")
+            return datetime.datetime.strptime(dtstr, "%Y-%m-%dT%H:%M:%S")
         except Exception:
             try:
-                return datetime.strptime(dtstr, "%Y-%m-%dT%H:%M:%S.%f")
+                return datetime.datetime.strptime(dtstr,
+                        "%Y-%m-%dT%H:%M:%S.%f")
             except Exception:
-                return datetime.strptime(dtstr, "%Y-%m-%d %H:%M:%S.%f")
+                return datetime.datetime.strptime(dtstr,
+                        "%Y-%m-%d %H:%M:%S.%f")
 
     def _get_datetime_range(self, req):
         qs = req.environ.get('QUERY_STRING', '')
         env = urlparse.parse_qs(qs)
         period_start = self._parse_datetime(env.get('start',
-                                    [datetime.utcnow().isoformat()])[0])
+                [datetime.datetime.utcnow().isoformat()])[0])
         period_stop = self._parse_datetime(env.get('end',
-                                    [datetime.utcnow().isoformat()])[0])
+                [datetime.datetime.utcnow().isoformat()])[0])
 
         detailed = bool(env.get('detailed', False))
         return (period_start, period_stop, detailed)
