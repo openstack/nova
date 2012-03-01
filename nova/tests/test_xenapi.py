@@ -32,6 +32,7 @@ from nova import utils
 from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute import utils as compute_utils
 from nova import exception
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
@@ -1527,27 +1528,23 @@ class XenAPIDom0IptablesFirewallTestCase(test.TestCase):
         instance_ref = db.instance_get(admin_ctxt, instance_ref['id'])
         src_instance_ref = db.instance_get(admin_ctxt, src_instance_ref['id'])
 
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1)
-
-        def get_fixed_ips(*args, **kwargs):
-            ips = []
-            for _n, info in network_info:
-                ips.extend(info['ips'])
-            return [ip['ip'] for ip in ips]
-
-        def nw_info(*args, **kwargs):
-            return network_info
+        network_model = fake_network.fake_get_instance_nw_info(self.stubs,
+                                                      1, spectacular=True)
 
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                          nw_info)
+                                      lambda *a, **kw: network_model)
+
+        network_info = compute_utils.legacy_network_info(network_model)
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
 
         self._validate_security_group()
         # Extra test for TCP acceptance rules
-        for ip in get_fixed_ips():
+        for ip in network_model.fixed_ips():
+            if ip['version'] != 4:
+                continue
             regex = re.compile('-A .* -j ACCEPT -p tcp'
-                               ' --dport 80:81 -s %s' % ip)
+                               ' --dport 80:81 -s %s' % ip['address'])
             self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
                             "TCP port 80/81 acceptance rule wasn't added")
 
