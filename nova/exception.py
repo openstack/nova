@@ -1015,3 +1015,7 @@ class InstanceNotFound(NotFound):
 
 class InvalidInstanceIDMalformed(Invalid):
     message = _("Invalid id: %(val)s (expecting \"i-...\").")
+
+
+class CouldNotFetchImage(NovaException):
+    message = _("Could not fetch image %(image)s")
