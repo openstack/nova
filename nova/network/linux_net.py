@@ -90,7 +90,11 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(linux_net_opts)
 
 
-binary_name = os.path.basename(inspect.stack()[-1][1])
+# NOTE(vish): Iptables supports chain names of up to 28 characters,  and we
+#             add up to 12 characters to binary_name which is used as a prefix,
+#             so we limit it to 16 characters.
+#             (max_chain_name_length - len('-POSTROUTING') == 16)
+binary_name = os.path.basename(inspect.stack()[-1][1])[:16]
 
 
 class IptablesRule(object):
