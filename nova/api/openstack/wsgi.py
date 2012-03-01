@@ -862,8 +862,7 @@ class Resource(wsgi.Application):
 
             # Run post-processing extensions
             if resp_obj:
-                if context:
-                    resp_obj['x-compute-request-id'] = context.request_id
+                _set_request_id_header(request, resp_obj)
                 # Do a preserialize to set up the response object
                 serializers = getattr(meth, 'wsgi_serializers', {})
                 resp_obj._bind_method_serializers(serializers)
@@ -1061,6 +1060,7 @@ class Fault(webob.exc.HTTPException):
 
         self.wrapped_exc.body = serializer.serialize(fault_data)
         self.wrapped_exc.content_type = content_type
+        _set_request_id_header(req, self.wrapped_exc.headers)
 
         return self.wrapped_exc
 
@@ -1113,3 +1113,9 @@ class OverLimitFault(webob.exc.HTTPException):
         self.wrapped_exc.body = content
 
         return self.wrapped_exc
+
+
+def _set_request_id_header(req, headers):
+    context = req.environ.get('nova.context')
+    if context:
+        headers['x-compute-request-id'] = context.request_id
