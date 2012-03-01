@@ -25,14 +25,21 @@ Although the original ec2 api only supports users, nova adds the concept of proj
 The api will return NotAuthorized if a normal user attempts to make requests for a project that he or she is not a member of.  Note that admins or users with special admin roles skip this check and can make requests for any project.
 
 To create a project, use the `project create` command of nova-manage. The syntax is nova-manage project create projectname manager_id [description] You must specify a projectname and a manager_id. For example::
+
   nova-manage project create john_project john "This is a sample project"
 
 You can add and remove users from projects with `project add` and `project remove`::
+
   nova-manage project add john_project john
   nova-manage project remove john_project john
 
 Project Commands
 ----------------
+
+.. todo::
+
+   Reformat command line app instructions for ``nova-manage`` using
+   ``:command:``, ``:option:``, and ``.. program::``. (bug-947261)
 
 Admins and Project Managers can use the 'nova-manage project' command to manage project resources:
 
@@ -63,6 +70,8 @@ Nova utilizes a quota system at the project level to control resource consumptio
 * Number of processor cores which may be allocated
 * Publicly accessible IP addresses
 
-Use the following command to set quotas for a project 
+Use the following command to set quotas for a project
+
 * project quota: Set or display quotas for project
+
     * arguments: project_id [key] [value]

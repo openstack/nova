@@ -1,6 +1,6 @@
 ..
       Copyright 2010-2011 United States Government as represented by the
-      Administrator of the National Aeronautics and Space Administration. 
+      Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,37 +18,45 @@
 Setting Up a Development Environment
 ====================================
 
-This page describes how to setup a working Python development environment that
-can be used in developing nova on Ubuntu, Fedora or Mac OS X. These
-instructions assume you're already familiar with git. Refer to
-http://wiki.openstack.org/GettingTheCode for additional information.
+This page describes how to setup a working Python development
+environment that can be used in developing nova on Ubuntu, Fedora or
+Mac OS X. These instructions assume you're already familiar with
+git. Refer to GettingTheCode_ for additional information.
 
-Following these instructions will allow you to run the nova unit tests. If you
-want to be able to run nova (i.e., launch VM instances), you will also need to
-install libvirt and at least one of the `supported
-hypervisors`<http://wiki.openstack.org/HypervisorSupportMatrix>_. Running
-nova is currently only supported on Linux, although you can run
-the unit tests on Mac OS X. See :doc:`quickstart` for how to get a working
-version of OpenStack Compute running as quickly as possible.
+.. _GettingTheCode: http://wiki.openstack.org/GettingTheCode
+
+Following these instructions will allow you to run the nova unit
+tests. If you want to be able to run nova (i.e., launch VM instances),
+you will also need to install libvirt and at least one of the
+`supported hypervisors`_. Running nova is currently only supported on
+Linux, although you can run the unit tests on Mac OS X. See
+:doc:`../quickstart` for how to get a working version of OpenStack
+Compute running as quickly as possible.
+
+.. _supported hypervisors: http://wiki.openstack.org/HypervisorSupportMatrix
 
 Virtual environments
 --------------------
 
-Nova development uses `virtualenv <http://pypi.python.org/pypi/virtualenv>`_
-to track and manage Python dependencies while in development and testing. This
-allows you to install all of the Python package dependencies in a virtual
-environment or `virtualenv` (a special subdirectory of your nova directory),
-instead of installing the packages at the system level.
+Nova development uses `virtualenv <http://pypi.python.org/pypi/virtualenv>`__ to track and manage Python
+dependencies while in development and testing. This allows you to
+install all of the Python package dependencies in a virtual
+environment or "virtualenv" (a special subdirectory of your nova
+directory), instead of installing the packages at the system level.
 
-Virtualenv is useful for running the unit tests, but is not typically used
-for full integration testing or production usage.
+.. note::
+
+   Virtualenv is useful for running the unit tests, but is not
+   typically used for full integration testing or production usage.
 
 Linux Systems
 -------------
 
-Note: This section is tested for Nova on Ubuntu (10.10-64) and
-Fedora-based (RHEL 6.1) distributions. Feel free to add notes and change
-according to your experiences or operating system.
+.. note::
+
+  This section is tested for Nova on Ubuntu (10.10-64) and
+  Fedora-based (RHEL 6.1) distributions. Feel free to add notes and
+  change according to your experiences or operating system.
 
 Install the prerequisite packages.
 
@@ -135,8 +143,10 @@ Contributing Your Work
 ----------------------
 
 Once your work is complete you may wish to contribute it to the project.  Add
-your name and email address to the `Authors` file, and also to the `.mailmap`
+your name and email address to the ``Authors`` file, and also to the ``.mailmap``
 file if you use multiple email addresses. Your contributions can not be merged
 into trunk unless you are listed in the Authors file. Nova uses the Gerrit
 code review system. For information on how to submit your branch to Gerrit,
-see http://wiki.openstack.org/GerritWorkflow
+see GerritWorkflow_.
+
+.. _GerritWorkflow: http://wiki.openstack.org/GerritWorkflow

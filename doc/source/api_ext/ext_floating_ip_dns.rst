@@ -1,5 +1,6 @@
 About The Floating IP DNS Extension
-================================
+===================================
+
 The Floating IP DNS extension provides an interface for managing DNS records associated with IP addresses
 allocated by the Floating Ips extension.  Requests are dispatched to a DNS driver selected at startup.
 
@@ -85,9 +86,10 @@ None
 
 New Resources
 -------------
-Get a list of registered DNS Domains published by the DNS drivers:
 
-        GET /v1.1/<tenant_id>/os-floating-ip-dns/
+Get a list of registered DNS Domains published by the DNS drivers::
+
+    GET /v1.1/<tenant_id>/os-floating-ip-dns/
 
     # Sample Response:
     {'domain_entries' : [
@@ -97,9 +99,9 @@ Get a list of registered DNS Domains published by the DNS drivers:
       {'domain': 'example.internal', 'scope': 'private', 'availability_zone': 'zone1'}]}
 
 
-Create or modify a DNS domain:
+Create or modify a DNS domain::
 
-        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<domain>
+    PUT /v1.1/<tenant_id>/os-floating-ip-dns/<domain>
 
     # Sample body, public domain:
      {'domain_entry' :
@@ -130,18 +132,18 @@ Create or modify a DNS domain:
     Failure Response Code: 403 (Insufficient permissions.)
 
 
-Delete a DNS domain and all associated host entries:
+Delete a DNS domain and all associated host entries::
 
-DELETE /v1.1/<tenant_id>/os-floating-ip-dns/<domain>
+    DELETE /v1.1/<tenant_id>/os-floating-ip-dns/<domain>
 
     Normal Response Code: 200
     Failure Response Code: 404 (Domain to be deleted not found.)
     Failure Response Code: 403 (Insufficient permissions to delete.)
 
 
-Create or modify a DNS entry:
+Create or modify a DNS entry::
 
-        PUT /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries/<name>
+    PUT /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries/<name>
 
     # Sample body:
     { 'dns_entry' :
@@ -154,9 +156,9 @@ Create or modify a DNS entry:
         'name' : 'instance1' }}
 
 
-Find unique DNS entry for a given domain and name:
+Find unique DNS entry for a given domain and name::
 
-        GET /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries/<name>
+    GET /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries/<name>
 
     # Sample Response:
     { 'dns_entry' :
@@ -166,9 +168,9 @@ Find unique DNS entry for a given domain and name:
         'name' : <name> }}
 
 
-Find DNS entries for a given domain and ip:
+Find DNS entries for a given domain and ip::
 
-        GET /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries?ip=<ip>
+    GET /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries?ip=<ip>
 
     # Sample Response:
     { 'dns_entries' : [
@@ -182,9 +184,9 @@ Find DNS entries for a given domain and ip:
         'name' : 'example2' }]}
 
 
-Delete a DNS entry:
+Delete a DNS entry::
 
-DELETE /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries/<name>
+    DELETE /v1.1/<tenant_id>/os-floating-ip-dns/<domain>/entries/<name>
 
     Normal Response Code: 200
     Failure Response Code: 404 (Entry to be deleted not found)

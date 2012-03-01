@@ -15,7 +15,7 @@ do
   # and make sure to emit that many '=' under
   # it to avoid heading format errors
   # in Sphinx.
-  let heading_len=$(echo "$heading" | wc -c)
+  heading_len=$(echo "$heading" | wc -c)
   underline=$(head -c $heading_len < /dev/zero | tr '\0' '=')
   ( cat <<EOF
 ${heading}

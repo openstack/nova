@@ -105,10 +105,11 @@ Note:- Due to a faulty wsdl being shipped with ESX vSphere 4.1 we need a working
 
 Debug flag
 ----------
-::
 
-suds logging is very verbose and turned off by default.  If you need to
-debug the VMware API calls, change the default_log_levels flag appropriately.
+.. note::
+
+  suds logging is very verbose and turned off by default.  If you need to
+  debug the VMware API calls, change the default_log_levels flag appropriately.
 
 
 VLAN Network Manager

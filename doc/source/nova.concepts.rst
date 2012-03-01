@@ -35,9 +35,11 @@ focuses on describing how Nova's implementation of those concepts is achieved.
 
 This page outlines concepts that you will need to understand as a user or
 administrator of an OpenStack installation.  Each section links to more more
-detailed information in the :doc:`adminguide/index`,
+detailed information in the `OpenStack Compute Administration Guide`_
 but you'll probably want to read this section straight-through before tackling
-the specifics presented in the administration guide.
+the specifics presented there.
+
+.. _OpenStack Compute Administration Guide: http://docs.openstack.org/diablo/openstack-compute/admin/content/
 
 
 Concept: Users and Projects
@@ -163,7 +165,8 @@ The nova-manage command is used to perform many essential functions for
 administration and ongoing maintenance of Nova, such as user creation,
 vpn management, and much more.
 
-See :doc:`nova.manage` in the Administration Guide for more details.
+See :doc:`runnova/nova.manage` in the Administration Guide for more
+details.
 
 Concept: Flags
 --------------

@@ -1,5 +1,6 @@
 About The Rescue Extension
 ==========================
+
 The rescue extension lets you put a server into a "rescue" status when the virtual instance will be replaced with a "rescue" image and have its existing drive attached as a second disk so that a root user can log in and troubleshoot problems with the virtual server.
 
 To put a server into "rescue" state, you do not have to be an administrator. The only requirement is that the base image used to build your instance must still be available.
@@ -67,7 +68,7 @@ This extension to the OpenStack Compute API enables rescue of running instances.
 To support these new actions, the extension also issues new states.
 
 New Actions
-----------
+-----------
 rescue
 unrescue
 

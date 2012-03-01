@@ -226,7 +226,7 @@ Concept: Plugins
 Concept: IPC/RPC
 ----------------
 
-Rabbit is the main messaging queue, used for all communication between Nova components and it also does the remote procedure calls and inter-process communication. 
+Rabbit is the main messaging queue, used for all communication between Nova components and it also does the remote procedure calls and inter-process communication.
 
 
 Concept: Fakes
@@ -252,7 +252,7 @@ Security groups
 Concept: Certificate Authority
 ------------------------------
 
-Nova does a small amount of certificate management.  These certificates are used for :ref:`project vpns <../cloudpipe>` and decrypting bundled images.
+Nova does a small amount of certificate management.  These certificates are used for :ref:`project vpns <cloudpipe>` and decrypting bundled images.
 
 
 Concept: Images

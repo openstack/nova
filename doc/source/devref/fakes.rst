@@ -45,7 +45,7 @@ The :mod:`nova.auth.fakeldap` Module
     
 
 The :mod:`nova.testing.fake.rabbit` Module
----------------------------------
+------------------------------------------
 
 .. automodule:: nova.testing.fake.rabbit
     :noindex:

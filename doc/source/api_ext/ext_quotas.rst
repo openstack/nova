@@ -47,6 +47,9 @@ As shown below, responses to an EXTENSION query in XML or JSON provide basic inf
 
 Extension Query Response: XML::
 
+    TBD
+
+.. todo:: Provide example of extension query XML response.
 
 Extension Query Response: JSON::
 

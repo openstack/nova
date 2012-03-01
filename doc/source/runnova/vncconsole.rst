@@ -33,6 +33,7 @@ In general, a VNC console Connection works like so:
   the session ends
 
 Note that in general, the vnc proxy performs multiple functions:
+
 * Bridges between public network (where clients live) and private network
   (where vncservers live)
 * Mediates token authentication
@@ -52,6 +53,8 @@ Getting an Access Url
 Nova provides the ability to create access_urls through the os-consoles extension.
 Support for accessing this url is provided by novaclient:
 
+::
+
     nova get-vnc-console [server_id] [xvpvnc|novnc]
 
 
@@ -67,14 +70,18 @@ nova-xvpvncproxy service, which you should run to enable this feature.
 * :option:`--xvpvncproxy_host=[host]` - host to bind (defaults to 0.0.0.0)
 
 As a client, you will need a special Java client, which is
-a version of TightVNC slightly modified to support our token auth::
+a version of TightVNC slightly modified to support our token auth:
+
+::
 
     git clone https://github.com/cloudbuilders/nova-xvpvncviewer
     cd nova-xvpvncviewer
     make
 
 Then, to create a session, first request an access url using python-novaclient
-and then run the client like so::
+and then run the client like so:
+
+::
 
     # Retrieve access url
     nova get-vnc-console [server_id] xvpvnc
@@ -90,6 +97,9 @@ http://github.com/cloudbuilders/noVNC.git (in a branch called vnc_redux while
 this patch is in review).
 
 To use this nova-novncproxy:
+
+::
+
     git clone http://github.com/cloudbuilders/noVNC.git
     git checkout vnc_redux
     utils/nova-novncproxy --flagfile=[path to flagfile]
@@ -110,6 +120,8 @@ Accessing a vnc console through a web browser
 ---------------------------------------------
 Retrieving an access_url for a web browser is similar to the flow for
 the java client:
+
+::
 
     # Retrieve access url
     nova get-vnc-console [server_id] novnc
@@ -135,3 +147,9 @@ Important Options
   management ip on the same network as the proxies.
   For multi-host libvirt  deployments this can be set to a host
   management ip on the same network as the proxies.
+
+
+.. todo:: 
+
+   Reformat command line app instructions for commands using
+   ``:command:``, ``:option:``, and ``.. program::``. (bug-947261)

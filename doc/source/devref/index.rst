@@ -36,11 +36,11 @@ Background Concepts for Nova
 .. toctree::
    :maxdepth: 3
 
+   architecture
    threading
    il8n
    distributed_scheduler
    multinic
-   zone
    rabbit
 
 Other Resources

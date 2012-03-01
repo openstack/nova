@@ -53,9 +53,12 @@ For background on the core objects referenced in this section, see :doc:`../obje
    managing.users
    managing.projects
    managing.instances
+   managing.instance.types
    managing.images
-   managing.volumes
    managing.networks
+   managingsecurity
+
+..   managing.volumes
 
 Deployment
 ----------
@@ -66,7 +69,9 @@ For a starting multi-node architecture, you would start with two nodes - a cloud
 .. toctree::
    :maxdepth: 1
 
-   dbsync
+   binaries
+
+..   dbsync
 
 
 Networking

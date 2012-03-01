@@ -34,7 +34,7 @@ Contributing Code
 -----------------
 
 To contribute code, sign up for a Launchpad account and sign a contributor license agreement,
-available on the `OpenStack Wiki <http://wiki.openstack.org/CLA>`_. Once the CLA is signed you
+available on the `OpenStack Wiki`_. Once the CLA is signed you
 can contribute code through the Bazaar version control system which is related to your Launchpad
 account.  See the :doc:`devref/development.environment` page to get started.
 
@@ -54,7 +54,9 @@ The wiki is a living source of knowledge.  It is edited by the community, and
 has collections of links and other sources of information. Typically the pages are a good place
 to write drafts for specs or documentation, describe a blueprint, or collaborate with others.
 
-* `OpenStack Wiki <http://wiki.openstack.org/>`_
+* `OpenStack Wiki`_
+
+.. _OpenStack Wiki: http://wiki.openstack.org/
 
 
 Nova on Github

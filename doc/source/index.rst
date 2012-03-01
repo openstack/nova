@@ -48,11 +48,12 @@ Key Concepts
 
    cloud101
    nova.concepts
-   swift.concepts
    service.architecture
-   nova.object.model
-   swift.object.model
+   object.model
    runnova/index
+
+..   swift.concepts
+..   swift.object.model
 
 Developer Docs
 ==============

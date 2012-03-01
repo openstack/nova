@@ -46,18 +46,18 @@ As shown below, responses to an EXTENSION query in XML or JSON provide basic inf
 
 Extension Query Response: XML::
 
-HTTP/1.1 200 OK
-Content-Type: application/xml
-Content-Length: 3295
-Date: Fri, 16 Sep 2011 21:06:55 GMT
+    HTTP/1.1 200 OK
+    Content-Type: application/xml
+    Content-Length: 3295
+    Date: Fri, 16 Sep 2011 21:06:55 GMT
 
-<extensions xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1">
-<extension name="SecurityGroups" namespace="http://docs.openstack.org/ext/securitygroups/api/v1.1" alias="security_groups" updated="2011-07-21T00:00:00+00:00"><description>Security group support</description></extension>
-</extensions>
+    <extensions xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1">
+    <extension name="SecurityGroups" namespace="http://docs.openstack.org/ext/securitygroups/api/v1.1" alias="security_groups" updated="2011-07-21T00:00:00+00:00"><description>Security group support</description></extension>
+    </extensions>
 
 Extension Query Response: JSON::
 
-{"extensions": [{"updated": "2011-07-21T00:00:00+00:00", "name": "SecurityGroups", "links": [], "namespace": "http://docs.openstack.org/ext/securitygroups/api/v1.1", "alias": "security_groups", "description": "Security group support"}]}
+    {"extensions": [{"updated": "2011-07-21T00:00:00+00:00", "name": "SecurityGroups", "links": [], "namespace": "http://docs.openstack.org/ext/securitygroups/api/v1.1", "alias": "security_groups", "description": "Security group support"}]}
 
 Document Change History
 -----------------------

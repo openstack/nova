@@ -1,7 +1,7 @@
 ..
       Copyright 2010-2011 United States Government as represented by the
       Administrator of the National Aeronautics and Space Administration.
-      Overview Sections Copyright 2010-2011 Citrix 
+      Overview Sections Copyright 2010-2011 Citrix
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,7 +23,7 @@ In Nova, users organize their cloud resources in projects. A Nova project consis
 Nova Network Strategies
 -----------------------
 
-Currently, Nova supports three kinds of networks, implemented in three "Network Manager" types respectively: Flat Network Manager, Flat DHCP Network Manager, and VLAN Network Manager. The three kinds of networks can co-exist in a cloud system. However, the scheduler for selecting the type of network for a given project is not yet implemented. Here is a brief description of each of the different network strategies, with a focus on the VLAN Manager in a separate section. 
+Currently, Nova supports three kinds of networks, implemented in three "Network Manager" types respectively: Flat Network Manager, Flat DHCP Network Manager, and VLAN Network Manager. The three kinds of networks can co-exist in a cloud system. However, the scheduler for selecting the type of network for a given project is not yet implemented. Here is a brief description of each of the different network strategies, with a focus on the VLAN Manager in a separate section.
 
 Read more about Nova network strategies here:
 
@@ -36,6 +36,11 @@ Read more about Nova network strategies here:
 
 Network Management Commands
 ---------------------------
+
+.. todo::
+
+   Reformat command line app instructions for ``nova-manage`` using
+   ``:command:``, ``:option:``, and ``.. program::``. (bug-947261)
 
 Admins and Network Administrators can use the 'nova-manage' command to manage network resources:
 

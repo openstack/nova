@@ -48,7 +48,7 @@ RBAC management is exposed through the dashboard for simplified user management.
 
 
 User Commands
-~~~~~~~~~~~~
+~~~~~~~~~~~~~
 
 Users, including admins, are created through the ``user`` commands.
 

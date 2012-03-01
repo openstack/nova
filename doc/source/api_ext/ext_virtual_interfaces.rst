@@ -69,7 +69,7 @@ Summary of Changes
 This extension to the OpenStack Compute API enables listing of Virtual Interfaces of running instances.
 
 New Actions
-----------
+-----------
 virtual_interfaces
 
 New Faults

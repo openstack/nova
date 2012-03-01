@@ -2,7 +2,29 @@
 Building the docs
 =================
 
-It is really easy. You'll need sphinx (the python one) and if you are using the virtualenv you'll need to install it in the virtualenv specifically so that it can load the nova modules.
+Dependencies
+============
+
+Sphinx_
+  You'll need sphinx (the python one) and if you are
+  using the virtualenv you'll need to install it in the virtualenv
+  specifically so that it can load the nova modules.
+
+  ::
+
+    pip install Sphinx
+
+Graphviz_
+  Some of the diagrams are generated using the ``dot`` language
+  from Graphviz.
+
+  ::
+
+    sudo apt-get install graphviz
+
+.. _Sphinx: http://sphinx.pocoo.org
+
+.. _Graphviz: http://www.graphviz.org/
 
 
 Use `make`

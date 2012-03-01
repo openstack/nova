@@ -37,7 +37,8 @@ Doc Link (WADL)
 	http://
 	
 Short Description
-	This extension enables the assignment of config-drives to a compute guest on instance create running in an OpenStack cloud.
+	This extension enables the assignment of config-drives to a
+	compute guest on instance create running in an OpenStack cloud.
 
 Sample Query Responses
 ----------------------
@@ -46,8 +47,15 @@ As shown below, responses to an EXTENSION query in XML or JSON provide basic inf
 
 Extension Query Response: XML::
 
+  TBD
+
+.. todo:: Provide example of extension query XML response.
 
 Extension Query Response: JSON::
+
+  TBD
+
+.. todo:: Provide example of extension query JSON response.
 
 
 Document Change History
@@ -94,114 +102,122 @@ Changes to the Cloud Servers Specification
 In section 4.1.2 (Create Servers) of the API Specification: Examples 4.3 and 4.4 should optionally add the config-drive attribute as in the below examples:
 
 
-Example XML with config_drive attribute = True::
+Example XML with config_drive attribute = True:
 
-<?xml version="1.0" encoding="UTF-8"?>
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
-        imageRef="http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54"
-        flavorRef="52415800-8b69-11e0-9b19-734f1195ff37"
-        name="new-server-test"
-        config=drive="True"
-        >
-  <metadata>
-    <meta key="My Server Name">Apache1</meta>
-  </metadata>
-  <personality>
-    <file path="/etc/banner.txt">
-        ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp
-        dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k
-        IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs
-        c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g
-        QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo
-        ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv
-        dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy
-        c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6
-        b25zLiINCg0KLVJpY2hhcmQgQmFjaA==
-    </file>
-  </personality>
-</server>
+::
 
-Example XML with config_drive attribute is an imageRef::
+    <?xml version="1.0" encoding="UTF-8"?>
+    <server xmlns="http://docs.openstack.org/compute/api/v1.1"
+            imageRef="http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54"
+            flavorRef="52415800-8b69-11e0-9b19-734f1195ff37"
+            name="new-server-test"
+            config=drive="True"
+            >
+      <metadata>
+        <meta key="My Server Name">Apache1</meta>
+      </metadata>
+      <personality>
+        <file path="/etc/banner.txt">
+            ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp
+            dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k
+            IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs
+            c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g
+            QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo
+            ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv
+            dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy
+            c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6
+            b25zLiINCg0KLVJpY2hhcmQgQmFjaA==
+        </file>
+      </personality>
+    </server>
 
-<?xml version="1.0" encoding="UTF-8"?>
-<server xmlns="http://docs.openstack.org/compute/api/v1.1"
-        imageRef="http://servers.api.openstack.org/1234/images/
-52415800-8b69-11e0-9b19-734f6f006e54"
-        flavorRef="52415800-8b69-11e0-9b19-734f1195ff37"
-        name="new-server-test"
-        config_drive="http://servers.api.openstack.org/1234/images/52415800-8b69-1341-9b19-734f6f006e54"
-        >
-  <metadata>
-    <meta key="My Server Name">Apache1</meta>
-  </metadata>
-  <personality>
-    <file path="/etc/banner.txt">
-        ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp
-        dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k
-        IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs
-        c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g
-        QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo
-        ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv
-        dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy
-        c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6
-        b25zLiINCg0KLVJpY2hhcmQgQmFjaA==
-    </file>
-  </personality>
-</server>
+Example XML with config_drive attribute is an imageRef:
+
+::
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <server xmlns="http://docs.openstack.org/compute/api/v1.1"
+            imageRef="http://servers.api.openstack.org/1234/images/
+    52415800-8b69-11e0-9b19-734f6f006e54"
+            flavorRef="52415800-8b69-11e0-9b19-734f1195ff37"
+            name="new-server-test"
+            config_drive="http://servers.api.openstack.org/1234/images/52415800-8b69-1341-9b19-734f6f006e54"
+            >
+      <metadata>
+        <meta key="My Server Name">Apache1</meta>
+      </metadata>
+      <personality>
+        <file path="/etc/banner.txt">
+            ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp
+            dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k
+            IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs
+            c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g
+            QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo
+            ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv
+            dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy
+            c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6
+            b25zLiINCg0KLVJpY2hhcmQgQmFjaA==
+        </file>
+      </personality>
+    </server>
 
 
-Example JSON with config_drive attribute is true::
+Example JSON with config_drive attribute is true:
 
-{
-    "server" : {
-        "name" : "new-server-test",
-        "imageRef" : "http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54",
-        "flavorRef" : "52415800-8b69-11e0-9b19-734f1195ff37",
-        "config_drive" : "true",
-        "metadata" : {
-            "My Server Name" : "Apache1" 
-        },
-        "personality" : [
-            {
-                "path" : "/etc/banner.txt",
-                "contents" : "ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp
- dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k
- IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs
- c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g
- QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo
- ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv
- dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy
- c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6
- b25zLiINCg0KLVJpY2hhcmQgQmFjaA==" 
-            } 
-        ] 
+::
+
+    {
+        "server" : {
+            "name" : "new-server-test",
+            "imageRef" : "http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54",
+            "flavorRef" : "52415800-8b69-11e0-9b19-734f1195ff37",
+            "config_drive" : "true",
+            "metadata" : {
+                "My Server Name" : "Apache1"
+            },
+            "personality" : [
+                {
+                    "path" : "/etc/banner.txt",
+                    "contents" : "ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp
+     dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k
+     IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs
+     c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g
+     QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo
+     ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv
+     dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy
+     c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6
+     b25zLiINCg0KLVJpY2hhcmQgQmFjaA=="
+                }
+            ]
+        }
     }
-}
 
-Example JSON with config_drive attribute is an imageRef::
+Example JSON with config_drive attribute is an imageRef:
 
-{
-    "server" : {
-        "name" : "new-server-test",
-        "imageRef" : "http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54",
-        "flavorRef" : "52415800-8b69-11e0-9b19-734f1195ff37",
-        "config_drive" : "http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54",
-        "metadata" : {
-            "My Server Name" : "Apache1" 
-        },
-        "personality" : [
-            {
-                "path" : "/etc/banner.txt",
-                "contents" : "ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp
- dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k
- IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs
- c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g
- QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo
- ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv
- dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy
- c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6
- b25zLiINCg0KLVJpY2hhcmQgQmFjaA==" 
-            } 
-        ] 
+::
+
+    {
+        "server" : {
+            "name" : "new-server-test",
+            "imageRef" : "http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54",
+            "flavorRef" : "52415800-8b69-11e0-9b19-734f1195ff37",
+            "config_drive" : "http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f6f006e54",
+            "metadata" : {
+                "My Server Name" : "Apache1"
+            },
+            "personality" : [
+                {
+                    "path" : "/etc/banner.txt",
+                    "contents" : "ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp
+     dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k
+     IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs
+     c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g
+     QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo
+     ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv
+     dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy
+     c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6
+     b25zLiINCg0KLVJpY2hhcmQgQmFjaA=="
+                }
+            ]
+        }
     }
-}

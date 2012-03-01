@@ -48,10 +48,13 @@ As shown below, responses to an EXTENSION query in XML or JSON provide basic inf
 
 Extension Query Response: XML::
 
+   TBD
+
+.. todo:: Provide example of XML query and response for volumes extension.
 
 Extension Query Response: JSON::
 
-{"extensions": [{"updated": "2011-03-25T00:00:00+00:00", "name": "Volumes", "links": [], "namespace": "http://docs.openstack.org/ext/volumes/api/v1.1", "alias": "os-volumes", "description": "Volumes support"}]}
+    {"extensions": [{"updated": "2011-03-25T00:00:00+00:00", "name": "Volumes", "links": [], "namespace": "http://docs.openstack.org/ext/volumes/api/v1.1", "alias": "os-volumes", "description": "Volumes support"}]}
 
 Document Change History
 -----------------------
