@@ -417,7 +417,8 @@ class VolumeNotFound(NotFound):
 
 
 class SfAccountNotFound(NotFound):
-    message = _("Unable to locate account %(account_name) on Solidfire device")
+    message = _("Unable to locate account %(account_name)s on "
+                "Solidfire device")
 
 
 class VolumeNotFoundForInstance(VolumeNotFound):
@@ -973,7 +974,7 @@ class AggregateHostExists(Duplicate):
 
 
 class DuplicateSfVolumeNames(Duplicate):
-    message = _("Detected more than one volume with name %(vol_name)")
+    message = _("Detected more than one volume with name %(vol_name)s")
 
 
 class VolumeTypeCreateFailed(NovaException):
@@ -998,7 +999,7 @@ class SolidFireAPIDataException(SolidFireAPIException):
 
 
 class DuplicateVlan(Duplicate):
-    message = _("Detected existing vlan with id %(vlan)")
+    message = _("Detected existing vlan with id %(vlan)d")
 
 
 class InstanceNotFound(NotFound):
@@ -1006,4 +1007,4 @@ class InstanceNotFound(NotFound):
 
 
 class InvalidInstanceIDMalformed(Invalid):
-    message = _("Invalid id: %(val) (expecting \"i-...\").")
+    message = _("Invalid id: %(val)s (expecting \"i-...\").")
