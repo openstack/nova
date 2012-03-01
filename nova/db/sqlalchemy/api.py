@@ -4141,17 +4141,20 @@ def sm_backend_conf_create(context, values):
 
 @require_admin_context
 def sm_backend_conf_update(context, sm_backend_id, values):
-    backend_conf = model_query(context, models.SMBackendConf,
-                               read_deleted="yes").\
+    session = get_session()
+    with session.begin():
+        backend_conf = model_query(context, models.SMBackendConf,
+                                   session=session,
+                                   read_deleted="yes").\
                            filter_by(id=sm_backend_id).\
                            first()
 
-    if not backend_conf:
-        raise exception.NotFound(
+        if not backend_conf:
+            raise exception.NotFound(
                 _("No backend config with id %(sm_backend_id)s") % locals())
 
-    backend_conf.update(values)
-    backend_conf.save()
+        backend_conf.update(values)
+        backend_conf.save(session=session)
     return backend_conf
 
 
