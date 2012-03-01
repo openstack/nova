@@ -664,6 +664,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('%(action_str)s instance') % {'action_str': action_str},
                   context=context, instance=instance)
 
+        self._notify_about_instance_usage(instance, "shutdown.start")
+
         # get network info before tearing down
         network_info = self._get_instance_nw_info(context, instance)
         # tear down allocated network structure
@@ -695,6 +697,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             except exception.DiskNotFound as exc:
                 LOG.warn(_('Ignoring DiskNotFound: %s') % exc,
                          instance=instance)
+
+        self._notify_about_instance_usage(instance, "shutdown.end")
 
     def _cleanup_volumes(self, context, instance_id):
         bdms = self.db.block_device_mapping_get_all_by_instance(context,
@@ -752,12 +756,14 @@ class ComputeManager(manager.SchedulerDependentManager):
     def power_off_instance(self, context, instance_uuid):
         """Power off an instance on this host."""
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        self._notify_about_instance_usage(instance, "power_off.start")
         self.driver.power_off(instance)
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
                               instance_uuid,
                               power_state=current_power_state,
                               task_state=None)
+        self._notify_about_instance_usage(instance, "power_off.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -765,12 +771,14 @@ class ComputeManager(manager.SchedulerDependentManager):
     def power_on_instance(self, context, instance_uuid):
         """Power on an instance on this host."""
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        self._notify_about_instance_usage(instance, "power_on.start")
         self.driver.power_on(instance)
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
                               instance_uuid,
                               power_state=current_power_state,
                               task_state=None)
+        self._notify_about_instance_usage(instance, "power_on.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -929,6 +937,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'instance: %(instance_uuid)s (state: %(state)s '
                        'expected: %(running)s)') % locals())
 
+        self._notify_about_instance_usage(instance_ref, "snapshot.start")
+
         try:
             self.driver.snapshot(context, instance_ref, image_id)
         finally:
@@ -942,6 +952,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         elif image_type == 'backup':
             raise exception.RotationRequiredForBackup()
+
+        self._notify_about_instance_usage(instance_ref, "snapshot.end")
 
     @wrap_instance_fault
     def rotate_backups(self, context, instance_uuid, backup_type, rotation):
@@ -1292,6 +1304,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  migration_id,
                                  {'status': 'migrating'})
 
+        self._notify_about_instance_usage(instance_ref, "resize.start",
+                                          network_info=network_info)
+
         try:
             disk_info = self.driver.migrate_disk_and_power_off(
                     context, instance_ref, migration_ref['dest_host'],
@@ -1318,6 +1333,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         rpc.cast(context, topic, {'method': 'finish_resize',
                                   'args': params})
 
+        self._notify_about_instance_usage(instance_ref, "resize.end",
+                                          network_info=network_info)
+
     def _finish_resize(self, context, instance_ref, migration_ref, disk_info,
                        image):
         resize_instance = False
@@ -1338,6 +1356,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._get_instance_nw_info(context, instance_ref)
 
+        self._notify_about_instance_usage(instance_ref, "finish_resize.start",
+                                          network_info=network_info)
+
         self.driver.finish_migration(context, migration_ref, instance_ref,
                                      disk_info,
                                      self._legacy_nw_info(network_info),
@@ -1351,6 +1372,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.db.migration_update(context, migration_ref.id,
                                  {'status': 'finished'})
+
+        self._notify_about_instance_usage(instance_ref, "finish_resize.end",
+                                          network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
