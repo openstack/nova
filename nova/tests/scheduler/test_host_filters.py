@@ -177,6 +177,7 @@ class HostFiltersTestCase(test.TestCase):
     def test_ram_filter_fails_on_memory(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['RamFilter']()
+        self.flags(ram_allocation_ratio=1.0)
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         capabilities = {'enabled': True}
         service = {'disabled': False}

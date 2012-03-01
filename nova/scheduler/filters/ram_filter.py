@@ -22,7 +22,7 @@ from nova.scheduler import filters
 LOG = logging.getLogger(__name__)
 
 ram_allocation_ratio_opt = cfg.FloatOpt("ram_allocation_ratio",
-        default=1.0,
+        default=1.5,
         help="virtual ram to physical ram allocation ratio")
 
 FLAGS = flags.FLAGS
