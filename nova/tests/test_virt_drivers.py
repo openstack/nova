@@ -476,6 +476,10 @@ class LibvirtConnTestCase(_VirtDriverTestCase):
             nova.virt.libvirt.firewall.libvirt = self.saved_libvirt
         super(LibvirtConnTestCase, self).tearDown()
 
+    def test_force_hard_reboot(self):
+        self.flags(libvirt_wait_soft_reboot_seconds=0)
+        self.test_reboot()
+
     @test.skip_test("Test nothing, but this method "
                     "needed to override superclass.")
     def test_migrate_disk_and_power_off(self):

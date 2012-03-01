@@ -151,6 +151,11 @@ libvirt_opts = [
                help='Override the default disk prefix for the devices attached'
                     ' to a server, which is dependent on libvirt_type. '
                     '(valid options are: sd, xvd, uvd, vd)'),
+    cfg.IntOpt('libvirt_wait_soft_reboot_seconds',
+               default=120,
+               help='Number of seconds to wait for instance to shut down after'
+                    ' soft reboot request is made. We fall back to hard reboot'
+                    ' if instance does not shutdown within this window.'),
     ]
 
 FLAGS = flags.FLAGS
@@ -649,14 +654,55 @@ class LibvirtConnection(driver.ComputeDriver):
                 snapshot_ptr.delete(0)
 
     @exception.wrap_exception()
-    def reboot(self, instance, network_info, reboot_type=None, xml=None):
+    def reboot(self, instance, network_info, reboot_type='SOFT'):
+        """Reboot a virtual machine, given an instance reference."""
+        if reboot_type == 'SOFT':
+            # NOTE(vish): This will attempt to do a graceful shutdown/restart.
+            if self._soft_reboot(instance):
+                LOG.info(_("Instance soft rebooted successfully."),
+                         instance=instance)
+                return
+            else:
+                LOG.info(_("Failed to soft reboot instance."),
+                         instance=instance)
+        return self._hard_reboot(instance, network_info)
+
+    def _soft_reboot(self, instance):
+        """Attempt to shutdown and restart the instance gracefully.
+
+        We use shutdown and create here so we can return if the guest
+        responded and actually rebooted. Note that this method only
+        succeeds if the guest responds to acpi. Therefore we return
+        success or failure so we can fall back to a hard reboot if
+        necessary.
+
+        :returns: True if the reboot succeeded
+        """
+        dom = self._lookup_by_name(instance.name)
+        dom.shutdown()
+        # NOTE(vish): This actually could take slighty longer than the
+        #             FLAG defines depending on how long the get_info
+        #             call takes to return.
+        for x in xrange(FLAGS.libvirt_wait_soft_reboot_seconds):
+            state = self.get_info(instance)['state']
+            if state == power_state.SHUTDOWN:
+                LOG.info(_("Instance shutdown successfully."),
+                         instance=instance)
+                dom.create()
+                timer = utils.LoopingCall(self._wait_for_running, instance)
+                return timer.start(interval=0.5, now=True)
+            greenthread.sleep(1)
+        return False
+
+    def _hard_reboot(self, instance, network_info, xml=None):
         """Reboot a virtual machine, given an instance reference.
 
         This method actually destroys and re-creates the domain to ensure the
         reboot happens, as the guest OS cannot ignore this action.
 
+        If xml is set, it uses the passed in xml in place of the xml from the
+        existing domain.
         """
-
         virt_dom = self._conn.lookupByName(instance['name'])
         # NOTE(itoumsn): Use XML delived from the running instance
         # instead of using to_xml(instance, network_info). This is almost
@@ -664,9 +710,6 @@ class LibvirtConnection(driver.ComputeDriver):
         if not xml:
             xml = virt_dom.XMLDesc(0)
 
-        # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
-        # better because we cannot ensure flushing dirty buffers
-        # in the guest OS. But, in case of KVM, shutdown() does not work...
         self._destroy(instance, network_info, cleanup=False)
         self.plug_vifs(instance, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
@@ -741,7 +784,7 @@ class LibvirtConnection(driver.ComputeDriver):
         }
         self._create_image(context, instance, xml, '.rescue', rescue_images,
                            network_info=network_info)
-        self.reboot(instance, network_info, xml=xml)
+        self._hard_reboot(instance, network_info, xml=xml)
 
     @exception.wrap_exception()
     def unrescue(self, instance, network_info):
@@ -754,9 +797,9 @@ class LibvirtConnection(driver.ComputeDriver):
         unrescue_xml_path = os.path.join(FLAGS.instances_path,
                                          instance['name'],
                                          'unrescue.xml')
-        unrescue_xml = libvirt_utils.load_file(unrescue_xml_path)
+        xml = libvirt_utils.load_file(unrescue_xml_path)
         libvirt_utils.file_delete(unrescue_xml_path)
-        self.reboot(instance, network_info, xml=unrescue_xml)
+        self._hard_reboot(instance, network_info, xml=xml)
         rescue_files = os.path.join(FLAGS.instances_path, instance['name'],
                                     "*.rescue")
         for rescue_file in glob.iglob(rescue_files):
@@ -2195,12 +2238,12 @@ class LibvirtConnection(driver.ComputeDriver):
         except exception.NotFound:
             LOG.error(_("During wait running, instance disappeared."),
                       instance=instance)
-            raise utils.LoopingCallDone
+            raise utils.LoopingCallDone(False)
 
         if state == power_state.RUNNING:
             LOG.info(_("Instance running successfully."),
                      instance=instance)
-            raise utils.LoopingCallDone
+            raise utils.LoopingCallDone(True)
 
     @exception.wrap_exception()
     def finish_migration(self, context, migration, instance, disk_info,
