@@ -24,7 +24,6 @@ from nova import flags
 from nova import utils
 from nova import test
 from nova.compute import power_state
-from nova import context
 from nova.tests import fake_utils
 from nova import exception
 
@@ -265,7 +264,6 @@ class ProxyBareMetalTestCase(test.TestCase):
     def setUp(self):
         super(ProxyBareMetalTestCase, self).setUp()
         self.flags(baremetal_driver='fake')
-        self.context = context.get_admin_context()
         fake_utils.stub_out_utils_execute(self.stubs)
 
     def test_get_info(self):

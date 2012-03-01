@@ -438,7 +438,6 @@ class VolumePolicyTestCase(test.TestCase):
         nova.policy.init()
 
         self.context = context.get_admin_context()
-        self.volume_api = nova.volume.api.API()
 
     def tearDown(self):
         super(VolumePolicyTestCase, self).tearDown()

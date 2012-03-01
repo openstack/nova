@@ -51,7 +51,6 @@ class ImagesControllerTest(test.TestCase):
     def setUp(self):
         """Run before each test."""
         super(ImagesControllerTest, self).setUp()
-        self.maxDiff = None
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)

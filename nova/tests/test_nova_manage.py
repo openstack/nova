@@ -80,7 +80,6 @@ class NetworkCommandsTestCase(test.TestCase):
         super(NetworkCommandsTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.commands = nova_manage.NetworkCommands()
-        self.context = context.get_admin_context()
         self.net = {'id': 0,
                     'label': 'fake',
                     'injected': False,

@@ -92,7 +92,6 @@ class AdminActionsTest(test.TestCase):
                        fake_scheduler_api_live_migration)
 
     def test_admin_api_actions(self):
-        self.maxDiff = None
         app = fakes.wsgi_app()
         for _action in self._actions:
             req = webob.Request.blank('/v2/fake/servers/%s/action' %
@@ -104,7 +103,6 @@ class AdminActionsTest(test.TestCase):
             self.assertEqual(res.status_int, 202)
 
     def test_admin_api_actions_raise_conflict_on_invalid_state(self):
-        self.maxDiff = None
         app = fakes.wsgi_app()
 
         for _action, _method in self._actions_that_check_state:

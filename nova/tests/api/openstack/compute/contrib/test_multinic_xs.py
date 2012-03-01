@@ -18,7 +18,6 @@ import json
 import webob
 
 from nova import compute
-from nova import context
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -54,7 +53,6 @@ class FixedIpTest(test.TestCase):
         self.stubs.Set(compute.api.API, "remove_fixed_ip",
                        compute_api_remove_fixed_ip)
         self.stubs.Set(compute.api.API, 'get', compute_api_get)
-        self.context = context.get_admin_context()
 
     def test_add_fixed_ip(self):
         global last_add_fixed_ip

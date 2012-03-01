@@ -21,7 +21,6 @@ import webob
 
 from nova.api.openstack.compute.contrib import (virtual_storage_arrays as
                                                 vsa_ext)
-from nova import context
 import nova.db
 from nova import exception
 from nova import flags
@@ -104,8 +103,6 @@ class VSAApiTest(test.TestCase):
         self.stubs.Set(vsa.api.API, "delete", stub_vsa_delete)
         self.stubs.Set(vsa.api.API, "get", stub_vsa_get)
         self.stubs.Set(vsa.api.API, "get_all", stub_vsa_get_all)
-
-        self.context = context.get_admin_context()
 
     def tearDown(self):
         super(VSAApiTest, self).tearDown()
@@ -253,7 +250,6 @@ class VSAVolumeApiTest(test.TestCase):
         self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get)
         self.stubs.Set(volume.api.API, "get_all", fakes.stub_volume_get_all)
 
-        self.context = context.get_admin_context()
         self.test_obj = test_obj if test_obj else "volume"
         self.test_objs = test_objs if test_objs else "volumes"
 

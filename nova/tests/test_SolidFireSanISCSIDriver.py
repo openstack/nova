@@ -26,8 +26,6 @@ LOG = logging.getLogger(__name__)
 class SolidFireVolumeTestCase(test.TestCase):
     def setUp(self):
         super(SolidFireVolumeTestCase, self).setUp()
-        self.executes = []
-        self.account_not_found = False
 
     def tearDown(self):
         pass

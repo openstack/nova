@@ -19,7 +19,6 @@ import copy
 import webob
 
 from nova.api.openstack.compute.contrib import networks
-from nova import context
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -96,7 +95,6 @@ class NetworksTest(test.TestCase):
         self.controller = networks.NetworkController(self.fake_network_api)
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.context = context.RequestContext('user', '1234', is_admin=True)
 
     def test_network_list_all(self):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks')

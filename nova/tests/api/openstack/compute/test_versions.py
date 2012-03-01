@@ -25,7 +25,6 @@ import webob
 from nova.api.openstack.compute import versions
 from nova.api.openstack.compute import views
 from nova.api.openstack import xmlutil
-from nova import context
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
@@ -82,7 +81,6 @@ VERSIONS = {
 class VersionsTest(test.TestCase):
     def setUp(self):
         super(VersionsTest, self).setUp()
-        self.context = context.get_admin_context()
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_auth(self.stubs)
         #Stub out VERSIONS

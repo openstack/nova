@@ -44,8 +44,6 @@ class VolumeTypeTestCase(test.TestCase):
                     size="300",
                     rpm="7200",
                     visible="True")
-        self.vol_type1 = dict(name=self.vol_type1_name,
-                              extra_specs=self.vol_type1_specs)
 
     def test_volume_type_create_then_destroy(self):
         """Ensure volume types can be created and deleted"""

@@ -19,7 +19,7 @@ import unittest
 
 from lxml import etree
 
-from nova.api.openstack  import compute
+from nova.api.openstack import compute
 from nova.api.openstack.compute import extensions
 from nova.api.openstack.compute.contrib import server_action_list
 from nova.api.openstack import wsgi
@@ -50,7 +50,6 @@ class ServerActionsTest(test.TestCase):
         self.flags(verbose=True)
         self.stubs.Set(nova.compute.API, 'get_actions', fake_get_actions)
         self.stubs.Set(nova.compute.API, 'get', fake_instance_get)
-        self.compute_api = nova.compute.API()
 
         self.router = compute.APIRouter()
 

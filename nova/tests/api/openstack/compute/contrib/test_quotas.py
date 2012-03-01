@@ -20,7 +20,6 @@ from lxml import etree
 
 from nova.api.openstack import wsgi
 from nova.api.openstack.compute.contrib import quotas
-from nova import context
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -42,13 +41,6 @@ class QuotaSetsTest(test.TestCase):
     def setUp(self):
         super(QuotaSetsTest, self).setUp()
         self.controller = quotas.QuotaSetsController()
-        self.user_id = 'fake'
-        self.project_id = 'fake'
-        self.user_context = context.RequestContext(self.user_id,
-                                                   self.project_id)
-        self.admin_context = context.RequestContext(self.user_id,
-                                                    self.project_id,
-                                                    is_admin=True)
 
     def test_format_quota_set(self):
         raw_quota_set = {

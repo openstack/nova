@@ -82,7 +82,6 @@ class LimitsControllerTest(BaseLimitTestSuite):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
         self.controller = limits.create_resource()
-        self.maxDiff = None
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -848,12 +847,6 @@ class LimitsViewBuilderTest(test.TestCase):
 
 
 class LimitsXMLSerializationTest(test.TestCase):
-
-    def setUp(self):
-        self.maxDiff = None
-
-    def tearDown(self):
-        pass
 
     def test_xml_declaration(self):
         serializer = limits.LimitsTemplate()

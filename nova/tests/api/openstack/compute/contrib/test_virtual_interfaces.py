@@ -44,7 +44,6 @@ class ServerVirtualInterfaceTest(test.TestCase):
 
     def setUp(self):
         super(ServerVirtualInterfaceTest, self).setUp()
-        self.controller = virtual_interfaces.ServerVirtualInterfaceController()
         self.stubs.Set(compute.api.API, "get",
                        compute_api_get)
         self.stubs.Set(network.api.API, "get_vifs_by_instance",

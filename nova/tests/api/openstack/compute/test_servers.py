@@ -91,7 +91,6 @@ class MockSetAdminPassword(object):
 
 class ServersControllerTest(test.TestCase):
     def setUp(self):
-        self.maxDiff = None
         super(ServersControllerTest, self).setUp()
         self.flags(verbose=True, use_ipv6=False)
         fakes.stub_out_rate_limiting(self.stubs)
@@ -108,8 +107,6 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_add_security_group',
                        return_security_group)
         self.stubs.Set(nova.db, 'instance_update', instance_update)
-
-        self.config_drive = None
 
         self.controller = servers.Controller()
         self.ips_controller = ips.Controller()
@@ -1200,10 +1197,8 @@ class ServersControllerCreateTest(test.TestCase):
         """Shared implementation for tests below that create instance"""
         super(ServersControllerCreateTest, self).setUp()
 
-        self.maxDiff = None
         self.flags(verbose=True,
                    enable_instance_password=True)
-        self.config_drive = None
         self.instance_cache_num = 0
         self.instance_cache = {}
 
@@ -1227,7 +1222,7 @@ class ServersControllerCreateTest(test.TestCase):
                 'reservation_id': inst['reservation_id'],
                 "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                 "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-                "config_drive": self.config_drive,
+                "config_drive": None,
                 "progress": 0,
                 "fixed_ips": []
             }
@@ -1778,7 +1773,6 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, req, body)
 
     def test_create_instance_with_config_drive(self):
-        self.config_drive = True
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
@@ -1805,7 +1799,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_with_config_drive_as_id(self):
-        self.config_drive = 2
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
@@ -1832,7 +1825,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_with_bad_config_drive(self):
-        self.config_drive = "asdf"
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/v2/fake/flavors/3'
         body = {
@@ -3032,10 +3024,6 @@ class ServerXMLSerializationTest(test.TestCase):
     SERVER_BOOKMARK = 'http://localhost/servers/%s' % FAKE_UUID
     IMAGE_BOOKMARK = 'http://localhost/images/5'
     FLAVOR_BOOKMARK = 'http://localhost/flavors/1'
-
-    def setUp(self):
-        self.maxDiff = None
-        test.TestCase.setUp(self)
 
     def test_xml_declaration(self):
         serializer = servers.ServerTemplate()

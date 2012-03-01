@@ -21,7 +21,6 @@ import webob
 
 from nova.api.openstack.compute import servers
 from nova.compute import vm_states
-from nova import context
 import nova.db
 from nova import exception
 from nova import flags
@@ -55,7 +54,6 @@ class MockSetAdminPassword(object):
 class ServerActionsControllerTest(test.TestCase):
 
     def setUp(self):
-        self.maxDiff = None
         super(ServerActionsControllerTest, self).setUp()
 
         self.stubs = stubout.StubOutForTesting()
@@ -72,7 +70,6 @@ class ServerActionsControllerTest(test.TestCase):
         fakes.stub_out_image_service(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(1, None)
         self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)

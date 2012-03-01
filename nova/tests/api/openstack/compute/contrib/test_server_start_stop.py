@@ -18,7 +18,6 @@ import mox
 import webob
 
 from nova.api.openstack.compute.contrib import server_start_stop
-from nova import context
 from nova import compute
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -32,7 +31,6 @@ class ServerStartStopTest(test.TestCase):
 
     def setUp(self):
         super(ServerStartStopTest, self).setUp()
-        self.context = context.get_admin_context()
         self.controller = server_start_stop.ServerStartStopActionController()
 
     def tearDown(self):

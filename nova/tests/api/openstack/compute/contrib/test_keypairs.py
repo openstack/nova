@@ -20,7 +20,6 @@ from lxml import etree
 
 from nova.api.openstack import wsgi
 from nova.api.openstack.compute.contrib import keypairs
-from nova import context
 from nova import db
 from nova import exception
 from nova import test
@@ -54,7 +53,6 @@ class KeypairsTest(test.TestCase):
 
     def setUp(self):
         super(KeypairsTest, self).setUp()
-        self.controller = keypairs.KeypairController()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(db, "key_pair_get_all_by_user",
@@ -63,7 +61,6 @@ class KeypairsTest(test.TestCase):
                        db_key_pair_create)
         self.stubs.Set(db, "key_pair_destroy",
                        db_key_pair_destroy)
-        self.context = context.get_admin_context()
 
     def test_keypair_list(self):
         req = webob.Request.blank('/v2/fake/os-keypairs')

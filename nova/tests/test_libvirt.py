@@ -349,8 +349,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(fake_call=True)
         self.user_id = 'fake'
         self.project_id = 'fake'
-        self.context = context.RequestContext(self.user_id, self.project_id)
-        self.network = utils.import_object(FLAGS.network_manager)
         self.context = context.get_admin_context()
         self.flags(instances_path='')
         self.call_libvirt_dependant_setup = False
@@ -1368,7 +1366,6 @@ class IptablesFirewallTestCase(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        self.network = utils.import_object(FLAGS.network_manager)
 
         class FakeLibvirtConnection(object):
             def nwfilterDefineXML(*args, **kwargs):
@@ -2046,7 +2043,6 @@ class LibvirtConnectionTestCase(test.TestCase):
 
         self.libvirtconnection = connection.LibvirtConnection(read_only=True)
         self.platform = sys.platform
-        self.exe_flag = False
 
         self.temp_path = os.path.join(flags.FLAGS.instances_path,
                                       'instance-00000001/', '')

@@ -47,7 +47,6 @@ class AccessTestCase(test.TestCase):
     def setUp(self):
         super(AccessTestCase, self).setUp()
         um = manager.AuthManager()
-        self.context = context.get_admin_context()
         # Make test users
         self.testadmin = um.create_user('testadmin')
         self.testpmsys = um.create_user('testpmsys')

@@ -18,7 +18,7 @@ import unittest
 
 from lxml import etree
 
-from nova.api.openstack  import compute
+from nova.api.openstack import compute
 from nova.api.openstack.compute import extensions
 from nova.api.openstack.compute.contrib import server_diagnostics
 from nova.api.openstack import wsgi
@@ -44,7 +44,6 @@ class ServerDiagnosticsTest(test.TestCase):
         self.stubs.Set(nova.compute.API, 'get_diagnostics',
                        fake_get_diagnostics)
         self.stubs.Set(nova.compute.API, 'get', fake_instance_get)
-        self.compute_api = nova.compute.API()
 
         self.router = compute.APIRouter()
 

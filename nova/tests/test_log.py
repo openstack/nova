@@ -82,7 +82,6 @@ class PublishErrorsHandlerTestCase(test.TestCase):
     """Tests for nova.log.PublishErrorsHandler"""
     def setUp(self):
         super(PublishErrorsHandlerTestCase, self).setUp()
-        self.handler = logging.Handler()
         self.publiserrorshandler = log.PublishErrorsHandler(logging.ERROR)
 
     def test_emit_cfg_list_notifier_drivers_in_flags(self):

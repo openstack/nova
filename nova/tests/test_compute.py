@@ -121,7 +121,6 @@ class BaseTestCase(test.TestCase):
                                               self.project_id)
         test_notifier.NOTIFICATIONS = []
         self.mox = mox.Mox()
-        self.total_waits = 0
 
         def fake_show(meh, context, id):
             return {'id': 1, 'min_disk': None, 'min_ram': None,
@@ -2582,7 +2581,6 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_get(self):
         """Test get instance"""
-        self.maxDiff = None
         c = context.get_admin_context()
         exp_instance = self._create_fake_instance()
         expected = dict(exp_instance.iteritems())
@@ -2598,7 +2596,6 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_get_with_integer_id(self):
         """Test get instance with an integer id"""
-        self.maxDiff = None
         c = context.get_admin_context()
         exp_instance = self._create_fake_instance()
         expected = dict(exp_instance.iteritems())
