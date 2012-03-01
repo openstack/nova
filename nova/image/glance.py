@@ -24,7 +24,7 @@ import datetime
 import json
 import random
 import time
-from urlparse import urlparse
+import urlparse
 
 from glance.common import exception as glance_exception
 
@@ -52,7 +52,7 @@ def _parse_image_ref(image_href):
     :raises ValueError
 
     """
-    o = urlparse(image_href)
+    o = urlparse.urlparse(image_href)
     port = o.port or 80
     host = o.netloc.split(':', 1)[0]
     image_id = o.path.split('/')[-1]

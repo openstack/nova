@@ -24,7 +24,8 @@ from nova.scheduler import least_cost
 from nova.scheduler import host_manager
 from nova.scheduler import distributed_scheduler
 from nova import test
-from nova.tests.scheduler import fakes, test_scheduler
+from nova.tests.scheduler import fakes
+from nova.tests.scheduler import test_scheduler
 
 
 def fake_filter_hosts(hosts, filter_properties):

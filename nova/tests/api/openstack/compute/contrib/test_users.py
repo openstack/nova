@@ -16,7 +16,7 @@
 from lxml import etree
 
 from nova.api.openstack.compute.contrib import users
-from nova.auth.manager import User, Project
+import nova.auth.manager as auth_manager
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
@@ -33,7 +33,8 @@ class UsersTest(test.TestCase):
         self.stubs.Set(users.Controller, '__init__',
                        fake_init)
         fakes.FakeAuthManager.clear_fakes()
-        fakes.FakeAuthManager.projects = dict(testacct=Project('testacct',
+        fakes.FakeAuthManager.projects = dict(testacct=auth_manager.Project(
+                                                               'testacct',
                                                                'testacct',
                                                                'id1',
                                                                'test',
@@ -44,8 +45,10 @@ class UsersTest(test.TestCase):
         fakes.stub_out_auth(self.stubs)
 
         fakemgr = fakes.FakeAuthManager()
-        fakemgr.add_user(User('id1', 'guy1', 'acc1', 'secret1', False))
-        fakemgr.add_user(User('id2', 'guy2', 'acc2', 'secret2', True))
+        fakemgr.add_user(auth_manager.User('id1', 'guy1',
+                'acc1', 'secret1', False))
+        fakemgr.add_user(auth_manager.User('id2', 'guy2',
+                'acc2', 'secret2', True))
 
         self.controller = users.Controller()
 

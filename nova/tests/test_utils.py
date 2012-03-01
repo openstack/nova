@@ -529,7 +529,8 @@ class MonkeyPatchTestCase(test.TestCase):
     def test_monkey_patch(self):
         utils.monkey_patch()
         nova.tests.monkey_patch_example.CALLED_FUNCTION = []
-        from nova.tests.monkey_patch_example import example_a, example_b
+        from nova.tests.monkey_patch_example import example_a
+        from nova.tests.monkey_patch_example import example_b
 
         self.assertEqual('Example function', example_a.example_function_a())
         exampleA = example_a.ExampleClassA()

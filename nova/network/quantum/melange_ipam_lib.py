@@ -15,7 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from netaddr import IPNetwork, IPAddress
+import netaddr
+
 from nova import db
 from nova import exception
 from nova import flags
@@ -72,8 +73,8 @@ class QuantumMelangeIPAMLib(object):
                "label": label}
         if FLAGS.quantum_use_dhcp:
             if cidr:
-                n = IPNetwork(cidr)
-                net['dhcp_start'] = IPAddress(n.first + 2)
+                n = netaddr.IPNetwork(cidr)
+                net['dhcp_start'] = netaddr.IPAddress(n.first + 2)
         else:
             net['dhcp_start'] = None
         admin_context = context.elevated()
@@ -216,7 +217,7 @@ class QuantumMelangeIPAMLib(object):
         tenant_id = project_id or FLAGS.quantum_default_tenant_id
         ip_list = self.m_conn.get_allocated_ips(net_id, vif_id, tenant_id)
         return [ip['address'] for ip in ip_list
-                if IPNetwork(ip['address']).version == ip_version]
+                if netaddr.IPNetwork(ip['address']).version == ip_version]
 
     def verify_subnet_exists(self, context, project_id, quantum_net_id):
         """Confirms that a subnet exists that is associated with the
