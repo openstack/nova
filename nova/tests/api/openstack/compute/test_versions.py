@@ -19,7 +19,6 @@ import json
 
 import feedparser
 from lxml import etree
-import stubout
 import webob
 
 from nova.api.openstack.compute import versions
@@ -81,7 +80,6 @@ VERSIONS = {
 class VersionsTest(test.TestCase):
     def setUp(self):
         super(VersionsTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_auth(self.stubs)
         #Stub out VERSIONS
         self.old_versions = versions.VERSIONS

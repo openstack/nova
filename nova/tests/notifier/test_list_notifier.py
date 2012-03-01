@@ -52,7 +52,6 @@ class NotifierListTestCase(test.TestCase):
         self.stubs.Set(nova.notifier.log_notifier, 'notify', mock_notify2)
 
     def tearDown(self):
-        self.stubs.UnsetAll()
         list_notifier._reset_drivers()
         super(NotifierListTestCase, self).tearDown()
 

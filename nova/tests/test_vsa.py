@@ -14,7 +14,6 @@
 #    under the License.
 
 import base64
-import stubout
 
 from xml.etree import ElementTree
 
@@ -37,7 +36,6 @@ class VsaTestCase(test.TestCase):
 
     def setUp(self):
         super(VsaTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.vsa_api = vsa.API()
 
         self.flags(quota_volumes=100, quota_gigabytes=10000)
@@ -61,10 +59,6 @@ class VsaTestCase(test.TestCase):
         self.stubs.Set(nova.image.fake._FakeImageService,
                         'show_by_name',
                         fake_show_by_name)
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(VsaTestCase, self).tearDown()
 
     def test_vsa_create_delete_defaults(self):
         param = {'display_name': 'VSA name test'}

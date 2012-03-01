@@ -15,7 +15,6 @@
 
 import datetime
 import json
-import stubout
 
 from lxml import etree
 import webob
@@ -92,7 +91,6 @@ def stub_snapshot_get_all(self, context):
 class SnapshotApiTest(test.TestCase):
     def setUp(self):
         super(SnapshotApiTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
@@ -108,10 +106,6 @@ class SnapshotApiTest(test.TestCase):
         self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get)
 
         self.context = context.get_admin_context()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(SnapshotApiTest, self).tearDown()
 
     def test_snapshot_create(self):
         global _last_param

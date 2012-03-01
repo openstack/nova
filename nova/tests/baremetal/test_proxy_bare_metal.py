@@ -18,7 +18,6 @@ import __builtin__
 import functools
 import mox
 import StringIO
-import stubout
 
 from nova import flags
 from nova import utils
@@ -53,18 +52,14 @@ class DomainReadWriteTestCase(test.TestCase):
         """Read a file that contains no domains"""
 
         self.mox.StubOutWithMock(__builtin__, 'open')
-        try:
-            fake_file = StringIO.StringIO('[]')
-            open('/tftpboot/test_fake_dom_file', 'r').AndReturn(fake_file)
+        fake_file = StringIO.StringIO('[]')
+        open('/tftpboot/test_fake_dom_file', 'r').AndReturn(fake_file)
 
-            self.mox.ReplayAll()
+        self.mox.ReplayAll()
 
-            domains = dom.read_domains('/tftpboot/test_fake_dom_file')
+        domains = dom.read_domains('/tftpboot/test_fake_dom_file')
 
-            self.assertEqual(domains, [])
-
-        finally:
-            self.mox.UnsetStubs()
+        self.assertEqual(domains, [])
 
     def test_read_domain(self):
         """Read a file that contains at least one domain"""
@@ -75,17 +70,13 @@ class DomainReadWriteTestCase(test.TestCase):
          "ramdisk_id": "", "ip_address": "10.5.1.2"}]''')
 
         self.mox.StubOutWithMock(__builtin__, 'open')
-        try:
-            open('/tftpboot/test_fake_dom_file', 'r').AndReturn(fake_file)
+        open('/tftpboot/test_fake_dom_file', 'r').AndReturn(fake_file)
 
-            self.mox.ReplayAll()
+        self.mox.ReplayAll()
 
-            domains = dom.read_domains('/tftpboot/test_fake_dom_file')
+        domains = dom.read_domains('/tftpboot/test_fake_dom_file')
 
-            self.assertEqual(domains, fake_domains)
-
-        finally:
-            self.mox.UnsetStubs()
+        self.assertEqual(domains, fake_domains)
 
     def test_read_no_file(self):
         """Try to read when the file does not exist
@@ -93,18 +84,14 @@ class DomainReadWriteTestCase(test.TestCase):
         This should through and IO exception"""
 
         self.mox.StubOutWithMock(__builtin__, 'open')
-        try:
-            open('/tftpboot/test_fake_dom_file',
-                 'r').AndRaise(IOError(2, 'No such file or directory',
+        open('/tftpboot/test_fake_dom_file',
+             'r').AndRaise(IOError(2, 'No such file or directory',
                                        '/tftpboot/test_fake_dom_file'))
 
-            self.mox.ReplayAll()
+        self.mox.ReplayAll()
 
-            self.assertRaises(exception.NotFound, dom.read_domains,
-                       '/tftpboot/test_fake_dom_file')
-
-        finally:
-            self.mox.UnsetStubs()
+        self.assertRaises(exception.NotFound, dom.read_domains,
+                          '/tftpboot/test_fake_dom_file')
 
     def assertJSONEquals(self, x, y):
         """Check if two json strings represent the equivalent Python object"""
@@ -120,23 +107,19 @@ class DomainReadWriteTestCase(test.TestCase):
                "name": "instance-00000001", "memory_kb": 16777216,
                "mac_address": "02:16:3e:01:4e:c9", "kernel_id": "1896115634",
                "ramdisk_id": "", "ip_address": "10.5.1.2"}]'''
-        try:
-            open('/tftpboot/test_fake_dom_file', 'w').AndReturn(mock_file)
+        open('/tftpboot/test_fake_dom_file', 'w').AndReturn(mock_file)
 
-            # Check if the argument to file.write() represents the same
-            # Python object as expected_json
-            # We can't do an exact string comparison
-            # because of ordering and whitespace
-            mock_file.write(mox.Func(functools.partial(self.assertJSONEquals,
-                                                       expected_json)))
-            mock_file.close()
+        # Check if the argument to file.write() represents the same
+        # Python object as expected_json
+        # We can't do an exact string comparison
+        # because of ordering and whitespace
+        mock_file.write(mox.Func(functools.partial(self.assertJSONEquals,
+                                                   expected_json)))
+        mock_file.close()
 
-            self.mox.ReplayAll()
+        self.mox.ReplayAll()
 
-            dom.write_domains('/tftpboot/test_fake_dom_file', fake_domains)
-
-        finally:
-            self.mox.UnsetStubs()
+        dom.write_domains('/tftpboot/test_fake_dom_file', fake_domains)
 
 
 class BareMetalDomTestCase(test.TestCase):
@@ -145,11 +128,9 @@ class BareMetalDomTestCase(test.TestCase):
         super(BareMetalDomTestCase, self).setUp()
         self.flags(baremetal_driver='fake')
         # Stub out utils.execute
-        self.stubs = stubout.StubOutForTesting()
         fake_utils.stub_out_utils_execute(self.stubs)
 
     def tearDown(self):
-        self.stubs.UnsetAll()
         super(BareMetalDomTestCase, self).tearDown()
 
         # Reset the singleton state

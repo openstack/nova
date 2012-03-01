@@ -21,8 +21,6 @@ import os
 import StringIO
 import sys
 
-import stubout
-
 import nova.auth.manager
 from nova import context
 from nova import db
@@ -44,13 +42,8 @@ sys.dont_write_bytecode = False
 class FixedIpCommandsTestCase(test.TestCase):
     def setUp(self):
         super(FixedIpCommandsTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         db_fakes.stub_out_db_network_api(self.stubs)
         self.commands = nova_manage.FixedIpCommands()
-
-    def tearDown(self):
-        super(FixedIpCommandsTestCase, self).tearDown()
-        self.stubs.UnsetAll()
 
     def test_reserve(self):
         self.commands.reserve('192.168.0.100')
@@ -78,7 +71,6 @@ class FixedIpCommandsTestCase(test.TestCase):
 class NetworkCommandsTestCase(test.TestCase):
     def setUp(self):
         super(NetworkCommandsTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.commands = nova_manage.NetworkCommands()
         self.net = {'id': 0,
                     'label': 'fake',
@@ -121,10 +113,6 @@ class NetworkCommandsTestCase(test.TestCase):
         self.fake_network_get_by_cidr = fake_network_get_by_cidr
         self.fake_network_get_by_uuid = fake_network_get_by_uuid
         self.fake_network_update = fake_network_update
-
-    def tearDown(self):
-        super(NetworkCommandsTestCase, self).tearDown()
-        self.stubs.UnsetAll()
 
     def test_create(self):
 

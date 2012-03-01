@@ -76,10 +76,6 @@ class VolumeTypesApiTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.controller = volumetypes.VolumeTypesController()
 
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(VolumeTypesApiTest, self).tearDown()
-
     def test_volume_types_index(self):
         self.stubs.Set(volume_types, 'get_all_types',
                        return_volume_types_get_all_types)

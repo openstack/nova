@@ -111,8 +111,6 @@ class RevokeCertsTest(test.TestCase):
 
         crypto.revoke_certs_by_user_and_project(user_id, project_id)
 
-        self.mox.VerifyAll()
-
     def test_revoke_certs_by_user(self):
         user_id = 'test_user'
         project_id = 2
@@ -133,8 +131,6 @@ class RevokeCertsTest(test.TestCase):
 
         crypto.revoke_certs_by_user(user_id)
 
-        self.mox.VerifyAll()
-
     def test_revoke_certs_by_project(self):
         user_id = 'test_user'
         project_id = 2
@@ -154,5 +150,3 @@ class RevokeCertsTest(test.TestCase):
         self.mox.ReplayAll()
 
         crypto.revoke_certs_by_project(project_id)
-
-        self.mox.VerifyAll()

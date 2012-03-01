@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
-
 import nova
 import nova.notifier.no_op_notifier
 from nova import log
@@ -28,11 +26,6 @@ class NotifierTestCase(test.TestCase):
     def setUp(self):
         super(NotifierTestCase, self).setUp()
         self.flags(notification_driver='nova.notifier.no_op_notifier')
-        self.stubs = stubout.StubOutForTesting()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(NotifierTestCase, self).tearDown()
 
     def test_send_notification(self):
         self.notify_called = False

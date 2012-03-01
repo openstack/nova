@@ -455,8 +455,6 @@ class VolumePolicyTestCase(test.TestCase):
         nova.policy.enforce(self.context, 'volume:attach', target)
         self.mox.ReplayAll()
         nova.volume.api.check_policy(self.context, 'attach')
-        self.mox.UnsetStubs()
-        self.mox.VerifyAll()
 
     def test_check_policy_with_target(self):
         self.mox.StubOutWithMock(nova.policy, 'enforce')
@@ -468,5 +466,3 @@ class VolumePolicyTestCase(test.TestCase):
         nova.policy.enforce(self.context, 'volume:attach', target)
         self.mox.ReplayAll()
         nova.volume.api.check_policy(self.context, 'attach', {'id': 2})
-        self.mox.UnsetStubs()
-        self.mox.VerifyAll()

@@ -51,7 +51,6 @@ class DeferredDeleteExtensionTest(test.TestCase):
         self.mox.ReplayAll()
         res = self.extension._force_delete(self.fake_req, self.fake_uuid,
                                            self.fake_input_dict)
-        self.mox.VerifyAll()
         self.assertEqual(res.status_int, 202)
 
     def test_force_delete_raises_conflict_on_invalid_state(self):
@@ -69,7 +68,6 @@ class DeferredDeleteExtensionTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                 self.extension._force_delete, self.fake_req, self.fake_uuid,
                 self.fake_input_dict)
-        self.mox.VerifyAll()
 
     def test_restore(self):
         self.mox.StubOutWithMock(compute.API, 'get')
@@ -84,7 +82,6 @@ class DeferredDeleteExtensionTest(test.TestCase):
         self.mox.ReplayAll()
         res = self.extension._restore(self.fake_req, self.fake_uuid,
                                       self.fake_input_dict)
-        self.mox.VerifyAll()
         self.assertEqual(res.status_int, 202)
 
     def test_restore_raises_conflict_on_invalid_state(self):
@@ -101,4 +98,3 @@ class DeferredDeleteExtensionTest(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(webob.exc.HTTPConflict, self.extension._restore,
                 self.fake_req, self.fake_uuid, self.fake_input_dict)
-        self.mox.VerifyAll()

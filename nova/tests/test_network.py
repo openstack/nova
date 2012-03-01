@@ -1463,8 +1463,6 @@ class NetworkPolicyTestCase(test.TestCase):
         nova.policy.enforce(self.context, 'network:get_all', target)
         self.mox.ReplayAll()
         network_manager.check_policy(self.context, 'get_all')
-        self.mox.UnsetStubs()
-        self.mox.VerifyAll()
 
 
 class InstanceDNSTestCase(test.TestCase):

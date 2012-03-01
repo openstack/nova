@@ -84,7 +84,6 @@ class HostManagerTestCase(test.TestCase):
         self.mox.ReplayAll()
         filtered_hosts = self.host_manager.filter_hosts(hosts,
                 filter_properties, filters=None)
-        self.mox.VerifyAll()
         self.assertEqual(len(filtered_hosts), 1)
         self.assertEqual(filtered_hosts[0], fake_host2)
 
@@ -108,7 +107,6 @@ class HostManagerTestCase(test.TestCase):
                 host1_volume_capabs)
         self.host_manager.update_service_capabilities('compute', 'host2',
                 host2_compute_capabs)
-        self.mox.VerifyAll()
 
         # Make sure dictionary isn't re-assigned
         self.assertEqual(self.host_manager.service_states, service_states)
@@ -149,7 +147,6 @@ class HostManagerTestCase(test.TestCase):
         res1 = self.host_manager.host_service_caps_stale('host1', 'compute')
         res2 = self.host_manager.host_service_caps_stale('host1', 'volume')
         res3 = self.host_manager.host_service_caps_stale('host2', 'compute')
-        self.mox.VerifyAll()
 
         self.assertEqual(res1, True)
         self.assertEqual(res2, False)
@@ -229,7 +226,6 @@ class HostManagerTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = self.host_manager.get_service_capabilities()
-        self.mox.VerifyAll()
 
         self.assertEqual(info['called'], 5)
 
@@ -258,7 +254,6 @@ class HostManagerTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         host_states = self.host_manager.get_all_host_states(context, topic)
-        self.mox.VerifyAll()
 
         self.assertEqual(len(host_states), 4)
         # Check that .service is set properly
@@ -305,7 +300,6 @@ class HostStateTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = fake_host.passes_filters(filter_fns, filter_properties)
-        self.mox.VerifyAll()
         self.assertTrue(result)
 
     def test_host_state_passes_filters_passes_with_ignore(self):
@@ -323,7 +317,6 @@ class HostStateTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = fake_host.passes_filters(filter_fns, filter_properties)
-        self.mox.VerifyAll()
         self.assertTrue(result)
 
     def test_host_state_passes_filters_fails(self):
@@ -341,7 +334,6 @@ class HostStateTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = fake_host.passes_filters(filter_fns, filter_properties)
-        self.mox.VerifyAll()
         self.assertFalse(result)
 
     def test_host_state_passes_filters_fails_from_ignore(self):
@@ -359,7 +351,6 @@ class HostStateTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = fake_host.passes_filters(filter_fns, filter_properties)
-        self.mox.VerifyAll()
         self.assertFalse(result)
 
     def test_host_state_passes_filters_skipped_from_force(self):
@@ -377,5 +368,4 @@ class HostStateTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = fake_host.passes_filters(filter_fns, filter_properties)
-        self.mox.VerifyAll()
         self.assertTrue(result)

@@ -17,7 +17,6 @@
 
 
 import datetime
-import stubout
 
 from nova.tests.api.openstack import fakes
 from nova import context
@@ -89,16 +88,11 @@ class TestGlanceImageService(test.TestCase):
 
     def setUp(self):
         super(TestGlanceImageService, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_compute_api_snapshot(self.stubs)
         client = glance_stubs.StubGlanceClient()
         self.service = glance.GlanceImageService(client=client)
         self.context = context.RequestContext('fake', 'fake', auth_token=True)
         self.service.delete_all()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(TestGlanceImageService, self).tearDown()
 
     @staticmethod
     def _make_fixture(**kwargs):
