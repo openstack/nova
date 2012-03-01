@@ -19,7 +19,6 @@ import os.path
 
 from lxml import etree
 
-from nova.api.openstack import wsgi
 from nova import utils
 
 

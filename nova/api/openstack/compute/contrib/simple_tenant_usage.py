@@ -18,8 +18,6 @@
 from datetime import datetime
 import urlparse
 
-import webob
-
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil

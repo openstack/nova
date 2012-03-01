@@ -19,7 +19,6 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.views import images as views_images
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import compute
 from nova import exception
 from nova import flags
 import nova.image

@@ -214,6 +214,8 @@ class VsaController(object):
         context = req.environ['nova.context']
         authorize(context)
 
+        # FIXME(comstud): Seems like this always assigns 'auto' right
+        # now despite what the docstring says this should support.
         if body is None:
             ip = 'auto'
         else:

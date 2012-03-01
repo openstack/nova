@@ -27,10 +27,8 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import vm_states
 from nova.compute import task_states
-from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import network
 from nova.network import model as network_model
 from nova import quota
 

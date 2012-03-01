@@ -274,13 +274,13 @@ class AdminActionsController(wsgi.Controller):
 
         try:
             instance = self.compute_api.get(context, id)
-            result = scheduler_api.live_migration(context,
-                                                  block_migration,
-                                                  disk_over_commit,
-                                                  instance["id"],
-                                                  host,
-                                                  topic=FLAGS.compute_topic)
-        except Exception, e:
+            scheduler_api.live_migration(context,
+                    block_migration,
+                    disk_over_commit,
+                    instance["id"],
+                    host,
+                    topic=FLAGS.compute_topic)
+        except Exception:
             msg = _("Live migration of instance %(id)s to host %(host)s"
                     " failed") % locals()
             LOG.exception(msg)

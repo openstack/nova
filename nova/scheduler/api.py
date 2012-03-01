@@ -67,5 +67,6 @@ def live_migration(context, block_migration, disk_over_commit,
               "topic": topic,
               "block_migration": block_migration,
               "disk_over_commit": disk_over_commit}
-    return _call_scheduler("live_migration", context=context,
-                           params=params)
+    # NOTE(comstud): Call vs cast so we can get exceptions back, otherwise
+    # this call in the scheduler driver doesn't return anything.
+    _call_scheduler("live_migration", context=context, params=params)

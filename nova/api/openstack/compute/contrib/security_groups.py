@@ -495,7 +495,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
         except ValueError:
             msg = _("Rule id is not integer")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.NotFound as exp:
+        except exception.NotFound:
             msg = _("Rule (%s) not found") % id
             raise exc.HTTPNotFound(explanation=msg)
 
