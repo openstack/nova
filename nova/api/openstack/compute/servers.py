@@ -807,9 +807,8 @@ class Controller(wsgi.Controller):
                     body['server']['auto_disk_config'])
             update_dict['auto_disk_config'] = auto_disk_config
 
-        instance = self.compute_api.get(ctxt, id)
-
         try:
+            instance = self.compute_api.get(ctxt, id)
             self.compute_api.update(ctxt, instance, **update_dict)
         except exception.NotFound:
             raise exc.HTTPNotFound()

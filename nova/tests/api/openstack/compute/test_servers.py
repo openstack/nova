@@ -951,6 +951,32 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
         self.assertEqual(res_dict['server']['name'], 'server_test')
 
+    def test_update_server_not_found(self):
+        def fake_get(*args, **kwargs):
+            raise nova.exception.InstanceNotFound()
+
+        self.stubs.Set(nova.compute.API, 'get', fake_get)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        body = {'server': {'name': 'server_test'}}
+        req.body = json.dumps(body)
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
+                          req, FAKE_UUID, body)
+
+    def test_update_server_not_found_on_update(self):
+        def fake_update(*args, **kwargs):
+            raise nova.exception.InstanceNotFound()
+
+        self.stubs.Set(nova.compute.API, 'update', fake_update)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        body = {'server': {'name': 'server_test'}}
+        req.body = json.dumps(body)
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
+                          req, FAKE_UUID, body)
+
     def test_rebuild_instance_with_access_ipv4_bad_format(self):
         self.stubs.Set(nova.db, 'instance_get',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
