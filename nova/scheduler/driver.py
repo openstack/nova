@@ -318,21 +318,18 @@ class Scheduler(object):
 
         # Checking shared storage connectivity
         # if block migration, instances_paths should not be on shared storage.
-        try:
-            self.mounted_on_same_shared_storage(context, instance_ref, dest)
-            if block_migration:
+        shared = self.mounted_on_same_shared_storage(context, instance_ref,
+                                                     dest)
+        if block_migration:
+            if shared:
                 reason = _("Block migration can not be used "
                            "with shared storage.")
                 raise exception.InvalidSharedStorage(reason=reason, path=dest)
-        # FIXME(comstud): See LP891756.
-        except exception.FileNotFound:
-            if not block_migration:
-                src = instance_ref['host']
-                ipath = FLAGS.instances_path
-                LOG.error(_("Cannot confirm tmpfile at %(ipath)s is on "
-                                "same shared storage between %(src)s "
-                                "and %(dest)s.") % locals())
-                raise
+
+        elif not shared:
+            reason = _("Live migration can not be used "
+                       "without shared storage.")
+            raise exception.InvalidSharedStorage(reason=reason, path=dest)
 
         # Checking destination host exists.
         dservice_refs = db.service_get_all_compute_by_host(context, dest)
@@ -506,26 +503,18 @@ class Scheduler(object):
         dst_t = db.queue_get_for(context, FLAGS.compute_topic, dest)
         src_t = db.queue_get_for(context, FLAGS.compute_topic, src)
 
-        filename = None
+        filename = rpc.call(context, dst_t,
+                            {"method": 'create_shared_storage_test_file'})
 
         try:
-            # create tmpfile at dest host
-            filename = rpc.call(context, dst_t,
-                                {"method": 'create_shared_storage_test_file'})
-
             # make sure existence at src host.
             ret = rpc.call(context, src_t,
-                          {"method": 'check_shared_storage_test_file',
-                           "args": {'filename': filename}})
-            if not ret:
-                raise exception.FileNotFound(file_path=filename)
-
-        except exception.FileNotFound:
-            raise
+                        {"method": 'check_shared_storage_test_file',
+                        "args": {'filename': filename}})
 
         finally:
-            # Should only be None for tests?
-            if filename is not None:
-                rpc.call(context, dst_t,
-                         {"method": 'cleanup_shared_storage_test_file',
-                          "args": {'filename': filename}})
+            rpc.cast(context, dst_t,
+                    {"method": 'cleanup_shared_storage_test_file',
+                    "args": {'filename': filename}})
+
+        return ret
