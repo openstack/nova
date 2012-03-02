@@ -50,6 +50,8 @@ import urllib
 
 # NOTE(vish): for new boto
 import boto
+# for boto.utils
+import boto.provider
 # NOTE(vish): for old boto
 import boto.utils
 
