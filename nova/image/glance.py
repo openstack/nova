@@ -301,6 +301,9 @@ class GlanceImageService(object):
             image_meta = client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
+        # NOTE(vish): this gets raised for public images
+        except glance_exception.MissingCredentialError:
+            raise exception.ImageNotAuthorized(image_id=image_id)
 
         base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta

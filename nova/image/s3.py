@@ -105,6 +105,27 @@ class S3ImageService(object):
 
         return image_copy
 
+    def _translate_id_to_uuid(self, context, image):
+        image_copy = image.copy()
+
+        try:
+            image_id = image_copy['id']
+        except KeyError:
+            pass
+        else:
+            image_copy['id'] = self.get_image_uuid(context, image_id)
+
+        for prop in ['kernel_id', 'ramdisk_id']:
+            try:
+                image_id = image_copy['properties'][prop]
+            except (KeyError, ValueError):
+                pass
+            else:
+                image_uuid = self.get_image_uuid(context, image_id)
+                image_copy['properties'][prop] = image_uuid
+
+        return image_copy
+
     def create(self, context, metadata, data=None):
         """Create an image.
 
@@ -120,6 +141,7 @@ class S3ImageService(object):
 
     def update(self, context, image_id, metadata, data=None):
         image_uuid = self.get_image_uuid(context, image_id)
+        metadata = self._translate_id_to_uuid(context, metadata)
         image = self.service.update(context, image_uuid, metadata, data)
         return self._translate_uuid_to_id(context, image)
 
