@@ -312,8 +312,7 @@ class VMOps(object):
                                      ramdisk_file=ramdisk_file)
 
             def undo_create_vm():
-                self._shutdown(instance, vm_ref)
-                self._destroy_vm(instance, vm_ref)
+                self._destroy(instance, vm_ref, network_info)
 
             undo_mgr.undo_with(undo_create_vm)
             return vm_ref
