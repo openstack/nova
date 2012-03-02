@@ -81,13 +81,7 @@ class VersionsTest(test.TestCase):
     def setUp(self):
         super(VersionsTest, self).setUp()
         fakes.stub_out_auth(self.stubs)
-        #Stub out VERSIONS
-        self.old_versions = versions.VERSIONS
-        versions.VERSIONS = VERSIONS
-
-    def tearDown(self):
-        versions.VERSIONS = self.old_versions
-        super(VersionsTest, self).tearDown()
+        self.stubs.Set(versions, 'VERSIONS', VERSIONS)
 
     def test_get_version_list(self):
         req = webob.Request.blank('/')
