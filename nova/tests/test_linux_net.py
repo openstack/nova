@@ -421,9 +421,11 @@ class LinuxNetworkTestCase(test.TestCase):
 
         driver = linux_net.LinuxBridgeInterfaceDriver()
 
+        info = {}
+
         @classmethod
         def test_ensure(_self, vlan, bridge, interface, network, mac_address):
-            self.passed_interface = interface
+            info['passed_interface'] = interface
 
         self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
                        'ensure_vlan_bridge', test_ensure)
@@ -434,10 +436,37 @@ class LinuxNetworkTestCase(test.TestCase):
                 "vlan": "fake"
         }
         driver.plug(network, "fakemac")
-        self.assertEqual(self.passed_interface, "base_interface")
+        self.assertEqual(info['passed_interface'], "base_interface")
         self.flags(vlan_interface="override_interface")
         driver.plug(network, "fakemac")
-        self.assertEqual(self.passed_interface, "override_interface")
+        self.assertEqual(info['passed_interface'], "override_interface")
+        driver.plug(network, "fakemac")
+
+    def test_flat_override(self):
+        """Makes sure flat_interface flag overrides network bridge_interface.
+
+        Allows heterogeneous networks a la bug 833426"""
+
+        driver = linux_net.LinuxBridgeInterfaceDriver()
+
+        info = {}
+
+        @classmethod
+        def test_ensure(_self, bridge, interface, network, gateway):
+            info['passed_interface'] = interface
+
+        self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,
+                       'ensure_bridge', test_ensure)
+
+        network = {
+                "bridge": "br100",
+                "bridge_interface": "base_interface",
+        }
+        driver.plug(network, "fakemac")
+        self.assertEqual(info['passed_interface'], "base_interface")
+        self.flags(flat_interface="override_interface")
+        driver.plug(network, "fakemac")
+        self.assertEqual(info['passed_interface'], "override_interface")
 
     def _test_initialize_gateway(self, existing, expected, routes=''):
         self.flags(fake_network=False)

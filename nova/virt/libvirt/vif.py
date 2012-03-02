@@ -90,10 +90,11 @@ class LibvirtBridgeDriver(VIFDriver):
                                              network['bridge'],
                                              iface)
             else:
+                iface = FLAGS.flat_interface or network['bridge_interface']
                 LOG.debug(_("Ensuring bridge %s"), network['bridge'])
                 linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(
                                         network['bridge'],
-                                        network['bridge_interface'])
+                                        iface)
 
         return self._get_configurations(network, mapping)
 
