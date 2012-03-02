@@ -36,9 +36,6 @@ class LeastCostTestCase(test.TestCase):
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
         self.host_manager = fakes.FakeHostManager()
 
-    def tearDown(self):
-        super(LeastCostTestCase, self).tearDown()
-
     def _get_all_hosts(self):
         ctxt = context.get_admin_context()
         fakes.mox_host_manager_db_calls(self.mox, ctxt)
@@ -93,13 +90,6 @@ class LeastCostTestCase(test.TestCase):
 
 
 class TestWeightedHost(test.TestCase):
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
     def test_dict_conversion_without_host_state(self):
         host = least_cost.WeightedHost('someweight')
         expected = {'weight': 'someweight'}

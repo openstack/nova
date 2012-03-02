@@ -33,9 +33,6 @@ class SignerTestCase(test.TestCase):
         super(SignerTestCase, self).setUp()
         self.signer = signer.Signer('uV3F3YluFJax1cknvbcGwgjvx4QpvB+leU8dUj2o')
 
-    def tearDown(self):
-        super(SignerTestCase, self).tearDown()
-
     # S3 Authorization Signing input & output examples taken from here:
     # http://docs.amazonwebservices.com/AmazonS3/latest/dev/
     def test_s3_authorization_get(self):

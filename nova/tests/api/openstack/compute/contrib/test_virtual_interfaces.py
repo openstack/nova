@@ -49,9 +49,6 @@ class ServerVirtualInterfaceTest(test.TestCase):
         self.stubs.Set(network.api.API, "get_vifs_by_instance",
                        get_vifs_by_instance)
 
-    def tearDown(self):
-        super(ServerVirtualInterfaceTest, self).tearDown()
-
     def test_get_virtual_interfaces_list(self):
         url = '/v2/fake/servers/abcd/os-virtual-interfaces'
         req = webob.Request.blank(url)

@@ -32,7 +32,7 @@ SSL_KEYFILE = "/tmp/keyfile.blah.blah"
 class RpcKombuSslTestCase(test.TestCase):
 
     def setUp(self):
-        test.TestCase.setUp(self)
+        super(RpcKombuSslTestCase, self).setUp()
         self.flags(kombu_ssl_keyfile=SSL_KEYFILE,
                    kombu_ssl_ca_certs=SSL_CA_CERT,
                    kombu_ssl_certfile=SSL_CERT,

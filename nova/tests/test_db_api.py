@@ -320,9 +320,6 @@ class AggregateDBApiTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
 
-    def tearDown(self):
-        super(AggregateDBApiTestCase, self).tearDown()
-
     def test_aggregate_create(self):
         """Ensure aggregate can be created with no metadata."""
         result = _create_aggregate(metadata=None)

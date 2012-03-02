@@ -104,9 +104,6 @@ class VSAApiTest(test.TestCase):
         self.stubs.Set(vsa.api.API, "get", stub_vsa_get)
         self.stubs.Set(vsa.api.API, "get_all", stub_vsa_get_all)
 
-    def tearDown(self):
-        super(VSAApiTest, self).tearDown()
-
     def test_vsa_create(self):
         global last_param
         last_param = {}
@@ -252,9 +249,6 @@ class VSAVolumeApiTest(test.TestCase):
 
         self.test_obj = test_obj if test_obj else "volume"
         self.test_objs = test_objs if test_objs else "volumes"
-
-    def tearDown(self):
-        super(VSAVolumeApiTest, self).tearDown()
 
     def test_vsa_volume_create(self):
         self.stubs.Set(volume.api.API, "create", fakes.stub_volume_create)

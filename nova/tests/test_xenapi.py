@@ -816,9 +816,6 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
     def test_encrypt_really_long_message(self):
         self._test_encryption(''.join(['abcd' for i in xrange(1024)]))
 
-    def tearDown(self):
-        super(XenAPIDiffieHellmanTestCase, self).tearDown()
-
 
 class XenAPIMigrateInstance(test.TestCase):
     """Unit test for verifying migration-related actions."""

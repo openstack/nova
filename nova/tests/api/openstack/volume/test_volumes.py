@@ -37,9 +37,6 @@ class VolumeApiTest(test.TestCase):
         self.stubs.Set(volume_api.API, 'get', fakes.stub_volume_get)
         self.stubs.Set(volume_api.API, 'delete', fakes.stub_volume_delete)
 
-    def tearDown(self):
-        super(VolumeApiTest, self).tearDown()
-
     def test_volume_create(self):
         self.stubs.Set(volume_api.API, "create", fakes.stub_volume_create)
 

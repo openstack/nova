@@ -21,6 +21,7 @@ from nova import test
 class TestNovaKeystoneContextMiddleware(test.TestCase):
 
     def setUp(self):
+        super(TestNovaKeystoneContextMiddleware, self).setUp()
 
         @webob.dec.wsgify()
         def fake_app(req):
@@ -32,9 +33,6 @@ class TestNovaKeystoneContextMiddleware(test.TestCase):
         self.request = webob.Request.blank('/')
         self.request.headers['X_TENANT_ID'] = 'testtenantid'
         self.request.headers['X_AUTH_TOKEN'] = 'testauthtoken'
-
-    def tearDown(self):
-        pass
 
     def test_no_user_or_user_id(self):
         response = self.request.get_response(self.middleware)

@@ -115,9 +115,6 @@ class VolumeApiTest(test.TestCase):
         self.context = context.get_admin_context()
         self.test_obj = test_obj if test_obj else "volume"
 
-    def tearDown(self):
-        super(VolumeApiTest, self).tearDown()
-
     def test_volume_create(self):
         self.stubs.Set(volume.api.API, "create", fakes.stub_volume_create)
 
