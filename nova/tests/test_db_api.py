@@ -679,3 +679,43 @@ class CapacityTestCase(test.TestCase):
         self.assertEquals(x.free_disk_gb, 2000)
         self.assertEquals(x.current_workload, 2)
         self.assertEquals(x.running_vms, 5)
+
+
+class TestIpAllocation(test.TestCase):
+
+    def setUp(self):
+        super(TestIpAllocation, self).setUp()
+        self.ctxt = context.get_admin_context()
+        self.instance = db.instance_create(self.ctxt, {})
+        self.network = db.network_create_safe(self.ctxt, {})
+
+    def create_fixed_ip(self, **params):
+        default_params = {'address': '192.168.0.1'}
+        default_params.update(params)
+        return db.fixed_ip_create(self.ctxt, default_params)
+
+    def test_fixed_ip_associate_fails_if_ip_not_in_network(self):
+        self.assertRaises(exception.FixedIpNotFoundForNetwork,
+                          db.fixed_ip_associate,
+                          self.ctxt, None, None)
+
+    def test_fixed_ip_associate_fails_if_ip_in_use(self):
+        address = self.create_fixed_ip(instance_id=self.instance.id)
+        self.assertRaises(exception.FixedIpAlreadyInUse,
+                          db.fixed_ip_associate,
+                          self.ctxt, address, self.instance.id)
+
+    def test_fixed_ip_associate_succeeds(self):
+        address = self.create_fixed_ip(network_id=self.network.id)
+        db.fixed_ip_associate(self.ctxt, address, self.instance.id,
+                              network_id=self.network.id)
+        fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
+        self.assertEqual(fixed_ip.instance_id, self.instance.id)
+
+    def test_fixed_ip_associate_succeeds_and_sets_network(self):
+        address = self.create_fixed_ip()
+        db.fixed_ip_associate(self.ctxt, address, self.instance.id,
+                              network_id=self.network.id)
+        fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
+        self.assertEqual(fixed_ip.instance_id, self.instance.id)
+        self.assertEqual(fixed_ip.network_id, self.network.id)
