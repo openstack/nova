@@ -84,9 +84,6 @@ class TestMigrations(unittest.TestCase):
     MIGRATE_FILE = nova.db.sqlalchemy.migrate_repo.__file__
     REPOSITORY = Repository(os.path.abspath(os.path.dirname(MIGRATE_FILE)))
 
-    def __init__(self, *args, **kwargs):
-        super(TestMigrations, self).__init__(*args, **kwargs)
-
     def setUp(self):
         super(TestMigrations, self).setUp()
 
