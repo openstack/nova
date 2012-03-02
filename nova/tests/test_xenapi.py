@@ -517,7 +517,7 @@ class XenAPIVMTestCase(test.TestCase):
 
         """
         vdi_recs_start = self._list_vdis()
-        stubs.stubout_fetch_image_glance_disk(self.stubs)
+        stubs.stubout_fetch_image_glance_disk(self.stubs, raise_failure=True)
         self.assertRaises(xenapi_fake.Failure,
                           self._test_spawn, 1, 2, 3)
         # No additional VDI should be found.
@@ -583,6 +583,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.check_vm_params_for_windows()
 
     def test_spawn_glance(self):
+        stubs.stubout_fetch_image_glance_disk(self.stubs)
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK)
