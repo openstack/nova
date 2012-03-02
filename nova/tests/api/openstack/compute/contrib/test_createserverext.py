@@ -61,13 +61,6 @@ def return_instance_add_security_group(context, instance_id,
 
 
 class CreateserverextTest(test.TestCase):
-
-    def setUp(self):
-        super(CreateserverextTest, self).setUp()
-
-    def tearDown(self):
-        super(CreateserverextTest, self).tearDown()
-
     def _make_stub_method(self, canned_return):
         def stub_method(*args, **kwargs):
             return canned_return

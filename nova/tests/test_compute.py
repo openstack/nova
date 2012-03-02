@@ -3297,9 +3297,6 @@ class ComputeAPIAggrTestCase(test.TestCase):
         self.stubs.Set(rpc, 'call', fake_rpc_method)
         self.stubs.Set(rpc, 'cast', fake_rpc_method)
 
-    def tearDown(self):
-        super(ComputeAPIAggrTestCase, self).tearDown()
-
     def test_create_invalid_availability_zone(self):
         """Ensure InvalidAggregateAction is raised with wrong avail_zone."""
         self.assertRaises(exception.InvalidAggregateAction,
@@ -3514,9 +3511,6 @@ class ComputeAggrTestCase(BaseTestCase):
         values = {'name': 'test_aggr',
                   'availability_zone': 'test_zone', }
         self.aggr = db.aggregate_create(self.context, values)
-
-    def tearDown(self):
-        super(ComputeAggrTestCase, self).tearDown()
 
     def test_add_aggregate_host(self):
         def fake_driver_add_to_aggregate(context, aggregate, host):

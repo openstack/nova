@@ -27,9 +27,6 @@ class SolidFireVolumeTestCase(test.TestCase):
     def setUp(self):
         super(SolidFireVolumeTestCase, self).setUp()
 
-    def tearDown(self):
-        pass
-
     def fake_issue_api_request(obj, method, params):
         if method is 'GetClusterInfo':
             LOG.info('Called Fake GetClusterInfo...')

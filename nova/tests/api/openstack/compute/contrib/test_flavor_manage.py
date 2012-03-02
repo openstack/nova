@@ -80,9 +80,6 @@ class FlavorManageTest(test.TestCase):
 
         self.controller = flavormanage.FlavorManageController()
 
-    def tearDown(self):
-        super(FlavorManageTest, self).tearDown()
-
     def test_delete(self):
         req = fakes.HTTPRequest.blank('/v2/123/flavors/1234')
         res = self.controller._delete(req, 1234)

@@ -26,12 +26,6 @@ from nova import test
 class BlockDeviceMappingEc2CloudTestCase(test.TestCase):
     """Test Case for Block Device Mapping"""
 
-    def setUp(self):
-        super(BlockDeviceMappingEc2CloudTestCase, self).setUp()
-
-    def tearDown(self):
-        super(BlockDeviceMappingEc2CloudTestCase, self).tearDown()
-
     def _assertApply(self, action, bdm_list):
         for bdm, expected_result in bdm_list:
             self.assertDictMatch(action(bdm), expected_result)

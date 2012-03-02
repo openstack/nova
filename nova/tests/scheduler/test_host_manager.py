@@ -279,9 +279,6 @@ class HostManagerTestCase(test.TestCase):
 class HostStateTestCase(test.TestCase):
     """Test case for HostState class"""
 
-    def setUp(self):
-        super(HostStateTestCase, self).setUp()
-
     # update_from_compute_node() and consume_from_instance() are tested
     # in HostManagerTestCase.test_get_all_host_states()
 

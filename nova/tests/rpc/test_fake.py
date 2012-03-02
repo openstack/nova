@@ -31,6 +31,3 @@ class RpcFakeTestCase(common._BaseRpcTestCase):
     def setUp(self):
         self.rpc = impl_fake
         super(RpcFakeTestCase, self).setUp()
-
-    def tearDown(self):
-        super(RpcFakeTestCase, self).tearDown()

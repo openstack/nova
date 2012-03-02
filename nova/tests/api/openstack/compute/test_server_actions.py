@@ -658,10 +658,8 @@ class ServerActionsControllerTest(test.TestCase):
 class TestServerActionXMLDeserializer(test.TestCase):
 
     def setUp(self):
+        super(TestServerActionXMLDeserializer, self).setUp()
         self.deserializer = servers.ActionDeserializer()
-
-    def tearDown(self):
-        pass
 
     def test_create_image(self):
         serial_request = """

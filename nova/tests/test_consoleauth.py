@@ -43,9 +43,6 @@ class ConsoleauthTestCase(test.TestCase):
         self.manager = utils.import_object(FLAGS.consoleauth_manager)
         self.context = context.get_admin_context()
 
-    def tearDown(self):
-        super(ConsoleauthTestCase, self).tearDown()
-
     def test_tokens_expire(self):
         """Test that tokens expire correctly."""
         token = 'mytok'

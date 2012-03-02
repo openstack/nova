@@ -32,9 +32,6 @@ class RpcCarrotTestCase(common._BaseRpcTestCase):
         self.rpc = impl_carrot
         super(RpcCarrotTestCase, self).setUp(supports_timeouts=False)
 
-    def tearDown(self):
-        super(RpcCarrotTestCase, self).tearDown()
-
     def test_connectionpool_single(self):
         """Test that ConnectionPool recycles a single connection."""
         conn1 = self.rpc.ConnectionPool.get()

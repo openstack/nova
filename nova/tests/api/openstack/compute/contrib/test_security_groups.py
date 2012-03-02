@@ -115,9 +115,6 @@ class TestSecurityGroups(test.TestCase):
             security_groups.ServerSecurityGroupController())
         self.manager = security_groups.SecurityGroupActionController()
 
-    def tearDown(self):
-        super(TestSecurityGroups, self).tearDown()
-
     def test_create_security_group(self):
         sg = security_group_template()
 
@@ -556,9 +553,6 @@ class TestSecurityGroupRules(test.TestCase):
         self.parent_security_group = db2
 
         self.controller = security_groups.SecurityGroupRulesController()
-
-    def tearDown(self):
-        super(TestSecurityGroupRules, self).tearDown()
 
     def test_create_by_cidr(self):
         rule = security_group_rule_template(cidr='10.2.3.124/24')

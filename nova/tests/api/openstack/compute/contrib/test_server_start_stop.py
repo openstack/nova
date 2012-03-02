@@ -33,9 +33,6 @@ class ServerStartStopTest(test.TestCase):
         super(ServerStartStopTest, self).setUp()
         self.controller = server_start_stop.ServerStartStopActionController()
 
-    def tearDown(self):
-        super(ServerStartStopTest, self).tearDown()
-
     def test_start(self):
         self.stubs.Set(compute.API, 'get', fake_compute_api_get)
         self.mox.StubOutWithMock(compute.API, 'start')

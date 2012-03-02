@@ -788,6 +788,7 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
 class LimitsViewBuilderTest(test.TestCase):
 
     def setUp(self):
+        super(LimitsViewBuilderTest, self).setUp()
         self.view_builder = views.limits.ViewBuilder()
         self.rate_limits = [{"URI": "*",
                              "regex": ".*",
@@ -806,9 +807,6 @@ class LimitsViewBuilderTest(test.TestCase):
         self.absolute_limits = {"metadata_items": 1,
                                 "injected_files": 5,
                                 "injected_file_content_bytes": 5}
-
-    def tearDown(self):
-        pass
 
     def test_build_limits(self):
         expected_limits = {"limits": {
@@ -847,7 +845,6 @@ class LimitsViewBuilderTest(test.TestCase):
 
 
 class LimitsXMLSerializationTest(test.TestCase):
-
     def test_xml_declaration(self):
         serializer = limits.LimitsTemplate()
 

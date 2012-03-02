@@ -34,9 +34,6 @@ class RootwrapTestCase(test.TestCase):
             filters.CommandFilter("/bin/cat", "root")  # Keep this one last
             ]
 
-    def tearDown(self):
-        super(RootwrapTestCase, self).tearDown()
-
     def test_RegExpFilter_match(self):
         usercmd = ["ls", "/root"]
         filtermatch = wrapper.match_filter(self.filters, usercmd)
