@@ -120,7 +120,6 @@ class BaseTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
         test_notifier.NOTIFICATIONS = []
-        self.mox = mox.Mox()
 
         def fake_show(meh, context, id):
             return {'id': 1, 'min_disk': None, 'min_ram': None,
@@ -131,7 +130,6 @@ class BaseTestCase(test.TestCase):
         self.stubs.Set(rpc, 'cast', rpc_cast_wrapper)
 
     def tearDown(self):
-        self.mox.UnsetStubs()
         instances = db.instance_get_all(self.context.elevated())
         for instance in instances:
             db.instance_destroy(self.context.elevated(), instance['id'])
@@ -3598,8 +3596,6 @@ class ComputePolicyTestCase(BaseTestCase):
         nova.policy.enforce(self.context, 'compute:reboot', {})
         self.mox.ReplayAll()
         nova.compute.api.check_policy(self.context, 'reboot', {})
-        self.mox.UnsetStubs()
-        self.mox.VerifyAll()
 
     def test_wrapped_method(self):
         instance = self._create_fake_instance()

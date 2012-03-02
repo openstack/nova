@@ -96,10 +96,6 @@ class FlavorsTest(test.TestCase):
 
         self.controller = flavors.Controller()
 
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(FlavorsTest, self).tearDown()
-
     def test_get_flavor_by_invalid_id(self):
         self.stubs.Set(nova.compute.instance_types,
                        "get_instance_type_by_flavor_id",

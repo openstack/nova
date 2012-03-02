@@ -380,10 +380,6 @@ class VSADriveApiTest(VSAVolumeApiTest):
         super(VSADriveApiTest, self).setUp(test_obj="drive",
                                            test_objs="drives")
 
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(VSADriveApiTest, self).tearDown()
-
 
 class SerializerTestCommon(test.TestCase):
     def _verify_attrs(self, obj, tree, attrs):

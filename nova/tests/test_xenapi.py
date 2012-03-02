@@ -22,7 +22,6 @@ import datetime
 import functools
 import os
 import re
-import stubout
 
 from nova import db
 from nova import context
@@ -89,7 +88,6 @@ class XenAPIVolumeTestCase(test.TestCase):
     """Unit tests for Volume operations."""
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -210,10 +208,6 @@ class XenAPIVolumeTestCase(test.TestCase):
                           volume['id'],
                           '/dev/sdc')
 
-    def tearDown(self):
-        super(XenAPIVolumeTestCase, self).tearDown()
-        self.stubs.UnsetAll()
-
 
 def configure_instance(*args):
     pass
@@ -228,7 +222,6 @@ class XenAPIVMTestCase(test.TestCase):
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
         self.network = utils.import_object(FLAGS.network_manager)
-        self.stubs = stubout.StubOutForTesting()
         self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',
                    instance_name_template='%d',
@@ -831,7 +824,6 @@ class XenAPIMigrateInstance(test.TestCase):
 
     def setUp(self):
         super(XenAPIMigrateInstance, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.flags(target_host='127.0.0.1',
                 xenapi_connection_url='test_url',
                 xenapi_connection_password='test_pass',
@@ -1141,7 +1133,6 @@ class XenAPIHostTestCase(test.TestCase):
 
     def setUp(self):
         super(XenAPIHostTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -1192,7 +1183,6 @@ class XenAPIHostTestCase(test.TestCase):
 class XenAPIAutoDiskConfigTestCase(test.TestCase):
     def setUp(self):
         super(XenAPIAutoDiskConfigTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.flags(target_host='127.0.0.1',
                    xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',
@@ -1284,7 +1274,6 @@ class XenAPIGenerateLocal(test.TestCase):
     """Test generating of local disks, like swap and ephemeral"""
     def setUp(self):
         super(XenAPIGenerateLocal, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.flags(target_host='127.0.0.1',
                    xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',
@@ -1364,7 +1353,6 @@ class XenAPIGenerateLocal(test.TestCase):
 class XenAPIBWUsageTestCase(test.TestCase):
     def setUp(self):
         super(XenAPIBWUsageTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(vm_utils.VMHelper, "compile_metrics",
                        XenAPIBWUsageTestCase._fake_compile_metrics)
         self.flags(target_host='127.0.0.1',
@@ -1437,7 +1425,6 @@ class XenAPIDom0IptablesFirewallTestCase(test.TestCase):
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
-        self.stubs = stubout.StubOutForTesting()
         xenapi_fake.reset()
         xenapi_fake.create_local_srs()
         xenapi_fake.create_local_pifs()
@@ -1701,13 +1688,8 @@ class XenAPISRSelectionTestCase(test.TestCase):
     """Unit tests for testing we find the right SR."""
     def setUp(self):
         super(XenAPISRSelectionTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
-
-    def tearDown(self):
-        super(XenAPISRSelectionTestCase, self).tearDown()
-        self.stubs.UnsetAll()
 
     def test_safe_find_sr_raise_exception(self):
         """Ensure StorageRepositoryNotFound is raise when wrong filter."""
@@ -1769,7 +1751,6 @@ class XenAPIAggregateTestCase(test.TestCase):
     """Unit tests for aggregate operations."""
     def setUp(self):
         super(XenAPIAggregateTestCase, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
         self.flags(xenapi_connection_url='http://test_url',
                    xenapi_connection_username='test_user',
                    xenapi_connection_password='test_pass',
@@ -1785,10 +1766,6 @@ class XenAPIAggregateTestCase(test.TestCase):
         self.fake_metadata = {'master_compute': 'host',
                               'host': xenapi_fake.get_record('host',
                                                              host_ref)['uuid']}
-
-    def tearDown(self):
-        super(XenAPIAggregateTestCase, self).tearDown()
-        self.stubs.UnsetAll()
 
     def test_add_to_aggregate_called(self):
         def fake_add_to_aggregate(context, aggregate, host):

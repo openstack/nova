@@ -50,7 +50,6 @@ class VsaVolumesTestCase(test.TestCase):
     def tearDown(self):
         if self.vsa_id:
             self.vsa_api.delete(self.context, self.vsa_id)
-        self.stubs.UnsetAll()
         super(VsaVolumesTestCase, self).tearDown()
 
     def _default_volume_param(self):

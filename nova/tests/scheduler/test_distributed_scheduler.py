@@ -160,7 +160,6 @@ class DistributedSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.ReplayAll()
         weighted_hosts = sched._schedule(fake_context, 'compute',
                 request_spec)
-        self.mox.VerifyAll()
         self.assertEquals(len(weighted_hosts), 10)
         for weighted_host in weighted_hosts:
             self.assertTrue(weighted_host.host_state is not None)

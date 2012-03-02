@@ -63,29 +63,22 @@ class TileraBareMetalNodesTestCase(test.TestCase):
         In this case, we check that it only loads the config file once,
         even though it has been instantiated multiple times"""
 
-        try:
-            self.mox.StubOutWithMock(__builtin__, 'open')
+        self.mox.StubOutWithMock(__builtin__, 'open')
 
-            open("/tftpboot/tilera_boards",
-                 "r").AndReturn(StringIO.StringIO(self.board_info))
+        open("/tftpboot/tilera_boards",
+             "r").AndReturn(StringIO.StringIO(self.board_info))
 
-            self.mox.ReplayAll()
+        self.mox.ReplayAll()
 
-            nodes = tilera.BareMetalNodes("/tftpboot/tilera_boards")
-            nodes = tilera.BareMetalNodes("/tftpboot/tilera_boards")
-        finally:
-            self.mox.UnsetStubs()
+        nodes = tilera.BareMetalNodes("/tftpboot/tilera_boards")
+        nodes = tilera.BareMetalNodes("/tftpboot/tilera_boards")
 
     def test_get_hw_info(self):
-        try:
+        self.mox.StubOutWithMock(__builtin__, 'open')
 
-            self.mox.StubOutWithMock(__builtin__, 'open')
+        open("/tftpboot/tilera_boards",
+             "r").AndReturn(StringIO.StringIO(self.board_info))
 
-            open("/tftpboot/tilera_boards",
-                 "r").AndReturn(StringIO.StringIO(self.board_info))
-
-            self.mox.ReplayAll()
-            nodes = tilera.BareMetalNodes()
-            self.assertEqual(nodes.get_hw_info('vcpus'), 10)
-        finally:
-            self.mox.UnsetStubs()
+        self.mox.ReplayAll()
+        nodes = tilera.BareMetalNodes()
+        self.assertEqual(nodes.get_hw_info('vcpus'), 10)
