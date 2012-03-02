@@ -88,6 +88,8 @@ def wrap_db_error(f):
     def _wrap(*args, **kwargs):
         try:
             return f(*args, **kwargs)
+        except UnicodeEncodeError:
+            raise InvalidUnicodeParameter()
         except Exception, e:
             LOG.exception(_('DB exception wrapped.'))
             raise DBError(e)
@@ -273,6 +275,11 @@ class InvalidCidr(Invalid):
 
 class InvalidRPCConnectionReuse(Invalid):
     message = _("Invalid reuse of an RPC connection.")
+
+
+class InvalidUnicodeParameter(Invalid):
+    message = _("Invalid Parameter: "
+                "Unicode is not supported by the current database.")
 
 
 # Cannot be templated as the error syntax varies.

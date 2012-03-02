@@ -574,6 +574,9 @@ class ResourceExceptionHandler(object):
         if isinstance(ex_value, exception.NotAuthorized):
             msg = unicode(ex_value)
             raise Fault(webob.exc.HTTPForbidden(explanation=msg))
+        elif isinstance(ex_value, exception.Invalid):
+            raise Fault(exception.ConvertedException(
+                code=ex_value.code, explanation=unicode(ex_value)))
         elif isinstance(ex_value, TypeError):
             exc_info = (ex_type, ex_value, ex_traceback)
             LOG.error(_('Exception handling resource: %s') % ex_value,
