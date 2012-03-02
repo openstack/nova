@@ -173,7 +173,7 @@ class DefaultPolicyTestCase(test.TestCase):
         nova.common.policy.set_brain(brain)
 
     def tearDown(self):
-        super(DefaultPolicyTestCase, self).setUp()
+        super(DefaultPolicyTestCase, self).tearDown()
         policy.reset()
 
     def test_policy_called(self):
