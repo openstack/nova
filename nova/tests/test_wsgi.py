@@ -24,25 +24,22 @@ import tempfile
 import unittest
 
 import nova.exception
-import nova.test
+from nova import test
 import nova.wsgi
 
 
-class TestLoaderNothingExists(unittest.TestCase):
+class TestLoaderNothingExists(test.TestCase):
     """Loader tests where os.path.exists always returns False."""
 
     def setUp(self):
-        self._os_path_exists = os.path.exists
-        os.path.exists = lambda _: False
+        super(TestLoaderNothingExists, self).setUp()
+        self.stubs.Set(os.path, 'exists', lambda _: False)
 
     def test_config_not_found(self):
         self.assertRaises(
             nova.exception.ConfigNotFound,
             nova.wsgi.Loader,
         )
-
-    def tearDown(self):
-        os.path.exists = self._os_path_exists
 
 
 class TestLoaderNormalFilesystem(unittest.TestCase):
