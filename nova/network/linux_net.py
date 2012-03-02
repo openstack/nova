@@ -682,7 +682,8 @@ def update_dhcp_hostfile_with_text(dev, hosts_text):
 
 def kill_dhcp(dev):
     pid = _dnsmasq_pid_for(dev)
-    _execute('kill', '-9', pid, run_as_root=True)
+    if pid:
+        _execute('kill', '-9', pid, run_as_root=True)
 
 
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
