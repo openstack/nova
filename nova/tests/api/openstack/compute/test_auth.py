@@ -41,10 +41,6 @@ class Test(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_networking(self.stubs)
 
-    def tearDown(self):
-        fakes.fake_data_store = {}
-        super(Test, self).tearDown()
-
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
         user = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
@@ -257,10 +253,6 @@ class TestLimiter(test.TestCase):
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
 
-    def tearDown(self):
-        fakes.fake_data_store = {}
-        super(TestLimiter, self).tearDown()
-
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
         user = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
@@ -293,10 +285,6 @@ class TestNoAuthMiddleware(test.TestCase):
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_networking(self.stubs)
-
-    def tearDown(self):
-        fakes.fake_data_store = {}
-        super(TestNoAuthMiddleware, self).tearDown()
 
     def test_authorize_user(self):
         req = webob.Request.blank('/v2')
