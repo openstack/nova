@@ -33,10 +33,6 @@ LOG = logging.getLogger(__name__)
 
 class InstanceTypeTestCase(test.TestCase):
     """Test cases for instance type code"""
-    def setUp(self):
-        super(InstanceTypeTestCase, self).setUp()
-        session = get_session()
-
     def _generate_name(self):
         """return a name not in the DB"""
         nonexistent_flavor = str(int(time.time()))
