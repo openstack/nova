@@ -14,6 +14,7 @@
 #    under the License.
 
 import nova
+from nova import flags
 from nova import log
 import nova.notifier.no_op_notifier
 from nova.notifier import api as notifier_api
@@ -78,6 +79,7 @@ class NotifierTestCase(test.TestCase):
                 'event_type', 'not a priority', dict(a=3))
 
     def test_rabbit_priority_queue(self):
+        flags.DECLARE('notification_topics', 'nova.notifier.rabbit_notifier')
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
                 'nova.notifier.rabbit_notifier')
         self.stubs.Set(nova.flags.FLAGS, 'notification_topics',
