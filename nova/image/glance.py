@@ -23,6 +23,7 @@ import copy
 import datetime
 import json
 import random
+import sys
 import time
 import urlparse
 
@@ -202,7 +203,10 @@ class GlanceImageService(object):
 
     def _fetch_images(self, fetch_func, **kwargs):
         """Paginate through results from glance server"""
-        images = fetch_func(**kwargs)
+        try:
+            images = fetch_func(**kwargs)
+        except Exception:
+            _reraise_translated_exception()
 
         if not images:
             # break out of recursive loop to end pagination
@@ -234,8 +238,8 @@ class GlanceImageService(object):
         try:
             image_meta = self._call_retry(context, 'get_image_meta',
                                           image_id)
-        except glance_exception.NotFound:
-            raise exception.ImageNotFound(image_id=image_id)
+        except Exception:
+            _reraise_translated_image_exception(image_id)
 
         if not self._is_image_available(context, image_meta):
             raise exception.ImageNotFound(image_id=image_id)
@@ -256,8 +260,8 @@ class GlanceImageService(object):
         try:
             image_meta, image_chunks = self._call_retry(context, 'get_image',
                                                         image_id)
-        except glance_exception.NotFound:
-            raise exception.ImageNotFound(image_id=image_id)
+        except Exception:
+            _reraise_translated_image_exception(image_id)
 
         for chunk in image_chunks:
             data.write(chunk)
@@ -296,14 +300,11 @@ class GlanceImageService(object):
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
         image_meta = self._translate_to_glance(image_meta)
+        client = self._get_client(context)
         try:
-            client = self._get_client(context)
             image_meta = client.update_image(image_id, image_meta, data)
-        except glance_exception.NotFound:
-            raise exception.ImageNotFound(image_id=image_id)
-        # NOTE(vish): this gets raised for public images
-        except glance_exception.MissingCredentialError:
-            raise exception.ImageNotAuthorized(image_id=image_id)
+        except Exception:
+            _reraise_translated_image_exception(image_id)
 
         base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
@@ -468,3 +469,39 @@ def _remove_read_only(image_meta):
         if attr in output:
             del output[attr]
     return output
+
+
+def _reraise_translated_image_exception(image_id):
+    """Transform the exception for the image but keep its traceback intact."""
+    exc_type, exc_value, exc_trace = sys.exc_info()
+    new_exc = _translate_image_exception(image_id, exc_type, exc_value)
+    raise new_exc, None, exc_trace
+
+
+def _reraise_translated_exception():
+    """Transform the exception but keep its traceback intact."""
+    exc_type, exc_value, exc_trace = sys.exc_info()
+    new_exc = _translate_plain_exception(exc_type, exc_value)
+    raise new_exc, None, exc_trace
+
+
+def _translate_image_exception(image_id, exc_type, exc_value):
+    if exc_type in (glance_exception.NotAuthorized,
+                    glance_exception.MissingCredentialError):
+        return exception.ImageNotAuthorized(image_id=image_id)
+    if exc_type is glance_exception.NotFound:
+        return exception.ImageNotFound(image_id=image_id)
+    if exc_type is glance_exception.Invalid:
+        return exception.Invalid(exc_value)
+    return exc_value
+
+
+def _translate_plain_exception(exc_type, exc_value):
+    if exc_type in (glance_exception.NotAuthorized,
+                    glance_exception.MissingCredentialError):
+        return exception.NotAuthorized(exc_value)
+    if exc_type is glance_exception.NotFound:
+        return exception.NotFound(exc_value)
+    if exc_type is glance_exception.Invalid:
+        return exception.Invalid(exc_value)
+    return exc_value

@@ -25,6 +25,7 @@ import urlparse
 from lxml import etree
 import webob
 
+from nova import exception
 from nova import flags
 from nova.api.openstack.compute import images
 from nova.api.openstack.compute.views import images as images_view
@@ -903,10 +904,10 @@ class ImagesControllerTest(test.TestCase):
         request = fakes.HTTPRequest.blank('/v2/images?status=ACTIVE&'
                                           'UNSUPPORTEDFILTER=testname')
         context = request.environ['nova.context']
-        image_service.detail(context, filters=filters).AndReturn([])
+        image_service.index(context, filters=filters).AndReturn([])
         self.mox.ReplayAll()
         controller = images.Controller(image_service=image_service)
-        controller.detail(request)
+        controller.index(request)
 
     def test_image_no_filters(self):
         image_service = self.mox.CreateMockAnything()
@@ -917,6 +918,16 @@ class ImagesControllerTest(test.TestCase):
         self.mox.ReplayAll()
         controller = images.Controller(image_service=image_service)
         controller.index(request)
+
+    def test_image_invalid_marker(self):
+        class InvalidImageService(object):
+
+            def index(self, *args, **kwargs):
+                raise exception.Invalid('meow')
+
+        request = fakes.HTTPRequest.blank('/v2/images?marker=invalid')
+        controller = images.Controller(image_service=InvalidImageService())
+        self.assertRaises(webob.exc.HTTPBadRequest, controller.index, request)
 
     def test_image_detail_filter_with_name(self):
         image_service = self.mox.CreateMockAnything()
@@ -1017,6 +1028,16 @@ class ImagesControllerTest(test.TestCase):
         self.mox.ReplayAll()
         controller = images.Controller(image_service=image_service)
         controller.detail(request)
+
+    def test_image_detail_invalid_marker(self):
+        class InvalidImageService(object):
+
+            def detail(self, *args, **kwargs):
+                raise exception.Invalid('meow')
+
+        request = fakes.HTTPRequest.blank('/v2/images?marker=invalid')
+        controller = images.Controller(image_service=InvalidImageService())
+        self.assertRaises(webob.exc.HTTPBadRequest, controller.detail, request)
 
     def test_generate_alternate_link(self):
         view = images_view.ViewBuilder()

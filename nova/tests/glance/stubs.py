@@ -17,6 +17,8 @@
 import copy
 import StringIO
 
+from glance.common import exception as glance_exception
+
 from nova import exception
 from nova.image import glance
 
@@ -103,7 +105,7 @@ class StubGlanceClient(object):
         for image in self.images:
             if image['id'] == str(image_id):
                 return image
-        raise exception.ImageNotFound(image_id=image_id)
+        raise glance_exception.NotFound()
 
     #TODO(bcwaldon): implement filters
     def get_images_detailed(self, filters=None, marker=None, limit=3):
@@ -114,6 +116,8 @@ class StubGlanceClient(object):
                 if image['id'] == str(marker):
                     index += 1
                     break
+            else:
+                raise glance_exception.Invalid()
 
         return self.images[index:index + limit]
 
@@ -143,11 +147,11 @@ class StubGlanceClient(object):
                     metadata['id'] = str(metadata['id'])
                 self.images[i].update(metadata)
                 return self.images[i]
-        raise exception.ImageNotFound(image_id=image_id)
+        raise glance_exception.NotFound()
 
     def delete_image(self, image_id):
         for i, image in enumerate(self.images):
             if image['id'] == image_id:
                 del self.images[i]
                 return
-        raise exception.ImageNotFound(image_id=image_id)
+        raise glance_exception.NotFound()
