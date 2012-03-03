@@ -98,8 +98,7 @@ def return_volume(context, volume_id):
 
 
 class VolumeApiTest(test.TestCase):
-
-    def setUp(self, test_obj=None):
+    def setUp(self):
         super(VolumeApiTest, self).setUp()
         fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
@@ -113,7 +112,6 @@ class VolumeApiTest(test.TestCase):
         self.stubs.Set(volume.api.API, "get_all", fakes.stub_volume_get_all)
 
         self.context = context.get_admin_context()
-        self.test_obj = test_obj if test_obj else "volume"
 
     def test_volume_create(self):
         self.stubs.Set(volume.api.API, "create", fakes.stub_volume_create)
@@ -122,28 +120,25 @@ class VolumeApiTest(test.TestCase):
                "display_name": "Volume Test Name",
                "display_description": "Volume Test Desc",
                "availability_zone": "zone1:host1"}
-        body = {self.test_obj: vol}
+        body = {"volume": vol}
         req = webob.Request.blank('/v2/fake/os-volumes')
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers['content-type'] = 'application/json'
         resp = req.get_response(fakes.wsgi_app())
 
-        if self.test_obj == "volume":
-            self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.status_int, 200)
 
-            resp_dict = json.loads(resp.body)
-            self.assertTrue(self.test_obj in resp_dict)
-            self.assertEqual(resp_dict[self.test_obj]['size'],
-                             vol['size'])
-            self.assertEqual(resp_dict[self.test_obj]['displayName'],
-                             vol['display_name'])
-            self.assertEqual(resp_dict[self.test_obj]['displayDescription'],
-                             vol['display_description'])
-            self.assertEqual(resp_dict[self.test_obj]['availabilityZone'],
-                             vol['availability_zone'])
-        else:
-            self.assertEqual(resp.status_int, 400)
+        resp_dict = json.loads(resp.body)
+        self.assertTrue('volume' in resp_dict)
+        self.assertEqual(resp_dict['volume']['size'],
+                         vol['size'])
+        self.assertEqual(resp_dict['volume']['displayName'],
+                         vol['display_name'])
+        self.assertEqual(resp_dict['volume']['displayDescription'],
+                         vol['display_description'])
+        self.assertEqual(resp_dict['volume']['availabilityZone'],
+                         vol['availability_zone'])
 
     def test_volume_create_no_body(self):
         req = webob.Request.blank('/v2/fake/os-volumes')
@@ -152,10 +147,7 @@ class VolumeApiTest(test.TestCase):
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
-        if self.test_obj == "volume":
-            self.assertEqual(resp.status_int, 422)
-        else:
-            self.assertEqual(resp.status_int, 400)
+        self.assertEqual(resp.status_int, 422)
 
     def test_volume_index(self):
         req = webob.Request.blank('/v2/fake/os-volumes')
@@ -183,10 +175,7 @@ class VolumeApiTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/os-volumes/123')
         req.method = 'DELETE'
         resp = req.get_response(fakes.wsgi_app())
-        if self.test_obj == "volume":
-            self.assertEqual(resp.status_int, 202)
-        else:
-            self.assertEqual(resp.status_int, 400)
+        self.assertEqual(resp.status_int, 202)
 
     def test_volume_delete_no_volume(self):
         self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get_notfound)
@@ -194,10 +183,7 @@ class VolumeApiTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/os-volumes/456')
         req.method = 'DELETE'
         resp = req.get_response(fakes.wsgi_app())
-        if self.test_obj == "volume":
-            self.assertEqual(resp.status_int, 404)
-        else:
-            self.assertEqual(resp.status_int, 400)
+        self.assertEqual(resp.status_int, 404)
 
 
 class VolumeSerializerTest(test.TestCase):
