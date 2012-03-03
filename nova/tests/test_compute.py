@@ -1309,11 +1309,6 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(context, inst_ref['uuid'])
 
-    def _setup_other_managers(self):
-        self.volume_manager = utils.import_object(FLAGS.volume_manager)
-        self.network_manager = utils.import_object(FLAGS.network_manager)
-        self.compute_driver = utils.import_object(FLAGS.compute_driver)
-
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
         """Confirm raising exception if instance doesn't have fixed_ip."""
         # creating instance testdata
