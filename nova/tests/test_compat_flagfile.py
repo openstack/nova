@@ -25,10 +25,10 @@ import unittest
 import uuid
 
 from nova.compat import flagfile
+from nova import test
 
 
 class ThatLastTwoPercentCoverageTestCase(unittest.TestCase):
-
     def test_open_file_for_reading(self):
         with flagfile._open_file_for_reading(__file__):
             pass
@@ -42,10 +42,9 @@ class ThatLastTwoPercentCoverageTestCase(unittest.TestCase):
             os.remove(path)
 
 
-class CompatFlagfileTestCase(unittest.TestCase):
-
+class CompatFlagfileTestCase(test.TestCase):
     def setUp(self):
-        self.stubs = stubout.StubOutForTesting()
+        super(CompatFlagfileTestCase, self).setUp()
         self.files = {}
         self.tempdir = str(uuid.uuid4())
         self.tempfiles = []
@@ -55,9 +54,6 @@ class CompatFlagfileTestCase(unittest.TestCase):
         self.stubs.Set(tempfile, 'mkdtemp', self._fake_mkdtemp)
         self.stubs.Set(tempfile, 'mkstemp', self._fake_mkstemp)
         self.stubs.Set(shutil, 'rmtree', self._fake_rmtree)
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
 
     def _fake_open(self, *args):
         @contextlib.contextmanager
