@@ -29,7 +29,8 @@ from nova.scheduler import driver
 
 multi_scheduler_opts = [
     cfg.StrOpt('compute_scheduler_driver',
-               default='nova.scheduler.chance.ChanceScheduler',
+               default='nova.scheduler.'
+                    'distributed_scheduler.DistributedScheduler',
                help='Driver to use for scheduling compute calls'),
     cfg.StrOpt('volume_scheduler_driver',
                default='nova.scheduler.chance.ChanceScheduler',
