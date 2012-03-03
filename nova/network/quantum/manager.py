@@ -251,8 +251,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             num_ports -= 1
 
         if num_ports > 0:
-            raise Exception(_("Network %s has active ports, cannot delete"
-                                                            % (net_uuid)))
+            raise exception.NetworkBusy(network=net_uuid)
 
         # only delete gw ports if we are going to finish deleting network
         if gw_port_uuid:

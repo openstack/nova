@@ -89,7 +89,7 @@ class FakeLibvirtTests(test.TestCase):
 
     def _test_connect_method_can_refuse_None_uri(self, conn_method):
         libvirt.allow_default_uri_connection = False
-        self.assertRaises(Exception, conn_method, None)
+        self.assertRaises(ValueError, conn_method, None)
 
     def test_openReadOnly_can_refuse_None_uri(self):
         conn_method = self.get_openReadOnly_curry_func()

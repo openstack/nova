@@ -115,6 +115,10 @@ def skip_if_fake(func):
     return _skipper
 
 
+class TestingException(Exception):
+    pass
+
+
 class TestCase(unittest.TestCase):
     """Test case base class for all unit tests."""
 

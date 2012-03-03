@@ -181,6 +181,18 @@ For more information on creating unit tests and utilizing the testing
 infrastructure in OpenStack Nova, please read nova/testing/README.rst.
 
 
+Unit Tests and assertRaises
+---------------------------
+When asserting that a test should raise an exception, test against the
+most specific exception possible. An overly broad exception type (like
+Exception) can mask errors in the unit test itself.
+
+Example::
+
+    self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
+                      elevated, instance_uuid)
+
+
 openstack-common
 ----------------
 

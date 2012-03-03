@@ -21,6 +21,7 @@ Test suite for VMWareAPI.
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import flags
 from nova import test
 from nova.compute import power_state
@@ -168,8 +169,8 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_snapshot_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertRaises(Exception, self.conn.snapshot, self.context,
-                          self.instance, "Test-Snapshot")
+        self.assertRaises(exception.InstanceNotFound, self.conn.snapshot,
+                          self.context, self.instance, "Test-Snapshot")
 
     def test_reboot(self):
         self._create_vm()
@@ -182,7 +183,8 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_reboot_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertRaises(Exception, self.conn.reboot, self.instance)
+        self.assertRaises(exception.InstanceNotFound, self.conn.reboot,
+                          self.instance, self.network_info, 'SOFT')
 
     def test_reboot_not_poweredon(self):
         self._create_vm()
@@ -191,7 +193,8 @@ class VMWareAPIVMTestCase(test.TestCase):
         self.conn.suspend(self.instance)
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.PAUSED)
-        self.assertRaises(Exception, self.conn.reboot, self.instance)
+        self.assertRaises(exception.InstanceRebootFailure, self.conn.reboot,
+                          self.instance, self.network_info, 'SOFT')
 
     def test_suspend(self):
         self._create_vm()
@@ -203,7 +206,8 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_suspend_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertRaises(Exception, self.conn.suspend, self.instance)
+        self.assertRaises(exception.InstanceNotFound, self.conn.suspend,
+                          self.instance)
 
     def test_resume(self):
         self._create_vm()
@@ -218,13 +222,15 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def test_resume_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertRaises(Exception, self.conn.resume, self.instance)
+        self.assertRaises(exception.InstanceNotFound, self.conn.resume,
+                          self.instance)
 
     def test_resume_not_suspended(self):
         self._create_vm()
         info = self.conn.get_info({'name': 1})
         self._check_vm_info(info, power_state.RUNNING)
-        self.assertRaises(Exception, self.conn.resume, self.instance)
+        self.assertRaises(exception.InstanceResumeFailure, self.conn.resume,
+                          self.instance)
 
     def test_get_info(self):
         self._create_vm()

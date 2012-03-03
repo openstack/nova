@@ -554,6 +554,10 @@ class NetworkHostNotSet(NovaException):
     message = _("Host is not set to the network (%(network_id)s).")
 
 
+class NetworkBusy(NovaException):
+    message = _("Network %(network)s has active ports, cannot delete.")
+
+
 class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 

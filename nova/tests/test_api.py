@@ -389,48 +389,45 @@ class ApiEc2TestCase(test.TestCase):
         group.authorize('tcp', 80, 81, '0.0.0.0/0')
         group.authorize('icmp', -1, -1, '0.0.0.0/0')
         group.authorize('udp', 80, 81, '0.0.0.0/0')
+
+        def _assert(message, *args):
+            try:
+                group.authorize(*args)
+            except EC2ResponseError as e:
+                self.assertEqual(e.status, 400, 'Expected status to be 400')
+                self.assertIn(message, e.error_message, e.error_message)
+            else:
+                raise self.failureException, 'EC2ResponseError not raised'
+
         # Invalid CIDR address
-        self.assertRaises(Exception,
-                          group.authorize, 'tcp', 80, 81, '0.0.0.0/0444')
+        _assert('Invalid CIDR', 'tcp', 80, 81, '0.0.0.0/0444')
         # Missing ports
-        self.assertRaises(Exception,
-                          group.authorize, 'tcp', '0.0.0.0/0')
+        _assert('Not enough parameters', 'tcp', '0.0.0.0/0')
         # from port cannot be greater than to port
-        self.assertRaises(Exception,
-                          group.authorize, 'tcp', 100, 1, '0.0.0.0/0')
+        _assert('Invalid port range', 'tcp', 100, 1, '0.0.0.0/0')
         # For tcp, negative values are not allowed
-        self.assertRaises(Exception,
-                          group.authorize, 'tcp', -1, 1, '0.0.0.0/0')
+        _assert('Invalid port range', 'tcp', -1, 1, '0.0.0.0/0')
         # For tcp, valid port range 1-65535
-        self.assertRaises(Exception,
-                          group.authorize, 'tcp', 1, 65599, '0.0.0.0/0')
+        _assert('Invalid port range', 'tcp', 1, 65599, '0.0.0.0/0')
         # For icmp, only -1:-1 is allowed for type:code
-        self.assertRaises(Exception,
-                          group.authorize, 'icmp', -1, 0, '0.0.0.0/0')
+        _assert('An unknown error has occurred', 'icmp', -1, 0, '0.0.0.0/0')
         # Non valid type:code
-        self.assertRaises(Exception,
-                          group.authorize, 'icmp', 0, 3, '0.0.0.0/0')
+        _assert('An unknown error has occurred', 'icmp', 0, 3, '0.0.0.0/0')
         # Invalid Cidr for ICMP type
-        self.assertRaises(Exception,
-                          group.authorize, 'icmp', -1, -1, '0.0.444.0/4')
+        _assert('Invalid CIDR', 'icmp', -1, -1, '0.0.444.0/4')
         # Invalid protocol
-        self.assertRaises(Exception,
-                          group.authorize, 'xyz', 1, 14, '0.0.0.0/0')
+        _assert('An unknown error has occurred', 'xyz', 1, 14, '0.0.0.0/0')
         # Invalid port
-        self.assertRaises(Exception,
-                          group.authorize, 'tcp', " ", "81", '0.0.0.0/0')
+        _assert('An unknown error has occurred', 'tcp', " ", "81", '0.0.0.0/0')
         # Invalid icmp port
-        self.assertRaises(Exception,
-                          group.authorize, 'icmp', " ", "81", '0.0.0.0/0')
+        _assert('An unknown error has occurred', 'icmp', " ", "81",
+                '0.0.0.0/0')
         # Invalid CIDR Address
-        self.assertRaises(Exception,
-                          group.authorize, 'icmp', -1, -1, '0.0.0.0')
+        _assert('Invalid CIDR', 'icmp', -1, -1, '0.0.0.0')
         # Invalid CIDR Address
-        self.assertRaises(Exception,
-                          group.authorize, 'icmp', -1, -1, '0.0.0.0/')
+        _assert('Invalid CIDR', 'icmp', -1, -1, '0.0.0.0/')
         # Invalid Cidr ports
-        self.assertRaises(Exception,
-                          group.authorize, 'icmp', 1, 256, '0.0.0.0/0')
+        _assert('Invalid port range', 'icmp', 1, 256, '0.0.0.0/0')
 
         self.expect_http()
         self.mox.ReplayAll()

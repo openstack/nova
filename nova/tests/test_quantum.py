@@ -358,8 +358,9 @@ class QuantumManagerTestCase(QuantumNovaTestCase):
 
             # make sure we aren't allowed to delete network with
             # active port
-            self.assertRaises(Exception, self.net_man.delete_network,
-                                        ctx, None, n['uuid'])
+            self.assertRaises(exception.NetworkBusy,
+                              self.net_man.delete_network,
+                              ctx, None, n['uuid'])
 
     def _check_vifs(self, expect_num_vifs):
         ctx = context.RequestContext('user1', "").elevated()

@@ -420,8 +420,8 @@ class Connection(object):
             if allow_default_uri_connection:
                 uri = 'qemu:///session'
             else:
-                raise Exception("URI was None, but fake libvirt is configured"
-                                " to not accept this.")
+                raise ValueError("URI was None, but fake libvirt is "
+                                 "configured to not accept this.")
 
         uri_whitelist = ['qemu:///system',
                          'qemu:///session',
