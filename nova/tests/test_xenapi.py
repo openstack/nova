@@ -717,7 +717,8 @@ class XenAPIVMTestCase(test.TestCase):
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
         # Ensure that it will not unrescue a non-rescued instance.
-        self.assertRaises(Exception, conn.unrescue, instance)
+        self.assertRaises(exception.InstanceNotInRescueMode, conn.unrescue,
+                          instance, None)
 
     def test_finish_revert_migration(self):
         instance = self._create_instance()
