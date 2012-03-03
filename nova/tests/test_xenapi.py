@@ -202,10 +202,10 @@ class XenAPIVolumeTestCase(test.TestCase):
         volume = self._create_volume()
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance.name, 'Running')
-        self.assertRaises(Exception,
+        self.assertRaises(exception.VolumeDriverNotFound,
                           conn.attach_volume,
+                          {'driver_volume_type': 'nonexist'},
                           instance.name,
-                          volume['id'],
                           '/dev/sdc')
 
 
