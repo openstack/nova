@@ -112,7 +112,7 @@ class BareMetalDom(object):
                 self.domains.remove(dom)
                 continue
 
-        LOG.debug(_(self.domains))
+        LOG.debug(self.domains)
         self.store_domain()
 
     def reboot_domain(self, name):

@@ -728,7 +728,7 @@ class VMHelper(HelperBase):
         vdis = json.loads(result)
         for vdi in vdis:
             LOG.debug(_("xapi 'download_vhd' returned VDI of "
-                    "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'" % vdi))
+                    "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'") % vdi)
 
         cls.scan_sr(session, instance, sr_ref)
 
@@ -756,7 +756,7 @@ class VMHelper(HelperBase):
             cur_vdi_uuid = vdi_rec['uuid']
             vdi_size_bytes = int(vdi_rec['physical_utilisation'])
             LOG.debug(_('vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes='
-                        '%(vdi_size_bytes)d' % locals()))
+                        '%(vdi_size_bytes)d') % locals())
             size_bytes += vdi_size_bytes
         return size_bytes
 

@@ -1232,8 +1232,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
             for injection in ('metadata', 'key', 'net', 'admin_password'):
                 if locals()[injection]:
-                    LOG.info(_('Injecting %(injection)s into image %(img_id)s'
-                               % locals()), instance=instance)
+                    LOG.info(_('Injecting %(injection)s into image %(img_id)s')
+                             % locals(), instance=instance)
             try:
                 disk.inject_data(injection_path,
                                  key, net, metadata, admin_password,
@@ -1810,7 +1810,7 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.info(_('Instance launched has CPU info:\n%s') % cpu_info)
         dic = utils.loads(cpu_info)
         xml = str(Template(self.cpuinfo_xml, searchList=dic))
-        LOG.info(_('to xml...\n:%s ' % xml))
+        LOG.info(_('to xml...\n:%s ') % xml)
 
         u = "http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult"
         m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")

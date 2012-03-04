@@ -67,7 +67,7 @@ class NetworkController(object):
     def _disassociate(self, request, network_id, body):
         context = request.environ['nova.context']
         authorize(context)
-        LOG.debug(_("Disassociating network with id %s" % network_id))
+        LOG.debug(_("Disassociating network with id %s") % network_id)
         try:
             self.network_api.disassociate(context, network_id)
         except exception.NetworkNotFound:

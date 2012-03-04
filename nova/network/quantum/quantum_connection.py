@@ -97,7 +97,7 @@ class QuantumClientConnection(object):
            vNIC with the specified interface-id.
         """
         LOG.debug(_("Connecting interface %(interface_id)s to "
-                    "net %(net_id)s for %(tenant_id)s" % locals()))
+                    "net %(net_id)s for %(tenant_id)s") % locals())
         port_data = {'port': {'state': 'ACTIVE'}}
         for kw in kwargs:
             port_data['port'][kw] = kwargs[kw]
@@ -111,7 +111,7 @@ class QuantumClientConnection(object):
     def detach_and_delete_port(self, tenant_id, net_id, port_id):
         """Detach and delete the specified Quantum port."""
         LOG.debug(_("Deleting port %(port_id)s on net %(net_id)s"
-                    " for %(tenant_id)s" % locals()))
+                    " for %(tenant_id)s") % locals())
 
         self.client.detach_resource(net_id, port_id, tenant=tenant_id)
         self.client.delete_port(net_id, port_id, tenant=tenant_id)

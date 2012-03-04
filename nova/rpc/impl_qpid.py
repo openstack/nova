@@ -337,12 +337,12 @@ class Connection(object):
             try:
                 self.connection.open()
             except qpid.messaging.exceptions.ConnectionError, e:
-                LOG.error(_('Unable to connect to AMQP server: %s ' % str(e)))
+                LOG.error(_('Unable to connect to AMQP server: %s ') % e)
                 time.sleep(FLAGS.qpid_reconnect_interval or 1)
             else:
                 break
 
-        LOG.info(_('Connected to AMQP server on %s' % self.broker))
+        LOG.info(_('Connected to AMQP server on %s') % self.broker)
 
         self.session = self.connection.session()
 

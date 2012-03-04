@@ -203,8 +203,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             if not self.q_conn.network_exists(q_tenant_id, quantum_net_id):
                     raise Exception(_("Unable to find existing quantum "
                                       "network for tenant '%(q_tenant_id)s' "
-                                      "with net-id '%(quantum_net_id)s'" %
-                                      locals()))
+                                      "with net-id '%(quantum_net_id)s'") %
+                                    locals())
         else:
             nova_id = self._get_nova_id()
             quantum_net_id = self.q_conn.create_network(q_tenant_id, label,

@@ -48,7 +48,7 @@ class DistributedScheduler(driver.Scheduler):
 
         NOTE: We're only focused on compute instances right now,
         so this method will always raise NoValidHost()."""
-        msg = _("No host selection for %s defined." % topic)
+        msg = _("No host selection for %s defined.") % topic
         raise exception.NoValidHost(reason=msg)
 
     def schedule_run_instance(self, context, request_spec, *args, **kwargs):
@@ -72,7 +72,7 @@ class DistributedScheduler(driver.Scheduler):
                                         *args, **kwargs)
 
         if not weighted_hosts:
-            raise exception.NoValidHost(reason=_(""))
+            raise exception.NoValidHost(reason="")
 
         # NOTE(comstud): Make sure we do not pass this through.  It
         # contains an instance of RpcContext that cannot be serialized.
@@ -106,7 +106,7 @@ class DistributedScheduler(driver.Scheduler):
         hosts = self._schedule(context, 'compute', request_spec,
                                *args, **kwargs)
         if not hosts:
-            raise exception.NoValidHost(reason=_(""))
+            raise exception.NoValidHost(reason="")
         host = hosts.pop(0)
 
         # NOTE(comstud): Make sure we do not pass this through.  It

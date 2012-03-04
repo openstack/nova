@@ -162,7 +162,7 @@ class _DiskImage(object):
         for cls in (loop.Mount, nbd.Mount, guestfs.Mount):
             if cls.mode == mode:
                 return cls
-        raise exception.Error(_("unknown disk image handler: %s" % mode))
+        raise exception.Error(_("unknown disk image handler: %s") % mode)
 
     def mount(self):
         """Mount a disk image, using the object attributes.

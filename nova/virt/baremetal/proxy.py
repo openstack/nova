@@ -253,7 +253,7 @@ class ProxyConnection(driver.ComputeDriver):
             network_info=network_info,
             block_device_info=block_device_info)
         LOG.debug(_("instance %s: is building"), instance['name'])
-        LOG.debug(_(xml_dict))
+        LOG.debug(xml_dict)
 
         def _wait_for_boot():
             try:
@@ -471,8 +471,8 @@ class ProxyConnection(driver.ComputeDriver):
             for injection in ('metadata', 'key', 'net'):
                 if locals()[injection]:
                     LOG.info(_('instance %(inst_name)s: injecting '
-                               '%(injection)s into image %(img_id)s'
-                               % locals()))
+                               '%(injection)s into image %(img_id)s')
+                             % locals())
             try:
                 disk.inject_data(injection_path, key, net, metadata,
                                  partition=target_partition,

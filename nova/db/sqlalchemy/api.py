@@ -562,8 +562,8 @@ def compute_node_utilization_update(context, host, free_ram_mb_delta=0,
                               with_lockmode('update').\
                               first()
         if compute_node is None:
-            raise exception.NotFound(_("No ComputeNode for %(host)s" %
-                                 locals()))
+            raise exception.NotFound(_("No ComputeNode for %(host)s") %
+                                     locals())
 
         # This table thingy is how we get atomic UPDATE x = x + 1
         # semantics.
@@ -597,8 +597,8 @@ def compute_node_utilization_set(context, host, free_ram_mb=None,
                               with_lockmode('update').\
                               first()
         if compute_node is None:
-            raise exception.NotFound(_("No ComputeNode for %(host)s" %
-                                 locals()))
+            raise exception.NotFound(_("No ComputeNode for %(host)s") %
+                                     locals())
 
         if free_ram_mb != None:
             compute_node.free_ram_mb = free_ram_mb
