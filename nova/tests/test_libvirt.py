@@ -2091,34 +2091,6 @@ class LibvirtConnectionTestCase(test.TestCase):
         except Exception:
             pass
 
-    class NullFirewallDriver(base_firewall.FirewallDriver):
-        def __init__(self, get_connection, **kwargs):
-            pass
-
-        def prepare_instance_filter(self, instance, network_info):
-            pass
-
-        def unfilter_instance(self, instance, network_info):
-            pass
-
-        def apply_instance_filter(self, instance, network_info):
-            pass
-
-        def refresh_security_group_rules(self, security_group_id):
-            pass
-
-        def refresh_security_group_members(self, security_group_id):
-            pass
-
-        def refresh_provider_fw_rules(self):
-            pass
-
-        def setup_basic_filtering(self, instance, network_info):
-            pass
-
-        def instance_filter_exists(self, instance, network_info):
-            return True
-
     def _create_instance(self, params=None):
         """Create a test instance"""
         if not params:
@@ -2296,7 +2268,7 @@ class LibvirtConnectionTestCase(test.TestCase):
         self.stubs.Set(self.libvirtconnection, '_create_new_domain',
                        fake_create_new_domain)
         self.stubs.Set(utils, 'execute', fake_execute)
-        fw = self.NullFirewallDriver(None)
+        fw = base_firewall.NoopFirewallDriver()
         self.stubs.Set(self.libvirtconnection, 'firewall_driver', fw)
 
         ins_ref = self._create_instance()
@@ -2321,7 +2293,7 @@ class LibvirtConnectionTestCase(test.TestCase):
 
         self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(utils, 'execute', fake_execute)
-        fw = self.NullFirewallDriver(None)
+        fw = base_firewall.NoopFirewallDriver()
         self.stubs.Set(self.libvirtconnection, 'firewall_driver', fw)
         self.stubs.Set(self.libvirtconnection, '_create_new_domain',
                        fake_create_new_domain)

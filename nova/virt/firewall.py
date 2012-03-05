@@ -453,3 +453,6 @@ class NoopFirewallDriver(object):
 
     def __getattr__(self, key):
         return self._noop
+
+    def instance_filter_exists(self, instance, network_info):
+        return True
