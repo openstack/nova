@@ -17,6 +17,7 @@
 import webob
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions as exts
 from nova.api.openstack import wsgi
 from nova import compute
@@ -56,7 +57,12 @@ class RescueController(wsgi.Controller):
             password = utils.generate_password(FLAGS.password_length)
 
         instance = self._get_instance(context, id)
-        self.compute_api.rescue(context, instance, rescue_password=password)
+        try:
+            self.compute_api.rescue(context, instance,
+                                    rescue_password=password)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                                                                  'rescue')
         return {'adminPass': password}
 
     @wsgi.action('unrescue')
