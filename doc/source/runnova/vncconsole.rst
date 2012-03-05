@@ -47,6 +47,9 @@ nova-consoleauth.  This service must be running in order for for either proxy
 to work.  Many proxies of either type can be run against a single
 nova-consoleauth service in a cluster configuration.
 
+nova-consoleauth should not be confused with nova-console, which is a xen-specific
+service that is not used by the most recent vnc proxy architecture.
+
 Getting an Access Url
 ---------------------
 Nova provides the ability to create access_urls through the os-consoles extension.
@@ -60,7 +63,7 @@ Accessing VNC Consoles with a Java client
 To enable support for the OpenStack java vnc client in nova, nova provides the
 nova-xvpvncproxy service, which you should run to enable this feature.
 
-* :option:`--xvpvncproxy_baseurl=[base url for client connections]` -
+* :option:`--xvpvncproxy_base_url=[base url for client connections]` -
   this is the public base url to which clients will connect.  "?token=abc"
   will be added to this url for the purposes of auth.
 * :option:`--xvpvncproxy_port=[port]` - port to bind (defaults to 6081)
@@ -99,7 +102,7 @@ server address and credentials.
 
 By default, nova-novncproxy binds 0.0.0.0:6080.  This can be configured with:
 
-* :option:`--novncproxy_baseurl=[base url for client connections]` -
+* :option:`--novncproxy_base_url=[base url for client connections]` -
   this is the public base url to which clients will connect.  "?token=abc"
   will be added to this url for the purposes of auth.
 * :option:`--novncproxy_port=[port]`
