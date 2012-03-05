@@ -114,10 +114,11 @@ def validate_user_data(user_data):
 def validate(args, validator):
     """Validate values of args against validators in validator.
 
-    args            Dict of values to be validated.
-    validator       A dict where the keys map to keys in args
-                    and the values are validators.
-                    Applies each validator to args[key]
+    :param args:      Dict of values to be validated.
+    :param validator: A dict where the keys map to keys in args
+                      and the values are validators.
+                      Applies each validator to ``args[key]``
+    :returns: True if validation succeeds. Otherwise False.
 
     A validator should be a callable which accepts 1 argument and which
     returns True if the argument passes validation. False otherwise.
@@ -126,7 +127,6 @@ def validate(args, validator):
 
     Only validates keys which show up in both args and validator.
 
-    returns True if validation succeeds. Otherwise False.
     """
 
     for key in validator:

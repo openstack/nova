@@ -128,25 +128,29 @@ class ComputeDriver(object):
         Return the number of virtual machines that the hypervisor knows
         about.
 
-        :note This implementation works for all drivers, but it is
-              not particularly efficient. Maintainers of the virt drivers are
-              encouraged to override this method with something more
-              efficient.
+        .. note::
+
+            This implementation works for all drivers, but it is
+            not particularly efficient. Maintainers of the virt drivers are
+            encouraged to override this method with something more
+            efficient.
         """
         return len(self.list_instances())
 
     def instance_exists(self, instance_id):
         """Checks existence of an instance on the host.
 
+        :param instance_id: The ID / name of the instance to lookup
+
         Returns True if an instance with the supplied ID exists on
         the host, False otherwise.
 
-        :note This implementation works for all drivers, but it is
-              not particularly efficient. Maintainers of the virt drivers are
-              encouraged to override this method with something more
-              efficient.
+        .. note::
 
-        :param instance_id: The ID / name of the instance to lookup
+            This implementation works for all drivers, but it is
+            not particularly efficient. Maintainers of the virt drivers are
+            encouraged to override this method with something more
+            efficient.
         """
         return instance_id in self.list_instances()
 
@@ -422,7 +426,7 @@ class ComputeDriver(object):
         host 'H0' and this method would still have been called.  The point was
         that this method isn't called on the host where instances of that
         group are running (as is the case with
-        :method:`refresh_security_group_rules`) but is called where references
+        :py:meth:`refresh_security_group_rules`) but is called where references
         are made to authorizing those instances.
 
         An error should be raised if the operation cannot complete.
@@ -436,7 +440,7 @@ class ComputeDriver(object):
 
         When this is called, rules have either been added or removed from the
         datastore.  You can retrieve rules with
-        :method:`nova.db.provider_fw_rule_get_all`.
+        :py:meth:`nova.db.provider_fw_rule_get_all`.
 
         Provider rules take precedence over security group rules.  If an IP
         would be allowed by a security group ingress rule, but blocked by
@@ -669,12 +673,12 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_volume_connector(self, instance):
-        """
-        Get connector information for the instance for attaching to volumes.
+        """Get connector information for the instance for attaching to volumes.
 
         Connector information is a dictionary representing the ip of the
         machine that will be making the connection and and the name of the
-        iscsi initiator as follows:
+        iscsi initiator as follows::
+
             {
                 'ip': ip,
                 'initiator': initiator,

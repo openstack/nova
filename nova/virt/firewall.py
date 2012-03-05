@@ -88,7 +88,7 @@ class FirewallDriver(object):
         """Create rules to block spoofing and allow dhcp.
 
         This gets called when spawning an instance, before
-        :method:`prepare_instance_filter`.
+        :py:meth:`prepare_instance_filter`.
 
         """
         raise NotImplementedError()
@@ -362,7 +362,7 @@ class IptablesFirewallDriver(FirewallDriver):
             self.add_filters_for_instance(instance)
 
     def refresh_provider_fw_rules(self):
-        """See class:FirewallDriver: docs."""
+        """See :class:`FirewallDriver` docs."""
         self._do_refresh_provider_fw_rules()
         self.iptables.apply()
 

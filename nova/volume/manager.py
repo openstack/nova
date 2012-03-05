@@ -266,7 +266,8 @@ class VolumeManager(manager.SchedulerDependentManager):
         This method calls the driver initialize_connection and returns
         it to the caller.  The connector parameter is a dictionary with
         information about the host that will connect to the volume in the
-        following format:
+        following format::
+
             {
                 'ip': ip,
                 'initiator': initiator,
@@ -279,7 +280,8 @@ class VolumeManager(manager.SchedulerDependentManager):
         connections.
 
         driver is responsible for doing any necessary security setup and
-        returning a connection_info dictionary in the following format:
+        returning a connection_info dictionary in the following format::
+
             {
                 'driver_volume_type': driver_volume_type,
                 'data': data,

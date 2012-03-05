@@ -85,7 +85,7 @@ class TestFaults(test.TestCase):
             self.assertEqual(expected, actual)
 
     def test_raise(self):
-        """Ensure the ability to raise `Fault`s in WSGI-ified methods."""
+        """Ensure the ability to raise :class:`Fault` in WSGI-ified methods."""
         @webob.dec.wsgify
         def raiser(req):
             raise wsgi.Fault(webob.exc.HTTPNotFound(explanation='whut?'))

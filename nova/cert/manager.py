@@ -17,10 +17,11 @@
 Cert manager manages x509 certificates.
 
 **Related Flags**
+
 :cert_topic:  What :mod:`rpc` topic to listen to (default: `cert`).
 :cert_manager:  The module name of a class derived from
-                  :class:`manager.Manager` (default:
-                  :class:`nova.cert.manager.Manager`).
+                :class:`manager.Manager` (default:
+                :class:`nova.cert.manager.Manager`).
 """
 
 import base64

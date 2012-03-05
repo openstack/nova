@@ -19,8 +19,9 @@
 Handles all requests relating to Virtual Storage Arrays (VSAs).
 
 Experimental code. Requires special VSA image.
+
 For assistance and guidelines pls contact
-    Zadara Storage Inc & Openstack community
+Zadara Storage Inc & Openstack community
 """
 
 from nova import compute
@@ -143,9 +144,8 @@ class API(base.Base):
     def create(self, context, display_name='', display_description='',
                 vc_count=1, instance_type=None, image_name=None,
                 availability_zone=None, storage=[], shared=None):
-        """
-        Provision VSA instance with corresponding compute instances
-        and associated volumes
+        """Provision VSA instance with compute instances and volumes
+
         :param storage: List of dictionaries with following keys:
                         disk_name, num_disks, size
         :param shared: Specifies if storage is dedicated or shared.

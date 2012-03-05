@@ -68,15 +68,15 @@ def enforce(context, action, target):
        :param context: nova context
        :param action: string representing the action to be checked
            this should be colon separated for clarity.
-           i.e. compute:create_instance
-                compute:attach_volume
-                volume:attach_volume
+           i.e. ``compute:create_instance``,
+           ``compute:attach_volume``,
+           ``volume:attach_volume``
 
        :param object: dictionary representing the object of the action
            for object creation this should be a dictionary representing the
-           location of the object e.g. {'project_id': context.project_id}
+           location of the object e.g. ``{'project_id': context.project_id}``
 
-       :raises: `nova.exception.PolicyNotAllowed` if verification fails.
+       :raises nova.exception.PolicyNotAllowed: if verification fails.
 
     """
     init()

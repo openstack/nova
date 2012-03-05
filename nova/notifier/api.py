@@ -79,35 +79,35 @@ def publisher_id(service, host=None):
 
 
 def notify(publisher_id, event_type, priority, payload):
-    """
-    Sends a notification using the specified driver
+    """Sends a notification using the specified driver
 
-    Notify parameters:
-
-    publisher_id - the source worker_type.host of the message
-    event_type - the literal type of event (ex. Instance Creation)
-    priority - patterned after the enumeration of Python logging levels in
-               the set (DEBUG, WARN, INFO, ERROR, CRITICAL)
-    payload - A python dictionary of attributes
+    :param publisher_id: the source worker_type.host of the message
+    :param event_type:   the literal type of event (ex. Instance Creation)
+    :param priority:     patterned after the enumeration of Python logging
+                         levels in the set (DEBUG, WARN, INFO, ERROR, CRITICAL)
+    :param payload:       A python dictionary of attributes
 
     Outgoing message format includes the above parameters, and appends the
     following:
 
-    message_id - a UUID representing the id for this notification
-    timestamp - the GMT timestamp the notification was sent at
+    message_id
+      a UUID representing the id for this notification
+
+    timestamp
+      the GMT timestamp the notification was sent at
 
     The composite message will be constructed as a dictionary of the above
     attributes, which will then be sent via the transport mechanism defined
     by the driver.
 
-    Message example:
+    Message example::
 
-    {'message_id': str(uuid.uuid4()),
-     'publisher_id': 'compute.host1',
-     'timestamp': utils.utcnow(),
-     'priority': 'WARN',
-     'event_type': 'compute.create_instance',
-     'payload': {'instance_id': 12, ... }}
+        {'message_id': str(uuid.uuid4()),
+         'publisher_id': 'compute.host1',
+         'timestamp': utils.utcnow(),
+         'priority': 'WARN',
+         'event_type': 'compute.create_instance',
+         'payload': {'instance_id': 12, ... }}
 
     """
     if priority not in log_levels:

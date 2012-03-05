@@ -244,9 +244,9 @@ class FakeLDAP(object):
     def modify_s(self, dn, attrs):
         """Modify the object at dn using the attribute list.
 
-        Args:
-        dn -- a dn
-        attrs -- a list of tuples in the following form:
+        :param dn: a dn
+        :param attrs: a list of tuples in the following form::
+
             ([MOD_ADD | MOD_DELETE | MOD_REPACE], attribute, value)
 
         """
