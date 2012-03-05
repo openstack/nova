@@ -48,7 +48,7 @@ CHUNK_SIZE = 8192
 KERNEL_DIR = '/boot/guest'
 
 
-class RetryException(Exception):
+class RetryableError(Exception):
     pass
 
 
@@ -86,18 +86,17 @@ def _copy_kernel_vdi(dest, copy_args):
     return filename
 
 
-def _download_tarball(request, staging_path):
-    """Make one attempt to download and extract the image tarball"""
+def _download_tarball_and_verify(request, staging_path):
     try:
         response = urllib2.urlopen(request)
     except urllib2.HTTPError, error:
-        raise RetryException(error)
+        raise RetryableError(error)
     except urllib2.URLError, error:
-        raise RetryException(error)
+        raise RetryableError(error)
     except httplib.HTTPException, error:
         # httplib.HTTPException and derivatives (BadStatusLine in particular)
         # don't have a useful __repr__ or __str__
-        raise RetryException('%s: %s' % (error.__class__.__name__, error))
+        raise RetryableError('%s: %s' % (error.__class__.__name__, error))
 
     tar_cmd = "tar -zx --directory=%(staging_path)s" % locals()
     tar_proc = _make_subprocess(tar_cmd, stderr=True, stdin=True)
@@ -124,7 +123,7 @@ def _download_tarball(request, staging_path):
     try:
         _finish_subprocess(tar_proc, tar_cmd)
     except Exception, error:
-        raise RetryException(error)
+        raise RetryableError(error)
 
     checksum = checksum.hexdigest()
     if etag is None:
@@ -132,16 +131,13 @@ def _download_tarball(request, staging_path):
         logging.info(msg % locals())
     elif checksum != etag:
         msg = 'ETag %(etag)s does not match computed md5sum %(checksum)s'
-        raise RetryException(msg % locals())
+        raise RetryableError(msg % locals())
     else:
         msg = "Verified image checksum %(checksum)s"
         logging.info(msg % locals())
 
-    return
 
-
-def _download_tarball_with_retry(sr_path, image_id, glance_host,
-                                 glance_port, auth_token, num_retries):
+def _download_tarball(sr_path, image_id, glance_host, glance_port, auth_token):
     """Download the tarball image from Glance and extract it into the staging
     area. Retry if there is any failure.
     """
@@ -155,24 +151,15 @@ def _download_tarball_with_retry(sr_path, image_id, glance_host,
     logging.info("Downloading %s" % url)
 
     request = urllib2.Request(url, headers=headers)
-    sleep_time = 0.5
-
-    for try_num in xrange(1, num_retries + 2):
-        try:
-            staging_path = _make_staging_area(sr_path)
-            _download_tarball(request, staging_path)
-            return staging_path
-        except RetryException, error:
-            msg = "Downloading %(url)s attempt %(try_num)d error: %(error)s"
-            logging.error(msg % locals())
-
+    staging_path = _make_staging_area(sr_path)
+    try:
+        _download_tarball_and_verify(request, staging_path)
+    except Exception:
+        logging.exception('Failed to retrieve %(url)s' % locals())
         _cleanup_staging_area(staging_path)
-        time.sleep(sleep_time)
-        sleep_time = min(2 * sleep_time, 15)
+        raise
 
-    msg = "Unable to retrieve %(url)s after %(try_num)d attempt(s)." % locals()
-    logging.error(msg)
-    raise Exception(msg)
+    return staging_path
 
 
 def _import_vhds(sr_path, staging_path, uuid_stack):
@@ -492,13 +479,11 @@ def download_vhd(session, args):
     uuid_stack = params["uuid_stack"]
     sr_path = params["sr_path"]
     auth_token = params["auth_token"]
-    num_retries = params["num_retries"]
 
     staging_path = None
     try:
-        staging_path = _download_tarball_with_retry(sr_path, image_id,
-                                                    glance_host, glance_port,
-                                                    auth_token, num_retries)
+        staging_path = _download_tarball(sr_path, image_id, glance_host,
+                                         glance_port, auth_token)
         # Right now, it's easier to return a single string via XenAPI,
         # so we'll json encode the list of VHDs.
         return json.dumps(_import_vhds(sr_path, staging_path, uuid_stack))

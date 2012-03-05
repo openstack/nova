@@ -692,6 +692,48 @@ class VMHelper(HelperBase):
                 session, instance, image, image_type)
 
     @classmethod
+    def _retry_glance_download_vhd(cls, context, session, instance, image):
+        # NOTE(sirp): The Glance plugin runs under Python 2.4
+        # which does not have the `uuid` module. To work around this,
+        # we generate the uuids here (under Python 2.6+) and
+        # pass them as arguments
+        uuid_stack = [str(uuid.uuid4()) for i in xrange(3)]
+
+        max_attempts = FLAGS.glance_num_retries + 1
+        sleep_time = 0.5
+        for attempt_num in xrange(1, max_attempts + 1):
+            glance_host, glance_port = glance.pick_glance_api_server()
+            params = {'image_id': image,
+                      'glance_host': glance_host,
+                      'glance_port': glance_port,
+                      'uuid_stack': uuid_stack,
+                      'sr_path': cls.get_sr_path(session),
+                      'num_retries': 0,
+                      'auth_token': getattr(context, 'auth_token', None)}
+            kwargs = {'params': pickle.dumps(params)}
+
+            LOG.info(_('download_vhd %(image)s '
+                       'attempt %(attempt_num)d/%(max_attempts)d '
+                       'from %(glance_host)s:%(glance_port)s') % locals())
+
+            task = session.async_call_plugin('glance', 'download_vhd', kwargs)
+            try:
+                result = session.wait_for_task(task, instance['uuid'])
+                return json.loads(result)
+            except cls.XenAPI.Failure as exc:
+                _type, method, error = exc.details[:3]
+                if error == 'RetryableError':
+                    LOG.error(_('download_vhd failed: %r') %
+                              (exc.details[3:],))
+                else:
+                    raise
+
+            time.sleep(sleep_time)
+            sleep_time = min(2 * sleep_time, 15)
+
+        raise exception.CouldNotFetchImage(image=image)
+
+    @classmethod
     def _fetch_image_glance_vhd(cls, context, session, instance, image,
                                 image_type):
         """Tell glance to download an image and put the VHDs into the SR
@@ -703,29 +745,12 @@ class VMHelper(HelperBase):
                     % locals())
         sr_ref = cls.safe_find_sr(session)
 
-        # NOTE(sirp): The Glance plugin runs under Python 2.4
-        # which does not have the `uuid` module. To work around this,
-        # we generate the uuids here (under Python 2.6+) and
-        # pass them as arguments
-        uuid_stack = [str(uuid.uuid4()) for i in xrange(3)]
+        vdis = cls._retry_glance_download_vhd(context, session, instance,
+                                              image)
 
-        glance_host, glance_port = glance.pick_glance_api_server()
-        params = {'image_id': image,
-                  'glance_host': glance_host,
-                  'glance_port': glance_port,
-                  'uuid_stack': uuid_stack,
-                  'sr_path': cls.get_sr_path(session),
-                  'num_retries': FLAGS.glance_num_retries,
-                  'auth_token': getattr(context, 'auth_token', None)}
-
-        kwargs = {'params': pickle.dumps(params)}
-        task = session.async_call_plugin('glance', 'download_vhd', kwargs)
-        result = session.wait_for_task(task, instance['uuid'])
-        # 'download_vhd' will return a json encoded string containing
-        # a list of dictionaries describing VDIs.  The dictionary will
-        # contain 'vdi_type' and 'vdi_uuid' keys.  'vdi_type' can be
-        # 'os' or 'swap' right now.
-        vdis = json.loads(result)
+        # 'download_vhd' will return a list of dictionaries describing VDIs.
+        # The dictionary will contain 'vdi_type' and 'vdi_uuid' keys.
+        # 'vdi_type' can be 'os' or 'swap' right now.
         for vdi in vdis:
             LOG.debug(_("xapi 'download_vhd' returned VDI of "
                     "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'") % vdi)
