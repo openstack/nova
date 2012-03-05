@@ -1365,11 +1365,18 @@ class CloudController(object):
         if ramdisk_id:
             i['ramdiskId'] = ec2utils.image_ec2_id(ramdisk_id, 'ari')
         i['imageOwnerId'] = image['properties'].get('owner_id')
-        if name:
-            i['imageLocation'] = "%s (%s)" % (image['properties'].
-                                              get('image_location'), name)
+
+        img_loc = image['properties'].get('image_location')
+        if img_loc:
+            i['imageLocation'] = img_loc
         else:
-            i['imageLocation'] = image['properties'].get('image_location')
+            i['imageLocation'] = "%s (%s)" % (img_loc, name)
+
+        i['name'] = name
+        if not name and img_loc:
+            # This should only occur for images registered with ec2 api
+            # prior to that api populating the glance name
+            i['name'] = img_loc
 
         i['imageState'] = self._get_image_state(image)
         i['description'] = image.get('description')
@@ -1425,9 +1432,14 @@ class CloudController(object):
         return image_id
 
     def register_image(self, context, image_location=None, **kwargs):
-        if image_location is None and 'name' in kwargs:
+        if image_location is None and kwargs.get('name'):
             image_location = kwargs['name']
         metadata = {'properties': {'image_location': image_location}}
+
+        if kwargs.get('name'):
+            metadata['name'] = kwargs['name']
+        else:
+            metadata['name'] = image_location
 
         if 'root_device_name' in kwargs:
             metadata['properties']['root_device_name'] = kwargs.get(
