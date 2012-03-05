@@ -59,6 +59,16 @@ def nova_except_format(logical_line):
         return 6, "NOVA N201: no 'except:' at least use 'except Exception:'"
 
 
+def nova_except_format(logical_line):
+    """
+    nova HACKING guide recommends not using assertRaises(Exception...):
+    Do not use overly broad Exception type
+    N202
+    """
+    if logical_line.startswith("self.assertRaises(Exception"):
+        return 1, "NOVA N202: assertRaises Exception too broad"
+
+
 def nova_one_import_per_line(logical_line):
     """
     nova HACKING guide recommends one import per line:
