@@ -951,9 +951,10 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                            network,
                            mac_address)
         else:
+            iface = FLAGS.flat_interface or network['bridge_interface']
             LinuxBridgeInterfaceDriver.ensure_bridge(
                           network['bridge'],
-                          network['bridge_interface'],
+                          iface,
                           network, gateway)
 
         # NOTE(vish): applying here so we don't get a lock conflict
