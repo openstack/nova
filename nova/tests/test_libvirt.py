@@ -2042,7 +2042,6 @@ class LibvirtConnectionTestCase(test.TestCase):
         super(LibvirtConnectionTestCase, self).setUp()
 
         self.libvirtconnection = connection.LibvirtConnection(read_only=True)
-        self.platform = sys.platform
 
         self.temp_path = os.path.join(flags.FLAGS.instances_path,
                                       'instance-00000001/', '')
@@ -2054,7 +2053,6 @@ class LibvirtConnectionTestCase(test.TestCase):
 
     def tearDown(self):
         super(LibvirtConnectionTestCase, self).tearDown()
-        sys.platform = self.platform
 
         try:
             shutil.rmtree(flags.FLAGS.instances_path)
