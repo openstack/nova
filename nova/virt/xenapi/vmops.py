@@ -1269,8 +1269,8 @@ class VMOps(object):
         rescue_vm_ref = VMHelper.lookup(self._session,
                                         "%s-rescue" % instance.name)
         if rescue_vm_ref:
-            raise RuntimeError(_(
-                "Instance is already in Rescue Mode: %s" % instance.name))
+            raise RuntimeError(_("Instance is already in Rescue Mode: %s")
+                               % instance.name)
 
         vm_ref = VMHelper.lookup(self._session, instance.name)
         self._shutdown(instance, vm_ref)

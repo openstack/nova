@@ -64,7 +64,7 @@ class SchedulerOptions(object):
             return os.path.getmtime(filename)
         except os.error, e:
             LOG.exception(_("Could not stat scheduler options file "
-                            "%(filename)s: '%(e)s'", locals()))
+                            "%(filename)s: '%(e)s'"), locals())
             raise
 
     def _load_file(self, handle):

@@ -177,8 +177,8 @@ class Client(object):
 
             if self.logger:
                 self.logger.debug(
-                    _("Quantum Client Request: %(method)s %(action)s" %
-                                    locals()))
+                    _("Quantum Client Request: %(method)s %(action)s") %
+                                    locals())
                 if body:
                     self.logger.debug(body)
 
@@ -193,7 +193,7 @@ class Client(object):
 
             if status_code in NOT_FOUND_CODES:
                 raise QuantumNotFoundException(
-                    _("Quantum entity not found: %s" % data))
+                    _("Quantum entity not found: %s") % data)
 
             if status_code in (httplib.OK,
                                httplib.CREATED,
@@ -203,12 +203,12 @@ class Client(object):
                     return self.deserialize(data, status_code)
             else:
                 raise QuantumServerException(
-                      _("Server %(status_code)s error: %(data)s"
-                                        % locals()))
+                      _("Server %(status_code)s error: %(data)s")
+                                        % locals())
 
         except (socket.error, IOError), e:
             raise QuantumIOException(_("Unable to connect to "
-                              "server. Got error: %s" % e))
+                              "server. Got error: %s") % e)
 
     def get_status_code(self, response):
         """Returns the integer status code from the response, which
@@ -225,8 +225,8 @@ class Client(object):
         elif isinstance(data, dict):
             return JSONSerializer().serialize(data, self.content_type())
         else:
-            raise Exception(_("unable to deserialize object of type = '%s'" %
-                              type(data)))
+            raise Exception(_("unable to deserialize object of type = '%s'") %
+                              type(data))
 
     def deserialize(self, data, status_code):
         return JSONSerializer().deserialize(data, self.content_type())

@@ -270,7 +270,7 @@ class FloatingIP(object):
                     self.l3driver.add_floating_ip(floating_ip['address'],
                             fixed_address, floating_ip['interface'])
                 except exception.ProcessExecutionError:
-                    msg = _('Interface %(interface)s not found' % locals())
+                    msg = _('Interface %(interface)s not found') % locals()
                     LOG.debug(msg)
                     raise exception.NoFloatingIpInterface(interface=interface)
 
@@ -468,7 +468,7 @@ class FloatingIP(object):
             fixed_address = self.db.floating_ip_disassociate(context,
                                                              floating_address)
             if "Cannot find device" in str(e):
-                msg = _('Interface %(interface)s not found' % locals())
+                msg = _('Interface %(interface)s not found') % locals()
                 LOG.error(msg)
                 raise exception.NoFloatingIpInterface(interface=interface)
 
@@ -1384,7 +1384,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         if require_disassociated and network.project_id is not None:
             raise ValueError(_('Network must be disassociated from project %s'
-                               ' before delete' % network.project_id))
+                               ' before delete') % network.project_id)
         db.network_delete_safe(context, network.id)
 
     @property

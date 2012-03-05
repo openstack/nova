@@ -181,7 +181,7 @@ class VsaScheduler(simple.SimpleScheduler):
                                                             selected_hosts,
                                                             unique)
         if host is None:
-            raise exception.NoValidHost(reason=_(""))
+            raise exception.NoValidHost(reason="")
 
         return (host, qos_cap)
 

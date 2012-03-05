@@ -611,8 +611,8 @@ class CloudController(object):
     def revoke_security_group_ingress(self, context, group_name=None,
                                       group_id=None, **kwargs):
         if not group_name and not group_id:
-            err = "Not enough parameters, need group_name or group_id"
-            raise exception.EC2APIError(_(err))
+            err = _("Not enough parameters, need group_name or group_id")
+            raise exception.EC2APIError(err)
         self.compute_api.ensure_default_security_group(context)
         notfound = exception.SecurityGroupNotFound
         if group_name:
@@ -626,8 +626,8 @@ class CloudController(object):
             if not security_group:
                 raise notfound(security_group_id=group_id)
 
-        msg = "Revoke security group ingress %s"
-        LOG.audit(_(msg), security_group['name'], context=context)
+        msg = _("Revoke security group ingress %s")
+        LOG.audit(msg, security_group['name'], context=context)
         prevalues = []
         try:
             prevalues = kwargs['ip_permissions']
@@ -638,8 +638,8 @@ class CloudController(object):
         for values in prevalues:
             rulesvalues = self._rule_args_to_dict(context, values)
             if not rulesvalues:
-                err = "%s Not enough parameters to build a valid rule"
-                raise exception.EC2APIError(_(err % rulesvalues))
+                err = _("%s Not enough parameters to build a valid rule")
+                raise exception.EC2APIError(err % rulesvalues)
 
             for values_for_rule in rulesvalues:
                 values_for_rule['parent_group_id'] = security_group.id
@@ -665,8 +665,8 @@ class CloudController(object):
     def authorize_security_group_ingress(self, context, group_name=None,
                                          group_id=None, **kwargs):
         if not group_name and not group_id:
-            err = "Not enough parameters, need group_name or group_id"
-            raise exception.EC2APIError(_(err))
+            err = _("Not enough parameters, need group_name or group_id")
+            raise exception.EC2APIError(err)
         self.compute_api.ensure_default_security_group(context)
         notfound = exception.SecurityGroupNotFound
         if group_name:
@@ -680,8 +680,8 @@ class CloudController(object):
             if not security_group:
                 raise notfound(security_group_id=group_id)
 
-        msg = "Authorize security group ingress %s"
-        LOG.audit(_(msg), security_group['name'], context=context)
+        msg = _("Authorize security group ingress %s")
+        LOG.audit(msg, security_group['name'], context=context)
         prevalues = []
         try:
             prevalues = kwargs['ip_permissions']
@@ -691,14 +691,14 @@ class CloudController(object):
         for values in prevalues:
             rulesvalues = self._rule_args_to_dict(context, values)
             if not rulesvalues:
-                err = "%s Not enough parameters to build a valid rule"
-                raise exception.EC2APIError(_(err % rulesvalues))
+                err = _("%s Not enough parameters to build a valid rule")
+                raise exception.EC2APIError(err % rulesvalues)
             for values_for_rule in rulesvalues:
                 values_for_rule['parent_group_id'] = security_group.id
                 if self._security_group_rule_exists(security_group,
                                                     values_for_rule):
-                    err = '%s - This rule already exists in group'
-                    raise exception.EC2APIError(_(err) % values_for_rule)
+                    err = _('%s - This rule already exists in group')
+                    raise exception.EC2APIError(err % values_for_rule)
                 postvalues.append(values_for_rule)
 
         rule_ids = []
@@ -772,8 +772,8 @@ class CloudController(object):
     def delete_security_group(self, context, group_name=None, group_id=None,
                               **kwargs):
         if not group_name and not group_id:
-            err = "Not enough parameters, need group_name or group_id"
-            raise exception.EC2APIError(_(err))
+            err = _("Not enough parameters, need group_name or group_id")
+            raise exception.EC2APIError(err)
         notfound = exception.SecurityGroupNotFound
         if group_name:
             security_group = db.security_group_get_by_name(context,

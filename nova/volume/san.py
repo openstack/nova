@@ -694,7 +694,7 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
                                            cluster_password))[:-1]
             header['Authorization'] = 'Basic %s' % auth_key
 
-        LOG.debug(_("Payload for SolidFire API call: %s" % payload))
+        LOG.debug(_("Payload for SolidFire API call: %s") % payload)
         connection = httplib.HTTPSConnection(host, port)
         connection.request('POST', '/json-rpc/1.0', payload, header)
         response = connection.getresponse()
@@ -711,12 +711,12 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
 
             except (TypeError, ValueError), exc:
                 connection.close()
-                msg = _("Call to json.loads() raised an exception: %s" % exc)
+                msg = _("Call to json.loads() raised an exception: %s") % exc
                 raise exception.SfJsonEncodeFailure(msg)
 
             connection.close()
 
-        LOG.debug(_("Results of SolidFire API call: %s" % data))
+        LOG.debug(_("Results of SolidFire API call: %s") % data)
         return data
 
     def _get_volumes_by_sfaccount(self, account_id):
@@ -730,7 +730,7 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
         params = {'username': sf_account_name}
         data = self._issue_api_request('GetAccountByName', params)
         if 'result' in data and 'account' in data['result']:
-            LOG.debug(_('Found solidfire account: %s' % sf_account_name))
+            LOG.debug(_('Found solidfire account: %s') % sf_account_name)
             sfaccount = data['result']['account']
         return sfaccount
 
@@ -744,8 +744,8 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
         sf_account_name = socket.gethostname() + '-' + nova_project_id
         sfaccount = self._get_sfaccount_by_name(sf_account_name)
         if sfaccount is None:
-            LOG.debug(_('solidfire account: %s does not exist, create it...'
-                    % sf_account_name))
+            LOG.debug(_('solidfire account: %s does not exist, create it...')
+                      % sf_account_name)
             chap_secret = self._generate_random_string(12)
             params = {'username': sf_account_name,
                       'initiatorSecret': chap_secret,
@@ -878,7 +878,7 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
                 volid = v['volumeID']
 
         if found_count != 1:
-            LOG.debug(_("Deleting volumeID: %s " % volid))
+            LOG.debug(_("Deleting volumeID: %s ") % volid)
             raise exception.DuplicateSfVolumeNames(vol_name=volume['name'])
 
         params = {'volumeID': volid}

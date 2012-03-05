@@ -93,7 +93,7 @@ def fake_execute(*cmd_parts, **kwargs):
                                   run_as_root=run_as_root,
                                   check_exit_code=check_exit_code)
         except exception.ProcessExecutionError as e:
-            LOG.debug(_('Faked command raised an exception %s' % str(e)))
+            LOG.debug(_('Faked command raised an exception %s') % e)
             raise
 
     stdout = reply[0]

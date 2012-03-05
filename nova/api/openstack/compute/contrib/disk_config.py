@@ -41,7 +41,7 @@ def disk_config_from_api(value):
     elif value == 'MANUAL':
         return False
     else:
-        msg = _("%s must be either 'MANUAL' or 'AUTO'." % API_DISK_CONFIG)
+        msg = _("%s must be either 'MANUAL' or 'AUTO'.") % API_DISK_CONFIG
         raise exc.HTTPBadRequest(explanation=msg)
 
 

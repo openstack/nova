@@ -272,14 +272,13 @@ class BareMetalNodes(object):
         out_msg = file.readline().find("Unreachable")
         utils.execute('sudo', 'rm', tile_output)
         if out_msg == -1:
-            cmd = ("TILERA_BOARD_#" + str(node_id) + " " + node_ip +
-                   " is ready")
-            LOG.debug(_(cmd))
+            cmd = _("TILERA_BOARD_#%(node_id)s %(node_ip)s is ready")
+            LOG.debug(cmd % locals())
             return True
         else:
-            cmd = ("TILERA_BOARD_#" + str(node_id) + " " +
-                   node_ip + " is not ready, out_msg=" + out_msg)
-            LOG.debug(_(cmd))
+            cmd = _("TILERA_BOARD_#%(node_id)s %(node_ip)s is not ready,"
+                    " out_msg=%(out_msg)s")
+            LOG.debug(cmd % local())
             self.power_mgr(node_id, 2)
             return False
 
@@ -290,8 +289,8 @@ class BareMetalNodes(object):
         From basepath to /tftpboot, kernel is set based on the given mode
         such as 0-NoSet, 1-SetVmlinux, or 9-RemoveVmlinux.
         """
-        cmd = "Noting to do for tilera nodes: vmlinux is in CF"
-        LOG.debug(_(cmd))
+        cmd = _("Noting to do for tilera nodes: vmlinux is in CF")
+        LOG.debug(cmd)
 
     def sleep_mgr(self, time_in_seconds):
         """

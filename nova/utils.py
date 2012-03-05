@@ -830,23 +830,23 @@ def synchronized(name, external=False):
                 _semaphores[name] = semaphore.Semaphore()
             sem = _semaphores[name]
             LOG.debug(_('Attempting to grab semaphore "%(lock)s" for method '
-                        '"%(method)s"...' % {'lock': name,
-                                             'method': f.__name__}))
+                        '"%(method)s"...') % {'lock': name,
+                                              'method': f.__name__})
             with sem:
                 LOG.debug(_('Got semaphore "%(lock)s" for method '
-                            '"%(method)s"...' % {'lock': name,
-                                                 'method': f.__name__}))
+                            '"%(method)s"...') % {'lock': name,
+                                                  'method': f.__name__})
                 if external and not FLAGS.disable_process_locking:
                     LOG.debug(_('Attempting to grab file lock "%(lock)s" for '
-                                'method "%(method)s"...' %
-                                {'lock': name, 'method': f.__name__}))
+                                'method "%(method)s"...') %
+                              {'lock': name, 'method': f.__name__})
                     lock_file_path = os.path.join(FLAGS.lock_path,
                                                   'nova-%s' % name)
                     lock = lockfile.FileLock(lock_file_path)
                     with lock:
                         LOG.debug(_('Got file lock "%(lock)s" for '
-                                    'method "%(method)s"...' %
-                                    {'lock': name, 'method': f.__name__}))
+                                    'method "%(method)s"...') %
+                                  {'lock': name, 'method': f.__name__})
                         retval = f(*args, **kwargs)
                 else:
                     retval = f(*args, **kwargs)
@@ -903,15 +903,15 @@ def cleanup_file_locks():
         if match is None:
             continue
         pid = match.group(1)
-        LOG.debug(_('Found sentinel %(filename)s for pid %(pid)s' %
-                    {'filename': filename, 'pid': pid}))
+        LOG.debug(_('Found sentinel %(filename)s for pid %(pid)s') %
+                  {'filename': filename, 'pid': pid})
         try:
             os.kill(int(pid), 0)
         except OSError, e:
             # PID wasn't found
             delete_if_exists(os.path.join(FLAGS.lock_path, filename))
-            LOG.debug(_('Cleaned sentinel %(filename)s for pid %(pid)s' %
-                    {'filename': filename, 'pid': pid}))
+            LOG.debug(_('Cleaned sentinel %(filename)s for pid %(pid)s') %
+                      {'filename': filename, 'pid': pid})
 
     # cleanup lock files
     for filename in files:
@@ -925,13 +925,13 @@ def cleanup_file_locks():
                 continue
             else:
                 raise
-        msg = _('Found lockfile %(file)s with link count %(count)d' %
-                {'file': filename, 'count': stat_info.st_nlink})
+        msg = (_('Found lockfile %(file)s with link count %(count)d') %
+               {'file': filename, 'count': stat_info.st_nlink})
         LOG.debug(msg)
         if stat_info.st_nlink == 1:
             delete_if_exists(os.path.join(FLAGS.lock_path, filename))
-            msg = _('Cleaned lockfile %(file)s with link count %(count)d' %
-                    {'file': filename, 'count': stat_info.st_nlink})
+            msg = (_('Cleaned lockfile %(file)s with link count %(count)d') %
+                   {'file': filename, 'count': stat_info.st_nlink})
             LOG.debug(msg)
 
 
@@ -1071,7 +1071,7 @@ def parse_server_string(server_str):
         return (address, port)
 
     except Exception:
-        LOG.debug(_('Invalid server_string: %s' % server_str))
+        LOG.debug(_('Invalid server_string: %s') % server_str)
         return ('', '')
 
 

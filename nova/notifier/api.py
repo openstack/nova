@@ -112,7 +112,7 @@ def notify(publisher_id, event_type, priority, payload):
     """
     if priority not in log_levels:
         raise BadPriorityException(
-                 _('%s not in valid priorities' % priority))
+                 _('%s not in valid priorities') % priority)
 
     # Ensure everything is JSON serializable.
     payload = utils.to_primitive(payload, convert_instances=True)
@@ -128,5 +128,5 @@ def notify(publisher_id, event_type, priority, payload):
         driver.notify(msg)
     except Exception, e:
         LOG.exception(_("Problem '%(e)s' attempting to "
-                        "send to notification system. Payload=%(payload)s" %
-                        locals()))
+                        "send to notification system. Payload=%(payload)s") %
+                        locals())

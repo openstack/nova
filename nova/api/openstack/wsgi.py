@@ -886,7 +886,7 @@ class Resource(wsgi.Application):
             msg = _("%(url)s returned with HTTP %(status)d") % msg_dict
         except AttributeError, e:
             msg_dict = dict(url=request.url, e=e)
-            msg = _("%(url)s returned a fault: %(e)s" % msg_dict)
+            msg = _("%(url)s returned a fault: %(e)s") % msg_dict
 
         LOG.info(msg)
 

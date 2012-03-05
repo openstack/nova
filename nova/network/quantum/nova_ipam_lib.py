@@ -87,7 +87,7 @@ class QuantumNovaIPAMLib(object):
         admin_context = context.elevated()
         network = db.network_get_by_uuid(admin_context, net_id)
         if not network:
-            raise Exception(_("No network with net_id = %s" % net_id))
+            raise Exception(_("No network with net_id = %s") % net_id)
         manager.FlatManager.delete_network(self.net_manager,
                                            admin_context, None,
                                            network['uuid'],
@@ -218,8 +218,8 @@ class QuantumNovaIPAMLib(object):
                                {'allocated': False,
                                 'virtual_interface_id': None})
         if len(fixed_ips) == 0:
-            LOG.error(_('No fixed IPs to deallocate for vif %s' %
-                        vif_ref['id']))
+            LOG.error(_('No fixed IPs to deallocate for vif %s') %
+                      vif_ref['id'])
 
     def get_allocated_ips(self, context, subnet_id, project_id):
         """Returns a list of (ip, vif_id) pairs"""

@@ -223,7 +223,7 @@ class Consumer(messaging.Consumer):
         #             persistent failure occurs.
         except Exception, e:  # pylint: disable=W0703
             if not self.failed_connection:
-                LOG.exception(_('Failed to fetch message from queue: %s' % e))
+                LOG.exception(_('Failed to fetch message from queue: %s') % e)
                 self.failed_connection = True
 
 
