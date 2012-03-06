@@ -26,7 +26,7 @@ from nova import compute
 from nova import exception
 from nova import log as logging
 from nova import network
-from nova import rpc
+from nova.rpc import common as rpc_common
 
 
 LOG = logging.getLogger(__name__)
@@ -152,7 +152,7 @@ class FloatingIPController(object):
         try:
             address = self.network_api.allocate_floating_ip(context, pool)
             ip = self.network_api.get_floating_ip_by_address(context, address)
-        except rpc.RemoteError as ex:
+        except rpc_common.RemoteError as ex:
             # NOTE(tr3buchet) - why does this block exist?
             if ex.exc_type == 'NoMoreFloatingIps':
                 if pool:
@@ -212,7 +212,7 @@ class FloatingIPActionController(wsgi.Controller):
         except exception.FixedIpNotFoundForInstance:
             msg = _("No fixed ips associated to instance")
             raise webob.exc.HTTPBadRequest(explanation=msg)
-        except rpc.RemoteError:
+        except rpc_common.RemoteError:
             msg = _("Associate floating ip failed")
             raise webob.exc.HTTPInternalServerError(explanation=msg)
 

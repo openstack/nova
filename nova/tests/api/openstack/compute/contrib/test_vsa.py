@@ -19,16 +19,16 @@ import json
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute.contrib import (virtual_storage_arrays as
-                                                vsa_ext)
+from nova.api.openstack.compute.contrib import virtual_storage_arrays as \
+                                                vsa_ext
 import nova.db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import volume
-from nova import vsa
+from nova.volume import api as volume_api
+from nova.vsa import api as vsa_api
 
 
 FLAGS = flags.FLAGS
@@ -99,10 +99,10 @@ class VSAApiTest(test.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
-        self.stubs.Set(vsa.api.API, "create", stub_vsa_create)
-        self.stubs.Set(vsa.api.API, "delete", stub_vsa_delete)
-        self.stubs.Set(vsa.api.API, "get", stub_vsa_get)
-        self.stubs.Set(vsa.api.API, "get_all", stub_vsa_get_all)
+        self.stubs.Set(vsa_api.API, "create", stub_vsa_create)
+        self.stubs.Set(vsa_api.API, "delete", stub_vsa_delete)
+        self.stubs.Set(vsa_api.API, "get", stub_vsa_get)
+        self.stubs.Set(vsa_api.API, "get_all", stub_vsa_get_all)
 
     def test_vsa_create(self):
         global last_param
@@ -239,19 +239,19 @@ class VSAVolumeApiTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db, 'vsa_get', return_vsa)
-        self.stubs.Set(vsa.api.API, "get_vsa_volume_type",
+        self.stubs.Set(vsa_api.API, "get_vsa_volume_type",
                         stub_get_vsa_volume_type)
 
-        self.stubs.Set(volume.api.API, "update", fakes.stub_volume_update)
-        self.stubs.Set(volume.api.API, "delete", fakes.stub_volume_delete)
-        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get)
-        self.stubs.Set(volume.api.API, "get_all", fakes.stub_volume_get_all)
+        self.stubs.Set(volume_api.API, "update", fakes.stub_volume_update)
+        self.stubs.Set(volume_api.API, "delete", fakes.stub_volume_delete)
+        self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get)
+        self.stubs.Set(volume_api.API, "get_all", fakes.stub_volume_get_all)
 
         self.test_obj = test_obj if test_obj else "volume"
         self.test_objs = test_objs if test_objs else "volumes"
 
     def test_vsa_volume_create(self):
-        self.stubs.Set(volume.api.API, "create", fakes.stub_volume_create)
+        self.stubs.Set(volume_api.API, "create", fakes.stub_volume_create)
 
         vol = {"size": 100,
                "displayName": "VSA Volume Test Name",
@@ -314,7 +314,7 @@ class VSAVolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 400)
 
     def test_vsa_volume_show_no_volume(self):
-        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get_notfound)
 
         req = webob.Request.blank('/v2/fake/zadr-vsa/123/%s/333' %
                                   self.test_objs)
@@ -357,7 +357,7 @@ class VSAVolumeApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 400)
 
     def test_vsa_volume_delete_no_volume(self):
-        self.stubs.Set(volume.api.API, "get", fakes.stub_volume_get_notfound)
+        self.stubs.Set(volume_api.API, "get", fakes.stub_volume_get_notfound)
 
         req = webob.Request.blank('/v2/fake/zadr-vsa/123/%s/333' %
                                   self.test_objs)

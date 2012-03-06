@@ -23,6 +23,7 @@ from nova import db
 from nova import network
 from nova import compute
 from nova import rpc
+from nova.rpc import common as rpc_common
 from nova import test
 from nova.tests import fake_network
 from nova.tests.api.openstack import fakes
@@ -204,7 +205,7 @@ class FloatingIpTest(test.TestCase):
 # test floating ip allocate/release(deallocate)
     def test_floating_ip_allocate_no_free_ips(self):
         def fake_call(*args, **kwargs):
-            raise(rpc.RemoteError('NoMoreFloatingIps', '', ''))
+            raise(rpc_common.RemoteError('NoMoreFloatingIps', '', ''))
 
         self.stubs.Set(rpc, "call", fake_call)
 

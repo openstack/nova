@@ -25,7 +25,7 @@ import nose
 
 from nova import context
 from nova import log as logging
-from nova.rpc.common import RemoteError, Timeout
+from nova.rpc import common as rpc_common
 from nova import test
 
 
@@ -107,7 +107,7 @@ class _BaseRpcTestCase(test.TestCase):
 
         """
         value = 42
-        self.assertRaises(RemoteError,
+        self.assertRaises(rpc_common.RemoteError,
                           self.rpc.call,
                           self.context,
                           'test',
@@ -119,7 +119,7 @@ class _BaseRpcTestCase(test.TestCase):
                      {"method": "fail",
                       "args": {"value": value}})
             self.fail("should have thrown RemoteError")
-        except RemoteError as exc:
+        except rpc_common.RemoteError as exc:
             self.assertEqual(int(exc.value), value)
 
     def test_nested_calls(self):
@@ -157,7 +157,7 @@ class _BaseRpcTestCase(test.TestCase):
             raise nose.SkipTest(_("RPC backend does not support timeouts"))
 
         value = 42
-        self.assertRaises(Timeout,
+        self.assertRaises(rpc_common.Timeout,
                           self.rpc.call,
                           self.context,
                           'test',
@@ -170,7 +170,7 @@ class _BaseRpcTestCase(test.TestCase):
                       "args": {"value": value}},
                      timeout=1)
             self.fail("should have thrown Timeout")
-        except Timeout as exc:
+        except rpc_common.Timeout as exc:
             pass
 
 

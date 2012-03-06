@@ -21,7 +21,7 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import contextlib
-from decimal import Decimal, InvalidOperation
+import decimal
 import json
 import os
 import pickle
@@ -44,7 +44,7 @@ from nova import utils
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt.disk import api as disk
-from nova.virt.xenapi import HelperBase
+from nova.virt import xenapi
 from nova.virt.xenapi import volume_utils
 
 
@@ -132,7 +132,7 @@ class ImageType:
         return dict(zip(ImageType._strs, ImageType._ids)).get(image_type_str)
 
 
-class VMHelper(HelperBase):
+class VMHelper(xenapi.HelperBase):
     """
     The class that wraps the helper methods together.
     """
@@ -1251,7 +1251,7 @@ def parse_rrd_data(doc):
     dnode = doc.getElementsByTagName('data')[0]
     return [dict(
             time=int(child.getElementsByTagName('t')[0].firstChild.data),
-            values=[Decimal(valnode.firstChild.data)
+            values=[decimal.Decimal(valnode.firstChild.data)
                   for valnode in child.getElementsByTagName('v')])
             for child in dnode.childNodes]
 
@@ -1277,8 +1277,8 @@ def average_series(data, col, until=None):
                 row['values'][col].is_finite()]
     if vals:
         try:
-            return (sum(vals) / len(vals)).quantize(Decimal('1.0000'))
-        except InvalidOperation:
+            return (sum(vals) / len(vals)).quantize(decimal.Decimal('1.0000'))
+        except decimal.InvalidOperation:
             # (mdragon) Xenserver occasionally returns odd values in
             # data that will throw an error on averaging (see bug 918490)
             # These are hard to find, since, whatever those values are,
@@ -1288,13 +1288,13 @@ def average_series(data, col, until=None):
             # other statistics.
             LOG.error(_("Invalid statistics data from Xenserver: %s")
                       % str(vals))
-            return Decimal('NaN')
+            return decimal.Decimal('NaN')
     else:
-        return Decimal('0.0000')
+        return decimal.Decimal('0.0000')
 
 
 def integrate_series(data, col, start, until=None):
-    total = Decimal('0.0000')
+    total = decimal.Decimal('0.0000')
     prev_time = int(start)
     prev_val = None
     for row in reversed(data):
@@ -1302,20 +1302,20 @@ def integrate_series(data, col, start, until=None):
             time = row['time']
             val = row['values'][col]
             if val.is_nan():
-                val = Decimal('0.0000')
+                val = decimal.Decimal('0.0000')
             if prev_val is None:
                 prev_val = val
             if prev_val >= val:
                 total += ((val * (time - prev_time)) +
-                          (Decimal('0.5000') * (prev_val - val) *
+                          (decimal.Decimal('0.5000') * (prev_val - val) *
                           (time - prev_time)))
             else:
                 total += ((prev_val * (time - prev_time)) +
-                          (Decimal('0.5000') * (val - prev_val) *
+                          (decimal.Decimal('0.5000') * (val - prev_val) *
                           (time - prev_time)))
             prev_time = time
             prev_val = val
-    return total.quantize(Decimal('1.0000'))
+    return total.quantize(decimal.Decimal('1.0000'))
 
 
 def _get_all_vdis_in_sr(session, sr_ref):

@@ -26,7 +26,7 @@ from nova.network import linux_net
 from nova.openstack.common import cfg
 from nova import utils
 from nova.virt import netutils
-from nova.virt.vif import VIFDriver
+from nova.virt import vif
 
 
 LOG = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ FLAGS = flags.FLAGS
 FLAGS.register_opt(libvirt_ovs_bridge_opt)
 
 
-class LibvirtBridgeDriver(VIFDriver):
+class LibvirtBridgeDriver(vif.VIFDriver):
     """VIF driver for Linux bridge."""
 
     def _get_configurations(self, network, mapping):
@@ -103,7 +103,7 @@ class LibvirtBridgeDriver(VIFDriver):
         pass
 
 
-class LibvirtOpenVswitchDriver(VIFDriver):
+class LibvirtOpenVswitchDriver(vif.VIFDriver):
     """VIF driver for Open vSwitch that uses type='ethernet'
        libvirt XML.  Used for libvirt versions that do not support
        OVS virtual port XML (0.9.10 or earlier)."""
@@ -158,7 +158,7 @@ class LibvirtOpenVswitchDriver(VIFDriver):
                         instance['name'])
 
 
-class LibvirtOpenVswitchVirtualPortDriver(VIFDriver):
+class LibvirtOpenVswitchVirtualPortDriver(vif.VIFDriver):
     """VIF driver for Open vSwitch that uses integrated libvirt
        OVS virtual port XML (introduced in libvirt 0.9.11)."""
 
@@ -174,7 +174,7 @@ class LibvirtOpenVswitchVirtualPortDriver(VIFDriver):
         pass
 
 
-class QuantumLinuxBridgeVIFDriver(VIFDriver):
+class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
     """VIF driver for Linux Bridge when running Quantum."""
 
     def get_dev_name(self, iface_id):

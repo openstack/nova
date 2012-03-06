@@ -29,11 +29,10 @@ from nova import log as logging
 from nova import manager
 from nova.openstack.common import cfg
 from nova import volume
-from nova import vsa
 from nova import utils
 from nova.compute import instance_types
 from nova.vsa import utils as vsa_utils
-from nova.vsa.api import VsaState
+from nova.vsa import api as vsa_api
 
 vsa_driver_opt = cfg.StrOpt('vsa_driver',
                             default='nova.vsa.connection.get_connection',
@@ -56,7 +55,7 @@ class VsaManager(manager.SchedulerDependentManager):
 
         self.compute_api = compute.API()
         self.volume_api = volume.API()
-        self.vsa_api = vsa.API()
+        self.vsa_api = vsa_api.API()
 
         if FLAGS.vsa_ec2_user_id is None or FLAGS.vsa_ec2_access_key is None:
             raise exception.VSANovaAccessParamNotFound()
@@ -122,9 +121,9 @@ class VsaManager(manager.SchedulerDependentManager):
         """Start VCs for VSA """
 
         vsa_id = vsa['id']
-        if vsa['status'] == VsaState.CREATING:
+        if vsa['status'] == vsa_api.VsaState.CREATING:
             self.vsa_api.update_vsa_status(context, vsa_id,
-                                           VsaState.LAUNCHING)
+                                           vsa_api.VsaState.LAUNCHING)
         else:
             return
 
@@ -153,7 +152,7 @@ class VsaManager(manager.SchedulerDependentManager):
             LOG.info(_("VSA ID %(vsa_id)d: Delete all BE volumes"), locals())
             self.vsa_api.delete_vsa_volumes(context, vsa_id, "BE", True)
             self.vsa_api.update_vsa_status(context, vsa_id,
-                                           VsaState.FAILED)
+                                           vsa_api.VsaState.FAILED)
             return
 
         # create user-data record for VC
@@ -179,4 +178,4 @@ class VsaManager(manager.SchedulerDependentManager):
                 metadata=dict(vsa_id=str(vsa_id)))
 
         self.vsa_api.update_vsa_status(context, vsa_id,
-                                       VsaState.CREATED)
+                                       vsa_api.VsaState.CREATED)

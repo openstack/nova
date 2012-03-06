@@ -37,8 +37,10 @@ from nova import context
 from nova import exception
 from nova import flags
 from nova import local
+from nova import log as logging
 import nova.rpc.common as rpc_common
-from nova.rpc.common import LOG
+
+LOG = logging.getLogger(__name__)
 
 
 FLAGS = flags.FLAGS

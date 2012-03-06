@@ -22,9 +22,9 @@
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
-from nova.virt.vif import VIFDriver
-from nova.virt.xenapi.network_utils import NetworkHelper
-from nova.virt.xenapi.vm_utils import VMHelper
+from nova.virt import vif
+from nova.virt.xenapi import network_utils
+from nova.virt.xenapi import vm_utils
 
 
 xenapi_ovs_integration_bridge_opt = cfg.StrOpt('xenapi_ovs_integration_bridge',
@@ -36,7 +36,7 @@ FLAGS.register_opt(xenapi_ovs_integration_bridge_opt)
 LOG = logging.getLogger(__name__)
 
 
-class XenVIFDriver(VIFDriver):
+class XenVIFDriver(vif.VIFDriver):
     def __init__(self, xenapi_session):
         self._session = xenapi_session
 
@@ -46,14 +46,14 @@ class XenAPIBridgeDriver(XenVIFDriver):
 
     def plug(self, instance, network, mapping, vm_ref=None, device=None):
         if not vm_ref:
-            vm_ref = VMHelper.lookup(self._session, instance.name)
+            vm_ref = vm_utils.VMHelper.lookup(self._session, instance.name)
         if not device:
             device = 0
 
         if mapping.get('should_create_vlan'):
             network_ref = self._ensure_vlan_bridge(network)
         else:
-            network_ref = NetworkHelper.find_network_with_bridge(
+            network_ref = network_utils.NetworkHelper.find_network_with_bridge(
                                         self._session, network['bridge'])
         vif_rec = {}
         vif_rec['device'] = str(device)
@@ -79,7 +79,7 @@ class XenAPIBridgeDriver(XenVIFDriver):
         bridge_interface = FLAGS.vlan_interface or network['bridge_interface']
         # Check whether bridge already exists
         # Retrieve network whose name_label is "bridge"
-        network_ref = NetworkHelper.find_network_with_name_label(
+        network_ref = network_utils.NetworkHelper.find_network_with_name_label(
                                         self._session, bridge)
         if network_ref is None:
             # If bridge does not exists
@@ -135,15 +135,15 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
 
     def plug(self, instance, network, mapping, vm_ref=None, device=None):
         if not vm_ref:
-            vm_ref = VMHelper.lookup(self._session, instance.name)
+            vm_ref = vm_utils.VMHelper.lookup(self._session, instance.name)
 
         if not device:
             device = 0
 
         # with OVS model, always plug into an OVS integration bridge
         # that is already created
-        network_ref = NetworkHelper.find_network_with_bridge(self._session,
-                                       FLAGS.xenapi_ovs_integration_bridge)
+        network_ref = network_utils.NetworkHelper.find_network_with_bridge(
+            self._session, FLAGS.xenapi_ovs_integration_bridge)
         vif_rec = {}
         vif_rec['device'] = str(device)
         vif_rec['network'] = network_ref

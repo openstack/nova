@@ -24,20 +24,19 @@ XenServer hosts.
 import os
 import sys
 
+import novalib
+
 # This is written to Python 2.4, since that is what is available on XenServer
 import simplejson as json
 
 
-from novalib import execute, execute_get_output
-
-
 def main(dom_id, command, only_this_vif=None):
-    xsls = execute_get_output('/usr/bin/xenstore-ls',
+    xsls = novalib.execute_get_output('/usr/bin/xenstore-ls',
                               '/local/domain/%s/vm-data/networking' % dom_id)
     macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
 
     for mac in macs:
-        xsread = execute_get_output('/usr/bin/xenstore-read',
+        xsread = novalib.execute_get_output('/usr/bin/xenstore-read',
                                     '/local/domain/%s/vm-data/networking/%s' %
                                     (dom_id, mac))
         data = json.loads(xsread)
@@ -60,7 +59,7 @@ def main(dom_id, command, only_this_vif=None):
 
 
 def apply_iptables_rules(command, params):
-    iptables = lambda *rule: execute('/sbin/iptables', *rule)
+    iptables = lambda *rule: novalib.execute('/sbin/iptables', *rule)
 
     iptables('-D', 'FORWARD', '-m', 'physdev',
              '--physdev-in', params['VIF'],
@@ -74,7 +73,7 @@ def apply_iptables_rules(command, params):
 
 
 def apply_arptables_rules(command, params):
-    arptables = lambda *rule: execute('/sbin/arptables', *rule)
+    arptables = lambda *rule: novalib.execute('/sbin/arptables', *rule)
 
     arptables('-D', 'FORWARD', '--opcode', 'Request',
               '--in-interface', params['VIF'],
@@ -99,7 +98,7 @@ def apply_arptables_rules(command, params):
 
 
 def apply_ebtables_rules(command, params):
-    ebtables = lambda *rule: execute("/sbin/ebtables", *rule)
+    ebtables = lambda *rule: novalib.execute("/sbin/ebtables", *rule)
 
     ebtables('-D', 'FORWARD', '-p', '0806', '-o', params['VIF'],
              '--arp-ip-dst', params['IP'],

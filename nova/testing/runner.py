@@ -132,13 +132,11 @@ class _Win32Colorizer(object):
     See _AnsiColorizer docstring.
     """
     def __init__(self, stream):
-        from win32console import (GetStdHandle, STD_OUT_HANDLE,
-                                  FOREGROUND_RED, FOREGROUND_BLUE,
-                                  FOREGROUND_GREEN, FOREGROUND_INTENSITY)
-        red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
-                                  FOREGROUND_BLUE, FOREGROUND_INTENSITY)
+        import win32console as win
+        red, green, blue, bold = (win.FOREGROUND_RED, win.FOREGROUND_GREEN,
+                                 win.FOREGROUND_BLUE, win.FOREGROUND_INTENSITY)
         self.stream = stream
-        self.screenBuffer = GetStdHandle(STD_OUT_HANDLE)
+        self.screenBuffer = win.GetStdHandle(win.STD_OUT_HANDLE)
         self._colors = {
             'normal': red | green | blue,
             'red': red | bold,

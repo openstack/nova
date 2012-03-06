@@ -21,7 +21,7 @@ import webob
 
 from nova import test
 from nova.api.openstack.compute.contrib import accounts
-from nova.auth.manager import User
+from nova.auth import manager as auth_manager
 from nova.tests.api.openstack import fakes
 
 
@@ -42,8 +42,8 @@ class AccountsTest(test.TestCase):
         fakes.stub_out_auth(self.stubs)
 
         fakemgr = fakes.FakeAuthManager()
-        joeuser = User('id1', 'guy1', 'acc1', 'secret1', False)
-        superuser = User('id2', 'guy2', 'acc2', 'secret2', True)
+        joeuser = auth_manager.User('id1', 'guy1', 'acc1', 'secret1', False)
+        superuser = auth_manager.User('id2', 'guy2', 'acc2', 'secret2', True)
         fakemgr.add_user(joeuser)
         fakemgr.add_user(superuser)
         fakemgr.create_project('test1', joeuser)

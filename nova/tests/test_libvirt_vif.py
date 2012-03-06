@@ -20,12 +20,8 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.virt import firewall
-from nova.virt import vif
+from nova.virt.libvirt import vif
 from nova.virt.libvirt import connection
-from nova.virt.libvirt.vif import LibvirtBridgeDriver, \
-                LibvirtOpenVswitchDriver, \
-                LibvirtOpenVswitchVirtualPortDriver, \
-                QuantumLinuxBridgeVIFDriver
 
 FLAGS = flags.FLAGS
 
@@ -101,7 +97,7 @@ class LibvirtVifTestCase(test.TestCase):
         return xml
 
     def test_bridge_driver(self):
-        d = LibvirtBridgeDriver()
+        d = vif.LibvirtBridgeDriver()
         xml = self._get_instance_xml(d, 'bridge')
 
         doc = ElementTree.fromstring(xml)
@@ -117,7 +113,7 @@ class LibvirtVifTestCase(test.TestCase):
         d.unplug(None, self.net, self.mapping)
 
     def test_ovs_ethernet_driver(self):
-        d = LibvirtOpenVswitchDriver()
+        d = vif.LibvirtOpenVswitchDriver()
         xml = self._get_instance_xml(d, 'ethernet')
 
         doc = ElementTree.fromstring(xml)
@@ -135,7 +131,7 @@ class LibvirtVifTestCase(test.TestCase):
         d.unplug(None, self.net, self.mapping)
 
     def test_ovs_virtualport_driver(self):
-        d = LibvirtOpenVswitchVirtualPortDriver()
+        d = vif.LibvirtOpenVswitchVirtualPortDriver()
         xml = self._get_instance_xml(d, 'ovs_virtualport')
 
         doc = ElementTree.fromstring(xml)
@@ -161,7 +157,7 @@ class LibvirtVifTestCase(test.TestCase):
         d.unplug(None, self.net, self.mapping)
 
     def test_quantum_bridge_ethernet_driver(self):
-        d = QuantumLinuxBridgeVIFDriver()
+        d = vif.QuantumLinuxBridgeVIFDriver()
         xml = self._get_instance_xml(d, 'ethernet')
 
         doc = ElementTree.fromstring(xml)

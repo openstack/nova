@@ -43,11 +43,12 @@ from nova import context
 from nova import exception
 from nova import flags
 from nova import local
+from nova import log as logging
 from nova.rpc import common as rpc_common
-from nova.rpc.common import RemoteError, LOG
 from nova.testing import fake
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger(__name__)
 
 
 class Connection(carrot_connection.BrokerConnection, rpc_common.Connection):
@@ -558,7 +559,7 @@ class MulticallWaiter(object):
         """Acks message and sets result."""
         message.ack()
         if data['failure']:
-            self._results.put(RemoteError(*data['failure']))
+            self._results.put(rpc_common.RemoteError(*data['failure']))
         elif data.get('ending', False):
             self._got_ending = True
         else:

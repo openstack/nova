@@ -29,8 +29,8 @@ from nova import rpc
 from nova import utils
 from nova.scheduler import driver
 from nova.scheduler import simple
-from nova.vsa.api import VsaState
 from nova.volume import volume_types
+from nova.vsa import api as vsa_api
 
 
 LOG = logging.getLogger(__name__)
@@ -297,7 +297,8 @@ class VsaScheduler(simple.SimpleScheduler):
         except Exception:
             LOG.exception(_("Error creating volumes"))
             if vsa_id:
-                db.vsa_update(context, vsa_id, dict(status=VsaState.FAILED))
+                db.vsa_update(context, vsa_id,
+                                        dict(status=vsa_api.VsaState.FAILED))
 
             for vol in volume_params:
                 if 'capabilities' in vol:
@@ -351,7 +352,7 @@ class VsaScheduler(simple.SimpleScheduler):
             LOG.exception(_("Error creating volume"))
             if volume_ref['to_vsa_id']:
                 db.vsa_update(context, volume_ref['to_vsa_id'],
-                                dict(status=VsaState.FAILED))
+                                dict(status=vsa_api.VsaState.FAILED))
             raise
 
         if host:

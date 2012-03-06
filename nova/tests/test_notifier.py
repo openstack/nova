@@ -14,10 +14,9 @@
 #    under the License.
 
 import nova
-import nova.notifier.no_op_notifier
 from nova import log
-import nova.notifier.api
-from nova.notifier.api import notify
+import nova.notifier.no_op_notifier
+from nova.notifier import api as notifier_api
 from nova import test
 
 
@@ -36,7 +35,7 @@ class NotifierTestCase(test.TestCase):
         self.stubs.Set(nova.notifier.no_op_notifier, 'notify',
                 mock_notify)
 
-        notify('publisher_id', 'event_type',
+        notifier_api.notify('publisher_id', 'event_type',
                 nova.notifier.api.WARN, dict(a=3))
         self.assertEqual(self.notify_called, True)
 
@@ -56,7 +55,7 @@ class NotifierTestCase(test.TestCase):
 
         self.stubs.Set(nova.notifier.no_op_notifier, 'notify',
                 message_assert)
-        notify('publisher_id', 'event_type',
+        notifier_api.notify('publisher_id', 'event_type',
                 nova.notifier.api.WARN, dict(a=3))
 
     def test_send_rabbit_notification(self):
@@ -68,14 +67,14 @@ class NotifierTestCase(test.TestCase):
             self.mock_notify = True
 
         self.stubs.Set(nova.rpc, 'notify', mock_notify)
-        notify('publisher_id', 'event_type',
+        notifier_api.notify('publisher_id', 'event_type',
                 nova.notifier.api.WARN, dict(a=3))
 
         self.assertEqual(self.mock_notify, True)
 
     def test_invalid_priority(self):
         self.assertRaises(nova.notifier.api.BadPriorityException,
-                notify, 'publisher_id',
+                notifier_api.notify, 'publisher_id',
                 'event_type', 'not a priority', dict(a=3))
 
     def test_rabbit_priority_queue(self):
@@ -90,7 +89,7 @@ class NotifierTestCase(test.TestCase):
             self.test_topic = topic
 
         self.stubs.Set(nova.rpc, 'notify', mock_notify)
-        notify('publisher_id', 'event_type', 'DEBUG', dict(a=3))
+        notifier_api.notify('publisher_id', 'event_type', 'DEBUG', dict(a=3))
         self.assertEqual(self.test_topic, 'testnotify.debug')
 
     def test_error_notification(self):

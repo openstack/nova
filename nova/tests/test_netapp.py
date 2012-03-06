@@ -27,7 +27,7 @@ from lxml import etree
 
 from nova import log as logging
 from nova import test
-from nova.volume.netapp import NetAppISCSIDriver
+from nova.volume import netapp
 
 LOG = logging.getLogger("nova.volume.driver")
 
@@ -898,7 +898,7 @@ class NetAppDriverTestCase(test.TestCase):
 
     def setUp(self):
         super(NetAppDriverTestCase, self).setUp()
-        driver = NetAppISCSIDriver()
+        driver = netapp.NetAppISCSIDriver()
         self.stubs.Set(httplib, 'HTTPConnection', FakeHTTPConnection)
         driver._create_client('http://localhost:8088/dfm.wsdl',
                               'root', 'password', 'localhost', 8088)

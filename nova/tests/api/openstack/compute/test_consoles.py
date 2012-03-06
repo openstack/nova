@@ -141,7 +141,7 @@ class ConsolesControllerTest(test.TestCase):
         def fake_create_console(cons_self, context, instance_id):
             self.assertEqual(instance_id, self.uuid)
             return {}
-        self.stubs.Set(console.API, 'create_console', fake_create_console)
+        self.stubs.Set(console.api.API, 'create_console', fake_create_console)
 
         req = fakes.HTTPRequest.blank(self.url)
         self.controller.create(req, self.uuid)
@@ -162,7 +162,7 @@ class ConsolesControllerTest(test.TestCase):
                                 'instance_name': 'inst-0001',
                                 'console_type': 'fake_type'}}
 
-        self.stubs.Set(console.API, 'get_console', fake_get_console)
+        self.stubs.Set(console.api.API, 'get_console', fake_get_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         res_dict = self.controller.show(req, self.uuid, '20')
@@ -172,7 +172,7 @@ class ConsolesControllerTest(test.TestCase):
         def fake_get_console(cons_self, context, instance_id, console_id):
             raise exception.ConsoleNotFound(console_id=console_id)
 
-        self.stubs.Set(console.API, 'get_console', fake_get_console)
+        self.stubs.Set(console.api.API, 'get_console', fake_get_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
@@ -182,7 +182,7 @@ class ConsolesControllerTest(test.TestCase):
         def fake_get_console(cons_self, context, instance_id, console_id):
             raise exception.InstanceNotFound(instance_id=instance_id)
 
-        self.stubs.Set(console.API, 'get_console', fake_get_console)
+        self.stubs.Set(console.api.API, 'get_console', fake_get_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
@@ -206,7 +206,7 @@ class ConsolesControllerTest(test.TestCase):
                 [{'console': {'id': 10, 'console_type': 'fake_type'}},
                  {'console': {'id': 11, 'console_type': 'fake_type2'}}]}
 
-        self.stubs.Set(console.API, 'get_consoles', fake_get_consoles)
+        self.stubs.Set(console.api.API, 'get_consoles', fake_get_consoles)
 
         req = fakes.HTTPRequest.blank(self.url)
         res_dict = self.controller.index(req, self.uuid)
@@ -225,8 +225,8 @@ class ConsolesControllerTest(test.TestCase):
             self.assertEqual(instance_id, self.uuid)
             self.assertEqual(console_id, 20)
 
-        self.stubs.Set(console.API, 'get_console', fake_get_console)
-        self.stubs.Set(console.API, 'delete_console', fake_delete_console)
+        self.stubs.Set(console.api.API, 'get_console', fake_get_console)
+        self.stubs.Set(console.api.API, 'delete_console', fake_delete_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.controller.delete(req, self.uuid, '20')
@@ -235,7 +235,7 @@ class ConsolesControllerTest(test.TestCase):
         def fake_delete_console(cons_self, context, instance_id, console_id):
             raise exception.ConsoleNotFound(console_id=console_id)
 
-        self.stubs.Set(console.API, 'delete_console', fake_delete_console)
+        self.stubs.Set(console.api.API, 'delete_console', fake_delete_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
@@ -245,7 +245,7 @@ class ConsolesControllerTest(test.TestCase):
         def fake_delete_console(cons_self, context, instance_id, console_id):
             raise exception.InstanceNotFound(instance_id=instance_id)
 
-        self.stubs.Set(console.API, 'delete_console', fake_delete_console)
+        self.stubs.Set(console.api.API, 'delete_console', fake_delete_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,

@@ -33,7 +33,7 @@ import urlparse
 
 import migrate
 from migrate.versioning import util as migrate_util
-from sqlalchemy import create_engine
+import sqlalchemy
 
 import nova.db.sqlalchemy.migrate_repo
 from nova import log as logging
@@ -68,7 +68,7 @@ if USE_MIGRATE_PATCH:
 
 # NOTE(jkoelker) Delay importing migrate until we are patched
 from migrate.versioning import api as migration_api
-from migrate.versioning.repository import Repository
+from migrate.versioning import repository
 
 
 class TestMigrations(unittest.TestCase):
@@ -82,7 +82,8 @@ class TestMigrations(unittest.TestCase):
     CONFIG_FILE_PATH = os.environ.get('NOVA_TEST_MIGRATIONS_CONF',
                                       DEFAULT_CONFIG_FILE)
     MIGRATE_FILE = nova.db.sqlalchemy.migrate_repo.__file__
-    REPOSITORY = Repository(os.path.abspath(os.path.dirname(MIGRATE_FILE)))
+    REPOSITORY = repository.Repository(
+                                os.path.abspath(os.path.dirname(MIGRATE_FILE)))
 
     def setUp(self):
         super(TestMigrations, self).setUp()
@@ -108,7 +109,7 @@ class TestMigrations(unittest.TestCase):
 
         self.engines = {}
         for key, value in TestMigrations.TEST_DATABASES.items():
-            self.engines[key] = create_engine(value)
+            self.engines[key] = sqlalchemy.create_engine(value)
 
         # We start each test case with a completely blank slate.
         self._reset_databases()

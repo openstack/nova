@@ -19,7 +19,7 @@
 A fake VMWare VI API implementation.
 """
 
-from pprint import pformat
+import pprint
 import uuid
 
 from nova import exception
@@ -40,7 +40,7 @@ LOG = logging.getLogger(__name__)
 def log_db_contents(msg=None):
     """Log DB Contents."""
     text = msg or ""
-    content = pformat(_db_content)
+    content = pprint.pformat(_db_content)
     LOG.debug(_("%(text)s: _db_content => %(content)s") % locals())
 
 

@@ -996,7 +996,7 @@ class SchedulerTestCase(test.TestCase):
         rpc.call(self.context, 'dest_queue',
                 {'method': 'compare_cpu',
                  'args': {'cpu_info': 'fake_cpu_info'}}).AndRaise(
-                         rpc.RemoteError())
+                         rpc_common.RemoteError())
 
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.RemoteError,

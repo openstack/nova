@@ -19,8 +19,7 @@
 
 from nova import flags
 from nova.openstack.common import cfg
-from nova.rpc.common import RemoteError, LOG
-from nova.utils import import_object
+from nova import utils
 
 
 rpc_backend_opt = cfg.StrOpt('rpc_backend',
@@ -199,5 +198,5 @@ def _get_impl():
     """Delay import of rpc_backend until FLAGS are loaded."""
     global _RPCIMPL
     if _RPCIMPL is None:
-        _RPCIMPL = import_object(FLAGS.rpc_backend)
+        _RPCIMPL = utils.import_object(FLAGS.rpc_backend)
     return _RPCIMPL

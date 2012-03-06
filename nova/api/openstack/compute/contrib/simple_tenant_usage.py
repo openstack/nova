@@ -72,12 +72,12 @@ class SimpleTenantUsageController(object):
         terminated_at = instance['terminated_at']
         if terminated_at is not None:
             if not isinstance(terminated_at, datetime.datetime):
-                terminated_at = datetime.strptime(terminated_at,
+                terminated_at = datetime.datetime.strptime(terminated_at,
                                                   "%Y-%m-%d %H:%M:%S.%f")
 
         if launched_at is not None:
             if not isinstance(launched_at, datetime.datetime):
-                launched_at = datetime.strptime(launched_at,
+                launched_at = datetime.datetime.strptime(launched_at,
                                                 "%Y-%m-%d %H:%M:%S.%f")
 
         if terminated_at and terminated_at < period_start:
