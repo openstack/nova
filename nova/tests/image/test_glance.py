@@ -18,6 +18,8 @@
 
 import datetime
 
+import glance.common.exception as glance_exception
+
 from nova.tests.api.openstack import fakes
 from nova import context
 from nova import exception
@@ -181,7 +183,7 @@ class TestGlanceImageService(test.TestCase):
         image_id = self.service.create(self.context, fixture)['id']
 
         self.assertNotEquals(None, image_id)
-        self.assertRaises(exception.NotFound,
+        self.assertRaises(exception.ImageNotFound,
                           self.service.show,
                           self.context,
                           'bad image id')
@@ -259,6 +261,17 @@ class TestGlanceImageService(test.TestCase):
                         'name': 'TestImage %d' % (i)}
             self.assertDictMatch(meta, expected)
             i = i + 1
+
+    def test_index_invalid_marker(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture(name='TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        self.assertRaises(exception.Invalid, self.service.index,
+                          self.context, marker='invalidmarker')
 
     def test_index_private_image(self):
         fixture = self._make_fixture(name='test image')
@@ -354,6 +367,17 @@ class TestGlanceImageService(test.TestCase):
             self.assertDictMatch(meta, expected)
             i = i + 1
 
+    def test_detail_invalid_marker(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture(name='TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        self.assertRaises(exception.Invalid, self.service.detail,
+                          self.context, marker='invalidmarker')
+
     def test_update(self):
         fixture = self._make_fixture(name='test image')
         image_id = self.service.create(self.context, fixture)['id']
@@ -444,6 +468,17 @@ class TestGlanceImageService(test.TestCase):
                           self.service.show,
                           self.context,
                           image_id)
+
+    def test_show_raises_on_missing_credential(self):
+        def raise_missing_credentials(*args, **kwargs):
+            raise glance_exception.MissingCredentialError()
+
+        self.stubs.Set(glance_stubs.StubGlanceClient, 'get_image_meta',
+                       raise_missing_credentials)
+        self.assertRaises(exception.ImageNotAuthorized,
+                          self.service.show,
+                          self.context,
+                          'test-image-id')
 
     def test_detail_passes_through_to_client(self):
         fixture = self._make_fixture(name='image10', is_public=True)
