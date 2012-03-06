@@ -2054,7 +2054,7 @@ class StorageManagerCommands(object):
 
             try:
                 db.sm_backend_conf_create(ctxt,
-                                          dict(flavor_id=flavors[0]['id'],
+                                          dict(flavor_id=flavors['id'],
                                                sr_uuid=None,
                                                sr_type=sr_type,
                                                config_params=config_params))
