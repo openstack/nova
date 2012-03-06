@@ -188,7 +188,7 @@ Concept: Plugins
 Concept: IPC/RPC
 ----------------
 
-Nova utilizes the RabbitMQ implementation of the AMQP messaging standard for performing communication between the various Nova services.  This message queuing service is used for both local and remote communication because Nova is designed so that there is no requirement that any of the services exist on the same physical machine.  RabbitMQ in particular is very robust and provides the efficiency and reliability that Nova needs.  More information about RabbitMQ can be found at http://www.rabbitmq.com/. 
+Nova utilizes the AMQP messaging standard for performing communication between the various Nova services.  This message queuing service is used for both local and remote communication because Nova is designed so that there is no requirement that any of the services exist on the same physical machine.  Nova supports two implementations of AMQP: RabbitMQ and Qpid.  More information about RabbitMQ can be found at http://www.rabbitmq.com/.   More information about Qpid can be found at http://qpid.apache.org/.
 
 Concept: Fakes
 --------------
