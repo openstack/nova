@@ -18,7 +18,6 @@ import contextlib
 import os
 import shutil
 import StringIO
-import stubout
 import textwrap
 import tempfile
 import unittest
@@ -150,8 +149,14 @@ class CompatFlagfileTestCase(test.TestCase):
         self._do_test_flagfile('--noverbose', 'verbose=false\n')
 
     def test_flagfile_comments(self):
-        self._do_test_flagfile('--bar=foo\n#foo\n--foo=bar\n//bar',
+        self._do_test_flagfile(' \n\n#foo\n--bar=foo\n--foo=bar\n//bar',
                                'bar=foo\nfoo=bar\n')
+
+    def test_flagfile_is_config(self):
+        self.files['foo.flags'] = '\n\n#foo\n//bar\n[DEFAULT]\nbar=foo'
+        before = ['--flagfile=foo.flags']
+        after = flagfile.handle_flagfiles(before, tempdir=self.tempdir)
+        self.assertEquals(after, ['--config-file=foo.flags'])
 
     def test_flagfile_nested(self):
         self.files['bar.flags'] = '--foo=bar'
