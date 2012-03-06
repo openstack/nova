@@ -18,14 +18,14 @@
       (OpenOffice Impress format) Illustrations are "exported" to png and then scaled
       to 400x300 or 640x480 as needed and placed in the doc/source/images directory.
       
-Distributed Scheduler
+Filter Scheduler
 =====================
 
-The Scheduler is akin to a Dating Service. Requests for the creation of new instances come in and the most applicable Compute nodes are selected from a large pool of potential candidates. In a small deployment we may be happy with the currently available Chance Scheduler which randomly selects a Host from the available pool. Or if you need something a little more fancy you may want to use the Distributed Scheduler, which selects Compute hosts from a logical partitioning of available hosts (within a single Zone).
+The Scheduler is akin to a Dating Service. Requests for the creation of new instances come in and the most applicable Compute nodes are selected from a large pool of potential candidates. In a small deployment we may be happy with the currently available Chance Scheduler which randomly selects a Host from the available pool. Or if you need something a little more fancy you may want to use the Filter Scheduler, which selects Compute hosts from a logical partitioning of available hosts.
 
     .. image:: /images/dating_service.png 
 
-The Distributed Scheduler (DS) supports filtering and weighing to make informed decisions on where a new instance should be created.
+The Filter Scheduler supports filtering and weighing to make informed decisions on where a new instance should be created.
 
 So, how does this all work?
 
@@ -48,14 +48,14 @@ This Weight is computed for each Instance requested. If the customer asked for 1
     
 Filtering and Weighing
 ----------------------
-The filtering (excluding compute nodes incapable of fulfilling the request) and weighing (computing the relative "fitness" of a compute node to fulfill the request) rules used are very subjective operations ... Service Providers will probably have a very different set of filtering and weighing rules than private cloud administrators. The filtering and weighing aspects of the `DistributedScheduler` are flexible and extensible.
+The filtering (excluding compute nodes incapable of fulfilling the request) and weighing (computing the relative "fitness" of a compute node to fulfill the request) rules used are very subjective operations ... Service Providers will probably have a very different set of filtering and weighing rules than private cloud administrators. The filtering and weighing aspects of the `FilterScheduler` are flexible and extensible.
 
     .. image:: /images/filtering.png 
 
 Host Filter
 -----------
 
-As we mentioned earlier, filtering hosts is a very deployment-specific process. Service Providers may have a different set of criteria for filtering Compute nodes than a University. To facilitate this, the `DistributedScheduler` supports a variety of filtering strategies as well as an easy means for plugging in your own algorithms.  Specifying filters involves 2 settings.  One makes filters available for use.  The second specifies which filters to use by default (out of the filters available).  The reason for this second option is that there may be support to allow end-users to specify specific filters during a build at some point in the future.
+As we mentioned earlier, filtering hosts is a very deployment-specific process. Service Providers may have a different set of criteria for filtering Compute nodes than a University. To facilitate this, the `FilterScheduler` supports a variety of filtering strategies as well as an easy means for plugging in your own algorithms.  Specifying filters involves 2 settings.  One makes filters available for use.  The second specifies which filters to use by default (out of the filters available).  The reason for this second option is that there may be support to allow end-users to specify specific filters during a build at some point in the future.
 
 Making filters available:
 
@@ -85,12 +85,12 @@ Here are some of the main flags you should set in your `nova.conf` file:
 
 ::
 
-  --scheduler_driver=nova.scheduler.distributed_scheduler.DistributedScheduler
+  --scheduler_driver=nova.scheduler.filter_scheduler.FilterScheduler
   --scheduler_available_filters=nova.scheduler.filters.standard_filters
   # --scheduler_available_filters=myfilter.MyOwnFilter
   --scheduler_default_filters=RamFilter,ComputeFilter,MyOwnFilter
 
-`scheduler_driver` is the real workhorse of the operation. For Distributed Scheduler, you need to specify a class derived from `nova.scheduler.distributed_scheduler.DistributedScheduler`.
+`scheduler_driver` is the real workhorse of the operation. For Filter Scheduler, you need to specify a class derived from `nova.scheduler.filter_scheduler.FilterScheduler`.
 `scheduler_default_filters` are the host filters to be used for filtering candidate Compute nodes.
 
 Some optional flags which are handy for debugging are:

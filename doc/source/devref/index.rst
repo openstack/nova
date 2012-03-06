@@ -39,7 +39,7 @@ Background Concepts for Nova
    architecture
    threading
    il8n
-   distributed_scheduler
+   filter_scheduler
    multinic
    rabbit
 

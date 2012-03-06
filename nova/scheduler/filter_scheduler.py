@@ -14,7 +14,7 @@
 #    under the License.
 
 """
-The DistributedScheduler is for creating instances locally.
+The FilterScheduler is for creating instances locally.
 You can customize this scheduler by specifying your own Host Filters and
 Weighing Functions.
 """
@@ -35,10 +35,10 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
-class DistributedScheduler(driver.Scheduler):
+class FilterScheduler(driver.Scheduler):
     """Scheduler that can be used for filtering and weighing."""
     def __init__(self, *args, **kwargs):
-        super(DistributedScheduler, self).__init__(*args, **kwargs)
+        super(FilterScheduler, self).__init__(*args, **kwargs)
         self.cost_function_cache = {}
         self.options = scheduler_options.SchedulerOptions()
 
