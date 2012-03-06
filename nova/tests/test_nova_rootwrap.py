@@ -47,8 +47,11 @@ class RootwrapTestCase(test.TestCase):
         self.assertTrue(filtermatch is None)
 
     def test_missing_command(self):
-        usercmd = ["foo_bar_not_exist"]
-        filtermatch = wrapper.match_filter(self.filters, usercmd)
+        valid_but_missing = ["foo_bar_not_exist"]
+        invalid = ["foo_bar_not_exist_and_not_matched"]
+        filtermatch = wrapper.match_filter(self.filters, valid_but_missing)
+        self.assertTrue(filtermatch is not None)
+        filtermatch = wrapper.match_filter(self.filters, invalid)
         self.assertTrue(filtermatch is None)
 
     def test_DnsmasqFilter(self):
