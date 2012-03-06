@@ -203,6 +203,52 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.assertEqual(robj['location'], self_href)
 
+    def test_rebuild_instance_with_image_uuid(self):
+        info = dict(image_href_in_call=None)
+
+        def rebuild(self2, context, instance, image_href, *args, **kwargs):
+            info['image_href_in_call'] = image_href
+
+        self.stubs.Set(nova.db, 'instance_get',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        self.stubs.Set(nova.compute.API, 'rebuild', rebuild)
+
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        body = {
+            'rebuild': {
+                'imageRef': image_uuid,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        self.controller._action_rebuild(req, FAKE_UUID, body)
+        self.assertEqual(info['image_href_in_call'], image_uuid)
+
+    def test_rebuild_instance_with_image_href_uses_uuid(self):
+        info = dict(image_href_in_call=None)
+
+        def rebuild(self2, context, instance, image_href, *args, **kwargs):
+            info['image_href_in_call'] = image_href
+
+        self.stubs.Set(nova.db, 'instance_get',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        self.stubs.Set(nova.compute.API, 'rebuild', rebuild)
+
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        body = {
+            'rebuild': {
+                'imageRef': image_href,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        self.controller._action_rebuild(req, FAKE_UUID, body)
+        self.assertEqual(info['image_href_in_call'], image_uuid)
+
     def test_rebuild_accepted_minimum_pass_disabled(self):
         # run with enable_instance_password disabled to verify adminPass
         # is missing from response. See lp bug 921814
@@ -231,7 +277,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_raises_conflict_on_invalid_state(self):
         body = {
             "rebuild": {
-                "imageRef": "http://localhost/images/2",
+                "imageRef": self._image_href,
             },
         }
 
