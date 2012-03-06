@@ -124,6 +124,11 @@ class Controller(wsgi.Controller):
         except (AttributeError, IndexError, KeyError):
             pass
 
+        filter_name = 'status'
+        if filter_name in filters:
+            # The Image API expects us to use lowercase strings for status
+            filters[filter_name] = filters[filter_name].lower()
+
         return filters
 
     @wsgi.serializers(xml=ImageTemplate)

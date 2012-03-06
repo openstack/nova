@@ -847,7 +847,7 @@ class ImagesControllerTest(test.TestCase):
 
     def test_image_filter_with_status(self):
         image_service = self.mox.CreateMockAnything()
-        filters = {'status': 'ACTIVE'}
+        filters = {'status': 'active'}
         request = fakes.HTTPRequest.blank('/v2/images?status=ACTIVE')
         context = request.environ['nova.context']
         image_service.index(context, filters=filters).AndReturn([])
@@ -900,7 +900,7 @@ class ImagesControllerTest(test.TestCase):
 
     def test_image_filter_not_supported(self):
         image_service = self.mox.CreateMockAnything()
-        filters = {'status': 'ACTIVE'}
+        filters = {'status': 'active'}
         request = fakes.HTTPRequest.blank('/v2/images?status=ACTIVE&'
                                           'UNSUPPORTEDFILTER=testname')
         context = request.environ['nova.context']
@@ -942,7 +942,7 @@ class ImagesControllerTest(test.TestCase):
 
     def test_image_detail_filter_with_status(self):
         image_service = self.mox.CreateMockAnything()
-        filters = {'status': 'ACTIVE'}
+        filters = {'status': 'active'}
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
                                           '?status=ACTIVE')
         context = request.environ['nova.context']
@@ -1010,7 +1010,7 @@ class ImagesControllerTest(test.TestCase):
 
     def test_image_detail_filter_not_supported(self):
         image_service = self.mox.CreateMockAnything()
-        filters = {'status': 'ACTIVE'}
+        filters = {'status': 'active'}
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail?status='
                                           'ACTIVE&UNSUPPORTEDFILTER=testname')
         context = request.environ['nova.context']
