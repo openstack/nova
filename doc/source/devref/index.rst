@@ -41,7 +41,7 @@ Background Concepts for Nova
    il8n
    filter_scheduler
    multinic
-   rabbit
+   rpc
 
 Other Resources
 ---------------
