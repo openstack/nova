@@ -17,6 +17,7 @@ import json
 import webob
 
 from nova import compute
+from nova import exception
 from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -67,6 +68,21 @@ class RescueTest(test.TestCase):
         self.assertEqual(resp.status_int, 200)
         resp_json = json.loads(resp.body)
         self.assertEqual(FLAGS.password_length, len(resp_json['adminPass']))
+
+    def test_rescue_of_rescued_instance(self):
+        body = dict(rescue=None)
+
+        def fake_rescue(*args, **kwargs):
+            raise exception.InstanceInvalidState('fake message')
+
+        self.stubs.Set(compute.api.API, "rescue", fake_rescue)
+        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 409)
 
     def test_unrescue(self):
         body = dict(unrescue=None)
