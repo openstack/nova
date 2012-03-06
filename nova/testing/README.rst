@@ -33,6 +33,17 @@ Using Fakes
 
 TBD
 
+test.TestCase
+-------------
+The TestCase class from nova.test (generally imported as test) will
+automatically manage self.stubs using the stubout module and self.mox
+using the mox module during the setUp step. They will automatically
+verify and clean up during the tearDown step.
+
+If using test.TestCase, calling the super class setUp is required and
+calling the super class tearDown is required to be last if tearDown
+is overriden.
+
 Writing Functional Tests
 ------------------------
 
@@ -42,3 +53,14 @@ Writing Integration Tests
 -------------------------
 
 TBD
+
+Tests and assertRaises
+----------------------
+When asserting that a test should raise an exception, test against the
+most specific exception possible. An overly broad exception type (like
+Exception) can mask errors in the unit test itself.
+
+Example::
+
+    self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
+                      elevated, instance_uuid)
