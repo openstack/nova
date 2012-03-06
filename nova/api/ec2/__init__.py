@@ -327,7 +327,6 @@ class EC2KeystoneAuth(wsgi.Middleware):
                                       project_id,
                                       roles=roles,
                                       auth_token=token_id,
-                                      strategy='keystone',
                                       remote_address=remote_address)
 
         req.environ['nova.context'] = ctxt

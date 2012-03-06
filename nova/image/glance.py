@@ -38,7 +38,6 @@ LOG = logging.getLogger(__name__)
 
 
 FLAGS = flags.FLAGS
-flags.DECLARE('use_deprecated_auth', 'nova.auth.manager')
 
 
 GlanceClient = utils.import_class('glance.client.Client')
@@ -60,7 +59,7 @@ def _parse_image_ref(image_href):
 
 
 def _create_glance_client(context, host, port):
-    if context.strategy == 'keystone':
+    if FLAGS.auth_strategy == 'keystone':
         # NOTE(dprince): Glance client just needs auth_tok right? Should we
         # add username and tenant to the creds below?
         creds = {'strategy': 'keystone',
@@ -318,7 +317,7 @@ class GlanceImageService(object):
         # NOTE(vish): show is to check if image is available
         image_meta = self.show(context, image_id)
 
-        if FLAGS.use_deprecated_auth:
+        if FLAGS.auth_strategy == 'deprecated':
             # NOTE(parthi): only allow image deletions if the user
             # is a member of the project owning the image, in case of
             # setup without keystone

@@ -386,7 +386,7 @@ class TestGlanceImageService(test.TestCase):
 
     def test_delete_not_by_owner(self):
         # this test is only relevant for deprecated auth mode
-        self.flags(use_deprecated_auth=True)
+        self.flags(auth_strategy='deprecated')
 
         fixture = self._make_fixture(name='test image')
         properties = {'project_id': 'proj1'}
