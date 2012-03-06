@@ -510,27 +510,40 @@ class XenAPISession(object):
         self.XenAPI = self.get_imported_xenapi()
         self._sessions = queue.Queue()
         self.host_uuid = None
+        self.is_slave = False
         exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
                                           "(is the Dom0 disk full?)"))
-        is_slave = False
-        for i in xrange(FLAGS.xenapi_connection_concurrent):
-            try:
-                session = self._create_session(url)
-                with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
-                    session.login_with_password(user, pw)
-            except self.XenAPI.Failure, e:
-                # if user and pw of the master are different, we're doomed!
-                if e.details[0] == 'HOST_IS_SLAVE':
-                    master = e.details[1]
-                    session = self.XenAPI.Session(pool.swap_xapi_host(url,
-                                                                      master))
-                    session.login_with_password(user, pw)
-                    is_slave = True
-                else:
-                    raise
+        url = self._create_first_session(url, user, pw, exception)
+        self._populate_session_pool(url, user, pw, exception)
+        self._populate_host_uuid()
+
+    def _create_first_session(self, url, user, pw, exception):
+        try:
+            session = self._create_session(url)
+            with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
+                session.login_with_password(user, pw)
+        except self.XenAPI.Failure, e:
+            # if user and pw of the master are different, we're doomed!
+            if e.details[0] == 'HOST_IS_SLAVE':
+                master = e.details[1]
+                url = pool.swap_xapi_host(url, master)
+                session = self.XenAPI.Session(url)
+                session.login_with_password(user, pw)
+                self.is_slave = True
+            else:
+                raise
+        self._sessions.put(session)
+        return url
+
+    def _populate_session_pool(self, url, user, pw, exception):
+        for _ in xrange(FLAGS.xenapi_connection_concurrent - 1):
+            session = self._create_session(url)
+            with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
+                session.login_with_password(user, pw)
             self._sessions.put(session)
 
-        if is_slave:
+    def _populate_host_uuid(self):
+        if self.is_slave:
             try:
                 aggr = db.aggregate_get_by_host(context.get_admin_context(),
                                                 FLAGS.host)
@@ -539,6 +552,10 @@ class XenAPISession(object):
                 LOG.exception(_('Host is member of a pool, but DB '
                                 'says otherwise'))
                 raise
+        else:
+            with self._get_session() as session:
+                host_ref = session.xenapi.session.get_this_host(session.handle)
+                self.host_uuid = session.xenapi.host.get_uuid(host_ref)
 
     def get_product_version(self):
         """Return a tuple of (major, minor, rev) for the host version"""
@@ -569,10 +586,7 @@ class XenAPISession(object):
     def get_xenapi_host(self):
         """Return the xenapi host on which nova-compute runs on."""
         with self._get_session() as session:
-            if self.host_uuid:
-                return session.xenapi.host.get_by_uuid(self.host_uuid)
-            else:
-                return session.xenapi.session.get_this_host(session.handle)
+            return session.xenapi.host.get_by_uuid(self.host_uuid)
 
     def call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread."""
@@ -599,8 +613,7 @@ class XenAPISession(object):
         host = self.get_xenapi_host()
         # NOTE(armando): pass the host uuid along with the args so that
         # the plugin gets executed on the right host when using XS pools
-        if self.host_uuid:
-            args['host_uuid'] = self.host_uuid
+        args['host_uuid'] = self.host_uuid
         with self._get_session() as session:
             return tpool.execute(self._unwrap_plugin_exceptions,
                                  session.xenapi.Async.host.call_plugin,
