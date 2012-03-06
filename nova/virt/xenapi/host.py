@@ -192,7 +192,7 @@ def _host_find(context, session, src, dst):
     """
     # NOTE: this would be a lot simpler if nova-compute stored
     # FLAGS.host in the XenServer host's other-config map.
-    # TODO: improve according the note above
+    # TODO(armando-migliaccio): improve according the note above
     aggregate = db.aggregate_get_by_host(context, src)
     uuid = session.call_xenapi('host.get_record', dst)['uuid']
     for compute_host, host_uuid in aggregate.metadetails.iteritems():

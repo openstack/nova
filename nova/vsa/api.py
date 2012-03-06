@@ -295,7 +295,8 @@ class API(base.Base):
 
         vc_count = kwargs.get('vc_count', None)
         if vc_count is not None:
-            # VP-TODO: This request may want to update number of VCs
+            # VP-TODO(vladimir.p):
+            # This request may want to update number of VCs
             # Get number of current VCs and add/delete VCs appropriately
             vsa = self.get(context, vsa_id)
             vc_count = int(vc_count)
@@ -317,13 +318,13 @@ class API(base.Base):
             add_cnt = vc_count - old_vc_count
             LOG.debug(_("Adding %(add_cnt)s VCs to VSA %(vsa_name)s."),
                         locals())
-            # VP-TODO: actual code for adding new VCs
+            # VP-TODO(vladimir.p): actual code for adding new VCs
 
         elif vc_count < old_vc_count:
             del_cnt = old_vc_count - vc_count
             LOG.debug(_("Deleting %(del_cnt)s VCs from VSA %(vsa_name)s."),
                         locals())
-            # VP-TODO: actual code for deleting extra VCs
+            # VP-TODO(vladimir.p): actual code for deleting extra VCs
 
     def _force_volume_delete(self, ctxt, volume):
         """Delete a volume, bypassing the check that it must be available."""

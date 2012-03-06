@@ -322,7 +322,7 @@ class GlanceImageService(object):
             # NOTE(parthi): only allow image deletions if the user
             # is a member of the project owning the image, in case of
             # setup without keystone
-            # TODO Currently this access control breaks if
+            # TODO(parthi): Currently this access control breaks if
             # 1. Image is not owned by a project
             # 2. Deleting user is not bound a project
             properties = image_meta['properties']

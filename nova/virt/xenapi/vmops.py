@@ -1442,7 +1442,7 @@ class VMOps(object):
 
     def get_console_output(self, instance):
         """Return snapshot of console."""
-        # TODO: implement this to fix pylint!
+        # TODO(armando-migliaccio): implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
 
     def get_vnc_console(self, instance):

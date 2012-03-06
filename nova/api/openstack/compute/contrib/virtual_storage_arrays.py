@@ -596,7 +596,7 @@ class VsaVCController(servers.Controller):
     def __init__(self):
         self.vsa_api = vsa_api.API()
         self.compute_api = compute.API()
-        self.vsa_id = None      # VP-TODO: temporary ugly hack
+        self.vsa_id = None      # VP-TODO(vladimir.p): temporary ugly hack
         super(VsaVCController, self).__init__()
 
     def _get_servers(self, req, is_detail):
@@ -624,7 +624,7 @@ class VsaVCController(servers.Controller):
 
         LOG.audit(_("Index instances for VSA %s"), vsa_id)
 
-        self.vsa_id = vsa_id    # VP-TODO: temporary ugly hack
+        self.vsa_id = vsa_id    # VP-TODO(vladimir.p): temporary ugly hack
         result = super(VsaVCController, self).detail(req)
         self.vsa_id = None
         return result

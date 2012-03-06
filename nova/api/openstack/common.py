@@ -277,7 +277,7 @@ def check_img_metadata_quota_limit(context, metadata):
 
 
 def dict_to_query_str(params):
-    # TODO: we should just use urllib.urlencode instead of this
+    # TODO(throughnothing): we should just use urllib.urlencode instead of this
     # But currently we don't work with urlencoded url's
     param_str = ""
     for key, val in params.iteritems():

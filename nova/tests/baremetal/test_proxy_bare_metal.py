@@ -261,7 +261,7 @@ class ProxyBareMetalTestCase(test.TestCase):
 
         # Code under test
         conn = proxy.get_connection(True)
-        # TODO: this is not a very good fake instance
+        # TODO(mikalstill): this is not a very good fake instance
         info = conn.get_info({'name': 'instance-00000001'})
 
         # Expected values

@@ -420,5 +420,5 @@ class AuthManagerDbTestCase(_AuthManagerBaseTestCase):
 
 
 if __name__ == "__main__":
-    # TODO: Implement use_fake as an option
+    # TODO(anotherjesse): Implement use_fake as an option
     unittest.main()

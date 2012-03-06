@@ -117,7 +117,7 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
         """Setup includes creating or introducing storage repos
            existing in the database and destroying deleted ones."""
 
-        # TODO purge storage repos
+        # TODO(renukaapte) purge storage repos
         self.ctxt = ctxt
         self._create_storage_repos(ctxt)
 
@@ -127,7 +127,7 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
 
         # For now the scheduling logic will be to try to fit the volume in
         # the first available backend.
-        # TODO better scheduling once APIs are in place
+        # TODO(renukaapte) better scheduling once APIs are in place
         sm_vol_rec = None
         backends = self.db.sm_backend_conf_get_all(self.ctxt)
         for backend in backends:
@@ -191,7 +191,6 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
 
     def create_export(self, context, volume):
         """Exports the volume."""
-        # !!! TODO
         pass
 
     def remove_export(self, context, volume):

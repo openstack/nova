@@ -1746,7 +1746,7 @@ class StorageManagerCommands(object):
                     flav['description'])
 
     def flavor_create(self, label, desc):
-        # TODO flavor name must be unique
+        # TODO(renukaapte) flavor name must be unique
         try:
             db.sm_flavor_create(context.get_admin_context(),
                                 dict(label=label,
@@ -1792,7 +1792,7 @@ class StorageManagerCommands(object):
                                                      b['config_params'],)
 
     def backend_add(self, flavor_label, sr_type, *args):
-        # TODO Add backend_introduce.
+        # TODO(renukaapte) Add backend_introduce.
         ctxt = context.get_admin_context()
         params = dict(map(self._splitfun, args))
         sr_uuid = utils.gen_uuid()

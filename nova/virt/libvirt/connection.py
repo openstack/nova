@@ -961,7 +961,7 @@ class LibvirtConnection(driver.ComputeDriver):
         def get_vnc_port_for_instance(instance_name):
             virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
-            # TODO: use etree instead of minidom
+            # TODO(sleepsonthefloor): use etree instead of minidom
             dom = minidom.parseString(xml)
 
             for graphic in dom.getElementsByTagName('graphics'):

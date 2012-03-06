@@ -436,7 +436,7 @@ class SessionBase(object):
         return
 
     def PIF_get_all_records_where(self, _1, _2):
-        # TODO (salvatore-orlando): filter table on _2
+        # TODO(salvatore-orlando): filter table on _2
         return _db_content['PIF']
 
     def VM_get_xenstore_data(self, _1, vm_ref):

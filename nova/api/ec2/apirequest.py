@@ -64,7 +64,7 @@ class APIRequest(object):
             _error = _('Unsupported API request: controller = %(controller)s,'
                     ' action = %(action)s') % locals()
             LOG.exception(_error)
-            # TODO: Raise custom exception, trap in apiserver,
+            # TODO(gundlach): Raise custom exception, trap in apiserver,
             #       and reraise as 400 error.
             raise exception.InvalidRequest()
 
