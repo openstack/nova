@@ -18,6 +18,8 @@
 import json
 import random
 
+from eventlet import tpool
+
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
@@ -67,6 +69,11 @@ def stubout_session(stubs, cls, product_version=None, **opt_args):
         product_version = (5, 6, 2)
     stubs.Set(xenapi_conn.XenAPISession, 'get_product_version',
             lambda s: product_version)
+    # NOTE(johannes): logging can't be used reliably from a thread
+    # since it can deadlock with eventlet. It's safe for our faked
+    # sessions to be called synchronously in the unit tests. (see
+    # bug 946687)
+    stubs.Set(tpool, 'execute', lambda m, *a, **kw: m(*a, **kw))
 
 
 def stub_out_get_target(stubs):
