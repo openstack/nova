@@ -39,7 +39,7 @@ class Host(object):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
 
-    def host_power_action(self, host, action):
+    def host_power_action(self, _host, action):
         """Reboots or shuts down the host."""
         args = {"action": json.dumps(action)}
         methods = {"reboot": "host_reboot", "shutdown": "host_shutdown"}
@@ -92,7 +92,7 @@ class Host(object):
         else:
             return 'off_maintenance'
 
-    def set_host_enabled(self, host, enabled):
+    def set_host_enabled(self, _host, enabled):
         """Sets the specified host's ability to accept new instances."""
         args = {"enabled": json.dumps(enabled)}
         response = call_xenhost(self._session, "set_host_enabled", args)

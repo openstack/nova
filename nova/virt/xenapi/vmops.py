@@ -402,8 +402,7 @@ class VMOps(object):
             vm_mode = 'hvm'  # Normalize
         else:
             use_pv_kernel = VMHelper.determine_is_pv(self._session,
-                    instance.id, first_vdi_ref, disk_image_type,
-                    instance.os_type)
+                    first_vdi_ref, disk_image_type, instance.os_type)
             vm_mode = use_pv_kernel and 'pv' or 'hvm'
 
         if instance.vm_mode != vm_mode:
@@ -1432,15 +1431,13 @@ class VMOps(object):
         """Return data about VM diagnostics."""
         vm_ref = self._get_vm_opaque_ref(instance)
         vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-        return VMHelper.compile_diagnostics(self._session, vm_rec)
+        return VMHelper.compile_diagnostics(vm_rec)
 
     def get_all_bw_usage(self, start_time, stop_time=None):
         """Return bandwidth usage info for each interface on each
            running VM"""
         try:
-            metrics = VMHelper.compile_metrics(self._session,
-                                               start_time,
-                                               stop_time)
+            metrics = VMHelper.compile_metrics(start_time, stop_time)
         except exception.CouldNotFetchMetrics:
             LOG.exception(_("Could not get bandwidth info."))
             return {}
