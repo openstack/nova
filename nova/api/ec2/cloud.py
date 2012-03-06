@@ -1434,6 +1434,9 @@ class CloudController(object):
     def register_image(self, context, image_location=None, **kwargs):
         if image_location is None and kwargs.get('name'):
             image_location = kwargs['name']
+        if image_location is None:
+            raise exception.EC2APIError(_('imageLocation is required'))
+
         metadata = {'properties': {'image_location': image_location}}
 
         if kwargs.get('name'):
@@ -1513,7 +1516,11 @@ class CloudController(object):
         del(image['id'])
 
         image['is_public'] = (operation_type == 'add')
-        return self.image_service.update(context, internal_id, image)
+        try:
+            return self.image_service.update(context, internal_id, image)
+        except exception.ImageNotAuthorized:
+            msg = _('Not allowed to modify attributes for image %s')
+            raise exception.EC2APIError(msg % image_id)
 
     def update_image(self, context, image_id, **kwargs):
         internal_id = ec2utils.ec2_id_to_id(image_id)
