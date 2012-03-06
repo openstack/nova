@@ -26,7 +26,6 @@ import sys
 
 
 _PY_EXT = ".py"
-_SCREEN_WIDTH = 72
 _FLAGS = "FLAGS"
 
 _STROPT = "StrOpt"
@@ -93,25 +92,18 @@ def print_module(mod_str):
         return
     except Exception, e:
         return
-    for opt_name, opt_dict in sorted(flags._opts.items(),
-                                     key=lambda (x, y): x):
+    for opt_name in sorted(flags.keys()):
         # check if option was processed
         if opt_name in _OPTION_CACHE:
             continue
+        opt_dict = flags.retrieve_opt(opt_name)
         opts.append(opt_dict['opt'])
         _OPTION_CACHE.append(opt_name)
     # return if flags has no unique options
     if not opts:
         return
     # print out module info
-    remain_width = _SCREEN_WIDTH - len(mod_str) - 5
-    print '#' * _SCREEN_WIDTH
-    print '#', mod_str,
-    if remain_width > 0:
-        print " " * remain_width, "#"
-    else:
-        print
-    print '#' * _SCREEN_WIDTH
+    print ''.join(['[', mod_str, ']'])
     print
     for opt in opts:
         print_opt(opt)
@@ -128,19 +120,13 @@ def print_opt(opt):
     # print out option info
     print "#", "".join(["(", opt_type, ")"]), opt.help
     if opt_type == _BOOLOPT:
-        if opt.default is True:
-            print "# Comment line to disable"
-        else:
-            print "# Uncomment line to enable"
-            print "#",
-        print ''.join(["--", opt.name])
+        print "# default: %s" % opt.default
+        print "#", ''.join(["--", opt.name])
     else:
         opt_value = str(opt.default)
-        if (opt.default is None or
-            (isinstance(opt.default, str) and not opt.default)):
+        if (opt.default is None or (opt_type == _STROPT and not opt.default)):
             opt_value = "<%s>" % opt.name
-            print "#",
-        print ''.join(["--", opt.name, "=", opt_value])
+        print "#", ''.join(["--", opt.name, "=", opt_value])
     print
 
 

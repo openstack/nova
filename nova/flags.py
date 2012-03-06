@@ -44,6 +44,10 @@ class NovaConfigOpts(cfg.CommonConfigOpts):
         with flagfile.handle_flagfiles_managed(argv[1:]) as args:
             return argv[:1] + super(NovaConfigOpts, self).__call__(args)
 
+    def retrieve_opt(self, opt_name, group=None):
+        return self._get_opt_info(opt_name, group)
+
+
 FLAGS = NovaConfigOpts()
 
 
