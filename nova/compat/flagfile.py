@@ -97,6 +97,10 @@ def _read_flagfile(arg, next_arg, tempdir=None):
 
     args = _read_lines(flagfile)
 
+    if args and not args[0].startswith('--'):
+        # This is a config file, not a flagfile, so return it.
+        return ['--config-file=' + flagfile] + argp[1:]
+
     #
     # We're recursing here to convert any --flagfile arguments
     # read from this flagfile into --config-file arguments
