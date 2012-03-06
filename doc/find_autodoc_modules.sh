@@ -1,10 +1,10 @@
 #!/bin/bash
 
-NOVA_DIR='../nova/' # include trailing slash
+NOVA_DIR='nova/' # include trailing slash
 DOCS_DIR='source'
 
 modules=''
-for x in `find ${NOVA_DIR} -name '*.py'`; do
+for x in `find ${NOVA_DIR} -name '*.py' | grep -v nova/tests`; do
     if [ `basename ${x} .py` == "__init__" ] ; then
         continue
     fi
