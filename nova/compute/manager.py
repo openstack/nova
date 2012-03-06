@@ -393,14 +393,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             try:
                 self.terminate_instance(context, instance_uuid)
             except exception.InstanceNotFound:
-                LOG.info(_("Instance already deleted from database. "
-                           "Attempting forceful vm deletion"),
-                         instance=instance_uuid)
+                LOG.info(_("Instance %s already deleted from database. "
+                           "Attempting forceful vm deletion")
+                            % instance_uuid)
                 ctxt = nova.context.get_admin_context(read_deleted='yes')
                 self.terminate_instance(ctxt, instance_uuid)
         except Exception as ex:
             LOG.exception(_("Exception encountered while terminating the "
-                            "instance"), instance=instance_uuid)
+                            "instance %s") % instance_uuid)
 
     def _run_instance(self, context, instance_uuid,
                       requested_networks=None,
