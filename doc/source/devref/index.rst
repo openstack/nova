@@ -41,7 +41,7 @@ Background Concepts for Nova
    il8n
    distributed_scheduler
    multinic
-   rabbit
+   rpc
 
 Other Resources
 ---------------
