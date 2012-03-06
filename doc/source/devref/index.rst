@@ -38,7 +38,7 @@ Background Concepts for Nova
 
    threading
    il8n
-   distributed_scheduler
+   filter_scheduler
    multinic
    zone
    rabbit

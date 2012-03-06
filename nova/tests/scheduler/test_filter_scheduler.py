@@ -22,7 +22,7 @@ from nova import context
 from nova import exception
 from nova.scheduler import least_cost
 from nova.scheduler import host_manager
-from nova.scheduler import distributed_scheduler
+from nova.scheduler import filter_scheduler
 from nova import test
 from nova.tests.scheduler import fakes
 from nova.tests.scheduler import test_scheduler
@@ -32,10 +32,10 @@ def fake_filter_hosts(hosts, filter_properties):
     return list(hosts)
 
 
-class DistributedSchedulerTestCase(test_scheduler.SchedulerTestCase):
+class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     """Test case for Distributed Scheduler."""
 
-    driver_cls = distributed_scheduler.DistributedScheduler
+    driver_cls = filter_scheduler.FilterScheduler
 
     def test_run_instance_no_hosts(self):
         """
@@ -44,7 +44,7 @@ class DistributedSchedulerTestCase(test_scheduler.SchedulerTestCase):
         def _fake_empty_call_zone_method(*args, **kwargs):
             return []
 
-        sched = fakes.FakeDistributedScheduler()
+        sched = fakes.FakeFilterScheduler()
 
         fake_context = context.RequestContext('user', 'project')
         request_spec = {'instance_type': {'memory_mb': 1, 'root_gb': 1,
@@ -64,7 +64,7 @@ class DistributedSchedulerTestCase(test_scheduler.SchedulerTestCase):
             self.was_admin = context.is_admin
             return {}
 
-        sched = fakes.FakeDistributedScheduler()
+        sched = fakes.FakeFilterScheduler()
         self.stubs.Set(sched.host_manager, 'get_all_host_states', fake_get)
 
         fake_context = context.RequestContext('user', 'project')
@@ -77,7 +77,7 @@ class DistributedSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_schedule_bad_topic(self):
         """Parameter checking."""
-        sched = fakes.FakeDistributedScheduler()
+        sched = fakes.FakeFilterScheduler()
         fake_context = context.RequestContext('user', 'project')
         self.assertRaises(NotImplementedError, sched._schedule, fake_context,
                           "foo", {})
@@ -139,7 +139,7 @@ class DistributedSchedulerTestCase(test_scheduler.SchedulerTestCase):
             return least_cost.WeightedHost(self.next_weight,
                     host_state=host_state)
 
-        sched = fakes.FakeDistributedScheduler()
+        sched = fakes.FakeFilterScheduler()
         fake_context = context.RequestContext('user', 'project',
                 is_admin=True)
 
@@ -166,7 +166,7 @@ class DistributedSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_get_cost_functions(self):
         self.flags(reserved_host_memory_mb=128)
-        fixture = fakes.FakeDistributedScheduler()
+        fixture = fakes.FakeFilterScheduler()
         fns = fixture.get_cost_functions()
         self.assertEquals(len(fns), 1)
         weight, fn = fns[0]
