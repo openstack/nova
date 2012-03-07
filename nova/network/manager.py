@@ -1465,8 +1465,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             fixed_ips = self.db.fixed_ips_by_virtual_interface(context,
                                                                vif['id'])
             addresses = [fixed_ip['address'] for fixed_ip in fixed_ips]
-            if not network['multihost']:
-                #NOTE (tr3buchet): if using multihost, host is instance[host]
+            if not network['multi_host']:
+                #NOTE (tr3buchet): if using multi_host, host is instance[host]
                 host = network['host']
             if self.host == host or host is None:
                 # at this point i am the correct host, or host doesn't
