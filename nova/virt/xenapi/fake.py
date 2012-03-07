@@ -704,7 +704,7 @@ class SessionBase(object):
     def _destroy(self, name, params):
         self._check_session(params)
         self._check_arg_count(params, 2)
-        table, _ = name.split('.')
+        table = name.split('.')[0]
         ref = params[1]
         if ref not in _db_content[table]:
             raise Failure(['HANDLE_INVALID', table, ref])

@@ -153,7 +153,7 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(xenapi_opts)
 
 
-def get_connection(_):
+def get_connection(_read_only):
     """Note that XenAPI doesn't have a read-only connection mode, so
     the read_only parameter is ignored."""
     url = FLAGS.xenapi_connection_url
@@ -536,7 +536,7 @@ class XenAPISession(object):
         return url
 
     def _populate_session_pool(self, url, user, pw, exception):
-        for _ in xrange(FLAGS.xenapi_connection_concurrent - 1):
+        for i in xrange(FLAGS.xenapi_connection_concurrent - 1):
             session = self._create_session(url)
             with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
                 session.login_with_password(user, pw)

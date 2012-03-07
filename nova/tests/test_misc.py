@@ -147,7 +147,7 @@ class LockTestCase(test.TestCase):
                 self.assertEquals(e.errno, errno.EPIPE)
                 return
 
-            rfds, _, __ = select.select([rpipe], [], [], 1)
+            rfds, _wfds, _efds = select.select([rpipe], [], [], 1)
             self.assertEquals(len(rfds), 0, "The other process, which was"
                                             " supposed to be locked, "
                                             "wrote on its end of the "
