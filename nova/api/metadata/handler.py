@@ -76,23 +76,6 @@ class MetadataRequestHandler(wsgi.Application):
                 network_api=self.network_api,
                 volume_api=volume.API())
 
-    def _get_mpi_data(self, context, project_id):
-        result = {}
-        search_opts = {'project_id': project_id, 'deleted': False}
-        for instance in self.compute_api.get_all(context,
-                search_opts=search_opts):
-            ip_info = ec2utils.get_ip_info_for_instance(context, instance)
-            # only look at ipv4 addresses
-            fixed_ips = ip_info['fixed_ips']
-            if fixed_ips:
-                line = '%s slots=%d' % (fixed_ips[0], instance['vcpus'])
-                key = str(instance['key_name'])
-                if key in result:
-                    result[key].append(line)
-                else:
-                    result[key] = [line]
-        return result
-
     def _format_instance_mapping(self, ctxt, instance_ref):
         root_device_name = instance_ref['root_device_name']
         if root_device_name is None:
@@ -150,7 +133,6 @@ class MetadataRequestHandler(wsgi.Application):
         except exception.NotFound:
             return None
 
-        mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         hostname = "%s.%s" % (instance_ref['hostname'], FLAGS.dhcp_domain)
         host = instance_ref['host']
         services = db.service_get_all_by_host(ctxt.elevated(), host)
@@ -184,8 +166,7 @@ class MetadataRequestHandler(wsgi.Application):
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip,
                 'reservation-id': instance_ref['reservation_id'],
-                'security-groups': security_groups,
-                'mpi': mpi}}
+                'security-groups': security_groups}}
 
         # public-keys should be in meta-data only if user specified one
         if instance_ref['key_name']:
