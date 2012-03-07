@@ -357,12 +357,17 @@ class Domain(object):
                function='0x1'/>
     </controller>
     %(nics)s
-    <serial type='pty'>
-      <source pty='/dev/pts/27'/>
+    <serial type='file'>
+      <source path='dummy.log'/>
       <target port='0'/>
     </serial>
-    <console type='pty'>
-      <target type='serial' port='0'/>
+    <serial type='pty'>
+      <source pty='/dev/pts/27'/>
+      <target port='1'/>
+    </serial>
+    <console type='file'>
+      <source path='dummy.log'/>
+      <target port='0'/>
     </console>
     <input type='tablet' bus='usb'/>
     <input type='mouse' bus='ps2'/>

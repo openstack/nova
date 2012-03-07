@@ -875,20 +875,13 @@ class LibvirtConnection(driver.ComputeDriver):
         timer = utils.LoopingCall(_wait_for_boot)
         return timer.start(interval=0.5, now=True)
 
-    def _flush_libvirt_console(self, virsh_output):
-        LOG.info(_('virsh said: %r'), virsh_output)
-        virsh_output = virsh_output[0].strip()
-
-        if virsh_output.startswith('/dev/'):
-            LOG.info(_("cool, it's a device"))
-            out, err = utils.execute('dd',
-                                     'if=%s' % virsh_output,
-                                     'iflag=nonblock',
-                                     run_as_root=True,
-                                     check_exit_code=False)
-            return out
-        else:
-            return ''
+    def _flush_libvirt_console(self, pty):
+        out, err = utils.execute('dd',
+                                 'if=%s' % pty,
+                                 'iflag=nonblock',
+                                 run_as_root=True,
+                                 check_exit_code=False)
+        return out
 
     def _append_to_file(self, data, fpath):
         LOG.info(_('data: %(data)r, fpath: %(fpath)r') % locals())
@@ -904,29 +897,28 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception()
     def get_console_output(self, instance):
+        virt_dom = self._lookup_by_name(instance['name'])
+        xml = virt_dom.XMLDesc(0)
+        tree = ElementTree.fromstring(xml)
+
+        # If the guest has a console logging to a file prefer to use that
+        node = tree.find("./devices/console[@type='file']/source")
+        if node is not None:
+            fpath = node.get("path")
+            return libvirt_utils.load_file(fpath)
+
+        # else if there is a PTY, then try to read latest data from that
+        node = tree.find("./devices/console[@type='pty']/source")
+        if node is None:
+            raise exception.Error(_("Guest does not have a console available"))
+
+        pty = node.get("path")
+
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
-
         libvirt_utils.chown(console_log, os.getuid())
-
-        if FLAGS.libvirt_type == 'xen':
-            # Xen is special
-            virsh_output = utils.execute('virsh',
-                                         'ttyconsole',
-                                         instance['name'])
-            data = self._flush_libvirt_console(virsh_output)
-            fpath = self._append_to_file(data, console_log)
-        elif FLAGS.libvirt_type == 'lxc':
-            # LXC is also special
-            virsh_output = utils.execute('virsh',
-                                         '-c',
-                                         'lxc:///',
-                                         'ttyconsole',
-                                         instance['name'])
-            data = self._flush_libvirt_console(virsh_output)
-            fpath = self._append_to_file(data, console_log)
-        else:
-            fpath = console_log
+        data = self._flush_libvirt_console(pty)
+        fpath = self._append_to_file(data, console_log)
 
         return libvirt_utils.load_file(fpath)
 

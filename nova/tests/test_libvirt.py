@@ -860,6 +860,21 @@ class LibvirtConnTestCase(test.TestCase):
                     check = (lambda t: t.find('./os/initrd'), None)
                 check_list.append(check)
 
+            if hypervisor_type in ['qemu', 'kvm']:
+                check = (lambda t: t.findall('./devices/serial')[0].get(
+                        'type'), 'file')
+                check_list.append(check)
+                check = (lambda t: t.findall('./devices/serial')[1].get(
+                        'type'), 'pty')
+                check_list.append(check)
+                check = (lambda t: t.findall('./devices/serial/source')[0].get(
+                        'path').split('/')[1], 'console.log')
+                check_list.append(check)
+            else:
+                check = (lambda t: t.find('./devices/console').get(
+                        'type'), 'pty')
+                check_list.append(check)
+
         parameter = './devices/interface/filterref/parameter'
         common_checks = [
             (lambda t: t.find('.').tag, 'domain'),
@@ -869,8 +884,6 @@ class LibvirtConnTestCase(test.TestCase):
             (lambda t: t.findall(parameter)[1].get('name'), 'DHCPSERVER'),
             (lambda t: _ipv4_like(t.findall(parameter)[1].get('value'),
                                   '192.168.*.1'), True),
-            (lambda t: t.find('./devices/serial/source').get(
-                'path').split('/')[1], 'console.log'),
             (lambda t: t.find('./memory').text, '2097152')]
         if rescue:
             common_checks += [
