@@ -436,20 +436,6 @@ class LibvirtConnTestCase(test.TestCase):
         result = conn.get_volume_connector(volume)
         self.assertDictMatch(expected, result)
 
-    def test_preparing_xml_info(self):
-        conn = connection.LibvirtConnection(True)
-        instance_ref = db.instance_create(self.context, self.test_instance)
-
-        result = conn._prepare_xml_info(instance_ref,
-                                        _fake_network_info(self.stubs, 1),
-                                        None, False)
-        self.assertTrue(len(result['nics']) == 1)
-
-        result = conn._prepare_xml_info(instance_ref,
-                                        _fake_network_info(self.stubs, 2),
-                                        None, False)
-        self.assertTrue(len(result['nics']) == 2)
-
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_uri(instance_data,
