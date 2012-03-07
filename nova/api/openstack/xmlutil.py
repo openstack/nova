@@ -24,6 +24,7 @@ from nova import utils
 
 XMLNS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XMLNS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
+XMLNS_COMMON_V10 = 'http://docs.openstack.org/common/api/v1.0'
 XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 
 

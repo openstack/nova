@@ -1,4 +1,4 @@
-<element name="extension" ns="http://docs.openstack.org/compute/api/v1.1"
+<element name="extension" ns="http://docs.openstack.org/common/api/v1.0"
     xmlns="http://relaxng.org/ns/structure/1.0">
   <attribute name="alias">     <text/> </attribute>
   <attribute name="name">      <text/> </attribute>

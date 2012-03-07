@@ -44,7 +44,7 @@ TEST_LIMITS = [
 ]
 NS = {
     'atom': 'http://www.w3.org/2005/Atom',
-    'ns': 'http://docs.openstack.org/compute/api/v1.1'
+    'ns': 'http://docs.openstack.org/common/api/v1.0'
 }
 
 

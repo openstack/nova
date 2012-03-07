@@ -112,7 +112,7 @@ def make_ext(elem):
     xmlutil.make_links(elem, 'links')
 
 
-ext_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+ext_nsmap = {None: xmlutil.XMLNS_COMMON_V10, 'atom': xmlutil.XMLNS_ATOM}
 
 
 class ExtensionTemplate(xmlutil.TemplateBuilder):
