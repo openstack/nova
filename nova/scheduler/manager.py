@@ -75,62 +75,104 @@ class SchedulerManager(manager.Manager):
 
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.
-
         Falls back to schedule(context, topic) if method doesn't exist.
         """
-        driver_method = 'schedule_%s' % method
+        driver_method_name = 'schedule_%s' % method
         try:
-            real_meth = getattr(self.driver, driver_method)
+            driver_method = getattr(self.driver, driver_method_name)
             args = (context,) + args
         except AttributeError, e:
-            LOG.warning(_("Driver Method %(driver_method)s missing: %(e)s."
-                          "Reverting to schedule()") % locals())
-            real_meth = self.driver.schedule
+            LOG.warning(_("Driver Method %(driver_method_name)s missing: "
+                       "%(e)s. Reverting to schedule()") % locals())
+            driver_method = self.driver.schedule
             args = (context, topic, method) + args
 
         # Scheduler methods are responsible for casting.
         try:
-            return real_meth(*args, **kwargs)
-        except exception.NoValidHost as ex:
-            self._set_instance_error(method, context, ex, *args, **kwargs)
+            return driver_method(*args, **kwargs)
         except Exception as ex:
             with utils.save_and_reraise_exception():
-                self._set_instance_error(method, context, ex, *args, **kwargs)
+                self._set_vm_state_and_notify(method,
+                                             {'vm_state': vm_states.ERROR},
+                                             context, ex, *args, **kwargs)
 
-    def _set_instance_error(self, method, context, ex, *args, **kwargs):
-        """Sets VM to Error state"""
+    def run_instance(self, context, topic, *args, **kwargs):
+        """Tries to call schedule_run_instance on the driver.
+        Sets instance vm_state to ERROR on exceptions
+        """
+        args = (context,) + args
+        try:
+            return self.driver.schedule_run_instance(*args, **kwargs)
+        except exception.NoValidHost as ex:
+            # don't reraise
+            self._set_vm_state_and_notify('run_instance',
+                                         {'vm_state': vm_states.ERROR},
+                                          context, ex, *args, **kwargs)
+        except Exception as ex:
+            with utils.save_and_reraise_exception():
+                self._set_vm_state_and_notify('run_instance',
+                                             {'vm_state': vm_states.ERROR},
+                                             context, ex, *args, **kwargs)
+
+    def prep_resize(self, context, topic, *args, **kwargs):
+        """Tries to call schedule_prep_resize on the driver.
+        Sets instance vm_state to ACTIVE on NoHostFound
+        Sets vm_state to ERROR on other exceptions
+        """
+        args = (context,) + args
+        try:
+            return self.driver.schedule_prep_resize(*args, **kwargs)
+        except exception.NoValidHost as ex:
+            self._set_vm_state_and_notify('prep_resize',
+                                         {'vm_state': vm_states.ACTIVE,
+                                          'task_state': None},
+                                         context, ex, *args, **kwargs)
+        except Exception as ex:
+            with utils.save_and_reraise_exception():
+                self._set_vm_state_and_notify('prep_resize',
+                                             {'vm_state': vm_states.ERROR},
+                                             context, ex, *args, **kwargs)
+
+    def _set_vm_state_and_notify(self, method, updates, context, ex,
+                                *args, **kwargs):
+        """changes VM state and notifies"""
+        # FIXME(comstud): Re-factor this somehow. Not sure this belongs in the
+        # scheduler manager like this. We should make this easier.
+        # run_instance only sends a request_spec, and an instance may or may
+        # not have been created in the API (or scheduler) already. If it was
+        # created, there's a 'uuid' set in the instance_properties of the
+        # request_spec.
+        # (littleidea): I refactored this a bit, and I agree
+        # it should be easier :)
+        # The refactoring could go further but trying to minimize changes
+        # for essex timeframe
+
         LOG.warning(_("Failed to schedule_%(method)s: %(ex)s") % locals())
-        # FIXME(comstud): Re-factor this somehow.  Not sure this belongs
-        # in the scheduler manager like this.  Needs to support more than
-        # run_instance
-        if method != "run_instance":
-            return
-        # FIXME(comstud): We should make this easier.  run_instance
-        # only sends a request_spec, and an instance may or may not
-        # have been created in the API (or scheduler) already.  If it
-        # was created, there's a 'uuid' set in the instance_properties
-        # of the request_spec.
+
+        vm_state = updates['vm_state']
         request_spec = kwargs.get('request_spec', {})
         properties = request_spec.get('instance_properties', {})
         instance_uuid = properties.get('uuid', {})
+
         if instance_uuid:
-            LOG.warning(_("Setting instance %(instance_uuid)s to "
-                    "ERROR state.") % locals())
-            db.instance_update(context, instance_uuid,
-                    {'vm_state': vm_states.ERROR})
+            state = vm_state.upper()
+            msg = _("Setting instance %(instance_uuid)s to %(state)s state.")
+            LOG.warning(msg % locals())
+            db.instance_update(context, instance_uuid, updates)
 
         payload = dict(request_spec=request_spec,
                        instance_properties=properties,
                        instance_id=instance_uuid,
-                       state=vm_states.ERROR,
+                       state=vm_state,
                        method=method,
                        reason=ex)
+
         notifier.notify(notifier.publisher_id("scheduler"),
-                        'scheduler.run_instance', notifier.ERROR, payload)
+                        'scheduler.' + method, notifier.ERROR, payload)
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
-    #                    Based on bexar design summit discussion,
-    #                    just put this here for bexar release.
+    # Based on bexar design summit discussion,
+    # just put this here for bexar release.
     def show_host_resources(self, context, host):
         """Shows the physical/usage resource given by hosts.
 

@@ -177,8 +177,18 @@ class Scheduler(object):
         return instance
 
     def schedule(self, context, topic, method, *_args, **_kwargs):
-        """Must override at least this method for scheduler to work."""
+        """Must override schedule method for scheduler to work."""
         raise NotImplementedError(_("Must implement a fallback schedule"))
+
+    def schedule_prep_resize(self, context, request_spec, *_args, **_kwargs):
+        """Must override schedule_prep_resize method for scheduler to work."""
+        msg = _("Driver must implement schedule_prep_resize")
+        raise NotImplementedError(msg)
+
+    def schedule_run_instance(self, context, request_spec, *_args, **_kwargs):
+        """Must override schedule_run_instance method for scheduler to work."""
+        msg = _("Driver must implement schedule_run_instance")
+        raise NotImplementedError(msg)
 
     def schedule_live_migration(self, context, instance_id, dest,
                                 block_migration=False,
