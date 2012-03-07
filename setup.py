@@ -33,7 +33,7 @@ try:
             for builder in ['html', 'man']:
                 self.builder = builder
                 self.finalize_options()
-                BuildDoc.run(self)
+                setup_command.BuildDoc.run(self)
     nova_cmdclass['build_sphinx'] = local_BuildDoc
 
 except Exception:
