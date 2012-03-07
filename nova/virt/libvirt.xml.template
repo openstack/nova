@@ -6,6 +6,7 @@
 #if $type == 'lxc'
         <type>exe</type>
         <init>/sbin/init</init>
+        <cmdline>console=ttyS0</cmdline>
 #else if $type == 'uml'
     #set $root_disk_bus = 'uml'
     #set $ephemeral_disk_bus = 'uml'
