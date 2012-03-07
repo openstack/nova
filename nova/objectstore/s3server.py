@@ -24,7 +24,7 @@ run something locally that was once running on S3.
 
 We don't support all the features of S3, but it does work with the
 standard S3 client for the most basic semantics. To use the standard
-S3 client with this module:
+S3 client with this module::
 
     c = S3.AWSAuthConnection("", "", server="localhost", port=8888,
                              is_secure=False)

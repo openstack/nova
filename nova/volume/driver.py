@@ -238,13 +238,15 @@ class ISCSIDriver(VolumeDriver):
 
     We make use of model provider properties as follows:
 
-    :provider_location:    if present, contains the iSCSI target information
-                           in the same format as an ietadm discovery
-                           i.e. '<ip>:<port>,<portal> <target IQN>'
+    ``provider_location``
+      if present, contains the iSCSI target information in the same
+      format as an ietadm discovery
+      i.e. '<ip>:<port>,<portal> <target IQN>'
 
-    :provider_auth:    if present, contains a space-separated triple:
-                       '<auth method> <auth username> <auth password>'.
-                       `CHAP` is the only auth_method in use at the moment.
+    ``provider_auth``
+      if present, contains a space-separated triple:
+      '<auth method> <auth username> <auth password>'.
+      `CHAP` is the only auth_method in use at the moment.
     """
 
     def __init__(self, *args, **kwargs):
@@ -424,7 +426,8 @@ class ISCSIDriver(VolumeDriver):
 
         The iscsi driver returns a driver_volume_type of 'iscsi'.
         The format of the driver data is defined in _get_iscsi_properties.
-        Example return value:
+        Example return value::
+
             {
                 'driver_volume_type': 'iscsi'
                 'data': {

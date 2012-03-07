@@ -116,23 +116,25 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
     Returns False on a failure. Basic packet structure is below.
 
     Client packet (14 bytes)::
-     0 1      8 9  13
-    +-+--------+-----+
-    |x| cli_id |?????|
-    +-+--------+-----+
-    x = packet identifier 0x38
-    cli_id = 64 bit identifier
-    ? = unknown, probably flags/padding
+
+         0 1      8 9  13
+        +-+--------+-----+
+        |x| cli_id |?????|
+        +-+--------+-----+
+        x = packet identifier 0x38
+        cli_id = 64 bit identifier
+        ? = unknown, probably flags/padding
 
     Server packet (26 bytes)::
-     0 1      8 9  13 14    21 2225
-    +-+--------+-----+--------+----+
-    |x| srv_id |?????| cli_id |????|
-    +-+--------+-----+--------+----+
-    x = packet identifier 0x40
-    cli_id = 64 bit identifier
-    ? = unknown, probably flags/padding
-    bit 9 was 1 and the rest were 0 in testing
+
+         0 1      8 9  13 14    21 2225
+        +-+--------+-----+--------+----+
+        |x| srv_id |?????| cli_id |????|
+        +-+--------+-----+--------+----+
+        x = packet identifier 0x40
+        cli_id = 64 bit identifier
+        ? = unknown, probably flags/padding
+        bit 9 was 1 and the rest were 0 in testing
 
     """
     if session_id is None:
@@ -162,27 +164,29 @@ def fetchfile(url, target):
 
 
 def execute(*cmd, **kwargs):
-    """
-    Helper method to execute command with optional retry.
+    """Helper method to execute command with optional retry.
+
     If you add a run_as_root=True command, don't forget to add the
     corresponding filter to nova.rootwrap !
 
-    :cmd                Passed to subprocess.Popen.
-    :process_input      Send to opened process.
-    :check_exit_code    Single bool, int, or list of allowed exit codes.
-                        Defaults to [0].  Raise exception.ProcessExecutionError
-                        unless program exits with one of these code.
-    :delay_on_retry     True | False. Defaults to True. If set to True, wait a
-                        short amount of time before retrying.
-    :attempts           How many times to retry cmd.
-    :run_as_root        True | False. Defaults to False. If set to True,
-                        the command is prefixed by the command specified
-                        in the root_helper FLAG.
+    :param cmd:                Passed to subprocess.Popen.
+    :param process_input:      Send to opened process.
+    :param check_exit_code:    Single bool, int, or list of allowed exit
+                               codes.  Defaults to [0].  Raise
+                               exception.ProcessExecutionError unless
+                               program exits with one of these code.
+    :param delay_on_retry:     True | False. Defaults to True. If set to
+                               True, wait a short amount of time
+                               before retrying.
+    :param attempts:           How many times to retry cmd.
+    :param run_as_root:        True | False. Defaults to False. If set to True,
+                               the command is prefixed by the command specified
+                               in the root_helper FLAG.
 
-    :raises exception.Error on receiving unknown arguments
-    :raises exception.ProcessExecutionError
+    :raises exception.Error: on receiving unknown arguments
+    :raises exception.ProcessExecutionError:
 
-    :returns a tuple, (stdout, stderr) from the spawned process, or None if
+    :returns: a tuple, (stdout, stderr) from the spawned process, or None if
              the command fails.
     """
 
@@ -795,21 +799,23 @@ _semaphores = {}
 def synchronized(name, external=False):
     """Synchronization decorator.
 
-    Decorating a method like so:
-    @synchronized('mylock')
-    def foo(self, *args):
-       ...
+    Decorating a method like so::
+
+        @synchronized('mylock')
+        def foo(self, *args):
+           ...
 
     ensures that only one thread will execute the bar method at a time.
 
-    Different methods can share the same lock:
-    @synchronized('mylock')
-    def foo(self, *args):
-       ...
+    Different methods can share the same lock::
 
-    @synchronized('mylock')
-    def bar(self, *args):
-       ...
+        @synchronized('mylock')
+        def foo(self, *args):
+           ...
+
+        @synchronized('mylock')
+        def bar(self, *args):
+           ...
 
     This way only one of either foo or bar can be executing at a time.
 
@@ -1601,7 +1607,8 @@ class UndoManager(object):
     def rollback_and_reraise(self, msg=None):
         """Rollback a series of actions then re-raise the exception.
 
-        NOTE(sirp): This should only be called within an exception handler.
+        .. note:: (sirp) This should only be called within an
+                  exception handler.
         """
         with save_and_reraise_exception():
             if msg:

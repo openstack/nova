@@ -382,8 +382,8 @@ class WsgiLimiter(object):
     """
     Rate-limit checking from a WSGI application. Uses an in-memory `Limiter`.
 
-    To use:
-        POST /<username> with JSON data such as:
+    To use, POST ``/<username>`` with JSON data such as::
+
         {
             "verb" : GET,
             "path" : "/servers"

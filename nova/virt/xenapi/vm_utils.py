@@ -95,15 +95,15 @@ KERNEL_DIR = '/boot/guest'
 
 
 class ImageType:
-    """
-    Enumeration class for distinguishing different image types
-        0 - kernel image (goes on dom0's filesystem)
-        1 - ramdisk image (goes on dom0's filesystem)
-        2 - disk image (local SR, partitioned by objectstore plugin)
-        3 - raw disk image (local SR, NOT partitioned by plugin)
-        4 - vhd disk image (local SR, NOT inspected by XS, PV assumed for
-            linux, HVM assumed for Windows)
-        5 - ISO disk image (local SR, NOT partitioned by plugin)
+    """Enumeration class for distinguishing different image types
+
+    | 0 - kernel image (goes on dom0's filesystem)
+    | 1 - ramdisk image (goes on dom0's filesystem)
+    | 2 - disk image (local SR, partitioned by objectstore plugin)
+    | 3 - raw disk image (local SR, NOT partitioned by plugin)
+    | 4 - vhd disk image (local SR, NOT inspected by XS, PV assumed for
+    |     linux, HVM assumed for Windows)
+    | 5 - ISO disk image (local SR, NOT partitioned by plugin)
     """
 
     KERNEL = 0

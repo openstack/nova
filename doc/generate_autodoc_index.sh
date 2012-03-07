@@ -20,6 +20,7 @@ do
   ( cat <<EOF
 ${heading}
 ${underline}
+
 .. automodule:: ${x}
   :members:
   :undoc-members:

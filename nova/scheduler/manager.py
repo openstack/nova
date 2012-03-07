@@ -179,11 +179,12 @@ class SchedulerManager(manager.Manager):
         :param context: security context
         :param host: hostname
         :returns:
-            example format is below.
-            {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
-            D: {'vcpus': 3, 'memory_mb': 2048, 'local_gb': 2048,
-                'vcpus_used': 12, 'memory_mb_used': 10240,
-                'local_gb_used': 64}
+            example format is below::
+
+                {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
+                D: {'vcpus': 3, 'memory_mb': 2048, 'local_gb': 2048,
+                    'vcpus_used': 12, 'memory_mb_used': 10240,
+                    'local_gb_used': 64}
 
         """
         # Getting compute node info and related instances info

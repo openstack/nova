@@ -173,7 +173,7 @@ def handle_flagfiles(args, tempdir=None):
 def handle_flagfiles_managed(args):
     '''A context manager for handle_flagfiles() which removes temp files.
 
-    For use with the 'with' statement, i.e.
+    For use with the 'with' statement, i.e.::
 
         with handle_flagfiles_managed(args) as args:
              # Do stuff

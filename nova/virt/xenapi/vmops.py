@@ -99,7 +99,7 @@ def make_step_decorator(context, instance):
     """Factory to create a decorator that records instance progress as a series
     of discrete steps.
 
-    Each time the decorator is invoked we bump the total-step-count, so after:
+    Each time the decorator is invoked we bump the total-step-count, so after::
 
         @step
         def step1():
@@ -112,11 +112,12 @@ def make_step_decorator(context, instance):
     we have a total-step-count of 2.
 
     Each time the step-function (not the step-decorator!) is invoked, we bump
-    the current-step-count by 1, so after:
+    the current-step-count by 1, so after::
 
         step1()
 
-    the current-step-count would be 1 giving a progress of 1 / 2 * 100 or 50%.
+    the current-step-count would be 1 giving a progress of ``1 / 2 *
+    100`` or 50%.
     """
     instance_uuid = instance['uuid']
 
@@ -650,18 +651,18 @@ class VMOps(object):
         Steps involved in a XenServer snapshot:
 
         1. XAPI-Snapshot: Snapshotting the instance using XenAPI. This
-            creates: Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
-            Snapshot VHD
+           creates: Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
+           Snapshot VHD
 
         2. Wait-for-coalesce: The Snapshot VDI and Instance VDI both point to
-            a 'base-copy' VDI.  The base_copy is immutable and may be chained
-            with other base_copies.  If chained, the base_copies
-            coalesce together, so, we must wait for this coalescing to occur to
-            get a stable representation of the data on disk.
+           a 'base-copy' VDI.  The base_copy is immutable and may be chained
+           with other base_copies.  If chained, the base_copies
+           coalesce together, so, we must wait for this coalescing to occur to
+           get a stable representation of the data on disk.
 
         3. Push-to-glance: Once coalesced, we call a plugin on the XenServer
-            that will bundle the VHDs together and then push the bundle into
-            Glance.
+           that will bundle the VHDs together and then push the bundle into
+           Glance.
 
         """
         template_vm_ref = None

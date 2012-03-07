@@ -216,7 +216,9 @@ class HostController(object):
         :param context: security context
         :param host: hostname
         :returns: expected to use HostShowTemplate.
-            ex. {'host': {'resource':D},..}
+            ex.::
+
+                {'host': {'resource':D},..}
                 D: {'host': 'hostname','project': 'admin',
                     'cpu': 1, 'memory_mb': 2048, 'disk_gb': 30}
         """

@@ -17,7 +17,9 @@
 r"""
 Configuration options which may be set on the command line or in config files.
 
-The schema for each option is defined using the Opt sub-classes e.g.
+The schema for each option is defined using the Opt sub-classes, e.g.:
+
+::
 
     common_opts = [
         cfg.StrOpt('bind_host',
@@ -28,7 +30,7 @@ The schema for each option is defined using the Opt sub-classes e.g.
                    help='Port number to listen on')
     ]
 
-Options can be strings, integers, floats, booleans, lists or 'multi strings':
+Options can be strings, integers, floats, booleans, lists or 'multi strings'::
 
     enabled_apis_opt = cfg.ListOpt('enabled_apis',
                                    default=['ec2', 'osapi_compute'],
@@ -41,7 +43,7 @@ Options can be strings, integers, floats, booleans, lists or 'multi strings':
                                                   default=DEFAULT_EXTENSIONS)
 
 Option schemas are registered with with the config manager at runtime, but
-before the option is referenced:
+before the option is referenced::
 
     class ExtensionManager(object):
 
@@ -57,7 +59,7 @@ before the option is referenced:
                 ....
 
 A common usage pattern is for each option schema to be defined in the module or
-class which uses the option:
+class which uses the option::
 
     opts = ...
 
@@ -72,7 +74,7 @@ class which uses the option:
 
 An option may optionally be made available via the command line. Such options
 must registered with the config manager before the command line is parsed (for
-the purposes of --help and CLI arg validation):
+the purposes of --help and CLI arg validation)::
 
     cli_opts = [
         cfg.BoolOpt('verbose',
@@ -88,7 +90,7 @@ the purposes of --help and CLI arg validation):
     def add_common_opts(conf):
         conf.register_cli_opts(cli_opts)
 
-The config manager has a single CLI option defined by default, --config-file:
+The config manager has a single CLI option defined by default, --config-file::
 
     class ConfigOpts(object):
 
@@ -101,7 +103,7 @@ The config manager has a single CLI option defined by default, --config-file:
 
 Option values are parsed from any supplied config files using SafeConfigParser.
 If none are specified, a default set is used e.g. glance-api.conf and
-glance-common.conf:
+glance-common.conf::
 
     glance-api.conf:
       [DEFAULT]
@@ -116,7 +118,7 @@ are parsed in order, with values in later files overriding those in earlier
 files.
 
 The parsing of CLI args and config files is initiated by invoking the config
-manager e.g.
+manager e.g.::
 
     conf = ConfigOpts()
     conf.register_opt(BoolOpt('verbose', ...))
@@ -124,7 +126,7 @@ manager e.g.
     if conf.verbose:
         ...
 
-Options can be registered as belonging to a group:
+Options can be registered as belonging to a group::
 
     rabbit_group = cfg.OptionGroup(name='rabbit',
                                    title='RabbitMQ options')
@@ -143,7 +145,7 @@ Options can be registered as belonging to a group:
         conf.register_opt(rabbit_port_opt, group='rabbit')
 
 If no group is specified, options belong to the 'DEFAULT' section of config
-files:
+files::
 
     glance-api.conf:
       [DEFAULT]
@@ -158,13 +160,14 @@ files:
       password = guest
       virtual_host = /
 
-Command-line options in a group are automatically prefixed with the group name:
+Command-line options in a group are automatically prefixed with the
+group name::
 
     --rabbit-host localhost --rabbit-port 9999
 
 Option values in the default group are referenced as attributes/properties on
 the config manager; groups are also attributes on the config manager, with
-attributes for each of the options associated with the group:
+attributes for each of the options associated with the group::
 
     server.start(app, conf.bind_port, conf.bind_host, conf)
 
@@ -173,7 +176,7 @@ attributes for each of the options associated with the group:
         port=conf.rabbit.port,
         ...)
 
-Option values may reference other values using PEP 292 string substitution:
+Option values may reference other values using PEP 292 string substitution::
 
     opts = [
         cfg.StrOpt('state_path',
@@ -191,15 +194,15 @@ Note that interpolation can be avoided by using '$$'.
 
 For command line utilities that dispatch to other command line utilities, the
 disable_interspersed_args() method is available. If this this method is called,
-then parsing e.g.
+then parsing e.g.::
 
   script --verbose cmd --debug /tmp/mything
 
-will no longer return:
+will no longer return::
 
   ['cmd', '/tmp/mything']
 
-as the leftover arguments, but will instead return:
+as the leftover arguments, but will instead return::
 
   ['cmd', '--debug', '/tmp/mything']
 
@@ -307,9 +310,12 @@ class ConfigFileValueError(Error):
 def find_config_files(project=None, prog=None):
     """Return a list of default configuration files.
 
+    :param project: an optional project name
+    :param prog: the program name, defaulting to the basename of sys.argv[0]
+
     We default to two config files: [${project}.conf, ${prog}.conf]
 
-    And we look for those config files in the following directories:
+    And we look for those config files in the following directories::
 
       ~/.${project}/
       ~/
@@ -324,9 +330,6 @@ def find_config_files(project=None, prog=None):
     '~/.foo/bar.conf']
 
     If no project name is supplied, we only look for ${prog.conf}.
-
-    :param project: an optional project name
-    :param prog: the program name, defaulting to the basename of sys.argv[0]
     """
     if prog is None:
         prog = os.path.basename(sys.argv[0])

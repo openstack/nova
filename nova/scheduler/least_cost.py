@@ -79,17 +79,20 @@ def compute_fill_first_cost_fn(host_state, weighing_properties):
 
 def weighted_sum(weighted_fns, host_states, weighing_properties):
     """Use the weighted-sum method to compute a score for an array of objects.
+
     Normalize the results of the objective-functions so that the weights are
     meaningful regardless of objective-function's range.
 
-    host_list - [(host, HostInfo()), ...]
-    weighted_fns - list of weights and functions like:
-        [(weight, objective-functions), ...]
-    weighing_properties is an arbitrary dict of values that can influence
-        weights.
+    :param host_list:    ``[(host, HostInfo()), ...]``
+    :param weighted_fns: list of weights and functions like::
 
-    Returns a single WeightedHost object which represents the best
-    candidate.
+        [(weight, objective-functions), ...]
+
+    :param weighing_properties: an arbitrary dict of values that can
+        influence weights.
+
+    :returns: a single WeightedHost object which represents the best
+              candidate.
     """
 
     # Make a grid of functions results.

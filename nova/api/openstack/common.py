@@ -144,17 +144,16 @@ def _get_marker_param(request):
 
 
 def limited(items, request, max_limit=FLAGS.osapi_max_limit):
-    """
-    Return a slice of items according to requested offset and limit.
+    """Return a slice of items according to requested offset and limit.
 
-    @param items: A sliceable entity
-    @param request: `wsgi.Request` possibly containing 'offset' and 'limit'
+    :param items: A sliceable entity
+    :param request: ``wsgi.Request`` possibly containing 'offset' and 'limit'
                     GET variables. 'offset' is where to start in the list,
                     and 'limit' is the maximum number of items to return. If
                     'limit' is not specified, 0, or > max_limit, we default
                     to max_limit. Negative values for either offset or limit
                     will cause exc.HTTPBadRequest() exceptions to be raised.
-    @kwarg max_limit: The maximum number of items to return from 'items'
+    :kwarg max_limit: The maximum number of items to return from 'items'
     """
     try:
         offset = int(request.GET.get('offset', 0))
@@ -309,15 +308,15 @@ def get_nw_info_for_instance(context, instance):
 
 
 def get_networks_for_instance(context, instance):
-    """Returns a prepared nw_info list for passing into the view
-    builders
+    """Returns a prepared nw_info list for passing into the view builders
 
-    We end up with a data structure like:
-    {'public': {'ips': [{'addr': '10.0.0.1', 'version': 4},
-                        {'addr': '2001::1', 'version': 6}],
-                'floating_ips': [{'addr': '172.16.0.1', 'version': 4},
-                                 {'addr': '172.16.2.1', 'version': 4}]},
-     ...}
+    We end up with a data structure like::
+
+        {'public': {'ips': [{'addr': '10.0.0.1', 'version': 4},
+                            {'addr': '2001::1', 'version': 6}],
+                    'floating_ips': [{'addr': '172.16.0.1', 'version': 4},
+                                     {'addr': '172.16.2.1', 'version': 4}]},
+         ...}
     """
     nw_info = get_nw_info_for_instance(context, instance)
     return get_networks_for_instance_from_nw_info(nw_info)

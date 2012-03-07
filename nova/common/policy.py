@@ -49,49 +49,64 @@ def enforce(match_list, target_dict, credentials_dict):
     """Enforces authorization of some rules against credentials.
 
     :param match_list: nested tuples of data to match against
-    The basic brain supports three types of match lists:
-        1) rules
-            looks like: ('rule:compute:get_instance',)
-            Retrieves the named rule from the rules dict and recursively
-            checks against the contents of the rule.
-        2) roles
-            looks like: ('role:compute:admin',)
-            Matches if the specified role is in credentials_dict['roles'].
-        3) generic
-            ('tenant_id:%(tenant_id)s',)
-            Substitutes values from the target dict into the match using
-            the % operator and matches them against the creds dict.
 
-    Combining rules:
-        The brain returns True if any of the outer tuple of rules match
-        and also True if all of the inner tuples match. You can use this to
-        perform simple boolean logic.  For example, the following rule would
-        return True if the creds contain the role 'admin' OR the if the
-        tenant_id matches the target dict AND the the creds contains the
-        role 'compute_sysadmin':
+        The basic brain supports three types of match lists:
 
-        {
-            "rule:combined": (
-                'role:admin',
-                ('tenant_id:%(tenant_id)s', 'role:compute_sysadmin')
-            )
-        }
+            1) rules
 
+                looks like: ``('rule:compute:get_instance',)``
 
-    Note that rule and role are reserved words in the credentials match, so
-    you can't match against properties with those names. Custom brains may
-    also add new reserved words. For example, the HttpBrain adds http as a
-    reserved word.
+                Retrieves the named rule from the rules dict and recursively
+                checks against the contents of the rule.
+
+            2) roles
+
+                looks like: ``('role:compute:admin',)``
+
+                Matches if the specified role is in credentials_dict['roles'].
+
+            3) generic
+
+                looks like: ``('tenant_id:%(tenant_id)s',)``
+
+                Substitutes values from the target dict into the match using
+                the % operator and matches them against the creds dict.
+
+        Combining rules:
+
+            The brain returns True if any of the outer tuple of rules
+            match and also True if all of the inner tuples match. You
+            can use this to perform simple boolean logic.  For
+            example, the following rule would return True if the creds
+            contain the role 'admin' OR the if the tenant_id matches
+            the target dict AND the the creds contains the role
+            'compute_sysadmin':
+
+            ::
+
+                {
+                    "rule:combined": (
+                        'role:admin',
+                        ('tenant_id:%(tenant_id)s', 'role:compute_sysadmin')
+                    )
+                }
+
+        Note that rule and role are reserved words in the credentials match, so
+        you can't match against properties with those names. Custom brains may
+        also add new reserved words. For example, the HttpBrain adds http as a
+        reserved word.
 
     :param target_dict: dict of object properties
-    Target dicts contain as much information as we can about the object being
-    operated on.
+
+      Target dicts contain as much information as we can about the object being
+      operated on.
 
     :param credentials_dict: dict of actor properties
-    Credentials dicts contain as much information as we can about the user
-    performing the action.
 
-    :raises NotAuthorized if the check fails
+      Credentials dicts contain as much information as we can about the user
+      performing the action.
+
+    :raises NotAuthorized: if the check fails
 
     """
     global _BRAIN

@@ -211,21 +211,25 @@ class VIF(Model):
                             for floating_ip in fixed_ip['floating_ips']]
 
     def labeled_ips(self):
-        """ returns the list of all IPs in this flat structure:
-        {'network_label': 'my_network',
-         'network_id': 'n8v29837fn234782f08fjxk3ofhb84',
-         'ips': [{'address': '123.123.123.123',
-                  'version': 4,
-                  'type: 'fixed',
-                  'meta': {...}},
-                 {'address': '124.124.124.124',
-                  'version': 4,
-                  'type': 'floating',
-                  'meta': {...}},
-                 {'address': 'fe80::4',
-                  'version': 6,
-                  'type': 'fixed',
-                  'meta': {...}}]"""
+        """Returns the list of all IPs
+
+        The return value looks like this flat structure::
+
+            {'network_label': 'my_network',
+             'network_id': 'n8v29837fn234782f08fjxk3ofhb84',
+             'ips': [{'address': '123.123.123.123',
+                      'version': 4,
+                      'type: 'fixed',
+                      'meta': {...}},
+                     {'address': '124.124.124.124',
+                      'version': 4,
+                      'type': 'floating',
+                      'meta': {...}},
+                     {'address': 'fe80::4',
+                      'version': 6,
+                      'type': 'fixed',
+                      'meta': {...}}]
+        """
         if self['network']:
             # remove unecessary fields on fixed_ips
             ips = [IP(**ensure_string_keys(ip)) for ip in self.fixed_ips()]

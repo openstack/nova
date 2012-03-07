@@ -87,12 +87,13 @@ class VMWareVMOps(object):
         Creates a VM instance.
 
         Steps followed are:
+
         1. Create a VM with no disk and the specifics in the instance object
-            like RAM size.
+           like RAM size.
         2. Create a dummy vmdk of the size of the disk file that is to be
-            uploaded. This is required just to create the metadata file.
+           uploaded. This is required just to create the metadata file.
         3. Delete the -flat.vmdk file created in the above step and retain
-            the metadata .vmdk file.
+           the metadata .vmdk file.
         4. Upload the disk file.
         5. Attach the disk to the VM by reconfiguring the same.
         6. Power on the VM.
@@ -335,16 +336,17 @@ class VMWareVMOps(object):
         _power_on_vm()
 
     def snapshot(self, context, instance, snapshot_name):
-        """
-        Create snapshot from a running VM instance.
+        """Create snapshot from a running VM instance.
+
         Steps followed are:
+
         1. Get the name of the vmdk file which the VM points to right now.
-            Can be a chain of snapshots, so we need to know the last in the
-            chain.
+           Can be a chain of snapshots, so we need to know the last in the
+           chain.
         2. Create the snapshot. A new vmdk is created which the VM points to
-            now. The earlier vmdk becomes read-only.
+           now. The earlier vmdk becomes read-only.
         3. Call CopyVirtualDisk which coalesces the disk chain to form a single
-            vmdk, rather a .vmdk metadata file and a -flat.vmdk disk data file.
+           vmdk, rather a .vmdk metadata file and a -flat.vmdk disk data file.
         4. Now upload the -flat.vmdk file to the image store.
         5. Delete the coalesced .vmdk and -flat.vmdk created.
         """
