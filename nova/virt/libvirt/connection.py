@@ -69,6 +69,7 @@ from nova.openstack.common import cfg
 from nova import utils
 from nova.virt import driver
 from nova.virt.disk import api as disk
+from nova.virt.libvirt import config
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
@@ -1467,8 +1468,12 @@ class LibvirtConnection(driver.ComputeDriver):
             xml_info['config_drive'] = xml_info['basepath'] + "/disk.config"
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
-            xml_info['vncserver_listen'] = FLAGS.vncserver_listen
-            xml_info['vnc_keymap'] = FLAGS.vnc_keymap
+            graphics = config.LibvirtConfigGuestGraphics()
+            graphics.type = "vnc"
+            graphics.keymap = FLAGS.vnc_keymap
+            graphics.listen = FLAGS.vncserver_listen
+            devs.append(graphics.to_xml())
+
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"

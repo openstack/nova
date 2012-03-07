@@ -137,9 +137,5 @@
 #if $getVar('use_usb_tablet', True) and $type != 'lxc' and $type != 'xen'
         <input type='tablet' bus='usb'/>
 #end if
-
-#if $getVar('vncserver_listen', False)
-        <graphics type='vnc' port='-1' autoport='yes' keymap='${vnc_keymap}' listen='${vncserver_listen}'/>
-#end if
     </devices>
 </domain>
