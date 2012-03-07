@@ -1370,9 +1370,6 @@ class LibvirtConnection(driver.ComputeDriver):
             block_device_info)
 
         devs = []
-        for (network, mapping) in network_info:
-            cfg = self.vif_driver.plug(instance, network, mapping)
-            devs.append(cfg.to_xml())
 
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
@@ -1551,6 +1548,10 @@ class LibvirtConnection(driver.ComputeDriver):
                 diskconfig.target_dev = self.default_last_device
                 diskconfig.target_bus = ephemeral_disk_bus
                 devs.append(diskconfig.to_xml())
+
+        for (network, mapping) in network_info:
+            cfg = self.vif_driver.plug(instance, network, mapping)
+            devs.append(cfg.to_xml())
 
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
