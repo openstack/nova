@@ -2305,10 +2305,48 @@ class ComputeManager(manager.SchedulerDependentManager):
                 vm_instance = self.driver.get_info(db_instance)
                 vm_power_state = vm_instance['state']
             except exception.InstanceNotFound:
-                LOG.warn(_("Instance found in database but not known by "
-                           "hypervisor. Setting power state to NOSTATE"),
-                         locals(), instance=db_instance)
-                vm_power_state = power_state.NOSTATE
+                # This exception might have been caused by a race condition
+                # between _sync_power_states and live migrations. Two cases
+                # are possible as documented below. To this aim, refresh the
+                # DB instance state.
+                try:
+                    u = self.db.instance_get_by_uuid(context,
+                                                     db_instance['uuid'])
+                    if self.host != u['host']:
+                        # on the sending end of nova-compute _sync_power_state
+                        # may have yielded to the greenthread performing a live
+                        # migration; this in turn has changed the resident-host
+                        # for the VM; However, the instance is still active, it
+                        # is just in the process of migrating to another host.
+                        # This implies that the compute source must relinquish
+                        # control to the compute destination.
+                        LOG.info(_("During the sync_power process the "
+                                   "instance %(uuid)s has moved from "
+                                   "host %(src)s to host %(dst)s") %
+                                   {'uuid': db_instance['uuid'],
+                                    'src': self.host,
+                                    'dst': u['host']})
+                    elif (u['host'] == self.host and
+                          u['vm_state'] == vm_states.MIGRATING):
+                        # on the receiving end of nova-compute, it could happen
+                        # that the DB instance already report the new resident
+                        # but the actual VM has not showed up on the hypervisor
+                        # yet. In this case, let's allow the loop to continue
+                        # and run the state sync in a later round
+                        LOG.info(_("Instance %s is in the process of "
+                                   "migrating to this host. Wait next "
+                                   "sync_power cycle before setting "
+                                   "power state to NOSTATE")
+                                   % db_instance['uuid'])
+                    else:
+                        LOG.warn(_("Instance found in database but not "
+                                   "known by hypervisor. Setting power "
+                                   "state to NOSTATE"), locals(),
+                                   instance=db_instance)
+                        vm_power_state = power_state.NOSTATE
+                except exception.InstanceNotFound:
+                    # no need to update vm_state for deleted instances
+                    continue
 
             if vm_power_state == db_power_state:
                 continue

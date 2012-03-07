@@ -23,6 +23,7 @@ import logging
 import json
 import random
 
+from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
@@ -73,17 +74,22 @@ class Host(object):
                         instance = db.instance_get_by_uuid(ctxt, uuid)
                         vm_counter = vm_counter + 1
 
+                        dest = _host_find(ctxt, self._session, host, host_ref)
+                        db.instance_update(ctxt, instance.id,
+                                           {'host': dest,
+                                            'vm_state': vm_states.MIGRATING})
                         self._session.call_xenapi('VM.pool_migrate',
                                                   vm_ref, host_ref, {})
-                        new_host = _host_find(ctxt, self._session,
-                                              host, host_ref)
-                        db.instance_update(ctxt,
-                                           instance.id, {'host': new_host})
                         migrations_counter = migrations_counter + 1
+                        db.instance_update(ctxt, instance.id,
+                                           {'vm_state': vm_states.ACTIVE})
                         break
                     except self.XenAPI.Failure:
                         LOG.exception('Unable to migrate VM %(vm_ref)s'
                                       'from %(host)s' % locals())
+                        db.instance_update(ctxt, instance.id,
+                                           {'host': host,
+                                            'vm_state': vm_states.ACTIVE})
             if vm_counter == migrations_counter:
                 return 'on_maintenance'
             else:
