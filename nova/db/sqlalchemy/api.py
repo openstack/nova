@@ -993,16 +993,12 @@ def fixed_ip_associate(context, address, instance_id, network_id=None,
         if fixed_ip_ref is None:
             raise exception.FixedIpNotFoundForNetwork(address=address,
                                             network_id=network_id)
-        if fixed_ip_ref.instance is not None:
+        if fixed_ip_ref.instance_id:
             raise exception.FixedIpAlreadyInUse(address=address)
 
-        if not fixed_ip_ref.network:
-            fixed_ip_ref.network = network_get(context,
-                                           network_id,
-                                           session=session)
-        fixed_ip_ref.instance = instance_get(context,
-                                             instance_id,
-                                             session=session)
+        if not fixed_ip_ref.network_id:
+            fixed_ip_ref.network_id = network_id
+        fixed_ip_ref.instance_id = instance_id
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
