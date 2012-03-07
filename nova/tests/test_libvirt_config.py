@@ -361,3 +361,40 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 </disk>
               </devices>
             </domain>""")
+
+
+class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
+
+    def test_config_cpu(self):
+        obj = config.LibvirtConfigCPU()
+        obj.vendor = "AMD"
+        obj.model = "Quad-Core AMD Opteron(tm) Processor 2350"
+        obj.arch = "x86_64"
+        obj.add_feature("svm")
+        obj.add_feature("extapic")
+        obj.add_feature("constant_tsc")
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu>
+              <arch>x86_64</arch>
+              <model>Quad-Core AMD Opteron(tm) Processor 2350</model>
+              <vendor>AMD</vendor>
+              <feature name="svm"/>
+              <feature name="extapic"/>
+              <feature name="constant_tsc"/>
+            </cpu>""")
+
+    def test_config_topology(self):
+        obj = config.LibvirtConfigCPU()
+        obj.vendor = "AMD"
+        obj.sockets = 2
+        obj.cores = 4
+        obj.threads = 2
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu>
+              <vendor>AMD</vendor>
+              <topology cores="4" threads="2" sockets="2"/>
+            </cpu>""")

@@ -356,3 +356,43 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
     def add_device(self, dev):
         self.devices.append(dev)
+
+
+class LibvirtConfigCPU(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCPU, self).__init__(root_name="cpu",
+                                               **kwargs)
+
+        self.arch = None
+        self.model = None
+        self.vendor = None
+        self.sockets = None
+        self.cores = None
+        self.threads = None
+        self.features = []
+
+    def add_feature(self, name):
+        self.features.append(name)
+
+    def format_dom(self):
+        cpu = super(LibvirtConfigCPU, self).format_dom()
+        if self.arch:
+            cpu.append(self._text_node("arch", self.arch))
+        if self.model:
+            cpu.append(self._text_node("model", self.model))
+        if self.vendor:
+            cpu.append(self._text_node("vendor", self.vendor))
+        if (self.sockets is not None and
+            self.cores is not None and
+            self.threads is not None):
+            cpu.append(etree.Element("topology",
+                                     sockets=str(self.sockets),
+                                     cores=str(self.cores),
+                                     threads=str(self.threads)))
+
+        for f in self.features:
+            cpu.append(etree.Element("feature",
+                                     name=f))
+
+        return cpu
