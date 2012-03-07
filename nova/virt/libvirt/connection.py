@@ -504,15 +504,15 @@ class LibvirtConnection(driver.ComputeDriver):
     def attach_volume(self, connection_info, instance_name, mountpoint):
         virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
-        xml = self.volume_driver_method('connect_volume',
-                                        connection_info,
-                                        mount_device)
+        conf = self.volume_driver_method('connect_volume',
+                                         connection_info,
+                                         mount_device)
 
         if FLAGS.libvirt_type == 'lxc':
-            self._attach_lxc_volume(xml, virt_dom, instance_name)
+            self._attach_lxc_volume(conf.to_xml(), virt_dom, instance_name)
         else:
             try:
-                virt_dom.attachDevice(xml)
+                virt_dom.attachDevice(conf.to_xml())
             except Exception, ex:
                 self.volume_driver_method('disconnect_volume',
                                            connection_info,
@@ -1394,10 +1394,10 @@ class LibvirtConnection(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             mountpoint = vol['mount_device']
-            xml = self.volume_driver_method('connect_volume',
-                                            connection_info,
-                                            mountpoint)
-            volumes.append(xml)
+            conf = self.volume_driver_method('connect_volume',
+                                             connection_info,
+                                             mountpoint)
+            volumes.append(conf.to_xml())
 
         ebs_root = self._volume_in_mapping(self.default_root_device,
                                            block_device_info)

@@ -24,6 +24,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.virt.libvirt import config
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
@@ -41,14 +42,15 @@ class LibvirtVolumeDriver(object):
 
     def connect_volume(self, connection_info, mount_device):
         """Connect the volume. Returns xml for libvirt."""
-        driver = self._pick_volume_driver()
-        device_path = connection_info['data']['device_path']
-        xml = """<disk type='block'>
-                     <driver name='%s' type='raw' cache='none'/>
-                     <source dev='%s'/>
-                     <target dev='%s' bus='virtio'/>
-                 </disk>""" % (driver, device_path, mount_device)
-        return xml
+        conf = config.LibvirtConfigGuestDisk()
+        conf.source_type = "block"
+        conf.driver_name = self._pick_volume_driver()
+        conf.driver_format = "raw"
+        conf.driver_cache = "none"
+        conf.source_path = connection_info['data']['device_path']
+        conf.target_dev = mount_device
+        conf.target_bus = "virtio"
+        return conf
 
     def disconnect_volume(self, connection_info, mount_device):
         """Disconnect the volume"""
@@ -59,29 +61,32 @@ class LibvirtFakeVolumeDriver(LibvirtVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
 
     def connect_volume(self, connection_info, mount_device):
-        protocol = 'fake'
-        name = 'fake'
-        xml = """<disk type='network'>
-                     <driver name='qemu' type='raw' cache='none'/>
-                     <source protocol='%s' name='%s'/>
-                     <target dev='%s' bus='virtio'/>
-                 </disk>""" % (protocol, name, mount_device)
-        return xml
+        conf = config.LibvirtConfigGuestDisk()
+        conf.source_type = "network"
+        conf.driver_name = "qemu"
+        conf.driver_format = "raw"
+        conf.driver_cache = "none"
+        conf.source_protocol = "fake"
+        conf.source_host = "fake"
+        conf.target_dev = mount_device
+        conf.target_bus = "virtio"
+        return conf
 
 
 class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
 
     def connect_volume(self, connection_info, mount_device):
-        driver = self._pick_volume_driver()
-        protocol = connection_info['driver_volume_type']
-        name = connection_info['data']['name']
-        xml = """<disk type='network'>
-                     <driver name='%s' type='raw' cache='none'/>
-                     <source protocol='%s' name='%s'/>
-                     <target dev='%s' bus='virtio'/>
-                 </disk>""" % (driver, protocol, name, mount_device)
-        return xml
+        conf = config.LibvirtConfigGuestDisk()
+        conf.source_type = "network"
+        conf.driver_name = self._pick_volume_driver()
+        conf.driver_format = "raw"
+        conf.driver_cache = "none"
+        conf.source_protocol = connection_info['driver_volume_type']
+        conf.source_host = connection_info['data']['name']
+        conf.target_dev = mount_device
+        conf.target_bus = "virtio"
+        return conf
 
 
 class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):

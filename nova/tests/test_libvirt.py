@@ -157,8 +157,8 @@ class LibvirtVolumeTestCase(test.TestCase):
                'provider_location': '%s,fake %s' % (location, iqn)}
         connection_info = vol_driver.initialize_connection(vol, self.connr)
         mount_device = "vde"
-        xml = libvirt_driver.connect_volume(connection_info, mount_device)
-        tree = ElementTree.fromstring(xml)
+        conf = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = conf.format_dom()
         dev_str = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-0' % (location, iqn)
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./source').get('dev'), dev_str)
@@ -196,8 +196,8 @@ class LibvirtVolumeTestCase(test.TestCase):
                'provider_location': '%s,fake %s' % (location, iqn)}
         connection_info = vol_driver.initialize_connection(vol, self.connr)
         mount_device = "vde"
-        xml = libvirt_driver.connect_volume(connection_info, mount_device)
-        tree = ElementTree.fromstring(xml)
+        conf = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = conf.format_dom()
         dev_str = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-0' % (location, iqn)
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./source').get('dev'), dev_str)
@@ -219,8 +219,8 @@ class LibvirtVolumeTestCase(test.TestCase):
         vol = {'id': 1, 'name': name}
         connection_info = vol_driver.initialize_connection(vol, self.connr)
         mount_device = "vde"
-        xml = libvirt_driver.connect_volume(connection_info, mount_device)
-        tree = ElementTree.fromstring(xml)
+        conf = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'sheepdog')
         self.assertEqual(tree.find('./source').get('name'), name)
@@ -234,8 +234,8 @@ class LibvirtVolumeTestCase(test.TestCase):
         vol = {'id': 1, 'name': name}
         connection_info = vol_driver.initialize_connection(vol, self.connr)
         mount_device = "vde"
-        xml = libvirt_driver.connect_volume(connection_info, mount_device)
-        tree = ElementTree.fromstring(xml)
+        conf = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = conf.format_dom()
         self.assertEqual(tree.get('type'), 'network')
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
         rbd_name = '%s/%s' % (FLAGS.rbd_pool, name)
@@ -256,8 +256,8 @@ class LibvirtVolumeTestCase(test.TestCase):
                'provider_location': '%s,fake %s' % (location, iqn)}
         connection_info = vol_driver.initialize_connection(vol, self.connr)
         mount_device = "vde"
-        xml = libvirt_driver.connect_volume(connection_info, mount_device)
-        tree = ElementTree.fromstring(xml)
+        conf = libvirt_driver.connect_volume(connection_info, mount_device)
+        tree = conf.format_dom()
         dev_str = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-0' % (location, iqn)
         self.assertEqual(tree.get('type'), 'block')
         self.assertEqual(tree.find('./source').get('dev'), dev_str)
