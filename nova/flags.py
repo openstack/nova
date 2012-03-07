@@ -462,6 +462,10 @@ global_opts = [
     cfg.StrOpt('default_access_ip_network_name',
                default=None,
                help='Name of network to use to set access ips for instances'),
+    cfg.StrOpt('auth_strategy',
+               default='noauth',
+               help='The strategy to use for auth. Supports noauth, keystone, '
+                    'and deprecated.'),
 ]
 
 FLAGS.register_opts(global_opts)

@@ -40,9 +40,6 @@ from nova.auth import signer
 
 
 auth_opts = [
-    cfg.BoolOpt('use_deprecated_auth',
-                default=False,
-                help='This flag must be set to use old style auth'),
     cfg.ListOpt('allowed_roles',
                 default=[
                   'cloudadmin',
@@ -830,7 +827,7 @@ class AuthManager(object):
         rc = open(FLAGS.credentials_template).read()
         # NOTE(vish): Deprecated auth uses an access key, no auth uses a
         #             the user_id in place of it.
-        if FLAGS.use_deprecated_auth:
+        if FLAGS.auth_strategy == 'deprecated':
             access = user.access
         else:
             access = user.id

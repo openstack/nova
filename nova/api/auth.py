@@ -38,6 +38,17 @@ FLAGS.register_opt(use_forwarded_for_opt)
 LOG = logging.getLogger(__name__)
 
 
+def pipeline_factory(loader, global_conf, **local_conf):
+    """A paste pipeline replica that keys off of auth_strategy."""
+    pipeline = local_conf[FLAGS.auth_strategy].split()
+    filters = [loader.get_filter(n) for n in pipeline[:-1]]
+    app = loader.get_app(pipeline[-1])
+    filters.reverse()
+    for filter in filters:
+        app = filter(app)
+    return app
+
+
 class InjectContext(wsgi.Middleware):
     """Add a 'nova.context' to WSGI environ."""
 
@@ -82,7 +93,6 @@ class NovaKeystoneContext(wsgi.Middleware):
                                      project_id,
                                      roles=roles,
                                      auth_token=auth_token,
-                                     strategy='keystone',
                                      remote_address=remote_address)
 
         req.environ['nova.context'] = ctx

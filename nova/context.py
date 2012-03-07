@@ -38,8 +38,7 @@ class RequestContext(object):
 
     def __init__(self, user_id, project_id, is_admin=None, read_deleted="no",
                  roles=None, remote_address=None, timestamp=None,
-                 request_id=None, auth_token=None, strategy='noauth',
-                 overwrite=True):
+                 request_id=None, auth_token=None, overwrite=True):
         """
         :param read_deleted: 'no' indicates deleted records are hidden, 'yes'
             indicates deleted records are visible, 'only' indicates that
@@ -71,7 +70,6 @@ class RequestContext(object):
             request_id = generate_request_id()
         self.request_id = request_id
         self.auth_token = auth_token
-        self.strategy = strategy
         if overwrite or not hasattr(local.store, 'context'):
             local.store.context = self
 
@@ -84,8 +82,7 @@ class RequestContext(object):
                 'remote_address': self.remote_address,
                 'timestamp': utils.strtime(self.timestamp),
                 'request_id': self.request_id,
-                'auth_token': self.auth_token,
-                'strategy': self.strategy}
+                'auth_token': self.auth_token}
 
     @classmethod
     def from_dict(cls, values):
