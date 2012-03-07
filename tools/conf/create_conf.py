@@ -16,9 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Generates a nova.conf file.
-
-"""
+"""Generates a nova.conf file."""
 
 import os
 import re
@@ -52,9 +50,12 @@ def main(srcfiles):
                   "console", "consoleauth", "image"]
         return prefer.index(pkg_str) if pkg_str in prefer else ord(pkg_str[0])
 
-    print '#', 'nova.conf sample\n'
+    print '#' * 20 + '\n# nova.conf sample #\n' + '#' * 20
     # NOTE(lzyeval): sort top level modules and packages
     #                to process modules first
+    print
+    print '[DEFAULT]'
+    print
     mods_by_pkg = dict()
     for filepath in srcfiles:
         pkg_name = filepath.split(os.sep)[3]
@@ -96,14 +97,14 @@ def print_module(mod_str):
         # check if option was processed
         if opt_name in _OPTION_CACHE:
             continue
-        opt_dict = flags.retrieve_opt(opt_name)
+        opt_dict = flags._get_opt_info(opt_name)
         opts.append(opt_dict['opt'])
         _OPTION_CACHE.append(opt_name)
     # return if flags has no unique options
     if not opts:
         return
     # print out module info
-    print ''.join(['[', mod_str, ']'])
+    print '######### defined in %s #########' % mod_str
     print
     for opt in opts:
         print_opt(opt)
@@ -118,16 +119,21 @@ def print_opt(opt):
         sys.stderr.write("%s\n" % str(err))
         sys.exit(1)
     # print out option info
-    print "#", "".join(["(", opt_type, ")"]), opt.help
-    if opt_type == _BOOLOPT:
-        print "# default: %s" % opt.default
-        print "#", ''.join(["--", opt.name])
+    print "######", "".join(["(", opt_type, ")"]), opt.help
+    if opt.default is None:
+        print '# %s=<None>' % opt.name
     else:
-        opt_value = str(opt.default)
-        if (opt.default is None or (opt_type == _STROPT and not opt.default)):
-            opt_value = "<%s>" % opt.name
-        print "#", ''.join(["--", opt.name, "=", opt_value])
-    print
+        if opt_type == 'StrOpt':
+            print '# %s="%s"' % (opt.name, opt.default)
+        elif opt_type == 'ListOpt':
+            print '# %s="%s"' % (opt.name, ','.join(opt.default))
+        elif opt_type == 'MultiStrOpt':
+            for default in opt.default:
+                print '# %s="%s"' % (opt.name, default)
+        elif opt_type == 'BoolOpt':
+            print '# %s=%s' % (opt.name, str(opt.default).lower())
+        else:
+            print '# %s=%s' % (opt.name, opt.default)
 
 
 if __name__ == '__main__':
