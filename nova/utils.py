@@ -373,38 +373,87 @@ EASIER_PASSWORD_SYMBOLS = ('23456789',  # Removed: 0, 1
 
 
 def current_audit_period(unit=None):
+    """This method gives you the most recently *completed* audit period.
+
+    arguments:
+            units: string, one of 'hour', 'day', 'month', 'year'
+                    Periods normally begin at the beginning (UTC) of the
+                    period unit (So a 'day' period begins at midnight UTC,
+                    a 'month' unit on the 1st, a 'year' on Jan, 1)
+                    unit string may be appended with an optional offset
+                    like so:  'day@18'  This will begin the period at 18:00
+                    UTC.  'month@15' starts a monthly period on the 15th,
+                    and year@3 begins a yearly one on March 1st.
+
+
+    returns:  2 tuple of datetimes (begin, end)
+              The begin timestamp of this audit period is the same as the
+              end of the previous."""
     if not unit:
         unit = FLAGS.instance_usage_audit_period
+
+    offset = 0
+    if '@' in unit:
+        unit, offset = unit.split("@", 1)
+        offset = int(offset)
+
     rightnow = utcnow()
     if unit not in ('month', 'day', 'year', 'hour'):
         raise ValueError('Time period must be hour, day, month or year')
-    n = 1  # we are currently only using multiples of 1 unit (mdragon)
     if unit == 'month':
-        year = rightnow.year - (n // 12)
-        n = n % 12
-        if n >= rightnow.month:
-            year -= 1
-            month = 12 + (rightnow.month - n)
-        else:
-            month = rightnow.month - n
-        begin = datetime.datetime(day=1, month=month, year=year)
-        end = datetime.datetime(day=1,
+        if offset == 0:
+            offset = 1
+        end = datetime.datetime(day=offset,
                                 month=rightnow.month,
                                 year=rightnow.year)
+        if end >= rightnow:
+            year = rightnow.year
+            if 1 >= rightnow.month:
+                year -= 1
+                month = 12 + (rightnow.month - 1)
+            else:
+                month = rightnow.month - 1
+            end = datetime.datetime(day=offset,
+                                    month=month,
+                                    year=year)
+        year = end.year
+        if 1 >= end.month:
+            year -= 1
+            month = 12 + (end.month - 1)
+        else:
+            month = end.month - 1
+        begin = datetime.datetime(day=offset, month=month, year=year)
 
     elif unit == 'year':
-        begin = datetime.datetime(day=1, month=1, year=rightnow.year - n)
-        end = datetime.datetime(day=1, month=1, year=rightnow.year)
+        if offset == 0:
+            offset = 1
+        end = datetime.datetime(day=1, month=offset, year=rightnow.year)
+        if end >= rightnow:
+            end = datetime.datetime(day=1,
+                                    month=offset,
+                                    year=rightnow.year - 1)
+            begin = datetime.datetime(day=1,
+                                      month=offset,
+                                      year=rightnow.year - 2)
+        else:
+            begin = datetime.datetime(day=1,
+                                      month=offset,
+                                      year=rightnow.year - 1)
 
     elif unit == 'day':
-        b = rightnow - datetime.timedelta(days=n)
-        begin = datetime.datetime(day=b.day, month=b.month, year=b.year)
-        end = datetime.datetime(day=rightnow.day,
+        end = datetime.datetime(hour=offset,
+                               day=rightnow.day,
                                month=rightnow.month,
                                year=rightnow.year)
+        if end >= rightnow:
+            end = end - datetime.timedelta(days=1)
+        begin = end - datetime.timedelta(days=1)
+
     elif unit == 'hour':
-        end = rightnow.replace(minute=0, second=0, microsecond=0)
-        begin = end - datetime.timedelta(hours=n)
+        end = rightnow.replace(minute=offset, second=0, microsecond=0)
+        if end >= rightnow:
+            end = end - datetime.timedelta(hours=1)
+        begin = end - datetime.timedelta(hours=1)
 
     return (begin, end)
 
