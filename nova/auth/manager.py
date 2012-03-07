@@ -97,7 +97,7 @@ LOG = logging.getLogger(__name__)
 if FLAGS.memcached_servers:
     import memcache
 else:
-    from nova.testing.fake import memcache
+    from nova.common import memorycache as memcache
 
 
 class AuthBase(object):

@@ -1,2 +1,1 @@
-import memcache
 import rabbit

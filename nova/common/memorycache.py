@@ -29,11 +29,16 @@ class Client(object):
         self.cache = {}
 
     def get(self, key):
-        """Retrieves the value for a key or None."""
-        (timeout, value) = self.cache.get(key, (0, None))
-        if timeout == 0 or utils.utcnow_ts() < timeout:
-            return value
-        return None
+        """Retrieves the value for a key or None.
+
+        this expunges expired keys during each get"""
+
+        for k in self.cache.keys():
+            (timeout, _value) = self.cache[k]
+            if timeout and utils.utcnow_ts() >= timeout:
+                del self.cache[k]
+
+        return self.cache.get(key, (0, None))[1]
 
     def set(self, key, value, time=0, min_compress_len=0):
         """Sets the value for a key."""
