@@ -77,13 +77,13 @@ Concept: System Architecture
 
 Nova consists of seven main components, with the Cloud Controller component representing the global state and interacting with all other components. API Server acts as the Web services front end for the cloud controller. Compute Controller provides compute server resources, and the Object Store component provides storage services. Auth Manager provides authentication and authorization services. Volume Controller provides fast and permanent block-level storage for the comput servers. Network Controller provides virtual networks to enable compute servers to interact with each other and with the public network. Scheduler selects the most suitable compute controller to host an instance.
 
-    .. image:: images/Novadiagram.png 
+    .. image:: images/Novadiagram.png
 
 Nova is built on a shared-nothing, messaging-based architecture. All of the major components, that is Compute Controller, Volume Controller, Network Controller, and Object Store can be run on multiple servers. Cloud Controller communicates with Object Store via HTTP (Hyper Text Transfer Protocol), but it communicates with Scheduler, Network Controller, and Volume Controller via AMQP (Advanced Message Queue Protocol). To avoid blocking each component while waiting for a response, Nova uses asynchronous calls, with a call-back that gets triggered when a response is received.
 
-To achieve the shared-nothing property with multiple copies of the same component, Nova keeps all the cloud system state in a distributed data store. Updates to system state are written into this store, using atomic transactions when required. Requests for system state are read out of this store. In limited cases, the read results are cached within controllers for short periods of time (for example, the current list of system users.) 
+To achieve the shared-nothing property with multiple copies of the same component, Nova keeps all the cloud system state in a distributed data store. Updates to system state are written into this store, using atomic transactions when required. Requests for system state are read out of this store. In limited cases, the read results are cached within controllers for short periods of time (for example, the current list of system users.)
 
-    .. note:: The database schema is available on the `OpenStack Wiki <http://wiki.openstack.org/NovaDatabaseSchema>`_. 
+    .. note:: The database schema is available on the `OpenStack Wiki <http://wiki.openstack.org/NovaDatabaseSchema>`_.
 
 Concept: Storage
 ----------------
@@ -171,7 +171,7 @@ details.
 Concept: Flags
 --------------
 
-Nova uses python-gflags for a distributed command line system, and the flags can either be set when running a command at the command line or within a flag file. When you install Nova packages for the Austin release, each nova service gets its own flag file. For example, nova-network.conf is used for configuring the nova-network service, and so forth. In releases beyond Austin which was released in October 2010, all flags are set in nova.conf.  
+Nova uses python-gflags for a distributed command line system, and the flags can either be set when running a command at the command line or within a flag file. When you install Nova packages for the Austin release, each nova service gets its own flag file. For example, nova-network.conf is used for configuring the nova-network service, and so forth. In releases beyond Austin which was released in October 2010, all flags are set in nova.conf.
 
 Concept: Plugins
 ----------------
@@ -213,7 +213,7 @@ When launching VM instances, the project manager specifies which security groups
 
 A security group can be thought of as a security profile or a security role - it promotes the good practice of managing firewalls by role, not by machine. For example, a user could stipulate that servers with the "webapp" role must be able to connect to servers with the "mysql" role on port 3306. Going further with the security profile analogy, an instance can be launched with membership of multiple security groups - similar to a server with multiple roles. Because all rules in security groups are ACCEPT rules, it's trivial to combine them.
 
-Each rule in a security group must specify the source of packets to be allowed, which can either be a subnet anywhere on the Internet (in CIDR notation, with 0.0.0./0 representing the entire Internet) or another security group. In the latter case, the source security group can be any user's group. This makes it easy to grant selective access to one user's instances from instances run by the user's friends, partners, and vendors. 
+Each rule in a security group must specify the source of packets to be allowed, which can either be a subnet anywhere on the Internet (in CIDR notation, with 0.0.0./0 representing the entire Internet) or another security group. In the latter case, the source security group can be any user's group. This makes it easy to grant selective access to one user's instances from instances run by the user's friends, partners, and vendors.
 
 The creation of rules with other security groups specified as sources helps users deal with dynamic IP addressing. Without this feature, the user would have had to adjust the security groups each time a new instance is launched. This practice would become cumbersome if an application running in Nova is very dynamic and elastic, for example scales up or down frequently.
 

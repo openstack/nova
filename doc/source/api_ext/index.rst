@@ -20,13 +20,13 @@ Compute API Extensions
 
 In this section you will find extension reference information. If you need to write an extension's reference page, you can find an RST template in doc/source/api_ext/rst_extension_template.rst.
 
-The Compute API specification is published to http://docs.openstack.org/api and the source is found in https://github.com/openstack/compute-api. These extensions extend the core API. 
+The Compute API specification is published to http://docs.openstack.org/api and the source is found in https://github.com/openstack/compute-api. These extensions extend the core API.
 
 Extensions
 ----------
 .. toctree::
     :maxdepth: 3
-    
+
     ext_config_drive.rst
     ext_floating_ip_dns.rst
     ext_floating_ips.rst

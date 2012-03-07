@@ -67,7 +67,7 @@ for arg in "$@"; do
   process_option $arg
 done
 
-# If enabled, tell nose to collect coverage data 
+# If enabled, tell nose to collect coverage data
 if [ $coverage -eq 1 ]; then
     noseopts="$noseopts --with-coverage --cover-package=nova"
 fi

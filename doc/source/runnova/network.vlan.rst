@@ -22,21 +22,21 @@ VLAN Network Mode is the default mode for Nova.  It provides a private network
 segment for each project's instances that can be accessed via a dedicated
 VPN connection from the Internet.
 
-In this mode, each project gets its own VLAN, Linux networking bridge, and subnet. The subnets are specified by the network administrator, and are assigned dynamically to a project when required. A DHCP Server is started for each VLAN to pass out IP addresses to VM instances from the subnet assigned to the project. All instances belonging to one project are bridged into the same VLAN for that project. The Linux networking bridges and VLANs are created by Nova when required, described in more detail in Nova VLAN Network Management Implementation. 
+In this mode, each project gets its own VLAN, Linux networking bridge, and subnet. The subnets are specified by the network administrator, and are assigned dynamically to a project when required. A DHCP Server is started for each VLAN to pass out IP addresses to VM instances from the subnet assigned to the project. All instances belonging to one project are bridged into the same VLAN for that project. The Linux networking bridges and VLANs are created by Nova when required, described in more detail in Nova VLAN Network Management Implementation.
 
-.. 
+..
     (this text revised above)
-    Because the flat network and flat DhCP network are simple to understand and yet do not scale well enough for real-world cloud systems, this section focuses on the VLAN network implementation by the VLAN Network Manager. 
+    Because the flat network and flat DhCP network are simple to understand and yet do not scale well enough for real-world cloud systems, this section focuses on the VLAN network implementation by the VLAN Network Manager.
 
 
-    In the VLAN network mode, all the VM instances of a project are connected together in a VLAN with the specified private subnet. Each running VM instance is assigned an IP address within the given private subnet. 
+    In the VLAN network mode, all the VM instances of a project are connected together in a VLAN with the specified private subnet. Each running VM instance is assigned an IP address within the given private subnet.
 
 .. image:: /images/Novadiagram.png
    :width: 790
-   
-While network traffic between VM instances belonging to the same VLAN is always open, Nova can enforce isolation of network traffic between different projects by enforcing one VLAN per project. 
 
-In addition, the network administrator can specify a pool of public IP addresses that users may allocate and then assign to VMs, either at boot or dynamically at run-time. This capability is similar to Amazon's 'elastic IPs'. A public IP address may be associated with a running instances, allowing the VM instance to be accessed from the public network. The public IP addresses are accessible from the network host and NATed to the private IP address of the project. A public IP address could be associated with a project using the euca-allocate-address commands. 
+While network traffic between VM instances belonging to the same VLAN is always open, Nova can enforce isolation of network traffic between different projects by enforcing one VLAN per project.
+
+In addition, the network administrator can specify a pool of public IP addresses that users may allocate and then assign to VMs, either at boot or dynamically at run-time. This capability is similar to Amazon's 'elastic IPs'. A public IP address may be associated with a running instances, allowing the VM instance to be accessed from the public network. The public IP addresses are accessible from the network host and NATed to the private IP address of the project. A public IP address could be associated with a project using the euca-allocate-address commands.
 
 This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code named :ref:`cloudpipe <cloudpipe>`) needs to be created.  Nova generates a certificate and key for the user to access the vpn and starts the vpn automatically. More information on cloudpipe can be found :ref:`here <cloudpipe>`.
 
@@ -65,22 +65,22 @@ We also keep as a goal a common DMZ segment for support services, meaning these 
 Limitations
 -----------
 
-We kept in mind some of these limitations: 
+We kept in mind some of these limitations:
 
 * Projects / cluster limited to available VLANs in switching infrastructure
 * Requires VPN for access to project segment
 
 Implementation
 --------------
-Currently Nova segregates project VLANs using 802.1q VLAN tagging in the 
-switching layer.  Compute hosts create VLAN-specific interfaces and bridges 
+Currently Nova segregates project VLANs using 802.1q VLAN tagging in the
+switching layer.  Compute hosts create VLAN-specific interfaces and bridges
 as required.
 
-The network nodes act as default gateway for project networks and contain 
+The network nodes act as default gateway for project networks and contain
 all of the routing and firewall rules implementing security groups.  The
 network node also handles DHCP to provide instance IPs for each project.
 
-VPN access is provided by running a small instance called CloudPipe 
+VPN access is provided by running a small instance called CloudPipe
 on the IP immediately following the gateway IP for each project.  The
 network node maps a dedicated public IP/port to the CloudPipe instance.
 

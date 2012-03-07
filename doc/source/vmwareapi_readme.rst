@@ -19,7 +19,7 @@ VMware ESX/ESXi Server Support for OpenStack Compute
 
 Introduction
 ------------
-A module named 'vmwareapi' is added to 'nova.virt' to add support of VMware ESX/ESXi hypervisor to OpenStack compute (Nova). Nova may now use VMware vSphere as a compute provider. 
+A module named 'vmwareapi' is added to 'nova.virt' to add support of VMware ESX/ESXi hypervisor to OpenStack compute (Nova). Nova may now use VMware vSphere as a compute provider.
 
 The basic requirement is to support VMware vSphere 4.1 as a compute provider within Nova. As the deployment architecture, support both ESX and ESXi. VM storage is restricted to VMFS volumes on local drives. vCenter is not required by the current design, and is not currently supported. Instead, Nova Compute talks directly to ESX/ESXi.
 
@@ -32,7 +32,7 @@ Currently supports Nova's flat networking model (Flat Manager) & VLAN networking
 
 System Requirements
 -------------------
-Following software components are required for building the cloud using OpenStack on top of ESX/ESXi Server(s): 
+Following software components are required for building the cloud using OpenStack on top of ESX/ESXi Server(s):
 
 * OpenStack
 * Glance Image service
@@ -44,9 +44,9 @@ VMware ESX Requirements
 * Single local hard disk at the ESX host
 * An ESX Virtual Machine Port Group (For Flat Networking)
 * An ESX physical network adapter (For VLAN networking)
-* Need to enable "vSphere Web Access" in  "vSphere client" UI at Configuration->Security Profile->Firewall   
+* Need to enable "vSphere Web Access" in  "vSphere client" UI at Configuration->Security Profile->Firewall
 
-Python dependencies 
+Python dependencies
 -------------------
 * suds-0.4
 
@@ -57,21 +57,21 @@ Python dependencies
  easy_install suds==0.4
 
 
-Configuration flags required for nova-compute 
+Configuration flags required for nova-compute
 ---------------------------------------------
 ::
- 
-  --connection_type=vmwareapi 
-  --vmwareapi_host_ip=<VMware ESX Host IP> 
+
+  --connection_type=vmwareapi
+  --vmwareapi_host_ip=<VMware ESX Host IP>
   --vmwareapi_host_username=<VMware ESX Username>
   --vmwareapi_host_password=<VMware ESX Password>
   --vmwareapi_vlan_interface=<Physical ethernet adapter name in VMware ESX host for vlan networking E.g vmnic0> [Optional, only for VLAN Networking]
-  
 
-Configuration flags required for nova-network 
+
+Configuration flags required for nova-network
 ---------------------------------------------
 ::
- 
+
   --network_manager=nova.network.manager.FlatManager [or nova.network.manager.VlanManager]
   --flat_network_bridge=<ESX Virtual Machine Port Group> [Optional, only for Flat Networking]
 
@@ -79,11 +79,11 @@ Configuration flags required for nova-network
 Configuration flags required for nova-console
 ---------------------------------------------
 ::
- 
+
   --console_manager=nova.console.vmrc_manager.ConsoleVMRCManager
   --console_driver=nova.console.vmrc.VMRCSessionConsole [Optional, only for OTP (One time Passwords) as against host credentials]
 
-   
+
 Other flags
 -----------
 ::
@@ -198,7 +198,7 @@ Assumptions
 1. The VMware images uploaded to the image repositories have VMware Tools installed.
 
 
-FAQ 
+FAQ
 ---
 
 1. What type of disk images are supported?
@@ -210,7 +210,7 @@ FAQ
 
 * IP address information is injected through 'machine.id' vmx parameter (equivalent to XenStore in XenServer). This information can be retrived inside the guest using VMware tools.
 
-    
+
 3. What is the guest tool?
 
 * The guest tool is a small python script that should be run either as a service or added to system startup. This script configures networking on the guest. The guest tool is available at tools/esx/guest_tool.py

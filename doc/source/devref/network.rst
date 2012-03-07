@@ -18,7 +18,7 @@
 Networking
 ==========
 
-.. todo:: 
+.. todo::
 
     * document hardware specific commands (maybe in admin guide?) (todd)
     * document a map between flags and managers/backends (todd)

@@ -104,7 +104,7 @@ modindex_common_prefix = ['nova.']
 
 # -- Options for man page output -----------------------------------------------
 
-# Grouping the document tree for man pages. 
+# Grouping the document tree for man pages.
 # List of tuples 'sourcefile', 'target', u'title', u'Authors name', 'manual'
 
 man_pages = [

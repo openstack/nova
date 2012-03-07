@@ -23,4 +23,4 @@ With Nova, you can manage images either using the built-in object store or using
  * Ability to store and retrieve virtual machine images
  * Ability to store and retrieve metadata about these virtual machine images
 
-Refer to http://glance.openstack.org for additional details. 
+Refer to http://glance.openstack.org for additional details.

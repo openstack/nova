@@ -32,7 +32,7 @@ Nova’s Cloud Fabric is composed of the following major components:
 .. image:: /images/fabric.png
    :width: 790
 
-API Server 
+API Server
 --------------------------------------------------
 At the heart of the cloud framework is an API Server.  This API Server makes command and control of the hypervisor, storage, and networking programmatically available to users in realization of the definition of cloud computing.
 

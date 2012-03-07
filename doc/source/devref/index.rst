@@ -25,7 +25,7 @@ Programming HowTos and Tutorials
 --------------------------------
 .. toctree::
     :maxdepth: 3
-    
+
     development.environment
     unit_tests
     addmethod.openstackapi

@@ -16,12 +16,12 @@
 Managing Instance Types and Flavors
 ===================================
 
-You can manage instance types and instance flavors using the nova-manage command-line interface coupled with the instance_type subcommand for nova-manage. 
+You can manage instance types and instance flavors using the nova-manage command-line interface coupled with the instance_type subcommand for nova-manage.
 
 What are Instance Types or Flavors ?
 ------------------------------------
 
-Instance types describe the compute, memory and storage capacity of nova computing instances. In layman terms, this is the size (in terms of vCPUs, RAM, etc.) of the virtual server that you will be launching. In the EC2 API, these are called by names such as "m1.large" or "m1.tiny", while the OpenStack API terms these "flavors" with names like "512 MB Server". 
+Instance types describe the compute, memory and storage capacity of nova computing instances. In layman terms, this is the size (in terms of vCPUs, RAM, etc.) of the virtual server that you will be launching. In the EC2 API, these are called by names such as "m1.large" or "m1.tiny", while the OpenStack API terms these "flavors" with names like "512 MB Server".
 
 In Nova, "flavor" and "instance type" are equivalent terms. When you create an EC2 instance type, you are also creating a OpenStack API flavor. To reduce repetition, for the rest of this document I will refer to these as instance types.
 
@@ -34,8 +34,8 @@ In the current (Cactus) version of nova, instance types can only be created by t
 Basic Management
 ----------------
 
-Instance types / flavor are managed through the nova-manage binary with 
-the "instance_type" command and an appropriate subcommand. Note that you can also use 
+Instance types / flavor are managed through the nova-manage binary with
+the "instance_type" command and an appropriate subcommand. Note that you can also use
 the "flavor" command as a synonym for "instance_types".
 
 To see all currently active instance types, use the list subcommand::
@@ -58,7 +58,7 @@ By default, the list subcommand only shows active instance types. To see all ins
     m1.deleted: Memory: 2048MB, VCPUS: 1, Storage: 20GB, FlavorID: 2, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB, inactive
 
 To create an instance type, use the "create" subcommand with the following positional arguments:
- * memory (expressed in megabytes) 
+ * memory (expressed in megabytes)
  * vcpu(s) (integer)
  * local storage (expressed in gigabytes)
  * flavorid (unique integer)
@@ -76,10 +76,10 @@ To delete an instance type, use the "delete" subcommand and specify the name::
     # nova-manage instance_type delete m1.xxlarge
     m1.xxlarge deleted
 
-Please note that the "delete" command only marks the instance type as 
+Please note that the "delete" command only marks the instance type as
 inactive in the database; it does not actually remove the instance type. This is done
-to preserve the instance type definition for long running instances (which may not 
-terminate for months or years). If you are sure that you want to delete this instance 
+to preserve the instance type definition for long running instances (which may not
+terminate for months or years). If you are sure that you want to delete this instance
 type from the database, pass the "--purge" flag after the name::
 
     # nova-manage instance_type delete m1.xxlarge --purge

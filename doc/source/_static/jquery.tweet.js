@@ -1,5 +1,5 @@
 (function($) {
- 
+
   $.fn.tweet = function(o){
     var s = {
       username: ["seaofclouds"],              // [string]   required, unless you want to display our tweets. :) it can be an array, just do ["username1","username2","etc"]
@@ -17,9 +17,9 @@
       loading_text: null,                     // [string]   optional loading text, displayed while tweets load
       query: null                             // [string]   optional search query
     };
-    
+
     if(o) $.extend(s, o);
-    
+
     $.fn.extend({
       linkUrl: function() {
         var returning = [];

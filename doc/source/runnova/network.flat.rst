@@ -32,8 +32,8 @@ IP addresses for VM instances are grabbed from a subnet specified by the network
 
 * Each compute host creates a single bridge for all instances to use to attach to the external network.
 * The networking configuration is injected into the instance before it is booted or it is obtained by a guest agent installed in the instance.
- 
-Note that the configuration injection currently only works on linux-style systems that keep networking 
+
+Note that the configuration injection currently only works on linux-style systems that keep networking
 configuration in /etc/network/interfaces.
 
 

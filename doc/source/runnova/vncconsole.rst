@@ -152,7 +152,7 @@ Important Options
   management ip on the same network as the proxies.
 
 
-.. todo:: 
+.. todo::
 
    Reformat command line app instructions for commands using
    ``:command:``, ``:option:``, and ``.. program::``. (bug-947261)

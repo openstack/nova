@@ -1,6 +1,6 @@
 ..
       Copyright 2010-2011 United States Government as represented by the
-      Administrator of the National Aeronautics and Space Administration. 
+      Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -27,8 +27,8 @@ How to Join the OpenStack Community
 
 Our community welcomes all people interested in open source cloud computing, and there are no formal
 membership requirements. The best way to join the community is to talk with others online or at a meetup
-and offer contributions through Launchpad, the wiki, or blogs. We welcome all types of contributions, 
-from blueprint designs to documentation to testing to deployment scripts. 
+and offer contributions through Launchpad, the wiki, or blogs. We welcome all types of contributions,
+from blueprint designs to documentation to testing to deployment scripts.
 
 Contributing Code
 -----------------
@@ -89,14 +89,14 @@ aggregation with your blog posts, there are instructions for `adding your blog <
 Twitter
 -------
 
-Because all the cool kids do it: `@openstack <http://twitter.com/openstack>`_. Also follow the 
+Because all the cool kids do it: `@openstack <http://twitter.com/openstack>`_. Also follow the
 `#openstack <http://search.twitter.com/search?q=%23openstack>`_ tag for relevant tweets.
 
 OpenStack Docs Site
 -------------------
 
-The `nova.openstack.org <http://nova.openstack.org>`_ site is geared towards developer documentation, 
-and the `docs.openstack.org <http://docs.openstack.org>`_  site is intended for cloud administrators 
+The `nova.openstack.org <http://nova.openstack.org>`_ site is geared towards developer documentation,
+and the `docs.openstack.org <http://docs.openstack.org>`_  site is intended for cloud administrators
 who are standing up and running OpenStack Compute in production. You can contribute to the Docs Site
 by using git and Gerrit and contributing to the openstack-manuals project at http://github.com/openstack/openstack-manuals.
 
