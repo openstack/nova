@@ -627,6 +627,20 @@ class FixedIpCommands(object):
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
+    @staticmethod
+    def network_to_host_list(network):
+        """Return the list of host of a network.
+
+        If the network is empty and only has one host, then we consider it
+        has the host in the network.
+        """
+
+        if network.size == 1:
+            yield network.ip
+        else:
+            for host in network.iter_hosts():
+                yield host
+
     @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     @args('--pool', dest="pool", metavar='<pool>', help='Optional pool')
     @args('--interface', dest="interface", metavar='<interface>',
@@ -639,7 +653,7 @@ class FloatingIpCommands(object):
             pool = FLAGS.default_floating_pool
         if not interface:
             interface = FLAGS.public_interface
-        for address in addresses.iter_hosts():
+        for address in self.network_to_host_list(addresses):
             db.floating_ip_create(admin_context,
                                   {'address': str(address),
                                    'pool': pool,
@@ -648,7 +662,7 @@ class FloatingIpCommands(object):
     @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     def delete(self, ip_range):
         """Deletes floating ips by range"""
-        for address in netaddr.IPNetwork(ip_range).iter_hosts():
+        for address in self.network_to_host_list(netaddr.IPNetwork(ip_range)):
             db.floating_ip_destroy(context.get_admin_context(),
                                    str(address))
 
