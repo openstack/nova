@@ -396,3 +396,18 @@ class LibvirtConfigCPU(LibvirtConfigObject):
                                      name=f))
 
         return cpu
+
+
+class LibvirtConfigGuestSnapshot(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestSnapshot, self).__init__(
+            root_name="domainsnapshot",
+            **kwargs)
+
+        self.name = None
+
+    def format_dom(self):
+        ss = super(LibvirtConfigGuestSnapshot, self).format_dom()
+        ss.append(self._text_node("name", self.name))
+        return ss

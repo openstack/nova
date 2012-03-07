@@ -398,3 +398,16 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
               <vendor>AMD</vendor>
               <topology cores="4" threads="2" sockets="2"/>
             </cpu>""")
+
+
+class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
+
+    def test_config_snapshot(self):
+        obj = config.LibvirtConfigGuestSnapshot()
+        obj.name = "Demo"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <domainsnapshot>
+              <name>Demo</name>
+            </domainsnapshot>""")
