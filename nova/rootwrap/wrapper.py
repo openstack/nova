@@ -47,13 +47,17 @@ def match_filter(filters, userargs):
     returns the first matching filter, or None is none matched.
     """
 
+    found_filter = None
+
     for f in filters:
         if f.match(userargs):
-            # Skip if executable is absent
+            # Try other filters if executable is absent
             if not os.access(f.exec_path, os.X_OK):
+                if not found_filter:
+                    found_filter = f
                 continue
             # Otherwise return matching filter for execution
             return f
 
-    # No filter matched
-    return None
+    # No filter matched or first missing executable
+    return found_filter
