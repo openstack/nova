@@ -117,50 +117,8 @@
     #end if
 #end if
 
-#for $nic in $nics
-    #if $vif_type == 'ethernet'
-        <interface type='ethernet'>
-            <target dev='${nic.name}' />
-            <mac address='${nic.mac_address}' />
-            <script path='${nic.script}' />
-        </interface>
-    #else if $vif_type == '802.1Qbh'
-       <interface type='direct'>
-            <mac address='${nic.mac_address}'/>
-            <source dev='${nic.device_name}' mode='private'/>
-            <virtualport type='802.1Qbh'>
-                <parameters profileid='${nic.profile_name}'/>
-            </virtualport>
-            <model type='virtio'/>
-       </interface>
-    #else if $vif_type == 'ovs_virtualport'
-        <interface type='bridge'>
-            <source bridge='${nic.bridge_name}'/>
-            <mac address='${nic.mac_address}'/>
-            <virtualport type="openvswitch">
-                <parameters interfaceid='${nic.ovs_interfaceid}'/>
-            </virtualport>
-        </interface>
-    #else
-        <interface type='bridge'>
-            <source bridge='${nic.bridge_name}'/>
-            <mac address='${nic.mac_address}'/>
-#if $getVar('use_virtio_for_bridges', True)
-            <model type='virtio'/>
-#end if
-            <filterref filter="nova-instance-${name}-${nic.id}">
-                <parameter name="IP" value="${nic.ip_address}" />
-                <parameter name="DHCPSERVER" value="${nic.dhcp_server}" />
-#if $getVar('nic.extra_params', False)
-                ${nic.extra_params}
-#end if
-#if $getVar('nic.gateway_v6', False)
-                <parameter name="RASERVER" value="${nic.gateway_v6}" />
-#end if
-            </filterref>
-        </interface>
-    #end if
-
+#for $dev in $devs
+    ${dev}
 #end for
 
 #if $type == 'qemu' or $type == 'kvm'

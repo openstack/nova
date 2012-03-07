@@ -28,53 +28,58 @@ from nova import utils
 from nova.virt import netutils
 from nova.virt import vif
 
+from nova.virt.libvirt import config
 
 LOG = logging.getLogger(__name__)
 
-libvirt_ovs_bridge_opt = cfg.StrOpt('libvirt_ovs_bridge',
+libvirt_vif_opts = [
+    cfg.StrOpt('libvirt_ovs_bridge',
         default='br-int',
-        help='Name of Integration Bridge used by Open vSwitch')
+        help='Name of Integration Bridge used by Open vSwitch'),
+    cfg.BoolOpt('libvirt_use_virtio_for_bridges',
+                default=False,
+                help='Use virtio for bridge interfaces'),
+]
 
 FLAGS = flags.FLAGS
-FLAGS.register_opt(libvirt_ovs_bridge_opt)
+FLAGS.register_opts(libvirt_vif_opts)
 
 
 class LibvirtBridgeDriver(vif.VIFDriver):
     """VIF driver for Linux bridge."""
 
-    def _get_configurations(self, network, mapping):
+    def _get_configurations(self, instance, network, mapping):
         """Get a dictionary of VIF configurations for bridge type."""
-        # Assume that the gateway also acts as the dhcp server.
-        gateway_v6 = mapping.get('gateway_v6')
+
         mac_id = mapping['mac'].replace(':', '')
 
+        conf = config.LibvirtConfigGuestInterface()
+        conf.net_type = "bridge"
+        conf.mac_addr = mapping['mac']
+        conf.source_dev = network['bridge']
+        conf.script = ""
+        if FLAGS.libvirt_use_virtio_for_bridges:
+            conf.model = "virtio"
+
+        conf.filtername = "nova-instance-" + instance['name'] + "-" + mac_id
+        conf.add_filter_param("IP", mapping['ips'][0]['ip'])
+        conf.add_filter_param("DHCPSERVER", mapping['dhcp_server'])
+
+        if FLAGS.use_ipv6:
+            conf.add_filter_param("RASERVER",
+                                  mapping.get('gateway_v6') + "/128")
+
         if FLAGS.allow_same_net_traffic:
-            template = "<parameter name=\"%s\" value=\"%s\" />\n"
             net, mask = netutils.get_net_and_mask(network['cidr'])
-            values = [("PROJNET", net), ("PROJMASK", mask)]
+            conf.add_filter_param("PROJNET", net)
+            conf.add_filter_param("PROJMASK", mask)
             if FLAGS.use_ipv6:
                 net_v6, prefixlen_v6 = netutils.get_net_and_prefixlen(
                                            network['cidr_v6'])
-                values.extend([("PROJNETV6", net_v6),
-                               ("PROJMASKV6", prefixlen_v6)])
+                conf.add_filter_param("PROJNET6", net_v6)
+                conf.add_filter_param("PROJMASK6", prefixlen_v6)
 
-            extra_params = "".join([template % value for value in values])
-        else:
-            extra_params = "\n"
-
-        result = {
-            'id': mac_id,
-            'bridge_name': network['bridge'],
-            'mac_address': mapping['mac'],
-            'ip_address': mapping['ips'][0]['ip'],
-            'dhcp_server': mapping['dhcp_server'],
-            'extra_params': extra_params,
-        }
-
-        if gateway_v6:
-            result['gateway_v6'] = gateway_v6 + "/128"
-
-        return result
+        return conf
 
     def plug(self, instance, network, mapping):
         """Ensure that the bridge exists, and add VIF to it."""
@@ -96,7 +101,7 @@ class LibvirtBridgeDriver(vif.VIFDriver):
                                         network['bridge'],
                                         iface)
 
-        return self._get_configurations(network, mapping)
+        return self._get_configurations(instance, network, mapping)
 
     def unplug(self, instance, network, mapping):
         """No manual unplugging required."""
@@ -139,11 +144,14 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
                 "external-ids:vm-uuid=%s" % instance['uuid'],
                 run_as_root=True)
 
-        result = {
-            'script': '',
-            'name': dev,
-            'mac_address': mapping['mac']}
-        return result
+        conf = config.LibvirtConfigGuestInterface()
+
+        conf.net_type = "ethernet"
+        conf.target_dev = dev
+        conf.script = ""
+        conf.mac_addr = mapping['mac']
+
+        return conf
 
     def unplug(self, instance, network, mapping):
         """Unplug the VIF from the network by deleting the port from
@@ -164,10 +172,18 @@ class LibvirtOpenVswitchVirtualPortDriver(vif.VIFDriver):
 
     def plug(self, instance, network, mapping):
         """ Pass data required to create OVS virtual port element"""
-        return {
-            'bridge_name': FLAGS.libvirt_ovs_bridge,
-            'ovs_interfaceid': mapping['vif_uuid'],
-            'mac_address': mapping['mac']}
+
+        conf = config.LibvirtConfigGuestInterface()
+
+        conf.net_type = "bridge"
+        conf.source_dev = FLAGS.libvirt_ovs_bridge
+        conf.mac_addr = mapping['mac']
+        if FLAGS.libvirt_use_virtio_for_bridges:
+            conf.model = "virtio"
+        conf.vporttype = "openvswitch"
+        conf.add_vport_param("interfaceid", mapping['vif_uuid'])
+
+        return conf
 
     def unplug(self, instance, network, mapping):
         """No action needed.  Libvirt takes care of cleanup"""
@@ -185,11 +201,14 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
         dev = self.get_dev_name(iface_id)
         linux_net.QuantumLinuxBridgeInterfaceDriver.create_tap_dev(dev)
 
-        result = {
-            'script': '',
-            'name': dev,
-            'mac_address': mapping['mac']}
-        return result
+        conf = config.LibvirtConfigGuestInterface()
+
+        conf.net_type = "ethernet"
+        conf.target_dev = dev
+        conf.script = ""
+        conf.mac_addr = mapping['mac']
+
+        return conf
 
     def unplug(self, instance, network, mapping):
         """Unplug the VIF from the network by deleting the port from
