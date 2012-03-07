@@ -177,6 +177,12 @@ class TestCase(unittest.TestCase):
                 except Exception:
                     pass
 
+            # Delete attributes that don't start with _ so they don't pin
+            # memory around unnecessarily for the duration of the test
+            # suite
+            for key in [k for k in self.__dict__.keys() if k[0] != '_']:
+                del self.__dict__[key]
+
     def flags(self, **kw):
         """Override flag variables for a test."""
         for k, v in kw.iteritems():
