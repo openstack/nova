@@ -95,7 +95,7 @@ class Failure(Exception):
         return str(self.details)
 
 
-def get_connection(_):
+def get_connection(_read_only):
     """Sets up the ESX host connection."""
     host_ip = FLAGS.vmwareapi_host_ip
     host_username = FLAGS.vmwareapi_host_username

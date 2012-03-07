@@ -36,7 +36,7 @@ from nova.virt import driver
 LOG = logging.getLogger(__name__)
 
 
-def get_connection(_=None):
+def get_connection(_read_only):
     # The read_only parameter is ignored.
     return FakeConnection.instance()
 
