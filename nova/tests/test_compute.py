@@ -43,10 +43,10 @@ from nova import exception
 from nova import flags
 from nova.image import fake as fake_image
 from nova import log as logging
-from nova.network.quantum import client as quantum_client
 from nova.notifier import test_notifier
 import nova.policy
 from nova import rpc
+from nova.rpc import common as rpc_common
 from nova.scheduler import driver as scheduler_driver
 from nova import test
 from nova.tests import fake_network
@@ -942,13 +942,13 @@ class ComputeTestCase(BaseTestCase):
                 mox.IgnoreArg(),
                 mox.IgnoreArg(),
                 requested_networks=None,
-                vpn=False).AndRaise(quantum_client.QuantumServerException())
+                vpn=False).AndRaise(rpc_common.RemoteError())
 
         self.flags(stub_network=False)
 
         self.mox.ReplayAll()
 
-        self.assertRaises(quantum_client.QuantumServerException,
+        self.assertRaises(rpc_common.RemoteError,
                           self.compute.run_instance,
                           self.context,
                           instance_uuid)
@@ -958,6 +958,27 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(vm_states.ERROR, instance['vm_state'])
 
         self.compute.terminate_instance(self.context, instance['uuid'])
+
+    def test_instance_set_to_error_on_deleted_instance_doesnt_raise(self):
+        """Test that we don't raise InstanceNotFound when trying to set
+        an instance to ERROR that has already been deleted from under us.
+        The original exception should be re-raised.
+        """
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+
+        def fake_allocate_network(context, instance, requested_networks):
+            # Remove the instance to simulate race condition
+            self.compute.terminate_instance(self.context, instance['uuid'])
+            raise rpc_common.RemoteError()
+
+        self.stubs.Set(self.compute, '_allocate_network',
+                       fake_allocate_network)
+
+        self.assertRaises(rpc_common.RemoteError,
+                          self.compute.run_instance,
+                          self.context,
+                          instance_uuid)
 
     def test_network_is_deallocated_on_spawn_failure(self):
         """When a spawn fails the network must be deallocated"""

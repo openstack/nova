@@ -216,9 +216,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.db.instance_update(context, instance_id, kwargs)
 
     def _set_instance_error_state(self, context, instance_uuid):
-        self._instance_update(context,
-                              instance_uuid,
-                              vm_state=vm_states.ERROR)
+        try:
+            self._instance_update(context,
+                    instance_uuid, vm_state=vm_states.ERROR)
+        except exception.InstanceNotFound:
+            LOG.debug(_("Instance %(instance_uuid)s has been destroyed "
+                    "from under us while trying to set it to ERROR") %
+                    locals())
 
     def init_host(self):
         """Initialization for a standalone compute service."""
