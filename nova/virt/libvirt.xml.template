@@ -51,9 +51,11 @@
     #end if
 #end if
     </os>
+#if $type != 'lxc' and $type != 'uml'
     <features>
         <acpi/>
     </features>
+#end if
     <vcpu>${vcpus}</vcpu>
     <devices>
 #if $type == 'lxc'
