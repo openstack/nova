@@ -47,7 +47,7 @@ from nova.virt import driver
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
-from nova.virt.vmwareapi.vmops import VMWareVMOps
+from nova.virt.vmwareapi import vmops
 
 
 LOG = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ class VMWareESXConnection(driver.ComputeDriver):
         super(VMWareESXConnection, self).__init__()
         session = VMWareAPISession(host_ip, host_username, host_password,
                                    api_retry_count, scheme=scheme)
-        self._vmops = VMWareVMOps(session)
+        self._vmops = vmops.VMWareVMOps(session)
 
     def init_host(self, host):
         """Do the initialization that needs to be done."""

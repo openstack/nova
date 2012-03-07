@@ -24,21 +24,21 @@ This script is used to configure base openvswitch flows for XenServer hosts.
 import os
 import sys
 
-
-from novalib import execute, execute_get_output
+import novalib
 
 
 def main(command, phys_dev_name):
-    ovs_ofctl = lambda *rule: execute('/usr/bin/ovs-ofctl', *rule)
+    ovs_ofctl = lambda *rule: novalib.execute('/usr/bin/ovs-ofctl', *rule)
 
     bridge_name = \
-        execute_get_output('/usr/bin/ovs-vsctl', 'iface-to-br', phys_dev_name)
+        novalib.execute_get_output('/usr/bin/ovs-vsctl',
+                                    'iface-to-br', phys_dev_name)
 
     # always clear all flows first
     ovs_ofctl('del-flows', bridge_name)
 
     if command in ('online', 'reset'):
-        pnic_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get',
+        pnic_ofport = novalib.execute_get_output('/usr/bin/ovs-vsctl', 'get',
                                          'Interface', phys_dev_name, 'ofport')
 
         # these flows are lower priority than all VM-specific flows.
@@ -51,8 +51,8 @@ def main(command, phys_dev_name):
         # Allow traffic from dom0 if there is a management interface
         # present (its IP address is on the bridge itself)
         bridge_addr = \
-            execute_get_output('/sbin/ip', '-o', '-f', 'inet', 'addr', 'show',
-                               bridge_name)
+            novalib.execute_get_output('/sbin/ip', '-o', '-f', 'inet', 'addr',
+                                                    'show', bridge_name)
         if bridge_addr != '':
             ovs_ofctl('add-flow', bridge_name,
                       "priority=2,in_port=LOCAL,actions=normal")

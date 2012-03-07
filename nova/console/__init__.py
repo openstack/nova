@@ -10,4 +10,3 @@
               multitenant VM console access
 .. moduleauthor:: Monsyne Dragon <mdragon@rackspace.com>
 """
-from nova.console.api import API

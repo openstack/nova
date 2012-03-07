@@ -77,8 +77,8 @@ from nova.virt import driver
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
 from nova.virt.xenapi import vm_utils
-from nova.virt.xenapi.vmops import VMOps
-from nova.virt.xenapi.volumeops import VolumeOps
+from nova.virt.xenapi import vmops
+from nova.virt.xenapi import volumeops
 
 
 LOG = logging.getLogger(__name__)
@@ -173,11 +173,11 @@ class XenAPIConnection(driver.ComputeDriver):
     def __init__(self, url, user, pw):
         super(XenAPIConnection, self).__init__()
         self._session = XenAPISession(url, user, pw)
-        self._volumeops = VolumeOps(self._session)
+        self._volumeops = volumeops.VolumeOps(self._session)
         self._host_state = None
         self._host = host.Host(self._session)
         self._product_version = self._session.get_product_version()
-        self._vmops = VMOps(self._session, self._product_version)
+        self._vmops = vmops.VMOps(self._session, self._product_version)
         self._initiator = None
         self._pool = pool.ResourcePool(self._session)
 

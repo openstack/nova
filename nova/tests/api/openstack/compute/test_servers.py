@@ -34,7 +34,7 @@ from nova.compute import instance_types
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.db
-from nova.db.sqlalchemy.models import InstanceMetadata
+from nova.db.sqlalchemy import models
 from nova import flags
 import nova.image.fake
 import nova.rpc
@@ -3008,7 +3008,7 @@ class ServersViewBuilderTest(test.TestCase):
     def test_build_server_detail_with_metadata(self):
 
         metadata = []
-        metadata.append(InstanceMetadata(key="Open", value="Stack"))
+        metadata.append(models.InstanceMetadata(key="Open", value="Stack"))
         self.instance['metadata'] = metadata
 
         image_bookmark = "http://localhost/fake/images/5"

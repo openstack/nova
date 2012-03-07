@@ -37,8 +37,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
-from nova.utils import ssh_execute
-from nova.volume.driver import ISCSIDriver
+import nova.volume.driver
 
 
 LOG = logging.getLogger(__name__)
@@ -78,7 +77,7 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(san_opts)
 
 
-class SanISCSIDriver(ISCSIDriver):
+class SanISCSIDriver(nova.volume.driver.ISCSIDriver):
     """Base class for SAN-style storage volumes
 
     A SAN-style storage value is 'different' because the volume controller
@@ -127,7 +126,7 @@ class SanISCSIDriver(ISCSIDriver):
         ssh = self._connect_to_ssh()
 
         #TODO(justinsb): Reintroduce the retry hack
-        ret = ssh_execute(ssh, command, check_exit_code=check_exit_code)
+        ret = utils.ssh_execute(ssh, command, check_exit_code=check_exit_code)
 
         ssh.close()
 

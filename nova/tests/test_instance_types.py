@@ -24,8 +24,8 @@ from nova import flags
 from nova import log as logging
 from nova import test
 from nova.compute import instance_types
-from nova.db.sqlalchemy.session import get_session
 from nova.db.sqlalchemy import models
+from nova.db.sqlalchemy import session as sql_session
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ class InstanceTypeTestCase(test.TestCase):
 
     def test_get_all_instance_types(self):
         """Ensures that all instance types can be retrieved"""
-        session = get_session()
+        session = sql_session.get_session()
         total_instance_types = session.query(models.InstanceTypes).count()
         inst_types = instance_types.get_all_types()
         self.assertEqual(total_instance_types, len(inst_types))

@@ -20,7 +20,7 @@ import mox
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy.session import get_session
+from nova.db.sqlalchemy import session as sql_session
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -198,7 +198,7 @@ class QuantumNovaTestCase(test.TestCase):
         # habit of of creating fixed IPs and not cleaning up, which
         # can confuse these tests, so we remove all existing fixed
         # ips before starting.
-        session = get_session()
+        session = sql_session.get_session()
         result = session.query(models.FixedIp).all()
         with session.begin():
             for fip_ref in result:

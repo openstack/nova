@@ -33,7 +33,7 @@ from nova import network
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import vsa
+from nova.vsa import api as vsa_api
 from nova import volume
 
 
@@ -114,7 +114,7 @@ class VsaController(object):
     """The Virtual Storage Array API controller for the OpenStack API."""
 
     def __init__(self):
-        self.vsa_api = vsa.API()
+        self.vsa_api = vsa_api.API()
         self.compute_api = compute.API()
         self.network_api = network.API()
         super(VsaController, self).__init__()
@@ -271,7 +271,7 @@ class VsaVolumeDriveController(volumes.VolumeController):
 
     def __init__(self):
         self.volume_api = volume.API()
-        self.vsa_api = vsa.API()
+        self.vsa_api = vsa_api.API()
         super(VsaVolumeDriveController, self).__init__()
 
     def _translation(self, context, vol, vsa_id, details):
@@ -565,7 +565,7 @@ class VsaVPoolController(object):
     """The vPool VSA API controller for the OpenStack API."""
 
     def __init__(self):
-        self.vsa_api = vsa.API()
+        self.vsa_api = vsa_api.API()
         super(VsaVPoolController, self).__init__()
 
     @wsgi.serializers(xml=VsaVPoolsTemplate)
@@ -594,7 +594,7 @@ class VsaVCController(servers.Controller):
     """The VSA Virtual Controller API controller for the OpenStack API."""
 
     def __init__(self):
-        self.vsa_api = vsa.API()
+        self.vsa_api = vsa_api.API()
         self.compute_api = compute.API()
         self.vsa_id = None      # VP-TODO: temporary ugly hack
         super(VsaVCController, self).__init__()

@@ -16,15 +16,15 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.volume.driver import VolumeDriver
-from nova.virt.xenapi_conn import XenAPISession
-from nova.virt.xenapi.volumeops import VolumeOps
+from nova.virt import xenapi_conn
+from nova.virt.xenapi import volumeops
+import nova.volume.driver
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 
-class XenSMDriver(VolumeDriver):
+class XenSMDriver(nova.volume.driver.VolumeDriver):
 
     def _convert_config_params(self, conf_str):
         params = dict([item.split("=") for item in conf_str.split()])
@@ -103,8 +103,8 @@ class XenSMDriver(VolumeDriver):
         username = FLAGS.xenapi_connection_username
         password = FLAGS.xenapi_connection_password
         try:
-            session = XenAPISession(url, username, password)
-            self._volumeops = VolumeOps(session)
+            session = xenapi_conn.XenAPISession(url, username, password)
+            self._volumeops = volumeops.VolumeOps(session)
         except Exception as ex:
             LOG.exception(ex)
             raise exception.Error(_("Failed to initiate session"))

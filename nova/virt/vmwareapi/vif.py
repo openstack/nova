@@ -20,7 +20,7 @@
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.virt.vif import VIFDriver
+from nova.virt import vif
 from nova.virt.vmwareapi import network_utils
 
 
@@ -30,7 +30,7 @@ FLAGS = flags.FLAGS
 FLAGS.set_default('vmwareapi_vlan_interface', 'vmnic0')
 
 
-class VMWareVlanBridgeDriver(VIFDriver):
+class VMWareVlanBridgeDriver(vif.VIFDriver):
     """VIF Driver to setup bridge/VLAN networking using VMWare API."""
 
     def plug(self, instance, network, mapping):

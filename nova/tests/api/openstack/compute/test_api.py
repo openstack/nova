@@ -18,9 +18,9 @@
 import json
 
 from lxml import etree
+import webob
 import webob.exc
 import webob.dec
-from webob import Request
 
 import nova.context
 from nova import test
@@ -84,7 +84,7 @@ class APITest(test.TestCase):
 
         #api.application = raise_webob_exc
         api = self._wsgi_app(raise_webob_exc)
-        resp = Request.blank('/').get_response(api)
+        resp = webob.Request.blank('/').get_response(api)
         self.assertEqual(resp.status_int, 404, resp.body)
 
     def test_exceptions_are_converted_to_faults_api_fault(self):
@@ -95,7 +95,7 @@ class APITest(test.TestCase):
 
         #api.application = raise_api_fault
         api = self._wsgi_app(raise_api_fault)
-        resp = Request.blank('/').get_response(api)
+        resp = webob.Request.blank('/').get_response(api)
         self.assertTrue('itemNotFound' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 404, resp.body)
 
@@ -106,7 +106,7 @@ class APITest(test.TestCase):
 
         #api.application = fail
         api = self._wsgi_app(fail)
-        resp = Request.blank('/').get_response(api)
+        resp = webob.Request.blank('/').get_response(api)
         self.assertTrue('{"computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
@@ -117,7 +117,7 @@ class APITest(test.TestCase):
 
         #api.application = fail
         api = self._wsgi_app(fail)
-        resp = Request.blank('/.xml').get_response(api)
+        resp = webob.Request.blank('/.xml').get_response(api)
         self.assertTrue('<computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 

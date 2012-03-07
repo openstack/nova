@@ -22,7 +22,7 @@ to the write using a LightQueue as a Pipe between the reader and the writer.
 
 from eventlet import event
 from eventlet import greenthread
-from eventlet.queue import LightQueue
+from eventlet import queue
 
 from nova import exception
 from nova import log as logging
@@ -33,12 +33,12 @@ IO_THREAD_SLEEP_TIME = .01
 GLANCE_POLL_INTERVAL = 5
 
 
-class ThreadSafePipe(LightQueue):
+class ThreadSafePipe(queue.LightQueue):
     """The pipe to hold the data which the reader writes to and the writer
     reads from."""
 
     def __init__(self, maxsize, transfer_size):
-        LightQueue.__init__(self, maxsize)
+        queue.LightQueue.__init__(self, maxsize)
         self.transfer_size = transfer_size
         self.transferred = 0
 

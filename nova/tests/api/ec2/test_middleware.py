@@ -27,7 +27,7 @@ from nova import flags
 from nova import test
 from nova import utils
 
-from xml.etree.ElementTree import fromstring as xml_to_tree
+from xml.etree import ElementTree
 
 FLAGS = flags.FLAGS
 
@@ -108,7 +108,7 @@ class ExecutorTestCase(test.TestCase):
         return self.executor(fake_wsgi_request)
 
     def _extract_message(self, result):
-        tree = xml_to_tree(result.body)
+        tree = ElementTree.fromstring(result.body)
         return tree.findall('./Errors')[0].find('Error/Message').text
 
     def test_instance_not_found(self):

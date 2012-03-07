@@ -17,7 +17,7 @@
 
 from nova import exception
 from nova import log as logging
-from nova.volume.san import SolidFireSanISCSIDriver as SFID
+from nova.volume import san
 from nova import test
 
 LOG = logging.getLogger(__name__)
@@ -90,19 +90,21 @@ class SolidFireVolumeTestCase(test.TestCase):
                     'id': 1}
 
     def test_create_volume(self):
-        SFID._issue_api_request = self.fake_issue_api_request
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request)
         testvol = {'project_id': 'testprjid',
                    'name': 'testvol',
                    'size': 1}
-        sfv = SFID()
+        sfv = san.SolidFireSanISCSIDriver()
         model_update = sfv.create_volume(testvol)
 
     def test_create_volume_fails(self):
-        SFID._issue_api_request = self.fake_issue_api_request_fails
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request_fails)
         testvol = {'project_id': 'testprjid',
                    'name': 'testvol',
                    'size': 1}
-        sfv = SFID()
+        sfv = san.SolidFireSanISCSIDriver()
         try:
             sfv.create_volume(testvol)
             self.fail("Should have thrown Error")
@@ -110,43 +112,49 @@ class SolidFireVolumeTestCase(test.TestCase):
             pass
 
     def test_create_sfaccount(self):
-        sfv = SFID()
-        SFID._issue_api_request = self.fake_issue_api_request
+        sfv = san.SolidFireSanISCSIDriver()
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request)
         account = sfv._create_sfaccount('project-id')
         self.assertNotEqual(account, None)
 
     def test_create_sfaccount_fails(self):
-        sfv = SFID()
-        SFID._issue_api_request = self.fake_issue_api_request_fails
+        sfv = san.SolidFireSanISCSIDriver()
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request_fails)
         account = sfv._create_sfaccount('project-id')
         self.assertEqual(account, None)
 
     def test_get_sfaccount_by_name(self):
-        sfv = SFID()
-        SFID._issue_api_request = self.fake_issue_api_request
+        sfv = san.SolidFireSanISCSIDriver()
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request)
         account = sfv._get_sfaccount_by_name('some-name')
         self.assertNotEqual(account, None)
 
     def test_get_sfaccount_by_name_fails(self):
-        sfv = SFID()
-        SFID._issue_api_request = self.fake_issue_api_request_fails
+        sfv = san.SolidFireSanISCSIDriver()
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request_fails)
         account = sfv._get_sfaccount_by_name('some-name')
         self.assertEqual(account, None)
 
     def test_delete_volume(self):
-        SFID._issue_api_request = self.fake_issue_api_request
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request)
         testvol = {'project_id': 'testprjid',
                    'name': 'test_volume',
                    'size': 1}
-        sfv = SFID()
+        sfv = san.SolidFireSanISCSIDriver()
         model_update = sfv.delete_volume(testvol)
 
     def test_delete_volume_fails_no_volume(self):
-        SFID._issue_api_request = self.fake_issue_api_request
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request)
         testvol = {'project_id': 'testprjid',
                    'name': 'no-name',
                    'size': 1}
-        sfv = SFID()
+        sfv = san.SolidFireSanISCSIDriver()
         try:
             model_update = sfv.delete_volume(testvol)
             self.fail("Should have thrown Error")
@@ -154,22 +162,25 @@ class SolidFireVolumeTestCase(test.TestCase):
             pass
 
     def test_delete_volume_fails_account_lookup(self):
-        SFID._issue_api_request = self.fake_issue_api_request
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request)
         testvol = {'project_id': 'testprjid',
                    'name': 'no-name',
                    'size': 1}
-        sfv = SFID()
+        sfv = san.SolidFireSanISCSIDriver()
         self.assertRaises(exception.DuplicateSfVolumeNames,
                           sfv.delete_volume,
                           testvol)
 
     def test_get_cluster_info(self):
-        SFID._issue_api_request = self.fake_issue_api_request
-        sfv = SFID()
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request)
+        sfv = san.SolidFireSanISCSIDriver()
         sfv._get_cluster_info()
 
     def test_get_cluster_info_fail(self):
-        SFID._issue_api_request = self.fake_issue_api_request_fails
-        sfv = SFID()
+        self.stubs.Set(san.SolidFireSanISCSIDriver, '_issue_api_request',
+                       self.fake_issue_api_request_fails)
+        sfv = san.SolidFireSanISCSIDriver()
         self.assertRaises(exception.SolidFireAPIException,
                           sfv._get_cluster_info)

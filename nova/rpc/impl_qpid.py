@@ -26,11 +26,12 @@ import qpid.messaging
 import qpid.messaging.exceptions
 
 from nova import flags
+from nova import log as logging
 from nova.openstack.common import cfg
 from nova.rpc import amqp as rpc_amqp
 from nova.rpc import common as rpc_common
-from nova.rpc.common import LOG
 
+LOG = logging.getLogger(__name__)
 
 qpid_opts = [
     cfg.StrOpt('qpid_hostname',

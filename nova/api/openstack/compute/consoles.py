@@ -20,7 +20,7 @@ from webob import exc
 
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import console
+from nova.console import api as console_api
 from nova import exception
 
 
@@ -83,7 +83,7 @@ class Controller(object):
     """The Consoles controller for the Openstack API"""
 
     def __init__(self):
-        self.console_api = console.API()
+        self.console_api = console_api.API()
 
     @wsgi.serializers(xml=ConsolesTemplate)
     def index(self, req, server_id):

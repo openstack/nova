@@ -29,7 +29,7 @@ import webob.exc
 import nova
 import nova.common.policy
 from nova import compute
-import nova.compute.api
+from nova.compute import api as compute_api
 from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
@@ -1419,7 +1419,7 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        self.assertRaises(rpc.RemoteError,
+        self.assertRaises(rpc_common.RemoteError,
                           self.compute.live_migration,
                           c, instance_id, inst_ref['host'], True)
 
@@ -3316,7 +3316,7 @@ class ComputeAPIAggrTestCase(test.TestCase):
 
     def setUp(self):
         super(ComputeAPIAggrTestCase, self).setUp()
-        self.api = compute.AggregateAPI()
+        self.api = compute_api.AggregateAPI()
         self.context = context.get_admin_context()
         self.stubs.Set(rpc, 'call', fake_rpc_method)
         self.stubs.Set(rpc, 'cast', fake_rpc_method)

@@ -15,7 +15,7 @@
 
 from nova import exception
 from nova import flags
-from nova import vsa
+from nova.vsa import api as vsa_api
 from nova import volume
 from nova import context
 from nova import test
@@ -30,7 +30,7 @@ class VsaVolumesTestCase(test.TestCase):
 
     def setUp(self):
         super(VsaVolumesTestCase, self).setUp()
-        self.vsa_api = vsa.API()
+        self.vsa_api = vsa_api.API()
         self.volume_api = volume.API()
         self.context = context.get_admin_context()
 

@@ -19,18 +19,16 @@
 import glob
 import os
 
-from setuptools import find_packages
-
-from setuptools import setup
+import setuptools
 
 from nova import version
 
 nova_cmdclass = {}
 
 try:
-    from sphinx.setup_command import BuildDoc
+    from sphinx import setup_command
 
-    class local_BuildDoc(BuildDoc):
+    class local_BuildDoc(setup_command.BuildDoc):
         def run(self):
             for builder in ['html', 'man']:
                 self.builder = builder
@@ -55,14 +53,14 @@ def find_data_files(destdir, srcdir):
     return package_data
 
 
-setup(name='nova',
+setuptools.setup(name='nova',
       version=version.canonical_version_string(),
       description='cloud computing fabric controller',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
       url='http://www.openstack.org/',
       cmdclass=nova_cmdclass,
-      packages=find_packages(exclude=['bin', 'smoketests']),
+      packages=setuptools.find_packages(exclude=['bin', 'smoketests']),
       include_package_data=True,
       test_suite='nose.collector',
       scripts=['bin/clear_rabbit_queues',

@@ -31,6 +31,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova import rpc
+from nova.rpc import common as rpc_common
 from nova import utils
 
 
@@ -366,7 +367,7 @@ class Scheduler(object):
                      {"method": 'compare_cpu',
                       "args": {'cpu_info': oservice_ref['cpu_info']}})
 
-        except rpc.RemoteError:
+        except rpc_common.RemoteError:
             src = instance_ref['host']
             LOG.exception(_("host %(dest)s is not compatible with "
                                 "original host %(src)s.") % locals())
@@ -457,7 +458,7 @@ class Scheduler(object):
                            {"method": 'get_instance_disk_info',
                             "args": {'instance_name': instance_ref['name']}})
             disk_infos = utils.loads(ret)
-        except rpc.RemoteError:
+        except rpc_common.RemoteError:
             LOG.exception(_("host %(dest)s is not compatible with "
                                 "original host %(src)s.") % locals())
             raise

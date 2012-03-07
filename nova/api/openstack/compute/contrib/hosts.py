@@ -22,7 +22,7 @@ from xml.parsers import expat
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.api.openstack import extensions
-from nova import compute
+from nova.compute import api as compute_api
 from nova import db
 from nova import exception
 from nova import flags
@@ -120,7 +120,7 @@ def check_host(fn):
 class HostController(object):
     """The Hosts API controller for the OpenStack API."""
     def __init__(self):
-        self.api = compute.HostAPI()
+        self.api = compute_api.HostAPI()
         super(HostController, self).__init__()
 
     @wsgi.serializers(xml=HostIndexTemplate)

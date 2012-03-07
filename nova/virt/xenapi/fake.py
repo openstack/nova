@@ -54,9 +54,9 @@ A fake XenAPI SDK.
 import json
 import random
 import uuid
-from xml.sax.saxutils import escape
+from xml.sax import saxutils
 
-from pprint import pformat
+import pprint
 
 from nova import exception
 from nova import log as logging
@@ -73,7 +73,7 @@ LOG = logging.getLogger(__name__)
 
 def log_db_contents(msg=None):
     text = msg or ""
-    content = pformat(_db_content)
+    content = pprint.pformat(_db_content)
     LOG.debug(_("%(text)s: _db_content => %(content)s") % locals())
 
 
@@ -326,7 +326,7 @@ def check_for_session_leaks():
 def as_value(s):
     """Helper function for simulating XenAPI plugin responses.  It
     escapes and wraps the given argument."""
-    return '<value>%s</value>' % escape(s)
+    return '<value>%s</value>' % saxutils.escape(s)
 
 
 def as_json(*args, **kwargs):

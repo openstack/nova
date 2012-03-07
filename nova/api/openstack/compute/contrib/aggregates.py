@@ -18,10 +18,9 @@
 from webob import exc
 
 from nova.api.openstack import extensions
-from nova import compute
+from nova.compute import api as compute_api
 from nova import exception
 from nova import log as logging
-
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'aggregates')
@@ -45,7 +44,7 @@ def get_host_from_body(fn):
 class AggregateController(object):
     """The Host Aggregates API controller for the OpenStack API."""
     def __init__(self):
-        self.api = compute.AggregateAPI()
+        self.api = compute_api.AggregateAPI()
 
     def index(self, req):
         """Returns a list a host aggregate's id, name, availability_zone."""

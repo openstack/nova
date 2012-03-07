@@ -25,7 +25,7 @@ from nova import flags
 from nova import log as logging
 from nova.db import api as db
 from nova.virt import netutils
-from nova.virt.firewall import IptablesFirewallDriver
+from nova.virt import firewall
 
 
 LOG = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ drivers = ['nova.virt.firewall.IptablesFirewallDriver',
            'nova.virt.xenapi.firewall.Dom0IptablesFirewallDriver', ]
 
 
-class Dom0IptablesFirewallDriver(IptablesFirewallDriver):
+class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
     """ Dom0IptablesFirewallDriver class
 
     This class provides an implementation for nova.virt.Firewall

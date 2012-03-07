@@ -21,13 +21,12 @@ This script is used to configure openvswitch flows on XenServer hosts.
 """
 
 import os
+import simplejson as json
 import sys
 
 # This is written to Python 2.4, since that is what is available on XenServer
 import netaddr
-import simplejson as json
-
-from novalib import execute, execute_get_output
+import novalib
 
 
 OVS_OFCTL = '/usr/bin/ovs-ofctl'
@@ -39,10 +38,11 @@ class OvsFlow(object):
         self.params = params
 
     def add(self, rule):
-        execute(OVS_OFCTL, 'add-flow', self.bridge, rule % self.params)
+        novalib.execute(OVS_OFCTL, 'add-flow', self.bridge, rule % self.params)
 
     def clear_flows(self, ofport):
-        execute(OVS_OFCTL, 'del-flows', self.bridge, "in_port=%s" % ofport)
+        novalib.execute(OVS_OFCTL, 'del-flows',
+                                        self.bridge, "in_port=%s" % ofport)
 
 
 def main(command, vif_raw, net_type):
@@ -52,14 +52,15 @@ def main(command, vif_raw, net_type):
     vif_name, dom_id, vif_index = vif_raw.split('-')
     vif = "%s%s.%s" % (vif_name, dom_id, vif_index)
 
-    bridge = execute_get_output('/usr/bin/ovs-vsctl', 'iface-to-br', vif)
+    bridge = novalib.execute_get_output('/usr/bin/ovs-vsctl',
+                                                    'iface-to-br', vif)
 
-    xsls = execute_get_output('/usr/bin/xenstore-ls',
+    xsls = novalib.execute_get_output('/usr/bin/xenstore-ls',
                               '/local/domain/%s/vm-data/networking' % dom_id)
     macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
 
     for mac in macs:
-        xsread = execute_get_output('/usr/bin/xenstore-read',
+        xsread = novalib.execute_get_output('/usr/bin/xenstore-read',
                                     '/local/domain/%s/vm-data/networking/%s' %
                                     (dom_id, mac))
         data = json.loads(xsread)
@@ -71,10 +72,10 @@ def main(command, vif_raw, net_type):
             phys_dev = "eth1"
 
         if vif == this_vif:
-            vif_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get',
-                                            'Interface', vif, 'ofport')
-            phys_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get',
-                                             'Interface', phys_dev, 'ofport')
+            vif_ofport = novalib.execute_get_output('/usr/bin/ovs-vsctl',
+                                    'get', 'Interface', vif, 'ofport')
+            phys_ofport = novalib.execute_get_output('/usr/bin/ovs-vsctl',
+                                    'get', 'Interface', phys_dev, 'ofport')
 
             params = dict(VIF_NAME=vif,
                           MAC=data['mac'],

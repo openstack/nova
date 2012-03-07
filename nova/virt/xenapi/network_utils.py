@@ -21,10 +21,10 @@ their lookup functions.
 """
 
 
-from nova.virt.xenapi import HelperBase
+from nova.virt import xenapi
 
 
-class NetworkHelper(HelperBase):
+class NetworkHelper(xenapi.HelperBase):
     """
     The class that wraps the helper methods together.
     """

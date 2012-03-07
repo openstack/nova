@@ -36,7 +36,7 @@ class VsaTestCase(test.TestCase):
 
     def setUp(self):
         super(VsaTestCase, self).setUp()
-        self.vsa_api = vsa.API()
+        self.vsa_api = vsa.api.API()
 
         self.flags(quota_volumes=100, quota_gigabytes=10000)
 

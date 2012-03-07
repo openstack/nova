@@ -28,7 +28,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.virt.xenapi import HelperBase
+from nova.virt import xenapi
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class StorageError(Exception):
         super(StorageError, self).__init__(message)
 
 
-class VolumeHelper(HelperBase):
+class VolumeHelper(xenapi.HelperBase):
     """
     The class that wraps the helper methods together.
     """
