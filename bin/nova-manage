@@ -2147,8 +2147,8 @@ class GetLogCommands(object):
 
     def errors(self):
         """Get all of the errors from the log files"""
+        error_found = 0
         if FLAGS.logdir:
-            error_found = 0
             logs = [x for x in os.listdir(FLAGS.logdir) if x.endswith('.log')]
             for file in logs:
                 log_file = os.path.join(FLAGS.logdir, file)
