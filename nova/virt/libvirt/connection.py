@@ -105,9 +105,6 @@ libvirt_opts = [
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
                 help='Sync virtual and real mouse cursors in Windows VMs'),
-    cfg.StrOpt('cpuinfo_xml_template',
-               default='$pybasedir/nova/virt/cpuinfo.xml.template',
-               help='CpuInfo XML Template (Used only live migration now)'),
     cfg.StrOpt('live_migration_uri',
                default="qemu+tcp://%s/system",
                help='Define protocol used by live_migration feature'),
@@ -244,14 +241,6 @@ class LibvirtConnection(driver.ComputeDriver):
     def init_host(self, host):
         # NOTE(nsokolov): moved instance restarting to ComputeManager
         pass
-
-    @property
-    def cpuinfo_xml(self):
-        if not hasattr(self, '_cpuinfo_xml_cache_info'):
-            self._cpuinfo_xml_cache_info = {}
-
-        return utils.read_cached_file(FLAGS.cpuinfo_xml_template,
-                self._cpuinfo_xml_cache_info)
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
@@ -2035,16 +2024,23 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
 
+        info = utils.loads(cpu_info)
         LOG.info(_('Instance launched has CPU info:\n%s') % cpu_info)
-        dic = utils.loads(cpu_info)
-        xml = str(Template(self.cpuinfo_xml, searchList=dic))
-        LOG.info(_('to xml...\n:%s ') % xml)
+        cpu = config.LibvirtConfigCPU()
+        cpu.arch = info['arch']
+        cpu.model = info['model']
+        cpu.vendor = info['vendor']
+        cpu.sockets = info['topology']['sockets']
+        cpu.cores = info['topology']['cores']
+        cpu.threads = info['topology']['threads']
+        for f in info['features']:
+            cpu.add_feature(f)
 
         u = "http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult"
         m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")
         # unknown character exists in xml, then libvirt complains
         try:
-            ret = self._conn.compareCPU(xml, 0)
+            ret = self._conn.compareCPU(cpu.to_xml(), 0)
         except libvirt.libvirtError, e:
             ret = e.message
             LOG.error(m % locals())
