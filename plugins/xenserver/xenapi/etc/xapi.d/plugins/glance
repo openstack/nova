@@ -354,6 +354,8 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     Create a tarball of the image and then stream that into Glance
     using chunked-transfer-encoded HTTP.
     """
+    url = 'http://%s:%s/v1/images/%s' % (glance_host, glance_port, image_id)
+    logging.info("Writing image data to %s" % url)
     conn = httplib.HTTPConnection(glance_host, glance_port)
 
     # NOTE(sirp): httplib under python2.4 won't accept a file-like object
@@ -395,17 +397,25 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     tar_cmd = "tar -zc --directory=%(staging_path)s ." % locals()
     tar_proc = _make_subprocess(tar_cmd, stdout=True, stderr=True)
 
+    length = 0
     chunk = tar_proc.stdout.read(CHUNK_SIZE)
     while chunk:
+        length += len(chunk)
         conn.send("%x\r\n%s\r\n" % (len(chunk), chunk))
         chunk = tar_proc.stdout.read(CHUNK_SIZE)
     conn.send("0\r\n\r\n")
+    logging.info("Wrote %s bytes to %s" % (length, url))
 
     _finish_subprocess(tar_proc, tar_cmd)
 
     resp = conn.getresponse()
     if resp.status != httplib.OK:
-        raise Exception("Unexpected response from Glance %i" % resp.status)
+        logging.error("Unexpected response while writing image data to %s: "
+                      "Response Status: %i, Response body: %s"
+                      % (url, resp.status, resp.read()))
+        raise Exception("Unexpected response [%i] while uploading image [%s] "
+                        "to glance host [%s:%s]"
+                        % (resp.status, image_id, glance_host, glance_port))
     conn.close()
 
 
