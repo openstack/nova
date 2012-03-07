@@ -176,12 +176,14 @@ class API(base.Base):
         args = kwargs
         args['instance_id'] = instance['id']
         args['project_id'] = instance['project_id']
+        args['host'] = instance['host']
         rpc.cast(context, FLAGS.network_topic,
                  {'method': 'deallocate_for_instance',
                   'args': args})
 
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):
         """Adds a fixed ip to instance from specified network."""
+        # NOTE(tr3buchet): poorly written, broken in all but flat manager
         args = {'instance_id': instance_id,
                 'host': host,
                 'network_id': network_id}
@@ -191,6 +193,7 @@ class API(base.Base):
 
     def remove_fixed_ip_from_instance(self, context, instance_id, address):
         """Removes a fixed ip from instance from specified network."""
+        # NOTE(tr3buchet): poorly written, broken in all but flat manager
         args = {'instance_id': instance_id,
                 'address': address}
         rpc.cast(context, FLAGS.network_topic,
@@ -317,3 +320,20 @@ class API(base.Base):
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'create_public_dns_domain',
                          'args': args})
+
+    def setup_networks_on_host(self, context, instance, host=None,
+                                                        teardown=False):
+        """Setup or teardown the network structures on hosts related to
+           instance"""
+        host = host or instance['host']
+        # NOTE(tr3buchet): host is passed in cases where we need to setup
+        # or teardown the networks on a host which has been migrated to/from
+        # and instance['host'] is not yet or is no longer equal to
+        args = {'instance_id': instance['id'],
+                'host': host,
+                'teardown': teardown}
+
+        # NOTE(tr3buchet): the call is just to wait for completion
+        rpc.call(context, FLAGS.network_topic,
+                 {'method': 'setup_networks_on_host',
+                  'args': args})

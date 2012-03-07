@@ -689,3 +689,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             leases_text += text
         LOG.debug("DHCP leases: %s" % leases_text)
         return leases_text
+
+    def setup_networks_on_host(self, *args, **kwargs):
+        # no host specific setup is needed in quantum manager
+        pass

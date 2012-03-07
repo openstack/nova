@@ -838,7 +838,7 @@ class VlanNetworkTestCase(test.TestCase):
         # Clean up the ip addresses
         self.network.disassociate_floating_ip(context1, float_addr)
         self.network.deallocate_floating_ip(context1, float_addr)
-        self.network.deallocate_fixed_ip(context1, fix_addr)
+        self.network.deallocate_fixed_ip(context1, fix_addr, 'fake')
         db.floating_ip_destroy(context1.elevated(), float_addr)
         db.fixed_ip_disassociate(context1.elevated(), fix_addr)
 

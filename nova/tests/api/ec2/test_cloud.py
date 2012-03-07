@@ -218,7 +218,8 @@ class CloudTestCase(test.TestCase):
                                         public_ip=address)
         self.cloud.release_address(self.context,
                                   public_ip=address)
-        self.network.deallocate_fixed_ip(self.context, fixed_ips[0]['address'])
+        self.network.deallocate_fixed_ip(self.context, fixed_ips[0]['address'],
+                                         inst['host'])
         db.instance_destroy(self.context, inst['id'])
         db.floating_ip_destroy(self.context, address)
 
