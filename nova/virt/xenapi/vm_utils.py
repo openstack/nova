@@ -740,7 +740,6 @@ class VMHelper(xenapi.HelperBase):
 
         Returns: A list of dictionaries that describe VDIs
         """
-        instance_id = instance.id
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
                     % locals())
         sr_ref = cls.safe_find_sr(session)
