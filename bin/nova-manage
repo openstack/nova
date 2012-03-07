@@ -57,7 +57,6 @@
 import ast
 import errno
 import gettext
-import glob
 import json
 import math
 import netaddr
@@ -65,7 +64,6 @@ import optparse
 import os
 import StringIO
 import sys
-import time
 
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
@@ -84,7 +82,6 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
-from nova import image
 from nova import log as logging
 from nova import quota
 from nova import rpc
@@ -94,7 +91,6 @@ from nova import vsa
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.compute import instance_types
-from nova.compute import vm_states
 from nova.db import migration
 from nova.volume import volume_types
 
@@ -946,60 +942,6 @@ class VmCommands(object):
                 instance['availability_zone'],
                 instance['launch_index'])
 
-    def _migration(self, ec2_id, dest, block_migration=False,
-                                       disk_over_commit=False):
-        """Migrates a running instance to a new machine.
-         :param ec2_id: instance id which comes from euca-describe-instance.
-         :param dest: destination host name.
-         :param block_migration: if True, do block_migration.
-
-        """
-
-        ctxt = context.get_admin_context()
-        instance_id = ec2utils.ec2_id_to_id(ec2_id)
-
-        flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
-        if (FLAGS.connection_type != 'libvirt' or
-           (FLAGS.connection_type == 'libvirt' and
-            FLAGS.libvirt_type not in ['kvm', 'qemu'])):
-            msg = _('Only KVM and QEmu are supported for now. Sorry!')
-            raise exception.Error(msg)
-
-        if FLAGS.volume_driver != 'nova.volume.driver.ISCSIDriver':
-            msg = _("Support only ISCSIDriver. Sorry!")
-            raise exception.Error(msg)
-
-        rpc.call(ctxt,
-                 FLAGS.scheduler_topic,
-                 {"method": "live_migration",
-                  "args": {"instance_id": instance_id,
-                           "dest": dest,
-                           "topic": FLAGS.compute_topic,
-                           "block_migration": block_migration,
-                           "disk_over_commit": disk_over_commit}})
-
-        print _('Migration of %s initiated.'
-               'Check its progress using euca-describe-instances.') % ec2_id
-
-    @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
-    @args('--dest', dest='dest', metavar='<Destanation>',
-            help='destanation node')
-    def live_migration(self, ec2_id, dest):
-        """Migrates a running instance to a new machine."""
-
-        self._migration(ec2_id, dest)
-
-    @args('--ec2_id', dest='ec2_id', metavar='<ec2 id>', help='EC2 ID')
-    @args('--dest', dest='dest', metavar='<Destanation>',
-                           help='destanation node')
-    @args('--disk_over_commit', dest='disk_over_commit',
-                           metavar='<overcommit flag>',
-                           help='Allow overcommit (default Flase)')
-    def block_migration(self, ec2_id, dest, disk_over_commit=False):
-        """Migrates a running instance to a new machine with storage data."""
-
-        self._migration(ec2_id, dest, True, disk_over_commit)
-
 
 class ServiceCommands(object):
     """Enable and disable running services"""
@@ -1776,174 +1718,6 @@ class InstanceTypeCommands(object):
             self._print_instance_types(name, inst_types)
 
 
-class ImageCommands(object):
-    """Methods for dealing with a cloud in an odd state"""
-
-    def __init__(self, *args, **kwargs):
-        self.image_service = image.get_default_image_service()
-
-    def _register(self, container_format, disk_format,
-                  path, owner, name=None, is_public='T',
-                  architecture='x86_64', kernel_id=None, ramdisk_id=None):
-        meta = {'is_public': (is_public == 'T'),
-                'name': name,
-                'container_format': container_format,
-                'disk_format': disk_format,
-                'properties': {'image_state': 'available',
-                               'project_id': owner,
-                               'architecture': architecture,
-                               'image_location': 'local'}}
-        if kernel_id:
-            meta['properties']['kernel_id'] = kernel_id
-        if ramdisk_id:
-            meta['properties']['ramdisk_id'] = ramdisk_id
-        elevated = context.get_admin_context()
-        try:
-            with open(path) as ifile:
-                image = self.image_service.create(elevated, meta, ifile)
-            new = image['id']
-            print _("Image registered to %(new)s (%(path)s).") % locals()
-            return new
-        except Exception as exc:
-            print _("Failed to register %(path)s: %(exc)s") % locals()
-            sys.exit(1)
-
-    @args('--image', dest='image', metavar='<image>', help='Image')
-    @args('--kernel', dest='kernel', metavar='<kernel>', help='Kernel')
-    @args('--ram', dest='ramdisk', metavar='<ramdisk>', help='RAM disk')
-    @args('--owner', dest='owner', metavar='<owner>', help='Image owner')
-    @args('--name', dest='name', metavar='<name>', help='Image name')
-    @args('--public', dest='is_public', metavar="<'T'|'F'>",
-            help='Image public or not')
-    @args('--arch', dest='architecture', metavar='<arch>',
-            help='Architecture')
-    def all_register(self, image, kernel, ramdisk, owner, name=None,
-                 is_public='T', architecture='x86_64'):
-        """Uploads an image, kernel, and ramdisk into the image_service"""
-        kernel_id = self.kernel_register(kernel, owner, None,
-                                   is_public, architecture)
-        ramdisk_id = self.ramdisk_register(ramdisk, owner, None,
-                                    is_public, architecture)
-        self.image_register(image, owner, name, is_public,
-                            architecture, 'ami', 'ami',
-                            kernel_id, ramdisk_id)
-
-    @args('--path', dest='path', metavar='<path>', help='Image path')
-    @args('--owner', dest='owner', metavar='<owner>', help='Image owner')
-    @args('--name', dest='name', metavar='<name>', help='Image name')
-    @args('--public', dest='is_public', metavar="<'T'|'F'>",
-            help='Image public or not')
-    @args('--arch', dest='architecture', metavar='<arch>',
-            help='Architecture')
-    @args('--cont_format', dest='container_format',
-            metavar='<container format>',
-            help='Container format(default bare)')
-    @args('--disk_format', dest='disk_format', metavar='<disk format>',
-            help='Disk format(default: raw)')
-    @args('--kernel', dest='kernel_id', metavar='<kernel>', help='Kernel')
-    @args('--ram', dest='ramdisk_id', metavar='<ramdisk>', help='RAM disk')
-    def image_register(self, path, owner, name=None, is_public='T',
-                       architecture='x86_64', container_format='bare',
-                       disk_format='raw', kernel_id=None, ramdisk_id=None):
-        """Uploads an image into the image_service"""
-        return self._register(container_format, disk_format, path,
-                              owner, name, is_public, architecture,
-                              kernel_id, ramdisk_id)
-
-    @args('--path', dest='path', metavar='<path>', help='Image path')
-    @args('--owner', dest='owner', metavar='<owner>', help='Image owner')
-    @args('--name', dest='name', metavar='<name>', help='Image name')
-    @args('--public', dest='is_public', metavar="<'T'|'F'>",
-            help='Image public or not')
-    @args('--arch', dest='architecture', metavar='<arch>',
-            help='Architecture')
-    def kernel_register(self, path, owner, name=None, is_public='T',
-               architecture='x86_64'):
-        """Uploads a kernel into the image_service"""
-        return self._register('aki', 'aki', path, owner, name,
-                              is_public, architecture)
-
-    @args('--path', dest='path', metavar='<path>', help='Image path')
-    @args('--owner', dest='owner', metavar='<owner>', help='Image owner')
-    @args('--name', dest='name', metavar='<name>', help='Image name')
-    @args('--public', dest='is_public', metavar="<'T'|'F'>",
-            help='Image public or not')
-    @args('--arch', dest='architecture', metavar='<arch>',
-            help='Architecture')
-    def ramdisk_register(self, path, owner, name=None, is_public='T',
-                architecture='x86_64'):
-        """Uploads a ramdisk into the image_service"""
-        return self._register('ari', 'ari', path, owner, name,
-                              is_public, architecture)
-
-    def _lookup(self, old_image_id):
-        elevated = context.get_admin_context()
-        try:
-            internal_id = ec2utils.ec2_id_to_id(old_image_id)
-            image = self.image_service.show(elevated, internal_id)
-        except (exception.InvalidEc2Id, exception.ImageNotFound):
-            image = self.image_service.show_by_name(elevated, old_image_id)
-        return image['id']
-
-    def _old_to_new(self, old):
-        mapping = {'machine': 'ami',
-                   'kernel': 'aki',
-                   'ramdisk': 'ari'}
-        container_format = mapping[old['type']]
-        disk_format = container_format
-        if container_format == 'ami' and not old.get('kernelId'):
-            container_format = 'bare'
-            disk_format = 'raw'
-        new = {'disk_format': disk_format,
-               'container_format': container_format,
-               'is_public': old['isPublic'],
-               'name': old['imageId'],
-               'properties': {'image_state': old['imageState'],
-                              'project_id': old['imageOwnerId'],
-                              'architecture': old['architecture'],
-                              'image_location': old['imageLocation']}}
-        if old.get('kernelId'):
-            new['properties']['kernel_id'] = self._lookup(old['kernelId'])
-        if old.get('ramdiskId'):
-            new['properties']['ramdisk_id'] = self._lookup(old['ramdiskId'])
-        return new
-
-    def _convert_images(self, images):
-        elevated = context.get_admin_context()
-        for image_path, image_metadata in images.iteritems():
-            meta = self._old_to_new(image_metadata)
-            old = meta['name']
-            try:
-                with open(image_path) as ifile:
-                    image = self.image_service.create(elevated, meta, ifile)
-                new = image['id']
-                print _("Image %(old)s converted to %(new)s.") % locals()
-            except Exception as exc:
-                print _("Failed to convert %(old)s: %(exc)s") % locals()
-
-    @args('--dir', dest='directory', metavar='<path>',
-            help='Images directory')
-    def convert(self, directory):
-        """Uploads old objectstore images in directory to new service"""
-        machine_images = {}
-        other_images = {}
-        directory = os.path.abspath(directory)
-        for fn in glob.glob("%s/*/info.json" % directory):
-            try:
-                image_path = os.path.join(fn.rpartition('/')[0], 'image')
-                with open(fn) as metadata_file:
-                    image_metadata = json.load(metadata_file)
-                if image_metadata['type'] == 'machine':
-                    machine_images[image_path] = image_metadata
-                else:
-                    other_images[image_path] = image_metadata
-            except Exception:
-                print _("Failed to load %(fn)s.") % locals()
-        # NOTE(vish): do kernels and ramdisks first so images
-        self._convert_images(other_images)
-        self._convert_images(machine_images)
-
-
 class StorageManagerCommands(object):
     """Class for mangaging Storage Backends and Flavors"""
 
@@ -2294,7 +2068,6 @@ CATEGORIES = [
     ('floating', FloatingIpCommands),
     ('host', HostCommands),
     ('instance_type', InstanceTypeCommands),
-    ('image', ImageCommands),
     ('network', NetworkCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
