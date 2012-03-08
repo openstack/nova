@@ -297,9 +297,7 @@ class InstanceInfoCache(BASE, NovaBase):
     instance = relationship(Instance,
                             backref=backref('info_cache', uselist=False),
                             foreign_keys=instance_id,
-                            primaryjoin='and_('
-                              'InstanceInfoCache.instance_id == Instance.uuid,'
-                              'InstanceInfoCache.deleted == False)')
+                            primaryjoin=instance_id == Instance.uuid)
 
 
 class VirtualStorageArray(BASE, NovaBase):
