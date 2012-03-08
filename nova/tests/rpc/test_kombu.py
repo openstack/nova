@@ -48,7 +48,7 @@ def _raise_exc_stub(stubs, times, obj, method, exc_msg):
     return info
 
 
-class RpcKombuTestCase(common._BaseRpcTestCase):
+class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
     def setUp(self):
         self.rpc = impl_kombu
         super(RpcKombuTestCase, self).setUp()

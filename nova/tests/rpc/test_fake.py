@@ -27,7 +27,7 @@ from nova.tests.rpc import common
 LOG = logging.getLogger(__name__)
 
 
-class RpcFakeTestCase(common._BaseRpcTestCase):
+class RpcFakeTestCase(common.BaseRpcTestCase):
     def setUp(self):
         self.rpc = impl_fake
         super(RpcFakeTestCase, self).setUp()

@@ -21,10 +21,12 @@ Unit Tests for remote procedure calls shared between all implementations
 
 import time
 
+from eventlet import greenthread
 import nose
 
 from nova import context
 from nova import log as logging
+from nova.rpc import amqp as rpc_amqp
 from nova.rpc import common as rpc_common
 from nova import test
 
@@ -32,9 +34,9 @@ from nova import test
 LOG = logging.getLogger(__name__)
 
 
-class _BaseRpcTestCase(test.TestCase):
+class BaseRpcTestCase(test.TestCase):
     def setUp(self, supports_timeouts=True):
-        super(_BaseRpcTestCase, self).setUp()
+        super(BaseRpcTestCase, self).setUp()
         self.conn = self.rpc.create_connection(True)
         self.receiver = TestReceiver()
         self.conn.create_consumer('test', self.receiver, False)
@@ -44,7 +46,7 @@ class _BaseRpcTestCase(test.TestCase):
 
     def tearDown(self):
         self.conn.close()
-        super(_BaseRpcTestCase, self).tearDown()
+        super(BaseRpcTestCase, self).tearDown()
 
     def test_call_succeed(self):
         value = 42
@@ -172,6 +174,43 @@ class _BaseRpcTestCase(test.TestCase):
             self.fail("should have thrown Timeout")
         except rpc_common.Timeout as exc:
             pass
+
+
+class BaseRpcAMQPTestCase(BaseRpcTestCase):
+    """Base test class for all AMQP-based RPC tests"""
+    def test_proxycallback_handles_exceptions(self):
+        """Make sure exceptions unpacking messages don't cause hangs."""
+        orig_unpack = rpc_amqp.unpack_context
+
+        info = {'unpacked': False}
+
+        def fake_unpack_context(*args, **kwargs):
+            info['unpacked'] = True
+            raise test.TestingException('moo')
+
+        self.stubs.Set(rpc_amqp, 'unpack_context', fake_unpack_context)
+
+        value = 41
+        self.rpc.cast(self.context, 'test', {"method": "echo",
+                                             "args": {"value": value}})
+
+        # Wait for the cast to complete.
+        for x in xrange(50):
+            if info['unpacked']:
+                break
+            greenthread.sleep(0.1)
+        else:
+            self.fail("Timeout waiting for message to be consued")
+
+        # Now see if we get a response even though we raised an
+        # exception for the cast above.
+        self.stubs.Set(rpc_amqp, 'unpack_context', orig_unpack)
+
+        value = 42
+        result = self.rpc.call(self.context, 'test',
+                {"method": "echo",
+                 "args": {"value": value}})
+        self.assertEqual(value, result)
 
 
 class TestReceiver(object):

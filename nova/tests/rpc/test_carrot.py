@@ -27,7 +27,7 @@ from nova.tests.rpc import common
 LOG = logging.getLogger(__name__)
 
 
-class RpcCarrotTestCase(common._BaseRpcTestCase):
+class RpcCarrotTestCase(common.BaseRpcTestCase):
     def setUp(self):
         self.rpc = impl_carrot
         super(RpcCarrotTestCase, self).setUp(supports_timeouts=False)

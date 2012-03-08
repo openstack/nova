@@ -406,7 +406,10 @@ class Connection(object):
 
         def _consume():
             nxt_receiver = self.session.next_receiver(timeout=timeout)
-            self._lookup_consumer(nxt_receiver).consume()
+            try:
+                self._lookup_consumer(nxt_receiver).consume()
+            except Exception:
+                LOG.exception(_("Error processing message.  Skipping it."))
 
         for iteration in itertools.count(0):
             if limit and iteration >= limit:
