@@ -4214,9 +4214,9 @@ def sm_backend_conf_get(context, sm_backend_id):
 @require_admin_context
 def sm_backend_conf_get_by_sr(context, sr_uuid):
     session = get_session()
-    # FIXME(sirp): shouldn't this have a `first()` qualifier attached?
     return model_query(context, models.SMBackendConf, read_deleted="yes").\
-                    filter_by(sr_uuid=sr_uuid)
+                    filter_by(sr_uuid=sr_uuid).\
+                    first()
 
 
 @require_admin_context

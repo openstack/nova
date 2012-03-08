@@ -1718,7 +1718,7 @@ def sm_backend_conf_get(context, sm_backend_conf_id):
 
 def sm_backend_conf_get_by_sr(context, sr_uuid):
     """Get a specific SM Backend Config."""
-    return IMPL.sm_backend_conf_get(context, sr_uuid)
+    return IMPL.sm_backend_conf_get_by_sr(context, sr_uuid)
 
 
 def sm_backend_conf_get_all(context):
