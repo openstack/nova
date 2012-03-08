@@ -1790,7 +1790,7 @@ class XenAPIAggregateTestCase(test.TestCase):
 
     def test_join_slave(self):
         """Ensure join_slave gets called when the request gets to master."""
-        def fake_join_slave(id, compute_uuid, url, user, password):
+        def fake_join_slave(id, compute_uuid, host, url, user, password):
             fake_join_slave.called = True
         self.stubs.Set(self.conn._pool, "_join_slave", fake_join_slave)
 

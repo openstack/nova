@@ -25,7 +25,6 @@ import functools
 import json
 import os
 import pickle
-import random
 import time
 import uuid
 
@@ -699,7 +698,6 @@ class VMOps(object):
             raise
 
     def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path):
-        instance_id = instance['id']
         instance_uuid = instance['uuid']
         params = {'host': dest,
                   'vdi_uuid': vdi_uuid,
@@ -1174,7 +1172,6 @@ class VMOps(object):
 
     def _destroy_vm(self, instance, vm_ref):
         """Destroys a VM record."""
-        instance_id = instance['id']
         instance_uuid = instance['uuid']
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm_ref)
@@ -1624,7 +1621,6 @@ class VMOps(object):
         Abstracts out the process of calling a method of a xenapi plugin.
         Any errors raised by the plugin will in turn raise a RuntimeError here.
         """
-        instance_id = vm['id']
         instance_uuid = vm['uuid']
         vm_ref = vm_ref or self._get_vm_opaque_ref(vm)
         vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)

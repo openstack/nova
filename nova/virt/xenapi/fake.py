@@ -401,8 +401,6 @@ class SessionBase(object):
 
     def SR_introduce(self, _1, sr_uuid, label, desc, type, content_type,
                      shared, sm_config):
-        host_ref = _db_content['host'].keys()[0]
-
         ref = None
         rec = None
         for ref, rec in _db_content['SR'].iteritems():

@@ -76,7 +76,6 @@ from nova.openstack.common import cfg
 from nova.virt import driver
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
-from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
 from nova.virt.xenapi import volumeops
 
