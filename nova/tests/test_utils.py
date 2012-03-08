@@ -20,6 +20,7 @@ import hashlib
 import os
 import os.path
 import socket
+import shutil
 import StringIO
 import tempfile
 
@@ -828,6 +829,8 @@ class TestLockCleanup(test.TestCase):
 
         self.pid = os.getpid()
         self.dead_pid = self._get_dead_pid()
+        self.tempdir = tempfile.mkdtemp()
+        self.flags(lock_path=self.tempdir)
         self.lock_name = 'nova-testlock'
         self.lock_file = os.path.join(FLAGS.lock_path,
                                       self.lock_name + '.lock')
@@ -838,6 +841,10 @@ class TestLockCleanup(test.TestCase):
         except OSError as (errno, strerror):
             if errno == 2:
                 pass
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+        super(TestLockCleanup, self).tearDown()
 
     def _get_dead_pid(self):
         """get a pid for a process that does not exist"""
