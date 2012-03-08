@@ -265,6 +265,34 @@ def _import_vhds(sr_path, staging_path, uuid_stack):
             link_vhds(new_path, parent_path)
         return (new_path, vdi_uuid)
 
+    def validate_vdi_chain(vdi_path):
+        """
+        This check ensures that the parent pointers on the VHDs are valid
+        before we move the VDI chain to the SR. This is *very* important
+        because a bad parent pointer will corrupt the SR causing a cascade of
+        failures.
+        """
+        def get_parent_path(path):
+            query_cmd = "vhd-util query -n %(path)s -p" % locals()
+            query_proc = _make_subprocess(query_cmd, stdout=True, stderr=True)
+            out, err = _finish_subprocess(
+                    query_proc, query_cmd, ok_exit_codes=[0, 22])
+            first_line = out.splitlines()[0].strip()
+            if first_line.endswith(".vhd"):
+                return first_line
+            elif 'has no parent' in first_line:
+                return None
+            elif 'query failed' in first_line:
+                raise Exception("VDI '%(path)s' not present which breaks"
+                                " the VDI chain, bailing out" % locals())
+            else:
+                raise Exception("Unexpected output '%(out)s' from vhd-util" %
+                                locals())
+
+        cur_path = vdi_path
+        while cur_path:
+            cur_path = get_parent_path(cur_path)
+
     vdi_return_list = []
     paths_to_move = []
 
@@ -283,6 +311,7 @@ def _import_vhds(sr_path, staging_path, uuid_stack):
     snap_info = prepare_if_exists(staging_path, 'snap.vhd',
             image_info[0])
     if snap_info:
+        validate_vdi_chain(snap_info[0])
         # NOTE(sirp): this is an insert rather than an append since the
         # 'snapshot' vhd needs to be copied into the SR before the base copy.
         # If it doesn't, then there is a possibliity that snapwatchd will
@@ -291,6 +320,7 @@ def _import_vhds(sr_path, staging_path, uuid_stack):
         # We return this snap as the VDI instead of image.vhd
         vdi_return_list.append(dict(vdi_type="os", vdi_uuid=snap_info[1]))
     else:
+        validate_vdi_chain(image_info[0])
         assert_vhd_not_hidden(image_info[0])
         # If there's no snap, we return the image.vhd UUID
         vdi_return_list.append(dict(vdi_type="os", vdi_uuid=image_info[1]))
@@ -439,14 +469,18 @@ def _make_subprocess(cmdline, stdout=False, stderr=False, stdin=False):
     return proc
 
 
-def _finish_subprocess(proc, cmdline):
+def _finish_subprocess(proc, cmdline, ok_exit_codes=None):
     """Ensure that the process returned a zero exit code indicating success
     """
+    if ok_exit_codes is None:
+        ok_exit_codes = [0]
+
     out, err = proc.communicate()
     ret = proc.returncode
-    if ret != 0:
+    if ret not in ok_exit_codes:
         raise Exception("'%(cmdline)s' returned non-zero exit code: "
-                        "retcode=%(ret)i,  stderr='%(err)s'" % locals())
+                        "retcode=%(ret)i, out='%(out)s', stderr='%(err)s'"
+                        % locals())
     return out, err
 
 
