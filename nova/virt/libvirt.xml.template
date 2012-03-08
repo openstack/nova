@@ -121,8 +121,5 @@
     ${dev}
 #end for
 
-#if $getVar('use_usb_tablet', True) and $type != 'lxc' and $type != 'xen'
-        <input type='tablet' bus='usb'/>
-#end if
     </devices>
 </domain>

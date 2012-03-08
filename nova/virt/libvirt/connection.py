@@ -1488,6 +1488,12 @@ class LibvirtConnection(driver.ComputeDriver):
             devs.append(consolepty.to_xml())
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
+            if FLAGS.use_usb_tablet:
+                tablet = config.LibvirtConfigGuestInput()
+                tablet.type = "tablet"
+                tablet.bus = "usb"
+                devs.append(tablet.to_xml())
+
             graphics = config.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
             graphics.keymap = FLAGS.vnc_keymap
