@@ -23,6 +23,8 @@ import time
 import sqlalchemy.interfaces
 import sqlalchemy.orm
 from sqlalchemy.exc import DisconnectionError
+from sqlalchemy.pool import NullPool, StaticPool
+import time
 
 import nova.exception
 import nova.flags as flags
@@ -38,11 +40,11 @@ _MAKER = None
 
 def get_session(autocommit=True, expire_on_commit=False):
     """Return a SQLAlchemy session."""
-    global _ENGINE, _MAKER
+    global _MAKER
 
-    if _MAKER is None or _ENGINE is None:
-        _ENGINE = get_engine()
-        _MAKER = get_maker(_ENGINE, autocommit, expire_on_commit)
+    if _MAKER is None:
+        engine = get_engine()
+        _MAKER = get_maker(engine, autocommit, expire_on_commit)
 
     session = _MAKER()
     session.query = nova.exception.wrap_db_error(session.query)
@@ -81,23 +83,32 @@ class MySQLPingListener(object):
 
 def get_engine():
     """Return a SQLAlchemy engine."""
-    connection_dict = sqlalchemy.engine.url.make_url(FLAGS.sql_connection)
+    global _ENGINE
+    if _ENGINE is None:
+        connection_dict = sqlalchemy.engine.url.make_url(FLAGS.sql_connection)
 
-    engine_args = {
-        "pool_recycle": FLAGS.sql_idle_timeout,
-        "echo": False,
-        'convert_unicode': True,
-    }
+        engine_args = {
+            "pool_recycle": FLAGS.sql_idle_timeout,
+            "echo": False,
+            'convert_unicode': True,
+        }
 
-    if "sqlite" in connection_dict.drivername:
-        engine_args["poolclass"] = sqlalchemy.pool.NullPool
-        if not FLAGS.sqlite_synchronous:
-            engine_args["listeners"] = [SynchronousSwitchListener()]
+        if "sqlite" in connection_dict.drivername:
+            engine_args["poolclass"] = NullPool
 
-    if 'mysql' in connection_dict.drivername:
-        engine_args['listeners'] = [MySQLPingListener()]
+            if FLAGS.sql_connection == "sqlite://":
+                engine_args["poolclass"] = StaticPool
+                engine_args["connect_args"] = {'check_same_thread': False}
 
-    return sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
+            if not FLAGS.sqlite_synchronous:
+                engine_args["listeners"] = [SynchronousSwitchListener()]
+
+        if 'mysql' in connection_dict.drivername:
+            engine_args['listeners'] = [MySQLPingListener()]
+
+        _ENGINE = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
+
+    return _ENGINE
 
 
 def get_maker(engine, autocommit=True, expire_on_commit=False):
