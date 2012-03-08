@@ -21,7 +21,6 @@
 Scheduler base class that all Schedulers should inherit from
 """
 
-from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import vm_states
@@ -249,8 +248,8 @@ class Scheduler(object):
 
         # Checking instance is running.
         if instance_ref['power_state'] != power_state.RUNNING:
-            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-            raise exception.InstanceNotRunning(instance_id=instance_id)
+            raise exception.InstanceNotRunning(
+                    instance_id=instance_ref['uuid'])
 
         # Checing volume node is running when any volumes are mounted
         # to the instance.
@@ -291,9 +290,8 @@ class Scheduler(object):
         # and dest is not same.
         src = instance_ref['host']
         if dest == src:
-            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-            raise exception.UnableToMigrateToSelf(instance_id=instance_id,
-                                                  host=dest)
+            raise exception.UnableToMigrateToSelf(
+                    instance_id=instance_ref['uuid'], host=dest)
 
         # Checking dst host still has enough capacities.
         self.assert_compute_node_has_enough_resources(context,
@@ -417,8 +415,8 @@ class Scheduler(object):
         mem_inst = instance_ref['memory_mb']
         avail = avail - used
         if avail <= mem_inst:
-            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-            reason = _("Unable to migrate %(instance_id)s to %(dest)s: "
+            instance_uuid = instance_ref['uuid']
+            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
                        "Lack of memory(host:%(avail)s <= "
                        "instance:%(mem_inst)s)")
             raise exception.MigrationError(reason=reason % locals())
@@ -473,8 +471,8 @@ class Scheduler(object):
 
         # Check that available disk > necessary disk
         if (available - necessary) < 0:
-            instance_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-            reason = _("Unable to migrate %(instance_id)s to %(dest)s: "
+            instance_uuid = instance_ref['uuid']
+            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
                        "Lack of disk(host:%(available)s "
                        "<= instance:%(necessary)s)")
             raise exception.MigrationError(reason=reason % locals())
