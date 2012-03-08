@@ -121,19 +121,6 @@
     ${dev}
 #end for
 
-#if $type == 'qemu' or $type == 'kvm'
-        <!-- The QEMU 'pty' driver throws away any data if no
-	     client app is connected. Thus we can't get away
-	     with a single type=pty console. Instead we have
-	     to configure two separate consoles. -->
-        <serial type='file'>
-            <source path='${basepath}/console.log'/>
-        </serial>
-        <serial type='pty'/>
-#else
-        <console type='pty'/>
-#end if
-
 #if $getVar('use_usb_tablet', True) and $type != 'lxc' and $type != 'xen'
         <input type='tablet' bus='usb'/>
 #end if

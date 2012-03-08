@@ -1467,6 +1467,26 @@ class LibvirtConnection(driver.ComputeDriver):
         if instance.get('config_drive') or instance.get('config_drive_id'):
             xml_info['config_drive'] = xml_info['basepath'] + "/disk.config"
 
+        if FLAGS.libvirt_type == "qemu" or FLAGS.libvirt_type == "kvm":
+            # The QEMU 'pty' driver throws away any data if no
+            # client app is connected. Thus we can't get away
+            # with a single type=pty console. Instead we have
+            # to configure two separate consoles.
+            consolelog = config.LibvirtConfigGuestSerial()
+            consolelog.type = "file"
+            consolelog.source_path = os.path.join(FLAGS.instances_path,
+                                                  instance['name'],
+                                                  "console.log")
+            devs.append(consolelog.to_xml())
+
+            consolepty = config.LibvirtConfigGuestSerial()
+            consolepty.type = "pty"
+            devs.append(consolepty.to_xml())
+        else:
+            consolepty = config.LibvirtConfigGuestConsole()
+            consolepty.type = "pty"
+            devs.append(consolepty.to_xml())
+
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
             graphics = config.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
