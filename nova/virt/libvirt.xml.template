@@ -8,26 +8,16 @@
         <init>/sbin/init</init>
         <cmdline>console=ttyS0</cmdline>
 #else if $type == 'uml'
-    #set $root_disk_bus = 'uml'
-    #set $ephemeral_disk_bus = 'uml'
         <type>uml</type>
         <kernel>/usr/bin/linux</kernel>
         #set $root_device_name = $getVar('root_device_name', '/dev/ubda')
         <root>${root_device_name}</root>
 #else
     #if $type == 'xen'
-        #set $root_disk_bus = 'scsi'
-        #set $ephemeral_disk_bus = 'scsi'
             <type>linux</type>
             #set $root_device_name = $getVar('root_device_name', '/dev/xvda')
             <root>${root_device_name}</root>
     #else
-        #set $ephemeral_disk_bus = 'virtio'
-        #if $root_device_type == 'cdrom'
-            #set $root_disk_bus = 'ide'
-        #else
-            #set $root_disk_bus = 'virtio'
-        #end if
             <type>hvm</type>
     #end if
     #if $getVar('rescue', False)
@@ -58,59 +48,6 @@
 #end if
     <vcpu>${vcpus}</vcpu>
     <devices>
-#if $type != 'lxc'
-    #if $getVar('rescue', False)
-        <disk type='file'>
-            <driver type='${driver_type}' cache='${cachemode}'/>
-            <source file='${basepath}/disk.rescue'/>
-            <target dev='${disk_prefix}a' bus='${ephemeral_disk_bus}'/>
-        </disk>
-        <disk type='file'>
-            <driver type='${driver_type}' cache='${cachemode}'/>
-            <source file='${basepath}/disk'/>
-            <target dev='${disk_prefix}b' bus='${ephemeral_disk_bus}'/>
-        </disk>
-    #else
-        #if not ($getVar('ebs_root', False))
-        <disk type='file' device='${root_device_type}'>
-            <driver type='${driver_type}' cache='${cachemode}'/>
-            <source file='${basepath}/disk'/>
-            <target dev='${root_device}' bus='${root_disk_bus}'/>
-        </disk>
-        #end if
-        #if $getVar('ephemeral_device', False)
-            <disk type='file'>
-                <driver type='${driver_type}' cache='${cachemode}'/>
-                <source file='${basepath}/disk.local'/>
-                <target dev='${ephemeral_device}' bus='${ephemeral_disk_bus}'/>
-            </disk>
-        #end if
-        #for $eph in $ephemerals
-         <disk type='block'>
-                <driver type='${driver_type}' cache='${cachemode}'/>
-                <source dev='${basepath}/${eph.device_path}'/>
-                <target dev='${eph.device}' bus='${ephemeral_disk_bus}'/>
-         </disk>
-        #end for
-        #if $getVar('swap_device', False)
-            <disk type='file'>
-                <driver type='${driver_type}' cache='${cachemode}'/>
-                <source file='${basepath}/disk.swap'/>
-                <target dev='${swap_device}' bus='${ephemeral_disk_bus}'/>
-            </disk>
-        #end if
-        #for $vol in $volumes
-            ${vol}
-        #end for
-    #end if
-    #if $getVar('config_drive', False)
-        <disk type='file'>
-            <driver type='raw' cache='${cachemode}'/>
-            <source file='${basepath}/disk.config' />
-            <target dev='${disk_prefix}z' bus='${ephemeral_disk_bus}' />
-        </disk>
-    #end if
-#end if
 
 #for $dev in $devs
     ${dev}
