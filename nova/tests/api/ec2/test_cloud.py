@@ -20,8 +20,9 @@
 import base64
 import copy
 import functools
-import tempfile
 import os
+import string
+import tempfile
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -1362,6 +1363,21 @@ class CloudTestCase(test.TestCase):
                                   key_name)
         self.assertEqual(dummypub, keydata['public_key'])
         self.assertEqual(dummyfprint, keydata['fingerprint'])
+
+    def test_create_key_pair(self):
+        good_names = ('a', 'a' * 255, string.ascii_letters + ' -_')
+        bad_names = ('', 'a' * 256, '*', '/')
+
+        for key_name in good_names:
+            result = self.cloud.create_key_pair(self.context,
+                                                key_name)
+            self.assertEqual(result['keyName'], key_name)
+
+        for key_name in bad_names:
+            self.assertRaises(exception.EC2APIError,
+                              self.cloud.create_key_pair,
+                              self.context,
+                              key_name)
 
     def test_delete_key_pair(self):
         self._create_key('test')

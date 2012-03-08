@@ -369,6 +369,17 @@ class CloudController(object):
         return {'keySet': result}
 
     def create_key_pair(self, context, key_name, **kwargs):
+        if not re.match('^[a-zA-Z0-9_\- ]+$', str(key_name)):
+            err = _("Value (%s) for KeyName is invalid."
+                    " Content limited to Alphanumeric character, "
+                    "spaces, dashes, and underscore.") % key_name
+            raise exception.EC2APIError(err)
+
+        if len(str(key_name)) > 255:
+            err = _("Value (%s) for Keyname is invalid."
+                    " Length exceeds maximum of 255.") % key_name
+            raise exception.EC2APIError(err)
+
         LOG.audit(_("Create key pair %s"), key_name, context=context)
         data = _gen_key(context, context.user_id, key_name)
         return {'keyName': key_name,
