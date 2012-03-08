@@ -1372,6 +1372,15 @@ class LibvirtConnection(driver.ComputeDriver):
         for (network, mapping) in network_info:
             cfg = self.vif_driver.plug(instance, network, mapping)
             devs.append(cfg.to_xml())
+
+        if FLAGS.libvirt_type == "lxc":
+            fs = config.LibvirtConfigGuestFilesys()
+            fs.type = "mount"
+            fs.source_dir = os.path.join(FLAGS.instances_path,
+                                         instance['name'],
+                                         "rootfs")
+            devs.append(fs.to_xml())
+
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)

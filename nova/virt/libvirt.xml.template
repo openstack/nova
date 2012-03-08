@@ -58,12 +58,7 @@
 #end if
     <vcpu>${vcpus}</vcpu>
     <devices>
-#if $type == 'lxc'
-        <filesystem type='mount'>
-            <source dir='${basepath}/rootfs'/>
-            <target dir='/'/>
-        </filesystem>
-#else
+#if $type != 'lxc'
     #if $getVar('rescue', False)
         <disk type='file'>
             <driver type='${driver_type}' cache='${cachemode}'/>
