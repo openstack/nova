@@ -123,8 +123,8 @@ class ImagesControllerTest(test.TestCase):
         bookmark = "https://zoo.com:42/fake/images/124"
         alternate = "http://circus.com:34/fake/images/124"
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/servers/" + server_uuid
-        server_bookmark = "http://localhost/servers/" + server_uuid
+        server_href = "https://zoo.com:42/v2/servers/" + server_uuid
+        server_bookmark = "https://zoo.com:42/servers/" + server_uuid
 
         expected_image = {
             "image": {
