@@ -29,6 +29,7 @@ import crypt
 import json
 import os
 import random
+import re
 import tempfile
 
 from nova import exception
@@ -90,6 +91,10 @@ for s in FLAGS.virt_mkfs:
         _DEFAULT_MKFS_COMMAND = mkfs_command
 
 
+_QEMU_VIRT_SIZE_REGEX = re.compile('^virtual size: (.*) \(([0-9]+) bytes\)',
+                                   re.MULTILINE)
+
+
 def mkfs(os_type, fs_label, target):
     mkfs_command = (_MKFS_COMMAND.get(os_type, _DEFAULT_MKFS_COMMAND) or
                     '') % locals()
@@ -97,10 +102,17 @@ def mkfs(os_type, fs_label, target):
         utils.execute(*mkfs_command.split())
 
 
+def get_image_virtual_size(image):
+    out, _err = utils.execute('qemu-img', 'info', image)
+    m = _QEMU_VIRT_SIZE_REGEX.search(out)
+    return int(m.group(2))
+
+
 def extend(image, size):
     """Increase image to size"""
-    file_size = os.path.getsize(image)
-    if file_size >= size:
+    # NOTE(MotoKen): check image virtual size before resize
+    virt_size = get_image_virtual_size(image)
+    if virt_size >= size:
         return
     utils.execute('qemu-img', 'resize', image, size)
     # NOTE(vish): attempts to resize filesystem
