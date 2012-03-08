@@ -28,7 +28,6 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 :libvirt_type:  Libvirt domain type.  Can be kvm, qemu, uml, xen
                 (default: kvm).
 :libvirt_uri:  Override for the default libvirt URI (depends on libvirt_type).
-:libvirt_xml_template:  Libvirt XML Template.
 :libvirt_disk_prefix:  Override the default disk prefix for the devices
                        attached to a server.
 :rescue_image_id:  Rescue ami image (None = original image).
@@ -91,9 +90,6 @@ libvirt_opts = [
     cfg.StrOpt('rescue_ramdisk_id',
                default=None,
                help='Rescue ari image'),
-    cfg.StrOpt('libvirt_xml_template',
-               default='$pybasedir/nova/virt/libvirt.xml.template',
-               help='Libvirt XML Template'),
     cfg.StrOpt('libvirt_type',
                default='kvm',
                help='Libvirt domain type (valid options are: '
@@ -248,14 +244,6 @@ class LibvirtConnection(driver.ComputeDriver):
     def init_host(self, host):
         # NOTE(nsokolov): moved instance restarting to ComputeManager
         pass
-
-    @property
-    def libvirt_xml(self):
-        if not hasattr(self, '_libvirt_xml_cache_info'):
-            self._libvirt_xml_cache_info = {}
-
-        return utils.read_cached_file(FLAGS.libvirt_xml_template,
-                self._libvirt_xml_cache_info)
 
     @property
     def cpuinfo_xml(self):
@@ -1364,8 +1352,8 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.debug(_("block_device_list %s"), block_device_list)
         return block_device.strip_dev(mount_device) in block_device_list
 
-    def _prepare_xml_info(self, instance, network_info, image_meta, rescue,
-                          block_device_info=None):
+    def get_guest_config(self, instance, network_info, image_meta, rescue,
+                         block_device_info=None):
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
 
@@ -1374,6 +1362,13 @@ class LibvirtConnection(driver.ComputeDriver):
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
+
+        guest = config.LibvirtConfigGuest()
+        guest.virt_type = FLAGS.libvirt_type
+        guest.name = instance['name']
+        guest.uuid = instance['uuid']
+        guest.memory = inst_type['memory_mb'] * 1024
+        guest.vcpus = inst_type['vcpus']
 
         root_device_name = driver.block_device_info_get_root(block_device_info)
         if root_device_name:
@@ -1388,12 +1383,53 @@ class LibvirtConnection(driver.ComputeDriver):
                 {'root_device_name': '/dev/' + self.default_root_device})
 
         if FLAGS.libvirt_type == "lxc":
+            guest.os_type = "exe"
+            guest.os_init_path = "/sbin/init"
+            guest.os_cmdline = "console=ttyS0"
+        elif FLAGS.libvirt_type == "uml":
+            guest.os_type = "uml"
+            guest.os_kernel = "/usr/bin/linux"
+            guest.os_root = root_device_name or "/dev/ubda"
+        else:
+            if FLAGS.libvirt_type == "xen":
+                guest.os_type = "linux"
+                guest.os_root = root_device_name or "/dev/xvda"
+            else:
+                guest.os_type = "hvm"
+
+            if rescue:
+                guest.os_kernel = os.path.join(FLAGS.instances_path,
+                                               instance['name'],
+                                               "kernel.rescue")
+                guest.os_initrd = os.path.join(FLAGS.instances_path,
+                                               instance['name'],
+                                               "ramdisk.rescue")
+            elif instance['kernel_id']:
+                guest.os_kernel = os.path.join(FLAGS.instances_path,
+                                               instance['name'],
+                                               "kernel")
+                if FLAGS.libvirt_type == "xen":
+                    guest.os_cmdline = "ro"
+                else:
+                    guest.os_cmdline = "root=%s console=ttyS0" % (
+                        root_device_name or "/dev/vda",)
+                if instance['ramdisk_id']:
+                    guest.os_initrd = os.path.join(FLAGS.instances_path,
+                                                   instance['name'],
+                                                   "ramdisk")
+            else:
+                guest.os_boot_dev = "hd"
+
+        if FLAGS.libvirt_type != "lxc" and FLAGS.libvirt_type != "uml":
+            guest.acpi = True
+
+        if FLAGS.libvirt_type == "lxc":
             fs = config.LibvirtConfigGuestFilesys()
             fs.type = "mount"
             fs.source_dir = os.path.join(FLAGS.instances_path,
                                          instance['name'],
                                          "rootfs")
-            devs.append(fs.to_xml())
+            guest.add_device(fs)
         else:
             if FLAGS.use_cow_images:
                 driver_type = 'qcow2'
@@ -1422,7 +1458,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 diskrescue.driver_cache = self.disk_cachemode
                 diskrescue.target_dev = self.default_root_device
                 diskrescue.target_bus = ephemeral_disk_bus
-                devs.append(diskrescue.to_xml())
+                guest.add_device(diskrescue)
 
                 diskos = config.LibvirtConfigGuestDisk()
                 diskos.source_type = "file"
@@ -1433,7 +1469,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 diskos.driver_cache = self.disk_cachemode
                 diskos.target_dev = self.default_second_device
                 diskos.target_bus = ephemeral_disk_bus
-                devs.append(diskos.to_xml())
+                guest.add_device(diskos)
             else:
                 ebs_root = self._volume_in_mapping(self.default_root_device,
                                                    block_device_info)
@@ -1452,7 +1488,7 @@ class LibvirtConnection(driver.ComputeDriver):
                         diskos.target_bus = "ide"
                     else:
                         diskos.target_bus = "virtio"
-                    devs.append(diskos.to_xml())
+                    guest.add_device(diskos)
 
                 ephemeral_device = None
                 if not (self._volume_in_mapping(self.default_second_device,
@@ -1474,7 +1510,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                                          "disk.local")
                     disklocal.target_dev = ephemeral_device
                     disklocal.target_bus = ephemeral_disk_bus
-                    devs.append(disklocal.to_xml())
+                    guest.add_device(disklocal)
 
                 if ephemeral_device is not None:
                     swap_device = self.default_third_device
@@ -1498,7 +1534,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     diskeph.target_dev = block_device.strip_dev(
                         eph['device_name'])
                     diskeph.target_bus = ephemeral_disk_bus
-                    devs.append(diskeph.to_xml())
+                    guest.add_device(diskeph)
 
                 swap = driver.block_device_info_get_swap(block_device_info)
                 if driver.swap_is_usable(swap):
@@ -1512,7 +1548,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     diskswap.target_dev = block_device.strip_dev(
                         swap['device_name'])
                     diskswap.target_bus = ephemeral_disk_bus
-                    devs.append(diskswap.to_xml())
+                    guest.add_device(diskswap)
                 elif (inst_type['swap'] > 0 and
                       not self._volume_in_mapping(swap_device,
                                                   block_device_info)):
@@ -1525,7 +1561,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                                         "disk.swap")
                     diskswap.target_dev = swap_device
                     diskswap.target_bus = ephemeral_disk_bus
-                    devs.append(diskswap.to_xml())
+                    guest.add_device(diskswap)
                     db.instance_update(
                         nova_context.get_admin_context(), instance['id'],
                         {'default_swap_device': '/dev/' + swap_device})
@@ -1533,9 +1569,10 @@ class LibvirtConnection(driver.ComputeDriver):
                 for vol in block_device_mapping:
                     connection_info = vol['connection_info']
                     mountpoint = vol['mount_device']
-                    devs.append(self.volume_driver_method('connect_volume',
-                                                          connection_info,
-                                                          mountpoint).to_xml())
+                    cfg = self.volume_driver_method('connect_volume',
+                                                    connection_info,
+                                                    mountpoint)
+                    guest.add_device(cfg)
 
             if instance.get('config_drive') or instance.get('config_drive_id'):
                 diskconfig = config.LibvirtConfigGuestDisk()
@@ -1547,22 +1584,11 @@ class LibvirtConnection(driver.ComputeDriver):
                                                       "disk.config")
                 diskconfig.target_dev = self.default_last_device
                 diskconfig.target_bus = ephemeral_disk_bus
-                devs.append(diskconfig.to_xml())
+                guest.add_device(diskconfig)
 
         for (network, mapping) in network_info:
             cfg = self.vif_driver.plug(instance, network, mapping)
-            devs.append(cfg.to_xml())
-
-        xml_info = {'type': FLAGS.libvirt_type,
-                    'name': instance['name'],
-                    'uuid': instance['uuid'],
-                    'basepath': os.path.join(FLAGS.instances_path,
-                                             instance['name']),
-                    'memory_kb': inst_type['memory_mb'] * 1024,
-                    'vcpus': inst_type['vcpus'],
-                    'rescue': rescue,
-                    'disk_prefix': self._disk_prefix,
-                    'devs': devs}
+            guest.add_device(cfg)
 
         if FLAGS.libvirt_type == "qemu" or FLAGS.libvirt_type == "kvm":
             # The QEMU 'pty' driver throws away any data if no
@@ -1574,46 +1600,37 @@ class LibvirtConnection(driver.ComputeDriver):
             consolelog.source_path = os.path.join(FLAGS.instances_path,
                                                   instance['name'],
                                                   "console.log")
-            devs.append(consolelog.to_xml())
+            guest.add_device(consolelog)
 
             consolepty = config.LibvirtConfigGuestSerial()
             consolepty.type = "pty"
-            devs.append(consolepty.to_xml())
+            guest.add_device(consolepty)
         else:
             consolepty = config.LibvirtConfigGuestConsole()
             consolepty.type = "pty"
-            devs.append(consolepty.to_xml())
+            guest.add_device(consolepty)
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
             if FLAGS.use_usb_tablet:
                 tablet = config.LibvirtConfigGuestInput()
                 tablet.type = "tablet"
                 tablet.bus = "usb"
-                devs.append(tablet.to_xml())
+                guest.add_device(tablet)
 
             graphics = config.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
             graphics.keymap = FLAGS.vnc_keymap
             graphics.listen = FLAGS.vncserver_listen
-            devs.append(graphics.to_xml())
+            guest.add_device(graphics)
 
-        if not rescue:
-            if instance['kernel_id']:
-                xml_info['kernel'] = xml_info['basepath'] + "/kernel"
-
-            if instance['ramdisk_id']:
-                xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
-
-            xml_info['disk'] = xml_info['basepath'] + "/disk"
-        return xml_info
+        return guest
 
     def to_xml(self, instance, network_info, image_meta=None, rescue=False,
                block_device_info=None):
-        # TODO(termie): cache?
         LOG.debug(_('Starting toXML method'), instance=instance)
-        xml_info = self._prepare_xml_info(instance, network_info, image_meta,
-                                          rescue, block_device_info)
-        xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
+        conf = self.get_guest_config(instance, network_info, image_meta,
+                                     rescue, block_device_info)
+        xml = conf.to_xml()
         LOG.debug(_('Finished toXML method'), instance=instance)
         return xml
 
