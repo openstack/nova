@@ -12,22 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from sqlalchemy import *
-
-
-meta = MetaData()
-
-compute_nodes = Table("compute_nodes", meta, Column("id", Integer(),
-        primary_key=True, nullable=False))
-
-hypervisor_hostname = Column("hypervisor_hostname", String(255))
+from sqlalchemy import Column, MetaData, String, Table
 
 
 def upgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
+    compute_nodes = Table("compute_nodes", meta, autoload=True)
+    hypervisor_hostname = Column("hypervisor_hostname", String(255))
     compute_nodes.create_column(hypervisor_hostname)
 
 
 def downgrade(migrate_engine):
+    meta = MetaData()
     meta.bind = migrate_engine
-    compute_nodes.drop_column(hypervisor_hostname)
+    compute_nodes = Table("compute_nodes", meta, autoload=True)
+    compute_nodes.drop_column('hypervisor_hostname')
