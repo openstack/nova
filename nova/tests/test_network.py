@@ -16,7 +16,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import mox
+import shutil
 import sys
+import tempfile
 
 from nova import context
 from nova import db
@@ -126,6 +128,8 @@ vifs = [{'id': 0,
 class FlatNetworkTestCase(test.TestCase):
     def setUp(self):
         super(FlatNetworkTestCase, self).setUp()
+        self.tempdir = tempfile.mkdtemp()
+        self.flags(logdir=self.tempdir)
         self.network = network_manager.FlatManager(host=HOST)
         temp = utils.import_object('nova.network.minidns.MiniDNS')
         self.network.instance_dns_manager = temp
@@ -135,7 +139,7 @@ class FlatNetworkTestCase(test.TestCase):
                                               is_admin=False)
 
     def tearDown(self):
-        self.network.instance_dns_manager.delete_dns_file()
+        shutil.rmtree(self.tempdir)
         super(FlatNetworkTestCase, self).tearDown()
 
     def test_get_instance_nw_info(self):
@@ -1268,6 +1272,8 @@ class FloatingIPTestCase(test.TestCase):
     """Tests nova.network.manager.FloatingIP"""
     def setUp(self):
         super(FloatingIPTestCase, self).setUp()
+        self.tempdir = tempfile.mkdtemp()
+        self.flags(logdir=self.tempdir)
         self.network = TestFloatingIPManager()
         temp = utils.import_object('nova.network.minidns.MiniDNS')
         self.network.floating_dns_manager = temp
@@ -1277,7 +1283,7 @@ class FloatingIPTestCase(test.TestCase):
             is_admin=False)
 
     def tearDown(self):
-        self.network.floating_dns_manager.delete_dns_file()
+        shutil.rmtree(self.tempdir)
         super(FloatingIPTestCase, self).tearDown()
 
     def test_double_deallocation(self):
@@ -1469,6 +1475,8 @@ class InstanceDNSTestCase(test.TestCase):
     """Tests nova.network.manager instance DNS"""
     def setUp(self):
         super(InstanceDNSTestCase, self).setUp()
+        self.tempdir = tempfile.mkdtemp()
+        self.flags(logdir=self.tempdir)
         self.network = TestFloatingIPManager()
         temp = utils.import_object('nova.network.minidns.MiniDNS')
         self.network.instance_dns_manager = temp
@@ -1480,7 +1488,7 @@ class InstanceDNSTestCase(test.TestCase):
             is_admin=False)
 
     def tearDown(self):
-        self.network.instance_dns_manager.delete_dns_file()
+        shutil.rmtree(self.tempdir)
         super(InstanceDNSTestCase, self).tearDown()
 
     def test_dns_domains_private(self):
