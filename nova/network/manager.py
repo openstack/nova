@@ -320,10 +320,8 @@ class FloatingIP(object):
             self.db.floating_ip_set_auto_assigned(context, floating_address)
 
             # get the first fixed address belonging to the instance
-            for nw, info in nw_info:
-                if info.get('ips'):
-                    fixed_address = info['ips'][0]['ip']
-                    break
+            fixed_ips = nw_info.fixed_ips()
+            fixed_address = fixed_ips[0]['address']
 
             # associate the floating ip to fixed_ip
             self.associate_floating_ip(context,
