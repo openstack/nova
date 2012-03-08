@@ -46,11 +46,14 @@ from nova import local
 from nova import log as logging
 from nova.rpc import common as rpc_common
 from nova.testing import fake
+from nova import utils
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
+@utils.deprecated('Use of carrot will be removed in a future release. '
+        'Use kombu, instead.')
 class Connection(carrot_connection.BrokerConnection, rpc_common.Connection):
     """Connection instance object."""
 
