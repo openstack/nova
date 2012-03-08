@@ -105,8 +105,7 @@ class NovaExceptionTestCase(test.TestCase):
             message = "default message"
 
         exc = FakeNovaException()
-        self.assertEquals(unicode(exc),
-                          'default message')
+        self.assertEquals(unicode(exc), 'default message')
 
     def test_error_msg(self):
         self.assertEquals(unicode(exception.NovaException('test')),
@@ -117,5 +116,18 @@ class NovaExceptionTestCase(test.TestCase):
             message = "default message: %(code)s"
 
         exc = FakeNovaException(code=500)
-        self.assertEquals(unicode(exc),
-                          'default message: 500')
+        self.assertEquals(unicode(exc), 'default message: 500')
+
+    def test_default_error_code(self):
+        class FakeNovaException(exception.NovaException):
+            code = 404
+
+        exc = FakeNovaException()
+        self.assertEquals(exc.kwargs['code'], 404)
+
+    def test_error_code_from_kwarg(self):
+        class FakeNovaException(exception.NovaException):
+            code = 500
+
+        exc = FakeNovaException(code=404)
+        self.assertEquals(exc.kwargs['code'], 404)
