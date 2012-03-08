@@ -213,10 +213,6 @@ def configure_instance(*args):
     pass
 
 
-def _find_rescue_vbd_ref(*args):
-    pass
-
-
 class XenAPIVMTestCase(test.TestCase):
     """Unit tests for VM operations."""
     def setUp(self):
@@ -238,8 +234,6 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_is_vdi_pv(self.stubs)
         self.stubs.Set(vmops.VMOps, '_configure_instance',
                 configure_instance)
-        self.stubs.Set(vmops.VMOps, '_find_rescue_vbd_ref',
-                _find_rescue_vbd_ref)
         stubs.stub_out_vm_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
         fake_utils.stub_out_utils_execute(self.stubs)
@@ -709,7 +703,15 @@ class XenAPIVMTestCase(test.TestCase):
                               str(3 * 1024))
 
     def test_rescue(self):
+        def _find_rescue_vbd_ref(*args):
+            return vbd
+
+        self.stubs.Set(vmops.VMOps, '_find_rescue_vbd_ref',
+                _find_rescue_vbd_ref)
         instance = self._create_instance()
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
+        vm = vm_utils.VMHelper.lookup(session, instance.name)
+        vbd = xenapi_fake.create_vbd(vm, None)
         conn = xenapi_conn.get_connection(False)
         conn.rescue(self.context, instance, [], None)
 

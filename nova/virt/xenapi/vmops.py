@@ -920,11 +920,9 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
 
         if reboot_type == "HARD":
-            task = self._session.call_xenapi('Async.VM.hard_reboot', vm_ref)
+            self._session.call_xenapi('VM.hard_reboot', vm_ref)
         else:
-            task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
-
-        self._session.wait_for_task(task, instance['uuid'])
+            self._session.call_xenapi('VM.clean_reboot', vm_ref)
 
     def get_agent_version(self, instance):
         """Get the version of the agent running on the VM instance."""
@@ -1061,12 +1059,9 @@ class VMOps(object):
         try:
             task = None
             if hard:
-                task = self._session.call_xenapi("Async.VM.hard_shutdown",
-                                                 vm_ref)
+                self._session.call_xenapi('VM.hard_shutdown', vm_ref)
             else:
-                task = self._session.call_xenapi("Async.VM.clean_shutdown",
-                                                 vm_ref)
-            self._session.wait_for_task(task, instance['uuid'])
+                self._session.call_xenapi('VM.clean_shutdown', vm_ref)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
@@ -1105,10 +1100,9 @@ class VMOps(object):
 
         for vdi_ref in vdi_refs:
             try:
-                task = self._session.call_xenapi('Async.VDI.destroy', vdi_ref)
-                self._session.wait_for_task(task, instance['uuid'])
-            except self.XenAPI.Failure, exc:
-                LOG.exception(exc)
+                VMHelper.destroy_vdi(self._session, vdi_ref)
+            except volume_utils.StorageError as exc:
+                LOG.error(exc)
 
     def _destroy_rescue_vdis(self, rescue_vm_ref):
         """Destroys all VDIs associated with a rescued VM."""
@@ -1174,8 +1168,7 @@ class VMOps(object):
         """Destroys a VM record."""
         instance_uuid = instance['uuid']
         try:
-            task = self._session.call_xenapi('Async.VM.destroy', vm_ref)
-            self._session.wait_for_task(task, instance_uuid)
+            self._session.call_xenapi('VM.destroy', vm_ref)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
@@ -1233,27 +1226,22 @@ class VMOps(object):
     def pause(self, instance):
         """Pause VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        task = self._session.call_xenapi('Async.VM.pause', vm_ref)
-        self._session.wait_for_task(task, instance['uuid'])
+        self._session.call_xenapi('VM.pause', vm_ref)
 
     def unpause(self, instance):
         """Unpause VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        task = self._session.call_xenapi('Async.VM.unpause', vm_ref)
-        self._session.wait_for_task(task, instance['uuid'])
+        self._session.call_xenapi('VM.unpause', vm_ref)
 
     def suspend(self, instance):
         """Suspend the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        task = self._session.call_xenapi('Async.VM.suspend', vm_ref)
-        self._session.wait_for_task(task, instance['uuid'])
+        self._session.call_xenapi('VM.suspend', vm_ref)
 
     def resume(self, instance):
         """Resume the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        task = self._session.call_xenapi('Async.VM.resume',
-                                         vm_ref, False, True)
-        self._session.wait_for_task(task, instance['uuid'])
+        self._session.call_xenapi('VM.resume', vm_ref, False, True)
 
     def rescue(self, context, instance, network_info, image_meta):
         """Rescue the specified instance.
@@ -1277,7 +1265,7 @@ class VMOps(object):
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
         rescue_vbd_ref = self._find_rescue_vbd_ref(vm_ref, rescue_vm_ref)
 
-        self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
+        self._session.call_xenapi('VBD.plug', rescue_vbd_ref)
 
     def unrescue(self, instance):
         """Unrescue the specified instance.
@@ -1329,7 +1317,7 @@ class VMOps(object):
         """
         # NOTE(jk0): All existing clean_reboot tasks must be cancelled before
         # we can kick off the hard_reboot tasks.
-        self._cancel_stale_tasks(timeout, "Async.VM.clean_reboot")
+        self._cancel_stale_tasks(timeout, 'VM.clean_reboot')
 
         ctxt = nova_context.get_admin_context()
         instances = db.instance_get_all_hung_in_rebooting(ctxt, timeout)

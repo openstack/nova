@@ -283,8 +283,7 @@ class VMHelper(xenapi.HelperBase):
     def destroy_vbd(cls, session, vbd_ref):
         """Destroy VBD from host database"""
         try:
-            task = session.call_xenapi('Async.VBD.destroy', vbd_ref)
-            session.wait_for_task(task)
+            session.call_xenapi('VBD.destroy', vbd_ref)
         except cls.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise volume_utils.StorageError(
@@ -293,8 +292,7 @@ class VMHelper(xenapi.HelperBase):
     @classmethod
     def destroy_vdi(cls, session, vdi_ref):
         try:
-            task = session.call_xenapi('Async.VDI.destroy', vdi_ref)
-            session.wait_for_task(task)
+            session.call_xenapi('VDI.destroy', vdi_ref)
         except cls.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise volume_utils.StorageError(
@@ -366,8 +364,7 @@ class VMHelper(xenapi.HelperBase):
 
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
 
-        task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
-        template_vm_ref = session.wait_for_task(task, instance['uuid'])
+        template_vm_ref = session.call_xenapi('VM.snapshot', vm_ref, label)
         template_vdi_rec = cls.get_vdi_for_vm_safely(session,
                 template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
@@ -754,7 +751,7 @@ class VMHelper(xenapi.HelperBase):
             LOG.debug(_("xapi 'download_vhd' returned VDI of "
                     "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'") % vdi)
 
-        cls.scan_sr(session, instance, sr_ref)
+        cls.scan_sr(session, sr_ref)
 
         # Pull out the UUID of the first VDI (which is the os VDI)
         os_vdi_uuid = vdis[0]['vdi_uuid']
@@ -1097,19 +1094,16 @@ class VMHelper(xenapi.HelperBase):
         raise exception.CouldNotFetchMetrics()
 
     @classmethod
-    def scan_sr(cls, session, instance=None, sr_ref=None):
+    def scan_sr(cls, session, sr_ref=None):
         """Scans the SR specified by sr_ref"""
         if sr_ref:
             LOG.debug(_("Re-scanning SR %s"), sr_ref)
-            task = session.call_xenapi('Async.SR.scan', sr_ref)
-            instance_uuid = instance['uuid'] if instance else None
-            session.wait_for_task(task, instance_uuid)
+            session.call_xenapi('SR.scan', sr_ref)
 
     @classmethod
     def scan_default_sr(cls, session):
         """Looks for the system default SR and triggers a re-scan"""
-        sr_ref = cls.find_sr(session)
-        session.call_xenapi('SR.scan', sr_ref)
+        cls.scan_sr(session, cls.find_sr(session))
 
     @classmethod
     def safe_find_sr(cls, session):
@@ -1409,7 +1403,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
 
     max_attempts = FLAGS.xenapi_vhd_coalesce_max_attempts
     for i in xrange(max_attempts):
-        VMHelper.scan_sr(session, instance, sr_ref)
+        VMHelper.scan_sr(session, sr_ref)
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
             LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
