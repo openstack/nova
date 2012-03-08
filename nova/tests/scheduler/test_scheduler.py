@@ -415,7 +415,9 @@ class SchedulerTestCase(test.TestCase):
     def _live_migration_instance(self):
         volume1 = {'id': 31338}
         volume2 = {'id': 31339}
-        return {'id': 31337, 'name': 'fake-instance',
+        return {'id': 31337,
+                'uuid': 'fake_uuid',
+                'name': 'fake-instance',
                 'host': 'fake_host1',
                 'volumes': [volume1, volume2],
                 'power_state': power_state.RUNNING,
@@ -575,15 +577,10 @@ class SchedulerTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        c = False
-        try:
-            self.driver.schedule_live_migration(self.context,
+        self.assertRaises(exception.InstanceNotRunning,
+            self.driver.schedule_live_migration, self.context,
                     instance_id=instance['id'], dest=dest,
                     block_migration=block_migration)
-            self._test_scheduler_live_migration(options)
-        except exception.Invalid, e:
-            c = (str(e).find('is not running') > 0)
-        self.assertTrue(c)
 
     def test_live_migration_volume_node_not_alive(self):
         """Raise exception when volume node is not alive."""
