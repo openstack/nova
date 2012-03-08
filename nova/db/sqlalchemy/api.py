@@ -1444,8 +1444,6 @@ def instance_get_by_uuid(context, uuid, session=None):
                 first()
 
     if not result:
-        # FIXME(sirp): it would be nice if InstanceNotFound would accept a
-        # uuid parameter as well
         raise exception.InstanceNotFound(instance_id=uuid)
 
     return result
