@@ -48,12 +48,15 @@ import hashlib
 import hmac
 import urllib
 
-# NOTE(vish): for new boto
-import boto
-# for boto.utils
-import boto.provider
-# NOTE(vish): for old boto
-import boto.utils
+try:
+    # NOTE(vish): for new boto
+    import boto
+    # for boto.utils
+    import boto.provider
+    # NOTE(vish): for old boto
+    import boto.utils
+except ImportError:
+    boto = None
 
 from nova import exception
 from nova import log as logging
@@ -74,6 +77,8 @@ class Signer(object):
 
     def s3_authorization(self, headers, verb, path):
         """Generate S3 authorization string."""
+        if not boto:
+            raise exception.Error('boto is not installed')
         c_string = boto.utils.canonical_string(verb, path, headers)
         hmac_copy = self.hmac.copy()
         hmac_copy.update(c_string)
