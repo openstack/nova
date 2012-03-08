@@ -19,7 +19,7 @@ PasteDeploy==1.5.0
 paste
 sqlalchemy-migrate>=0.7.2
 netaddr
-glance
+glance>=2011.3.1
 suds==0.4
 paramiko
 feedparser
