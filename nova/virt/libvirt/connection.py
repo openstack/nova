@@ -2008,13 +2008,13 @@ class LibvirtConnection(driver.ComputeDriver):
         # if image has kernel and ramdisk, just download
         # following normal way.
         if instance_ref['kernel_id']:
-            libvirt_utils.fetch_image(nova_context.get_admin_context(),
+            libvirt_utils.fetch_image(ctxt,
                               os.path.join(instance_dir, 'kernel'),
                               instance_ref['kernel_id'],
                               instance_ref['user_id'],
                               instance_ref['project_id'])
             if instance_ref['ramdisk_id']:
-                libvirt_utils.fetch_image(nova_context.get_admin_context(),
+                libvirt_utils.fetch_image(ctxt,
                                   os.path.join(instance_dir, 'ramdisk'),
                                   instance_ref['ramdisk_id'],
                                   instance_ref['user_id'],
