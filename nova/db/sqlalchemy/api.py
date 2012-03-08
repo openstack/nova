@@ -2125,6 +2125,7 @@ def network_get_associated_fixed_ips(context, network_id):
     # fixed_ip_get_all_by_network.
     return model_query(context, models.FixedIp, read_deleted="no").\
                     filter_by(network_id=network_id).\
+                    filter_by(allocated=True).\
                     filter(models.FixedIp.instance_id != None).\
                     filter(models.FixedIp.virtual_interface_id != None).\
                     all()
