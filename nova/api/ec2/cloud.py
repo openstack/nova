@@ -888,8 +888,13 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_id_to_id(volume_id)
-        volume = self.volume_api.get(context, volume_id)
-        self.volume_api.delete(context, volume)
+
+        try:
+            volume = self.volume_api.get(context, volume_id)
+            self.volume_api.delete(context, volume)
+        except exception.InvalidVolume:
+            raise exception.EC2APIError(_('Delete Failed'))
+
         return True
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
@@ -901,7 +906,13 @@ class CloudController(object):
         msg = _("Attach volume %(volume_id)s to instance %(instance_id)s"
                 " at %(device)s") % locals()
         LOG.audit(msg, context=context)
-        self.compute_api.attach_volume(context, instance, volume_id, device)
+
+        try:
+            self.compute_api.attach_volume(context, instance,
+                                           volume_id, device)
+        except exception.InvalidVolume:
+            raise exception.EC2APIError(_('Attach Failed.'))
+
         volume = self.volume_api.get(context, volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
@@ -915,7 +926,13 @@ class CloudController(object):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
         volume = self.volume_api.get(context, volume_id)
-        instance = self.compute_api.detach_volume(context, volume_id=volume_id)
+
+        try:
+            instance = self.compute_api.detach_volume(context,
+                                                      volume_id=volume_id)
+        except exception.InvalidVolume:
+            raise exception.EC2APIError(_('Detach Volume Failed.'))
+
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
                 'instanceId': ec2utils.id_to_ec2_id(instance['id']),
