@@ -44,3 +44,17 @@ class ContextTestCase(test.TestCase):
                           '111',
                           '222',
                           read_deleted=True)
+
+    def test_extra_args_to_context_get_logged(self):
+        info = {}
+
+        def fake_warn(log_msg):
+            info['log_msg'] = log_msg
+
+        self.stubs.Set(context.LOG, 'warn', fake_warn)
+
+        c = context.RequestContext('user', 'project',
+                extra_arg1='meow', extra_arg2='wuff')
+        self.assertTrue(c)
+        self.assertIn("'extra_arg1': 'meow'", info['log_msg'])
+        self.assertIn("'extra_arg2': 'wuff'", info['log_msg'])
