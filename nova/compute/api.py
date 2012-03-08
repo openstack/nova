@@ -1083,8 +1083,7 @@ class API(base.Base):
         return self.db.instance_get_all_by_filters(context, filters)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
-                          task_state=[None, task_states.RESIZE_VERIFY])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF])
     def backup(self, context, instance, name, backup_type, rotation,
                extra_properties=None):
         """Backup the given instance
@@ -1102,8 +1101,7 @@ class API(base.Base):
         return recv_meta
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
-                          task_state=[None, task_states.RESIZE_VERIFY])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF])
     def snapshot(self, context, instance, name, extra_properties=None):
         """Snapshot the given instance.
 
@@ -1130,8 +1128,17 @@ class API(base.Base):
         :param extra_properties: dict of extra image properties to include
 
         """
-        task_state = instance["task_state"]
         instance_uuid = instance['uuid']
+
+        if image_type == "snapshot":
+            task_state = task_states.IMAGE_SNAPSHOT
+        elif image_type == "backup":
+            task_state = task_states.IMAGE_BACKUP
+        else:
+            raise Exception(_('Image type not recognized %s') % image_type)
+
+        self.db.instance_test_and_set(
+                context, instance_uuid, 'task_state', [None], task_state)
 
         properties = {
             'instance_uuid': instance_uuid,
