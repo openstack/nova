@@ -52,7 +52,6 @@ from eventlet import greenthread
 from xml.dom import minidom
 from xml.etree import ElementTree
 
-from nova.auth import manager
 from nova import block_device
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -63,10 +62,8 @@ from nova import flags
 import nova.image
 from nova import log as logging
 from nova.openstack.common import cfg
-from nova import network
 from nova import utils
 from nova.virt import driver
-from nova.virt import images
 from nova.virt.disk import api as disk
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagecache
@@ -298,7 +295,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def instance_exists(self, instance_id):
         """Efficient override of base instance_exists method."""
         try:
-            _ignored = self._conn.lookupByName(instance_id)
+            self._conn.lookupByName(instance_id)
             return True
         except libvirt.libvirtError:
             return False
@@ -399,7 +396,7 @@ class LibvirtConnection(driver.ComputeDriver):
         def _wait_for_destroy():
             """Called at an interval until the VM is gone."""
             try:
-                state = self.get_info(instance)['state']
+                self.get_info(instance)
             except exception.NotFound:
                 LOG.info(_("Instance destroyed successfully."),
                          instance=instance)
@@ -417,9 +414,9 @@ class LibvirtConnection(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             mountpoint = vol['mount_device']
-            xml = self.volume_driver_method('disconnect_volume',
-                                            connection_info,
-                                            mountpoint)
+            self.volume_driver_method('disconnect_volume',
+                                      connection_info,
+                                      mountpoint)
         if cleanup:
             self._cleanup(instance)
 
@@ -431,7 +428,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
-        instance_name = instance['name']
         LOG.info(_('Deleting instance files %(target)s') % locals(),
                  instance=instance)
         if FLAGS.libvirt_type == 'lxc':
@@ -541,7 +537,6 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.info(_('detaching LXC block device'))
 
         lxc_container_root = self.get_lxc_container_root(virt_dom)
-        lxc_host_volume = self.get_lxc_host_device(xml)
         lxc_container_device = self.get_lxc_container_target(xml)
         lxc_container_target = "%s/%s" % (lxc_container_root,
                                           lxc_container_device)
@@ -858,7 +853,7 @@ class LibvirtConnection(driver.ComputeDriver):
         self._create_image(context, instance, xml, network_info=network_info,
                            block_device_info=block_device_info)
 
-        domain = self._create_new_domain(xml)
+        self._create_new_domain(xml)
         LOG.debug(_("Instance is running"), instance=instance)
         self._enable_hairpin(instance)
         self.firewall_driver.apply_instance_filter(instance, network_info)
@@ -1185,7 +1180,6 @@ class LibvirtConnection(driver.ComputeDriver):
         ifc_template = open(FLAGS.injected_network_template).read()
         ifc_num = -1
         have_injected_networks = False
-        admin_context = nova_context.get_admin_context()
         for (network_ref, mapping) in network_info:
             ifc_num += 1
 
@@ -1226,9 +1220,6 @@ class LibvirtConnection(driver.ComputeDriver):
             admin_password = None
 
         if any((key, net, metadata, admin_password)):
-
-            instance_name = instance['name']
-
             if config_drive:  # Should be True or None by now.
                 injection_path = basepath('disk.config')
                 img_id = 'config-drive'
@@ -1385,7 +1376,6 @@ class LibvirtConnection(driver.ComputeDriver):
                 nova_context.get_admin_context(), instance['id'],
                 {'default_swap_device': '/dev/' + swap_device})
 
-        config_drive = False
         if instance.get('config_drive') or instance.get('config_drive_id'):
             xml_info['config_drive'] = xml_info['basepath'] + "/disk.config"
 
@@ -1968,9 +1958,9 @@ class LibvirtConnection(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             mountpoint = vol['mount_device']
-            xml = self.volume_driver_method('connect_volume',
-                                            connection_info,
-                                            mountpoint)
+            self.volume_driver_method('connect_volume',
+                                      connection_info,
+                                      mountpoint)
 
     def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
         """Preparation block migration.
@@ -2287,8 +2277,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                     network_info=network_info,
                                     block_device_info=None)
 
-        domain = self._create_new_domain(xml)
-
+        self._create_new_domain(xml)
         self.firewall_driver.apply_instance_filter(instance, network_info)
 
         timer = utils.LoopingCall(self._wait_for_running, instance)
@@ -2310,7 +2299,7 @@ class LibvirtConnection(driver.ComputeDriver):
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
         # images already exist
-        domain = self._create_new_domain(xml)
+        self._create_new_domain(xml)
         self.firewall_driver.apply_instance_filter(instance, network_info)
 
         timer = utils.LoopingCall(self._wait_for_running, instance)
