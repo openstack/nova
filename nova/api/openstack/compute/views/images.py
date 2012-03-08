@@ -59,6 +59,8 @@ class ViewBuilder(common.ViewBuilder):
         if instance_uuid is not None:
             server_ref = os.path.join(request.application_url, 'servers',
                                       instance_uuid)
+            server_ref = self._update_link_prefix(server_ref,
+                    FLAGS.osapi_compute_link_prefix)
             image_dict["server"] = {
                 "id": instance_uuid,
                 "links": [{
