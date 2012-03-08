@@ -696,7 +696,7 @@ class VMOps(object):
         except self.XenAPI.Failure, exc:
             LOG.error(_("Unable to Snapshot instance %(instance_uuid)s: "
                     "%(exc)s") % locals())
-            return
+            raise
 
     def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path):
         instance_id = instance['id']
