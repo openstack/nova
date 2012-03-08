@@ -1387,26 +1387,24 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
         self.compute.driver.unfilter_instance(i_ref, [])
         self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, 'network', {'method': 'setup_networks_on_host',
-                                'args': {'instance_id': instance_id,
-                                         'host': self.compute.host,
-                                         'teardown': True}})
         rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
              "args": {'instance_id': i_ref['id'], 'block_migration': False}})
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
         self.compute.driver.unplug_vifs(i_ref, [])
+        rpc.call(c, 'network', {'method': 'setup_networks_on_host',
+                                'args': {'instance_id': instance_id,
+                                         'host': self.compute.host,
+                                         'teardown': True}})
 
         # start test
         self.mox.ReplayAll()
         self.compute.post_live_migration(c, i_ref, dest)
 
-        # make sure every data is rewritten to destinatioin hostname.
-        i_ref = db.instance_get(c, i_ref['id'])
-        c1 = (i_ref['host'] == dest)
+        # make sure floating ips are rewritten to destinatioin hostname.
         flo_refs = db.floating_ip_get_all_by_host(c, dest)
-        c2 = (len(flo_refs) != 0 and flo_refs[0]['address'] == flo_addr)
-        self.assertTrue(c1 and c2)
+        self.assertTrue(flo_refs)
+        self.assertEqual(flo_refs[0]['address'], flo_addr)
 
         # cleanup
         db.instance_destroy(c, instance_id)

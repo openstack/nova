@@ -2000,10 +2000,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Releasing vlan.
         # (not necessary in current implementation?)
 
-        # NOTE(tr3buchet): tear down networks on source host
-        self.network_api.setup_networks_on_host(ctxt, instance_ref,
-                                                self.host, teardown=True)
-
         network_info = self._get_instance_nw_info(ctxt, instance_ref)
         # Releasing security group ingress rule.
         self.driver.unfilter_instance(instance_ref,
@@ -2041,15 +2037,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                       "args": {'instance_id': instance_ref['id'],
                                'block_migration': block_migration}})
 
-        # Restore instance state
-        current_power_state = self._get_power_state(ctxt, instance_ref)
-        self._instance_update(ctxt,
-                              instance_ref["id"],
-                              host=dest,
-                              power_state=current_power_state,
-                              vm_state=vm_states.ACTIVE,
-                              task_state=None)
-
         # Restore volume state
         for volume_ref in instance_ref['volumes']:
             self.volume_api.update(ctxt, volume_ref, {'status': 'in-use'})
@@ -2066,6 +2053,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             # torn down
             self.driver.unplug_vifs(instance_ref,
                                     self._legacy_nw_info(network_info))
+
+        # NOTE(tr3buchet): tear down networks on source host
+        self.network_api.setup_networks_on_host(ctxt, instance_ref,
+                                                self.host, teardown=True)
 
         LOG.info(_('Migrating instance to %(dest)s finished successfully.'),
                  locals(), instance=instance_ref)
@@ -2098,6 +2089,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.post_live_migration_at_destination(context, instance_ref,
                                             self._legacy_nw_info(network_info),
                                             block_migration)
+        # Restore instance state
+        current_power_state = self._get_power_state(context, instance_ref)
+        self._instance_update(context,
+                              instance_ref['id'],
+                              host=self.host,
+                              power_state=current_power_state,
+                              vm_state=vm_states.ACTIVE,
+                              task_state=None)
+
+        # NOTE(vish): this is necessary to update dhcp
+        self.network_api.setup_networks_on_host(context,
+                                                instance_ref,
+                                                self.host)
 
     def rollback_live_migration(self, context, instance_ref,
                                 dest, block_migration):
