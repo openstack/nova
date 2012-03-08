@@ -229,7 +229,7 @@ class RPCAllocateFixedIP(object):
         network = self._get_network_by_id(context, network_id)
         return self.allocate_fixed_ip(context, instance_id, network, **kwargs)
 
-    def deallocate_fixed_ip(self, context, address, host):
+    def deallocate_fixed_ip(self, context, address, host, **kwargs):
         """Call the superclass deallocate_fixed_ip if i'm the correct host
         otherwise cast to the correct host"""
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
