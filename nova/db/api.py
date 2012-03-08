@@ -647,6 +647,15 @@ def instance_get_all_hung_in_rebooting(context, reboot_window):
     return IMPL.instance_get_all_hung_in_rebooting(context, reboot_window)
 
 
+def instance_test_and_set(context, instance_id, attr, ok_states,
+                          new_state):
+    """Atomically check if an instance is in a valid state, and if it is, set
+    the instance into a new state.
+    """
+    return IMPL.instance_test_and_set(
+            context, instance_id, attr, ok_states, new_state)
+
+
 def instance_update(context, instance_id, values):
     """Set the given properties on an instance and update it.
 

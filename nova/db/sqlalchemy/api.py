@@ -1691,6 +1691,40 @@ def instance_get_all_hung_in_rebooting(context, reboot_window, session=None):
 
 
 @require_context
+def instance_test_and_set(context, instance_id, attr, ok_states,
+                          new_state, session=None):
+    """Atomically check if an instance is in a valid state, and if it is, set
+    the instance into a new state.
+    """
+    if not session:
+        session = get_session()
+
+    with session.begin():
+        query = model_query(context, models.Instance, session=session,
+                            project_only=True)
+
+        if utils.is_uuid_like(instance_id):
+            query = query.filter_by(uuid=instance_id)
+        else:
+            query = query.filter_by(id=instance_id)
+
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        instance = query.with_lockmode('update').first()
+
+        state = instance[attr]
+        if state not in ok_states:
+            raise exception.InstanceInvalidState(
+                attr=attr,
+                instance_uuid=instance['uuid'],
+                state=state,
+                method='instance_test_and_set')
+
+        instance[attr] = new_state
+        instance.save(session=session)
+
+
+@require_context
 def instance_update(context, instance_id, values):
     session = get_session()
 
