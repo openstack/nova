@@ -210,14 +210,13 @@ class API(base.Base):
                                                 instance_type)
         if num_instances < min_count:
             pid = context.project_id
-            LOG.warn(_("Quota exceeded for %(pid)s,"
-                    " tried to run %(min_count)s instances") % locals())
             if num_instances <= 0:
-                message = _("Instance quota exceeded. You cannot run any "
-                            "more instances of this type.")
+                msg = _("Cannot run any more instances of this type.")
             else:
-                message = _("Instance quota exceeded. You can only run %s "
-                            "more instances of this type.") % num_instances
+                msg = (_("Can only run %s more instances of this type.") %
+                       num_instances)
+            LOG.warn(_("Quota exceeded for %(pid)s,"
+                  " tried to run %(min_count)s instances. " + msg) % locals())
             raise exception.QuotaError(code="InstanceLimitExceeded")
 
         self._check_metadata_properties_quota(context, metadata)
