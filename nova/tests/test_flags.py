@@ -114,7 +114,7 @@ class FlagsTestCase(test.TestCase):
 
         try:
             os.write(fd, '--string=foo\n--int=2\n--false\n--notrue\n')
-            os.write(fd, '--multi=foo\n')  # FIXME(markmc): --multi=bar\n')
+            os.write(fd, '--multi=bar\n')
             os.close(fd)
 
             self.FLAGS(['flags_test', '--flagfile=' + path])
@@ -123,11 +123,11 @@ class FlagsTestCase(test.TestCase):
             self.assertEqual(self.FLAGS.int, 2)
             self.assertEqual(self.FLAGS.false, True)
             self.assertEqual(self.FLAGS.true, False)
-            self.assertEqual(self.FLAGS.multi, ['foo'])  # FIXME(markmc): 'bar'
+            self.assertEqual(self.FLAGS.multi, ['bar'])
 
             # Re-parse to test multistring isn't append multiple times
             self.FLAGS(['flags_test', '--flagfile=' + path])
-            self.assertEqual(self.FLAGS.multi, ['foo'])  # FIXME(markmc): 'bar'
+            self.assertEqual(self.FLAGS.multi, ['bar'])
         finally:
             os.remove(path)
 
