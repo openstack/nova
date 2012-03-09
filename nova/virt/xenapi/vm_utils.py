@@ -426,8 +426,7 @@ class VMHelper(xenapi.HelperBase):
                   'properties': properties}
 
         kwargs = {'params': pickle.dumps(params)}
-        task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
-        session.wait_for_task(task, instance['uuid'])
+        session.call_plugin('glance', 'upload_vhd', kwargs)
 
     @classmethod
     def resize_disk(cls, session, vdi_ref, instance_type):
@@ -584,9 +583,8 @@ class VMHelper(xenapi.HelperBase):
             args = {}
             args['cached-image'] = image
             args['new-image-uuid'] = str(uuid.uuid4())
-            task = session.async_call_plugin('glance', "create_kernel_ramdisk",
-                                              args)
-            filename = session.wait_for_task(task, instance.id)
+            filename = session.call_plugin('glance', 'create_kernel_ramdisk',
+                                           args)
 
         if filename == "":
             return cls.fetch_image(context, session, instance, image,
@@ -689,7 +687,7 @@ class VMHelper(xenapi.HelperBase):
                 session, instance, image, image_type)
 
     @classmethod
-    def _retry_glance_download_vhd(cls, context, session, instance, image):
+    def _retry_glance_download_vhd(cls, context, session, image):
         # NOTE(sirp): The Glance plugin runs under Python 2.4
         # which does not have the `uuid` module. To work around this,
         # we generate the uuids here (under Python 2.6+) and
@@ -713,9 +711,8 @@ class VMHelper(xenapi.HelperBase):
                        'attempt %(attempt_num)d/%(max_attempts)d '
                        'from %(glance_host)s:%(glance_port)s') % locals())
 
-            task = session.async_call_plugin('glance', 'download_vhd', kwargs)
             try:
-                result = session.wait_for_task(task, instance['uuid'])
+                result = session.call_plugin('glance', 'download_vhd', kwargs)
                 return json.loads(result)
             except cls.XenAPI.Failure as exc:
                 _type, _method, error = exc.details[:3]
@@ -741,8 +738,7 @@ class VMHelper(xenapi.HelperBase):
                     % locals())
         sr_ref = cls.safe_find_sr(session)
 
-        vdis = cls._retry_glance_download_vhd(context, session, instance,
-                                              image)
+        vdis = cls._retry_glance_download_vhd(context, session, image)
 
         # 'download_vhd' will return a list of dictionaries describing VDIs.
         # The dictionary will contain 'vdi_type' and 'vdi_uuid' keys.
@@ -863,12 +859,13 @@ class VMHelper(xenapi.HelperBase):
                 fn = "copy_kernel_vdi"
                 args = {}
                 args['vdi-ref'] = vdi_ref
+
                 # Let the plugin copy the correct number of bytes.
                 args['image-size'] = str(vdi_size)
                 if FLAGS.cache_images:
                     args['cached-image'] = image
-                task = session.async_call_plugin('glance', fn, args)
-                filename = session.wait_for_task(task, instance['uuid'])
+                filename = session.call_plugin('glance', fn, args)
+
                 # Remove the VDI as it is not needed anymore.
                 session.call_xenapi("VDI.destroy", vdi_ref)
                 LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)

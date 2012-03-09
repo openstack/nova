@@ -706,10 +706,8 @@ class VMOps(object):
 
         try:
             _params = {'params': pickle.dumps(params)}
-            task = self._session.async_call_plugin('migration',
-                                                   'transfer_vhd',
-                                                   _params)
-            self._session.wait_for_task(task, instance_uuid)
+            self._session.call_plugin('migration', 'transfer_vhd',
+                                      _params)
         except self.XenAPI.Failure:
             msg = _("Failed to transfer vhd to new host")
             raise exception.MigrationError(reason=msg)
@@ -869,9 +867,8 @@ class VMOps(object):
         else:
             new_uuid = new_base_copy_uuid
 
-        task = self._session.async_call_plugin('migration',
-                'move_vhds_into_sr', {'params': pickle.dumps(params)})
-        self._session.wait_for_task(task, instance['uuid'])
+        self._session.call_plugin('migration', 'move_vhds_into_sr',
+                                  {'params': pickle.dumps(params)})
 
         # Now we rescan the SR so we find the VHDs
         VMHelper.scan_default_sr(self._session)
@@ -1128,9 +1125,7 @@ class VMOps(object):
             args['kernel-file'] = kernel
         if ramdisk:
             args['ramdisk-file'] = ramdisk
-        task = self._session.async_call_plugin(
-            'glance', 'remove_kernel_ramdisk', args)
-        self._session.wait_for_task(task)
+        self._session.call_plugin('glance', 'remove_kernel_ramdisk', args)
 
     def _destroy_kernel_ramdisk(self, instance, vm_ref):
         """Three situations can occur:
@@ -1615,10 +1610,8 @@ class VMOps(object):
         args = {'dom_id': vm_rec['domid'], 'path': path}
         args.update(addl_args or {})
         try:
-            task = self._session.async_call_plugin(plugin, method, args)
-            ret = self._session.wait_for_task(task, instance_uuid)
+            return self._session.call_plugin(plugin, method, args)
         except self.XenAPI.Failure, e:
-            ret = None
             err_msg = e.details[-1].splitlines()[-1]
             if 'TIMEOUT:' in err_msg:
                 LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
@@ -1633,7 +1626,7 @@ class VMOps(object):
                 LOG.error(_('The call to %(method)s returned an error: %(e)s. '
                         'VM id=%(instance_uuid)s; args=%(args)r') % locals())
                 return {'returncode': 'error', 'message': err_msg}
-        return ret
+            return None
 
     def add_to_xenstore(self, vm, path, key, value):
         """
