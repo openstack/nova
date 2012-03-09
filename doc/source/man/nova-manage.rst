@@ -7,9 +7,9 @@ control and manage cloud computer instances and images
 ------------------------------------------------------
 
 :Author: openstack@lists.launchpad.net
-:Date:   2010-11-16
+:Date:   2012-04-05
 :Copyright: OpenStack LLC
-:Version: 0.1
+:Version: 2012.1
 :Manual section: 1
 :Manual group: cloud computing
 
@@ -118,7 +118,6 @@ Nova Project
 Nova Role
 ~~~~~~~~~
 
-nova-manage role <action> [<argument>]
 ``nova-manage role add <username> <rolename> <(optional) projectname>``
 
     Add a user to either a global or project-based role with the indicated <rolename> assigned to the named user. Role names can be one of the following five roles: cloudadmin, itsec, sysadmin, netadmin, developer. If you add the project name as the last argument then the role is assigned just for that project, otherwise the user is assigned the named role for all projects.
@@ -128,6 +127,17 @@ nova-manage role <action> [<argument>]
 
 ``nova-manage role remove <username> <rolename>``
     Remove the indicated role from the user.
+
+Nova Logs
+~~~~~~~~~
+
+``nova-manage logs errors``
+
+    Displays nova errors from log files.
+
+``nova-manage logs syslog <number>``
+
+    Displays nova alerts from syslog.
 
 Nova Shell
 ~~~~~~~~~~
