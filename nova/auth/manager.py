@@ -63,10 +63,10 @@ auth_opts = [
                 help='Roles that apply to all projects'),
 
     cfg.StrOpt('credentials_template',
-               default=utils.abspath('auth/novarc.template'),
+               default='$pybasedir/nova/auth/novarc.template',
                help='Template for creating users rc file'),
     cfg.StrOpt('vpn_client_template',
-               default=utils.abspath('cloudpipe/client.ovpn.template'),
+               default='$pybasedir/nova/cloudpipe/client.ovpn.template',
                help='Template for creating users vpn file'),
     cfg.StrOpt('credential_vpn_file',
                default='nova-vpn.conf',

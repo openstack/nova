@@ -45,7 +45,7 @@ LOG = logging.getLogger(__name__)
 
 disk_opts = [
     cfg.StrOpt('injected_network_template',
-               default=utils.abspath('virt/interfaces.template'),
+               default='$pybasedir/nova/virt/interfaces.template',
                help='Template file for injected network'),
     cfg.ListOpt('img_handlers',
                 default=['loop', 'nbd', 'guestfs'],

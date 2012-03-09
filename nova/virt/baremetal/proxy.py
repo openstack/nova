@@ -60,7 +60,7 @@ FLAGS = flags.FLAGS
 
 baremetal_opts = [
     cfg.StrOpt('baremetal_injected_network_template',
-                default=utils.abspath('virt/interfaces.template'),
+                default='$pybasedir/nova/virt/interfaces.template',
                 help='Template file for injected network'),
     cfg.StrOpt('baremetal_type',
                 default='baremetal',
