@@ -481,7 +481,8 @@ class SnapshotController(object):
         LOG.audit(_("Delete snapshot with id: %s"), id, context=context)
 
         try:
-            self.volume_api.delete_snapshot(context, snapshot_id=id)
+            snapshot = self.volume_api.get_snapshot(context, id)
+            self.volume_api.delete_snapshot(context, snapshot)
         except exception.NotFound:
             return exc.HTTPNotFound()
         return webob.Response(status_int=202)
