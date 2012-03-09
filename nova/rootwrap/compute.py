@@ -179,6 +179,10 @@ filterlist = [
     # nova/virt/xenapi/vm_utils.py: 'mkfs'
     filters.CommandFilter("/sbin/mkfs", "root"),
 
+    # nova/virt/libvirt/utils.py: 'qemu-img'
+    filters.CommandFilter("/usr/bin/qemu-img", "root"),
+
     # nova/virt/libvirt/connection.py:
     filters.ReadFileFilter("/etc/iscsi/initiatorname.iscsi"),
+
     ]

@@ -96,8 +96,14 @@ class FakeVirtDomain(object):
     def name(self):
         return "fake-domain %s" % self
 
-    def snapshotCreateXML(self, *args):
-        return FakeVirDomainSnapshot(self)
+    def info(self):
+        return [power_state.RUNNING, None, None, None, None]
+
+    def create(self):
+        pass
+
+    def managedSave(self, *args):
+        pass
 
     def createWithFlags(self, launch_flags):
         pass
