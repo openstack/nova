@@ -38,6 +38,8 @@ _OPTION_REGEX = re.compile(r"(%s)" % "|".join([_STROPT, _BOOLOPT, _INTOPT,
                                                _FLOATOPT, _LISTOPT,
                                                _MULTISTROPT]))
 
+_BASEDIR = os.path.abspath(os.path.dirname(__file__) + "../../")
+
 
 def main(srcfiles):
 
@@ -111,6 +113,13 @@ def print_module(mod_str):
     print
 
 
+def convert_abspath(s):
+    """Set up a reasonably sensible default for pybasedir."""
+    if not s.startswith(_BASEDIR):
+        return s
+    return s.replace(_BASEDIR, '/usr/lib/python/site-packages')
+
+
 def print_opt(opt):
     opt_type = None
     try:
@@ -120,20 +129,26 @@ def print_opt(opt):
         sys.exit(1)
     # print out option info
     print "######", "".join(["(", opt_type, ")"]), opt.help
-    if opt.default is None:
-        print '# %s=<None>' % opt.name
+
+    name, default = opt.name, opt.default
+
+    if isinstance(default, basestring):
+        default = convert_abspath(default)
+
+    if default is None:
+        print '# %s=<None>' % name
     else:
         if opt_type == 'StrOpt':
-            print '# %s="%s"' % (opt.name, opt.default)
+            print '# %s="%s"' % (name, default)
         elif opt_type == 'ListOpt':
-            print '# %s="%s"' % (opt.name, ','.join(opt.default))
+            print '# %s="%s"' % (name, ','.join(default))
         elif opt_type == 'MultiStrOpt':
-            for default in opt.default:
-                print '# %s="%s"' % (opt.name, default)
+            for default in default:
+                print '# %s="%s"' % (name, default)
         elif opt_type == 'BoolOpt':
-            print '# %s=%s' % (opt.name, str(opt.default).lower())
+            print '# %s=%s' % (name, str(default).lower())
         else:
-            print '# %s=%s' % (opt.name, opt.default)
+            print '# %s=%s' % (name, default)
 
 
 if __name__ == '__main__':

@@ -10,6 +10,8 @@
 # allow_resize_to_same_host=false
 ###### (StrOpt) File name for the paste.deploy config for nova-api
 # api_paste_config="api-paste.ini"
+###### (StrOpt) The strategy to use for auth. Supports noauth, keystone, and deprecated.
+# auth_strategy="noauth"
 ###### (IntOpt) Seconds for auth tokens to linger
 # auth_token_ttl=3600
 ###### (StrOpt) AWS Access ID
@@ -18,26 +20,28 @@
 # aws_secret_access_key="admin"
 ###### (IntOpt) interval to pull bandwidth usage info
 # bandwith_poll_interval=600
+###### (StrOpt) Directory where nova binaries are installed
+# bindir="$pybasedir/bin"
 ###### (BoolOpt) Cache glance images locally
 # cache_images=true
-###### (StrOpt) Manager for cert
+###### (StrOpt) full class name for the Manager for cert
 # cert_manager="nova.cert.manager.CertManager"
 ###### (StrOpt) the topic cert nodes listen on
 # cert_topic="cert"
-###### (StrOpt) The compute API class to use
+###### (StrOpt) The full class name of the compute API class to use
 # compute_api_class="nova.compute.api.API"
-###### (StrOpt) Manager for compute
+###### (StrOpt) full class name for the Manager for compute
 # compute_manager="nova.compute.manager.ComputeManager"
 ###### (StrOpt) the topic compute nodes listen on
 # compute_topic="compute"
 ###### (MultiStrOpt) Path to a config file to use. Multiple config files can be specified, with values in later files taking precedence. The default files used are: []
-###### (StrOpt) libvirt, xenapi or fake
+###### (StrOpt) Virtualization api connection type : libvirt, xenapi, or fake
 # connection_type=<None>
-###### (StrOpt) Manager for console proxy
+###### (StrOpt) full class name for the Manager for console proxy
 # console_manager="nova.console.manager.ConsoleProxyManager"
 ###### (StrOpt) the topic console proxy nodes listen on
 # console_topic="console"
-###### (StrOpt) the main exchange to connect to
+###### (StrOpt) the main RabbitMQ exchange to connect to
 # control_exchange="nova"
 ###### (BoolOpt) Print debugging output
 # debug=false
@@ -49,49 +53,49 @@
 # default_image="ami-11111"
 ###### (StrOpt) default instance type to use, testing only
 # default_instance_type="m1.small"
-###### (StrOpt) default project for openstack
+###### (StrOpt) the default project to use for openstack
 # default_project="openstack"
-###### (StrOpt) zone to use when user doesnt specify one
+###### (StrOpt) availability zone to use when user doesnt specify one
 # default_schedule_zone=<None>
 ###### (StrOpt) default instance type for VSA instances
 # default_vsa_instance_type="m1.small"
-###### (StrOpt) internal ip of api server
+###### (StrOpt) the internal ip of the ec2 api server
 # ec2_dmz_host="$my_ip"
-###### (StrOpt) ip of api server
+###### (StrOpt) the ip of the ec2 api server
 # ec2_host="$my_ip"
-###### (StrOpt) suffix for ec2
+###### (StrOpt) the path prefix used to call the ec2 api server
 # ec2_path="/services/Cloud"
-###### (IntOpt) cloud controller port
+###### (IntOpt) the port of the ec2 api server
 # ec2_port=8773
-###### (StrOpt) prefix for ec2
+###### (StrOpt) the protocol to use when connecting to the ec2 api server (http, https)
 # ec2_scheme="http"
 ###### (BoolOpt) Allows use of instance password during server creation
 # enable_instance_password=true
-###### (ListOpt) list of APIs to enable by default
+###### (ListOpt) a list of APIs to enable by default
 # enabled_apis="ec2,osapi_compute,osapi_volume,metadata"
-###### (BoolOpt) should we use fake network devices and addresses
+###### (BoolOpt) If passed, use fake network devices and addresses
 # fake_network=false
-###### (BoolOpt) use a fake rabbit
+###### (BoolOpt) If passed, use a fake RabbitMQ provider
 # fake_rabbit=false
 ###### (StrOpt) Firewall driver (defaults to iptables)
 # firewall_driver="nova.virt.firewall.IptablesFirewallDriver"
-###### (StrOpt) DNS Manager for floating IPs
+###### (StrOpt) full class name for the DNS Manager for floating IPs
 # floating_ip_dns_manager="nova.network.dns_driver.DNSDriver"
-###### (ListOpt) glance api servers available to nova (host:port)
+###### (ListOpt) A list of the glance api servers available to nova ([hostname|ip]:port)
 # glance_api_servers="$glance_host:$glance_port"
-###### (StrOpt) default glance host
+###### (StrOpt) default glance hostname or ip
 # glance_host="$my_ip"
 ###### (IntOpt) Number retries when downloading an image from glance
 # glance_num_retries=0
 ###### (IntOpt) default glance port
 # glance_port=9292
 ###### (StrOpt) Name of this node.  This can be an opaque identifier.  It is not necessarily a hostname, FQDN, or IP address.
-# host="firefly-2.local"
+# host="sorcha"
 ###### (StrOpt) The service to use for retrieving and searching images.
 # image_service="nova.image.glance.GlanceImageService"
-###### (StrOpt) DNS Zone for instance IPs
+###### (StrOpt) full class name for the DNS Zone for instance IPs
 # instance_dns_domain=""
-###### (StrOpt) DNS Manager for instance IPs
+###### (StrOpt) full class name for the DNS Manager for instance IPs
 # instance_dns_manager="nova.network.dns_driver.DNSDriver"
 ###### (StrOpt) time period to generate instance usages for.
 # instance_usage_audit_period="month"
@@ -99,8 +103,8 @@
 # isolated_hosts=""
 ###### (ListOpt) Images to run on isolated host
 # isolated_images=""
-###### (StrOpt) Directory for lock files
-# lock_path="/Users/vishvananda/cache/stack/nova/nova/../"
+###### (StrOpt) Directory to use for lock files
+# lock_path="$pybasedir"
 ###### (StrOpt) If this option is specified, the logging configuration file specified is used and overrides any other logging options specified. Please see the Python logging module documentation for details on logging configuration files.
 # log-config=<None>
 ###### (StrOpt) Format string for %(asctime)s in log records. Default: %default
@@ -111,31 +115,31 @@
 # log-file=<None>
 ###### (StrOpt) A logging.Formatter log message format string which may use any of the available logging.LogRecord attributes. Default: %default
 # log-format="%(asctime)s %(levelname)8s [%(name)s] %(message)s"
-###### (StrOpt) output to a per-service log file in named directory
+###### (StrOpt) Log output to a per-service log file in named directory
 # logdir=<None>
-###### (StrOpt) output to named file
+###### (StrOpt) Log output to a named file
 # logfile=<None>
-###### (StrOpt) Default file mode of the logs.
+###### (StrOpt) Default file mode used when creating log files
 # logfile_mode="0644"
 ###### (IntOpt) maxinum VCs in a VSA
 # max_vcs_in_vsa=32
 ###### (ListOpt) Memcached servers or None for in process cache.
 # memcached_servers=<None>
-###### (StrOpt) ip of metadata server
+###### (StrOpt) the ip for the metadata api server
 # metadata_host="$my_ip"
-###### (IntOpt) Metadata API port
+###### (IntOpt) the port for the metadata api port
 # metadata_port=8775
 ###### (BoolOpt) Whether to log monkey patching
 # monkey_patch=false
 ###### (ListOpt) List of modules/decorators to monkey patch
 # monkey_patch_modules="nova.api.ec2.cloud:nova.notifier.api.notify_decorator,nova.compute.api:nova.notifier.api.notify_decorator"
-###### (StrOpt) host ip address
-# my_ip="192.168.1.22"
-###### (StrOpt) The network API class to use
+###### (StrOpt) ip address of this host
+# my_ip="192.168.6.99"
+###### (StrOpt) The full class name of the network API class to use
 # network_api_class="nova.network.api.API"
 ###### (StrOpt) Driver to use for network creation
 # network_driver="nova.network.linux_net"
-###### (StrOpt) Manager for network
+###### (StrOpt) full class name for the Manager for network
 # network_manager="nova.network.manager.VlanManager"
 ###### (StrOpt) the topic network nodes listen on
 # network_topic="network"
@@ -153,11 +157,11 @@
 # osapi_compute_link_prefix=<None>
 ###### (StrOpt) Base URL that will be presented to users in links to glance resources
 # osapi_glance_link_prefix=<None>
-###### (IntOpt) max number of items returned in a collection response
+###### (IntOpt) the maximum number of items returned in a single response from a collection resource
 # osapi_max_limit=1000
-###### (StrOpt) suffix for openstack
+###### (StrOpt) the path prefix used to call the openstack api server
 # osapi_path="/v1.1/"
-###### (StrOpt) prefix for openstack
+###### (StrOpt) the protocol to use when connecting to the openstack api server (http, https)
 # osapi_scheme="http"
 ###### (ListOpt) Specify list of extensions to load when using osapi_volume_extension option with nova.api.openstack.volume.contrib.select_extensions
 # osapi_volume_ext_list=""
@@ -165,25 +169,27 @@
 # osapi_volume_extension="nova.api.openstack.volume.contrib.standard_extensions"
 ###### (IntOpt) Length of generated instance admin passwords
 # password_length=12
-###### (BoolOpt) use durable queues
+###### (StrOpt) Directory where the nova python module is installed
+# pybasedir="/usr/lib/python/site-packages"
+###### (BoolOpt) use durable queues in RabbitMQ
 # rabbit_durable_queues=false
-###### (StrOpt) rabbit host
+###### (StrOpt) the RabbitMQ host
 # rabbit_host="localhost"
-###### (IntOpt) maximum rabbit connection attempts (0=try forever)
+###### (IntOpt) maximum retries with trying to connect to RabbitMQ (the default of 0 implies an infinite retry count)
 # rabbit_max_retries=0
-###### (StrOpt) rabbit password
+###### (StrOpt) the RabbitMQ password
 # rabbit_password="guest"
-###### (IntOpt) rabbit port
+###### (IntOpt) the RabbitMQ port
 # rabbit_port=5672
-###### (IntOpt) rabbit connection retry backoff in seconds
+###### (IntOpt) how long to backoff for between retries when connecting to RabbitMQ
 # rabbit_retry_backoff=2
-###### (IntOpt) rabbit connection retry interval to start
+###### (IntOpt) how frequently to retry connecting with RabbitMQ
 # rabbit_retry_interval=1
-###### (BoolOpt) connect over SSL
+###### (BoolOpt) connect over SSL for RabbitMQ
 # rabbit_use_ssl=false
-###### (StrOpt) rabbit userid
+###### (StrOpt) the RabbitMQ userid
 # rabbit_userid="guest"
-###### (StrOpt) rabbit virtual host
+###### (StrOpt) the RabbitMQ virtual host
 # rabbit_virtual_host="/"
 ###### (IntOpt) Interval in seconds for reclaiming deleted instances
 # reclaim_instance_interval=0
@@ -193,36 +199,36 @@
 # resume_guests_state_on_host_boot=false
 ###### (StrOpt) Command prefix to use for running commands as root
 # root_helper="sudo"
-###### (StrOpt) s3 dmz ip (for instances)
+###### (StrOpt) hostname or ip for the instances to use when accessing the s3 api
 # s3_dmz="$my_ip"
-###### (StrOpt) s3 host (for infrastructure)
+###### (StrOpt) hostname or ip for openstack to use when accessing the s3 api
 # s3_host="$my_ip"
-###### (IntOpt) s3 port
+###### (IntOpt) port used when accessing the s3 api
 # s3_port=3333
-###### (StrOpt) Manager for scheduler
+###### (StrOpt) full class name for the Manager for scheduler
 # scheduler_manager="nova.scheduler.manager.SchedulerManager"
 ###### (StrOpt) the topic scheduler nodes listen on
 # scheduler_topic="scheduler"
-###### (StrOpt) security group handler class
+###### (StrOpt) The full class name of the security group handler class
 # security_group_handler="nova.network.quantum.sg.NullSecurityGroupHandler"
 ###### (IntOpt) maximum time since last check-in for up service
 # service_down_time=60
-###### (StrOpt) connection string for sql database
+###### (StrOpt) The SQLAlchemy connection string used to connect to the database
 # sql_connection="sqlite:///$state_path/$sqlite_db"
-###### (IntOpt) timeout for idle sql database connections
+###### (IntOpt) timeout before idle sql connections are reaped
 # sql_idle_timeout=3600
-###### (IntOpt) sql connection attempts
+###### (IntOpt) maximum number of retries for connecting to the sql database
 # sql_max_retries=12
-###### (IntOpt) sql connection retry interval
+###### (IntOpt) interval between retries of opening a sql connection
 # sql_retry_interval=10
-###### (StrOpt) file name for sqlite
+###### (StrOpt) the filename to use with sqlite
 # sqlite_db="nova.sqlite"
-###### (BoolOpt) Synchronous mode for sqlite
+###### (BoolOpt) If passed, use synchronous mode for sqlite
 # sqlite_synchronous=true
 ###### (BoolOpt) Whether to restart guests when the host reboots
 # start_guests_on_host_boot=false
 ###### (StrOpt) Top-level directory for maintaining nova's state
-# state_path="/Users/vishvananda/cache/stack/nova/nova/../"
+# state_path="$pybasedir"
 ###### (StrOpt) Stub network related code
 # stub_network="False"
 ###### (StrOpt) syslog facility to receive log lines
@@ -231,7 +237,7 @@
 # use_cow_images=true
 ###### (BoolOpt) use ipv6
 # use_ipv6=false
-###### (BoolOpt) log to standard error
+###### (BoolOpt) Log output to standard error
 # use_stderr=true
 ###### (BoolOpt) Use syslog for logging.
 # use-syslog=false
@@ -239,17 +245,17 @@
 # vc_image_name="vc_image"
 ###### (BoolOpt) Print more verbose output
 # verbose=false
-###### (StrOpt) The volume API class to use
+###### (StrOpt) The full class name of the volume API class to use
 # volume_api_class="nova.volume.api.API"
-###### (StrOpt) Manager for volume
+###### (StrOpt) full class name for the Manager for volume
 # volume_manager="nova.volume.manager.VolumeManager"
 ###### (StrOpt) the topic volume nodes listen on
 # volume_topic="volume"
-###### (StrOpt) image id for cloudpipe vpn server
+###### (StrOpt) image id used when starting up a cloudpipe vpn server
 # vpn_image_id="0"
 ###### (StrOpt) Suffix to add to project name for vpn key and secgroups
 # vpn_key_suffix="-vpn"
-###### (StrOpt) Manager for vsa
+###### (StrOpt) full class name for the Manager for VSA
 # vsa_manager="nova.vsa.manager.VsaManager"
 ###### (IntOpt) default partition size for shared capacity
 # vsa_part_size_gb=100
@@ -312,12 +318,6 @@
 # report_interval=10
 ###### (StrOpt) The messaging module to use, defaults to kombu.
 # rpc_backend="nova.rpc.impl_kombu"
-###### (IntOpt) Size of RPC connection pool
-# rpc_conn_pool_size=30
-###### (IntOpt) Seconds to wait for a response from call or multicall
-# rpc_response_timeout=3600
-###### (IntOpt) Size of RPC thread pool
-# rpc_thread_pool_size=1024
 ###### (StrOpt) Template string to be used to generate snapshot names
 # snapshot_name_template="snapshot-%08x"
 ###### (StrOpt) Template string to be used to generate instance names
@@ -376,46 +376,30 @@
 
 ######### defined in nova.test #########
 
-###### (ListOpt) Allowed roles for project
-# allowed_roles="cloudadmin,itsec,sysadmin,netadmin,developer"
-###### (StrOpt) Driver that auth manager uses
-# auth_driver="nova.auth.dbdriver.DbDriver"
 ###### (StrOpt) the topic console auth proxy nodes listen on
 # consoleauth_topic="consoleauth"
-###### (StrOpt) Filename of certificate in credentials zip
-# credential_cert_file="cert.pem"
-###### (StrOpt) Filename of private key in credentials zip
-# credential_key_file="pk.pem"
-###### (StrOpt) Filename of rc in credentials zip %s will be replaced by name of the region (nova by default)
-# credential_rc_file="%src"
-###### (StrOpt) Filename of certificate in credentials zip
-# credential_vpn_file="nova-vpn.conf"
-###### (StrOpt) Template for creating users rc file
-# credentials_template="/Users/vishvananda/cache/stack/nova/nova/auth/novarc.template"
 ###### (StrOpt) driver to use for database access
 # db_driver="nova.db"
 ###### (BoolOpt) should we use everything for testing
 # fake_tests=true
 ###### (StrOpt) Timeout after NN seconds when looking for a host.
 # find_host_timeout="30"
-###### (ListOpt) Roles that apply to all projects
-# global_roles="cloudadmin,itsec"
+###### (IntOpt) Size of RPC connection pool
+# rpc_conn_pool_size=30
+###### (IntOpt) Seconds to wait for a response from call or multicall
+# rpc_response_timeout=60
+###### (IntOpt) Size of RPC thread pool
+# rpc_thread_pool_size=1024
 ###### (StrOpt) File name of clean sqlite db
 # sqlite_clean_db="clean.sqlite"
 ###### (StrOpt) availability zone of this service
 # storage_availability_zone="nova"
-###### (ListOpt) Roles that ignore authorization checking completely
-# superuser_roles="cloudadmin"
-###### (BoolOpt) This flag must be set to use old style auth
-# use_deprecated_auth=false
 ###### (BoolOpt) if True, will not discover local volumes
 # use_local_volumes=true
 ###### (StrOpt) Driver to use for volume creation
 # volume_driver="nova.volume.driver.ISCSIDriver"
 ###### (BoolOpt) if True will force update capabilities on each check
 # volume_force_update_capabilities=false
-###### (StrOpt) Template for creating users vpn file
-# vpn_client_template="/Users/vishvananda/cache/stack/nova/nova/cloudpipe/client.ovpn.template"
 
 ######### defined in nova.auth.ldapdriver #########
 
@@ -451,6 +435,29 @@
 # ldap_user_unit="Users"
 ###### (StrOpt) OU for Roles
 # role_project_subtree="ou=Groups,dc=example,dc=com"
+
+######### defined in nova.auth.manager #########
+
+###### (ListOpt) Allowed roles for project
+# allowed_roles="cloudadmin,itsec,sysadmin,netadmin,developer"
+###### (StrOpt) Driver that auth manager uses
+# auth_driver="nova.auth.dbdriver.DbDriver"
+###### (StrOpt) Filename of certificate in credentials zip
+# credential_cert_file="cert.pem"
+###### (StrOpt) Filename of private key in credentials zip
+# credential_key_file="pk.pem"
+###### (StrOpt) Filename of rc in credentials zip %s will be replaced by name of the region (nova by default)
+# credential_rc_file="%src"
+###### (StrOpt) Filename of certificate in credentials zip
+# credential_vpn_file="nova-vpn.conf"
+###### (StrOpt) Template for creating users rc file
+# credentials_template="$pybasedir/nova/auth/novarc.template"
+###### (ListOpt) Roles that apply to all projects
+# global_roles="cloudadmin,itsec"
+###### (ListOpt) Roles that ignore authorization checking completely
+# superuser_roles="cloudadmin"
+###### (StrOpt) Template for creating users vpn file
+# vpn_client_template="$pybasedir/nova/cloudpipe/client.ovpn.template"
 
 ######### defined in nova.api.auth #########
 
@@ -507,7 +514,7 @@
 ###### (IntOpt) Lifetime of a DHCP lease in seconds
 # dhcp_lease_time=120
 ###### (StrOpt) location of nova-dhcpbridge
-# dhcpbridge="/Users/vishvananda/cache/stack/nova/bin/nova-dhcpbridge"
+# dhcpbridge="$bindir/nova-dhcpbridge"
 ###### (StrOpt) location of flagfile for dhcpbridge
 # dhcpbridge_flagfile="/etc/nova/nova-dhcpbridge.conf"
 ###### (StrOpt) dmz range that should be accepted
@@ -516,6 +523,42 @@
 # dns_server=<None>
 ###### (StrOpt) Override the default dnsmasq settings with this file
 # dnsmasq_config_file=""
+###### (StrOpt) Base DN for DNS entries in ldap
+# ldap_dns_base_dn="ou=hosts,dc=example,dc=org"
+###### (StrOpt) password for ldap DNS
+# ldap_dns_password="password"
+###### (MultiStrOpt) DNS Servers for ldap dns driver
+# ldap_dns_servers="["
+# ldap_dns_servers="d"
+# ldap_dns_servers="n"
+# ldap_dns_servers="s"
+# ldap_dns_servers="."
+# ldap_dns_servers="e"
+# ldap_dns_servers="x"
+# ldap_dns_servers="a"
+# ldap_dns_servers="m"
+# ldap_dns_servers="p"
+# ldap_dns_servers="l"
+# ldap_dns_servers="e"
+# ldap_dns_servers="."
+# ldap_dns_servers="o"
+# ldap_dns_servers="r"
+# ldap_dns_servers="g"
+# ldap_dns_servers="]"
+###### (StrOpt) Expiry interval (in seconds) for ldap dns driver Statement of Authority
+# ldap_dns_soa_expiry="86400"
+###### (StrOpt) Hostmaster for ldap dns driver Statement of Authority
+# ldap_dns_soa_hostmaster="hostmaster@example.org"
+###### (StrOpt) Minimum interval (in seconds) for ldap dns driver Statement of Authority
+# ldap_dns_soa_minimum="7200"
+###### (StrOpt) Refresh interval (in seconds) for ldap dns driver Statement of Authority
+# ldap_dns_soa_refresh="1800"
+###### (StrOpt) Retry interval (in seconds) for ldap dns driver Statement of Authority
+# ldap_dns_soa_retry="3600"
+###### (StrOpt) URL for ldap server which will store dns entries
+# ldap_dns_url="ldap://ldap.example.com:389"
+###### (StrOpt) user for ldap DNS
+# ldap_dns_user="uid=admin,ou=people,dc=example,dc=org"
 ###### (StrOpt) Driver used to create ethernet devices.
 # linuxnet_interface_driver="nova.network.linux_net.LinuxBridgeInterfaceDriver"
 ###### (StrOpt) Name of Open vSwitch bridge used with linuxnet
@@ -574,7 +617,7 @@
 ###### (BoolOpt) Default value for multi_host in networks
 # multi_host=false
 ###### (StrOpt) Network host to use for ip allocation in flat modes
-# network_host="firefly-2.local"
+# network_host="sorcha"
 ###### (IntOpt) Number of addresses in each private subnet
 # network_size=256
 ###### (IntOpt) Number of networks to support
@@ -620,7 +663,7 @@
 ###### (StrOpt) Driver to use for controlling virtualization
 # compute_driver="nova.virt.connection.get_connection"
 ###### (StrOpt) Console proxy host to use to connect to instances on this host.
-# console_host="firefly-2.local"
+# console_host="sorcha"
 ###### (StrOpt) Default notification level for outgoing notifications
 # default_notification_level="INFO"
 ###### (StrOpt) Default publisher_id for outgoing notifications
@@ -660,7 +703,7 @@
 ###### (BoolOpt) Whether to allow in project network traffic
 # baremetal_allow_project_net_traffic=true
 ###### (StrOpt) Template file for injected network
-# baremetal_injected_network_template="/Users/vishvananda/cache/stack/nova/nova/virt/interfaces.template"
+# baremetal_injected_network_template="$pybasedir/nova/virt/interfaces.template"
 ###### (StrOpt) baremetal domain type
 # baremetal_type="baremetal"
 ###### (StrOpt) Override the default baremetal URI
@@ -670,7 +713,7 @@
 ###### (ListOpt) Order of methods used to mount disk images
 # img_handlers="loop,nbd,guestfs"
 ###### (StrOpt) Template file for injected network
-# injected_network_template="/Users/vishvananda/cache/stack/nova/nova/virt/interfaces.template"
+# injected_network_template="$pybasedir/nova/virt/interfaces.template"
 ###### (IntOpt) maximum number of possible nbd devices
 # max_nbd_devices=16
 ###### (StrOpt) binary to use for qemu-img commands
@@ -694,7 +737,7 @@
 ###### (BoolOpt) Write a checksum for files in _base to disk
 # checksum_base_images=false
 ###### (StrOpt) CpuInfo XML Template (Used only live migration now)
-# cpuinfo_xml_template="/Users/vishvananda/cache/stack/nova/nova/virt/cpuinfo.xml.template"
+# cpuinfo_xml_template="$pybasedir/nova/virt/cpuinfo.xml.template"
 ###### (StrOpt) Override the default disk prefix for the devices attached to a server, which is dependent on libvirt_type. (valid options are: sd, xvd, uvd, vd)
 # libvirt_disk_prefix=<None>
 ###### (BoolOpt) Inject the admin password at boot time, without an agent.
@@ -714,7 +757,7 @@
 ###### (IntOpt) Number of seconds to wait for instance to shut down after soft reboot request is made. We fall back to hard reboot if instance does not shutdown within this window.
 # libvirt_wait_soft_reboot_seconds=120
 ###### (StrOpt) Libvirt XML Template
-# libvirt_xml_template="/Users/vishvananda/cache/stack/nova/nova/virt/libvirt.xml.template"
+# libvirt_xml_template="$pybasedir/nova/virt/libvirt.xml.template"
 ###### (IntOpt) Define live migration behavior
 # live_migration_bandwidth=0
 ###### (StrOpt) Define live migration behavior.
@@ -839,7 +882,7 @@
 ###### (StrOpt) Driver to use for the console proxy
 # console_driver="nova.console.xvp.XVPConsoleProxy"
 ###### (StrOpt) Publicly visable name for this console host
-# console_public_hostname="firefly-2.local"
+# console_public_hostname="sorcha"
 ###### (BoolOpt) Stub calls to compute worker for tests
 # stub_compute=false
 
@@ -855,7 +898,7 @@
 ###### (StrOpt) generated XVP conf file
 # console_xvp_conf="/etc/xvp.conf"
 ###### (StrOpt) XVP conf template
-# console_xvp_conf_template="/Users/vishvananda/cache/stack/nova/nova/console/xvp.conf.template"
+# console_xvp_conf_template="$pybasedir/nova/console/xvp.conf.template"
 ###### (StrOpt) XVP log file
 # console_xvp_log="/var/log/xvp.log"
 ###### (IntOpt) port for XVP to multiplex VNC connections on
@@ -882,7 +925,7 @@
 ######### defined in nova.cloudpipe.pipelib #########
 
 ###### (StrOpt) Template for cloudpipe instance boot script
-# boot_script_template="/Users/vishvananda/cache/stack/nova/nova/cloudpipe/bootscript.template"
+# boot_script_template="$pybasedir/nova/cloudpipe/bootscript.template"
 ###### (StrOpt) Netmask to push into openvpn config
 # dmz_mask="255.255.255.0"
 ###### (StrOpt) Network to push into openvpn config
@@ -959,7 +1002,7 @@
 ######### defined in nova.scheduler.multi #########
 
 ###### (StrOpt) Driver to use for scheduling compute calls
-# compute_scheduler_driver="nova.scheduler.distributed_scheduler.DistributedScheduler"
+# compute_scheduler_driver="nova.scheduler.filter_scheduler.FilterScheduler"
 ###### (StrOpt) Driver to use for scheduling volume calls
 # volume_scheduler_driver="nova.scheduler.chance.ChanceScheduler"
 
@@ -1085,4 +1128,4 @@
 ###### (StrOpt) The ZFS path under which to create zvols for volumes.
 # san_zfs_volume_base="rpool/"
 
-# Total option count: 456
+# Total option count: 468
