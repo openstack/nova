@@ -24,17 +24,6 @@ All XenAPI calls are on a green thread (using eventlet's "tpool"
 thread pool). They are remote calls, and so may hang for the usual
 reasons.
 
-All long-running XenAPI calls (VM.start, VM.reboot, etc) are called async
-(using XenAPI.VM.async_start etc). These return a task, which can then be
-polled for completion.
-
-This combination of techniques means that we don't block the main thread at
-all, and at the same time we don't hold lots of threads waiting for
-long-running operations.
-
-FIXME: get_info currently doesn't conform to these rules, and will block the
-reactor thread if the VM.get_by_name_label or VM.get_record calls block.
-
 **Related Flags**
 
 :xenapi_connection_url:  URL for connection to XenServer/Xen Cloud Platform.
@@ -42,9 +31,6 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
                               Platform (default: root).
 :xenapi_connection_password:  Password for connection to XenServer/Xen Cloud
                               Platform.
-:xenapi_task_poll_interval:  The interval (seconds) used for polling of
-                             remote tasks (Async.VM.start, etc)
-                             (default: 0.5).
 :target_host:                the iSCSI Target Host IP address, i.e. the IP
                              address for the nova-volume host
 :target_port:                iSCSI Target Port, 3260 Default
@@ -99,11 +85,6 @@ xenapi_opts = [
                default=5,
                help='Maximum number of concurrent XenAPI connections. '
                     'Used only if connection_type=xenapi.'),
-    cfg.FloatOpt('xenapi_task_poll_interval',
-                 default=0.5,
-                 help='The interval used for polling of remote tasks '
-                      '(Async.VM.start, etc). '
-                      'Used only if connection_type=xenapi.'),
     cfg.FloatOpt('xenapi_vhd_coalesce_poll_interval',
                  default=5.0,
                  help='The interval used for polling of coalescing vhds. '
@@ -121,9 +102,6 @@ xenapi_opts = [
     cfg.StrOpt('xenapi_sr_base_path',
                default='/var/run/sr-mount',
                help='Base path to the storage repository'),
-    cfg.BoolOpt('xenapi_log_instance_actions',
-                default=False,
-                help='Log all instance calls to XenAPI in the database.'),
     cfg.StrOpt('target_host',
                default=None,
                help='iSCSI Target Host'),
@@ -604,61 +582,22 @@ class XenAPISession(object):
             f = session.xenapi_request
             return tpool.execute(f, method, *args)
 
-    def async_call_plugin(self, plugin, fn, args):
-        """Call Async.host.call_plugin on a background thread."""
+    def call_plugin(self, plugin, fn, args):
+        """Call host.call_plugin on a background thread."""
         # NOTE(johannes): Fetch host before we acquire a session. Since
-        # _get_session() acquires a session too, it can result in a deadlock
-        # if multiple greenthreads race with each other. See bug 924918
+        # get_xenapi_host() acquires a session too, it can result in a
+        # deadlock if multiple greenthreads race with each other. See
+        # bug 924918
         host = self.get_xenapi_host()
+
         # NOTE(armando): pass the host uuid along with the args so that
         # the plugin gets executed on the right host when using XS pools
         args['host_uuid'] = self.host_uuid
+
         with self._get_session() as session:
             return tpool.execute(self._unwrap_plugin_exceptions,
-                                 session.xenapi.Async.host.call_plugin,
+                                 session.xenapi.host.call_plugin,
                                  host, plugin, fn, args)
-
-    def wait_for_task(self, task, uuid=None):
-        """Return the result of the given task. The task is polled
-        until it completes."""
-        while True:
-            """Poll the given XenAPI task, and return the result if the
-            action was completed successfully or not.
-            """
-            ctxt = context.get_admin_context()
-            name = self.call_xenapi("task.get_name_label", task)
-            status = self.call_xenapi("task.get_status", task)
-
-            # Ensure action is never > 255
-            action = dict(action=name[:255], error=None)
-            log_instance_actions = (FLAGS.xenapi_log_instance_actions and
-                                    uuid)
-            if log_instance_actions:
-                action["instance_uuid"] = uuid
-
-            if status == "pending":
-                pass
-            elif status == "success":
-                result = self.call_xenapi("task.get_result", task)
-                LOG.info(_("Task [%(name)s] %(task)s status:"
-                        " success    %(result)s") % locals())
-
-                if log_instance_actions:
-                    db.instance_action_create(ctxt, action)
-
-                return _parse_xmlrpc_value(result)
-            else:
-                error_info = self.call_xenapi("task.get_error_info", task)
-                LOG.warn(_("Task [%(name)s] %(task)s status:"
-                        " %(status)s    %(error_info)s") % locals())
-
-                if log_instance_actions:
-                    action["error"] = str(error_info)
-                    db.instance_action_create(ctxt, action)
-
-                raise self.XenAPI.Failure(error_info)
-
-            greenthread.sleep(FLAGS.xenapi_task_poll_interval)
 
     def _create_session(self, url):
         """Stubout point. This can be replaced with a mock session."""

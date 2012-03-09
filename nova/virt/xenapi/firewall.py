@@ -50,9 +50,7 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         args = {}
         args.update(map(lambda x: (x, str(kwargs[x])), kwargs))
         args['cmd_args'] = json.dumps(cmd)
-        task = self._session.async_call_plugin(
-            'xenhost', 'iptables_config', args)
-        ret = self._session.wait_for_task(task)
+        ret = self._session.call_plugin('xenhost', 'iptables_config', args)
         json_ret = json.loads(ret)
         return (json_ret['out'], json_ret['err'])
 

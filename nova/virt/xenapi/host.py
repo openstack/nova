@@ -21,7 +21,6 @@ Management class for host-related functions (start, reboot, etc).
 
 import logging
 import json
-import random
 
 from nova.compute import vm_states
 from nova import context
@@ -160,14 +159,12 @@ def call_xenhost(session, method, arg_dict):
     out that behavior.
     """
     # Create a task ID as something that won't match any instance ID
-    task_id = random.randint(-80000, -70000)
     XenAPI = session.get_imported_xenapi()
     try:
-        task = session.async_call_plugin("xenhost", method, args=arg_dict)
-        task_result = session.wait_for_task(task, str(task_id))
-        if not task_result:
-            task_result = json.dumps("")
-        return json.loads(task_result)
+        result = session.call_plugin('xenhost', method, args=arg_dict)
+        if not result:
+            return ''
+        return json.loads(result)
     except ValueError:
         LOG.exception(_("Unable to get updated status"))
         return None

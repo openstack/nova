@@ -412,7 +412,6 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_sr)
     stubs.Set(vmops.VMOps, '_create_snapshot', fake_create_snapshot)
     stubs.Set(vm_utils.VMHelper, 'get_vdi_for_vm_safely', fake_get_vdi)
-    stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task', lambda x, y, z: None)
     stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)
     stubs.Set(vmops.VMOps, 'reset_network', fake_reset_network)
     stubs.Set(vmops.VMOps, '_shutdown', fake_shutdown)
