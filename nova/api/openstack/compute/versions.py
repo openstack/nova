@@ -85,7 +85,7 @@ def make_version(elem):
     xmlutil.make_links(elem, 'links')
 
 
-version_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+version_nsmap = {None: xmlutil.XMLNS_COMMON_V10, 'atom': xmlutil.XMLNS_ATOM}
 
 
 class VersionTemplate(xmlutil.TemplateBuilder):

@@ -43,7 +43,7 @@ PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
 
 
-limits_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+limits_nsmap = {None: xmlutil.XMLNS_COMMON_V10, 'atom': xmlutil.XMLNS_ATOM}
 
 
 class LimitsTemplate(xmlutil.TemplateBuilder):

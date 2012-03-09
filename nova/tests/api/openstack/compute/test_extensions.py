@@ -32,7 +32,7 @@ from nova.tests.api.openstack import fakes
 
 FLAGS = flags.FLAGS
 
-NS = "{http://docs.openstack.org/compute/api/v1.1}"
+NS = "{http://docs.openstack.org/common/api/v1.0}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
 response_body = "Try to say this Mr. Knox, sir..."
 extension_body = "I am not a fox!"
