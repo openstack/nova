@@ -184,15 +184,12 @@ class XenAPIVolumeTestCase(test.TestCase):
         result = conn.attach_volume(self._make_info(),
                                     instance.name, '/dev/sdc')
 
-        def check():
-            # check that the VM has a VBD attached to it
-            # Get XenAPI record for VBD
-            vbds = xenapi_fake.get_all('VBD')
-            vbd = xenapi_fake.get_record('VBD', vbds[0])
-            vm_ref = vbd['VM']
-            self.assertEqual(vm_ref, vm)
-
-        check()
+        # check that the VM has a VBD attached to it
+        # Get XenAPI record for VBD
+        vbds = xenapi_fake.get_all('VBD')
+        vbd = xenapi_fake.get_record('VBD', vbds[0])
+        vm_ref = vbd['VM']
+        self.assertEqual(vm_ref, vm)
 
     def test_attach_volume_raise_exception(self):
         """This shows how to test when exceptions are raised."""
@@ -311,35 +308,28 @@ class XenAPIVMTestCase(test.TestCase):
         name = "MySnapshot"
         template_vm_ref = self.conn.snapshot(self.context, instance, name)
 
-        def ensure_vm_was_torn_down():
-            vm_labels = []
-            for vm_ref in xenapi_fake.get_all('VM'):
-                vm_rec = xenapi_fake.get_record('VM', vm_ref)
-                if not vm_rec["is_control_domain"]:
-                    vm_labels.append(vm_rec["name_label"])
+        # Ensure VM was torn down
+        vm_labels = []
+        for vm_ref in xenapi_fake.get_all('VM'):
+            vm_rec = xenapi_fake.get_record('VM', vm_ref)
+            if not vm_rec["is_control_domain"]:
+                vm_labels.append(vm_rec["name_label"])
 
-            self.assertEquals(vm_labels, ['1'])
+        self.assertEquals(vm_labels, [instance.name])
 
-        def ensure_vbd_was_torn_down():
-            vbd_labels = []
-            for vbd_ref in xenapi_fake.get_all('VBD'):
-                vbd_rec = xenapi_fake.get_record('VBD', vbd_ref)
-                vbd_labels.append(vbd_rec["vm_name_label"])
+        # Ensure VBDs were torn down
+        vbd_labels = []
+        for vbd_ref in xenapi_fake.get_all('VBD'):
+            vbd_rec = xenapi_fake.get_record('VBD', vbd_ref)
+            vbd_labels.append(vbd_rec["vm_name_label"])
 
-            self.assertEquals(vbd_labels, ['1'])
+        self.assertEquals(vbd_labels, [instance.name])
 
-        def ensure_vdi_was_torn_down():
-            for vdi_ref in xenapi_fake.get_all('VDI'):
-                vdi_rec = xenapi_fake.get_record('VDI', vdi_ref)
-                name_label = vdi_rec["name_label"]
-                self.assert_(not name_label.endswith('snapshot'))
-
-        def check():
-            ensure_vm_was_torn_down()
-            ensure_vbd_was_torn_down()
-            ensure_vdi_was_torn_down()
-
-        check()
+        # Ensure VDIs were torn down
+        for vdi_ref in xenapi_fake.get_all('VDI'):
+            vdi_rec = xenapi_fake.get_record('VDI', vdi_ref)
+            name_label = vdi_rec["name_label"]
+            self.assert_(not name_label.endswith('snapshot'))
 
     def create_vm_record(self, conn, os_type, instance_id=1):
         instances = conn.list_instances()
