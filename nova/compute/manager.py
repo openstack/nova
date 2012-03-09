@@ -107,7 +107,7 @@ compute_opts = [
                help="Number of periodic scheduler ticks to wait between "
                     "runs of the cleanup task."),
     cfg.StrOpt("running_deleted_instance_action",
-               default="noop",
+               default="log",
                help="Action to take if a running deleted instance is detected."
                     "Valid options are 'noop', 'log' and 'reap'. "
                     "Set to 'noop' to disable."),
