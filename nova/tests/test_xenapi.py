@@ -1201,10 +1201,10 @@ class XenAPIAutoDiskConfigTestCase(test.TestCase):
 
         @classmethod
         def fake_create_vbd(cls, session, vm_ref, vdi_ref, userdevice,
-                bootable=True):
+                            vbd_type='disk', read_only=False, bootable=True):
             pass
 
-        self.stubs.Set(volume_utils.VolumeHelper,
+        self.stubs.Set(vm_utils.VMHelper,
                        "create_vbd",
                        fake_create_vbd)
 
@@ -1294,10 +1294,10 @@ class XenAPIGenerateLocal(test.TestCase):
 
         @classmethod
         def fake_create_vbd(cls, session, vm_ref, vdi_ref, userdevice,
-                            bootable=True):
+                            vbd_type='disk', read_only=False, bootable=True):
             pass
 
-        self.stubs.Set(volume_utils.VolumeHelper,
+        self.stubs.Set(vm_utils.VMHelper,
                        "create_vbd",
                        fake_create_vbd)
 

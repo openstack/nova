@@ -63,11 +63,7 @@ class VolumeOps(object):
         if vdi_ref is None:
             raise exception.Error(_('Could not find VDI ref'))
 
-        try:
-            self._session.call_xenapi("VDI.destroy", vdi_ref)
-        except self.XenAPI.Failure, exc:
-            LOG.exception(exc)
-            raise volume_utils.StorageError(_('Error destroying VDI'))
+        vm_utils.VMHelper.destroy_vdi(vdi_ref)
 
     def create_sr(self, label, params):
         LOG.debug(_("Creating SR %s") % label)
@@ -184,11 +180,9 @@ class VolumeOps(object):
 
         dev_number = volume_utils.VolumeHelper.mountpoint_to_number(mountpoint)
         try:
-            vbd_ref = volume_utils.VolumeHelper.create_vbd(self._session,
-                                                           vm_ref,
-                                                           vdi_ref,
-                                                           dev_number,
-                                                           False)
+            vbd_ref = vm_utils.VMHelper.create_vbd(self._session, vm_ref,
+                                                   vdi_ref, dev_number,
+                                                   bootable=False)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
             self.forget_sr(uuid)

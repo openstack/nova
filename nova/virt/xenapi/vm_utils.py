@@ -230,30 +230,6 @@ class VMHelper(xenapi.HelperBase):
         return host_free_mem >= mem
 
     @classmethod
-    def create_cd_vbd(cls, session, vm_ref, vdi_ref, userdevice, bootable):
-        """Create a VBD record.  Returns a Deferred that gives the new
-        VBD reference specific to CDRom devices."""
-        vbd_rec = {}
-        vbd_rec['VM'] = vm_ref
-        vbd_rec['VDI'] = vdi_ref
-        vbd_rec['userdevice'] = str(userdevice)
-        vbd_rec['bootable'] = bootable
-        vbd_rec['mode'] = 'RO'
-        vbd_rec['type'] = 'CD'
-        vbd_rec['unpluggable'] = True
-        vbd_rec['empty'] = False
-        vbd_rec['other_config'] = {}
-        vbd_rec['qos_algorithm_type'] = ''
-        vbd_rec['qos_algorithm_params'] = {}
-        vbd_rec['qos_supported_algorithms'] = []
-        LOG.debug(_('Creating a CDROM-specific VBD for VM %(vm_ref)s,'
-                ' VDI %(vdi_ref)s ... ') % locals())
-        vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
-        LOG.debug(_('Created a CDROM-specific VBD %(vbd_ref)s '
-                ' for VM %(vm_ref)s, VDI %(vdi_ref)s.') % locals())
-        return vbd_ref
-
-    @classmethod
     def find_vbd_by_number(cls, session, vm_ref, number):
         """Get the VBD reference from the device number"""
         vbd_refs = session.call_xenapi("VM.get_VBDs", vm_ref)
@@ -288,6 +264,30 @@ class VMHelper(xenapi.HelperBase):
             LOG.exception(exc)
             raise volume_utils.StorageError(
                     _('Unable to destroy VBD %s') % vbd_ref)
+
+    @classmethod
+    def create_vbd(cls, session, vm_ref, vdi_ref, userdevice,
+                   vbd_type='disk', read_only=False, bootable=False):
+        """Create a VBD record and returns its reference."""
+        vbd_rec = {}
+        vbd_rec['VM'] = vm_ref
+        vbd_rec['VDI'] = vdi_ref
+        vbd_rec['userdevice'] = str(userdevice)
+        vbd_rec['bootable'] = bootable
+        vbd_rec['mode'] = read_only and 'RO' or 'RW'
+        vbd_rec['type'] = vbd_type
+        vbd_rec['unpluggable'] = True
+        vbd_rec['empty'] = False
+        vbd_rec['other_config'] = {}
+        vbd_rec['qos_algorithm_type'] = ''
+        vbd_rec['qos_algorithm_params'] = {}
+        vbd_rec['qos_supported_algorithms'] = []
+        LOG.debug(_('Creating %(vbd_type)s-type VBD for VM %(vm_ref)s,'
+                ' VDI %(vdi_ref)s ... ') % locals())
+        vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
+        LOG.debug(_('Created VBD %(vbd_ref)s for VM %(vm_ref)s,'
+                ' VDI %(vdi_ref)s.') % locals())
+        return vbd_ref
 
     @classmethod
     def destroy_vdi(cls, session, vdi_ref):
@@ -530,8 +530,8 @@ class VMHelper(xenapi.HelperBase):
                                   run_as_root=True)
 
             # 4. Create VBD between instance VM and swap VDI
-            volume_utils.VolumeHelper.create_vbd(
-                session, vm_ref, vdi_ref, userdevice, bootable=False)
+            cls.create_vbd(session, vm_ref, vdi_ref, userdevice,
+                           bootable=False)
         except Exception:
             with utils.save_and_reraise_exception():
                 cls.destroy_vdi(session, vdi_ref)
@@ -867,7 +867,7 @@ class VMHelper(xenapi.HelperBase):
                 filename = session.call_plugin('glance', fn, args)
 
                 # Remove the VDI as it is not needed anymore.
-                session.call_xenapi("VDI.destroy", vdi_ref)
+                cls.destroy_vdi(session, vdi_ref)
                 LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
                 return [dict(vdi_type=ImageType.to_string(image_type),
                              vdi_uuid=None,
@@ -1454,22 +1454,10 @@ def _wait_for_device(dev):
 @contextlib.contextmanager
 def vdi_attached_here(session, vdi_ref, read_only=False):
     this_vm_ref = get_this_vm_ref(session)
-    vbd_rec = {}
-    vbd_rec['VM'] = this_vm_ref
-    vbd_rec['VDI'] = vdi_ref
-    vbd_rec['userdevice'] = 'autodetect'
-    vbd_rec['bootable'] = False
-    vbd_rec['mode'] = read_only and 'RO' or 'RW'
-    vbd_rec['type'] = 'disk'
-    vbd_rec['unpluggable'] = True
-    vbd_rec['empty'] = False
-    vbd_rec['other_config'] = {}
-    vbd_rec['qos_algorithm_type'] = ''
-    vbd_rec['qos_algorithm_params'] = {}
-    vbd_rec['qos_supported_algorithms'] = []
-    LOG.debug(_('Creating VBD for VDI %s ... '), vdi_ref)
-    vbd_ref = session.call_xenapi("VBD.create", vbd_rec)
-    LOG.debug(_('Creating VBD for VDI %s done.'), vdi_ref)
+
+    vbd_ref = VMHelper.create_vbd(session, this_vm_ref, vdi_ref,
+                                  'autodetect', read_only=read_only,
+                                  bootable=False)
     try:
         LOG.debug(_('Plugging VBD %s ... '), vbd_ref)
         session.call_xenapi("VBD.plug", vbd_ref)
@@ -1491,7 +1479,11 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
             LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
             vbd_unplug_with_retry(session, vbd_ref)
     finally:
-        ignore_failure(session.call_xenapi, "VBD.destroy", vbd_ref)
+        try:
+            VMHelper.destroy_vbd(session, vbd_ref)
+        except volume_utils.StorageError:
+            # destroy_vbd() will log error
+            pass
         LOG.debug(_('Destroying VBD for VDI %s done.'), vdi_ref)
 
 
@@ -1502,7 +1494,7 @@ def vbd_unplug_with_retry(session, vbd_ref):
     should be dead."""
     while True:
         try:
-            session.call_xenapi("VBD.unplug", vbd_ref)
+            VMHelper.unplug_vbd(session, vbd_ref)
             LOG.debug(_('VBD.unplug successful first time.'))
             return
         except VMHelper.XenAPI.Failure, e:
@@ -1519,14 +1511,6 @@ def vbd_unplug_with_retry(session, vbd_ref):
                 LOG.error(_('Ignoring XenAPI.Failure in VBD.unplug: %s'),
                               e)
                 return
-
-
-def ignore_failure(func, *args, **kwargs):
-    try:
-        return func(*args, **kwargs)
-    except VMHelper.XenAPI.Failure, e:
-        LOG.error(_('Ignoring XenAPI.Failure %s'), e)
-        return None
 
 
 def get_this_vm_uuid():

@@ -446,16 +446,16 @@ class VMOps(object):
                       "install")
 
             cd_vdi_ref = first_vdi_ref
-            first_vdi_ref = VMHelper.fetch_blank_disk(session=self._session,
-                        instance_type_id=instance.instance_type_id)
+            first_vdi_ref = VMHelper.fetch_blank_disk(self._session,
+                            instance.instance_type_id)
 
-            VolumeHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                vdi_ref=first_vdi_ref, userdevice=userdevice, bootable=False)
+            VMHelper.create_vbd(self._session, vm_ref, first_vdi_ref,
+                                userdevice, bootable=False)
 
             # device 1 reserved for rescue disk and we've used '0'
             userdevice = 2
-            VMHelper.create_cd_vbd(session=self._session, vm_ref=vm_ref,
-                    vdi_ref=cd_vdi_ref, userdevice=userdevice, bootable=True)
+            VMHelper.create_vbd(self._session, vm_ref, cd_vdi_ref,
+                                userdevice, vbd_type='CD', bootable=True)
 
             # set user device to next free value
             userdevice += 1
@@ -466,13 +466,12 @@ class VMOps(object):
                             " resize partition...") % locals())
                 instance_type = db.instance_type_get(ctx,
                         instance.instance_type_id)
-                VMHelper.auto_configure_disk(session=self._session,
-                                             vdi_ref=first_vdi_ref,
-                                             new_gb=instance_type['root_gb'])
+                VMHelper.auto_configure_disk(self._session,
+                                             first_vdi_ref,
+                                             instance_type['root_gb'])
 
-            VolumeHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                                    vdi_ref=first_vdi_ref,
-                                    userdevice=userdevice, bootable=True)
+            VMHelper.create_vbd(self._session, vm_ref, first_vdi_ref,
+                                userdevice, bootable=True)
 
             # set user device to next free value
             # userdevice 1 is reserved for rescue and we've used '0'
@@ -482,16 +481,14 @@ class VMOps(object):
         swap_mb = instance_type['swap']
         generate_swap = swap_mb and FLAGS.xenapi_generate_swap
         if generate_swap:
-            VMHelper.generate_swap(session=self._session, instance=instance,
-                                   vm_ref=vm_ref, userdevice=userdevice,
-                                   swap_mb=swap_mb)
+            VMHelper.generate_swap(self._session, instance,
+                                   vm_ref, userdevice, swap_mb)
             userdevice += 1
 
         ephemeral_gb = instance_type['ephemeral_gb']
         if ephemeral_gb:
             VMHelper.generate_ephemeral(self._session, instance,
-                                        vm_ref, userdevice,
-                                        ephemeral_gb)
+                                        vm_ref, userdevice, ephemeral_gb)
             userdevice += 1
 
         # Attach any other disks
@@ -504,9 +501,8 @@ class VMOps(object):
                 VMHelper.destroy_vdi(self._session, vdi_ref)
                 continue
 
-            VolumeHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                    vdi_ref=vdi_ref, userdevice=userdevice,
-                    bootable=False)
+            VMHelper.create_vbd(self._session, vm_ref, vdi_ref,
+                                userdevice, bootable=False)
             userdevice += 1
 
     def _configure_instance(self, ctx, instance, vm_ref,
@@ -1078,8 +1074,8 @@ class VMOps(object):
 
         vdi_ref = self._session.call_xenapi("VBD.get_record", vbd_ref)["VDI"]
 
-        return VolumeHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref,
-                1, False)
+        return VMHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref,
+                                   1, bootable=False)
 
     def _shutdown_rescue(self, rescue_vm_ref):
         """Shutdown a rescue instance."""
