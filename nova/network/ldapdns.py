@@ -42,7 +42,7 @@ ldap_dns_opts = [
                default='hostmaster@example.org',
                help='Hostmaster for ldap dns driver Statement of Authority'),
     cfg.MultiStrOpt('ldap_dns_servers',
-                    default='[dns.example.org]',
+                    default=['dns.example.org'],
                     help='DNS Servers for ldap dns driver'),
     cfg.StrOpt('ldap_dns_base_dn',
                default='ou=hosts,dc=example,dc=org',
