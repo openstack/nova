@@ -44,7 +44,7 @@ class LibvirtVolumeDriver(object):
         driver = self._pick_volume_driver()
         device_path = connection_info['data']['device_path']
         xml = """<disk type='block'>
-                     <driver name='%s' type='raw'/>
+                     <driver name='%s' type='raw' cache='none'/>
                      <source dev='%s'/>
                      <target dev='%s' bus='virtio'/>
                  </disk>""" % (driver, device_path, mount_device)
@@ -62,7 +62,7 @@ class LibvirtFakeVolumeDriver(LibvirtVolumeDriver):
         protocol = 'fake'
         name = 'fake'
         xml = """<disk type='network'>
-                     <driver name='qemu' type='raw'/>
+                     <driver name='qemu' type='raw' cache='none'/>
                      <source protocol='%s' name='%s'/>
                      <target dev='%s' bus='virtio'/>
                  </disk>""" % (protocol, name, mount_device)
@@ -77,7 +77,7 @@ class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
         protocol = connection_info['driver_volume_type']
         name = connection_info['data']['name']
         xml = """<disk type='network'>
-                     <driver name='%s' type='raw'/>
+                     <driver name='%s' type='raw' cache='none'/>
                      <source protocol='%s' name='%s'/>
                      <target dev='%s' bus='virtio'/>
                  </disk>""" % (driver, protocol, name, mount_device)

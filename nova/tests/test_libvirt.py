@@ -486,6 +486,10 @@ class LibvirtConnTestCase(test.TestCase):
         instance_data = dict(self.test_instance)
         self._check_xml_and_disk_prefix(instance_data)
 
+    def test_xml_disk_driver(self):
+        instance_data = dict(self.test_instance)
+        self._check_xml_and_disk_driver(instance_data)
+
     def test_xml_disk_bus_virtio(self):
         self._check_xml_and_disk_bus({"disk_format": "raw"},
                                      "disk", "virtio")
@@ -788,6 +792,19 @@ class LibvirtConnTestCase(test.TestCase):
                                  expected_result,
                                  '%s != %s failed check %d' %
                                  (check(tree), expected_result, i))
+
+    def _check_xml_and_disk_driver(self, image_meta):
+        user_context = context.RequestContext(self.user_id, self.project_id)
+        instance_ref = db.instance_create(user_context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+
+        xml = connection.LibvirtConnection(True).to_xml(instance_ref,
+                                                        network_info,
+                                                        image_meta)
+        tree = ElementTree.fromstring(xml)
+        disks = tree.findall('./devices/disk/driver')
+        for disk in disks:
+            self.assertEqual(disk.get("cache"), "none")
 
     def _check_xml_and_disk_bus(self, image_meta, device_type, bus):
         user_context = context.RequestContext(self.user_id, self.project_id)
