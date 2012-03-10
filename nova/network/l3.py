@@ -45,6 +45,10 @@ class L3Driver(object):
         """Set up a gateway on this network"""
         raise NotImplementedError()
 
+    def remove_gateway(self, network_ref):
+        """Remove an existing gateway on this network"""
+        raise NotImplementedError()
+
     def is_initialized(self):
         """:returns: True/False (whether the driver is initialized)"""
         raise NotImplementedError()
@@ -94,6 +98,9 @@ class LinuxNetL3(L3Driver):
                     gateway=(network_ref['gateway'] is not None))
         linux_net.initialize_gateway_device(dev, network_ref)
 
+    def remove_gateway(self, network_ref):
+        linux_net.unplug(network_ref)
+
     def add_floating_ip(self, floating_ip, fixed_ip, l3_interface_id):
         linux_net.bind_floating_ip(floating_ip, l3_interface_id)
         linux_net.ensure_floating_forward(floating_ip, fixed_ip)
@@ -131,6 +138,9 @@ class NullL3(L3Driver):
         pass
 
     def initialize_gateway(self, network_ref):
+        pass
+
+    def remove_gateway(self, network_ref):
         pass
 
     def add_floating_ip(self, floating_ip, fixed_ip, l3_interface_id):
