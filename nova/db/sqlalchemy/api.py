@@ -518,10 +518,6 @@ def compute_node_update(context, compute_id, values, auto_adjust):
         compute_ref.save(session=session)
 
 
-# Note: these operations use with_lockmode() ... so this will only work
-# reliably with engines that support row-level locking
-# (postgres, mysql+innodb and above).
-
 def compute_node_get_by_host(context, host):
     """Get all capacity entries for the given host."""
     session = get_session()
@@ -529,10 +525,13 @@ def compute_node_get_by_host(context, host):
         node = session.query(models.ComputeNode).\
                              options(joinedload('service')).\
                              filter(models.Service.host == host).\
-                             filter_by(deleted=False).\
-                             with_lockmode('update')
+                             filter_by(deleted=False)
         return node.first()
 
+
+# Note: these operations use with_lockmode() ... so this will only work
+# reliably with engines that support row-level locking
+# (postgres, mysql+innodb and above).
 
 def compute_node_capacity_find(context, minimum_ram_mb, minimum_disk_gb):
     """Get all enabled hosts with enough ram and disk."""
