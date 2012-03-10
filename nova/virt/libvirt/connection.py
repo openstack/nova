@@ -674,13 +674,19 @@ class LibvirtConnection(driver.ComputeDriver):
         :returns: True if the reboot succeeded
         """
         dom = self._lookup_by_name(instance.name)
-        dom.shutdown()
+        (state, _max_mem, _mem, _cpus, _t) = dom.info()
+        # NOTE(vish): This check allows us to reboot an instance that
+        #             is already shutdown.
+        if state == power_state.RUNNING:
+            dom.shutdown()
         # NOTE(vish): This actually could take slighty longer than the
         #             FLAG defines depending on how long the get_info
         #             call takes to return.
         for x in xrange(FLAGS.libvirt_wait_soft_reboot_seconds):
-            state = self.get_info(instance)['state']
-            if state == power_state.SHUTDOWN:
+            (state, _max_mem, _mem, _cpus, _t) = dom.info()
+            if state in [power_state.SHUTDOWN,
+                         power_state.SHUTOFF,
+                         power_state.CRASHED]:
                 LOG.info(_("Instance shutdown successfully."),
                          instance=instance)
                 dom.create()
