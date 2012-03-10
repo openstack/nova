@@ -129,9 +129,6 @@ network_opts = [
     cfg.IntOpt('cnt_vpn_clients',
                default=0,
                help='Number of addresses reserved for vpn clients'),
-    cfg.BoolOpt('update_dhcp_on_disassociate',
-                default=False,
-                help='Whether to update dhcp when fixed_ip is disassociated'),
     cfg.IntOpt('fixed_ip_disassociate_timeout',
                default=600,
                help='Seconds after which a deallocated ip is disassociated'),
@@ -1212,12 +1209,16 @@ class NetworkManager(manager.SchedulerDependentManager):
                 self.instance_dns_manager.delete_entry(n,
                                                       self.instance_dns_domain)
 
+        network = self._get_network_by_id(context, fixed_ip_ref['network_id'])
+        self._teardown_network_on_host(context, network)
+
         if FLAGS.force_dhcp_release:
-            network = self._get_network_by_id(context,
-                                              fixed_ip_ref['network_id'])
+            dev = self.driver.get_dev(network)
             vif = self.db.virtual_interface_get_by_instance_and_network(
                     context, instance_id, network['id'])
-            self._teardown_network_on_host(context, network, vif, address)
+            # NOTE(vish): This forces a packet so that the release_fixed_ip
+            #             callback will get called by nova-dhcpbridge.
+            self.driver.release_dhcp(dev, address, vif['address'])
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
@@ -1252,12 +1253,6 @@ class NetworkManager(manager.SchedulerDependentManager):
                                 {'leased': False})
         if not fixed_ip['allocated']:
             self.db.fixed_ip_disassociate(context, address)
-            # NOTE(vish): dhcp server isn't updated until next setup, this
-            #             means there will stale entries in the conf file
-            #             the code below will update the file if necessary
-            if FLAGS.update_dhcp_on_disassociate:
-                network_ref = self.db.fixed_ip_get_network(context, address)
-                self._setup_network_on_host(context, network_ref)
 
     def create_networks(self, context, label, cidr, multi_host, num_networks,
                         network_size, cidr_v6, gateway, gateway_v6, bridge,
@@ -1464,49 +1459,41 @@ class NetworkManager(manager.SchedulerDependentManager):
             network = self.db.network_get(context, vif['network_id'])
             fixed_ips = self.db.fixed_ips_by_virtual_interface(context,
                                                                vif['id'])
-            addresses = [fixed_ip['address'] for fixed_ip in fixed_ips]
             if not network['multi_host']:
                 #NOTE (tr3buchet): if using multi_host, host is instance[host]
                 host = network['host']
             if self.host == host or host is None:
                 # at this point i am the correct host, or host doesn't
                 # matter -> FlatManager
-                for address in addresses:
-                    call_func(context, network, vif, address)
+                call_func(context, network)
             else:
                 # i'm not the right host, run call on correct host
                 topic = self.db.queue_get_for(context, FLAGS.network_topic,
                                               host)
-                args = {'network_id': network['id'],
-                        'vif_id': vif['id'],
-                        'teardown': teardown}
-                for address in addresses:
-                    # NOTE(tr3buchet): the call is just to wait for completion
-                    args['address'] = address
-                    green_pool.spawn_n(rpc.call, context, topic,
-                                       {'method': 'rpc_setup_network_on_host',
-                                        'args': args})
+                args = {'network_id': network['id'], 'teardown': teardown}
+                # NOTE(tr3buchet): the call is just to wait for completion
+                green_pool.spawn_n(rpc.call, context, topic,
+                                   {'method': 'rpc_setup_network_on_host',
+                                    'args': args})
 
         # wait for all of the setups (if any) to finish
         green_pool.waitall()
 
-    def rpc_setup_network_on_host(self, context, network_id, vif_id, address,
-                                  teardown):
+    def rpc_setup_network_on_host(self, context, network_id, teardown):
         if teardown:
             call_func = self._teardown_network_on_host
         else:
             call_func = self._setup_network_on_host
 
         # subcall from original setup_networks_on_host
-        vif = self.db.virtual_interface_get(context, vif_id)
         network = self.db.network_get(context, network_id)
-        call_func(context, network, vif, address)
+        call_func(context, network)
 
-    def _setup_network_on_host(self, context, network, vif=None, address=None):
+    def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
         raise NotImplementedError()
 
-    def _teardown_network_on_host(self, context, network, vif, address):
+    def _teardown_network_on_host(self, context, network):
         """Sets up network on this host."""
         raise NotImplementedError()
 
@@ -1638,7 +1625,7 @@ class FlatManager(NetworkManager):
                                                      **kwargs)
         self.db.fixed_ip_disassociate(context, address)
 
-    def _setup_network_on_host(self, context, network, vif=None, address=None):
+    def _setup_network_on_host(self, context, network):
         """Setup Network on this host."""
         # NOTE(tr3buchet): this does not need to happen on every ip
         # allocation, this functionality makes more sense in create_network
@@ -1647,8 +1634,8 @@ class FlatManager(NetworkManager):
         net['injected'] = FLAGS.flat_injected
         self.db.network_update(context, network['id'], net)
 
-    def _teardown_network_on_host(self, context, network, vif, address):
-        """Tear down netowrk on this host."""
+    def _teardown_network_on_host(self, context, network):
+        """Tear down network on this host."""
         pass
 
 
@@ -1672,7 +1659,7 @@ class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         super(FlatDHCPManager, self).init_host()
         self.init_host_floating_ips()
 
-    def _setup_network_on_host(self, context, network, vif=None, address=None):
+    def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
         network['dhcp_server'] = self._get_dhcp_ip(context, network)
 
@@ -1687,10 +1674,10 @@ class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                 self.db.network_update(context, network['id'],
                                        {'gateway_v6': gateway})
 
-    def _teardown_network_on_host(self, context, network, vif, address):
+    def _teardown_network_on_host(self, context, network):
         if not FLAGS.fake_network:
             dev = self.driver.get_dev(network)
-            self.driver.release_dhcp(dev, address, vif['address'])
+            self.driver.update_dhcp(context, dev, network)
 
     def _get_network_by_id(self, context, network_id):
         return NetworkManager._get_network_by_id(self, context.elevated(),
@@ -1806,7 +1793,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
         NetworkManager.create_networks(self, context, vpn=True, **kwargs)
 
-    def _setup_network_on_host(self, context, network, vif=None, address=None):
+    def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
         if not network['vpn_public_address']:
             net = {}
@@ -1835,10 +1822,10 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                 self.db.network_update(context, network['id'],
                                        {'gateway_v6': gateway})
 
-    def _teardown_network_on_host(self, context, network, vif, address):
+    def _teardown_network_on_host(self, context, network):
         if not FLAGS.fake_network:
             dev = self.driver.get_dev(network)
-            self.driver.release_dhcp(dev, address, vif['address'])
+            self.driver.update_dhcp(context, dev, network)
 
     def _get_networks_by_uuids(self, context, network_uuids):
         return self.db.network_get_all_by_uuids(context, network_uuids,
