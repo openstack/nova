@@ -35,11 +35,6 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 
-def _bin_file(script):
-    """Return the absolute path to scipt in the bin directory."""
-    return os.path.abspath(os.path.join(__file__, '../../../bin', script))
-
-
 linux_net_opts = [
     cfg.StrOpt('dhcpbridge_flagfile',
                default='/etc/nova/nova-dhcpbridge.conf',
@@ -54,7 +49,7 @@ linux_net_opts = [
                default=None,
                help='MTU setting for vlan'),
     cfg.StrOpt('dhcpbridge',
-               default=_bin_file('nova-dhcpbridge'),
+               default='$bindir/nova-dhcpbridge',
                help='location of nova-dhcpbridge'),
     cfg.StrOpt('routing_source_ip',
                default='$my_ip',

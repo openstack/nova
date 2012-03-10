@@ -45,7 +45,7 @@ cloudpipe_opts = [
                default='m1.tiny',
                help=_('Instance type for vpn instances')),
     cfg.StrOpt('boot_script_template',
-               default=utils.abspath('cloudpipe/bootscript.template'),
+               default='$pybasedir/nova/cloudpipe/bootscript.template',
                help=_('Template for cloudpipe instance boot script')),
     cfg.StrOpt('dmz_net',
                default='10.0.0.0',

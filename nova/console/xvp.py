@@ -33,7 +33,7 @@ from nova import utils
 
 xvp_opts = [
     cfg.StrOpt('console_xvp_conf_template',
-               default=utils.abspath('console/xvp.conf.template'),
+               default='$pybasedir/nova/console/xvp.conf.template',
                help='XVP conf template'),
     cfg.StrOpt('console_xvp_conf',
                default='/etc/xvp.conf',
