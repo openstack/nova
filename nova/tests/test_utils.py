@@ -403,6 +403,17 @@ class GenericUtilsTestCase(test.TestCase):
         self.assertFalse(utils.strcmp_const_time('a', 'aaaaa'))
         self.assertFalse(utils.strcmp_const_time('ABC123', 'abc123'))
 
+    def test_temporary_chown(self):
+        def fake_execute(*args, **kwargs):
+            if args[0] == 'chown':
+                fake_execute.uid = args[1]
+        self.stubs.Set(utils, 'execute', fake_execute)
+
+        with tempfile.NamedTemporaryFile() as f:
+            with utils.temporary_chown(f.name, owner_uid=2):
+                self.assertEqual(fake_execute.uid, 2)
+            self.assertEqual(fake_execute.uid, os.getuid())
+
 
 class IsUUIDLikeTestCase(test.TestCase):
     def assertUUIDLike(self, val, expected):

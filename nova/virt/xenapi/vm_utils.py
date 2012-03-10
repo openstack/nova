@@ -1564,12 +1564,12 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
         _write_partition(virtual_size, dev)
 
     dev_path = utils.make_dev_path(dev)
-    utils.execute('chown', os.getuid(), dev_path, run_as_root=True)
 
-    with open(dev_path, 'wb') as f:
-        f.seek(offset)
-        for chunk in image_file:
-            f.write(chunk)
+    with utils.temporary_chown(dev_path):
+        with open(dev_path, 'wb') as f:
+            f.seek(offset)
+            for chunk in image_file:
+                f.write(chunk)
 
 
 def _write_partition(virtual_size, dev):
