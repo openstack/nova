@@ -51,6 +51,13 @@ s3_opts = [
     cfg.StrOpt('s3_secret_key',
                default='notchecked',
                help='secret key to use for s3 server for images'),
+    cfg.BoolOpt('s3_use_ssl',
+               default=False,
+               help='whether to use ssl when talking to s3'),
+    cfg.BoolOpt('s3_affix_tenant',
+               default=False,
+               help='whether to affix the tenant id to the access key '
+                    'when downloading from s3'),
     ]
 
 FLAGS = flags.FLAGS
@@ -154,11 +161,13 @@ class S3ImageService(object):
         # NOTE(vish): access and secret keys for s3 server are not
         #             checked in nova-objectstore
         access = FLAGS.s3_access_key
+        if FLAGS.s3_affix_tenant:
+            access = '%s:%s' % (access, context.project_id)
         secret = FLAGS.s3_secret_key
         calling = boto.s3.connection.OrdinaryCallingFormat()
         return boto.s3.connection.S3Connection(aws_access_key_id=access,
                                                aws_secret_access_key=secret,
-                                               is_secure=False,
+                                               is_secure=FLAGS.s3_use_ssl,
                                                calling_format=calling,
                                                port=FLAGS.s3_port,
                                                host=FLAGS.s3_host)
