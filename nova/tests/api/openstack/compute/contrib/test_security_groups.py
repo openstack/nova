@@ -790,6 +790,42 @@ class TestSecurityGroupRules(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
+    def _test_create_with_no_ports_and_no_group(self, proto):
+        rule = {'ip_protocol': proto, 'parent_group_id': '2'}
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'security_group_rule': rule})
+
+    def  _test_create_with_no_ports(self, proto):
+        rule = {'ip_protocol': proto, 'parent_group_id': '2', 'group_id': '1'}
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        res_dict = self.controller.create(req, {'security_group_rule': rule})
+
+        security_group_rule = res_dict['security_group_rule']
+        expected_rule = {
+            'from_port': 1, 'group': {'tenant_id': '123', 'name': 'test'},
+            'ip_protocol': proto, 'to_port': 65535, 'parent_group_id': 2,
+            'ip_range': {}, 'id': 1
+        }
+        if proto == 'icmp':
+            expected_rule['to_port'] = -1
+            expected_rule['from_port'] = -1
+        self.assertTrue(security_group_rule == expected_rule)
+
+    def test_create_with_no_ports_icmp(self):
+        self._test_create_with_no_ports_and_no_group('icmp')
+        self._test_create_with_no_ports('icmp')
+
+    def test_create_with_no_ports_tcp(self):
+        self._test_create_with_no_ports_and_no_group('tcp')
+        self._test_create_with_no_ports('tcp')
+
+    def test_create_with_no_ports_udp(self):
+        self._test_create_with_no_ports_and_no_group('udp')
+        self._test_create_with_no_ports('udp')
+
     def test_delete(self):
         rule = security_group_rule_template(id=10)
 

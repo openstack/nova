@@ -436,6 +436,18 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
         else:
             values['cidr'] = '0.0.0.0/0'
 
+        if group_id:
+            # Open everything if an explicit port range or type/code are not
+            # specified, but only if a source group was specified.
+            ip_proto_upper = ip_protocol.upper() if ip_protocol else ''
+            if ip_proto_upper == 'ICMP' and not from_port and not to_port:
+                from_port = -1
+                to_port = -1
+            elif (ip_proto_upper in ['TCP', 'UDP'] and not from_port
+                  and not to_port):
+                from_port = 1
+                to_port = 65535
+
         if ip_protocol and from_port and to_port:
 
             ip_protocol = str(ip_protocol)
