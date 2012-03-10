@@ -1290,6 +1290,7 @@ class CloudTestCase(test.TestCase):
             'id': 1,
             'container_format': 'ami',
             'name': 'name',
+            'owner': 'someone',
             'properties': {
                 'image_location': 'location',
                 'kernel_id': 1,
@@ -1297,7 +1298,7 @@ class CloudTestCase(test.TestCase):
                 'type': 'machine'},
             'is_public': False}
         expected = {'name': 'name',
-                    'imageOwnerId': None,
+                    'imageOwnerId': 'someone',
                     'isPublic': False,
                     'imageId': 'ami-00000001',
                     'imageState': None,

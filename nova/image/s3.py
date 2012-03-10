@@ -238,7 +238,6 @@ class S3ImageService(object):
             mappings = []
 
         properties = metadata['properties']
-        properties['project_id'] = context.project_id
         properties['architecture'] = arch
 
         def _translate_dependent_image_id(image_key, image_id):
