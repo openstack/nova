@@ -59,12 +59,12 @@ def stub_snapshot_create(self, context, volume_id, name, description):
     return snapshot
 
 
-def stub_snapshot_delete(self, context, snapshot_id):
+def stub_snapshot_delete(self, context, snapshot):
     global _last_param
-    _last_param = dict(snapshot_id=snapshot_id)
+    _last_param = snapshot
 
     LOG.debug(_("_delete: %s"), locals())
-    if snapshot_id != '123':
+    if snapshot['id'] != '123':
         raise exception.NotFound
 
 
@@ -179,7 +179,7 @@ class SnapshotApiTest(test.TestCase):
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
-        self.assertEqual(str(_last_param['snapshot_id']), str(snapshot_id))
+        self.assertEqual(str(_last_param['id']), str(snapshot_id))
 
     def test_snapshot_delete_invalid_id(self):
         global _last_param
