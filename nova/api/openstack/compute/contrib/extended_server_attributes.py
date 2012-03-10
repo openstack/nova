@@ -69,7 +69,7 @@ class ExtendedServerAttributesController(wsgi.Controller):
         context = req.environ['nova.context']
         if authorize(context):
             # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedServerAttributesTemplate())
+            resp_obj.attach(xml=ExtendedServerAttributeTemplate())
 
             try:
                 instance = self.compute_api.get(context, id)

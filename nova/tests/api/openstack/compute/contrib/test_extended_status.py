@@ -16,7 +16,9 @@
 import json
 
 import webob
+from lxml import etree
 
+from nova.api.openstack.compute.contrib import extended_status
 from nova import compute
 from nova import exception
 from nova import flags
@@ -27,9 +29,9 @@ from nova.tests.api.openstack import fakes
 FLAGS = flags.FLAGS
 
 
-UUID1 = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
-UUID2 = '65ba6da7-3b9a-4b71-bc08-f81fbdb72d1a'
-UUID3 = 'b55c356f-4c22-47ed-b622-cc6ba0f4b1ab'
+UUID1 = '00000000-0000-0000-0000-000000000001'
+UUID2 = '00000000-0000-0000-0000-000000000002'
+UUID3 = '00000000-0000-0000-0000-000000000003'
 
 
 def fake_compute_get(*args, **kwargs):
@@ -39,14 +41,16 @@ def fake_compute_get(*args, **kwargs):
 
 def fake_compute_get_all(*args, **kwargs):
     return [
-        fakes.stub_instance(1, uuid=UUID1, task_state="task%s" % UUID1,
-                vm_state="vm%s" % UUID1, power_state="power%s" % UUID1),
-        fakes.stub_instance(2, uuid=UUID2, task_state="task%s" % UUID2,
-                vm_state="vm%s" % UUID2, power_state="power%s" % UUID2),
+        fakes.stub_instance(1, uuid=UUID1, task_state="task-1",
+                vm_state="vm-1", power_state="power-1"),
+        fakes.stub_instance(2, uuid=UUID2, task_state="task-2",
+                vm_state="vm-2", power_state="power-2"),
     ]
 
 
 class ExtendedStatusTest(test.TestCase):
+    content_type = 'application/json'
+    prefix = 'OS-EXT-STS:'
 
     def setUp(self):
         super(ExtendedStatusTest, self).setUp()
@@ -56,22 +60,28 @@ class ExtendedStatusTest(test.TestCase):
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
-        req.headers['Accept'] = 'application/json'
+        req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app())
         return res
 
+    def _get_server(self, body):
+        return json.loads(body).get('server')
+
+    def _get_servers(self, body):
+        return json.loads(body).get('servers')
+
     def assertServerStates(self, server, vm_state, power_state, task_state):
-        self.assertEqual(server.get('OS-EXT-STS:vm_state'), vm_state)
-        self.assertEqual(server.get('OS-EXT-STS:power_state'), power_state)
-        self.assertEqual(server.get('OS-EXT-STS:task_state'), task_state)
+        self.assertEqual(server.get('%svm_state' % self.prefix), vm_state)
+        self.assertEqual(server.get('%spower_state' % self.prefix),
+                         power_state)
+        self.assertEqual(server.get('%stask_state' % self.prefix), task_state)
 
     def test_show(self):
         url = '/v2/fake/servers/%s' % UUID3
         res = self._make_request(url)
-        body = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
-        self.assertServerStates(body['server'],
+        self.assertServerStates(self._get_server(res.body),
                                 vm_state='slightly crunchy',
                                 power_state='empowered',
                                 task_state='kayaking')
@@ -79,15 +89,13 @@ class ExtendedStatusTest(test.TestCase):
     def test_detail(self):
         url = '/v2/fake/servers/detail'
         res = self._make_request(url)
-        body = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
-        for server in body['servers']:
-            sid = server['id']
+        for i, server in enumerate(self._get_servers(res.body)):
             self.assertServerStates(server,
-                                    vm_state='vm%s' % sid,
-                                    power_state='power%s' % sid,
-                                    task_state='task%s' % sid)
+                                    vm_state='vm-%s' % (i + 1),
+                                    power_state='power-%s' % (i + 1),
+                                    task_state='task-%s' % (i + 1))
 
     def test_no_instance_passthrough_404(self):
 
@@ -99,3 +107,14 @@ class ExtendedStatusTest(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
+
+
+class ExtendedStatusXmlTest(ExtendedStatusTest):
+    content_type = 'application/xml'
+    prefix = '{%s}' % extended_status.Extended_status.namespace
+
+    def _get_server(self, body):
+        return etree.XML(body)
+
+    def _get_servers(self, body):
+        return etree.XML(body).getchildren()
