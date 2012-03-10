@@ -410,7 +410,7 @@ class Controller(wsgi.Controller):
         """
 
         search_opts = {}
-        search_opts.update(req.str_GET)
+        search_opts.update(req.GET)
 
         context = req.environ['nova.context']
         remove_invalid_options(context, search_opts,
