@@ -18,10 +18,11 @@
 
 """Session Handling for SQLAlchemy backend."""
 
-import sqlalchemy.exc
+import time
+
 import sqlalchemy.interfaces
 import sqlalchemy.orm
-import time
+from sqlalchemy.exc import DisconnectionError
 
 import nova.exception
 import nova.flags as flags
@@ -50,10 +51,32 @@ def get_session(autocommit=True, expire_on_commit=False):
 
 
 class SynchronousSwitchListener(sqlalchemy.interfaces.PoolListener):
+
     """Switch sqlite connections to non-synchronous mode"""
 
     def connect(self, dbapi_con, con_record):
         dbapi_con.execute("PRAGMA synchronous = OFF")
+
+
+class MySQLPingListener(object):
+
+    """
+    Ensures that MySQL connections checked out of the
+    pool are alive.
+
+    Borrowed from:
+    http://groups.google.com/group/sqlalchemy/msg/a4ce563d802c929f
+    """
+
+    def checkout(self, dbapi_con, con_record, con_proxy):
+        try:
+            dbapi_con.cursor().execute('select 1')
+        except dbapi_con.OperationalError, ex:
+            if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
+                LOG.warn('Got mysql server has gone away: %s', ex)
+                raise DisconnectionError("Database server went away")
+            else:
+                raise
 
 
 def get_engine():
@@ -70,26 +93,10 @@ def get_engine():
         if not FLAGS.sqlite_synchronous:
             engine_args["listeners"] = [SynchronousSwitchListener()]
 
-    engine = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
-    ensure_connection(engine)
-    return engine
+    if 'mysql' in connection_dict.drivername:
+        engine_args['listeners'] = [MySQLPingListener()]
 
-
-def ensure_connection(engine):
-    remaining_attempts = FLAGS.sql_max_retries
-    while True:
-        try:
-            engine.connect()
-            return
-        except sqlalchemy.exc.OperationalError:
-            if remaining_attempts == 0:
-                raise
-            LOG.warning(_('SQL connection failed (%(connstring)s). '
-                          '%(attempts)d attempts left.'),
-                           {'connstring': FLAGS.sql_connection,
-                            'attempts': remaining_attempts})
-            time.sleep(FLAGS.sql_retry_interval)
-            remaining_attempts -= 1
+    return sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
 
 
 def get_maker(engine, autocommit=True, expire_on_commit=False):
