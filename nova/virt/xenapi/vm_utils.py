@@ -21,10 +21,10 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import contextlib
+import cPickle as pickle
 import decimal
 import json
 import os
-import pickle
 import re
 import time
 import urllib

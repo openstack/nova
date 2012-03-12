@@ -21,10 +21,10 @@ Management class for VM-related functions (spawn, reboot, etc).
 
 import base64
 import binascii
+import cPickle as pickle
 import functools
 import json
 import os
-import pickle
 import time
 import uuid
 
