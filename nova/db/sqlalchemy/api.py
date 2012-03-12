@@ -4153,15 +4153,15 @@ def aggregate_create(context, values, metadata=None):
                                      values['name'],
                                      session=session,
                                      read_deleted='yes').first()
+    values.setdefault('operational_state', aggregate_states.CREATED)
     if not aggregate:
         aggregate = models.Aggregate()
-        values.setdefault('operational_state', aggregate_states.CREATED)
         aggregate.update(values)
         aggregate.save(session=session)
     elif aggregate.deleted:
-        aggregate.update({'deleted': False,
-                          'deleted_at': None,
-                          'availability_zone': values['availability_zone']})
+        values['deleted'] = False
+        values['deleted_at'] = None
+        aggregate.update(values)
         aggregate.save(session=session)
     else:
         raise exception.AggregateNameExists(aggregate_name=values['name'])
@@ -4230,6 +4230,7 @@ def aggregate_delete(context, aggregate_id):
     if query.first():
         query.update({'deleted': True,
                       'deleted_at': utils.utcnow(),
+                      'operational_state': aggregate_states.DISMISSED,
                       'updated_at': literal_column('updated_at')})
     else:
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)

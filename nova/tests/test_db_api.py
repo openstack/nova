@@ -333,6 +333,7 @@ class AggregateDBApiTestCase(test.TestCase):
         r2 = _create_aggregate(values=values)
         self.assertEqual(r2.name, values['name'])
         self.assertEqual(r2.availability_zone, values['availability_zone'])
+        self.assertEqual(r2.operational_state, "created")
 
     def test_aggregate_create_raise_exist_exc(self):
         """Ensure aggregate names are distinct."""
@@ -409,6 +410,8 @@ class AggregateDBApiTestCase(test.TestCase):
         db.aggregate_delete(ctxt, result['id'])
         expected = db.aggregate_get_all(ctxt, read_deleted='no')
         self.assertEqual(0, len(expected))
+        aggregate = db.aggregate_get(ctxt, result['id'], read_deleted='yes')
+        self.assertEqual(aggregate["operational_state"], "dismissed")
 
     def test_aggregate_update(self):
         """Ensure an aggregate can be updated."""

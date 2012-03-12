@@ -1760,8 +1760,6 @@ class AggregateAPI(base.Base):
             raise exception.InvalidAggregateAction(action='delete',
                                                    aggregate_id=aggregate_id,
                                                    reason='not empty')
-        values = {'operational_state': aggregate_states.DISMISSED}
-        self.db.aggregate_update(context, aggregate_id, values)
         self.db.aggregate_delete(context, aggregate_id)
 
     def add_host_to_aggregate(self, context, aggregate_id, host):
