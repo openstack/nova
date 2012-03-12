@@ -84,6 +84,7 @@ class QuotaSetsController(object):
                     raise webob.exc.HTTPForbidden()
         return {'quota_set': quota.get_project_quotas(context, project_id)}
 
+    @wsgi.serializers(xml=QuotaTemplate)
     def defaults(self, req, id):
         authorize(req.environ['nova.context'])
         return self._format_quota_set(id, quota._get_default_quotas())
