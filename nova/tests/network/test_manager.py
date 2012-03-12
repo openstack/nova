@@ -858,7 +858,8 @@ class CommonNetworkTestCase(test.TestCase):
 
     def test_remove_fixed_ip_from_instance(self):
         manager = fake_network.FakeNetworkManager()
-        manager.remove_fixed_ip_from_instance(self.context, 99, '10.0.0.1')
+        manager.remove_fixed_ip_from_instance(self.context, 99, HOST,
+                                              '10.0.0.1')
 
         self.assertEquals(manager.deallocate_called, '10.0.0.1')
 
@@ -866,7 +867,7 @@ class CommonNetworkTestCase(test.TestCase):
         manager = fake_network.FakeNetworkManager()
         self.assertRaises(exception.FixedIpNotFoundForSpecificInstance,
                           manager.remove_fixed_ip_from_instance,
-                          self.context, 99, 'bad input')
+                          self.context, 99, HOST, 'bad input')
 
     def test_validate_cidrs(self):
         manager = fake_network.FakeNetworkManager()

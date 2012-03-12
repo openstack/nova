@@ -1123,12 +1123,13 @@ class NetworkManager(manager.SchedulerDependentManager):
         self._allocate_fixed_ips(context, instance_id, host, networks)
 
     @wrap_check_policy
-    def remove_fixed_ip_from_instance(self, context, instance_id, address):
+    def remove_fixed_ip_from_instance(self, context, instance_id, host,
+                                      address):
         """Removes a fixed ip from an instance from specified network."""
         fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
         for fixed_ip in fixed_ips:
             if fixed_ip['address'] == address:
-                self.deallocate_fixed_ip(context, address)
+                self.deallocate_fixed_ip(context, address, host)
                 return
         raise exception.FixedIpNotFoundForSpecificInstance(
                                     instance_id=instance_id, ip=address)
