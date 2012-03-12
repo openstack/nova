@@ -1793,58 +1793,54 @@ class StorageManagerCommands(object):
         # TODO Add backend_introduce.
         ctxt = context.get_admin_context()
         params = dict(map(self._splitfun, args))
+        sr_uuid = utils.gen_uuid()
+
+        if flavor_label is None:
+            print "error: backend needs to be associated with flavor"
+            sys.exit(2)
+
+        try:
+            flavors = db.sm_flavor_get(ctxt, flavor_label)
+
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
+
+        config_params = " ".join(['%s=%s' %
+                               (key, params[key]) for key in params])
 
         if 'sr_uuid' in params:
+            sr_uuid = params['sr_uuid']
             try:
-                backend = db.sm_backend_conf_get_by_sr(ctxt,
-                                                       params['sr_uuid'])
+                backend = db.sm_backend_conf_get_by_sr(ctxt, sr_uuid)
             except exception.DBError, e:
                 _db_error(e)
 
             if backend:
-                if len(backend) > 1:
-                    print 'error: Multiple backends found with given sr_uuid'
-                    sys.exit(2)
-
                 print 'Backend config found. Would you like to recreate this?'
                 print '(WARNING:Recreating will destroy all VDIs on backend!!)'
                 c = raw_input('Proceed? (y/n) ')
                 if c == 'y' or c == 'Y':
                     try:
                         db.sm_backend_conf_update(ctxt, backend['id'],
-                                                  dict(created=False))
+                                        dict(created=False,
+                                             flavor_id=flavors['id'],
+                                             sr_type=sr_type,
+                                             config_params=config_params))
                     except exception.DBError, e:
                         _db_error(e)
                 return
 
             else:
                 print 'Backend config not found. Would you like to create it?'
-                print '(WARNING: Creating will destroy all data on backend!!!)'
-                c = raw_input('Proceed? (y/n) ')
-                if c != 'y' and c != 'Y':
-                    return
 
         print '(WARNING: Creating will destroy all data on backend!!!)'
         c = raw_input('Proceed? (y/n) ')
         if c == 'y' or c == 'Y':
-            if flavor_label is None:
-                print "error: backend needs to be associated with flavor"
-                sys.exit(2)
-
-            try:
-                flavors = db.sm_flavor_get(ctxt, flavor_label)
-
-            except exception.NotFound as ex:
-                print "error: %s" % ex
-                sys.exit(2)
-
-            config_params = "".join(['%s=%s ' %
-                                   (key, params[key]) for key in params])
-
             try:
                 db.sm_backend_conf_create(ctxt,
                                           dict(flavor_id=flavors['id'],
-                                               sr_uuid=None,
+                                               sr_uuid=sr_uuid,
                                                sr_type=sr_type,
                                                config_params=config_params))
             except exception.DBError, e:
