@@ -2068,6 +2068,25 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.assertEqual(robj['Location'], selfhref)
 
+    def test_create_instance_above_quota(self):
+        fakes.stub_out_instance_quota(self.stubs, 0)
+        image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
+        body = dict(server=dict(
+            name='server_test', imageRef=image_uuid, flavorRef=2,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        try:
+            server = self.controller.create(req, body).obj['server']
+            fail('excepted quota to be exceeded')
+        except webob.exc.HTTPRequestEntityTooLarge as e:
+            code = {'code': 'InstanceLimitExceeded'}
+            self.assertEquals(e.explanation,
+                              _('Quota exceeded: code=%(code)s') % code)
+
 
 class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
