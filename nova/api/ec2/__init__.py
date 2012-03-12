@@ -156,7 +156,7 @@ class Lockout(wsgi.Middleware):
         if FLAGS.memcached_servers:
             import memcache
         else:
-            from nova.testing.fake import memcache
+            from nova.common import memorycache as memcache
         self.mc = memcache.Client(FLAGS.memcached_servers,
                                   debug=0)
         super(Lockout, self).__init__(application)

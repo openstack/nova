@@ -119,7 +119,7 @@ class MetadataTestCase(test.TestCase):
         request = webob.Request.blank('/user-data')
         request.remote_addr = None
         response = request.get_response(self.app)
-        self.assertEqual(response.status_int, 500)
+        self.assertEqual(response.status_int, 404)
 
     def test_user_data_invalid_url(self):
         request = webob.Request.blank('/user-data-invalid')
@@ -177,9 +177,7 @@ class MetadataTestCase(test.TestCase):
                     'swap': '/dev/sdc',
                     'ebs0': '/dev/sdh'}
 
-        self.assertEqual(self.app._format_instance_mapping(ctxt,
-                                                           instance_ref0),
+        self.assertEqual(self.app._format_instance_mapping(instance_ref0),
                          handler._DEFAULT_MAPPINGS)
-        self.assertEqual(self.app._format_instance_mapping(ctxt,
-                                                           instance_ref1),
+        self.assertEqual(self.app._format_instance_mapping(instance_ref1),
                          expected)
