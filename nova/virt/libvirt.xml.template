@@ -162,21 +162,20 @@
     #end if
 
 #end for
-        <!-- The order is significant here.  File must be defined first -->
-        <serial type="file">
+
+#if $type == 'qemu' or $type == 'kvm'
+        <!-- The QEMU 'pty' driver throws away any data if no
+	     client app is connected. Thus we can't get away
+	     with a single type=pty console. Instead we have
+	     to configure two separate consoles. -->
+        <serial type='file'>
             <source path='${basepath}/console.log'/>
-            <target port='1'/>
         </serial>
+        <serial type='pty'/>
+#else
+        <console type='pty'/>
+#end if
 
-        <console type='pty' tty='/dev/pts/2'>
-            <source path='/dev/pts/2'/>
-            <target port='0'/>
-        </console>
-
-        <serial type='pty'>
-            <source path='/dev/pts/2'/>
-            <target port='0'/>
-        </serial>
 #if $getVar('use_usb_tablet', True) and $type != 'lxc' and $type != 'xen'
         <input type='tablet' bus='usb'/>
 #end if
