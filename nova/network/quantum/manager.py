@@ -258,6 +258,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             self.q_conn.detach_and_delete_port(q_tenant_id,
                                                    net_uuid,
                                                    gw_port_uuid)
+            self.l3driver.remove_gateway(net_ref)
 
         # Now we can delete the network
         self.q_conn.delete_network(q_tenant_id, net_uuid)
