@@ -61,6 +61,14 @@ def chown(path, owner):
     pass
 
 
+def create_snapshot(disk_path, snapshot_name):
+    pass
+
+
+def delete_snapshot(disk_path, snapshot_name):
+    pass
+
+
 def extract_snapshot(disk_path, source_fmt, snapshot_name, out_path, dest_fmt):
     files[out_path] = ''
 

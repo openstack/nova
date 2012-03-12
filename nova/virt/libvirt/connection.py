@@ -616,20 +616,19 @@ class LibvirtConnection(driver.ComputeDriver):
         if 'container_format' in base:
             metadata['container_format'] = base['container_format']
 
-        # Make the snapshot
-        snapshot_name = uuid.uuid4().hex
-        snapshot_xml = """
-        <domainsnapshot>
-            <name>%s</name>
-        </domainsnapshot>
-        """ % snapshot_name
-        snapshot_ptr = virt_dom.snapshotCreateXML(snapshot_xml, 0)
-
         # Find the disk
         xml_desc = virt_dom.XMLDesc(0)
         domain = ElementTree.fromstring(xml_desc)
         source = domain.find('devices/disk/source')
         disk_path = source.get('file')
+
+        snapshot_name = uuid.uuid4().hex
+
+        (state, _max_mem, _mem, _cpus, _t) = virt_dom.info()
+        if state == power_state.RUNNING:
+            virt_dom.managedSave(0)
+        # Make the snapshot
+        libvirt_utils.create_snapshot(disk_path, snapshot_name)
 
         # Export the snapshot to a raw image
         with utils.tempdir() as tmpdir:
@@ -638,15 +637,17 @@ class LibvirtConnection(driver.ComputeDriver):
                 libvirt_utils.extract_snapshot(disk_path, source_format,
                                                snapshot_name, out_path,
                                                image_format)
-                # Upload that image to the image service
-                with libvirt_utils.file_open(out_path) as image_file:
-                    image_service.update(context,
-                                         image_href,
-                                         metadata,
-                                         image_file)
-
             finally:
-                snapshot_ptr.delete(0)
+                libvirt_utils.delete_snapshot(disk_path, snapshot_name)
+                if state == power_state.RUNNING:
+                    virt_dom.create()
+
+            # Upload that image to the image service
+            with libvirt_utils.file_open(out_path) as image_file:
+                image_service.update(context,
+                                     image_href,
+                                     metadata,
+                                     image_file)
 
     @exception.wrap_exception()
     def reboot(self, instance, network_info, reboot_type='SOFT'):
