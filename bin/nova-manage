@@ -1971,7 +1971,15 @@ class GetLogCommands(object):
         """Get <num_entries> of the nova syslog events"""
         entries = int(num_entries)
         count = 0
-        lines = [line.strip() for line in open('/var/log/syslog', "r")]
+        log_file = ''
+        if os.path.exists('/var/log/syslog'):
+            log_file = '/var/log/syslog'
+        elif os.path.exists('/var/log/messages'):
+            log_file = '/var/log/messages'
+        else:
+            print "Unable to find system log file!"
+            sys.exit(1)
+        lines = [line.strip() for line in open(log_file, "r")]
         lines.reverse()
         print "Last %s nova syslog entries:-" % (entries)
         for line in lines:
