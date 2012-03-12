@@ -1676,6 +1676,7 @@ class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
     def _teardown_network_on_host(self, context, network):
         if not FLAGS.fake_network:
+            network['dhcp_server'] = self._get_dhcp_ip(context, network)
             dev = self.driver.get_dev(network)
             self.driver.update_dhcp(context, dev, network)
 
@@ -1824,6 +1825,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
     def _teardown_network_on_host(self, context, network):
         if not FLAGS.fake_network:
+            network['dhcp_server'] = self._get_dhcp_ip(context, network)
             dev = self.driver.get_dev(network)
             self.driver.update_dhcp(context, dev, network)
 
