@@ -21,6 +21,7 @@ import socket
 import time
 import urllib
 
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
