@@ -908,18 +908,39 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = virt_dom.XMLDesc(0)
         tree = ElementTree.fromstring(xml)
 
+        console_types = {}
+
+        # NOTE(comstud): We want to try 'file' types first, then try 'pty'
+        # types.  We can't use Python 2.7 syntax of:
+        # tree.find("./devices/console[@type='file']/source")
+        # because we need to support 2.6.
+        console_nodes = tree.findall('./devices/console')
+        for console_node in console_nodes:
+            console_type = console_node.get('type')
+            console_types.setdefault(console_type, [])
+            console_types[console_type].append(console_node)
+
         # If the guest has a console logging to a file prefer to use that
-        node = tree.find("./devices/console[@type='file']/source")
-        if node is not None:
-            fpath = node.get("path")
-            return libvirt_utils.load_file(fpath)
+        for file_console in console_types.get('file'):
+            source_node = file_console.find('./source')
+            if source_node is None:
+                continue
+            path = source_node.get("path")
+            if not path:
+                continue
+            return libvirt_utils.load_file(path)
 
-        # else if there is a PTY, then try to read latest data from that
-        node = tree.find("./devices/console[@type='pty']/source")
-        if node is None:
+        # Try 'pty' types
+        for pty_console in console_types.get('pty'):
+            source_node = pty_console.find('./source')
+            if source_node is None:
+                continue
+            pty = source_node.get("path")
+            if not pty:
+                continue
+            break
+        else:
             raise exception.Error(_("Guest does not have a console available"))
-
-        pty = node.get("path")
 
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
