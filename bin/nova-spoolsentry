@@ -19,6 +19,7 @@
 
 
 import base64
+import cPickle as pickle
 import json
 import logging
 import os
@@ -26,10 +27,6 @@ import shutil
 import sys
 import urllib
 import urllib2
-try:
-    import cPickle as pickle
-except Exception:
-    import pickle
 
 
 class SpoolSentry(object):

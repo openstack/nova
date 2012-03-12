@@ -21,6 +21,7 @@
 # XenAPI plugin for managing glance images
 #
 
+import cPickle as pickle
 import httplib
 try:
     import json
@@ -30,7 +31,6 @@ except ImportError:
 import md5
 import os
 import os.path
-import pickle
 import shlex
 import shutil
 import subprocess

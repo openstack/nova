@@ -19,9 +19,9 @@
 XenAPI Plugin for transfering data between host nodes
 """
 
+import cPickle as pickle
 import os
 import os.path
-import pickle
 import shlex
 import shutil
 import subprocess
