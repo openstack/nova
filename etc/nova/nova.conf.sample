@@ -642,7 +642,7 @@
 ###### (IntOpt) Automatically confirm resizes after N seconds. Set to 0 to disable.
 # resize_confirm_window=0
 ###### (StrOpt) Action to take if a running deleted instance is detected.Valid options are 'noop', 'log' and 'reap'. Set to 'noop' to disable.
-# running_deleted_instance_action="noop"
+# running_deleted_instance_action="log"
 ###### (IntOpt) Number of periodic scheduler ticks to wait between runs of the cleanup task.
 # running_deleted_instance_poll_interval=30
 ###### (IntOpt) Number of seconds after being deleted when a running instance should be considered eligible for cleanup.
