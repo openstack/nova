@@ -692,6 +692,10 @@ class ProjectQuotaNotFound(QuotaNotFound):
     message = _("Quota for project %(project_id)s could not be found.")
 
 
+class QuotaClassNotFound(QuotaNotFound):
+    message = _("Quota class %(class_name)s could not be found.")
+
+
 class SecurityGroupNotFound(NotFound):
     message = _("Security group %(security_group_id)s not found.")
 

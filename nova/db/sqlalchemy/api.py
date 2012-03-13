@@ -89,6 +89,15 @@ def authorize_user_context(context, user_id):
             raise exception.NotAuthorized()
 
 
+def authorize_quota_class_context(context, class_name):
+    """Ensures a request has permission to access the given quota class."""
+    if is_user_context(context):
+        if not context.quota_class:
+            raise exception.NotAuthorized()
+        elif context.quota_class != class_name:
+            raise exception.NotAuthorized()
+
+
 def require_admin_context(f):
     """Decorator to require admin request context.
 
@@ -2286,6 +2295,80 @@ def quota_destroy_all_by_project(context, project_id):
 
         for quota_ref in quotas:
             quota_ref.delete(session=session)
+
+
+###################
+
+
+@require_context
+def quota_class_get(context, class_name, resource, session=None):
+    result = model_query(context, models.QuotaClass, session=session,
+                         read_deleted="no").\
+                     filter_by(class_name=class_name).\
+                     filter_by(resource=resource).\
+                     first()
+
+    if not result:
+        raise exception.QuotaClassNotFound(class_name=class_name)
+
+    return result
+
+
+@require_context
+def quota_class_get_all_by_name(context, class_name):
+    authorize_quota_class_context(context, class_name)
+
+    rows = model_query(context, models.QuotaClass, read_deleted="no").\
+                   filter_by(class_name=class_name).\
+                   all()
+
+    result = {'class_name': class_name}
+    for row in rows:
+        result[row.resource] = row.hard_limit
+
+    return result
+
+
+@require_admin_context
+def quota_class_create(context, class_name, resource, limit):
+    quota_class_ref = models.QuotaClass()
+    quota_class_ref.class_name = class_name
+    quota_class_ref.resource = resource
+    quota_class_ref.hard_limit = limit
+    quota_class_ref.save()
+    return quota_class_ref
+
+
+@require_admin_context
+def quota_class_update(context, class_name, resource, limit):
+    session = get_session()
+    with session.begin():
+        quota_class_ref = quota_class_get(context, class_name, resource,
+                                          session=session)
+        quota_class_ref.hard_limit = limit
+        quota_class_ref.save(session=session)
+
+
+@require_admin_context
+def quota_class_destroy(context, class_name, resource):
+    session = get_session()
+    with session.begin():
+        quota_class_ref = quota_class_get(context, class_name, resource,
+                                          session=session)
+        quota_class_ref.delete(session=session)
+
+
+@require_admin_context
+def quota_class_destroy_all_by_name(context, class_name):
+    session = get_session()
+    with session.begin():
+        quota_classes = model_query(context, models.QuotaClass,
+                                    session=session, read_deleted="no").\
+                                filter_by(class_name=class_name).\
+                                all()
+
+        for quota_class_ref in quota_classes:
+            quota_class_ref.delete(session=session)
 
 
 ###################

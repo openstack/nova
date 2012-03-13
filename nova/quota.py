@@ -60,6 +60,11 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(quota_opts)
 
 
+quota_resources = ['metadata_items', 'injected_file_content_bytes',
+        'volumes', 'gigabytes', 'ram', 'floating_ips', 'instances',
+        'injected_files', 'cores']
+
+
 def _get_default_quotas():
     defaults = {
         'instances': FLAGS.quota_instances,
@@ -80,13 +85,29 @@ def _get_default_quotas():
     return defaults
 
 
-def get_project_quotas(context, project_id):
-    rval = _get_default_quotas()
-    quota = db.quota_get_all_by_project(context, project_id)
-    for key in rval.keys():
+def get_class_quotas(context, quota_class, defaults=None):
+    """Update defaults with the quota class values."""
+
+    if not defaults:
+        defaults = _get_default_quotas()
+
+    quota = db.quota_class_get_all_by_name(context, quota_class)
+    for key in defaults.keys():
         if key in quota:
-            rval[key] = quota[key]
-    return rval
+            defaults[key] = quota[key]
+
+    return defaults
+
+
+def get_project_quotas(context, project_id):
+    defaults = _get_default_quotas()
+    if context.quota_class:
+        get_class_quotas(context, context.quota_class, defaults)
+    quota = db.quota_get_all_by_project(context, project_id)
+    for key in defaults.keys():
+        if key in quota:
+            defaults[key] = quota[key]
+    return defaults
 
 
 def _get_request_allotment(requested, used, quota):

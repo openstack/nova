@@ -927,6 +927,39 @@ def quota_destroy_all_by_project(context, project_id):
 ###################
 
 
+def quota_class_create(context, class_name, resource, limit):
+    """Create a quota class for the given name and resource."""
+    return IMPL.quota_class_create(context, class_name, resource, limit)
+
+
+def quota_class_get(context, class_name, resource):
+    """Retrieve a quota class or raise if it does not exist."""
+    return IMPL.quota_class_get(context, class_name, resource)
+
+
+def quota_class_get_all_by_name(context, class_name):
+    """Retrieve all quotas associated with a given quota class."""
+    return IMPL.quota_class_get_all_by_name(context, class_name)
+
+
+def quota_class_update(context, class_name, resource, limit):
+    """Update a quota class or raise if it does not exist."""
+    return IMPL.quota_class_update(context, class_name, resource, limit)
+
+
+def quota_class_destroy(context, class_name, resource):
+    """Destroy the quota class or raise if it does not exist."""
+    return IMPL.quota_class_destroy(context, class_name, resource)
+
+
+def quota_class_destroy_all_by_name(context, class_name):
+    """Destroy all quotas associated with a given quota class."""
+    return IMPL.quota_class_destroy_all_by_name(context, class_name)
+
+
+###################
+
+
 def volume_allocate_iscsi_target(context, volume_id, host):
     """Atomically allocate a free iscsi_target from the pool."""
     return IMPL.volume_allocate_iscsi_target(context, volume_id, host)
