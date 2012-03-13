@@ -2067,11 +2067,15 @@ def network_get_all_by_instance(context, instance_id):
 
 @require_admin_context
 def network_get_all_by_host(context, host):
+    session = get_session()
+    fixed_ip_query = model_query(context, models.FixedIp.network_id,
+                                 session=session).\
+                        filter(models.FixedIp.host == host)
     # NOTE(vish): return networks that have host set
     #             or that have a fixed ip with host set
     host_filter = or_(models.Network.host == host,
-                      models.FixedIp.host == host)
-    return _network_get_query(context).\
+                      models.Network.id.in_(fixed_ip_query.subquery()))
+    return _network_get_query(context, session=session).\
                        filter(host_filter).\
                        all()
 
