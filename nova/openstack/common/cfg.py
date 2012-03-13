@@ -37,7 +37,7 @@ Options can be strings, integers, floats, booleans, lists or 'multi strings'::
                                    help='List of APIs to enable by default')
 
     DEFAULT_EXTENSIONS = [
-        'nova.api.openstack.contrib.standard_extensions'
+        'nova.api.openstack.compute.contrib.standard_extensions'
     ]
     osapi_compute_extension_opt = cfg.MultiStrOpt('osapi_compute_extension',
                                                   default=DEFAULT_EXTENSIONS)
