@@ -202,21 +202,25 @@ class MetadataRequestHandler(wsgi.Application):
 
     def ami_id(self, address):
         instance_ref = self.get_instance(address)
-        return ec2utils.image_ec2_id(instance_ref['image_ref'])
+        image_id = instance_ref['image_ref']
+        ctxt = context.get_admin_context()
+        return ec2utils.glance_id_to_ec2_id(ctxt, image_id)
 
     def kernel_id(self, address):
         instance_ref = self.get_instance(address)
         kernel_id = instance_ref.get('kernel_id')
         if kernel_id:
-            return ec2utils.image_ec2_id(kernel_id,
-                                         ec2utils.image_type('kernel'))
+            image_type = ec2utils.image_type('kernel')
+            ctxt = context.get_admin_context()
+            return ec2utils.glance_id_to_ec2_id(ctxt, kernel_id, image_type)
 
     def ramdisk_id(self, address):
         instance_ref = self.get_instance(address)
         ramdisk_id = instance_ref.get('ramdisk_id')
         if ramdisk_id:
-            return ec2utils.image_ec2_id(ramdisk_id,
-                                         ec2utils.image_type('ramdisk'))
+            image_type = ec2utils.image_type('ramdisk')
+            ctxt = context.get_admin_context()
+            return ec2utils.image_ec2_id(ctxt, ramdisk_id, image_type)
 
     def ami_launch_index(self, address):
         instance_ref = self.get_instance(address)
