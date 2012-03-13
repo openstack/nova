@@ -740,6 +740,8 @@
 # libvirt_disk_prefix=<None>
 ###### (BoolOpt) Inject the admin password at boot time, without an agent.
 # libvirt_inject_password=false
+###### (BoolOpt) Use a separated OS thread pool to realize non-blocking libvirt calls. Disabled by default.
+# libvirt_nonblocking=false
 ###### (StrOpt) Libvirt domain type (valid options are: kvm, lxc, qemu, uml, xen)
 # libvirt_type="kvm"
 ###### (StrOpt) Override the default libvirt URI (which is dependent on libvirt_type)
