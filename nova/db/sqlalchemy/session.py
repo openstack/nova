@@ -86,6 +86,7 @@ def get_engine():
     engine_args = {
         "pool_recycle": FLAGS.sql_idle_timeout,
         "echo": False,
+        'convert_unicode': True,
     }
 
     if "sqlite" in connection_dict.drivername:
