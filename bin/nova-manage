@@ -584,9 +584,13 @@ class FixedIpCommands(object):
             network = db.network_get(context.get_admin_context(),
                                      fixed_ip['network_id'])
             if fixed_ip['instance_id']:
-                instance = instances_by_id[fixed_ip['instance_id']]
-                hostname = instance['hostname']
-                host = instance['host']
+                instance = instances_by_id.get(fixed_ip['instance_id'])
+                if instance:
+                    hostname = instance['hostname']
+                    host = instance['host']
+                else:
+                    print 'WARNING: fixed ip %s allocated to missing' \
+                    ' instance' % str(fixed_ip['address'])
             print "%-18s\t%-15s\t%-15s\t%s" % (
                     network['cidr'],
                     fixed_ip['address'],
