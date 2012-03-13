@@ -1160,7 +1160,8 @@ class CloudController(object):
                 # always filter out deleted instances
                 search_opts['deleted'] = False
                 instances = self.compute_api.get_all(context,
-                                                     search_opts=search_opts)
+                                                     search_opts=search_opts,
+                                                     sort_dir='asc')
             except exception.NotFound:
                 instances = []
         for instance in instances:

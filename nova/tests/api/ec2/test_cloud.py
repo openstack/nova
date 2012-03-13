@@ -19,6 +19,7 @@
 
 import base64
 import copy
+import datetime
 import functools
 import os
 import string
@@ -709,6 +710,62 @@ class CloudTestCase(test.TestCase):
                 'fe80:b33f::a8bb:ccff:fedd:eeff')
         db.instance_destroy(self.context, inst1['id'])
         db.instance_destroy(self.context, inst2['id'])
+        db.service_destroy(self.context, comp1['id'])
+        db.service_destroy(self.context, comp2['id'])
+
+    def test_describe_instances_sorting(self):
+        """Makes sure describe_instances works and is sorted as expected."""
+        self.flags(use_ipv6=True)
+
+        self._stub_instance_get_with_fixed_ips('get_all')
+        self._stub_instance_get_with_fixed_ips('get')
+
+        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
+        inst_base = {
+                'reservation_id': 'a',
+                'image_ref': image_uuid,
+                'instance_type_id': 1,
+                'vm_state': 'active'
+        }
+
+        inst1_kwargs = {}
+        inst1_kwargs.update(inst_base)
+        inst1_kwargs['host'] = 'host1'
+        inst1_kwargs['hostname'] = 'server-1111'
+        inst1_kwargs['created_at'] = datetime.datetime(2012, 5, 1, 1, 1, 1)
+        inst1 = db.instance_create(self.context, inst1_kwargs)
+
+        inst2_kwargs = {}
+        inst2_kwargs.update(inst_base)
+        inst2_kwargs['host'] = 'host2'
+        inst2_kwargs['hostname'] = 'server-2222'
+        inst2_kwargs['created_at'] = datetime.datetime(2012, 2, 1, 1, 1, 1)
+        inst2 = db.instance_create(self.context, inst2_kwargs)
+
+        inst3_kwargs = {}
+        inst3_kwargs.update(inst_base)
+        inst3_kwargs['host'] = 'host3'
+        inst3_kwargs['hostname'] = 'server-3333'
+        inst3_kwargs['created_at'] = datetime.datetime(2012, 2, 5, 1, 1, 1)
+        inst3 = db.instance_create(self.context, inst3_kwargs)
+
+        comp1 = db.service_create(self.context, {'host': 'host1',
+                                                 'availability_zone': 'zone1',
+                                                 'topic': "compute"})
+
+        comp2 = db.service_create(self.context, {'host': 'host2',
+                                                 'availability_zone': 'zone2',
+                                                 'topic': "compute"})
+
+        result = self.cloud.describe_instances(self.context)
+        result = result['reservationSet'][0]['instancesSet']
+        self.assertEqual(result[0]['launchTime'], inst2_kwargs['created_at'])
+        self.assertEqual(result[1]['launchTime'], inst3_kwargs['created_at'])
+        self.assertEqual(result[2]['launchTime'], inst1_kwargs['created_at'])
+
+        db.instance_destroy(self.context, inst1['id'])
+        db.instance_destroy(self.context, inst2['id'])
+        db.instance_destroy(self.context, inst3['id'])
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
 
