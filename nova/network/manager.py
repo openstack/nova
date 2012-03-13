@@ -36,8 +36,6 @@ topologies.  All of the network commands are issued to a subclass of
 :network_size:  Number of addresses in each private subnet
 :floating_range:  Floating IP address block
 :fixed_range:  Fixed IP address block
-:date_dhcp_on_disassociate:  Whether to update dhcp when fixed_ip
-                             is disassociated
 :fixed_ip_disassociate_timeout:  Seconds after which a deallocated ip
                                  is disassociated
 :create_unique_mac_address_attempts:  Number of times to attempt creating

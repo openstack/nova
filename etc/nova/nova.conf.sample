@@ -579,8 +579,6 @@
 # network_size=256
 ###### (IntOpt) Number of networks to support
 # num_networks=1
-###### (BoolOpt) Whether to update dhcp when fixed_ip is disassociated
-# update_dhcp_on_disassociate=false
 ###### (StrOpt) vlans will bridge into this interface if set
 # vlan_interface=<None>
 ###### (IntOpt) First VLAN for private networks
