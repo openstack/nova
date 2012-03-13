@@ -46,6 +46,7 @@ import multiprocessing
 import os
 import shutil
 import sys
+import time
 import uuid
 
 from eventlet import greenthread
@@ -1012,22 +1013,26 @@ class LibvirtConnection(driver.ComputeDriver):
                 # For raw it's quicker to just generate outside the cache
                 call_if_not_exists(target, fn, *args, **kwargs)
 
-            if cow:
-                cow_base = base
-                if size:
-                    size_gb = size / (1024 * 1024 * 1024)
-                    cow_base += "_%d" % size_gb
-                    if not os.path.exists(cow_base):
-                        libvirt_utils.copy_image(base, cow_base)
-                        disk.extend(cow_base, size)
-                libvirt_utils.create_cow_image(cow_base, target)
-            elif not generating:
-                libvirt_utils.copy_image(base, target)
-                # Resize after the copy, as it's usually much faster
-                # to make sparse updates, rather than potentially
-                # naively copying the whole image file.
-                if size:
-                    disk.extend(target, size)
+            @utils.synchronized(base)
+            def copy_and_extend(cow, generating, base, target, size):
+                if cow:
+                    cow_base = base
+                    if size:
+                        size_gb = size / (1024 * 1024 * 1024)
+                        cow_base += "_%d" % size_gb
+                        if not os.path.exists(cow_base):
+                            libvirt_utils.copy_image(base, cow_base)
+                            disk.extend(cow_base, size)
+                    libvirt_utils.create_cow_image(cow_base, target)
+                elif not generating:
+                    libvirt_utils.copy_image(base, target)
+                    # Resize after the copy, as it's usually much faster
+                    # to make sparse updates, rather than potentially
+                    # naively copying the whole image file.
+                    if size:
+                        disk.extend(target, size)
+
+            copy_and_extend(cow, generating, base, target, size)
 
     @staticmethod
     def _create_local(target, local_size, unit='G',
