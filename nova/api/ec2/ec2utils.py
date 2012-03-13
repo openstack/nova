@@ -18,6 +18,7 @@
 
 import re
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -44,6 +45,31 @@ def image_type(image_type):
     if image_type not in ['aki', 'ari']:
         return 'ami'
     return image_type
+
+
+def id_to_glance_id(context, image_id):
+    """Convert an internal (db) id to a glance id."""
+    return db.s3_image_get(context, image_id)['uuid']
+
+
+def glance_id_to_id(context, glance_id):
+    """Convert a glance id to an internal (db) id."""
+    if glance_id is None:
+        return
+    try:
+        return db.s3_image_get_by_uuid(context, glance_id)['id']
+    except exception.NotFound:
+        return db.s3_image_create(context, glance_id)['id']
+
+
+def ec2_id_to_glance_id(context, ec2_id):
+    image_id = ec2_id_to_id(ec2_id)
+    return id_to_glance_id(context, image_id)
+
+
+def glance_id_to_ec2_id(context, glance_id, image_type='ami'):
+    image_id = glance_id_to_id(context, glance_id)
+    return image_ec2_id(image_id, image_type=image_type)
 
 
 def ec2_id_to_id(ec2_id):

@@ -967,15 +967,14 @@ class CloudController(object):
         kernel_uuid = instance_ref['kernel_id']
         if kernel_uuid is None or kernel_uuid == '':
             return
-        kernel_id = self._get_image_id(context, kernel_uuid)
-        result[key] = ec2utils.image_ec2_id(kernel_id, 'aki')
+        result[key] = ec2utils.glance_id_to_ec2_id(context, kernel_uuid, 'aki')
 
     def _format_ramdisk_id(self, context, instance_ref, result, key):
         ramdisk_uuid = instance_ref['ramdisk_id']
         if ramdisk_uuid is None or ramdisk_uuid == '':
             return
-        ramdisk_id = self._get_image_id(context, ramdisk_uuid)
-        result[key] = ec2utils.image_ec2_id(ramdisk_id, 'ari')
+        result[key] = ec2utils.glance_id_to_ec2_id(context, ramdisk_uuid,
+                                                   'ari')
 
     def describe_instance_attribute(self, context, instance_id, attribute,
                                     **kwargs):
@@ -1173,8 +1172,7 @@ class CloudController(object):
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
             image_uuid = instance['image_ref']
-            image_id = self._get_image_id(context, image_uuid)
-            i['imageId'] = ec2utils.image_ec2_id(image_id)
+            i['imageId'] = ec2utils.glance_id_to_ec2_id(context, image_uuid)
             self._format_kernel_id(context, instance, i, 'kernelId')
             self._format_ramdisk_id(context, instance, i, 'ramdiskId')
             i['instanceState'] = _state_description(
@@ -1287,16 +1285,17 @@ class CloudController(object):
         max_count = int(kwargs.get('max_count', 1))
         if kwargs.get('kernel_id'):
             kernel = self._get_image(context, kwargs['kernel_id'])
-            kwargs['kernel_id'] = self._get_image_uuid(context, kernel['id'])
+            kwargs['kernel_id'] = ec2utils.id_to_glance_id(context,
+                                                           kernel['id'])
         if kwargs.get('ramdisk_id'):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
-            kwargs['ramdisk_id'] = self._get_image_uuid(context,
-                                                        ramdisk['id'])
+            kwargs['ramdisk_id'] = ec2utils.id_to_glance_id(context,
+                                                            ramdisk['id'])
         for bdm in kwargs.get('block_device_mapping', []):
             _parse_block_device_mapping(bdm)
 
         image = self._get_image(context, kwargs['image_id'])
-        image_uuid = self._get_image_uuid(context, image['id'])
+        image_uuid = ec2utils.id_to_glance_id(context, image['id'])
 
         if image:
             image_state = self._get_image_state(image)
@@ -1382,15 +1381,6 @@ class CloudController(object):
         if ec2utils.image_type(image.get('container_format')) != image_type:
             raise exception.ImageNotFound(image_id=ec2_id)
         return image
-
-    # NOTE(bcwaldon): We need access to the image uuid since we directly
-    # call the compute api from this class
-    def _get_image_uuid(self, context, internal_id):
-        return self.image_service.get_image_uuid(context, internal_id)
-
-    # NOTE(bcwaldon): We also need to be able to map image uuids to integers
-    def _get_image_id(self, context, image_uuid):
-        return self.image_service.get_image_id(context, image_uuid)
 
     def _format_image(self, image):
         """Convert from format defined by GlanceImageService to S3 format."""
