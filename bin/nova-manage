@@ -660,7 +660,7 @@ class FloatingIpCommands(object):
     @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     def delete(self, ip_range):
         """Deletes floating ips by range"""
-        for address in self.network_to_host_list(netaddr.IPNetwork(ip_range)):
+        for address in self.address_to_hosts(ip_range):
             db.floating_ip_destroy(context.get_admin_context(),
                                    str(address))
 
