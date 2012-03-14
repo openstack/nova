@@ -1567,7 +1567,13 @@ def service_is_up(service):
 
 def generate_mac_address():
     """Generate an Ethernet MAC address."""
-    mac = [0xfe, 0x16, 0x3e,
+    # NOTE(vish): We would prefer to use 0xfe here to ensure that linux
+    #             bridge mac addresses don't change, but it appears to
+    #             conflict with libvirt, so we use the next highest octet
+    #             that has the unicast and locally administered bits set
+    #             properly: 0xfa.
+    #             Discussion: https://bugs.launchpad.net/nova/+bug/921838
+    mac = [0xfa, 0x16, 0x3e,
            random.randint(0x00, 0x7f),
            random.randint(0x00, 0xff),
            random.randint(0x00, 0xff)]
