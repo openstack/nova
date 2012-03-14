@@ -112,8 +112,10 @@ def transfer_vhd(session, args):
 
     ssh_cmd = '\"ssh -o StrictHostKeyChecking=no\"'
 
-    rsync_args = shlex.split('nohup /usr/bin/rsync -av -e %s %s %s'
-            % (ssh_cmd, source_path, dest_path))
+    # NOTE(dprince): shlex python 2.4 doesn't like unicode so we
+    # explicitly convert to ascii
+    rsync_args = shlex.split(('nohup /usr/bin/rsync -av -e %s %s %s'
+            % (ssh_cmd, source_path, dest_path)).encode('ascii'))
 
     logging.debug('rsync %s' % (' '.join(rsync_args, )))
 
