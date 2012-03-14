@@ -13,9 +13,8 @@ function usage {
   echo "  -n, --no-recreate-db     Don't recreate the test database."
   echo "  -x, --stop               Stop running tests after the first error or failure."
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
-  echo "  -p, --pep8               Just run pep8"
-  echo "  -P, --no-pep8            Don't run pep8"
-  echo "  -H, --hacking            Just run HACKING compliance testing"
+  echo "  -p, --pep8               Just run PEP8 and HACKING compliance check"
+  echo "  -P, --no-pep8            Don't run static code checks"
   echo "  -c, --coverage           Generate coverage report"
   echo "  -h, --help               Print this usage message"
   echo "  --hide-elapsed           Don't print the elapsed time for each test along with slow test list"
@@ -39,7 +38,6 @@ function process_option {
     -f|--force) force=1;;
     -p|--pep8) just_pep8=1;;
     -P|--no-pep8) no_pep8=1;;
-    -H|--hacking) just_hacking=1;;
     -c|--coverage) coverage=1;;
     -*) noseopts="$noseopts $1";;
     *) noseargs="$noseargs $1"
@@ -58,7 +56,6 @@ noseopts=
 wrapper=""
 just_pep8=0
 no_pep8=0
-just_hacking=0
 coverage=0
 recreate_db=1
 patch_migrate=1
@@ -109,16 +106,10 @@ srcfiles+=" `find ${xen_api_path} ${xen_net_path} -type f ! -name "*.patch" ! -n
 srcfiles+=" setup.py"
 
 function run_pep8 {
-  echo "Running pep8 ..."
+  echo "Running PEP8 and HACKING compliance check..."
   # Just run PEP8 in current environment
   #
-  ${wrapper} pep8 ${srcfiles}
-}
-
-function run_hacking {
-  echo "Running hacking compliance testing..."
-  hacking_opts="--ignore=E202"
-  ${wrapper} python tools/hacking.py ${hacking_opts} ${srcfiles}
+  ${wrapper} python tools/hacking.py ${srcfiles}
 }
 
 
@@ -159,12 +150,6 @@ if [ $just_pep8 -eq 1 ]; then
     run_pep8
     exit
 fi
-
-if [ $just_hacking -eq 1 ]; then
-    run_hacking
-    exit
-fi
-
 
 if [ $recreate_db -eq 1 ]; then
     rm -f tests.sqlite
