@@ -37,7 +37,7 @@ console_manager_opts = [
                 help='Stub calls to compute worker for tests'),
     cfg.StrOpt('console_public_hostname',
                default=socket.gethostname(),
-               help='Publicly visable name for this console host'),
+               help='Publicly visible name for this console host'),
     ]
 
 FLAGS = flags.FLAGS
