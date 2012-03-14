@@ -1015,16 +1015,17 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     host_filter = or_(and_(models.Instance.host == host,
                            models.Network.multi_host == True),
                       models.Network.host == host)
-    fixed_ips = model_query(context, models.FixedIp.id, session=session,
+    fixed_ips = model_query(context, models.FixedIp, session=session,
                        read_deleted="yes").\
                       filter(models.FixedIp.updated_at < time).\
                       filter(models.FixedIp.instance_id != None).\
                       filter(models.FixedIp.allocated == False).\
                       filter(host_filter).\
                       all()
+    fixed_ip_ids = [fip.id for fip in fixed_ips]
     result = model_query(context, models.FixedIp, session=session,
                          read_deleted="yes").\
-                     filter(models.FixedIp.id.in_(fixed_ips)).\
+                     filter(models.FixedIp.id.in_(fixed_ip_ids)).\
                      update({'instance_id': None,
                              'leased': False,
                              'updated_at': utils.utcnow()},
