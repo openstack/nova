@@ -129,8 +129,12 @@ class API(base.Base):
     @wrap_check_policy
     def delete(self, context, volume):
         volume_id = volume['id']
-        if volume['status'] != "available":
-            msg = _("Volume status must be available")
+        if not volume['host']:
+            # NOTE(vish): scheduling failed, so delete it
+            self.db.volume_destroy(context, volume_id)
+            return
+        if volume['status'] not in ["available", "error"]:
+            msg = _("Volume status must be available or error")
             raise exception.InvalidVolume(reason=msg)
         now = utils.utcnow()
         self.db.volume_update(context, volume_id, {'status': 'deleting',
