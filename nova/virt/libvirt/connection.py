@@ -929,6 +929,7 @@ class LibvirtConnection(driver.ComputeDriver):
             path = source_node.get("path")
             if not path:
                 continue
+            libvirt_utils.chown(path, os.getuid())
             return libvirt_utils.load_file(path)
 
         # Try 'pty' types
