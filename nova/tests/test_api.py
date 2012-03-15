@@ -242,14 +242,14 @@ class ApiEc2TestCase(test.TestCase):
                             "%Y-%m-%d %H:%M:%S.%f")
         self.assertEqual(
                         conv(time_to_convert),
-                        '2011-02-21T20:14:10Z')
+                        '2011-02-21T20:14:10.634Z')
         # mysqlite database representation
         time_to_convert = datetime.datetime.strptime(
                             "2011-02-21 19:56:18",
                             "%Y-%m-%d %H:%M:%S")
         self.assertEqual(
                         conv(time_to_convert),
-                        '2011-02-21T19:56:18Z')
+                        '2011-02-21T19:56:18.000Z')
 
     def test_xmlns_version_matches_request_version(self):
         self.expect_http(api_version='2010-10-30')
