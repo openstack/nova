@@ -18,7 +18,7 @@
 
 """The Flavor extra data extension
 
-Openstack API version 1.1 lists "name", "ram", "disk", "vcpus" as flavor
+OpenStack API version 1.1 lists "name", "ram", "disk", "vcpus" as flavor
 attributes.  This extension adds to that list:
 
 - OS-FLV-EXT-DATA:ephemeral

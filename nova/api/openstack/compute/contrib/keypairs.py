@@ -49,7 +49,7 @@ class KeypairsTemplate(xmlutil.TemplateBuilder):
 
 
 class KeypairController(object):
-    """ Keypair API controller for the Openstack API """
+    """ Keypair API controller for the OpenStack API """
 
     # TODO(ja): both this file and nova.api.ec2.cloud.py have similar logic.
     # move the common keypair logic to nova.compute.API?

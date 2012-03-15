@@ -28,7 +28,7 @@ FLAGS = flags.FLAGS
 
 
 class Controller(object):
-    """The image metadata API controller for the Openstack API"""
+    """The image metadata API controller for the OpenStack API"""
 
     def __init__(self):
         self.image_service = image.get_default_image_service()

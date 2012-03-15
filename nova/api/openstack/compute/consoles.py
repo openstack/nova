@@ -80,7 +80,7 @@ class ConsolesTemplate(xmlutil.TemplateBuilder):
 
 
 class Controller(object):
-    """The Consoles controller for the Openstack API"""
+    """The Consoles controller for the OpenStack API"""
 
     def __init__(self):
         self.console_api = console_api.API()

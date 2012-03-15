@@ -439,7 +439,7 @@ class VsaVolumesTemplate(xmlutil.TemplateBuilder):
 
 
 class VsaVolumeController(VsaVolumeDriveController):
-    """The VSA volume API controller for the Openstack API.
+    """The VSA volume API controller for the OpenStack API.
 
     A child resource of the VSA object. Allows operations with volumes created
     by particular VSA
@@ -489,7 +489,7 @@ class VsaDrivesTemplate(xmlutil.TemplateBuilder):
 
 
 class VsaDriveController(VsaVolumeDriveController):
-    """The VSA Drive API controller for the Openstack API.
+    """The VSA Drive API controller for the OpenStack API.
 
     A child resource of the VSA object. Allows operations with drives created
     for particular VSA

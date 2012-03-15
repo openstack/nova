@@ -54,7 +54,7 @@ class VolumeTypesTemplate(xmlutil.TemplateBuilder):
 
 
 class VolumeTypesController(object):
-    """ The volume types API controller for the Openstack API """
+    """ The volume types API controller for the OpenStack API """
 
     @wsgi.serializers(xml=VolumeTypesTemplate)
     def index(self, req):
@@ -144,7 +144,7 @@ class VolumeTypeExtraSpecTemplate(xmlutil.TemplateBuilder):
 
 
 class VolumeTypeExtraSpecsController(object):
-    """ The volume type extra specs API controller for the Openstack API """
+    """ The volume type extra specs API controller for the OpenStack API """
 
     def _get_extra_specs(self, context, vol_type_id):
         extra_specs = db.volume_type_extra_specs_get(context, vol_type_id)

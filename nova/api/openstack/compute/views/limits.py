@@ -21,7 +21,7 @@ from nova import utils
 
 
 class ViewBuilder(object):
-    """Openstack API base limits view builder."""
+    """OpenStack API base limits view builder."""
 
     def build(self, rate_limits, absolute_limits):
         rate_limits = self._build_rate_limits(rate_limits)

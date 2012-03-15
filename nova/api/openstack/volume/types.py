@@ -49,7 +49,7 @@ class VolumeTypesTemplate(xmlutil.TemplateBuilder):
 
 
 class VolumeTypesController(object):
-    """ The volume types API controller for the Openstack API """
+    """ The volume types API controller for the OpenStack API """
 
     @wsgi.serializers(xml=VolumeTypesTemplate)
     def index(self, req):

@@ -24,7 +24,7 @@ from nova import exception
 
 
 class Controller(object):
-    """ The server metadata API controller for the Openstack API """
+    """ The server metadata API controller for the OpenStack API """
 
     def __init__(self):
         self.compute_api = compute.API()

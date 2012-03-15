@@ -35,7 +35,7 @@ class ExtraSpecsTemplate(xmlutil.TemplateBuilder):
 
 
 class FlavorExtraSpecsController(object):
-    """ The flavor extra specs API controller for the Openstack API """
+    """ The flavor extra specs API controller for the OpenStack API """
 
     def _get_extra_specs(self, context, flavor_id):
         extra_specs = db.instance_type_extra_specs_get(context, flavor_id)

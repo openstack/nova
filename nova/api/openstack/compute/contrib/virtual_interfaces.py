@@ -50,7 +50,7 @@ def _translate_vif_summary_view(_context, vif):
 
 
 class ServerVirtualInterfaceController(object):
-    """The instance VIF API controller for the Openstack API.
+    """The instance VIF API controller for the OpenStack API.
     """
 
     def __init__(self):

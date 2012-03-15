@@ -59,7 +59,7 @@ class AddressesTemplate(xmlutil.TemplateBuilder):
 
 
 class Controller(wsgi.Controller):
-    """The servers addresses API controller for the Openstack API."""
+    """The servers addresses API controller for the OpenStack API."""
 
     _view_builder_class = view_addresses.ViewBuilder
 

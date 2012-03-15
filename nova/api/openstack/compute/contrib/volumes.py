@@ -275,7 +275,7 @@ class VolumeAttachmentsTemplate(xmlutil.TemplateBuilder):
 
 
 class VolumeAttachmentController(object):
-    """The volume attachment API controller for the Openstack API.
+    """The volume attachment API controller for the OpenStack API.
 
     A child resource of the server.  Note that we use the volume id
     as the ID of the attachment (though this is not guaranteed externally)
@@ -397,7 +397,7 @@ class VolumeAttachmentController(object):
 
 
 class BootFromVolumeController(servers.Controller):
-    """The boot from volume API controller for the Openstack API."""
+    """The boot from volume API controller for the OpenStack API."""
 
     def _get_block_device_mapping(self, data):
         return data.get('block_device_mapping')
