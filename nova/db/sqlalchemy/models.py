@@ -278,7 +278,7 @@ class Instance(BASE, NovaBase):
     # EC2 disable_api_termination
     disable_terminate = Column(Boolean(), default=False, nullable=False)
 
-    # Openstack compute cell name
+    # OpenStack compute cell name
     cell_name = Column(String(255))
 
 

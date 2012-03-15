@@ -21,7 +21,7 @@ Handles all requests relating to Virtual Storage Arrays (VSAs).
 Experimental code. Requires special VSA image.
 
 For assistance and guidelines pls contact
-Zadara Storage Inc & Openstack community
+Zadara Storage Inc & OpenStack community
 """
 
 from nova import compute
