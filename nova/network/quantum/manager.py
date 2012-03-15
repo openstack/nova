@@ -401,6 +401,16 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         network_ref['quantum_net_id'] = quantum_net_id
         return network_ref
 
+    @manager.wrap_check_policy
+    def get_instance_uuids_by_ip_filter(self, context, filters):
+        # This is not returning the instance IDs like the method name would
+        # make you think, its matching the return format of the method it's
+        # overriding.
+        instance_ids = self.ipam.get_instance_ids_by_ip_address(
+                                    context, filters.get('ip'))
+        instances = [db.instance_get(context, id) for id in instance_ids]
+        return [{'instance_uuid':instance.uuid} for instance in instances]
+
     @utils.synchronized('quantum-enable-dhcp')
     def enable_dhcp(self, context, quantum_net_id, network_ref, vif_rec,
             project_id):

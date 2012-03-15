@@ -204,6 +204,14 @@ class MelangeIpamLibTestCase(test.TestCase):
                                         'tenant_id', 6)
         self.assertEquals(values, ["2001::CAFE"])
 
+    def test_get_instance_ids_by_ip_address(self):
+        ips = [{'used_by_device': 'some_vif_uuid'}]
+        self.m_conn.get_allocated_ips_by_address('ip').AndReturn(ips)
+
+        self.mox.ReplayAll()
+        uuid = self.ipam.get_instance_ids_by_ip_address('context', 'ip')
+        self.assertEqual(uuid, ['some_vif_uuid'])
+
     def test_verify_subnet_exists(self):
         blocks = {'ip_blocks': [{'network_id': 'quantum_net_id'}]}
         self.m_conn.get_blocks('tenant_id').AndReturn(blocks)

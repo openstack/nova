@@ -612,3 +612,36 @@ class QuantumNovaPortSecurityTestCase(QuantumNovaTestCase):
                         project_id=project_id,
                         requested_networks=requested_networks)
         self.assertEqual(nw_info[0]['address'], fake_mac)
+
+
+class QuantumMelangeTestCase(test.TestCase):
+    def setUp(self):
+        super(QuantumMelangeTestCase, self).setUp()
+
+        fc = fake_client.FakeClient(LOG)
+        qc = quantum_connection.QuantumClientConnection(client=fc)
+
+        self.net_man = quantum_manager.QuantumManager(
+            ipam_lib="nova.network.quantum.nova_ipam_lib",
+            q_conn=qc)
+
+    def test_get_instance_uuids_by_ip_filter(self):
+        fake_context = context.RequestContext('user', 'project')
+        address = '1.2.3.4'
+        filters = {'ip': address}
+
+        self.net_man.ipam = self.mox.CreateMockAnything()
+        self.net_man.ipam.get_instance_ids_by_ip_address(fake_context,
+                address).AndReturn(['instance_id'])
+
+        instance = self.mox.CreateMockAnything()
+        instance.uuid = 'instance_uuid'
+
+        self.mox.StubOutWithMock(db, 'instance_get')
+        db.instance_get(fake_context, 'instance_id').AndReturn(instance)
+
+        self.mox.ReplayAll()
+
+        uuids = self.net_man.get_instance_uuids_by_ip_filter(fake_context,
+                                                             filters)
+        self.assertEquals(uuids, [{'instance_uuid':'instance_uuid'}])
