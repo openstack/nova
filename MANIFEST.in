@@ -3,7 +3,7 @@ include LICENSE run_tests.sh
 include README.rst
 include MANIFEST.in pylintrc Authors
 include openstack-common.conf
-include tox.ini
+include babel.cfg tox.ini
 graft nova/CA
 graft doc
 graft smoketests
