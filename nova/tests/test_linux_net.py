@@ -504,7 +504,6 @@ class LinuxNetworkTestCase(test.TestCase):
              'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
-            ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on'),
         ]
         self._test_initialize_gateway(existing, expected)
 
@@ -530,7 +529,6 @@ class LinuxNetworkTestCase(test.TestCase):
             ('route', 'add', 'default', 'gw', '192.68.0.1'),
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
-            ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on'),
         ]
         self._test_initialize_gateway(existing, expected, routes)
 
@@ -546,7 +544,6 @@ class LinuxNetworkTestCase(test.TestCase):
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
-            ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on'),
         ]
         self._test_initialize_gateway(existing, expected)
 
@@ -563,6 +560,5 @@ class LinuxNetworkTestCase(test.TestCase):
              'brd', '192.168.1.255', 'dev', 'eth0'),
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
-            ('ip', 'link', 'set', 'dev', 'eth0', 'promisc', 'on'),
         ]
         self._test_initialize_gateway(existing, expected)
