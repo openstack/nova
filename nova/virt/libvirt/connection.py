@@ -843,8 +843,6 @@ class LibvirtConnection(driver.ComputeDriver):
         for interface in interfaces:
             utils.execute('tee',
                           '/sys/class/net/%s/brport/hairpin_mode' % interface,
-                          '>',
-                          '/dev/null',
                           process_input='1',
                           run_as_root=True,
                           check_exit_code=[0, 1])
