@@ -182,7 +182,6 @@ class ExtensionControllerTest(ExtensionTestCase):
             "ServerStartStop",
             "SimpleTenantUsage",
             "Users",
-            "VSAs",
             "VirtualInterfaces",
             "Volumes",
             "VolumeTypes",

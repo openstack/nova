@@ -136,35 +136,14 @@ class VolumeManager(manager.SchedulerDependentManager):
             with utils.save_and_reraise_exception():
                 self.db.volume_update(context,
                                       volume_ref['id'], {'status': 'error'})
-                self._notify_vsa(context, volume_ref, 'error')
 
         now = utils.utcnow()
         self.db.volume_update(context,
                               volume_ref['id'], {'status': 'available',
                                                  'launched_at': now})
         LOG.debug(_("volume %s: created successfully"), volume_ref['name'])
-        self._notify_vsa(context, volume_ref, 'available')
         self._reset_stats()
         return volume_id
-
-    def _notify_vsa(self, context, volume_ref, status):
-        if volume_ref['volume_type_id'] is None:
-            return
-
-        if volume_types.is_vsa_drive(volume_ref['volume_type_id']):
-            vsa_id = None
-            for i in volume_ref.get('volume_metadata'):
-                if i['key'] == 'to_vsa_id':
-                    vsa_id = int(i['value'])
-                    break
-
-            if vsa_id:
-                rpc.cast(context,
-                         FLAGS.vsa_topic,
-                         {"method": "vsa_volume_created",
-                          "args": {"vol_id": volume_ref['id'],
-                                   "vsa_id": vsa_id,
-                                   "status": status}})
 
     def delete_volume(self, context, volume_id):
         """Deletes and unexports volume."""

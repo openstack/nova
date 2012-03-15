@@ -42,7 +42,4 @@ filterlist = [
     # nova/volume/driver.py: 'iscsiadm', '-m', 'discovery', '-t',...
     # nova/volume/driver.py: 'iscsiadm', '-m', 'node', '-T', ...
     filters.CommandFilter("/sbin/iscsiadm", "root"),
-
-    # nova/volume/driver.py:'/var/lib/zadara/bin/zadara_sncfg', *
-    # sudoers does not allow zadara_sncfg yet
     ]

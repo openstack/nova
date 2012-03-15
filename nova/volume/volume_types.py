@@ -123,24 +123,3 @@ def is_key_value_present(volume_type_id, key, value, volume_type=None):
         return False
     else:
         return True
-
-
-def is_vsa_drive(volume_type_id, volume_type=None):
-    return is_key_value_present(volume_type_id,
-                'type', 'vsa_drive', volume_type)
-
-
-def is_vsa_volume(volume_type_id, volume_type=None):
-    return is_key_value_present(volume_type_id,
-                'type', 'vsa_volume', volume_type)
-
-
-def is_vsa_object(volume_type_id):
-    if volume_type_id is None:
-        return False
-
-    volume_type = get_volume_type(context.get_admin_context(),
-                                  volume_type_id)
-
-    return (is_vsa_drive(volume_type_id, volume_type) or
-            is_vsa_volume(volume_type_id, volume_type))

@@ -645,14 +645,7 @@ def stub_volume_delete(self, context, *args, **param):
 
 
 def stub_volume_get(self, context, volume_id):
-    vol = stub_volume(volume_id)
-    if volume_id == '234':
-        meta = {'key': 'from_vsa_id', 'value': '123'}
-        vol['volume_metadata'].append(meta)
-    if volume_id == '345':
-        meta = {'key': 'to_vsa_id', 'value': '123'}
-        vol['volume_metadata'].append(meta)
-    return vol
+    return stub_volume(volume_id)
 
 
 def stub_volume_get_notfound(self, context, volume_id):
