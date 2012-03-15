@@ -244,7 +244,7 @@ class ProxyCallback(object):
         """Thread that magically looks for a method on the proxy
         object and calls it.
         """
-
+        ctxt.update_store()
         try:
             node_func = getattr(self.proxy, str(method))
             node_args = dict((str(k), v) for k, v in args.iteritems())

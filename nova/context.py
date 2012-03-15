@@ -81,7 +81,10 @@ class RequestContext(object):
         self.request_id = request_id
         self.auth_token = auth_token
         if overwrite or not hasattr(local.store, 'context'):
-            local.store.context = self
+            self.update_store()
+
+    def update_store(self):
+        local.store.context = self
 
     def to_dict(self):
         return {'user_id': self.user_id,
