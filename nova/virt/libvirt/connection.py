@@ -406,8 +406,16 @@ class LibvirtConnection(driver.ComputeDriver):
         timer = utils.LoopingCall(_wait_for_destroy)
         timer.start(interval=0.5, now=True)
 
-        self.firewall_driver.unfilter_instance(instance,
-                                               network_info=network_info)
+        try:
+            self.firewall_driver.unfilter_instance(instance,
+                                                   network_info=network_info)
+        except libvirt.libvirtError as e:
+            errcode = e.get_error_code()
+            LOG.warning(_("Error from libvirt during unfilter. "
+                          "Code=%(errcode)s Error=%(e)s") %
+                        locals(), instance=instance)
+            reason = "Error unfiltering instance."
+            raise exception.InstanceTerminationFailure(reason=reason)
 
         # NOTE(vish): we disconnect from volumes regardless
         block_device_mapping = driver.block_device_info_get_mapping(

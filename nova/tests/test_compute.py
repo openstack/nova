@@ -932,26 +932,21 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance['uuid'])
 
-    def test_instance_set_to_error_on_deleted_instance_doesnt_raise(self):
-        """Test that we don't raise InstanceNotFound when trying to set
-        an instance to ERROR that has already been deleted from under us.
-        The original exception should be re-raised.
+    def test_instance_termination_exception_sets_error(self):
+        """Test that we handle InstanceTerminationFailure
+        which is propagated up from the underlying driver.
         """
         instance = self._create_fake_instance()
-        instance_uuid = instance['uuid']
 
-        def fake_allocate_network(context, instance, requested_networks):
-            # Remove the instance to simulate race condition
-            self.compute.terminate_instance(self.context, instance['uuid'])
-            raise rpc_common.RemoteError()
+        def fake_delete_instance(context, instance):
+            raise exception.InstanceTerminationFailure(reason='')
 
-        self.stubs.Set(self.compute, '_allocate_network',
-                       fake_allocate_network)
+        self.stubs.Set(self.compute, '_delete_instance',
+                       fake_delete_instance)
 
-        self.assertRaises(rpc_common.RemoteError,
-                          self.compute.run_instance,
-                          self.context,
-                          instance_uuid)
+        self.compute.terminate_instance(self.context, instance['uuid'])
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
     def test_network_is_deallocated_on_spawn_failure(self):
         """When a spawn fails the network must be deallocated"""

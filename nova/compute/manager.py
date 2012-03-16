@@ -645,18 +645,24 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def run_instance(self, context, instance_uuid, **kwargs):
-        self._run_instance(context, instance_uuid, **kwargs)
+        @utils.synchronized(instance_uuid)
+        def do_run_instance():
+            self._run_instance(context, instance_uuid, **kwargs)
+        do_run_instance()
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
     def start_instance(self, context, instance_uuid):
-        """Starting an instance on this host."""
-        # TODO(yamahata): injected_files isn't supported.
-        #                 Anyway OSAPI doesn't support stop/start yet
-        # FIXME(vish): I've kept the files during stop instance, but
-        #              I think start will fail due to the files still
-        self._run_instance(context, instance_uuid)
+        @utils.synchronized(instance_uuid)
+        def do_start_instance():
+            """Starting an instance on this host."""
+            # TODO(yamahata): injected_files isn't supported.
+            #                 Anyway OSAPI doesn't support stop/start yet
+            # FIXME(vish): I've kept the files during stop instance, but
+            #              I think start will fail due to the files still
+            self._run_instance(context, instance_uuid)
+        do_start_instance()
 
     def _shutdown_instance(self, context, instance, action_str):
         """Shutdown an instance on this host."""
@@ -725,25 +731,35 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_instance_fault
     def terminate_instance(self, context, instance_uuid):
         """Terminate an instance on this host."""
-        elevated = context.elevated()
-        instance = self.db.instance_get_by_uuid(elevated, instance_uuid)
-        compute_utils.notify_usage_exists(instance, current_period=True)
-        try:
-            self._delete_instance(context, instance)
-        except exception.InstanceNotFound as e:
-            LOG.warn(e)
+        @utils.synchronized(instance_uuid)
+        def do_terminate_instance():
+            elevated = context.elevated()
+            instance = self.db.instance_get_by_uuid(elevated, instance_uuid)
+            compute_utils.notify_usage_exists(instance, current_period=True)
+            try:
+                self._delete_instance(context, instance)
+            except exception.InstanceTerminationFailure as error:
+                msg = _('%s. Setting instance vm_state to ERROR')
+                LOG.error(msg % error)
+                self._set_instance_error_state(context, instance_uuid)
+            except exception.InstanceNotFound as e:
+                LOG.warn(e)
+        do_terminate_instance()
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
     def stop_instance(self, context, instance_uuid):
         """Stopping an instance on this host."""
-        instance = self.db.instance_get_by_uuid(context, instance_uuid)
-        self._shutdown_instance(context, instance, 'Stopping')
-        self._instance_update(context,
-                              instance_uuid,
-                              vm_state=vm_states.STOPPED,
-                              task_state=None)
+        @utils.synchronized(instance_uuid)
+        def do_stop_instance():
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+            self._shutdown_instance(context, instance, 'Stopping')
+            self._instance_update(context,
+                                  instance_uuid,
+                                  vm_state=vm_states.STOPPED,
+                                  task_state=None)
+        do_stop_instance()
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
