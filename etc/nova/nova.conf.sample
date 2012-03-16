@@ -55,7 +55,7 @@
 # default_instance_type="m1.small"
 ###### (StrOpt) the default project to use for openstack
 # default_project="openstack"
-###### (StrOpt) availability zone to use when user doesnt specify one
+###### (StrOpt) availability zone to use when user doesn't specify one
 # default_schedule_zone=<None>
 ###### (StrOpt) the internal ip of the ec2 api server
 # ec2_dmz_host="$my_ip"
@@ -88,14 +88,14 @@
 ###### (IntOpt) default glance port
 # glance_port=9292
 ###### (StrOpt) Name of this node.  This can be an opaque identifier.  It is not necessarily a hostname, FQDN, or IP address.
-# host="sorcha"
+# host="nova"
 ###### (StrOpt) The service to use for retrieving and searching images.
 # image_service="nova.image.glance.GlanceImageService"
 ###### (StrOpt) full class name for the DNS Zone for instance IPs
 # instance_dns_domain=""
 ###### (StrOpt) full class name for the DNS Manager for instance IPs
 # instance_dns_manager="nova.network.dns_driver.DNSDriver"
-###### (StrOpt) time period to generate instance usages for.
+###### (StrOpt) time period to generate instance usages for.  Time period must be hour, day, month or year
 # instance_usage_audit_period="month"
 ###### (ListOpt) Host reserved for specific images
 # isolated_hosts=""
@@ -130,7 +130,7 @@
 ###### (ListOpt) List of modules/decorators to monkey patch
 # monkey_patch_modules="nova.api.ec2.cloud:nova.notifier.api.notify_decorator,nova.compute.api:nova.notifier.api.notify_decorator"
 ###### (StrOpt) ip address of this host
-# my_ip="192.168.6.99"
+# my_ip="10.0.0.1"
 ###### (StrOpt) The full class name of the network API class to use
 # network_api_class="nova.network.api.API"
 ###### (StrOpt) Driver to use for network creation
@@ -149,7 +149,7 @@
 # osapi_compute_ext_list=""
 ###### (MultiStrOpt) osapi compute extension to load
 # osapi_compute_extension="nova.api.openstack.compute.contrib.standard_extensions"
-###### (StrOpt) Base URL that will be presented to users in links to the Openstack Compute API
+###### (StrOpt) Base URL that will be presented to users in links to the OpenStack Compute API
 # osapi_compute_link_prefix=<None>
 ###### (StrOpt) Base URL that will be presented to users in links to glance resources
 # osapi_glance_link_prefix=<None>
@@ -213,8 +213,6 @@
 # sql_connection="sqlite:///$state_path/$sqlite_db"
 ###### (IntOpt) timeout before idle sql connections are reaped
 # sql_idle_timeout=3600
-###### (IntOpt) maximum number of retries for connecting to the sql database
-# sql_max_retries=12
 ###### (IntOpt) interval between retries of opening a sql connection
 # sql_retry_interval=10
 ###### (StrOpt) the filename to use with sqlite
@@ -514,23 +512,7 @@
 ###### (StrOpt) password for ldap DNS
 # ldap_dns_password="password"
 ###### (MultiStrOpt) DNS Servers for ldap dns driver
-# ldap_dns_servers="["
-# ldap_dns_servers="d"
-# ldap_dns_servers="n"
-# ldap_dns_servers="s"
-# ldap_dns_servers="."
-# ldap_dns_servers="e"
-# ldap_dns_servers="x"
-# ldap_dns_servers="a"
-# ldap_dns_servers="m"
-# ldap_dns_servers="p"
-# ldap_dns_servers="l"
-# ldap_dns_servers="e"
-# ldap_dns_servers="."
-# ldap_dns_servers="o"
-# ldap_dns_servers="r"
-# ldap_dns_servers="g"
-# ldap_dns_servers="]"
+# ldap_dns_servers="dns.example.org"
 ###### (StrOpt) Expiry interval (in seconds) for ldap dns driver Statement of Authority
 # ldap_dns_soa_expiry="86400"
 ###### (StrOpt) Hostmaster for ldap dns driver Statement of Authority
@@ -603,7 +585,7 @@
 ###### (BoolOpt) Default value for multi_host in networks
 # multi_host=false
 ###### (StrOpt) Network host to use for ip allocation in flat modes
-# network_host="sorcha"
+# network_host="nova"
 ###### (IntOpt) Number of addresses in each private subnet
 # network_size=256
 ###### (IntOpt) Number of networks to support
@@ -647,7 +629,7 @@
 ###### (StrOpt) Driver to use for controlling virtualization
 # compute_driver="nova.virt.connection.get_connection"
 ###### (StrOpt) Console proxy host to use to connect to instances on this host.
-# console_host="sorcha"
+# console_host="nova"
 ###### (StrOpt) Default notification level for outgoing notifications
 # default_notification_level="INFO"
 ###### (StrOpt) Default publisher_id for outgoing notifications
@@ -700,8 +682,6 @@
 # injected_network_template="$pybasedir/nova/virt/interfaces.template"
 ###### (IntOpt) maximum number of possible nbd devices
 # max_nbd_devices=16
-###### (StrOpt) binary to use for qemu-img commands
-# qemu_img="qemu-img"
 ###### (IntOpt) time to wait for a NBD device coming up
 # timeout_nbd=10
 ###### (MultiStrOpt) mkfs commands for ephemeral device. The format is <os_type>=<mkfs command>
@@ -726,7 +706,7 @@
 # libvirt_disk_prefix=<None>
 ###### (BoolOpt) Inject the admin password at boot time, without an agent.
 # libvirt_inject_password=false
-###### (BoolOpt) Use a separated OS thread pool to realize non-blocking libvirt calls. Disabled by default.
+###### (BoolOpt) Use a separated OS thread pool to realize non-blocking libvirt calls
 # libvirt_nonblocking=false
 ###### (StrOpt) Libvirt domain type (valid options are: kvm, lxc, qemu, uml, xen)
 # libvirt_type="kvm"
@@ -846,8 +826,6 @@
 # xenapi_connection_url=<None>
 ###### (StrOpt) Username for connection to XenServer/Xen Cloud Platform. Used only if connection_type=xenapi.
 # xenapi_connection_username="root"
-###### (BoolOpt) Log all instance calls to XenAPI in the database.
-# xenapi_log_instance_actions=false
 ###### (IntOpt) Timeout in seconds for XenAPI login.
 # xenapi_login_timeout=10
 ###### (BoolOpt) Used to enable the remapping of VBD dev (Works around an issue in Ubuntu Maverick)
@@ -856,8 +834,6 @@
 # xenapi_remap_vbd_dev_prefix="sd"
 ###### (StrOpt) Base path to the storage repository
 # xenapi_sr_base_path="/var/run/sr-mount"
-###### (FloatOpt) The interval used for polling of remote tasks (Async.VM.start, etc). Used only if connection_type=xenapi.
-# xenapi_task_poll_interval=0.5
 ###### (IntOpt) Max number of times to poll for VHD to coalesce. Used only if connection_type=xenapi.
 # xenapi_vhd_coalesce_max_attempts=5
 ###### (FloatOpt) The interval used for polling of coalescing vhds. Used only if connection_type=xenapi.
@@ -867,8 +843,8 @@
 
 ###### (StrOpt) Driver to use for the console proxy
 # console_driver="nova.console.xvp.XVPConsoleProxy"
-###### (StrOpt) Publicly visable name for this console host
-# console_public_hostname="sorcha"
+###### (StrOpt) Publicly visible name for this console host
+# console_public_hostname="nova"
 ###### (BoolOpt) Stub calls to compute worker for tests
 # stub_compute=false
 
@@ -905,8 +881,12 @@
 # image_decryption_dir="/tmp"
 ###### (StrOpt) access key to use for s3 server for images
 # s3_access_key="notchecked"
+###### (BoolOpt) whether to affix the tenant id to the access key when downloading from s3
+# s3_affix_tenant=false
 ###### (StrOpt) secret key to use for s3 server for images
 # s3_secret_key="notchecked"
+###### (BoolOpt) whether to use ssl when talking to s3
+# s3_use_ssl=false
 
 ######### defined in nova.cloudpipe.pipelib #########
 
@@ -944,6 +924,37 @@
 # kombu_ssl_keyfile=""
 ###### (StrOpt) SSL version to use (valid only if SSL enabled)
 # kombu_ssl_version=""
+
+######### defined in nova.rpc.impl_qpid #########
+
+###### (IntOpt) Seconds between connection keepalive heartbeats
+# qpid_heartbeat=5
+###### (StrOpt) Qpid broker hostname
+# qpid_hostname="localhost"
+###### (StrOpt) Password for qpid connection
+# qpid_password=""
+###### (StrOpt) Qpid broker port
+# qpid_port="5672"
+###### (StrOpt) Transport to use, either 'tcp' or 'ssl'
+# qpid_protocol="tcp"
+###### (BoolOpt) Automatically reconnect
+# qpid_reconnect=true
+###### (IntOpt) Equivalent to setting max and min to the same value
+# qpid_reconnect_interval=0
+###### (IntOpt) Maximum seconds between reconnection attempts
+# qpid_reconnect_interval_max=0
+###### (IntOpt) Minimum seconds between reconnection attempts
+# qpid_reconnect_interval_min=0
+###### (IntOpt) Max reconnections before giving up
+# qpid_reconnect_limit=0
+###### (IntOpt) Reconnection timeout in seconds
+# qpid_reconnect_timeout=0
+###### (StrOpt) Space separated list of SASL mechanisms to use for auth
+# qpid_sasl_mechanisms=""
+###### (BoolOpt) Disable Nagle algorithm
+# qpid_tcp_nodelay=true
+###### (StrOpt) Username for qpid connection
+# qpid_username=""
 
 ######### defined in nova.scheduler.driver #########
 
@@ -1092,4 +1103,4 @@
 ###### (StrOpt) The ZFS path under which to create zvols for volumes.
 # san_zfs_volume_base="rpool/"
 
-# Total option count: 468
+# Total option count: 465
