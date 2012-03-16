@@ -673,13 +673,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         # tear down allocated network structure
         self._deallocate_network(context, instance)
 
-        current_power_state = self._get_power_state(context, instance)
-
-        if current_power_state == power_state.SHUTOFF:
-            self.db.instance_destroy(context, instance_id)
-            _msg = _('trying to destroy already destroyed instance: %s')
-            raise exception.Invalid(_msg % instance_uuid)
-
         # NOTE(vish) get bdms before destroying the instance
         bdms = self._get_instance_volume_bdms(context, instance_id)
         block_device_info = self._get_instance_volume_block_device_info(
