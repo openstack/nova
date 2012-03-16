@@ -48,6 +48,8 @@ from nova.objectstore import s3server
 from nova.vnc import xvp_proxy
 
 
+LOG = logging.getLogger('nova.all')
+
 if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
@@ -65,13 +67,13 @@ if __name__ == '__main__':
         try:
             servers.append(mod.get_wsgi_server())
         except (Exception, SystemExit):
-            logging.exception(_('Failed to load %s') % mod.__name__)
+            LOG.exception(_('Failed to load %s') % mod.__name__)
 
     for binary in ['nova-compute', 'nova-volume',
                    'nova-network', 'nova-scheduler', 'nova-vsa', 'nova-cert']:
         try:
             servers.append(service.Service.create(binary=binary))
         except (Exception, SystemExit):
-            logging.exception(_('Failed to load %s' % binary))
+            LOG.exception(_('Failed to load %s' % binary))
     service.serve(*servers)
     service.wait()
