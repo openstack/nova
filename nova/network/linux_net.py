@@ -562,12 +562,6 @@ def initialize_gateway_device(dev, network_ref):
         _execute('ip', '-f', 'inet6', 'addr',
                      'change', network_ref['cidr_v6'],
                      'dev', dev, run_as_root=True)
-    # NOTE(vish): If the public interface is the same as the
-    #             bridge, then the bridge has to be in promiscuous
-    #             to forward packets properly.
-    if(FLAGS.public_interface == dev):
-        _execute('ip', 'link', 'set',
-                     'dev', dev, 'promisc', 'on', run_as_root=True)
 
 
 def get_dhcp_leases(context, network_ref):
