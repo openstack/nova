@@ -36,12 +36,14 @@ import socket
 import struct
 import sys
 import tempfile
+import threading
 import time
 import types
 import uuid
 import warnings
 from xml.sax import saxutils
 
+from eventlet import corolocal
 from eventlet import event
 from eventlet import greenthread
 from eventlet import semaphore
@@ -838,6 +840,33 @@ else:
     anyjson.force_implementation("nova.utils")
 
 
+class GreenLockFile(lockfile.FileLock):
+    """Implementation of lockfile that allows for a lock per greenthread.
+
+    Simply implements lockfile:LockBase init with an addiontall suffix
+    on the unique name of the greenthread identifier
+    """
+    def __init__(self, path, threaded=True):
+        self.path = path
+        self.lock_file = os.path.abspath(path) + ".lock"
+        self.hostname = socket.gethostname()
+        self.pid = os.getpid()
+        if threaded:
+            t = threading.current_thread()
+            # Thread objects in Python 2.4 and earlier do not have ident
+            # attrs.  Worm around that.
+            ident = getattr(t, "ident", hash(t))
+            gident = corolocal.get_ident()
+            self.tname = "-%x-%x" % (ident & 0xffffffff, gident & 0xffffffff)
+        else:
+            self.tname = ""
+        dirname = os.path.dirname(self.lock_file)
+        self.unique_name = os.path.join(dirname,
+                                        "%s%s.%s" % (self.hostname,
+                                                     self.tname,
+                                                     self.pid))
+
+
 _semaphores = {}
 
 
@@ -869,6 +898,19 @@ def synchronized(name, external=False):
     a method decorated with @synchronized('mylock', external=True), only one
     of them will execute at a time.
 
+    Important limitation: you can only have one external lock running per
+    thread at a time. For example the following will fail:
+
+        @utils.synchronized('testlock1', external=True)
+        def outer_lock():
+
+            @utils.synchronized('testlock2', external=True)
+            def inner_lock():
+                pass
+            inner_lock()
+
+        outer_lock()
+
     """
 
     def wrap(f):
@@ -893,7 +935,7 @@ def synchronized(name, external=False):
                               {'lock': name, 'method': f.__name__})
                     lock_file_path = os.path.join(FLAGS.lock_path,
                                                   'nova-%s' % name)
-                    lock = lockfile.FileLock(lock_file_path)
+                    lock = GreenLockFile(lock_file_path)
                     with lock:
                         LOG.debug(_('Got file lock "%(lock)s" for '
                                     'method "%(method)s"...') %

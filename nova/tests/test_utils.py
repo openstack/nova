@@ -24,7 +24,10 @@ import shutil
 import StringIO
 import tempfile
 
+import eventlet
+from eventlet import greenpool
 import iso8601
+import lockfile
 import mox
 
 import nova
@@ -830,6 +833,42 @@ class Iso8601TimeTest(test.TestCase):
         west = utils.parse_isotime(str)
         normed = utils.normalize_time(west)
         self._instaneous(normed, 2012, 2, 13, 23, 53, 07, 0)
+
+
+class TestGreenLocks(test.TestCase):
+    def test_concurrent_green_lock_succeeds(self):
+        """Verify spawn_n greenthreads with two locks run concurrently.
+
+        This succeeds with spawn but fails with spawn_n because lockfile
+        gets the same thread id for both spawn_n threads. Our workaround
+        of using the GreenLockFile will work even if the issue is fixed.
+        """
+        self.completed = False
+        with utils.tempdir() as tmpdir:
+
+            def locka(wait):
+                a = utils.GreenLockFile(os.path.join(tmpdir, 'a'))
+                a.acquire()
+                wait.wait()
+                a.release()
+                self.completed = True
+
+            def lockb(wait):
+                b = utils.GreenLockFile(os.path.join(tmpdir, 'b'))
+                b.acquire()
+                wait.wait()
+                b.release()
+
+            wait1 = eventlet.event.Event()
+            wait2 = eventlet.event.Event()
+            pool = greenpool.GreenPool()
+            pool.spawn_n(locka, wait1)
+            pool.spawn_n(lockb, wait2)
+            wait2.send()
+            eventlet.sleep(0)
+            wait1.send()
+            pool.waitall()
+        self.assertTrue(self.completed)
 
 
 class TestLockCleanup(test.TestCase):
