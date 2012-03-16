@@ -21,6 +21,7 @@
 
 import inspect
 import os
+import signal
 
 import eventlet
 import greenlet
@@ -126,6 +127,15 @@ class Launcher(object):
         :returns: None
 
         """
+        def sigterm(sig, frame):
+            LOG.audit(_("SIGTERM received"))
+            # NOTE(jk0): Raise a ^C which is caught by the caller and cleanly
+            # shuts down the service. This does not yet handle eventlet
+            # threads.
+            raise KeyboardInterrupt
+
+        signal.signal(signal.SIGTERM, sigterm)
+
         for service in self._services:
             try:
                 service.wait()
