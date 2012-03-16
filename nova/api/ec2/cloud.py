@@ -463,7 +463,7 @@ class CloudController(object):
                 else:
                     for protocol, min_port, max_port in (('icmp', -1, -1),
                                                          ('tcp', 1, 65535),
-                                                         ('udp', 1, 65536)):
+                                                         ('udp', 1, 65535)):
                         r['ipProtocol'] = protocol
                         r['fromPort'] = min_port
                         r['toPort'] = max_port
@@ -559,15 +559,16 @@ class CloudController(object):
             # Open everything if an explicit port range or type/code are not
             # specified, but only if a source group was specified.
             ip_proto_upper = ip_protocol.upper() if ip_protocol else ''
-            if ip_proto_upper == 'ICMP' and not from_port and not to_port:
+            if (ip_proto_upper == 'ICMP' and
+                from_port is None and to_port is None):
                 from_port = -1
                 to_port = -1
-            elif (ip_proto_upper in ['TCP', 'UDP'] and not from_port
-                  and not to_port):
+            elif (ip_proto_upper in ['TCP', 'UDP'] and from_port is None
+                  and to_port is None):
                 from_port = 1
                 to_port = 65535
 
-        if ip_protocol and from_port and to_port:
+        if ip_protocol and from_port is not None and to_port is not None:
 
             ip_protocol = str(ip_protocol)
             try:
@@ -587,7 +588,8 @@ class CloudController(object):
 
             # Verify that from_port must always be less than
             # or equal to to_port
-            if from_port > to_port:
+            if (ip_protocol.upper() in ['TCP', 'UDP'] and
+                (from_port > to_port)):
                 raise exception.InvalidPortRange(from_port=from_port,
                       to_port=to_port, msg="Former value cannot"
                                             " be greater than the later")
@@ -601,7 +603,8 @@ class CloudController(object):
 
             # Verify ICMP type and code
             if (ip_protocol.upper() == "ICMP" and
-                (from_port < -1 or to_port > 255)):
+                (from_port < -1 or from_port > 255 or
+                to_port < -1 or to_port > 255)):
                 raise exception.InvalidPortRange(from_port=from_port,
                       to_port=to_port, msg="For ICMP, the"
                                            " type:code must be valid")
