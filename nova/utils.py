@@ -21,6 +21,7 @@
 
 import contextlib
 import datetime
+import errno
 import functools
 import hashlib
 import inspect
@@ -1014,8 +1015,8 @@ def cleanup_file_locks():
             continue
         try:
             stat_info = os.stat(os.path.join(FLAGS.lock_path, filename))
-        except OSError as (errno, strerror):
-            if errno == 2:  # doesn't exist
+        except OSError as e:
+            if e.errno == errno.ENOENT:
                 continue
             else:
                 raise
@@ -1034,8 +1035,8 @@ def delete_if_exists(pathname):
 
     try:
         os.unlink(pathname)
-    except OSError as (errno, strerror):
-        if errno == 2:  # doesn't exist
+    except OSError as e:
+        if e.errno == errno.ENOENT:
             return
         else:
             raise
@@ -1343,6 +1344,18 @@ def logging_error(message):
     except Exception as error:
         with save_and_reraise_exception():
             LOG.exception(message)
+
+
+@contextlib.contextmanager
+def remove_path_on_error(path):
+    """Protect code that wants to operate on PATH atomically.
+    Any exception will cause PATH to be removed.
+    """
+    try:
+        yield
+    except Exception:
+        with save_and_reraise_exception():
+            delete_if_exists(path)
 
 
 def make_dev_path(dev, partition=None, base='/dev'):
