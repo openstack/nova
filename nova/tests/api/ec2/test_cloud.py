@@ -382,7 +382,7 @@ class CloudTestCase(test.TestCase):
                                        'userId': u'someuser'}],
                            'ipProtocol': 'udp',
                            'ipRanges': [],
-                           'toPort': 65536},
+                           'toPort': 65535},
                           {'fromPort': 80,
                            'groups': [{'groupName': u'othergroup2',
                                        'userId': u'someuser'}],
