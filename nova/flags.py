@@ -272,7 +272,7 @@ global_opts = [
     cfg.StrOpt('osapi_compute_link_prefix',
                default=None,
                help='Base URL that will be presented to users in links '
-                    'to the Openstack Compute API'),
+                    'to the OpenStack Compute API'),
     cfg.StrOpt('osapi_glance_link_prefix',
                default=None,
                help='Base URL that will be presented to users in links '

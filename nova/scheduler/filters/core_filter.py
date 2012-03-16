@@ -1,4 +1,4 @@
-# Copyright (c) 2011 Openstack, LLC.
+# Copyright (c) 2011 OpenStack, LLC.
 # Copyright (c) 2012 Justin Santa Barbara
 #
 # All Rights Reserved.
