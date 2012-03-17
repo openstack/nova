@@ -50,6 +50,8 @@ import time
 import uuid
 
 from eventlet import greenthread
+from eventlet import tpool
+
 from xml.dom import minidom
 from xml.etree import ElementTree
 
@@ -154,6 +156,10 @@ libvirt_opts = [
                help='Number of seconds to wait for instance to shut down after'
                     ' soft reboot request is made. We fall back to hard reboot'
                     ' if instance does not shutdown within this window.'),
+    cfg.BoolOpt('libvirt_nonblocking',
+                default=False,
+                help='Use a separated OS thread pool to realize non-blocking'
+                     ' libvirt calls')
     ]
 
 FLAGS = flags.FLAGS
@@ -249,9 +255,16 @@ class LibvirtConnection(driver.ComputeDriver):
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
             LOG.debug(_('Connecting to libvirt: %s'), self.uri)
-            self._wrapped_conn = self._connect(self.uri,
+            if not FLAGS.libvirt_nonblocking:
+                self._wrapped_conn = self._connect(self.uri,
                                                self.read_only)
+            else:
+                self._wrapped_conn = tpool.proxy_call(
+                    (libvirt.virDomain, libvirt.virConnect),
+                    self._connect, self.uri, self.read_only)
+
         return self._wrapped_conn
+
     _conn = property(_get_connection)
 
     def _test_connection(self):

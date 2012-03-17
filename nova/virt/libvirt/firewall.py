@@ -144,7 +144,13 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         if callable(xml):
             xml = xml()
         # execute in a native thread and block current greenthread until done
-        tpool.execute(self._conn.nwfilterDefineXML, xml)
+        if not FLAGS.libvirt_nonblocking:
+            # NOTE(maoy): the original implementation is to have the API called
+            # in the thread pool no matter what.
+            tpool.execute(self._conn.nwfilterDefineXML, xml)
+        else:
+            # NOTE(maoy): self._conn is a eventlet.tpool.Proxy object
+            self._conn.nwfilterDefineXML(xml)
 
     def unfilter_instance(self, instance, network_info):
         """Clear out the nwfilter rules."""
