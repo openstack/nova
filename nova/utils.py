@@ -982,7 +982,7 @@ def cleanup_file_locks():
     #    reliably tell which sentinels refer to which lock in the
     #    lockfile implementation.
 
-    if  FLAGS.disable_process_locking:
+    if FLAGS.disable_process_locking:
         return
 
     hostname = socket.gethostname()
@@ -1308,7 +1308,7 @@ def save_and_reraise_exception():
     In some cases the exception context can be cleared, resulting in None
     being attempted to be reraised after an exception handler is run. This
     can happen when eventlet switches greenthreads or when running an
-    exception handler, code raises and catches and exception. In both
+    exception handler, code raises and catches an exception. In both
     cases the exception context will be cleared.
 
     To work around this, we save the exception state, run handler code, and
