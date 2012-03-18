@@ -141,13 +141,26 @@ class HostState(object):
         """Return whether or not this host passes filters."""
 
         if self.host in filter_properties.get('ignore_hosts', []):
+            LOG.debug(_('Host filter fails for ignored host %(host)s'),
+                      {'host': self.host})
             return False
+
         force_hosts = filter_properties.get('force_hosts', [])
         if force_hosts:
+            if not self.host in force_hosts:
+                LOG.debug(_('Host filter fails for non-forced host %(host)s'),
+                          {'host': self.host})
             return self.host in force_hosts
+
         for filter_fn in filter_fns:
             if not filter_fn(self, filter_properties):
+                LOG.debug(_('Host filter function %(func)s failed for '
+                            '%(host)s'),
+                          {'func': repr(filter_fn),
+                           'host': self.host})
                 return False
+
+        LOG.debug(_('Host filter passes for %(host)s'), {'host': self.host})
         return True
 
     def __repr__(self):
