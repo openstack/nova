@@ -39,6 +39,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 """
 
+import errno
 import hashlib
 import functools
 import glob
@@ -2131,6 +2132,10 @@ class LibvirtConnection(driver.ComputeDriver):
                           locals())
                 continue
 
+            # get the real disk size or
+            # raise a localized error if image is unavailable
+            dk_size = int(os.path.getsize(path))
+
             disk_type = driver_nodes[cnt].get('type')
             if disk_type == "qcow2":
                 out, err = utils.execute('qemu-img', 'info', path)
@@ -2140,13 +2145,9 @@ class LibvirtConnection(driver.ComputeDriver):
                     if i.strip().find('virtual size') >= 0]
                 virt_size = int(size[0])
 
-                # real disk size:
-                dk_size = int(os.path.getsize(path))
-
                 # backing file:(actual path:)
                 backing_file = libvirt_utils.get_disk_backing_file(path)
             else:
-                dk_size = int(os.path.getsize(path))
                 backing_file = ""
                 virt_size = 0
 
@@ -2174,11 +2175,18 @@ class LibvirtConnection(driver.ComputeDriver):
         instances_name = self.list_instances()
         instances_sz = 0
         for i_name in instances_name:
-            disk_infos = utils.loads(self.get_instance_disk_info(i_name))
-            for info in disk_infos:
-                i_vt_sz = int(info['virt_disk_size'])
-                i_dk_sz = int(info['disk_size'])
-                instances_sz += i_vt_sz - i_dk_sz
+            try:
+                disk_infos = utils.loads(self.get_instance_disk_info(i_name))
+                for info in disk_infos:
+                    i_vt_sz = int(info['virt_disk_size'])
+                    i_dk_sz = int(info['disk_size'])
+                    instances_sz += i_vt_sz - i_dk_sz
+            except OSError as e:
+                if e.errno == errno.ENOENT:
+                    LOG.error(_("Getting disk size of %(i_name)s: %(e)s") %
+                              locals())
+                else:
+                    raise
 
         # Disk available least size
         available_least_size = dk_sz_gb * (1024 ** 3) - instances_sz
