@@ -1990,15 +1990,49 @@ def network_get_all_by_uuids(context, network_uuids, project_id=None):
 
 
 @require_admin_context
-def network_get_associated_fixed_ips(context, network_id):
+def network_get_associated_fixed_ips(context, network_id, host=None):
     # FIXME(sirp): since this returns fixed_ips, this would be better named
     # fixed_ip_get_all_by_network.
-    return model_query(context, models.FixedIp, read_deleted="no").\
-                    filter_by(network_id=network_id).\
-                    filter_by(allocated=True).\
-                    filter(models.FixedIp.instance_id != None).\
-                    filter(models.FixedIp.virtual_interface_id != None).\
-                    all()
+    # NOTE(vish): The ugly joins here are to solve a performance issue and
+    #             should be removed once we can add and remove leases
+    #             without regenerating the whole list
+    vif_and = and_(models.VirtualInterface.id ==
+                   models.FixedIp.virtual_interface_id,
+                   models.VirtualInterface.deleted == False)
+    inst_and = and_(models.Instance.id == models.FixedIp.instance_id,
+                    models.Instance.deleted == False)
+    session = get_session()
+    query = session.query(models.FixedIp.address,
+                          models.FixedIp.instance_id,
+                          models.FixedIp.network_id,
+                          models.FixedIp.virtual_interface_id,
+                          models.VirtualInterface.address,
+                          models.Instance.hostname,
+                          models.Instance.updated_at,
+                          models.Instance.created_at).\
+                          filter(models.FixedIp.deleted == False).\
+                          filter(models.FixedIp.network_id == network_id).\
+                          filter(models.FixedIp.allocated == True).\
+                          join((models.VirtualInterface, vif_and)).\
+                          join((models.Instance, inst_and)).\
+                          filter(models.FixedIp.instance_id != None).\
+                          filter(models.FixedIp.virtual_interface_id != None)
+    if host:
+        query = query.filter(models.Instance.host == host)
+    result = query.all()
+    data = []
+    for datum in result:
+        cleaned = {}
+        cleaned['address'] = datum[0]
+        cleaned['instance_id'] = datum[1]
+        cleaned['network_id'] = datum[2]
+        cleaned['vif_id'] = datum[3]
+        cleaned['vif_address'] = datum[4]
+        cleaned['instance_hostname'] = datum[5]
+        cleaned['instance_updated'] = datum[6]
+        cleaned['instance_created'] = datum[7]
+        data.append(cleaned)
+    return data
 
 
 @require_admin_context

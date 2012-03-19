@@ -281,6 +281,32 @@ class DbApiTestCase(test.TestCase):
         db.dnsdomain_unregister(ctxt, domain1)
         db.dnsdomain_unregister(ctxt, domain2)
 
+    def test_network_get_associated_fixed_ips(self):
+        ctxt = context.get_admin_context()
+        values = {'host': 'foo', 'hostname': 'myname'}
+        instance = db.instance_create(ctxt, values)
+        values = {'address': 'bar', 'instance_id': instance['id']}
+        vif = db.virtual_interface_create(ctxt, values)
+        values = {'address': 'baz',
+                  'network_id': 1,
+                  'allocated': True,
+                  'instance_id': instance['id'],
+                  'virtual_interface_id': vif['id']}
+        fixed_address = db.fixed_ip_create(ctxt, values)
+        data = db.network_get_associated_fixed_ips(ctxt, 1)
+        self.assertEqual(len(data), 1)
+        record = data[0]
+        self.assertEqual(record['address'], fixed_address)
+        self.assertEqual(record['instance_id'], instance['id'])
+        self.assertEqual(record['network_id'], 1)
+        self.assertEqual(record['instance_created'], instance['created_at'])
+        self.assertEqual(record['instance_updated'], instance['updated_at'])
+        self.assertEqual(record['instance_hostname'], instance['hostname'])
+        self.assertEqual(record['vif_id'], vif['id'])
+        self.assertEqual(record['vif_address'], vif['address'])
+        data = db.network_get_associated_fixed_ips(ctxt, 1, 'nothing')
+        self.assertEqual(len(data), 0)
+
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate',

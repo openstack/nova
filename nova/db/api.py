@@ -782,9 +782,9 @@ def network_get_all_by_uuids(context, network_uuids, project_id=None):
 # pylint: disable=C0103
 
 
-def network_get_associated_fixed_ips(context, network_id):
+def network_get_associated_fixed_ips(context, network_id, host=None):
     """Get all network's ips that have been associated."""
-    return IMPL.network_get_associated_fixed_ips(context, network_id)
+    return IMPL.network_get_associated_fixed_ips(context, network_id, host)
 
 
 def network_get_by_bridge(context, bridge):

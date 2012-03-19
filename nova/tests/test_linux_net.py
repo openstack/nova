@@ -37,9 +37,13 @@ HOST = "testhost"
 
 instances = [{'id': 0,
               'host': 'fake_instance00',
+              'created_at': 'fakedate',
+              'updated_at': 'fakedate',
               'hostname': 'fake_instance00'},
              {'id': 1,
               'host': 'fake_instance01',
+              'created_at': 'fakedate',
+              'updated_at': 'fakedate',
               'hostname': 'fake_instance01'}]
 
 
@@ -77,7 +81,7 @@ networks = [{'id': 0,
              'uuid': "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
              'label': 'test1',
              'injected': False,
-             'multi_host': False,
+             'multi_host': True,
              'cidr': '192.168.1.0/24',
              'cidr_v6': '2001:db9::/64',
              'gateway_v6': '2001:db9::1',
@@ -179,6 +183,29 @@ vifs = [{'id': 0,
          'instance_id': 1}]
 
 
+def get_associated(context, network_id, host=None):
+    result = []
+    for datum in fixed_ips:
+        if (datum['network_id'] == network_id and datum['allocated']
+            and datum['instance_id'] is not None
+            and datum['virtual_interface_id'] is not None):
+            instance = instances[datum['instance_id']]
+            if host and host != instance['host']:
+                continue
+            cleaned = {}
+            cleaned['address'] = datum['address']
+            cleaned['instance_id'] = datum['instance_id']
+            cleaned['network_id'] = datum['network_id']
+            cleaned['vif_id'] = datum['virtual_interface_id']
+            vif = vifs[datum['virtual_interface_id']]
+            cleaned['vif_address'] = vif['address']
+            cleaned['instance_hostname'] = instance['hostname']
+            cleaned['instance_updated'] = instance['updated_at']
+            cleaned['instance_created'] = instance['created_at']
+            result.append(cleaned)
+    return result
+
+
 class LinuxNetworkTestCase(test.TestCase):
 
     def setUp(self):
@@ -189,36 +216,23 @@ class LinuxNetworkTestCase(test.TestCase):
         self.context = context.RequestContext('testuser', 'testproject',
                                               is_admin=True)
 
-    def test_update_dhcp_for_nw00(self):
-        self.flags(use_single_default_gateway=True)
-
-        def get_vif(_context, vif_id):
-            return vifs[vif_id]
+        def get_vifs(_context, instance_id):
+            return [vif for vif in vifs if vif['instance_id'] == instance_id]
 
         def get_instance(_context, instance_id):
             return instances[instance_id]
 
-        self.stubs.Set(db, 'virtual_interface_get', get_vif)
+        self.stubs.Set(db, 'virtual_interface_get_by_instance', get_vifs)
         self.stubs.Set(db, 'instance_get', get_instance)
-        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-        self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
+        self.stubs.Set(db, 'network_get_associated_fixed_ips', get_associated)
+
+    def test_update_dhcp_for_nw00(self):
+        self.flags(use_single_default_gateway=True)
+
         self.mox.StubOutWithMock(self.driver, 'write_to_file')
         self.mox.StubOutWithMock(self.driver, 'ensure_path')
         self.mox.StubOutWithMock(os, 'chmod')
 
-        db.network_get_associated_fixed_ips(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([fixed_ips[0], fixed_ips[3]])
-
-        db.network_get_associated_fixed_ips(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([fixed_ips[0], fixed_ips[3]])
-        db.virtual_interface_get_by_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([vifs[0], vifs[1]])
-        db.virtual_interface_get_by_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([vifs[2], vifs[3]])
         self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
         self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
         self.driver.ensure_path(mox.IgnoreArg())
@@ -238,33 +252,10 @@ class LinuxNetworkTestCase(test.TestCase):
     def test_update_dhcp_for_nw01(self):
         self.flags(use_single_default_gateway=True)
 
-        def get_vif(_context, vif_id):
-            return vifs[vif_id]
-
-        def get_instance(_context, instance_id):
-            return instances[instance_id]
-
-        self.stubs.Set(db, 'virtual_interface_get', get_vif)
-        self.stubs.Set(db, 'instance_get', get_instance)
-        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-        self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
         self.mox.StubOutWithMock(self.driver, 'write_to_file')
         self.mox.StubOutWithMock(self.driver, 'ensure_path')
         self.mox.StubOutWithMock(os, 'chmod')
 
-        db.network_get_associated_fixed_ips(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([fixed_ips[1], fixed_ips[2]])
-
-        db.network_get_associated_fixed_ips(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([fixed_ips[1], fixed_ips[2]])
-        db.virtual_interface_get_by_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([vifs[0], vifs[1]])
-        db.virtual_interface_get_by_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([vifs[2], vifs[3]])
         self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
         self.driver.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
         self.driver.ensure_path(mox.IgnoreArg())
@@ -284,116 +275,57 @@ class LinuxNetworkTestCase(test.TestCase):
     def test_get_dhcp_hosts_for_nw00(self):
         self.flags(use_single_default_gateway=True)
 
-        def get_vif(_context, vif_id):
-            return vifs[vif_id]
-
-        def get_instance(_context, instance_id):
-            return instances[instance_id]
-
-        self.stubs.Set(db, 'virtual_interface_get', get_vif)
-        self.stubs.Set(db, 'instance_get', get_instance)
-        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-
-        db.network_get_associated_fixed_ips(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([fixed_ips[0], fixed_ips[3]])
-        self.mox.ReplayAll()
-
-        expected = ("DE:AD:BE:EF:00:00,fake_instance00.novalocal,"
-                    "192.168.0.100,net:NW-i00000000-0\n"
-                    "DE:AD:BE:EF:00:03,fake_instance01.novalocal,"
-                    "192.168.1.101,net:NW-i00000001-0")
-        actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[1])
+        expected = (
+                "DE:AD:BE:EF:00:00,fake_instance00.novalocal,"
+                "192.168.0.100,net:NW-0\n"
+                "DE:AD:BE:EF:00:03,fake_instance01.novalocal,"
+                "192.168.1.101,net:NW-3\n"
+                "DE:AD:BE:EF:00:04,fake_instance00.novalocal,"
+                "192.168.0.102,net:NW-4"
+        )
+        actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[0])
 
         self.assertEquals(actual_hosts, expected)
 
     def test_get_dhcp_hosts_for_nw01(self):
         self.flags(use_single_default_gateway=True)
+        self.flags(host='fake_instance01')
 
-        def get_vif(_context, vif_id):
-            return vifs[vif_id]
-
-        def get_instance(_context, instance_id):
-            return instances[instance_id]
-
-        self.stubs.Set(db, 'virtual_interface_get', get_vif)
-        self.stubs.Set(db, 'instance_get', get_instance)
-        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-
-        db.network_get_associated_fixed_ips(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([fixed_ips[1], fixed_ips[2]])
-        self.mox.ReplayAll()
-
-        expected = ("DE:AD:BE:EF:00:01,fake_instance00.novalocal,"
-                    "192.168.1.100,net:NW-i00000000-1\n"
-                    "DE:AD:BE:EF:00:02,fake_instance01.novalocal,"
-                    "192.168.0.101,net:NW-i00000001-1")
-        actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[0])
+        expected = (
+                "DE:AD:BE:EF:00:02,fake_instance01.novalocal,"
+                "192.168.0.101,net:NW-2\n"
+                "DE:AD:BE:EF:00:05,fake_instance01.novalocal,"
+                "192.168.1.102,net:NW-5"
+        )
+        actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[1])
 
         self.assertEquals(actual_hosts, expected)
 
     def test_get_dhcp_opts_for_nw00(self):
-        def get_instance(_context, instance_id):
-            return instances[instance_id]
-
-        self.stubs.Set(db, 'instance_get', get_instance)
-        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-        self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
-
-        db.network_get_associated_fixed_ips(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([fixed_ips[0], fixed_ips[3],
-                                            fixed_ips[4]])
-        db.virtual_interface_get_by_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([vifs[0], vifs[1], vifs[4]])
-        db.virtual_interface_get_by_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([vifs[2], vifs[3], vifs[5]])
-        self.mox.ReplayAll()
-
-        expected_opts = 'NW-i00000001-0,3'
+        expected_opts = 'NW-0,3\nNW-3,3\nNW-4,3'
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[0])
 
         self.assertEquals(actual_opts, expected_opts)
 
     def test_get_dhcp_opts_for_nw01(self):
-        def get_instance(_context, instance_id):
-            print instance_id
-            return instances[instance_id]
-
-        self.stubs.Set(db, 'instance_get', get_instance)
-        self.mox.StubOutWithMock(db, 'network_get_associated_fixed_ips')
-        self.mox.StubOutWithMock(db, 'virtual_interface_get_by_instance')
-
-        db.network_get_associated_fixed_ips(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([fixed_ips[1], fixed_ips[2],
-                                            fixed_ips[5]])
-        db.virtual_interface_get_by_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([vifs[0], vifs[1], vifs[4]])
-        db.virtual_interface_get_by_instance(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn([vifs[2], vifs[3], vifs[5]])
-        self.mox.ReplayAll()
-
-        expected_opts = "NW-i00000000-1,3"
+        self.flags(host='fake_instance01')
+        expected_opts = "NW-5,3"
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[1])
 
         self.assertEquals(actual_opts, expected_opts)
 
     def test_dhcp_opts_not_default_gateway_network(self):
-        expected = "NW-i00000000-0,3"
-        actual = self.driver._host_dhcp_opts(fixed_ips[0], instances[0])
+        expected = "NW-0,3"
+        data = get_associated(self.context, 0)[0]
+        actual = self.driver._host_dhcp_opts(data)
         self.assertEquals(actual, expected)
 
     def test_host_dhcp_without_default_gateway_network(self):
         expected = ','.join(['DE:AD:BE:EF:00:00',
                              'fake_instance00.novalocal',
                              '192.168.0.100'])
-        actual = self.driver._host_dhcp(fixed_ips[0], vifs[0], instances[0])
+        data = get_associated(self.context, 0)[0]
+        actual = self.driver._host_dhcp(data)
         self.assertEquals(actual, expected)
 
     def test_linux_bridge_driver_plug(self):
