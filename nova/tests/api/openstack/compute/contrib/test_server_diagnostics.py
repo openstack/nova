@@ -19,7 +19,6 @@ import unittest
 from lxml import etree
 
 from nova.api.openstack import compute
-from nova.api.openstack.compute import extensions
 from nova.api.openstack.compute.contrib import server_diagnostics
 from nova.api.openstack import wsgi
 import nova.compute
@@ -28,11 +27,16 @@ from nova.tests.api.openstack import fakes
 import nova.utils
 
 
+UUID = 'abc'
+
+
 def fake_get_diagnostics(self, _context, instance_uuid):
     return {'data': 'Some diagnostic info'}
 
 
 def fake_instance_get(self, _context, instance_uuid):
+    if instance_uuid != UUID:
+        raise Exception("Invalid UUID")
     return {'uuid': instance_uuid}
 
 
@@ -48,8 +52,7 @@ class ServerDiagnosticsTest(test.TestCase):
         self.router = compute.APIRouter()
 
     def test_get_diagnostics(self):
-        uuid = nova.utils.gen_uuid()
-        req = fakes.HTTPRequest.blank('/fake/servers/%s/diagnostics' % uuid)
+        req = fakes.HTTPRequest.blank('/fake/servers/%s/diagnostics' % UUID)
         res = req.get_response(self.router)
         output = json.loads(res.body)
         self.assertEqual(output, {'data': 'Some diagnostic info'})
