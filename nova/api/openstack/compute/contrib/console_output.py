@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
+import re
 import webob
 
 from nova import compute
@@ -56,6 +57,10 @@ class ConsoleOutputController(wsgi.Controller):
                                                          length)
         except exception.NotFound:
             raise webob.exc.HTTPNotFound(_('Instance not found'))
+
+        # XML output is not correctly escaped, so remove invalid characters
+        remove_re = re.compile('[\x00-\x08\x0B-\x0C\x0E-\x1F]')
+        output = remove_re.sub('', output)
 
         return {'output': output}
 
