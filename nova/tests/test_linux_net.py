@@ -426,6 +426,7 @@ class LinuxNetworkTestCase(test.TestCase):
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
         expected = [
+            ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
             ('route', '-n'),
             ('ip', 'addr', 'del', '192.168.0.1/24',
@@ -449,6 +450,7 @@ class LinuxNetworkTestCase(test.TestCase):
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
         expected = [
+            ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
             ('route', '-n'),
             ('route', 'del', 'default', 'gw', '192.68.0.1', 'dev', 'eth0'),
@@ -473,6 +475,7 @@ class LinuxNetworkTestCase(test.TestCase):
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
         expected = [
+            ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
@@ -486,6 +489,7 @@ class LinuxNetworkTestCase(test.TestCase):
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
         expected = [
+            ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
             ('route', '-n'),
             ('ip', 'addr', 'add', '192.168.1.1/24',

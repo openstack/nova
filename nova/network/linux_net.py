@@ -524,6 +524,8 @@ def initialize_gateway_device(dev, network_ref):
     if not network_ref:
         return
 
+    _execute('sysctl', '-w', 'net.ipv4.ip_forward=1', run_as_root=True)
+
     # NOTE(vish): The ip for dnsmasq has to be the first address on the
     #             bridge for it to respond to reqests properly
     full_ip = '%s/%s' % (network_ref['dhcp_server'],
