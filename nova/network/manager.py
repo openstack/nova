@@ -1635,6 +1635,35 @@ class FlatManager(NetworkManager):
         """Tear down network on this host."""
         pass
 
+    # NOTE(justinsb): The floating ip functions are stub-implemented.
+    # We were throwing an exception, but this was messing up horizon.
+    # Timing makes it difficult to implement floating ips here, in Essex.
+
+    @wrap_check_policy
+    def get_floating_ip(self, context, id):
+        """Returns a floating IP as a dict"""
+        return None
+
+    @wrap_check_policy
+    def get_floating_pools(self, context):
+        """Returns list of floating pools"""
+        return {}
+
+    @wrap_check_policy
+    def get_floating_ip_by_address(self, context, address):
+        """Returns a floating IP as a dict"""
+        return None
+
+    @wrap_check_policy
+    def get_floating_ips_by_project(self, context):
+        """Returns the floating IPs allocated to a project"""
+        return []
+
+    @wrap_check_policy
+    def get_floating_ips_by_fixed_address(self, context, fixed_address):
+        """Returns the floating IPs associated with a fixed_address"""
+        return []
+
 
 class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
     """Flat networking with dhcp.
