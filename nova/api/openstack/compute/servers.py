@@ -594,7 +594,7 @@ class Controller(wsgi.Controller):
         try:
             socket.inet_pton(socket.AF_INET6, address)
         except socket.error:
-            expl = _('accessIPv4 is not proper IPv4 format')
+            expl = _('accessIPv6 is not proper IPv6 format')
             raise exc.HTTPBadRequest(explanation=expl)
 
     @wsgi.serializers(xml=ServerTemplate)
