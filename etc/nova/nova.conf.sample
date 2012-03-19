@@ -10,6 +10,8 @@
 # allow_resize_to_same_host=false
 ###### (StrOpt) File name for the paste.deploy config for nova-api
 # api_paste_config="api-paste.ini"
+###### (BoolOpt) whether to rate limit the api
+# api_rate_limit=true
 ###### (StrOpt) The strategy to use for auth. Supports noauth, keystone, and deprecated.
 # auth_strategy="noauth"
 ###### (IntOpt) Seconds for auth tokens to linger
@@ -1103,4 +1105,4 @@
 ###### (StrOpt) The ZFS path under which to create zvols for volumes.
 # san_zfs_volume_base="rpool/"
 
-# Total option count: 465
+# Total option count: 466

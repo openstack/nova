@@ -40,7 +40,11 @@ LOG = logging.getLogger(__name__)
 
 def pipeline_factory(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
-    pipeline = local_conf[FLAGS.auth_strategy].split()
+    pipeline = local_conf[FLAGS.auth_strategy]
+    if not FLAGS.api_rate_limit:
+        limit_name = FLAGS.auth_strategy + '_nolimit'
+        pipeline = local_conf.get(limit_name, pipeline)
+    pipeline = pipeline.split()
     filters = [loader.get_filter(n) for n in pipeline[:-1]]
     app = loader.get_app(pipeline[-1])
     filters.reverse()
