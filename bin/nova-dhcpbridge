@@ -63,9 +63,11 @@ def add_lease(mac, ip_address):
 
 
 def old_lease(mac, ip_address):
-    """Update just as add lease."""
-    LOG.debug(_("Adopted old lease or got a change of mac"))
-    add_lease(mac, ip_address)
+    """Called when an old lease is recognized."""
+    # NOTE(vish): We assume we heard about this lease the first time.
+    #             If not, we will get it the next time the lease is
+    #             renewed.
+    pass
 
 
 def del_lease(mac, ip_address):
@@ -99,12 +101,6 @@ def main():
 
     if int(os.environ.get('TESTING', '0')):
         from nova.tests import fake_flags
-
-    #if FLAGS.fake_rabbit:
-    #    LOG.debug(_("leasing ip"))
-    #    network_manager = utils.import_object(FLAGS.network_manager)
-    ##    reload(fake_flags)
-    #    from nova.tests import fake_flags
 
     action = argv[1]
     if action in ['add', 'del', 'old']:
