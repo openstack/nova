@@ -60,8 +60,8 @@ class DbApiTestCase(test.TestCase):
 
     def test_instance_get_all_by_filters(self):
         args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
-        inst1 = db.instance_create(self.context, args)
-        inst2 = db.instance_create(self.context, args)
+        db.instance_create(self.context, args)
+        db.instance_create(self.context, args)
         result = db.instance_get_all_by_filters(self.context, {})
         self.assertTrue(2, len(result))
 
@@ -436,7 +436,9 @@ class AggregateDBApiTestCase(test.TestCase):
         db.aggregate_delete(ctxt, result['id'])
         expected = db.aggregate_get_all(ctxt, read_deleted='no')
         self.assertEqual(0, len(expected))
-        aggregate = db.aggregate_get(ctxt, result['id'], read_deleted='yes')
+
+        ctxt = context.get_admin_context(read_deleted='yes')
+        aggregate = db.aggregate_get(ctxt, result['id'])
         self.assertEqual(aggregate["operational_state"], "dismissed")
 
     def test_aggregate_update(self):
@@ -650,7 +652,7 @@ class CapacityTestCase(test.TestCase):
         self.assertEquals(item.free_ram_mb, 1024 - 256)
 
     def test_compute_node_set(self):
-        item = self._create_helper('host1')
+        self._create_helper('host1')
 
         x = db.compute_node_utilization_set(self.ctxt, 'host1',
                             free_ram_mb=2048, free_disk_gb=4096)
@@ -672,7 +674,7 @@ class CapacityTestCase(test.TestCase):
         self.assertEquals(x.running_vms, 5)
 
     def test_compute_node_utilization_update(self):
-        item = self._create_helper('host1')
+        self._create_helper('host1')
 
         x = db.compute_node_utilization_update(self.ctxt, 'host1',
                                                free_ram_mb_delta=-24)
