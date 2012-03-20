@@ -4084,10 +4084,8 @@ def sm_volume_get_all(context):
 ################
 
 
-def _aggregate_get_query(context, model_class, id_field, id,
-                         session=None, read_deleted='yes'):
-    return model_query(context, model_class, session=session,
-                       read_deleted=read_deleted).filter(id_field == id)
+def _aggregate_get_query(context, model_class, id_field, id, **kwargs):
+    return model_query(context, model_class, **kwargs).filter(id_field == id)
 
 
 @require_admin_context
@@ -4117,11 +4115,12 @@ def aggregate_create(context, values, metadata=None):
 
 
 @require_admin_context
-def aggregate_get(context, aggregate_id, read_deleted='no'):
+def aggregate_get(context, aggregate_id, **kwargs):
     aggregate = _aggregate_get_query(context,
                                      models.Aggregate,
-                                     models.Aggregate.id, aggregate_id,
-                                     read_deleted=read_deleted).first()
+                                     models.Aggregate.id,
+                                     aggregate_id,
+                                     **kwargs).first()
 
     if not aggregate:
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
@@ -4130,17 +4129,18 @@ def aggregate_get(context, aggregate_id, read_deleted='no'):
 
 
 @require_admin_context
-def aggregate_get_by_host(context, host, read_deleted='no'):
+def aggregate_get_by_host(context, host, **kwargs):
     aggregate_host = _aggregate_get_query(context,
                                           models.AggregateHost,
                                           models.AggregateHost.host,
                                           host,
-                                          read_deleted='no').first()
+                                          **kwargs).first()
 
     if not aggregate_host:
         raise exception.AggregateHostNotFound(host=host)
 
-    return aggregate_get(context, aggregate_host.aggregate_id, read_deleted)
+    return aggregate_get(context, aggregate_host.aggregate_id,
+                         **kwargs)
 
 
 @require_admin_context
@@ -4183,19 +4183,20 @@ def aggregate_delete(context, aggregate_id):
 
 
 @require_admin_context
-def aggregate_get_all(context, read_deleted='yes'):
+def aggregate_get_all(context, **kwargs):
+    if 'read_deleted' not in kwargs:
+        kwargs['read_deleted'] = 'yes'
     return model_query(context,
                        models.Aggregate,
-                       read_deleted=read_deleted).all()
+                       **kwargs).all()
 
 
 @require_admin_context
 @require_aggregate_exists
-def aggregate_metadata_get(context, aggregate_id, read_deleted='no'):
+def aggregate_metadata_get(context, aggregate_id, **kwargs):
     rows = model_query(context,
                        models.AggregateMetadata,
-                       read_deleted=read_deleted).\
-                       filter_by(aggregate_id=aggregate_id).all()
+                       **kwargs).filter_by(aggregate_id=aggregate_id).all()
 
     return dict([(r['key'], r['value']) for r in rows])
 
@@ -4220,12 +4221,12 @@ def aggregate_metadata_delete(context, aggregate_id, key):
 @require_admin_context
 @require_aggregate_exists
 def aggregate_metadata_get_item(context, aggregate_id, key,
-                                session=None, read_deleted='yes'):
+                                session=None):
     result = _aggregate_get_query(context,
                                   models.AggregateMetadata,
                                   models.AggregateMetadata.aggregate_id,
                                   aggregate_id, session=session,
-                                  read_deleted=read_deleted).\
+                                  read_deleted='yes').\
                                   filter_by(key=key).first()
 
     if not result:
@@ -4270,11 +4271,12 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False):
 
 @require_admin_context
 @require_aggregate_exists
-def aggregate_host_get_all(context, aggregate_id, read_deleted='yes'):
+def aggregate_host_get_all(context, aggregate_id, **kwargs):
+    if 'read_deleted' not in kwargs:
+        kwargs['read_deleted'] = 'yes'
     rows = model_query(context,
                        models.AggregateHost,
-                       read_deleted=read_deleted).\
-                       filter_by(aggregate_id=aggregate_id).all()
+                       **kwargs).filter_by(aggregate_id=aggregate_id).all()
 
     return [r.host for r in rows]
 
