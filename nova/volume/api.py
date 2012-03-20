@@ -297,11 +297,11 @@ class API(base.Base):
             'display_description': description}
 
         snapshot = self.db.snapshot_create(context, options)
+        host = volume['host']
         rpc.cast(context,
-                 FLAGS.scheduler_topic,
+                 self.db.queue_get_for(context, FLAGS.volume_topic, host),
                  {"method": "create_snapshot",
-                  "args": {"topic": FLAGS.volume_topic,
-                           "volume_id": volume['id'],
+                  "args": {"volume_id": volume['id'],
                            "snapshot_id": snapshot['id']}})
         return snapshot
 
@@ -320,11 +320,12 @@ class API(base.Base):
             raise exception.InvalidVolume(reason=msg)
         self.db.snapshot_update(context, snapshot['id'],
                                 {'status': 'deleting'})
+        volume = self.db.volume_get(context, snapshot['volume_id'])
+        host = volume['host']
         rpc.cast(context,
-                 FLAGS.scheduler_topic,
+                 self.db.queue_get_for(context, FLAGS.volume_topic, host),
                  {"method": "delete_snapshot",
-                  "args": {"topic": FLAGS.volume_topic,
-                           "snapshot_id": snapshot['id']}})
+                  "args": {"snapshot_id": snapshot['id']}})
 
     @wrap_check_policy
     def get_volume_metadata(self, context, volume):
