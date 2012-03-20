@@ -942,25 +942,27 @@ class LibvirtConnection(driver.ComputeDriver):
             console_types[console_type].append(console_node)
 
         # If the guest has a console logging to a file prefer to use that
-        for file_console in console_types.get('file'):
-            source_node = file_console.find('./source')
-            if source_node is None:
-                continue
-            path = source_node.get("path")
-            if not path:
-                continue
-            libvirt_utils.chown(path, os.getuid())
-            return libvirt_utils.load_file(path)
+        if console_types.get('file'):
+            for file_console in console_types.get('file'):
+                source_node = file_console.find('./source')
+                if source_node is None:
+                    continue
+                path = source_node.get("path")
+                if not path:
+                    continue
+                libvirt_utils.chown(path, os.getuid())
+                return libvirt_utils.load_file(path)
 
         # Try 'pty' types
-        for pty_console in console_types.get('pty'):
-            source_node = pty_console.find('./source')
-            if source_node is None:
-                continue
-            pty = source_node.get("path")
-            if not pty:
-                continue
-            break
+        if console_types.get('pty'):
+            for pty_console in console_types.get('pty'):
+                source_node = pty_console.find('./source')
+                if source_node is None:
+                    continue
+                pty = source_node.get("path")
+                if not pty:
+                    continue
+                break
         else:
             raise exception.Error(_("Guest does not have a console available"))
 
