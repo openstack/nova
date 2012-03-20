@@ -16,7 +16,7 @@
 
 NOVA_VERSION = ['2012', '1', None]
 YEAR, COUNT, REVISION = NOVA_VERSION
-FINAL = False   # This becomes true at Release Candidate time
+FINAL = True   # This becomes true at Release Candidate time
 
 
 def canonical_version_string():
