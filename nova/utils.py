@@ -1219,6 +1219,10 @@ def is_valid_cidr(address):
         netaddr.IPNetwork(address)
     except netaddr.core.AddrFormatError:
         return False
+    except UnboundLocalError:
+        # NOTE(MotoKen): work around bug in netaddr 0.7.5 (see detail in
+        # https://github.com/drkjam/netaddr/issues/2)
+        return False
 
     # Prior validation partially verify /xx part
     # Verify it here
