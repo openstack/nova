@@ -81,16 +81,45 @@ Support for accessing this url is provided by novaclient:
     nova get-vnc-console [server_id] [xvpvnc|novnc]
 
 
-Accessing VNC Consoles with a Java client
------------------------------------------
-To enable support for the OpenStack java vnc client in nova, nova provides the
-nova-xvpvncproxy service, which you should run to enable this feature.
+Important nova-compute Options
+------------------------------
+To enable vncproxy in your cloud, in addition to to running one or both of the
+proxies and nova-consoleauth, you need to configure the following flags on your
+compute hosts.
 
+* :option:`--[no]vnc_enabled` - defaults to enabled. If this flag is
+  disabled your instances will launch without vnc support.
+* :option:`--vncserver_listen` - defaults to 127.0.0.1
+  This is the address that vncservers will bind, and should be overridden in
+  production deployments as a private address.  Applies to libvirt only.
+  For multi-host libvirt  deployments this should be set to a host
+  management ip on the same network as the proxies.
+* :option:`--vncserver_proxyclient_address` - defaults to 127.0.0.1
+  This is the address of the compute host that nova will instruct
+  proxies to use when connecting to instance vncservers.
+  For all-in-one xen server domU deployments this can be set to 169.254.0.1.
+  For multi-host xen server domU deployments this can be set to a dom0
+  management ip on the same network as the proxies.
+  For multi-host libvirt  deployments this can be set to a host
+  management ip on the same network as the proxies.
+* :option:`--novncproxy_base_url=[base url for client connections]` -
+  this is the public base url to which clients will connect.  "?token=abc"
+  will be added to this url for the purposes of auth.
+  When using the system as described in this document, an appropriate value is
+  "http://$SERVICE_HOST:6080/vnc_auto.html" where SERVICE_HOST is a public
+  hostname.
 * :option:`--xvpvncproxy_base_url=[base url for client connections]` -
   this is the public base url to which clients will connect.  "?token=abc"
   will be added to this url for the purposes of auth.
   When using the system as described in this document, an appropriate value is
   "http://$SERVICE_HOST:6081/console" where SERVICE_HOST is a public hostname.
+
+
+Accessing VNC Consoles with a Java client
+-----------------------------------------
+To enable support for the OpenStack java vnc client in nova, nova provides the
+nova-xvpvncproxy service, which you should run to enable this feature.
+
 * :option:`--xvpvncproxy_port=[port]` - port to bind (defaults to 6081)
 * :option:`--xvpvncproxy_host=[host]` - host to bind (defaults to 0.0.0.0)
 
@@ -134,15 +163,8 @@ server address and credentials.
 
 By default, nova-novncproxy binds 0.0.0.0:6080.  This can be configured with:
 
-* :option:`--novncproxy_base_url=[base url for client connections]` -
-  this is the public base url to which clients will connect.  "?token=abc"
-  will be added to this url for the purposes of auth.
-  When using the system as described in this document, an appropriate value is
-  "http://$SERVICE_HOST:6080/vnc_auto.html" where SERVICE_HOST is a public
-  hostname.
 * :option:`--novncproxy_port=[port]`
 * :option:`--novncproxy_host=[host]`
-
 
 Accessing a vnc console through a web browser
 ---------------------------------------------
@@ -155,30 +177,8 @@ the java client:
     nova get-vnc-console [server_id] novnc
     # Then, paste the url into your web browser
 
-Support for a streamlined flow via dashboard will land in essex.
-
-
-Important nova-compute Options
-------------------------------
-To enable vncproxy in your cloud, in addition to to running one or both of the
-proxies and nova-consoleauth, you need to configure the following flags on your
-compute hosts.
-
-* :option:`--[no]vnc_enabled` - defaults to enabled. If this flag is
-  disabled your instances will launch without vnc support.
-* :option:`--vncserver_listen` - defaults to 127.0.0.1
-  This is the address that vncservers will bind, and should be overridden in
-  production deployments as a private address.  Applies to libvirt only.
-  For multi-host libvirt  deployments this should be set to a host
-  management ip on the same network as the proxies.
-* :option:`--vncserver_proxyclient_address` - defaults to 127.0.0.1
-  This is the address of the compute host that nova will instruct
-  proxies to use when connecting to instance vncservers.
-  For all-in-one xen server domU deployments this can be set to 169.254.0.1.
-  For multi-host xen server domU deployments this can be set to a dom0
-  management ip on the same network as the proxies.
-  For multi-host libvirt  deployments this can be set to a host
-  management ip on the same network as the proxies.
+Additionally, you can use horizon to access browser-based vnc consoles for
+instances.
 
 
 .. todo::
