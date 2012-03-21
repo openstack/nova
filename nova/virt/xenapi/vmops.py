@@ -265,17 +265,17 @@ class VMOps(object):
             vdis = self._create_disks(context, instance, image_meta)
 
             def undo_create_disks():
+                vdi_refs = []
                 for vdi in vdis:
-                    vdi_uuid = vdi['vdi_uuid']
                     try:
-                        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                                vdi_uuid)
-                        LOG.debug(_('Removing VDI %(vdi_ref)s'
-                                    '(uuid:%(vdi_uuid)s)'), locals())
-                        VMHelper.destroy_vdi(self._session, vdi_ref)
+                        vdi_ref = self._session.call_xenapi(
+                                'VDI.get_by_uuid', vdi['vdi_uuid'])
                     except self.XenAPI.Failure:
-                        # VDI has already been deleted
-                        LOG.debug(_("Skipping VDI destroy for %s"), vdi_uuid)
+                        continue
+
+                    vdi_refs.append(vdi_ref)
+
+                self._safe_destroy_vdis(vdi_refs)
 
             undo_mgr.undo_with(undo_create_disks)
             return vdis
@@ -1084,30 +1084,27 @@ class VMOps(object):
         if state != power_state.SHUTDOWN:
             self._session.call_xenapi("VM.hard_shutdown", rescue_vm_ref)
 
+    def _safe_destroy_vdis(self, vdi_refs):
+        """Destroys the requested VDIs, logging any StorageError exceptions."""
+        for vdi_ref in vdi_refs:
+            try:
+                VMHelper.destroy_vdi(self._session, vdi_ref)
+            except volume_utils.StorageError as exc:
+                LOG.error(exc)
+
     def _destroy_vdis(self, instance, vm_ref):
         """Destroys all VDIs associated with a VM."""
         instance_uuid = instance['uuid']
         LOG.debug(_("Destroying VDIs for Instance %(instance_uuid)s")
                   % locals())
+
         vdi_refs = VMHelper.lookup_vm_vdis(self._session, vm_ref)
-
-        if not vdi_refs:
-            return
-
-        for vdi_ref in vdi_refs:
-            try:
-                VMHelper.destroy_vdi(self._session, vdi_ref)
-            except volume_utils.StorageError as exc:
-                LOG.error(exc)
+        self._safe_destroy_vdis(vdi_refs)
 
     def _destroy_rescue_vdis(self, rescue_vm_ref):
         """Destroys all VDIs associated with a rescued VM."""
         vdi_refs = VMHelper.lookup_vm_vdis(self._session, rescue_vm_ref)
-        for vdi_ref in vdi_refs:
-            try:
-                VMHelper.destroy_vdi(self._session, vdi_ref)
-            except volume_utils.StorageError as exc:
-                LOG.error(exc)
+        self._safe_destroy_vdis(vdi_refs)
 
     def _destroy_rescue_vbds(self, rescue_vm_ref):
         """Destroys all VBDs tied to a rescue VM."""

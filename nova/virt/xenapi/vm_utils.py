@@ -1027,10 +1027,7 @@ class VMHelper(xenapi.HelperBase):
                     LOG.exception(exc)
                 else:
                     vdi_refs.append(vdi_ref)
-            if len(vdi_refs) > 0:
-                return vdi_refs
-            else:
-                return None
+        return vdi_refs
 
     @classmethod
     def preconfigure_instance(cls, session, instance, vdi_ref, network_info):
