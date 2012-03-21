@@ -1079,7 +1079,10 @@ class VMOps(object):
 
     def _shutdown_rescue(self, rescue_vm_ref):
         """Shutdown a rescue instance."""
-        self._session.call_xenapi("VM.hard_shutdown", rescue_vm_ref)
+        vm_rec = self._session.call_xenapi("VM.get_record", rescue_vm_ref)
+        state = VMHelper.compile_info(vm_rec)['state']
+        if state != power_state.SHUTDOWN:
+            self._session.call_xenapi("VM.hard_shutdown", rescue_vm_ref)
 
     def _destroy_vdis(self, instance, vm_ref):
         """Destroys all VDIs associated with a VM."""
