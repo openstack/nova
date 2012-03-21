@@ -1077,13 +1077,6 @@ class VMOps(object):
 
         return self._session.call_xenapi("VBD.get_record", vbd_ref)["VDI"]
 
-    def _shutdown_rescue(self, rescue_vm_ref):
-        """Shutdown a rescue instance."""
-        vm_rec = self._session.call_xenapi("VM.get_record", rescue_vm_ref)
-        state = VMHelper.compile_info(vm_rec)['state']
-        if state != power_state.SHUTDOWN:
-            self._session.call_xenapi("VM.hard_shutdown", rescue_vm_ref)
-
     def _safe_destroy_vdis(self, vdi_refs):
         """Destroys the requested VDIs, logging any StorageError exceptions."""
         for vdi_ref in vdi_refs:
@@ -1091,23 +1084,6 @@ class VMOps(object):
                 VMHelper.destroy_vdi(self._session, vdi_ref)
             except volume_utils.StorageError as exc:
                 LOG.error(exc)
-
-    def _destroy_vdis(self, instance, vm_ref):
-        """Destroys all VDIs associated with a VM."""
-        instance_uuid = instance['uuid']
-        LOG.debug(_("Destroying VDIs for Instance %(instance_uuid)s")
-                  % locals())
-
-        vdi_refs = VMHelper.lookup_vm_vdis(self._session, vm_ref)
-        self._safe_destroy_vdis(vdi_refs)
-
-    def _destroy_rescue_vdis(self, rescue_vm_ref, except_vdi_ref):
-        """Destroys all VDIs associated with a rescued VM."""
-        vdi_refs = VMHelper.lookup_vm_vdis(self._session, rescue_vm_ref)
-        if except_vdi_ref:
-            vdi_refs = [vdi_ref for vdi_ref in vdi_refs
-                        if vdi_ref != except_vdi_ref]
-        self._safe_destroy_vdis(vdi_refs)
 
     def _destroy_kernel_ramdisk_plugin_call(self, kernel, ramdisk):
         args = {}
@@ -1161,10 +1137,19 @@ class VMOps(object):
 
     def _destroy_rescue_instance(self, rescue_vm_ref, original_vm_ref):
         """Destroy a rescue instance."""
-        vdi_ref = self._find_root_vdi_ref(original_vm_ref)
-        self._shutdown_rescue(rescue_vm_ref)
-        self._destroy_rescue_vdis(rescue_vm_ref, vdi_ref)
+        # Shutdown Rescue VM
+        vm_rec = self._session.call_xenapi("VM.get_record", rescue_vm_ref)
+        state = VMHelper.compile_info(vm_rec)['state']
+        if state != power_state.SHUTDOWN:
+            self._session.call_xenapi("VM.hard_shutdown", rescue_vm_ref)
 
+        # Destroy Rescue VDIs
+        vdi_refs = VMHelper.lookup_vm_vdis(self._session, rescue_vm_ref)
+        root_vdi_ref = self._find_root_vdi_ref(original_vm_ref)
+        vdi_refs = [vdi_ref for vdi_ref in vdi_refs if vdi_ref != root_vdi_ref]
+        self._safe_destroy_vdis(vdi_refs)
+
+        # Destroy Rescue VM
         self._session.call_xenapi("VM.destroy", rescue_vm_ref)
 
     def destroy(self, instance, network_info):
@@ -1203,7 +1188,10 @@ class VMOps(object):
         if shutdown:
             self._shutdown(instance, vm_ref)
 
-        self._destroy_vdis(instance, vm_ref)
+        # Destroy VDIs
+        vdi_refs = VMHelper.lookup_vm_vdis(self._session, vm_ref)
+        self._safe_destroy_vdis(vdi_refs)
+
         if destroy_kernel_ramdisk:
             self._destroy_kernel_ramdisk(instance, vm_ref)
 
