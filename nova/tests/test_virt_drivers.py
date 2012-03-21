@@ -451,6 +451,11 @@ class LibvirtConnTestCase(_VirtDriverTestCase):
         nova.virt.libvirt.connection.libvirt_utils = fake_libvirt_utils
         nova.virt.libvirt.firewall.libvirt = fakelibvirt
 
+        # So that the _supports_direct_io does the test based
+        # on the current working directory, instead of the
+        # default instances_path which doesn't exist
+        FLAGS.instances_path = ''
+
         # Point _VirtDriverTestCase at the right module
         self.driver_module = nova.virt.libvirt.connection
         super(LibvirtConnTestCase, self).setUp()
