@@ -42,6 +42,7 @@ from nova.compute import vm_states
 from nova.virt import images
 from nova.virt import driver
 from nova.virt import firewall as base_firewall
+from nova.virt.libvirt import config
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import volume
@@ -435,6 +436,59 @@ class LibvirtConnTestCase(test.TestCase):
         }
         result = conn.get_volume_connector(volume)
         self.assertDictMatch(expected, result)
+
+    def test_get_guest_config(self):
+        conn = connection.LibvirtConnection(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, False)
+        self.assertEquals(cfg.acpi, True)
+        self.assertEquals(cfg.memory, 1024 * 1024 * 2)
+        self.assertEquals(cfg.vcpus, 1)
+        self.assertEquals(cfg.os_type, "hvm")
+        self.assertEquals(cfg.os_boot_dev, "hd")
+        self.assertEquals(len(cfg.devices), 7)
+        self.assertEquals(type(cfg.devices[0]),
+                          config.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[1]),
+                          config.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[2]),
+                          config.LibvirtConfigGuestInterface)
+        self.assertEquals(type(cfg.devices[3]),
+                          config.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[4]),
+                          config.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[5]),
+                          config.LibvirtConfigGuestInput)
+        self.assertEquals(type(cfg.devices[6]),
+                          config.LibvirtConfigGuestGraphics)
+
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 2),
+                                    None, False)
+        self.assertEquals(cfg.acpi, True)
+        self.assertEquals(cfg.memory, 1024 * 1024 * 2)
+        self.assertEquals(cfg.vcpus, 1)
+        self.assertEquals(cfg.os_type, "hvm")
+        self.assertEquals(cfg.os_boot_dev, "hd")
+        self.assertEquals(type(cfg.devices[0]),
+                          config.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[1]),
+                          config.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[2]),
+                          config.LibvirtConfigGuestInterface)
+        self.assertEquals(type(cfg.devices[3]),
+                          config.LibvirtConfigGuestInterface)
+        self.assertEquals(type(cfg.devices[4]),
+                          config.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[5]),
+                          config.LibvirtConfigGuestSerial)
+        self.assertEquals(type(cfg.devices[6]),
+                          config.LibvirtConfigGuestInput)
+        self.assertEquals(type(cfg.devices[7]),
+                          config.LibvirtConfigGuestGraphics)
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
