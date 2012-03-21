@@ -225,7 +225,23 @@ class LibvirtConnection(driver.ComputeDriver):
         self.default_second_device = self._disk_prefix + 'b'
         self.default_third_device = self._disk_prefix + 'c'
 
+        self._disk_cachemode = None
         self.image_cache_manager = imagecache.ImageCacheManager()
+
+    @property
+    def disk_cachemode(self):
+        if self._disk_cachemode is None:
+            # We prefer 'none' for consistent performance, host crash
+            # safety & migration correctness by avoiding host page cache.
+            # Some filesystems (eg GlusterFS via FUSE) don't support
+            # O_DIRECT though. For those we fallback to 'writethrough'
+            # which gives host crash safety, and is safe for migration
+            # provided the filesystem is cache coherant (cluster filesystems
+            # typically are, but things like NFS are not).
+            self._disk_cachemode = "none"
+            if not self._supports_direct_io(FLAGS.instances_path):
+                self._disk_cachemode = "writethrough"
+        return self._disk_cachemode
 
     @property
     def host_state(self):
@@ -996,6 +1012,36 @@ class LibvirtConnection(driver.ComputeDriver):
         return {'host': host, 'port': port, 'internal_access_path': None}
 
     @staticmethod
+    def _supports_direct_io(dirpath):
+        testfile = os.path.join(dirpath, ".directio.test")
+        hasDirectIO = True
+        try:
+            f = os.open(testfile, os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
+            os.close(f)
+            LOG.debug(_("Path '%(path)s' supports direct I/O") %
+                      {'path': dirpath})
+        except OSError, e:
+            if e.errno == errno.EINVAL:
+                LOG.debug(_("Path '%(path)s' does not support direct I/O: "
+                            "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
+                hasDirectIO = False
+            else:
+                LOG.error(_("Error on '%(path)s' while checking direct I/O: "
+                            "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
+                raise e
+        except Exception, e:
+            LOG.error(_("Error on '%(path)s' while checking direct I/O: "
+                        "'%(ex)s'") % {'path': dirpath, 'ex': str(e)})
+            raise e
+        finally:
+            try:
+                os.unlink(testfile)
+            except:
+                pass
+
+        return hasDirectIO
+
+    @staticmethod
     def _cache_image(fn, target, fname, cow=False, size=None, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.
 
@@ -1374,6 +1420,7 @@ class LibvirtConnection(driver.ComputeDriver):
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
                     'uuid': instance['uuid'],
+                    'cachemode': self.disk_cachemode,
                     'basepath': os.path.join(FLAGS.instances_path,
                                              instance['name']),
                     'memory_kb': inst_type['memory_mb'] * 1024,
