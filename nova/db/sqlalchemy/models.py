@@ -419,15 +419,34 @@ class VolumeTypeExtraSpecs(BASE, NovaBase):
 class Quota(BASE, NovaBase):
     """Represents a single quota override for a project.
 
-    If there is no row for a given project id and resource, then
-    the default for the deployment is used. If the row is present
-    but the hard limit is Null, then the resource is unlimited.
+    If there is no row for a given project id and resource, then the
+    default for the quota class is used.  If there is no row for a
+    given quota class and resource, then the default for the
+    deployment is used. If the row is present but the hard limit is
+    Null, then the resource is unlimited.
     """
 
     __tablename__ = 'quotas'
     id = Column(Integer, primary_key=True)
 
     project_id = Column(String(255), index=True)
+
+    resource = Column(String(255))
+    hard_limit = Column(Integer, nullable=True)
+
+
+class QuotaClass(BASE, NovaBase):
+    """Represents a single quota override for a quota class.
+
+    If there is no row for a given quota class and resource, then the
+    default for the deployment is used.  If the row is present but the
+    hard limit is Null, then the resource is unlimited.
+    """
+
+    __tablename__ = 'quota_classes'
+    id = Column(Integer, primary_key=True)
+
+    class_name = Column(String(255), index=True)
 
     resource = Column(String(255))
     hard_limit = Column(Integer, nullable=True)

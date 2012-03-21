@@ -101,6 +101,7 @@
     "compute_extension:multinic": [],
     "compute_extension:networks": [],
     "compute_extension:quotas": [],
+    "compute_extension:quota_classes": [],
     "compute_extension:rescue": [],
     "compute_extension:security_groups": [],
     "compute_extension:server_action_list": [],

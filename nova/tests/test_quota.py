@@ -32,6 +32,196 @@ from nova.scheduler import driver as scheduler_driver
 FLAGS = flags.FLAGS
 
 
+class GetQuotaTestCase(test.TestCase):
+    def setUp(self):
+        super(GetQuotaTestCase, self).setUp()
+        self.flags(quota_instances=10,
+                   quota_cores=20,
+                   quota_ram=50 * 1024,
+                   quota_volumes=10,
+                   quota_gigabytes=1000,
+                   quota_floating_ips=10,
+                   quota_metadata_items=128,
+                   quota_max_injected_files=5,
+                   quota_max_injected_file_content_bytes=10 * 1024)
+        self.context = context.RequestContext('admin', 'admin', is_admin=True)
+
+    def _stub_class(self):
+        def fake_quota_class_get_all_by_name(context, quota_class):
+            result = dict(class_name=quota_class)
+            if quota_class == 'test_class':
+                result.update(
+                    instances=5,
+                    cores=10,
+                    ram=25 * 1024,
+                    volumes=5,
+                    gigabytes=500,
+                    floating_ips=5,
+                    metadata_items=64,
+                    injected_files=2,
+                    injected_file_content_bytes=5 * 1024,
+                    invalid_quota=100,
+                    )
+            return result
+
+        self.stubs.Set(db, 'quota_class_get_all_by_name',
+                       fake_quota_class_get_all_by_name)
+
+    def _stub_project(self, override=False):
+        def fake_quota_get_all_by_project(context, project_id):
+            result = dict(project_id=project_id)
+            if override:
+                result.update(
+                    instances=2,
+                    cores=5,
+                    ram=12 * 1024,
+                    volumes=2,
+                    gigabytes=250,
+                    floating_ips=2,
+                    metadata_items=32,
+                    injected_files=1,
+                    injected_file_content_bytes=2 * 1024,
+                    invalid_quota=50,
+                    )
+            return result
+
+        self.stubs.Set(db, 'quota_get_all_by_project',
+                       fake_quota_get_all_by_project)
+
+    def test_default_quotas(self):
+        result = quota._get_default_quotas()
+        self.assertEqual(result, dict(
+                instances=10,
+                cores=20,
+                ram=50 * 1024,
+                volumes=10,
+                gigabytes=1000,
+                floating_ips=10,
+                metadata_items=128,
+                injected_files=5,
+                injected_file_content_bytes=10 * 1024,
+                ))
+
+    def test_default_quotas_unlimited(self):
+        self.flags(quota_instances=-1,
+                   quota_cores=-1,
+                   quota_ram=-1,
+                   quota_volumes=-1,
+                   quota_gigabytes=-1,
+                   quota_floating_ips=-1,
+                   quota_metadata_items=-1,
+                   quota_max_injected_files=-1,
+                   quota_max_injected_file_content_bytes=-1)
+        result = quota._get_default_quotas()
+        self.assertEqual(result, dict(
+                instances=None,
+                cores=None,
+                ram=None,
+                volumes=None,
+                gigabytes=None,
+                floating_ips=None,
+                metadata_items=None,
+                injected_files=None,
+                injected_file_content_bytes=None,
+                ))
+
+    def test_class_quotas_noclass(self):
+        self._stub_class()
+        result = quota.get_class_quotas(self.context, 'noclass')
+        self.assertEqual(result, dict(
+                instances=10,
+                cores=20,
+                ram=50 * 1024,
+                volumes=10,
+                gigabytes=1000,
+                floating_ips=10,
+                metadata_items=128,
+                injected_files=5,
+                injected_file_content_bytes=10 * 1024,
+                ))
+
+    def test_class_quotas(self):
+        self._stub_class()
+        result = quota.get_class_quotas(self.context, 'test_class')
+        self.assertEqual(result, dict(
+                instances=5,
+                cores=10,
+                ram=25 * 1024,
+                volumes=5,
+                gigabytes=500,
+                floating_ips=5,
+                metadata_items=64,
+                injected_files=2,
+                injected_file_content_bytes=5 * 1024,
+                ))
+
+    def test_project_quotas_defaults_noclass(self):
+        self._stub_class()
+        self._stub_project()
+        result = quota.get_project_quotas(self.context, 'admin')
+        self.assertEqual(result, dict(
+                instances=10,
+                cores=20,
+                ram=50 * 1024,
+                volumes=10,
+                gigabytes=1000,
+                floating_ips=10,
+                metadata_items=128,
+                injected_files=5,
+                injected_file_content_bytes=10 * 1024,
+                ))
+
+    def test_project_quotas_overrides_noclass(self):
+        self._stub_class()
+        self._stub_project(True)
+        result = quota.get_project_quotas(self.context, 'admin')
+        self.assertEqual(result, dict(
+                instances=2,
+                cores=5,
+                ram=12 * 1024,
+                volumes=2,
+                gigabytes=250,
+                floating_ips=2,
+                metadata_items=32,
+                injected_files=1,
+                injected_file_content_bytes=2 * 1024,
+                ))
+
+    def test_project_quotas_defaults_withclass(self):
+        self._stub_class()
+        self._stub_project()
+        self.context.quota_class = 'test_class'
+        result = quota.get_project_quotas(self.context, 'admin')
+        self.assertEqual(result, dict(
+                instances=5,
+                cores=10,
+                ram=25 * 1024,
+                volumes=5,
+                gigabytes=500,
+                floating_ips=5,
+                metadata_items=64,
+                injected_files=2,
+                injected_file_content_bytes=5 * 1024,
+                ))
+
+    def test_project_quotas_overrides_withclass(self):
+        self._stub_class()
+        self._stub_project(True)
+        self.context.quota_class = 'test_class'
+        result = quota.get_project_quotas(self.context, 'admin')
+        self.assertEqual(result, dict(
+                instances=2,
+                cores=5,
+                ram=12 * 1024,
+                volumes=2,
+                gigabytes=250,
+                floating_ips=2,
+                metadata_items=32,
+                injected_files=1,
+                injected_file_content_bytes=2 * 1024,
+                ))
+
+
 class QuotaTestCase(test.TestCase):
 
     class StubImageService(object):
