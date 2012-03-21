@@ -55,9 +55,6 @@ class RequestContext(object):
         :param kwargs: Extra arguments that might be present, but we ignore
             because they possibly came in from older rpc messages.
         """
-        if read_deleted not in ('no', 'yes', 'only'):
-            raise ValueError(_("read_deleted can only be one of 'no', "
-                               "'yes' or 'only', not %r") % read_deleted)
         if kwargs:
             LOG.warn(_('Arguments dropped when creating context: %s') %
                     str(kwargs))
@@ -84,6 +81,21 @@ class RequestContext(object):
         self.quota_class = quota_class
         if overwrite or not hasattr(local.store, 'context'):
             self.update_store()
+
+    def _get_read_deleted(self):
+        return self._read_deleted
+
+    def _set_read_deleted(self, read_deleted):
+        if read_deleted not in ('no', 'yes', 'only'):
+            raise ValueError(_("read_deleted can only be one of 'no', "
+                               "'yes' or 'only', not %r") % read_deleted)
+        self._read_deleted = read_deleted
+
+    def _del_read_deleted(self):
+        del self._read_deleted
+
+    read_deleted = property(_get_read_deleted, _set_read_deleted,
+                            _del_read_deleted)
 
     def update_store(self):
         local.store.context = self

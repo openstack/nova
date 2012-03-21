@@ -38,12 +38,22 @@ class ContextTestCase(test.TestCase):
                                       read_deleted='yes')
         self.assertEquals(ctxt.read_deleted, 'yes')
 
+        ctxt.read_deleted = 'no'
+        self.assertEquals(ctxt.read_deleted, 'no')
+
     def test_request_context_read_deleted_invalid(self):
         self.assertRaises(ValueError,
                           context.RequestContext,
                           '111',
                           '222',
                           read_deleted=True)
+
+        ctxt = context.RequestContext('111', '222')
+        self.assertRaises(ValueError,
+                          setattr,
+                          ctxt,
+                          'read_deleted',
+                          True)
 
     def test_extra_args_to_context_get_logged(self):
         info = {}
