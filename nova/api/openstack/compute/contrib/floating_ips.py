@@ -152,16 +152,12 @@ class FloatingIPController(object):
         try:
             address = self.network_api.allocate_floating_ip(context, pool)
             ip = self.network_api.get_floating_ip_by_address(context, address)
-        except rpc_common.RemoteError as ex:
-            # NOTE(tr3buchet) - why does this block exist?
-            if ex.exc_type == 'NoMoreFloatingIps':
-                if pool:
-                    msg = _("No more floating ips in pool %s.") % pool
-                else:
-                    msg = _("No more floating ips available.")
-                raise webob.exc.HTTPBadRequest(explanation=msg)
+        except exception.NoMoreFloatingIps:
+            if pool:
+                msg = _("No more floating ips in pool %s.") % pool
             else:
-                raise
+                msg = _("No more floating ips available.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         return _translate_floating_ip_view(ip)
 
@@ -212,9 +208,6 @@ class FloatingIPActionController(wsgi.Controller):
         except exception.FixedIpNotFoundForInstance:
             msg = _("No fixed ips associated to instance")
             raise webob.exc.HTTPBadRequest(explanation=msg)
-        except rpc_common.RemoteError:
-            msg = _("Associate floating ip failed")
-            raise webob.exc.HTTPInternalServerError(explanation=msg)
 
         return webob.Response(status_int=202)
 

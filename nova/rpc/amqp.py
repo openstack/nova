@@ -27,7 +27,6 @@ AMQP, but is deprecated and predates this code.
 
 import inspect
 import sys
-import traceback
 import uuid
 
 from eventlet import greenpool
@@ -141,11 +140,7 @@ def msg_reply(msg_id, connection_pool, reply=None, failure=None, ending=False):
     """
     with ConnectionContext(connection_pool) as conn:
         if failure:
-            message = str(failure[1])
-            tb = traceback.format_exception(*failure)
-            LOG.error(_("Returning exception %s to caller"), message)
-            LOG.error(tb)
-            failure = (failure[0].__name__, str(failure[1]), tb)
+            failure = rpc_common.serialize_remote_exception(failure)
 
         try:
             msg = {'result': reply, 'failure': failure}
@@ -285,7 +280,9 @@ class MulticallWaiter(object):
     def __call__(self, data):
         """The consume() callback will call this.  Store the result."""
         if data['failure']:
-            self._result = rpc_common.RemoteError(*data['failure'])
+            failure = data['failure']
+            self._result = rpc_common.deserialize_remote_exception(failure)
+
         elif data.get('ending', False):
             self._got_ending = True
         else:

@@ -18,11 +18,14 @@
 #    under the License.
 
 import copy
+import sys
+import traceback
 
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -37,9 +40,14 @@ rpc_opts = [
     cfg.IntOpt('rpc_response_timeout',
                default=60,
                help='Seconds to wait for a response from call or multicall'),
+    cfg.IntOpt('allowed_rpc_exception_modules',
+               default=['nova.exception'],
+               help='Modules of exceptions that are permitted to be recreated'
+                    'upon receiving exception data from an rpc call.'),
     ]
 
 flags.FLAGS.register_opts(rpc_opts)
+FLAGS = flags.FLAGS
 
 
 class RemoteError(exception.NovaException):
@@ -158,3 +166,74 @@ def _safe_log(log_func, msg, msg_data):
         msg_data['auth_token'] = '<SANITIZED>'
 
     return log_func(msg, msg_data)
+
+
+def serialize_remote_exception(failure_info):
+    """Prepares exception data to be sent over rpc.
+
+    Failure_info should be a sys.exc_info() tuple.
+
+    """
+    tb = traceback.format_exception(*failure_info)
+    failure = failure_info[1]
+    LOG.error(_("Returning exception %s to caller"), unicode(failure))
+    LOG.error(tb)
+
+    kwargs = {}
+    if hasattr(failure, 'kwargs'):
+        kwargs = failure.kwargs
+
+    data = {
+        'class': str(failure.__class__.__name__),
+        'module': str(failure.__class__.__module__),
+        'message': unicode(failure),
+        'tb': tb,
+        'args': failure.args,
+        'kwargs': kwargs
+    }
+
+    json_data = utils.dumps(data)
+
+    return json_data
+
+
+def deserialize_remote_exception(data):
+    failure = utils.loads(str(data))
+
+    trace = failure.get('tb', [])
+    message = failure.get('message', "") + "\n" + "\n".join(trace)
+    name = failure.get('class')
+    module = failure.get('module')
+
+    # NOTE(ameade): We DO NOT want to allow just any module to be imported, in
+    # order to prevent arbitrary code execution.
+    if not module in FLAGS.allowed_rpc_exception_modules:
+        return RemoteError(name, failure.get('message'), trace)
+
+    try:
+        __import__(module)
+        mod = sys.modules[module]
+        klass = getattr(mod, name)
+        if not issubclass(klass, Exception):
+            raise TypeError("Can only deserialize Exceptions")
+
+        failure = klass(**failure.get('kwargs', {}))
+    except (AttributeError, TypeError, ImportError):
+        return RemoteError(name, failure.get('message'), trace)
+
+    ex_type = type(failure)
+    str_override = lambda self: message
+    new_ex_type = type(ex_type.__name__ + "_Remote", (ex_type,),
+                       {'__str__': str_override})
+    try:
+        # NOTE(ameade): Dynamically create a new exception type and swap it in
+        # as the new type for the exception. This only works on user defined
+        # Exceptions and not core python exceptions. This is important because
+        # we cannot necessarily change an exception message so we must override
+        # the __str__ method.
+        failure.__class__ = new_ex_type
+    except TypeError as e:
+        # NOTE(ameade): If a core exception then just add the traceback to the
+        # first exception argument.
+        failure.args = (message,) + failure.args[1:]
+    return failure

@@ -20,6 +20,7 @@ import webob
 from nova.api.openstack.compute.contrib import floating_ips
 from nova import context
 from nova import db
+from nova import exception
 from nova import network
 from nova import compute
 from nova import rpc
@@ -184,6 +185,18 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(res_dict['floating_ip']['ip'], '10.10.10.10')
         self.assertEqual(res_dict['floating_ip']['instance_id'], None)
 
+    def test_floating_ip_show_not_found(self):
+        def fake_get_floating_ip(*args, **kwargs):
+            raise exception.FloatingIpNotFound()
+
+        self.stubs.Set(network.api.API, "get_floating_ip",
+                       fake_get_floating_ip)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/9876')
+
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, req, 9876)
+
     def test_show_associated_floating_ip(self):
         def get_floating_ip(self, context, id):
             return {'id': 1, 'address': '10.10.10.10', 'pool': 'nova',
@@ -205,7 +218,7 @@ class FloatingIpTest(test.TestCase):
 # test floating ip allocate/release(deallocate)
     def test_floating_ip_allocate_no_free_ips(self):
         def fake_call(*args, **kwargs):
-            raise(rpc_common.RemoteError('NoMoreFloatingIps', '', ''))
+            raise exception.NoMoreFloatingIps()
 
         self.stubs.Set(rpc, "call", fake_call)
 

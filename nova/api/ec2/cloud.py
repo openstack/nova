@@ -41,7 +41,6 @@ from nova import flags
 from nova.image import s3
 from nova import log as logging
 from nova import network
-from nova.rpc import common as rpc_common
 from nova import utils
 from nova import volume
 
@@ -1253,15 +1252,8 @@ class CloudController(object):
 
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
-        try:
-            public_ip = self.network_api.allocate_floating_ip(context)
-            return {'publicIp': public_ip}
-        except rpc_common.RemoteError as ex:
-            # NOTE(tr3buchet) - why does this block exist?
-            if ex.exc_type == 'NoMoreFloatingIps':
-                raise exception.NoMoreFloatingIps()
-            else:
-                raise
+        public_ip = self.network_api.allocate_floating_ip(context)
+        return {'publicIp': public_ip}
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)

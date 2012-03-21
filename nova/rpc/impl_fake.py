@@ -77,12 +77,8 @@ class Consumer(object):
                     else:
                         res.append(rval)
                 done.send(res)
-            except Exception:
-                exc_info = sys.exc_info()
-                done.send_exception(
-                        rpc_common.RemoteError(exc_info[0].__name__,
-                            str(exc_info[1]),
-                            ''.join(traceback.format_exception(*exc_info))))
+            except Exception as e:
+                done.send_exception(e)
 
         thread = eventlet.greenthread.spawn(_inner)
 
@@ -161,7 +157,7 @@ def call(context, topic, msg, timeout=None):
 def cast(context, topic, msg):
     try:
         call(context, topic, msg)
-    except rpc_common.RemoteError:
+    except Exception:
         pass
 
 
@@ -184,5 +180,5 @@ def fanout_cast(context, topic, msg):
     for consumer in CONSUMERS.get(topic, []):
         try:
             consumer.call(context, method, args, None)
-        except rpc_common.RemoteError:
+        except Exception:
             pass

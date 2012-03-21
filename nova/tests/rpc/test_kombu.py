@@ -20,6 +20,7 @@ Unit Tests for remote procedure calls using kombu
 """
 
 from nova import context
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
@@ -292,4 +293,54 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
 
         self.assertEqual(self.received_message, message)
         # Only called once, because our stub goes away during reconnection
-        self.assertEqual(info['called'], 1)
+
+    def test_call_exception(self):
+        """Test that exception gets passed back properly.
+
+        rpc.call returns an Exception object.  The value of the
+        exception is converted to a string.
+
+        """
+        self.flags(allowed_rpc_exception_modules=['exceptions'])
+        value = "This is the exception message"
+        self.assertRaises(NotImplementedError,
+                          self.rpc.call,
+                          self.context,
+                          'test',
+                          {"method": "fail",
+                           "args": {"value": value}})
+        try:
+            self.rpc.call(self.context,
+                     'test',
+                     {"method": "fail",
+                      "args": {"value": value}})
+            self.fail("should have thrown Exception")
+        except NotImplementedError as exc:
+            self.assertTrue(value in unicode(exc))
+            #Traceback should be included in exception message
+            self.assertTrue('raise NotImplementedError(value)' in unicode(exc))
+
+    def test_call_converted_exception(self):
+        """Test that exception gets passed back properly.
+
+        rpc.call returns an Exception object.  The value of the
+        exception is converted to a string.
+
+        """
+        value = "This is the exception message"
+        self.assertRaises(exception.ConvertedException,
+                          self.rpc.call,
+                          self.context,
+                          'test',
+                          {"method": "fail_converted",
+                           "args": {"value": value}})
+        try:
+            self.rpc.call(self.context,
+                     'test',
+                     {"method": "fail_converted",
+                      "args": {"value": value}})
+            self.fail("should have thrown Exception")
+        except exception.ConvertedException as exc:
+            self.assertTrue(value in unicode(exc))
+            #Traceback should be included in exception message
+            self.assertTrue('exception.ConvertedException' in unicode(exc))
