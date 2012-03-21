@@ -12,7 +12,18 @@ General
 - Put one newline between methods in classes and anywhere else
 - Do not write "except:", use "except Exception:" at the very least
 - Include your name with TODOs as in "#TODO(termie)"
-- Do not name anything the same name as a built-in or reserved word
+- Do not shadow a built-in or reserved word. Example::
+
+    def list():
+        return [1, 2, 3]
+
+    mylist = list() # BAD, shadows `list` built-in
+
+    class Foo(object):
+        def list(self):
+            return [1, 2, 3]
+
+    mylist = Foo().list() # OKAY, does not shadow built-in
 
 
 Imports
