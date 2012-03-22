@@ -5,7 +5,7 @@ The rescue extension lets you put a server into a "rescue" status when the virtu
 
 To put a server into "rescue" state, you do not have to be an administrator. The only requirement is that the base image used to build your instance must still be available.
 
-To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://mycloud.com/v1.1/tenant/extensions.
+To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
 Rescue Extension Overview
 -------------------------

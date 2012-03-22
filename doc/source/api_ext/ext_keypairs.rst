@@ -2,7 +2,7 @@ About The Keypairs Extension
 ============================
 This extension enables you to create or import a keypair on a virtual instance. If you send the name of the instance to the API, you get a key and a private_key and fingerprint returned. You can also send a public_key to add an existing ssh key and also list the keypairs in use on instances.
 
-To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://mycloud.com/v1.1/tenant/extensions.
+To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
 Keypairs Extension Overview
 ---------------------------

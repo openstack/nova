@@ -9,7 +9,7 @@ To find more about it, please read http://wiki.openstack.org/host-aggregates or 
 
 Pre-requisites depend on the kind of hypervisor support you are going to use. As for XenServer/XCP, the same requirements for resource pools apply.
 
-To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://mycloud.com/v1.1/tenant/extensions.
+To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
 Extension Overview
 ------------------

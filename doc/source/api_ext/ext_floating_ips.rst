@@ -2,7 +2,7 @@ About The Floating IPs Extension
 ================================
 The Floating IPs extension enables assigning and allocation of floating IP addresses to instances running in an OpenStack cloud. It is used with the OpenStack Compute 1.1 API to add or remove floating IP addresses on named instances. 
 
-To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://mycloud.com/v1.1/tenant/extension.
+To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extension.
 
 Floating IPs Extension Overview
 -------------------------------

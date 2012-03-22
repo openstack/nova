@@ -2,7 +2,7 @@ About The Virtual Interfaces Extension
 ======================================
 The Virtual Interfaces extension lets you view the virtual interfaces used in an instance.
 
-To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://mycloud.com/v1.1/tenant/extensions.
+To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
 Virtual Interfaces Extension Overview
 -------------------------------------

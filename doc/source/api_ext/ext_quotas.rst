@@ -5,7 +5,7 @@ The quotas extension enables limiters placed on the resources used per tenant (p
 To use this extension, you need to have administrative rights to the tenants upon which you are placing quotas.
 .. Are there any pre-requisites prior to using it such as special hardware or configuration?
 
-To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://mycloud.com/v1.1/tenant/extensions.
+To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
 Quotas Extension Overview
 -------------------------

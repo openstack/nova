@@ -4,7 +4,7 @@ The Security Groups extension lets you view, create, and remove security groups 
 
 .. Are there any pre-requisites prior to using it such as special hardware or configuration?
 
-To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://mycloud.com/v1.1/tenant/extensions.
+To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
 Security Groups Extension Overview
 ----------------------------------

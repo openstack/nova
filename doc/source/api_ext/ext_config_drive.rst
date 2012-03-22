@@ -4,7 +4,7 @@ The config-drive extension enables attaching a separate drive to the Compute gue
 
 To use this extension, you must have installed Compute, with libvirt or Xen using local disk.
 
-To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://mycloud.com/v1.1/tenant/extensions.
+To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
 Extension Overview
 ------------------

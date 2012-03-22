@@ -4,7 +4,7 @@ This extension enables addFixedIp and removeFixedIp actions on servers. It is us
 
 To use this extension, you must have configured Compute with more than one Network Interface Card.
 
-To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://mycloud.com/v1.1/tenant/extension.
+To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extension.
 
 Fixed IPs Extension Overview
 ----------------------------
