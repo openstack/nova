@@ -854,6 +854,23 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(result1[0]['instanceId'],
                          ec2utils.id_to_ec2_id(inst2.id))
 
+    def test_describe_instances_with_image_deleted(self):
+        image_uuid = 'aebef54a-ed67-4d10-912f-14455edce176'
+        args1 = {'reservation_id': 'a',
+                 'image_ref': image_uuid,
+                 'instance_type_id': 1,
+                 'host': 'host1',
+                 'vm_state': 'active'}
+        inst1 = db.instance_create(self.context, args1)
+        args2 = {'reservation_id': 'b',
+                 'image_ref': image_uuid,
+                 'instance_type_id': 1,
+                 'host': 'host1',
+                 'vm_state': 'active'}
+        inst2 = db.instance_create(self.context, args2)
+        result = self.cloud.describe_instances(self.context)
+        self.assertEqual(len(result['reservationSet']), 2)
+
     def _block_device_mapping_create(self, instance_id, mappings):
         volumes = []
         for bdm in mappings:
