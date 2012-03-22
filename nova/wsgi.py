@@ -85,8 +85,12 @@ class Server(object):
 
         :param backlog: Maximum number of queued connections.
         :returns: None
+        :raises: nova.exception.InvalidInput
 
         """
+        if backlog < 1:
+            raise exception.InvalidInput(
+                    reason='The backlog must be more than 1')
         self._socket = eventlet.listen((self.host, self.port), backlog=backlog)
         self._server = eventlet.spawn(self._start)
         (self.host, self.port) = self._socket.getsockname()
