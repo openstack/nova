@@ -185,7 +185,7 @@ def unpack_context(msg):
             context_dict[key[9:]] = value
     context_dict['msg_id'] = msg.pop('_msg_id', None)
     ctx = RpcContext.from_dict(context_dict)
-    LOG.debug(_('unpacked context: %s'), ctx.to_dict())
+    rpc_common._safe_log(LOG.debug, _('unpacked context: %s'), ctx.to_dict())
     return ctx
 
 
