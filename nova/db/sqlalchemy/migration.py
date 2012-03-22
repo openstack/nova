@@ -29,10 +29,6 @@ import migrate
 from migrate.versioning import util as migrate_util
 
 
-MIGRATE_PKG_VER = dist_version.StrictVersion(migrate.__version__)
-USE_MIGRATE_PATCH = MIGRATE_PKG_VER < dist_version.StrictVersion('0.7.3')
-
-
 @migrate_util.decorator
 def patched_with_engine(f, *a, **kw):
     url = a[0]
@@ -49,7 +45,9 @@ def patched_with_engine(f, *a, **kw):
 
 # TODO(jkoelker) When migrate 0.7.3 is released and nova depends
 #                on that version or higher, this can be removed
-if USE_MIGRATE_PATCH:
+MIN_PKG_VERSION = dist_version.StrictVersion('0.7.3')
+if (not hasattr(migrate, '__version__') or
+    dist_version.StrictVersion(migrate.__version__) < MIN_PKG_VERSION):
     migrate_util.with_engine = patched_with_engine
 
 
