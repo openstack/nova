@@ -90,9 +90,9 @@ class SnapshotApiTest(test.TestCase):
         resp_dict = self.controller.create(req, body)
 
         self.assertTrue('snapshot' in resp_dict)
-        self.assertEqual(resp_dict['snapshot']['displayName'],
+        self.assertEqual(resp_dict['snapshot']['display_name'],
                         snapshot['display_name'])
-        self.assertEqual(resp_dict['snapshot']['displayDescription'],
+        self.assertEqual(resp_dict['snapshot']['display_description'],
                         snapshot['display_description'])
 
     def test_snapshot_create_force(self):
@@ -108,9 +108,9 @@ class SnapshotApiTest(test.TestCase):
         resp_dict = self.controller.create(req, body)
 
         self.assertTrue('snapshot' in resp_dict)
-        self.assertEqual(resp_dict['snapshot']['displayName'],
+        self.assertEqual(resp_dict['snapshot']['display_name'],
                         snapshot['display_name'])
-        self.assertEqual(resp_dict['snapshot']['displayDescription'],
+        self.assertEqual(resp_dict['snapshot']['display_description'],
                         snapshot['display_description'])
 
     def test_snapshot_delete(self):
@@ -161,8 +161,8 @@ class SnapshotSerializerTest(test.TestCase):
     def _verify_snapshot(self, snap, tree):
         self.assertEqual(tree.tag, 'snapshot')
 
-        for attr in ('id', 'status', 'size', 'createdAt',
-                     'displayName', 'displayDescription', 'volumeId'):
+        for attr in ('id', 'status', 'size', 'created_at',
+                     'display_name', 'display_description', 'volume_id'):
             self.assertEqual(str(snap[attr]), tree.get(attr))
 
     def test_snapshot_show_create_serializer(self):
@@ -171,10 +171,10 @@ class SnapshotSerializerTest(test.TestCase):
             id='snap_id',
             status='snap_status',
             size=1024,
-            createdAt=datetime.datetime.now(),
-            displayName='snap_name',
-            displayDescription='snap_desc',
-            volumeId='vol_id',
+            created_at=datetime.datetime.now(),
+            display_name='snap_name',
+            display_description='snap_desc',
+            volume_id='vol_id',
             )
         text = serializer.serialize(dict(snapshot=raw_snapshot))
 
@@ -189,19 +189,19 @@ class SnapshotSerializerTest(test.TestCase):
                 id='snap1_id',
                 status='snap1_status',
                 size=1024,
-                createdAt=datetime.datetime.now(),
-                displayName='snap1_name',
-                displayDescription='snap1_desc',
-                volumeId='vol1_id',
+                created_at=datetime.datetime.now(),
+                display_name='snap1_name',
+                display_description='snap1_desc',
+                volume_id='vol1_id',
                 ),
                        dict(
                 id='snap2_id',
                 status='snap2_status',
                 size=1024,
-                createdAt=datetime.datetime.now(),
-                displayName='snap2_name',
-                displayDescription='snap2_desc',
-                volumeId='vol2_id',
+                created_at=datetime.datetime.now(),
+                display_name='snap2_name',
+                display_description='snap2_desc',
+                volume_id='vol2_id',
                 )]
         text = serializer.serialize(dict(snapshots=raw_snapshots))
 
