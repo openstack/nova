@@ -47,7 +47,6 @@ from nova import volume
 
 
 FLAGS = flags.FLAGS
-flags.DECLARE('dhcp_domain', 'nova.network.manager')
 
 LOG = logging.getLogger(__name__)
 
