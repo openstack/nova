@@ -166,7 +166,7 @@ def stubout_create_vm(stubs):
 
 
 def stubout_loopingcall_start(stubs):
-    def fake_start(self, interval, now=True):
+    def fake_start(self, interval):
         self.f(*self.args, **self.kw)
     stubs.Set(utils.LoopingCall, 'start', fake_start)
 

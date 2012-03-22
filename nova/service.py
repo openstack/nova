@@ -21,6 +21,7 @@
 
 import inspect
 import os
+import random
 import signal
 
 import eventlet
@@ -47,6 +48,11 @@ service_opts = [
     cfg.IntOpt('periodic_interval',
                default=60,
                help='seconds between running periodic tasks'),
+    cfg.IntOpt('periodic_fuzzy_delay',
+               default=60,
+               help='range of seconds to randomly delay when starting the'
+                    ' periodic task scheduler to reduce stampeding.'
+                    ' (Disable by setting to 0)'),
     cfg.StrOpt('ec2_listen',
                default="0.0.0.0",
                help='IP address for EC2 API to listen'),
@@ -151,7 +157,8 @@ class Service(object):
     it state to the database services table."""
 
     def __init__(self, host, binary, topic, manager, report_interval=None,
-                 periodic_interval=None, *args, **kwargs):
+                 periodic_interval=None, periodic_fuzzy_delay=None,
+                 *args, **kwargs):
         self.host = host
         self.binary = binary
         self.topic = topic
@@ -160,6 +167,7 @@ class Service(object):
         self.manager = manager_class(host=self.host, *args, **kwargs)
         self.report_interval = report_interval
         self.periodic_interval = periodic_interval
+        self.periodic_fuzzy_delay = periodic_fuzzy_delay
         super(Service, self).__init__(*args, **kwargs)
         self.saved_args, self.saved_kwargs = args, kwargs
         self.timers = []
@@ -200,12 +208,19 @@ class Service(object):
 
         if self.report_interval:
             pulse = utils.LoopingCall(self.report_state)
-            pulse.start(interval=self.report_interval, now=False)
+            pulse.start(interval=self.report_interval,
+                        initial_delay=self.report_interval)
             self.timers.append(pulse)
 
         if self.periodic_interval:
+            if self.periodic_fuzzy_delay:
+                initial_delay = random.randint(0, self.periodic_fuzzy_delay)
+            else:
+                initial_delay = None
+
             periodic = utils.LoopingCall(self.periodic_tasks)
-            periodic.start(interval=self.periodic_interval, now=False)
+            periodic.start(interval=self.periodic_interval,
+                           initial_delay=initial_delay)
             self.timers.append(periodic)
 
     def _create_service_ref(self, context):
@@ -224,7 +239,8 @@ class Service(object):
 
     @classmethod
     def create(cls, host=None, binary=None, topic=None, manager=None,
-               report_interval=None, periodic_interval=None):
+               report_interval=None, periodic_interval=None,
+               periodic_fuzzy_delay=None):
         """Instantiates class and passes back application object.
 
         :param host: defaults to FLAGS.host
@@ -233,6 +249,7 @@ class Service(object):
         :param manager: defaults to FLAGS.<topic>_manager
         :param report_interval: defaults to FLAGS.report_interval
         :param periodic_interval: defaults to FLAGS.periodic_interval
+        :param periodic_fuzzy_delay: defaults to FLAGS.periodic_fuzzy_delay
 
         """
         if not host:
@@ -243,12 +260,16 @@ class Service(object):
             topic = binary.rpartition('nova-')[2]
         if not manager:
             manager = FLAGS.get('%s_manager' % topic, None)
-        if not report_interval:
+        if report_interval is None:
             report_interval = FLAGS.report_interval
-        if not periodic_interval:
+        if periodic_interval is None:
             periodic_interval = FLAGS.periodic_interval
+        if periodic_fuzzy_delay is None:
+            periodic_fuzzy_delay = FLAGS.periodic_fuzzy_delay
         service_obj = cls(host, binary, topic, manager,
-                          report_interval, periodic_interval)
+                          report_interval=report_interval,
+                          periodic_interval=periodic_interval,
+                          periodic_fuzzy_delay=periodic_fuzzy_delay)
 
         return service_obj
 
