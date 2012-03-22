@@ -84,6 +84,5 @@ setuptools.setup(name='nova',
                'bin/nova-scheduler',
                'bin/nova-volume',
                'bin/nova-xvpvncproxy',
-               'bin/stack',
-               'tools/nova-debug'],
+               'bin/stack'],
         py_modules=[])
