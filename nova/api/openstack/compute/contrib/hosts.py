@@ -138,7 +138,7 @@ class HostController(object):
             key = raw_key.lower().strip()
             val = raw_val.lower().strip()
             if key == "status":
-                if val[:6] in ("enable", "disabl"):
+                if val in ("enable", "disable"):
                     update_values['status'] = val.startswith("enable")
                 else:
                     explanation = _("Invalid status: '%s'") % raw_val
