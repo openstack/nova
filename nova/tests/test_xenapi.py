@@ -694,11 +694,6 @@ class XenAPIVMTestCase(test.TestCase):
                               str(3 * 1024))
 
     def test_rescue(self):
-        def _find_rescue_vbd_ref(*args):
-            return vbd
-
-        self.stubs.Set(vmops.VMOps, '_find_rescue_vbd_ref',
-                _find_rescue_vbd_ref)
         instance = self._create_instance()
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         vm = vm_utils.VMHelper.lookup(session, instance.name)

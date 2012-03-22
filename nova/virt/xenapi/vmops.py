@@ -1058,8 +1058,11 @@ class VMOps(object):
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
-    def _find_rescue_vbd_ref(self, vm_ref, rescue_vm_ref):
-        """Find and return the rescue VM's vbd_ref."""
+    def _find_root_vdi_ref(self, vm_ref):
+        """Find and return the root vdi ref for a VM."""
+        if not vm_ref:
+            return None
+
         vbd_refs = self._session.call_xenapi("VM.get_VBDs", vm_ref)
 
         if len(vbd_refs) == 0:
@@ -1072,10 +1075,7 @@ class VMOps(object):
             # with the root fs coming second
             vbd_ref = vbd_refs[1]
 
-        vdi_ref = self._session.call_xenapi("VBD.get_record", vbd_ref)["VDI"]
-
-        return VMHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref,
-                                   1, bootable=False)
+        return self._session.call_xenapi("VBD.get_record", vbd_ref)["VDI"]
 
     def _shutdown_rescue(self, rescue_vm_ref):
         """Shutdown a rescue instance."""
@@ -1101,19 +1101,13 @@ class VMOps(object):
         vdi_refs = VMHelper.lookup_vm_vdis(self._session, vm_ref)
         self._safe_destroy_vdis(vdi_refs)
 
-    def _destroy_rescue_vdis(self, rescue_vm_ref):
+    def _destroy_rescue_vdis(self, rescue_vm_ref, except_vdi_ref):
         """Destroys all VDIs associated with a rescued VM."""
         vdi_refs = VMHelper.lookup_vm_vdis(self._session, rescue_vm_ref)
+        if except_vdi_ref:
+            vdi_refs = [vdi_ref for vdi_ref in vdi_refs
+                        if vdi_ref != except_vdi_ref]
         self._safe_destroy_vdis(vdi_refs)
-
-    def _destroy_rescue_vbds(self, rescue_vm_ref):
-        """Destroys all VBDs tied to a rescue VM."""
-        vbd_refs = self._session.call_xenapi("VM.get_VBDs", rescue_vm_ref)
-        for vbd_ref in vbd_refs:
-            vbd_rec = self._session.call_xenapi("VBD.get_record", vbd_ref)
-            if vbd_rec.get("userdevice", None) == "1":  # VBD is always 1
-                VMHelper.unplug_vbd(self._session, vbd_ref)
-                VMHelper.destroy_vbd(self._session, vbd_ref)
 
     def _destroy_kernel_ramdisk_plugin_call(self, kernel, ramdisk):
         args = {}
@@ -1165,11 +1159,11 @@ class VMOps(object):
 
         LOG.debug(_("Instance %(instance_uuid)s VM destroyed") % locals())
 
-    def _destroy_rescue_instance(self, rescue_vm_ref):
+    def _destroy_rescue_instance(self, rescue_vm_ref, original_vm_ref):
         """Destroy a rescue instance."""
-        self._destroy_rescue_vbds(rescue_vm_ref)
+        vdi_ref = self._find_root_vdi_ref(original_vm_ref)
         self._shutdown_rescue(rescue_vm_ref)
-        self._destroy_rescue_vdis(rescue_vm_ref)
+        self._destroy_rescue_vdis(rescue_vm_ref, vdi_ref)
 
         self._session.call_xenapi("VM.destroy", rescue_vm_ref)
 
@@ -1183,12 +1177,13 @@ class VMOps(object):
         instance_uuid = instance['uuid']
         LOG.info(_("Destroying VM for Instance %(instance_uuid)s") % locals())
 
+        vm_ref = VMHelper.lookup(self._session, instance.name)
+
         rescue_vm_ref = VMHelper.lookup(self._session,
                                         "%s-rescue" % instance.name)
         if rescue_vm_ref:
-            self._destroy_rescue_instance(rescue_vm_ref)
+            self._destroy_rescue_instance(rescue_vm_ref, vm_ref)
 
-        vm_ref = VMHelper.lookup(self._session, instance.name)
         return self._destroy(instance, vm_ref, network_info, shutdown=True)
 
     def _destroy(self, instance, vm_ref, network_info=None, shutdown=True,
@@ -1260,8 +1255,10 @@ class VMOps(object):
         instance._rescue = True
         self.spawn_rescue(context, instance, image_meta, network_info)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
-        rescue_vbd_ref = self._find_rescue_vbd_ref(vm_ref, rescue_vm_ref)
+        vdi_ref = self._find_root_vdi_ref(vm_ref)
 
+        rescue_vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref,
+                                             vdi_ref, 1, bootable=False)
         self._session.call_xenapi('VBD.plug', rescue_vbd_ref)
 
     def unrescue(self, instance):
@@ -1281,7 +1278,7 @@ class VMOps(object):
         original_vm_ref = VMHelper.lookup(self._session, instance.name)
         instance._rescue = False
 
-        self._destroy_rescue_instance(rescue_vm_ref)
+        self._destroy_rescue_instance(rescue_vm_ref, original_vm_ref)
         self._release_bootlock(original_vm_ref)
         self._start(instance, original_vm_ref)
 
@@ -1360,10 +1357,10 @@ class VMOps(object):
         for vm in rescue_vms:
             rescue_vm_ref = vm["vm_ref"]
 
-            self._destroy_rescue_instance(rescue_vm_ref)
-
             original_name = vm["name"].split("-rescue", 1)[0]
             original_vm_ref = VMHelper.lookup(self._session, original_name)
+
+            self._destroy_rescue_instance(rescue_vm_ref, original_vm_ref)
 
             self._release_bootlock(original_vm_ref)
             self._session.call_xenapi("VM.start", original_vm_ref, False,
