@@ -96,6 +96,19 @@ class TestFaults(test.TestCase):
         self.assertEqual(resp.status_int, 404)
         self.assertTrue('whut?' in resp.body)
 
+    def test_raise_403(self):
+        """Ensure the ability to raise :class:`Fault` in WSGI-ified methods."""
+        @webob.dec.wsgify
+        def raiser(req):
+            raise wsgi.Fault(webob.exc.HTTPForbidden(explanation='whut?'))
+
+        req = webob.Request.blank('/.xml')
+        resp = req.get_response(raiser)
+        self.assertEqual(resp.content_type, "application/xml")
+        self.assertEqual(resp.status_int, 403)
+        self.assertTrue('resizeNotAllowed' not in resp.body)
+        self.assertTrue('forbidden' in resp.body)
+
     def test_fault_has_status_int(self):
         """Ensure the status_int is set correctly on faults"""
         fault = wsgi.Fault(webob.exc.HTTPBadRequest(explanation='what?'))

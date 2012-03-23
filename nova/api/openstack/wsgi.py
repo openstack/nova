@@ -1022,7 +1022,7 @@ class Fault(webob.exc.HTTPException):
     _fault_names = {
             400: "badRequest",
             401: "unauthorized",
-            403: "resizeNotAllowed",
+            403: "forbidden",
             404: "itemNotFound",
             405: "badMethod",
             409: "conflictingRequest",
