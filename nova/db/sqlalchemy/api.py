@@ -588,16 +588,6 @@ def certificate_create(context, values):
 
 
 @require_admin_context
-def certificate_destroy(context, certificate_id):
-    session = get_session()
-    with session.begin():
-        certificate_ref = certificate_get(context,
-                                          certificate_id,
-                                          session=session)
-        certificate_ref.delete(session=session)
-
-
-@require_admin_context
 def certificate_get_all_by_project(context, project_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(project_id=project_id).\
@@ -617,18 +607,6 @@ def certificate_get_all_by_user_and_project(context, user_id, project_id):
                    filter_by(user_id=user_id).\
                    filter_by(project_id=project_id).\
                    all()
-
-
-@require_admin_context
-def certificate_update(context, certificate_id, values):
-    session = get_session()
-    with session.begin():
-        certificate_ref = certificate_get(context,
-                                          certificate_id,
-                                          session=session)
-        for (key, value) in values.iteritems():
-            certificate_ref[key] = value
-        certificate_ref.save(session=session)
 
 
 ###################
