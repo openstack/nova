@@ -175,7 +175,7 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         # Check it's there and availability zone present
         found_volume = self.api.get_volume(created_volume_id)
         self.assertEqual(created_volume_id, found_volume['id'])
-        self.assertEqual(availability_zone, found_volume['availabilityZone'])
+        self.assertEqual(availability_zone, found_volume['availability_zone'])
 
 if __name__ == "__main__":
     unittest.main()

@@ -48,13 +48,13 @@ def _translate_snapshot_summary_view(context, vol):
 
     # TODO(bcwaldon): remove str cast once we use uuids
     d['id'] = str(vol['id'])
-    d['volumeId'] = str(vol['volume_id'])
+    d['volume_id'] = str(vol['volume_id'])
     d['status'] = vol['status']
     # NOTE(gagupta): We map volume_size as the snapshot size
     d['size'] = vol['volume_size']
-    d['createdAt'] = vol['created_at']
-    d['displayName'] = vol['display_name']
-    d['displayDescription'] = vol['display_description']
+    d['created_at'] = vol['created_at']
+    d['display_name'] = vol['display_name']
+    d['display_description'] = vol['display_description']
     return d
 
 
@@ -62,10 +62,10 @@ def make_snapshot(elem):
     elem.set('id')
     elem.set('status')
     elem.set('size')
-    elem.set('createdAt')
-    elem.set('displayName')
-    elem.set('displayDescription')
-    elem.set('volumeId')
+    elem.set('created_at')
+    elem.set('display_name')
+    elem.set('display_description')
+    elem.set('volume_id')
 
 
 class SnapshotTemplate(xmlutil.TemplateBuilder):

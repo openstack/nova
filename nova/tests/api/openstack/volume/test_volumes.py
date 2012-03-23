@@ -48,18 +48,18 @@ class VolumeApiTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v1/volumes')
         res_dict = self.controller.create(req, body)
         expected = {'volume': {'status': 'fakestatus',
-                               'displayDescription': 'Volume Test Desc',
-                               'availabilityZone': 'zone1:host1',
-                               'displayName': 'Volume Test Name',
+                               'display_description': 'Volume Test Desc',
+                               'availability_zone': 'zone1:host1',
+                               'display_name': 'Volume Test Name',
                                'attachments': [{'device': '/',
-                                                'serverId': 'fakeuuid',
+                                                'server_id': 'fakeuuid',
                                                 'id': '1',
-                                                'volumeId': '1'}],
-                               'volumeType': 'vol_type_name',
-                               'snapshotId': None,
+                                                'volume_id': '1'}],
+                               'volume_type': 'vol_type_name',
+                               'snapshot_id': None,
                                'metadata': {},
                                'id': '1',
-                               'createdAt': datetime.datetime(1, 1, 1,
+                               'created_at': datetime.datetime(1, 1, 1,
                                                               1, 1, 1),
                                'size': 100}}
         self.assertEqual(res_dict, expected)
@@ -76,18 +76,18 @@ class VolumeApiTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v1/volumes')
         res_dict = self.controller.index(req)
         expected = {'volumes': [{'status': 'fakestatus',
-                                 'displayDescription': 'displaydesc',
-                                 'availabilityZone': 'fakeaz',
-                                 'displayName': 'displayname',
+                                 'display_description': 'displaydesc',
+                                 'availability_zone': 'fakeaz',
+                                 'display_name': 'displayname',
                                  'attachments': [{'device': '/',
-                                                  'serverId': 'fakeuuid',
+                                                  'server_id': 'fakeuuid',
                                                   'id': '1',
-                                                  'volumeId': '1'}],
-                                 'volumeType': 'vol_type_name',
-                                 'snapshotId': None,
+                                                  'volume_id': '1'}],
+                                 'volume_type': 'vol_type_name',
+                                 'snapshot_id': None,
                                  'metadata': {},
                                  'id': '1',
-                                 'createdAt': datetime.datetime(1, 1, 1,
+                                 'created_at': datetime.datetime(1, 1, 1,
                                                                 1, 1, 1),
                                  'size': 1}]}
         self.assertEqual(res_dict, expected)
@@ -96,18 +96,18 @@ class VolumeApiTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v1/volumes/detail')
         res_dict = self.controller.index(req)
         expected = {'volumes': [{'status': 'fakestatus',
-                                 'displayDescription': 'displaydesc',
-                                 'availabilityZone': 'fakeaz',
-                                 'displayName': 'displayname',
+                                 'display_description': 'displaydesc',
+                                 'availability_zone': 'fakeaz',
+                                 'display_name': 'displayname',
                                  'attachments': [{'device': '/',
-                                                  'serverId': 'fakeuuid',
+                                                  'server_id': 'fakeuuid',
                                                   'id': '1',
-                                                  'volumeId': '1'}],
-                                 'volumeType': 'vol_type_name',
-                                 'snapshotId': None,
+                                                  'volume_id': '1'}],
+                                 'volume_type': 'vol_type_name',
+                                 'snapshot_id': None,
                                  'metadata': {},
                                  'id': '1',
-                                 'createdAt': datetime.datetime(1, 1, 1,
+                                 'created_at': datetime.datetime(1, 1, 1,
                                                                 1, 1, 1),
                                  'size': 1}]}
         self.assertEqual(res_dict, expected)
@@ -116,18 +116,18 @@ class VolumeApiTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v1/volumes/1')
         res_dict = self.controller.show(req, 1)
         expected = {'volume': {'status': 'fakestatus',
-                               'displayDescription': 'displaydesc',
-                               'availabilityZone': 'fakeaz',
-                               'displayName': 'displayname',
+                               'display_description': 'displaydesc',
+                               'availability_zone': 'fakeaz',
+                               'display_name': 'displayname',
                                'attachments': [{'device': '/',
-                                                'serverId': 'fakeuuid',
+                                                'server_id': 'fakeuuid',
                                                 'id': '1',
-                                                'volumeId': '1'}],
-                               'volumeType': 'vol_type_name',
-                               'snapshotId': None,
+                                                'volume_id': '1'}],
+                               'volume_type': 'vol_type_name',
+                               'snapshot_id': None,
                                'metadata': {},
                                'id': '1',
-                               'createdAt': datetime.datetime(1, 1, 1,
+                               'created_at': datetime.datetime(1, 1, 1,
                                                               1, 1, 1),
                                'size': 1}}
         self.assertEqual(res_dict, expected)
@@ -141,15 +141,15 @@ class VolumeApiTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v1/volumes/1')
         res_dict = self.controller.show(req, 1)
         expected = {'volume': {'status': 'fakestatus',
-                               'displayDescription': 'displaydesc',
-                               'availabilityZone': 'fakeaz',
-                               'displayName': 'displayname',
+                               'display_description': 'displaydesc',
+                               'availability_zone': 'fakeaz',
+                               'display_name': 'displayname',
                                'attachments': [],
-                               'volumeType': 'vol_type_name',
-                               'snapshotId': None,
+                               'volume_type': 'vol_type_name',
+                               'snapshot_id': None,
                                'metadata': {},
                                'id': '1',
-                               'createdAt': datetime.datetime(1, 1, 1,
+                               'created_at': datetime.datetime(1, 1, 1,
                                                               1, 1, 1),
                                'size': 1}}
         self.assertEqual(res_dict, expected)
@@ -180,15 +180,15 @@ class VolumeApiTest(test.TestCase):
 
 class VolumeSerializerTest(test.TestCase):
     def _verify_volume_attachment(self, attach, tree):
-        for attr in ('id', 'volumeId', 'serverId', 'device'):
+        for attr in ('id', 'volume_id', 'server_id', 'device'):
             self.assertEqual(str(attach[attr]), tree.get(attr))
 
     def _verify_volume(self, vol, tree):
         self.assertEqual(tree.tag, 'volume')
 
-        for attr in ('id', 'status', 'size', 'availabilityZone', 'createdAt',
-                     'displayName', 'displayDescription', 'volumeType',
-                     'snapshotId'):
+        for attr in ('id', 'status', 'size', 'availability_zone', 'created_at',
+                     'display_name', 'display_description', 'volume_type',
+                     'snapshot_id'):
             self.assertEqual(str(vol[attr]), tree.get(attr))
 
         for child in tree:
@@ -212,17 +212,17 @@ class VolumeSerializerTest(test.TestCase):
             id='vol_id',
             status='vol_status',
             size=1024,
-            availabilityZone='vol_availability',
-            createdAt=datetime.datetime.now(),
+            availability_zone='vol_availability',
+            created_at=datetime.datetime.now(),
             attachments=[dict(
                     id='vol_id',
-                    volumeId='vol_id',
-                    serverId='instance_uuid',
+                    volume_id='vol_id',
+                    server_id='instance_uuid',
                     device='/foo')],
-            displayName='vol_name',
-            displayDescription='vol_desc',
-            volumeType='vol_type',
-            snapshotId='snap_id',
+            display_name='vol_name',
+            display_description='vol_desc',
+            volume_type='vol_type',
+            snapshot_id='snap_id',
             metadata=dict(
                 foo='bar',
                 baz='quux',
@@ -241,17 +241,17 @@ class VolumeSerializerTest(test.TestCase):
                 id='vol1_id',
                 status='vol1_status',
                 size=1024,
-                availabilityZone='vol1_availability',
-                createdAt=datetime.datetime.now(),
+                availability_zone='vol1_availability',
+                created_at=datetime.datetime.now(),
                 attachments=[dict(
                         id='vol1_id',
-                        volumeId='vol1_id',
-                        serverId='instance_uuid',
+                        volume_id='vol1_id',
+                        server_id='instance_uuid',
                         device='/foo1')],
-                displayName='vol1_name',
-                displayDescription='vol1_desc',
-                volumeType='vol1_type',
-                snapshotId='snap1_id',
+                display_name='vol1_name',
+                display_description='vol1_desc',
+                volume_type='vol1_type',
+                snapshot_id='snap1_id',
                 metadata=dict(
                     foo='vol1_foo',
                     bar='vol1_bar',
@@ -261,17 +261,17 @@ class VolumeSerializerTest(test.TestCase):
                 id='vol2_id',
                 status='vol2_status',
                 size=1024,
-                availabilityZone='vol2_availability',
-                createdAt=datetime.datetime.now(),
+                availability_zone='vol2_availability',
+                created_at=datetime.datetime.now(),
                 attachments=[dict(
                         id='vol2_id',
-                        volumeId='vol2_id',
-                        serverId='instance_uuid',
+                        volume_id='vol2_id',
+                        server_id='instance_uuid',
                         device='/foo2')],
-                displayName='vol2_name',
-                displayDescription='vol2_desc',
-                volumeType='vol2_type',
-                snapshotId='snap2_id',
+                display_name='vol2_name',
+                display_description='vol2_desc',
+                volume_type='vol2_type',
+                snapshot_id='snap2_id',
                 metadata=dict(
                     foo='vol2_foo',
                     bar='vol2_bar',
