@@ -394,6 +394,11 @@ class ApiEc2TestCase(test.TestCase):
         group.authorize('tcp', 80, 81, '0.0.0.0/0')
         group.authorize('icmp', -1, -1, '0.0.0.0/0')
         group.authorize('udp', 80, 81, '0.0.0.0/0')
+        group.authorize('tcp', 1, 65535, '0.0.0.0/0')
+        group.authorize('udp', 1, 65535, '0.0.0.0/0')
+        group.authorize('icmp', 1, 0, '0.0.0.0/0')
+        group.authorize('icmp', 0, 1, '0.0.0.0/0')
+        group.authorize('icmp', 0, 0, '0.0.0.0/0')
 
         def _assert(message, *args):
             try:
@@ -414,10 +419,6 @@ class ApiEc2TestCase(test.TestCase):
         _assert('Invalid port range', 'tcp', -1, 1, '0.0.0.0/0')
         # For tcp, valid port range 1-65535
         _assert('Invalid port range', 'tcp', 1, 65599, '0.0.0.0/0')
-        # For icmp, only -1:-1 is allowed for type:code
-        _assert('An unknown error has occurred', 'icmp', -1, 0, '0.0.0.0/0')
-        # Non valid type:code
-        _assert('An unknown error has occurred', 'icmp', 0, 3, '0.0.0.0/0')
         # Invalid Cidr for ICMP type
         _assert('Invalid CIDR', 'icmp', -1, -1, '0.0.444.0/4')
         # Invalid protocol
@@ -441,7 +442,7 @@ class ApiEc2TestCase(test.TestCase):
 
         group = [grp for grp in rv if grp.name == security_group_name][0]
 
-        self.assertEquals(len(group.rules), 3)
+        self.assertEquals(len(group.rules), 8)
         self.assertEquals(int(group.rules[0].from_port), 80)
         self.assertEquals(int(group.rules[0].to_port), 81)
         self.assertEquals(len(group.rules[0].grants), 1)
@@ -454,6 +455,11 @@ class ApiEc2TestCase(test.TestCase):
         group.revoke('tcp', 80, 81, '0.0.0.0/0')
         group.revoke('icmp', -1, -1, '0.0.0.0/0')
         group.revoke('udp', 80, 81, '0.0.0.0/0')
+        group.revoke('tcp', 1, 65535, '0.0.0.0/0')
+        group.revoke('udp', 1, 65535, '0.0.0.0/0')
+        group.revoke('icmp', 1, 0, '0.0.0.0/0')
+        group.revoke('icmp', 0, 1, '0.0.0.0/0')
+        group.revoke('icmp', 0, 0, '0.0.0.0/0')
 
         self.expect_http()
         self.mox.ReplayAll()
