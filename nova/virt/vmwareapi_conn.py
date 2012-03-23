@@ -374,7 +374,7 @@ class VMWareAPISession(object):
         done = event.Event()
         loop = utils.LoopingCall(self._poll_task, instance_uuid, task_ref,
                                       done)
-        loop.start(FLAGS.vmwareapi_task_poll_interval, now=True)
+        loop.start(FLAGS.vmwareapi_task_poll_interval)
         ret_val = done.wait()
         loop.stop()
         return ret_val

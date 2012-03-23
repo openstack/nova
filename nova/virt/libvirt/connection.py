@@ -407,7 +407,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_destroy)
-        timer.start(interval=0.5, now=True)
+        timer.start(interval=0.5)
 
         try:
             self.firewall_driver.unfilter_instance(instance,
@@ -704,7 +704,7 @@ class LibvirtConnection(driver.ComputeDriver):
                          instance=instance)
                 dom.create()
                 timer = utils.LoopingCall(self._wait_for_running, instance)
-                return timer.start(interval=0.5, now=True)
+                return timer.start(interval=0.5)
             greenthread.sleep(1)
         return False
 
@@ -746,7 +746,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_reboot)
-        return timer.start(interval=0.5, now=True)
+        return timer.start(interval=0.5)
 
     @exception.wrap_exception()
     def pause(self, instance):
@@ -890,7 +890,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_boot)
-        return timer.start(interval=0.5, now=True)
+        return timer.start(interval=0.5)
 
     def _flush_libvirt_console(self, pty):
         out, err = utils.execute('dd',
@@ -2170,7 +2170,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 post_method(ctxt, instance_ref, dest, block_migration)
 
         timer.f = wait_for_live_migration
-        timer.start(interval=0.5, now=True)
+        timer.start(interval=0.5)
 
     def pre_live_migration(self, block_device_info):
         """Preparation live migration.
@@ -2516,7 +2516,7 @@ class LibvirtConnection(driver.ComputeDriver):
         self.firewall_driver.apply_instance_filter(instance, network_info)
 
         timer = utils.LoopingCall(self._wait_for_running, instance)
-        return timer.start(interval=0.5, now=True)
+        return timer.start(interval=0.5)
 
     @exception.wrap_exception()
     def finish_revert_migration(self, instance, network_info):
@@ -2538,7 +2538,7 @@ class LibvirtConnection(driver.ComputeDriver):
         self.firewall_driver.apply_instance_filter(instance, network_info)
 
         timer = utils.LoopingCall(self._wait_for_running, instance)
-        return timer.start(interval=0.5, now=True)
+        return timer.start(interval=0.5)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM"""
