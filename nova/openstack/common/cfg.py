@@ -101,9 +101,9 @@ The config manager has a single CLI option defined by default, --config-file::
             ...
             self.register_cli_opt(self.config_file_opt)
 
-Option values are parsed from any supplied config files using SafeConfigParser.
-If none are specified, a default set is used e.g. glance-api.conf and
-glance-common.conf::
+Option values are parsed from any supplied config files using
+openstack.common.iniparser. If none are specified, a default set is used
+e.g. glance-api.conf and glance-common.conf::
 
     glance-api.conf:
       [DEFAULT]
@@ -207,15 +207,26 @@ as the leftover arguments, but will instead return::
   ['cmd', '--debug', '/tmp/mything']
 
 i.e. argument parsing is stopped at the first non-option argument.
+
+Options may be declared as secret so that their values are not leaked into
+log files:
+
+     opts = [
+        cfg.StrOpt('s3_store_access_key', secret=True),
+        cfg.StrOpt('s3_store_secret_key', secret=True),
+        ...
+     ]
+
 """
 
 import collections
-import ConfigParser
 import copy
 import optparse
 import os
 import string
 import sys
+
+import iniparser
 
 
 class Error(Exception):
@@ -398,9 +409,10 @@ class Opt(object):
       help:
         an string explaining how the options value is used
     """
+    multi = False
 
-    def __init__(self, name, dest=None, short=None,
-                 default=None, metavar=None, help=None):
+    def __init__(self, name, dest=None, short=None, default=None,
+                 metavar=None, help=None, secret=False):
         """Construct an Opt object.
 
         The only required parameter is the option's name. However, it is
@@ -412,6 +424,7 @@ class Opt(object):
         :param default: the default value of the option
         :param metavar: the option argument to show in --help
         :param help: an explanation of how the option is used
+        :param secret: true iff the value should be obfuscated in log output
         """
         self.name = name
         if dest is None:
@@ -422,9 +435,10 @@ class Opt(object):
         self.default = default
         self.metavar = metavar
         self.help = help
+        self.secret = secret
 
     def _get_from_config_parser(self, cparser, section):
-        """Retrieves the option value from a ConfigParser object.
+        """Retrieves the option value from a MultiConfigParser object.
 
         This is the method ConfigOpts uses to look up the option value from
         config files. Most opt types override this method in order to perform
@@ -433,7 +447,7 @@ class Opt(object):
         :param cparser: a ConfigParser object
         :param section: a section name
         """
-        return cparser.get(section, self.dest, raw=True)
+        return cparser.get(section, self.dest)
 
     def _add_to_cli(self, parser, group=None):
         """Makes the option available in the command line interface.
@@ -535,9 +549,19 @@ class BoolOpt(Opt):
     1/0, yes/no, true/false or on/off.
     """
 
+    _boolean_states = {'1': True, 'yes': True, 'true': True, 'on': True,
+                       '0': False, 'no': False, 'false': False, 'off': False}
+
     def _get_from_config_parser(self, cparser, section):
         """Retrieve the opt value as a boolean from ConfigParser."""
-        return cparser.getboolean(section, self.dest)
+        def convert_bool(v):
+            value = self._boolean_states.get(v.lower())
+            if value is None:
+                raise ValueError('Unexpected boolean value %r' % v)
+
+            return value
+
+        return [convert_bool(v) for v in cparser.get(section, self.dest)]
 
     def _add_to_cli(self, parser, group=None):
         """Extends the base class method to add the --nooptname option."""
@@ -564,7 +588,7 @@ class IntOpt(Opt):
 
     def _get_from_config_parser(self, cparser, section):
         """Retrieve the opt value as a integer from ConfigParser."""
-        return cparser.getint(section, self.dest)
+        return [int(v) for v in cparser.get(section, self.dest)]
 
     def _get_optparse_kwargs(self, group, **kwargs):
         """Extends the base optparse keyword dict for integer options."""
@@ -578,7 +602,7 @@ class FloatOpt(Opt):
 
     def _get_from_config_parser(self, cparser, section):
         """Retrieve the opt value as a float from ConfigParser."""
-        return cparser.getfloat(section, self.dest)
+        return [float(v) for v in cparser.get(section, self.dest)]
 
     def _get_optparse_kwargs(self, group, **kwargs):
         """Extends the base optparse keyword dict for float options."""
@@ -595,7 +619,7 @@ class ListOpt(Opt):
 
     def _get_from_config_parser(self, cparser, section):
         """Retrieve the opt value as a list from ConfigParser."""
-        return cparser.get(section, self.dest).split(',')
+        return [v.split(',') for v in cparser.get(section, self.dest)]
 
     def _get_optparse_kwargs(self, group, **kwargs):
         """Extends the base optparse keyword dict for list options."""
@@ -617,14 +641,7 @@ class MultiStrOpt(Opt):
     Multistr opt values are string opts which may be specified multiple times.
     The opt value is a list containing all the string values specified.
     """
-
-    def _get_from_config_parser(self, cparser, section):
-        """Retrieve the opt value as a multistr from ConfigParser."""
-        # FIXME(markmc): values spread across the CLI and multiple
-        #                config files should be appended
-        value = super(MultiStrOpt, self)._get_from_config_parser(cparser,
-                                                                 section)
-        return value if value is None else [value]
+    multi = True
 
     def _get_optparse_kwargs(self, group, **kwargs):
         """Extends the base optparse keyword dict for multi str options."""
@@ -689,6 +706,69 @@ class OptGroup(object):
             self._optparse_group = optparse.OptionGroup(parser, self.title,
                                                         self.help)
         return self._optparse_group
+
+
+class ParseError(iniparser.ParseError):
+    def __init__(self, msg, lineno, line, filename):
+        super(ParseError, self).__init__(msg, lineno, line)
+        self.filename = filename
+
+    def __str__(self):
+        return 'at %s:%d, %s: %r' % (self.filename, self.lineno,
+                                     self.msg, self.line)
+
+
+class ConfigParser(iniparser.BaseParser):
+    def __init__(self, filename, sections):
+        super(ConfigParser, self).__init__()
+        self.filename = filename
+        self.sections = sections
+        self.section = None
+
+    def parse(self):
+        with open(self.filename) as f:
+            return super(ConfigParser, self).parse(f)
+
+    def new_section(self, section):
+        self.section = section
+        self.sections.setdefault(self.section, {})
+
+    def assignment(self, key, value):
+        if not self.section:
+            raise self.error_no_section()
+
+        self.sections[self.section].setdefault(key, [])
+        self.sections[self.section][key].append('\n'.join(value))
+
+    def parse_exc(self, msg, lineno, line=None):
+        return ParseError(msg, lineno, line, self.filename)
+
+    def error_no_section(self):
+        return self.parse_exc('Section must be started before assignment',
+                              self.lineno)
+
+
+class MultiConfigParser(object):
+    def __init__(self):
+        self.sections = {}
+
+    def read(self, config_files):
+        read_ok = []
+
+        for filename in config_files:
+            parser = ConfigParser(filename, self.sections)
+
+            try:
+                parser.parse()
+            except IOError:
+                continue
+
+            read_ok.append(filename)
+
+        return read_ok
+
+    def get(self, section, name):
+        return self.sections[section][name]
 
 
 class ConfigOpts(collections.Mapping):
@@ -948,15 +1028,22 @@ class ConfigOpts(collections.Mapping):
         logger.log(lvl, "config files: %s", self.config_file)
         logger.log(lvl, "=" * 80)
 
+        def _sanitize(opt, value):
+            """Obfuscate values of options declared secret"""
+            return value if not opt.secret else '*' * len(str(value))
+
         for opt_name in sorted(self._opts):
-            logger.log(lvl, "%-30s = %s", opt_name, getattr(self, opt_name))
+            opt = self._get_opt_info(opt_name)['opt']
+            logger.log(lvl, "%-30s = %s", opt_name,
+                       _sanitize(opt, getattr(self, opt_name)))
 
         for group_name in self._groups:
             group_attr = self.GroupAttr(self, self._get_group(group_name))
             for opt_name in sorted(self._groups[group_name]._opts):
+                opt = self._get_opt_info(opt_name, group_name)['opt']
                 logger.log(lvl, "%-30s = %s",
                            "%s.%s" % (group_name, opt_name),
-                           getattr(group_attr, opt_name))
+                           _sanitize(opt, getattr(group_attr, opt_name)))
 
         logger.log(lvl, "*" * 80)
 
@@ -986,20 +1073,31 @@ class ConfigOpts(collections.Mapping):
         if override is not None:
             return override
 
+        values = []
         if self._cparser is not None:
             section = group.name if group is not None else 'DEFAULT'
             try:
-                return opt._get_from_config_parser(self._cparser, section)
-            except (ConfigParser.NoOptionError,
-                    ConfigParser.NoSectionError):
+                value = opt._get_from_config_parser(self._cparser, section)
+            except KeyError:
                 pass
-            except ValueError, ve:
+            except ValueError as ve:
                 raise ConfigFileValueError(str(ve))
+            else:
+                if not opt.multi:
+                    # No need to continue since the last value wins
+                    return value[-1]
+                values.extend(value)
 
         name = name if group is None else group.name + '_' + name
-        value = self._cli_values.get(name, None)
+        value = self._cli_values.get(name)
         if value is not None:
-            return value
+            if not opt.multi:
+                return value
+
+            return value + values
+
+        if values:
+            return values
 
         if default is not None:
             return default
@@ -1069,12 +1167,12 @@ class ConfigOpts(collections.Mapping):
 
         :raises: ConfigFilesNotFoundError, ConfigFileParseError
         """
-        self._cparser = ConfigParser.SafeConfigParser()
+        self._cparser = MultiConfigParser()
 
         try:
             read_ok = self._cparser.read(config_files)
-        except ConfigParser.ParsingError, cpe:
-            raise ConfigFileParseError(cpe.filename, cpe.message)
+        except iniparser.ParseError as pe:
+            raise ConfigFileParseError(pe.filename, str(pe))
 
         if read_ok != config_files:
             not_read_ok = filter(lambda f: f not in read_ok, config_files)
