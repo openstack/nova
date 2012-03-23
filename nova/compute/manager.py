@@ -2453,8 +2453,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         with utils.temporary_mutation(context, read_deleted="yes"):
             for instance in self._running_deleted_instances(context):
                 if action == "log":
-                    LOG.warning(_("Detected instance  with name label "
-                                  "'%(name_label)s' which is marked as "
+                    name = instance['name']
+                    LOG.warning(_("Detected instance with name label "
+                                  "'%(name)s' which is marked as "
                                   "DELETED but still present on host."),
                                 locals(), instance=instance)
 
