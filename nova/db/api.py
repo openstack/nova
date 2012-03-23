@@ -209,11 +209,6 @@ def certificate_create(context, values):
     return IMPL.certificate_create(context, values)
 
 
-def certificate_destroy(context, certificate_id):
-    """Destroy the certificate or raise if it does not exist."""
-    return IMPL.certificate_destroy(context, certificate_id)
-
-
 def certificate_get_all_by_project(context, project_id):
     """Get all certificates for a project."""
     return IMPL.certificate_get_all_by_project(context, project_id)
@@ -229,15 +224,6 @@ def certificate_get_all_by_user_and_project(context, user_id, project_id):
     return IMPL.certificate_get_all_by_user_and_project(context,
                                                         user_id,
                                                         project_id)
-
-
-def certificate_update(context, certificate_id, values):
-    """Set the given properties on an certificate and update it.
-
-    Raises NotFound if service does not exist.
-
-    """
-    return IMPL.certificate_update(context, certificate_id, values)
 
 
 ###################
