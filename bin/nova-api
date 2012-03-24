@@ -24,7 +24,7 @@ Starts both the EC2 and OpenStack APIs in separate greenthreads.
 """
 
 import eventlet
-eventlet.monkey_patch()
+eventlet.monkey_patch(os=False)
 
 import os
 import sys
@@ -45,8 +45,8 @@ if __name__ == '__main__':
     flags.parse_args(sys.argv)
     logging.setup()
     utils.monkey_patch()
-    servers = []
+    launcher = service.ProcessLauncher()
     for api in flags.FLAGS.enabled_apis:
-        servers.append(service.WSGIService(api))
-    service.serve(*servers)
-    service.wait()
+        server = service.WSGIService(api)
+        launcher.launch_server(server, workers=server.workers or 1)
+    launcher.wait()

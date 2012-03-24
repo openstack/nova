@@ -28,7 +28,7 @@ continue attempting to launch the rest of the services.
 """
 
 import eventlet
-eventlet.monkey_patch()
+eventlet.monkey_patch(os=False)
 
 import os
 import sys
@@ -54,25 +54,26 @@ if __name__ == '__main__':
     flags.parse_args(sys.argv)
     logging.setup()
     utils.monkey_patch()
-    servers = []
+    launcher = service.ProcessLauncher()
+
     # nova-api
     for api in flags.FLAGS.enabled_apis:
         try:
-            servers.append(service.WSGIService(api))
+            server = service.WSGIService(api)
+            launcher.launch_server(server, workers=server.workers or 1)
         except (Exception, SystemExit):
             LOG.exception(_('Failed to load %s') % '%s-api' % api)
 
     for mod in [s3server, xvp_proxy]:
         try:
-            servers.append(mod.get_wsgi_server())
+            launcher.launch_server(mod.get_wsgi_server())
         except (Exception, SystemExit):
             LOG.exception(_('Failed to load %s') % mod.__name__)
 
     for binary in ['nova-compute', 'nova-volume',
                    'nova-network', 'nova-scheduler', 'nova-cert']:
         try:
-            servers.append(service.Service.create(binary=binary))
+            launcher.launch_server(service.Service.create(binary=binary))
         except (Exception, SystemExit):
             LOG.exception(_('Failed to load %s'), binary)
-    service.serve(*servers)
-    service.wait()
+    launcher.wait()
