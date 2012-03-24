@@ -366,5 +366,5 @@ def run():
 
 
 if __name__ == '__main__':
-    eventlet.monkey_patch()
+    eventlet.monkey_patch(os=False)
     run()

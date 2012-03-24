@@ -489,11 +489,17 @@
 # ec2_listen_port=8773
 #### (IntOpt) port for ec2 api to listen
 
+# ec2_workers=0
+#### (IntOpt) Number of EC2 API workers
+
 # osapi_compute_listen=0.0.0.0
 #### (StrOpt) IP address for OpenStack API to listen
 
 # osapi_compute_listen_port=8774
 #### (IntOpt) list port for osapi compute
+
+# osapi_compute_workers=0
+#### (IntOpt) Number of workers for OpenStack API
 
 # metadata_manager=nova.api.manager.MetadataManager
 #### (StrOpt) OpenStack metadata service manager
@@ -504,11 +510,17 @@
 # metadata_listen_port=8775
 #### (IntOpt) port for metadata api to listen
 
+# metadata_workers=0
+#### (IntOpt) Number of workers for metadata API
+
 # osapi_volume_listen=0.0.0.0
 #### (StrOpt) IP address for OpenStack Volume API to listen
 
 # osapi_volume_listen_port=8776
 #### (IntOpt) port for os volume api to listen
+
+# osapi_volume_workers=0
+#### (IntOpt) Number of workers for OpenStack Volume API
 
 
 ######## defined in nova.test ########
