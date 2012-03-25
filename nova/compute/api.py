@@ -1730,7 +1730,7 @@ class AggregateAPI(base.Base):
 
     def get_aggregate_list(self, context):
         """Get all the aggregates for this zone."""
-        aggregates = self.db.aggregate_get_all(context, read_deleted="no")
+        aggregates = self.db.aggregate_get_all(context)
         return [self._get_aggregate_info(context, a) for a in aggregates]
 
     def update_aggregate(self, context, aggregate_id, values):
@@ -1761,8 +1761,7 @@ class AggregateAPI(base.Base):
 
     def delete_aggregate(self, context, aggregate_id):
         """Deletes the aggregate."""
-        hosts = self.db.aggregate_host_get_all(context, aggregate_id,
-                                               read_deleted="no")
+        hosts = self.db.aggregate_host_get_all(context, aggregate_id)
         if len(hosts) > 0:
             raise exception.InvalidAggregateAction(action='delete',
                                                    aggregate_id=aggregate_id,
@@ -1827,9 +1826,7 @@ class AggregateAPI(base.Base):
     def _get_aggregate_info(self, context, aggregate):
         """Builds a dictionary with aggregate props, metadata and hosts."""
         metadata = self.db.aggregate_metadata_get(context, aggregate.id)
-        hosts = self.db.aggregate_host_get_all(context, aggregate.id,
-                                               read_deleted="no")
-
+        hosts = self.db.aggregate_host_get_all(context, aggregate.id)
         result = dict(aggregate.iteritems())
         result["metadata"] = metadata
         result["hosts"] = hosts

@@ -434,11 +434,10 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt, metadata=None)
         db.aggregate_delete(ctxt, result['id'])
-        expected = db.aggregate_get_all(ctxt, read_deleted='no')
+        expected = db.aggregate_get_all(ctxt)
         self.assertEqual(0, len(expected))
-
-        ctxt = context.get_admin_context(read_deleted='yes')
-        aggregate = db.aggregate_get(ctxt, result['id'])
+        aggregate = db.aggregate_get(ctxt.elevated(read_deleted='yes'),
+                                     result['id'])
         self.assertEqual(aggregate["operational_state"], "dismissed")
 
     def test_aggregate_update(self):
@@ -506,7 +505,7 @@ class AggregateDBApiTestCase(test.TestCase):
                                                 values=values, metadata=None))
         for c in xrange(1, remove_counter):
             db.aggregate_delete(ctxt, aggregates[c - 1].id)
-        results = db.aggregate_get_all(ctxt, read_deleted='no')
+        results = db.aggregate_get_all(ctxt)
         self.assertEqual(len(results), add_counter - remove_counter)
 
     def test_aggregate_metadata_add(self):
@@ -564,8 +563,7 @@ class AggregateDBApiTestCase(test.TestCase):
         host = _get_fake_aggr_hosts()[0]
         db.aggregate_host_delete(ctxt, result.id, host)
         db.aggregate_host_add(ctxt, result.id, host)
-        expected = db.aggregate_host_get_all(ctxt, result.id,
-                                             read_deleted='no')
+        expected = db.aggregate_host_get_all(ctxt, result.id)
         self.assertEqual(len(expected), 1)
 
     def test_aggregate_host_add_duplicate_raise_conflict(self):
@@ -602,8 +600,7 @@ class AggregateDBApiTestCase(test.TestCase):
         result = _create_aggregate_with_hosts(context=ctxt, metadata=None)
         db.aggregate_host_delete(ctxt, result.id,
                                  _get_fake_aggr_hosts()[0])
-        expected = db.aggregate_host_get_all(ctxt, result.id,
-                                             read_deleted='no')
+        expected = db.aggregate_host_get_all(ctxt, result.id)
         self.assertEqual(0, len(expected))
 
     def test_aggregate_host_delete_raise_not_found(self):
