@@ -56,15 +56,19 @@ VERSIONS = {
 
 
 class Versions(versions.Versions):
-    def dispatch(self, request, *args):
-        """Respond to a request for all OpenStack API versions."""
-        builder = views_versions.get_view_builder(request)
-        if request.path == '/':
-            # List Versions
-            return builder.build_versions(VERSIONS)
-        else:
-            # Versions Multiple Choice
-            return builder.build_choices(VERSIONS, request)
+    @wsgi.serializers(xml=versions.VersionsTemplate,
+                      atom=versions.VersionsAtomSerializer)
+    def index(self, req):
+        """Return all versions."""
+        builder = views_versions.get_view_builder(req)
+        return builder.build_versions(VERSIONS)
+
+    @wsgi.serializers(xml=versions.ChoicesTemplate)
+    @wsgi.response(300)
+    def multi(self, req):
+        """Return multiple choices."""
+        builder = views_versions.get_view_builder(req)
+        return builder.build_choices(VERSIONS, req)
 
 
 class VolumeVersionV1(object):
