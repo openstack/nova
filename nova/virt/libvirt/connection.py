@@ -1362,7 +1362,6 @@ class LibvirtConnection(driver.ComputeDriver):
         root_device_name = driver.block_device_info_get_root(block_device_info)
         if root_device_name:
             root_device = block_device.strip_dev(root_device_name)
-            xml_info['root_device_name'] = root_device_name
         else:
             # NOTE(yamahata):
             # for nova.api.ec2.cloud.CloudController.get_metadata()
