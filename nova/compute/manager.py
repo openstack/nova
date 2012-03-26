@@ -112,7 +112,7 @@ compute_opts = [
                     "Valid options are 'noop', 'log' and 'reap'. "
                     "Set to 'noop' to disable."),
     cfg.IntOpt("image_cache_manager_interval",
-               default=3600,
+               default=40,
                help="Number of periodic scheduler ticks to wait between "
                     "runs of the image cache manager."),
     cfg.IntOpt("heal_instance_info_cache_interval",
