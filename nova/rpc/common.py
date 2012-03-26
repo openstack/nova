@@ -127,7 +127,12 @@ class Connection(object):
 
 def _safe_log(log_func, msg, msg_data):
     """Sanitizes the msg_data field before logging."""
-    has_method = 'method' in msg_data
+    SANITIZE = {
+                'set_admin_password': ('new_pass',),
+                'run_instance': ('admin_password',),
+               }
+
+    has_method = 'method' in msg_data and msg_data['method'] in SANITIZE
     has_context_token = '_context_auth_token' in msg_data
     has_token = 'auth_token' in msg_data
 
@@ -137,10 +142,6 @@ def _safe_log(log_func, msg, msg_data):
     msg_data = copy.deepcopy(msg_data)
 
     if has_method:
-        SANITIZE = {
-                    'set_admin_password': ('new_pass',),
-                    'run_instance': ('admin_password',),
-                   }
         method = msg_data['method']
         if method in SANITIZE:
             args_to_sanitize = SANITIZE[method]
