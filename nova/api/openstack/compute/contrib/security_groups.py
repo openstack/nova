@@ -414,10 +414,6 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
                 msg = _("Parent or group id is not integer")
                 raise exception.InvalidInput(reason=msg)
 
-            if parent_group_id == group_id:
-                msg = _("Parent group id and group id cannot be same")
-                raise exception.InvalidInput(reason=msg)
-
             values['group_id'] = group_id
             #check if groupId exists
             db.security_group_get(context, group_id)
