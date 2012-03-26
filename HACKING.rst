@@ -64,8 +64,8 @@ Example::
   import nova.api.ec2
   from nova.api import openstack
   from nova.auth import users
-  import nova.flags
   from nova.endpoint import cloud
+  import nova.flags
   from nova import test
 
 
