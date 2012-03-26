@@ -192,7 +192,11 @@ def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
     if marker:
         start_index = -1
         for i, item in enumerate(items):
-            if item['id'] == marker or item.get('uuid') == marker:
+            if 'flavorid' in item:
+                if item['flavorid'] == marker:
+                    start_index = i + 1
+                    break
+            elif item['id'] == marker or item.get('uuid') == marker:
                 start_index = i + 1
                 break
         if start_index < 0:
