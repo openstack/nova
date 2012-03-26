@@ -17,6 +17,7 @@
 from nova.api.openstack import volume
 from nova.api.openstack.volume import snapshots
 from nova.api.openstack.volume import volumes
+from nova.api.openstack.volume import versions
 from nova.api.openstack import wsgi
 from nova import flags
 from nova import log as logging
@@ -59,6 +60,14 @@ class VolumeRouterTestCase(test.TestCase):
         req.content_type = 'application/json'
         response = req.get_response(self.app)
         self.assertEqual(200, response.status_int)
+
+    def test_versions_dispatch(self):
+        req = fakes.HTTPRequest.blank('/')
+        req.method = 'GET'
+        req.content_type = 'application/json'
+        resource = versions.Versions()
+        result = resource.dispatch(resource.index, req, {})
+        self.assertTrue(result)
 
     def test_volumes(self):
         req = fakes.HTTPRequest.blank('/fake/volumes')
