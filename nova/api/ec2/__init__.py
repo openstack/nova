@@ -629,6 +629,10 @@ class Executor(wsgi.Application):
             LOG.debug(_('InvalidRequest raised: %s'), unicode(ex),
                      context=context)
             return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
+        except exception.QuotaError as ex:
+            LOG.debug(_('QuotaError raised: %s'), unicode(ex),
+                      context=context)
+            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
         except exception.InvalidInstanceIDMalformed as ex:
             LOG.debug(_('ValidatorError raised: %s'), unicode(ex),
                      context=context)
