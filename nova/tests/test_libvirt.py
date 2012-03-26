@@ -449,6 +449,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.vcpus, 1)
         self.assertEquals(cfg.os_type, "hvm")
         self.assertEquals(cfg.os_boot_dev, "hd")
+        self.assertEquals(cfg.os_root, None)
         self.assertEquals(len(cfg.devices), 7)
         self.assertEquals(type(cfg.devices[0]),
                           config.LibvirtConfigGuestDisk)
@@ -465,6 +466,10 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(type(cfg.devices[6]),
                           config.LibvirtConfigGuestGraphics)
 
+    def test_get_guest_config_with_two_nics(self):
+        conn = connection.LibvirtConnection(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
         cfg = conn.get_guest_config(instance_ref,
                                     _fake_network_info(self.stubs, 2),
                                     None, False)
@@ -473,6 +478,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.vcpus, 1)
         self.assertEquals(cfg.os_type, "hvm")
         self.assertEquals(cfg.os_boot_dev, "hd")
+        self.assertEquals(cfg.os_root, None)
+        self.assertEquals(len(cfg.devices), 8)
         self.assertEquals(type(cfg.devices[0]),
                           config.LibvirtConfigGuestDisk)
         self.assertEquals(type(cfg.devices[1]),
@@ -489,6 +496,27 @@ class LibvirtConnTestCase(test.TestCase):
                           config.LibvirtConfigGuestInput)
         self.assertEquals(type(cfg.devices[7]),
                           config.LibvirtConfigGuestGraphics)
+
+    def test_get_guest_config_with_root_device_name(self):
+        self.flags(libvirt_type='uml')
+        conn = connection.LibvirtConnection(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        cfg = conn.get_guest_config(instance_ref, [], None, False,
+                                    {'root_device_name': 'dev/vdb'})
+        self.assertEquals(cfg.acpi, False)
+        self.assertEquals(cfg.memory, 1024 * 1024 * 2)
+        self.assertEquals(cfg.vcpus, 1)
+        self.assertEquals(cfg.os_type, "uml")
+        self.assertEquals(cfg.os_boot_dev, None)
+        self.assertEquals(cfg.os_root, 'dev/vdb')
+        self.assertEquals(len(cfg.devices), 3)
+        self.assertEquals(type(cfg.devices[0]),
+                          config.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[1]),
+                          config.LibvirtConfigGuestDisk)
+        self.assertEquals(type(cfg.devices[2]),
+                          config.LibvirtConfigGuestConsole)
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
