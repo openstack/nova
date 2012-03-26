@@ -66,40 +66,40 @@
 #else
     #if $getVar('rescue', False)
         <disk type='file'>
-            <driver type='${driver_type}' cache='none'/>
+            <driver type='${driver_type}' cache='${cachemode}'/>
             <source file='${basepath}/disk.rescue'/>
             <target dev='${disk_prefix}a' bus='${ephemeral_disk_bus}'/>
         </disk>
         <disk type='file'>
-            <driver type='${driver_type}' cache='none'/>
+            <driver type='${driver_type}' cache='${cachemode}'/>
             <source file='${basepath}/disk'/>
             <target dev='${disk_prefix}b' bus='${ephemeral_disk_bus}'/>
         </disk>
     #else
         #if not ($getVar('ebs_root', False))
         <disk type='file' device='${root_device_type}'>
-            <driver type='${driver_type}' cache='none'/>
+            <driver type='${driver_type}' cache='${cachemode}'/>
             <source file='${basepath}/disk'/>
             <target dev='${root_device}' bus='${root_disk_bus}'/>
         </disk>
         #end if
         #if $getVar('ephemeral_device', False)
             <disk type='file'>
-                <driver type='${driver_type}' cache='none'/>
+                <driver type='${driver_type}' cache='${cachemode}'/>
                 <source file='${basepath}/disk.local'/>
                 <target dev='${ephemeral_device}' bus='${ephemeral_disk_bus}'/>
             </disk>
         #end if
         #for $eph in $ephemerals
          <disk type='block'>
-                <driver type='${driver_type}' cache='none'/>
+                <driver type='${driver_type}' cache='${cachemode}'/>
                 <source dev='${basepath}/${eph.device_path}'/>
                 <target dev='${eph.device}' bus='${ephemeral_disk_bus}'/>
          </disk>
         #end for
         #if $getVar('swap_device', False)
             <disk type='file'>
-                <driver type='${driver_type}' cache='none'/>
+                <driver type='${driver_type}' cache='${cachemode}'/>
                 <source file='${basepath}/disk.swap'/>
                 <target dev='${swap_device}' bus='${ephemeral_disk_bus}'/>
             </disk>
@@ -110,7 +110,7 @@
     #end if
     #if $getVar('config_drive', False)
         <disk type='file'>
-            <driver type='raw' />
+            <driver type='raw' cache='${cachemode}'/>
             <source file='${basepath}/disk.config' />
             <target dev='${disk_prefix}z' bus='${ephemeral_disk_bus}' />
         </disk>
