@@ -1226,6 +1226,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         old_instance_type = migration_ref['old_instance_type_id']
         instance_type = instance_types.get_instance_type(old_instance_type)
 
+        self.driver.finish_revert_migration(instance_ref,
+                                   self._legacy_nw_info(network_info))
+
         # Just roll back the record. There's no need to resize down since
         # the 'old' VM already has the preferred attributes
         self._instance_update(context,
@@ -1239,8 +1242,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
 
-        self.driver.finish_revert_migration(instance_ref,
-                                   self._legacy_nw_info(network_info))
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
 
