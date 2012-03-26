@@ -73,15 +73,13 @@ class Controller(wsgi.Controller):
     def index(self, req):
         """Return all flavors in brief."""
         flavors = self._get_flavors(req)
-        limited_flavors = common.limited_by_marker(flavors.values(), req)
-        return self._view_builder.index(req, limited_flavors)
+        return self._view_builder.index(req, flavors)
 
     @wsgi.serializers(xml=FlavorsTemplate)
     def detail(self, req):
         """Return all flavors in detail."""
         flavors = self._get_flavors(req)
-        limited_flavors = common.limited_by_marker(flavors.values(), req)
-        return self._view_builder.detail(req, limited_flavors)
+        return self._view_builder.detail(req, flavors)
 
     @wsgi.serializers(xml=FlavorTemplate)
     def show(self, req, id):
@@ -108,7 +106,12 @@ class Controller(wsgi.Controller):
             except ValueError:
                 pass  # ignore bogus values per spec
 
-        return instance_types.get_all_types(filters=filters)
+        flavors = instance_types.get_all_types(filters=filters)
+        flavors_list = flavors.values()
+        sorted_flavors = sorted(flavors_list,
+                                key=lambda item: item['flavorid'])
+        limited_flavors = common.limited_by_marker(sorted_flavors, req)
+        return limited_flavors
 
 
 def create_resource():
