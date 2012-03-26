@@ -93,3 +93,18 @@ class RescueTest(test.TestCase):
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 202)
+
+    def test_unrescue_of_active_instance(self):
+        body = dict(unrescue=None)
+
+        def fake_unrescue(*args, **kwargs):
+            raise exception.InstanceInvalidState('fake message')
+
+        self.stubs.Set(compute.api.API, "unrescue", fake_unrescue)
+        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req.method = "POST"
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(fakes.wsgi_app())
+        self.assertEqual(resp.status_int, 409)
