@@ -556,6 +556,19 @@ class TestGlanceImageService(test.TestCase):
         self.flags(glance_num_retries=1)
         service.get(self.context, image_id, writer)
 
+    def test_client_raises_forbidden(self):
+        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
+            """A client that fails the first time, then succeeds."""
+            def get_image(self, image_id):
+                raise glance_exception.Forbidden()
+
+        client = MyGlanceStubClient()
+        service = glance.GlanceImageService(client=client)
+        image_id = 1  # doesn't matter
+        writer = NullWriter()
+        self.assertRaises(exception.ImageNotAuthorized, service.get,
+                          self.context, image_id, writer)
+
     def test_glance_client_image_id(self):
         fixture = self._make_fixture(name='test image')
         image_id = self.service.create(self.context, fixture)['id']
