@@ -634,11 +634,9 @@ class Executor(wsgi.Application):
                       context=context)
             return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
         except exception.InvalidInstanceIDMalformed as ex:
-            LOG.debug(_('ValidatorError raised: %s'), unicode(ex),
-                     context=context)
-            #EC2 Compatibility
-            return self._error(req, context, "InvalidInstanceID.Malformed",
-                unicode(ex))
+            LOG.debug(_('Invalid id: bogus (expecting "i-..."): %s'),
+                        unicode(ex), context=context)
+            return ec2_error(req, request_id, type(ex).__name__, unicode(ex))
         except Exception as ex:
             env = req.environ.copy()
             for k in env.keys():
