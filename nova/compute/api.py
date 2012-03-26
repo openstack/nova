@@ -899,16 +899,30 @@ class API(base.Base):
     def _delete(self, context, instance):
         host = instance['host']
         try:
-            if host:
-                self.update(context,
-                            instance,
-                            task_state=task_states.DELETING,
-                            progress=0)
+            if not host:
+                # Just update database, nothing else we can do
+                return self.db.instance_destroy(context, instance['id'])
 
-                self._cast_compute_message('terminate_instance',
-                        context, instance)
-            else:
-                self.db.instance_destroy(context, instance['id'])
+            self.update(context,
+                        instance,
+                        task_state=task_states.DELETING,
+                        progress=0)
+
+            if instance['task_state'] == task_states.RESIZE_VERIFY:
+                # If in the middle of a resize, use confirm_resize to
+                # ensure the original instance is cleaned up too
+                migration_ref = self.db.migration_get_by_instance_and_status(
+                        context, instance['uuid'], 'finished')
+                if migration_ref:
+                    src_host = migration_ref['source_compute']
+                    params = {'migration_id': migration_ref['id']}
+                    # Call since this can race with the terminate_instance
+                    self._call_compute_message('confirm_resize', context,
+                                               instance, host=src_host,
+                                               params=params)
+
+            self._cast_compute_message('terminate_instance',
+                                       context, instance)
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
             pass
