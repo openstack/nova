@@ -680,8 +680,13 @@ class FloatingIpCommands(object):
             instance_id = None
             if floating_ip['fixed_ip_id']:
                 fixed_ip = db.fixed_ip_get(ctxt, floating_ip['fixed_ip_id'])
-                instance = db.instance_get(ctxt, fixed_ip['instance_id'])
-                instance_id = instance.get('uuid', "none")
+                try:
+                    instance = db.instance_get(ctxt, fixed_ip['instance_id'])
+                    instance_id = instance.get('uuid', "none")
+                except exception.InstanceNotFound:
+                    msg = _('Missing instance %s')
+                    instance_id = msg % fixed_ip['instance_id']
+
             print "%s\t%s\t%s\t%s\t%s" % (floating_ip['project_id'],
                                           floating_ip['address'],
                                           instance_id,
