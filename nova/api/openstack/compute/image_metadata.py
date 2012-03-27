@@ -64,7 +64,8 @@ class Controller(object):
         if 'metadata' in body:
             for key, value in body['metadata'].iteritems():
                 image['properties'][key] = value
-        common.check_img_metadata_quota_limit(context, image['properties'])
+        common.check_img_metadata_properties_quota(context,
+                                                   image['properties'])
         self.image_service.update(context, image_id, image, None)
         return dict(metadata=image['properties'])
 
@@ -88,7 +89,8 @@ class Controller(object):
 
         image = self._get_image(context, image_id)
         image['properties'][id] = meta[id]
-        common.check_img_metadata_quota_limit(context, image['properties'])
+        common.check_img_metadata_properties_quota(context,
+                                                   image['properties'])
         self.image_service.update(context, image_id, image, None)
         return dict(meta=meta)
 
@@ -98,7 +100,7 @@ class Controller(object):
         context = req.environ['nova.context']
         image = self._get_image(context, image_id)
         metadata = body.get('metadata', {})
-        common.check_img_metadata_quota_limit(context, metadata)
+        common.check_img_metadata_properties_quota(context, metadata)
         image['properties'] = metadata
         self.image_service.update(context, image_id, image, None)
         return dict(metadata=metadata)
