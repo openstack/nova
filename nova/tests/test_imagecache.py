@@ -660,6 +660,9 @@ class ImageCacheManagerTestCase(test.TestCase):
                     fq_path('%s_10737418240' % hashed_1)]:
             self.assertTrue(rem in image_cache_manager.removable_base_files)
 
+        # Ensure there are no "corrupt" images as well
+        self.assertTrue(len(image_cache_manager.corrupt_base_files), 0)
+
     def test_verify_base_images_no_base(self):
         self.flags(instances_path='/tmp/no/such/dir/name/please')
         image_cache_manager = imagecache.ImageCacheManager()
