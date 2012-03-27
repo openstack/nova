@@ -485,7 +485,8 @@ def _reraise_translated_exception():
 
 
 def _translate_image_exception(image_id, exc_type, exc_value):
-    if exc_type in (glance_exception.NotAuthorized,
+    if exc_type in (glance_exception.Forbidden,
+                    glance_exception.NotAuthenticated,
                     glance_exception.MissingCredentialError):
         return exception.ImageNotAuthorized(image_id=image_id)
     if exc_type is glance_exception.NotFound:
@@ -496,7 +497,8 @@ def _translate_image_exception(image_id, exc_type, exc_value):
 
 
 def _translate_plain_exception(exc_type, exc_value):
-    if exc_type in (glance_exception.NotAuthorized,
+    if exc_type in (glance_exception.Forbidden,
+                    glance_exception.NotAuthenticated,
                     glance_exception.MissingCredentialError):
         return exception.NotAuthorized(exc_value)
     if exc_type is glance_exception.NotFound:
