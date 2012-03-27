@@ -1455,9 +1455,9 @@ class ConfigCommands(object):
             if value is not None:
                 print '%s = %s' % (key, value)
 
-    @args('--infile', dest='file_path', metavar='<path>',
+    @args('--infile', dest='infile', metavar='<path>',
           help='old-style flagfile to convert to config')
-    @args('--outfile', dest='file_path', metavar='<path>',
+    @args('--outfile', dest='outfile', metavar='<path>',
           help='path for output file. Writes config'
                'to stdout if not specified.')
     def convert(self, infile, outfile=None):
