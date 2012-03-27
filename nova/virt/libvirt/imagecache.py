@@ -303,8 +303,11 @@ class ImageCacheManager(object):
 
         if (base_file and os.path.exists(base_file)
             and os.path.isfile(base_file)):
-            # _verify_checksum returns True if the checksum is ok.
-            image_bad = not self._verify_checksum(img_id, base_file)
+            # _verify_checksum returns True if the checksum is ok, and None if
+            # there is no checksum file
+            checksum_result = self._verify_checksum(img_id, base_file)
+            if not checksum_result is None:
+                image_bad = not checksum_result
 
         instances = []
         if img_id in self.used_images:
