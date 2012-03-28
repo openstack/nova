@@ -19,9 +19,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Installation script for Nova's development virtualenv
-"""
+"""Installation script for Nova's development virtualenv."""
 
 import optparse
 import os
@@ -47,9 +45,9 @@ def check_python_version():
 
 
 def run_command_with_code(cmd, redirect_output=True, check_exit_code=True):
-    """
-    Runs a command in an out-of-process shell, returning the
-    output of that command.  Working directory is ROOT.
+    """Runs a command in an out-of-process shell.
+
+    Returns the output of that command.  Working directory is ROOT.
     """
     if redirect_output:
         stdout = subprocess.PIPE
@@ -92,7 +90,8 @@ class Distro(object):
         """Any distribution-specific post-processing gets done here.
 
         In particular, this is useful for applying patches to code inside
-        the venv."""
+        the venv.
+        """
         pass
 
 
@@ -127,10 +126,11 @@ class Fedora(Distro):
         This currently affects RHEL6.1, but the fix can safely be
         applied to all RHEL and Fedora distributions.
 
-        This can be removed when the fix is applied upstream
+        This can be removed when the fix is applied upstream.
 
         Nova: https://bugs.launchpad.net/nova/+bug/884915
-        Upstream: https://bitbucket.org/which_linden/eventlet/issue/89"""
+        Upstream: https://bitbucket.org/which_linden/eventlet/issue/89
+        """
 
         # Install "patch" program if it's not there
         if not self.check_pkg('patch'):
@@ -155,8 +155,10 @@ def check_dependencies():
 
 
 def create_virtualenv(venv=VENV, no_site_packages=True):
-    """Creates the virtual environment and installs PIP only into the
-    virtual environment
+    """Creates the virtual environment and installs PIP.
+
+    Creates the virtual environment and installs PIP only into the
+    virtual environment.
     """
     print 'Creating venv...',
     if no_site_packages:
@@ -225,7 +227,7 @@ def print_help():
 
 
 def parse_args():
-    """Parse command-line arguments"""
+    """Parses command-line arguments."""
     parser = optparse.OptionParser()
     parser.add_option("-n", "--no-site-packages", dest="no_site_packages",
         default=False, action="store_true",
