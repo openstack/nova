@@ -26,9 +26,6 @@ class HelperBase(object):
     """
     XenAPI = None
 
-    def __init__(self):
-        return
-
     @classmethod
     def get_rec(cls, session, record_type, ref):
         try:
