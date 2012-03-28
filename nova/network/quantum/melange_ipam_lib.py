@@ -158,7 +158,7 @@ class QuantumMelangeIPAMLib(object):
         for tid in tenant_ids:
             try:
                 self.m_conn.get_allocated_ips(net_id, vif_id, tid)
-            except KeyError:
+            except Exception:
                 continue
             ipam_tenant_id = tid
             break
