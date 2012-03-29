@@ -1223,7 +1223,7 @@ class API(base.Base):
             #try to get source image of the instance
             orig_image = self.image_service.show(context,
                                                  instance['image_ref'])
-        except webob.exc.HTTPNotFound:
+        except exception.ImageNotFound:
             return None, None
 
         #disk format of vhd is non-shrinkable
