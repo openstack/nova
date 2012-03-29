@@ -2294,6 +2294,16 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server_test')
 
+    def test_update_server_name_too_long_v1_1(self):
+        self.stubs.Set(nova.db.api, 'instance_get',
+                return_server_with_attributes(name='server_test'))
+        req = webob.Request.blank('/v1.1/fake/servers/1')
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        req.body = json.dumps({'server': {'name': 'x' * 256}})
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_update_server_access_ipv4_v1_1(self):
         self.stubs.Set(nova.db.api, 'instance_get',
                 return_server_with_attributes(access_ipv4='0.0.0.0'))
@@ -3633,6 +3643,15 @@ class TestServerInstanceCreation(test.TestCase):
         server = dom.childNodes[0]
         self.assertEquals(server.nodeName, 'server')
         self.assertEqual(16, len(server.getAttribute('adminPass')))
+
+    def test_create_instance_with_name_too_long(self):
+        personality = None
+        body_dict = self._create_personality_request_dict(personality)
+        body_dict['server']['name'] = 'X' * 256
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
 
 
 class TestGetKernelRamdiskFromImage(test.TestCase):

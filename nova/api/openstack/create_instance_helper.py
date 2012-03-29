@@ -248,6 +248,10 @@ class CreateInstanceHelper(object):
             msg = _("Server name is an empty string")
             raise exc.HTTPBadRequest(explanation=msg)
 
+        if not len(value) < 256:
+            msg = _("Server name must be less than 256 characters.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
     def _get_kernel_ramdisk_from_image(self, req, image_service, image_id):
         """Fetch an image from the ImageService, then if present, return the
         associated kernel and ramdisk image IDs.
