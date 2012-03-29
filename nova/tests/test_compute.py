@@ -2268,7 +2268,7 @@ class ComputeAPITestCase(BaseTestCase):
         """
 
         def fake_show(*args):
-            raise webob.exc.HTTPNotFound()
+            raise exception.ImageNotFound
 
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 
