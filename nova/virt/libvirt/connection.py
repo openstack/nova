@@ -367,7 +367,7 @@ class LibvirtConnection(driver.ComputeDriver):
                         is_okay = True
 
                 if not is_okay:
-                    LOG.warning(_("Error from libvirt during destroy. "
+                    LOG.error(_("Error from libvirt during destroy. "
                                   "Code=%(errcode)s Error=%(e)s") %
                                 locals(), instance=instance)
                     raise
@@ -379,7 +379,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     virt_dom.managedSaveRemove(0)
             except libvirt.libvirtError as e:
                 errcode = e.get_error_code()
-                LOG.warning(_("Error from libvirt during saved instance "
+                LOG.error(_("Error from libvirt during saved instance "
                               "removal. Code=%(errcode)s Error=%(e)s") %
                             locals(), instance=instance)
 
@@ -390,7 +390,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 virt_dom.undefine()
             except libvirt.libvirtError as e:
                 errcode = e.get_error_code()
-                LOG.warning(_("Error from libvirt during undefine. "
+                LOG.error(_("Error from libvirt during undefine. "
                               "Code=%(errcode)s Error=%(e)s") %
                             locals(), instance=instance)
                 raise
@@ -414,7 +414,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                                    network_info=network_info)
         except libvirt.libvirtError as e:
             errcode = e.get_error_code()
-            LOG.warning(_("Error from libvirt during unfilter. "
+            LOG.error(_("Error from libvirt during unfilter. "
                           "Code=%(errcode)s Error=%(e)s") %
                         locals(), instance=instance)
             reason = "Error unfiltering instance."
@@ -671,7 +671,7 @@ class LibvirtConnection(driver.ComputeDriver):
                          instance=instance)
                 return
             else:
-                LOG.info(_("Failed to soft reboot instance."),
+                LOG.warn(_("Failed to soft reboot instance."),
                          instance=instance)
         return self._hard_reboot(instance, network_info)
 
