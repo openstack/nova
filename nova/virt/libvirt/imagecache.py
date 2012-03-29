@@ -134,7 +134,9 @@ class ImageCacheManager(object):
             if len(ent) == digest_size:
                 self._store_image(base_dir, ent, original=True)
 
-            elif len(ent) > digest_size + 2 and ent[digest_size] == '_':
+            elif (len(ent) > digest_size + 2 and
+                  ent[digest_size] == '_' and
+                  not ent.endswith('.sha1')):
                 self._store_image(base_dir, ent, original=False)
 
     def _list_running_instances(self, context):
