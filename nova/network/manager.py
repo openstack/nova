@@ -1217,7 +1217,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                     context, instance_id, network['id'])
             # NOTE(vish): This forces a packet so that the release_fixed_ip
             #             callback will get called by nova-dhcpbridge.
-            self.driver.release_dhcp(dev, address, vif['address'])
+            if vif:
+                self.driver.release_dhcp(dev, address, vif['address'])
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
