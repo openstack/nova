@@ -283,7 +283,9 @@ class FloatingIP(object):
 
         for floating_ip in floating_ips:
             if floating_ip.get('fixed_ip', None):
-                fixed_address = floating_ip['fixed_ip']['address']
+                fixed_ip_id = floating_ip['fixed_ip_id']
+                fixed_ip_ref = self.db.fixed_ip_get(admin_context, fixed_ip_id)
+                fixed_address = fixed_ip_ref['address']
                 interface = floating_ip['interface']
                 try:
                     self.l3driver.add_floating_ip(floating_ip['address'],
