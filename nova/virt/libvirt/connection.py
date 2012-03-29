@@ -619,7 +619,11 @@ class LibvirtConnection(driver.ComputeDriver):
 
         (image_service, image_id) = nova.image.get_image_service(
             context, instance['image_ref'])
-        base = image_service.show(context, image_id)
+        try:
+            base = image_service.show(context, image_id)
+        except exception.ImageNotFound:
+            base = {}
+
         _image_service = nova.image.get_image_service(context, image_href)
         snapshot_image_service, snapshot_image_id = _image_service
         snapshot = snapshot_image_service.show(context, snapshot_image_id)
@@ -635,7 +639,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                    'ramdisk_id': instance['ramdisk_id'],
                                    }
                     }
-        if 'architecture' in base['properties']:
+        if 'architecture' in base.get('properties', {}):
             arch = base['properties']['architecture']
             metadata['properties']['architecture'] = arch
 
