@@ -63,7 +63,7 @@ log_opts = [
                        '%(pathname)s:%(lineno)d',
                help='data to append to log format when level is DEBUG'),
     cfg.StrOpt('logging_exception_prefix',
-               default='(%(name)s): TRACE: ',
+               default='%(asctime)s TRACE %(name)s %(instance)s',
                help='prefix each line of exception output with this format'),
     cfg.StrOpt('instance_format',
                default='[instance: %(uuid)s] ',
@@ -247,11 +247,16 @@ class LegacyNovaFormatter(logging.Formatter):
         """Format exception output with FLAGS.logging_exception_prefix."""
         if not record:
             return logging.Formatter.formatException(self, exc_info)
+
         stringbuffer = cStringIO.StringIO()
         traceback.print_exception(exc_info[0], exc_info[1], exc_info[2],
                                   None, stringbuffer)
         lines = stringbuffer.getvalue().split('\n')
         stringbuffer.close()
+
+        if FLAGS.logging_exception_prefix.find('%(asctime)') != -1:
+            record.asctime = self.formatTime(record, self.datefmt)
+
         formatted_lines = []
         for line in lines:
             pl = FLAGS.logging_exception_prefix % record.__dict__
