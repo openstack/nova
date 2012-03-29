@@ -321,8 +321,8 @@ class API(base.Base):
 
     @wrap_check_policy
     def delete_snapshot(self, context, snapshot):
-        if snapshot['status'] != "available":
-            msg = _("must be available")
+        if snapshot['status'] not in ["available", "error"]:
+            msg = _("Volume Snapshot status must be available or error")
             raise exception.InvalidVolume(reason=msg)
         self.db.snapshot_update(context, snapshot['id'],
                                 {'status': 'deleting'})

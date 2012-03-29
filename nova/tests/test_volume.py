@@ -275,7 +275,27 @@ class VolumeTestCase(test.TestCase):
                           volume_api.delete,
                           self.context,
                           volume)
+        self.volume.delete_snapshot(self.context, snapshot_id)
+        self.volume.delete_volume(self.context, volume['id'])
 
+    def test_can_delete_errored_snapshot(self):
+        """Test snapshot can be created and deleted."""
+        volume = self._create_volume()
+        self.volume.create_volume(self.context, volume['id'])
+        snapshot_id = self._create_snapshot(volume['id'])
+        self.volume.create_snapshot(self.context, volume['id'], snapshot_id)
+        snapshot = db.snapshot_get(context.get_admin_context(),
+                                   snapshot_id)
+
+        volume_api = nova.volume.api.API()
+
+        snapshot['status'] = 'badstatus'
+        self.assertRaises(exception.InvalidVolume,
+                          volume_api.delete_snapshot,
+                          self.context,
+                          snapshot)
+
+        snapshot['status'] = 'error'
         self.volume.delete_snapshot(self.context, snapshot_id)
         self.volume.delete_volume(self.context, volume['id'])
 
