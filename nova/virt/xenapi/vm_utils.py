@@ -143,13 +143,12 @@ class VMHelper(xenapi.HelperBase):
     @classmethod
     def create_vm(cls, session, instance, kernel, ramdisk,
                   use_pv_kernel=False):
-        """Create a VM record.  Returns a Deferred that gives the new
-        VM reference.
+        """Create a VM record.  Returns new VM reference.
         the use_pv_kernel flag indicates whether the guest is HVM or PV
 
         There are 3 scenarios:
 
-            1. Using paravirtualization,  kernel passed in
+            1. Using paravirtualization, kernel passed in
 
             2. Using paravirtualization, kernel within the image
 
@@ -306,10 +305,10 @@ class VMHelper(xenapi.HelperBase):
         vbd_rec['qos_algorithm_params'] = {}
         vbd_rec['qos_supported_algorithms'] = []
         LOG.debug(_('Creating %(vbd_type)s-type VBD for VM %(vm_ref)s,'
-                ' VDI %(vdi_ref)s ... ') % locals())
+                    ' VDI %(vdi_ref)s ... '), locals())
         vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
         LOG.debug(_('Created VBD %(vbd_ref)s for VM %(vm_ref)s,'
-                ' VDI %(vdi_ref)s.') % locals())
+                    ' VDI %(vdi_ref)s.'), locals())
         return vbd_ref
 
     @classmethod
@@ -337,8 +336,8 @@ class VMHelper(xenapi.HelperBase):
               'sm_config': {},
               'tags': []})
         LOG.debug(_('Created VDI %(vdi_ref)s (%(name_label)s,'
-                ' %(virtual_size)s, %(read_only)s) on %(sr_ref)s.')
-                % locals())
+                    ' %(virtual_size)s, %(read_only)s) on %(sr_ref)s.'),
+                  locals())
         return vdi_ref
 
     @classmethod
@@ -372,8 +371,8 @@ class VMHelper(xenapi.HelperBase):
             if vbd_rec['userdevice'] == '0':
                 vdi_rec = session.call_xenapi("VDI.get_record", vbd_rec['VDI'])
                 return vbd_rec['VDI'], vdi_rec
-        raise exception.Error(_("No primary VDI found for"
-                "%(vm_ref)s") % locals())
+        raise exception.Error(_("No primary VDI found for %(vm_ref)s") %
+                              locals())
 
     @classmethod
     def create_snapshot(cls, session, instance, vm_ref, label):
@@ -393,7 +392,7 @@ class VMHelper(xenapi.HelperBase):
         template_vdi_uuid = template_vdi_rec["uuid"]
 
         LOG.debug(_('Created snapshot %(template_vm_ref)s from'
-                ' VM %(vm_ref)s.') % locals())
+                    ' VM %(vm_ref)s.') % locals())
 
         parent_uuid, base_uuid = _wait_for_vhd_coalesce(
             session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
@@ -852,8 +851,7 @@ class VMHelper(xenapi.HelperBase):
         meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
-        LOG.debug(_("Size for image %(image)s:" +
-                    "%(virtual_size)d") % locals())
+        LOG.debug(_("Size for image %(image)s: %(virtual_size)d"), locals())
         if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
@@ -1201,7 +1199,7 @@ class VMHelper(xenapi.HelperBase):
                     LOG.debug(_("ISO: PBD %(pbd_ref)s disappeared") % locals())
                     continue
                 pbd_rec_host = pbd_rec['host']
-                LOG.debug(_("ISO: PBD matching, want %(pbd_rec)s, " +
+                LOG.debug(_("ISO: PBD matching, want %(pbd_rec)s, "
                             "have %(host)s") % locals())
                 if pbd_rec_host == host:
                     LOG.debug(_("ISO: SR with local PBD"))
@@ -1382,7 +1380,7 @@ def walk_vdi_chain(session, vdi_uuid):
 
 def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
                            original_parent_uuid):
-    """ Spin until the parent VHD is coalesced into its parent VHD
+    """Spin until the parent VHD is coalesced into its parent VHD
 
     Before coalesce:
         * original_parent_vhd
