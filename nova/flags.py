@@ -325,6 +325,10 @@ global_opts = [
     cfg.IntOpt('sql_idle_timeout',
                default=3600,
                help='timeout before idle sql connections are reaped'),
+    cfg.IntOpt('sql_max_retries',
+               default=10,
+               help='maximum db connection retries during startup. '
+                    '(setting -1 implies an infinite retry count)'),
     cfg.IntOpt('sql_retry_interval',
                default=10,
                help='interval between retries of opening a sql connection'),

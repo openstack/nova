@@ -22,9 +22,8 @@ import time
 
 import sqlalchemy.interfaces
 import sqlalchemy.orm
-from sqlalchemy.exc import DisconnectionError
+from sqlalchemy.exc import DisconnectionError, OperationalError
 from sqlalchemy.pool import NullPool, StaticPool
-import time
 
 import nova.exception
 import nova.flags as flags
@@ -81,6 +80,17 @@ class MySQLPingListener(object):
                 raise
 
 
+def is_db_connection_error(args):
+    """Return True if error in connecting to db."""
+    # NOTE(adam_g): This is currently MySQL specific and needs to be extended
+    #               to support Postgres and others.
+    conn_err_codes = ('2002', '2003', '2006')
+    for err_code in conn_err_codes:
+        if args.find(err_code) != -1:
+            return True
+    return False
+
+
 def get_engine():
     """Return a SQLAlchemy engine."""
     global _ENGINE
@@ -114,6 +124,28 @@ def get_engine():
 
         _ENGINE = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
 
+        try:
+            _ENGINE.connect()
+        except OperationalError, e:
+            if not is_db_connection_error(e.args[0]):
+                raise
+
+            remaining = FLAGS.sql_max_retries
+            if remaining == -1:
+                remaining = 'infinite'
+            while True:
+                msg = _('SQL connection failed. %s attempts left.')
+                LOG.warn(msg % remaining)
+                if remaining != 'infinite':
+                    remaining -= 1
+                time.sleep(FLAGS.sql_retry_interval)
+                try:
+                    _ENGINE.connect()
+                    break
+                except OperationalError, e:
+                    if (remaining != 'infinite' and remaining == 0) or \
+                       not is_db_connection_error(e.args[0]):
+                        raise
     return _ENGINE
 
 

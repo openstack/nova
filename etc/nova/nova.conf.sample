@@ -215,6 +215,8 @@
 # sql_connection="sqlite:///$state_path/$sqlite_db"
 ###### (IntOpt) timeout before idle sql connections are reaped
 # sql_idle_timeout=3600
+###### (IntOpt) maximum db connection retries during startup. (setting -1 implies an infinite retry count)
+# sql_max_retries=10
 ###### (IntOpt) interval between retries of opening a sql connection
 # sql_retry_interval=10
 ###### (StrOpt) the filename to use with sqlite
@@ -1105,4 +1107,4 @@
 ###### (StrOpt) The ZFS path under which to create zvols for volumes.
 # san_zfs_volume_base="rpool/"
 
-# Total option count: 466
+# Total option count: 467
