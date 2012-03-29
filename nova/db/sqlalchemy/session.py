@@ -93,6 +93,12 @@ def get_engine():
             'convert_unicode': True,
         }
 
+        # Map our SQL debug level to SQLAlchemy's options
+        if FLAGS.sql_connection_debug >= 100:
+            engine_args['echo'] = 'debug'
+        elif FLAGS.sql_connection_debug >= 50:
+            engine_args['echo'] = True
+
         if "sqlite" in connection_dict.drivername:
             engine_args["poolclass"] = NullPool
 
