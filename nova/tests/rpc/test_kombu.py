@@ -35,14 +35,15 @@ class MyException(Exception):
     pass
 
 
-def _raise_exc_stub(stubs, times, obj, method, exc_msg):
+def _raise_exc_stub(stubs, times, obj, method, exc_msg,
+        exc_class=MyException):
     info = {'called': 0}
     orig_method = getattr(obj, method)
 
     def _raise_stub(*args, **kwargs):
         info['called'] += 1
         if info['called'] <= times:
-            raise MyException(exc_msg)
+            raise exc_class(exc_msg)
         orig_method(*args, **kwargs)
     stubs.Set(obj, method, _raise_stub)
     return info
@@ -211,6 +212,18 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
                 'test_topic', None)
 
         self.assertEqual(info['called'], 2)
+        self.assertTrue(isinstance(result, self.rpc.DirectConsumer))
+
+    def test_declare_consumer_ioerrors_will_reconnect(self):
+        """Test that an IOError exception causes a reconnection"""
+        info = _raise_exc_stub(self.stubs, 2, self.rpc.DirectConsumer,
+                '__init__', 'Socket closed', exc_class=IOError)
+
+        conn = self.rpc.Connection()
+        result = conn.declare_consumer(self.rpc.DirectConsumer,
+                'test_topic', None)
+
+        self.assertEqual(info['called'], 3)
         self.assertTrue(isinstance(result, self.rpc.DirectConsumer))
 
     def test_publishing_errors_will_reconnect(self):
