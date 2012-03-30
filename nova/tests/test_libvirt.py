@@ -1399,6 +1399,22 @@ class LibvirtConnTestCase(test.TestCase):
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
         conn.destroy(instance, [])
 
+    def test_available_least_handles_missing(self):
+        """Ensure destroy calls managedSaveRemove for saved instance"""
+        conn = connection.LibvirtConnection(False)
+
+        def list_instances():
+            return ['fake']
+        self.stubs.Set(conn, 'list_instances', list_instances)
+
+        def get_info(instance_name):
+            raise exception.InstanceNotFound()
+        self.stubs.Set(conn, 'get_instance_disk_info', get_info)
+
+        result = conn.get_disk_available_least()
+        space = fake_libvirt_utils.get_fs_info(FLAGS.instances_path)['free']
+        self.assertEqual(result, space / 1024 ** 3)
+
 
 class HostStateTestCase(test.TestCase):
 
