@@ -784,11 +784,14 @@ class TestSecurityGroupRules(test.TestCase):
                           req, {'security_group_rule': rule})
 
     def test_create_with_same_group_parent_id_and_group_id(self):
-        rule = security_group_rule_template(group_id=2)
+        rule = security_group_rule_template(group_id=1, parent_group_id=1)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          req, {'security_group_rule': rule})
+        res_dict = self.controller.create(req, {'security_group_rule': rule})
+        security_group_rule = res_dict['security_group_rule']
+        self.assertNotEquals(security_group_rule['id'], 0)
+        self.assertEquals(security_group_rule['parent_group_id'], 1)
+        self.assertEquals(security_group_rule['id'], 1)
 
     def _test_create_with_no_ports_and_no_group(self, proto):
         rule = {'ip_protocol': proto, 'parent_group_id': '2'}
