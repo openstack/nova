@@ -2236,6 +2236,9 @@ class LibvirtConnection(driver.ComputeDriver):
                               locals())
                 else:
                     raise
+            except exception.InstanceNotFound:
+                # Instance was deleted during the check so ignore it
+                pass
 
         # Disk available least size
         available_least_size = dk_sz_gb * (1024 ** 3) - instances_sz
