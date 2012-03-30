@@ -2658,6 +2658,13 @@ def snapshot_get_all(context):
 
 
 @require_context
+def snapshot_get_all_for_volume(context, volume_id):
+    return model_query(context, models.Snapshot, read_deleted='no',
+                       project_only=True).\
+              filter_by(volume_id=volume_id).all()
+
+
+@require_context
 def snapshot_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
     return model_query(context, models.Snapshot).\

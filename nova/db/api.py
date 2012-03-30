@@ -1053,6 +1053,11 @@ def snapshot_get_all_by_project(context, project_id):
     return IMPL.snapshot_get_all_by_project(context, project_id)
 
 
+def snapshot_get_all_for_volume(context, volume_id):
+    """Get all snapshots for a volume."""
+    return IMPL.snapshot_get_all_for_volume(context, volume_id)
+
+
 def snapshot_update(context, snapshot_id, values):
     """Set the given properties on an snapshot and update it.
 
