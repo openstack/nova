@@ -955,9 +955,7 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             raise exception.Error(_("Guest does not have a console available"))
 
-        console_log = os.path.join(FLAGS.instances_path, instance['name'],
-                                   'console.log')
-        libvirt_utils.chown(console_log, os.getuid())
+        self._chown_console_log_for_instance(instance['name'])
         data = self._flush_libvirt_console(pty)
         fpath = self._append_to_file(data, console_log)
 
@@ -1099,6 +1097,13 @@ class LibvirtConnection(driver.ComputeDriver):
         libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
         libvirt_utils.mkfs('swap', target)
 
+    @staticmethod
+    def _chown_console_log_for_instance(instance_name):
+        console_log = os.path.join(FLAGS.instances_path, instance_name,
+                                   'console.log')
+        if os.path.exists(console_log):
+            libvirt_utils.chown(console_log, os.getuid())
+
     def _create_image(self, context, instance, libvirt_xml, suffix='',
                       disk_images=None, network_info=None,
                       block_device_info=None):
@@ -1120,6 +1125,9 @@ class LibvirtConnection(driver.ComputeDriver):
         if FLAGS.libvirt_type == 'lxc':
             container_dir = '%s/rootfs' % basepath(suffix='')
             libvirt_utils.ensure_tree(container_dir)
+
+        # NOTE(dprince): for rescue console.log may already exist... chown it.
+        self._chown_console_log_for_instance(instance['name'])
 
         # NOTE(vish): No need add the suffix to console.log
         libvirt_utils.write_to_file(basepath('console.log', ''), '', 007)
