@@ -1357,6 +1357,70 @@ class VMOps(object):
         return {'host': FLAGS.vncserver_proxyclient_address, 'port': 80,
                 'internal_access_path': path}
 
+    def _vif_xenstore_data(self, vif):
+        """convert a network info vif to injectable instance data"""
+
+        def get_ip(ip):
+            if not ip:
+                return None
+            return ip['address']
+
+        def fixed_ip_dict(ip, subnet):
+            if ip['version'] == 4:
+                netmask = str(subnet.as_netaddr().netmask)
+            else:
+                netmask = subnet.as_netaddr()._prefixlen
+
+            return {'ip': ip['address'],
+                    'enabled': '1',
+                    'netmask': netmask,
+                    'gateway': get_ip(subnet['gateway'])}
+
+        def convert_route(route):
+            return {'route': str(netaddr.IPNetwork(route['cidr']).network),
+                    'netmask': str(netaddr.IPNetwork(route['cidr']).netmask),
+                    'gateway': get_ip(route['gateway'])}
+
+        network = vif['network']
+        v4_subnets = [subnet for subnet in network['subnets']
+                             if subnet['version'] == 4]
+        v6_subnets = [subnet for subnet in network['subnets']
+                             if subnet['version'] == 6]
+
+        # NOTE(tr3buchet): routes and DNS come from all subnets
+        routes = [convert_route(route) for subnet in network['subnets']
+                                       for route in subnet['routes']]
+        dns = [get_ip(ip) for subnet in network['subnets']
+                          for ip in subnet['dns']]
+
+        info_dict = {'label': network['label'],
+                     'mac': vif['address']}
+
+        if v4_subnets:
+            # NOTE(tr3buchet): gateway and broadcast from first subnet
+            #                  primary IP will be from first subnet
+            #                  subnets are generally unordered :(
+            info_dict['gateway'] = get_ip(v4_subnets[0]['gateway'])
+            info_dict['broadcast'] = str(v4_subnets[0].as_netaddr().broadcast)
+            info_dict['ips'] = [fixed_ip_dict(ip, subnet)
+                                for subnet in v4_subnets
+                                for ip in subnet['ips']]
+        if v6_subnets:
+            # NOTE(tr3buchet): gateway from first subnet
+            #                  primary IP will be from first subnet
+            #                  subnets are generally unordered :(
+            info_dict['gateway_v6'] = get_ip(v6_subnets[0]['gateway'])
+            info_dict['ip6s'] = [fixed_ip_dict(ip, subnet)
+                                 for subnet in v6_subnets
+                                 for ip in subnet['ips']]
+        if routes:
+            info_dict['routes'] = routes
+
+        if dns:
+            info_dict['dns'] = dns
+
+        return info_dict
+
     def inject_network_info(self, instance, network_info, vm_ref=None):
         """
         Generate the network info and make calls to place it into the
@@ -1367,11 +1431,13 @@ class VMOps(object):
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         LOG.debug(_("Injecting network info to xenstore"), instance=instance)
 
-        for (network, info) in network_info:
-            location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
-            self._add_to_param_xenstore(vm_ref, location, json.dumps(info))
+        for vif in network_info:
+            xs_data = self._vif_xenstore_data(vif)
+            location = \
+                    'vm-data/networking/%s' % vif['address'].replace(':', '')
+            self._add_to_param_xenstore(vm_ref, location, json.dumps(xs_data))
             try:
-                self._write_to_xenstore(instance, location, info,
+                self._write_to_xenstore(instance, location, xs_data,
                                         vm_ref=vm_ref)
             except KeyError:
                 # catch KeyError for domid if instance isn't running
@@ -1385,8 +1451,8 @@ class VMOps(object):
         # this function raises if vm_ref is not a vm_opaque_ref
         self._session.call_xenapi("VM.get_record", vm_ref)
 
-        for device, (network, info) in enumerate(network_info):
-            vif_rec = self.vif_driver.plug(instance, network, info,
+        for device, vif in enumerate(network_info):
+            vif_rec = self.vif_driver.plug(instance, vif,
                                            vm_ref=vm_ref, device=device)
             network_ref = vif_rec['network']
             LOG.debug(_('Creating VIF for network %(network_ref)s'),
@@ -1397,13 +1463,13 @@ class VMOps(object):
 
     def plug_vifs(self, instance, network_info):
         """Set up VIF networking on the host."""
-        for device, (network, mapping) in enumerate(network_info):
-            self.vif_driver.plug(instance, network, mapping, device=device)
+        for device, vif in enumerate(network_info):
+            self.vif_driver.plug(instance, vif, device=device)
 
     def unplug_vifs(self, instance, network_info):
         if network_info:
-            for (network, mapping) in network_info:
-                self.vif_driver.unplug(instance, network, mapping)
+            for vif in network_info:
+                self.vif_driver.unplug(instance, vif)
 
     def reset_network(self, instance, vm_ref=None):
         """Calls resetnetwork method in agent."""

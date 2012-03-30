@@ -15,7 +15,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import nova.compute.utils
 import nova.context
 from nova import db
 from nova import exception
@@ -180,11 +179,13 @@ def fake_network(network_id, ipv6=None):
              'host': None,
              'project_id': 'fake_project',
              'vpn_public_address': '192.168.%d.2' % network_id,
-             'rxtx_base': '%d' % network_id * 10}
+             'rxtx_base': network_id * 10}
     if ipv6:
         fake_network['cidr_v6'] = '2001:db8:0:%x::/64' % network_id
         fake_network['gateway_v6'] = '2001:db8:0:%x::1' % network_id
         fake_network['netmask_v6'] = '64'
+    if FLAGS.flat_injected:
+        fake_network['injected'] = True
 
     return fake_network
 
@@ -353,7 +354,7 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
                 0, 0, 3, None)
     if spectacular:
         return nw_model
-    return nova.compute.utils.legacy_network_info(nw_model)
+    return nw_model.legacy()
 
 
 def stub_out_nw_api_get_instance_nw_info(stubs, func=None,

@@ -30,7 +30,6 @@ from xml.dom import minidom
 from nova.api.ec2 import cloud
 from nova.compute import instance_types
 from nova.compute import power_state
-from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -1892,7 +1891,7 @@ class IptablesFirewallTestCase(test.TestCase):
 
         _fake_stub_out_get_nw_info(self.stubs, lambda *a, **kw: network_model)
 
-        network_info = compute_utils.legacy_network_info(network_model)
+        network_info = network_model.legacy()
         self.fw.prepare_instance_filter(instance_ref, network_info)
         self.fw.apply_instance_filter(instance_ref, network_info)
 

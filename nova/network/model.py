@@ -31,11 +31,15 @@ class Model(dict):
     def __repr__(self):
         return self.__class__.__name__ + '(' + dict.__repr__(self) + ')'
 
-    def set_meta(self, kwargs):
+    def _set_meta(self, kwargs):
         # pull meta out of kwargs if it's there
         self['meta'] = kwargs.pop('meta', {})
         # update meta with any additional kwargs that may exist
         self['meta'].update(kwargs)
+
+    def get_meta(self, key, default=None):
+        """calls get(key, default) on self['meta']"""
+        return self['meta'].get(key, default)
 
 
 class IP(Model):
@@ -47,7 +51,7 @@ class IP(Model):
         self['type'] = type
         self['version'] = kwargs.pop('version', None)
 
-        self.set_meta(kwargs)
+        self._set_meta(kwargs)
 
         # determine version from address if not passed in
         if self['address'] and not self['version']:
@@ -106,7 +110,7 @@ class Route(Model):
         self['gateway'] = gateway
         self['interface'] = interface
 
-        self.set_meta(kwargs)
+        self._set_meta(kwargs)
 
     @classmethod
     def hydrate(cls, route):
@@ -128,7 +132,7 @@ class Subnet(Model):
         self['routes'] = routes or []
         self['version'] = kwargs.pop('version', None)
 
-        self.set_meta(kwargs)
+        self._set_meta(kwargs)
 
         if self['cidr'] and not self['version']:
             self['version'] = netaddr.IPNetwork(self['cidr']).version
@@ -173,7 +177,7 @@ class Network(Model):
         self['label'] = label
         self['subnets'] = subnets or []
 
-        self.set_meta(kwargs)
+        self._set_meta(kwargs)
 
     def add_subnet(self, subnet):
         if subnet not in self['subnets']:
@@ -197,7 +201,7 @@ class VIF(Model):
         self['address'] = address
         self['network'] = network or None
 
-        self.set_meta(kwargs)
+        self._set_meta(kwargs)
 
     def __eq__(self, other):
         return self['id'] == other['id']
@@ -270,5 +274,115 @@ class NetworkInfo(list):
             network_info = json.loads(network_info)
         return NetworkInfo([VIF.hydrate(vif) for vif in network_info])
 
-    def as_cache(self):
+    def json(self):
         return json.dumps(self)
+
+    def legacy(self):
+        """
+        Return the legacy network_info representation of self
+        """
+        def get_ip(ip):
+            if not ip:
+                return None
+            return ip['address']
+
+        def fixed_ip_dict(ip, subnet):
+            if ip['version'] == 4:
+                netmask = str(subnet.as_netaddr().netmask)
+            else:
+                netmask = subnet.as_netaddr()._prefixlen
+
+            return {'ip': ip['address'],
+                    'enabled': '1',
+                    'netmask': netmask,
+                    'gateway': get_ip(subnet['gateway'])}
+
+        def convert_routes(routes):
+            routes_list = []
+            for route in routes:
+                r = {'route': str(netaddr.IPNetwork(route['cidr']).network),
+                     'netmask': str(netaddr.IPNetwork(route['cidr']).netmask),
+                     'gateway': get_ip(route['gateway'])}
+                routes_list.append(r)
+            return routes_list
+
+        network_info = []
+        for vif in self:
+            # if vif doesn't have network or that network has no subnets, quit
+            if not vif['network'] or not vif['network']['subnets']:
+                continue
+            network = vif['network']
+
+            # NOTE(jkoelker) The legacy format only supports one subnet per
+            #                network, so we only use the 1st one of each type
+            # NOTE(tr3buchet): o.O
+            v4_subnets = []
+            v6_subnets = []
+            for subnet in vif['network']['subnets']:
+                if subnet['version'] == 4:
+                    v4_subnets.append(subnet)
+                else:
+                    v6_subnets.append(subnet)
+
+            subnet_v4 = None
+            subnet_v6 = None
+
+            if v4_subnets:
+                subnet_v4 = v4_subnets[0]
+
+            if v6_subnets:
+                subnet_v6 = v6_subnets[0]
+
+            if not subnet_v4:
+                msg = _('v4 subnets are required for legacy nw_info')
+                raise exception.NovaException(message=msg)
+
+            routes = convert_routes(subnet_v4['routes'])
+            should_create_bridge = network.get_meta('should_create_bridge',
+                                                    False)
+            should_create_vlan = network.get_meta('should_create_vlan', False)
+            gateway = get_ip(subnet_v4['gateway'])
+            dhcp_server = subnet_v4.get_meta('dhcp_server', gateway)
+
+            network_dict = \
+                    {'bridge': network['bridge'],
+                     'id': network['id'],
+                     'cidr': subnet_v4['cidr'],
+                     'cidr_v6': subnet_v6['cidr'] if subnet_v6 else None,
+                     'vlan': network.get_meta('vlan'),
+                     'injected': network.get_meta('injected', False),
+                     'multi_host': network.get_meta('multi_host', False),
+                     'bridge_interface': network.get_meta('bridge_interface')}
+            # NOTE(tr3buchet): 'ips' bit here is tricky, we support a single
+            #                  subnet but we want all the IPs to be there
+            #                  so use the v4_subnets[0] and its IPs are first
+            #                  so that eth0 will be from subnet_v4, the rest of
+            #                  the IPs will be aliased eth0:1 etc and the
+            #                  gateways from their subnets will not be used
+            info_dict = {'label': network['label'],
+                         'broadcast': str(subnet_v4.as_netaddr().broadcast),
+                         'mac': vif['address'],
+                         'vif_uuid': vif['id'],
+                         'rxtx_cap': vif.get_meta('rxtx_cap', 0),
+                         'dns': [get_ip(ip) for ip in subnet_v4['dns']],
+                         'ips': [fixed_ip_dict(ip, subnet)
+                                 for subnet in v4_subnets
+                                 for ip in subnet['ips']],
+                         'should_create_bridge': should_create_bridge,
+                         'should_create_vlan': should_create_vlan,
+                         'dhcp_server': dhcp_server}
+            if routes:
+                info_dict['routes'] = routes
+
+            if gateway:
+                info_dict['gateway'] = gateway
+
+            if v6_subnets:
+                if subnet_v6['gateway']:
+                    info_dict['gateway_v6'] = get_ip(subnet_v6['gateway'])
+                # NOTE(tr3buchet): only supporting single v6 subnet here
+                info_dict['ip6s'] = [fixed_ip_dict(ip, subnet_v6)
+                                     for ip in subnet_v6['ips']]
+
+            network_info.append((network_dict, info_dict))
+        return network_info

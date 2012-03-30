@@ -577,7 +577,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         nw_info = self.build_network_info_model(context, vifs, networks,
                                                 rxtx_factor, host)
         db.instance_info_cache_update(context, instance_uuid,
-                                      {'network_info': nw_info.as_cache()})
+                                      {'network_info': nw_info.json()})
 
         return nw_info
 

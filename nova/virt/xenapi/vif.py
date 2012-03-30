@@ -44,39 +44,40 @@ class XenVIFDriver(vif.VIFDriver):
 class XenAPIBridgeDriver(XenVIFDriver):
     """VIF Driver for XenAPI that uses XenAPI to create Networks."""
 
-    def plug(self, instance, network, mapping, vm_ref=None, device=None):
+    def plug(self, instance, vif, vm_ref=None, device=None):
         if not vm_ref:
             vm_ref = vm_utils.VMHelper.lookup(self._session, instance.name)
         if not device:
             device = 0
 
-        if mapping.get('should_create_vlan'):
-            network_ref = self._ensure_vlan_bridge(network)
+        if vif['network'].get_meta('should_create_vlan'):
+            network_ref = self._ensure_vlan_bridge(vif['network'])
         else:
             network_ref = network_utils.NetworkHelper.find_network_with_bridge(
-                                        self._session, network['bridge'])
+                                       self._session, vif['network']['bridge'])
         vif_rec = {}
         vif_rec['device'] = str(device)
         vif_rec['network'] = network_ref
         vif_rec['VM'] = vm_ref
-        vif_rec['MAC'] = mapping['mac']
+        vif_rec['MAC'] = vif['address']
         vif_rec['MTU'] = '1500'
         vif_rec['other_config'] = {}
-        if "rxtx_cap" in mapping:
-            vif_rec['qos_algorithm_type'] = "ratelimit"
-            vif_rec['qos_algorithm_params'] = {"kbps":
-                                               str(mapping['rxtx_cap'] * 1024)}
+        if vif.get_meta('rxtx_cap'):
+            vif_rec['qos_algorithm_type'] = 'ratelimit'
+            vif_rec['qos_algorithm_params'] = {'kbps':
+                         str(int(vif.get_meta('rxtx_cap')) * 1024)}
         else:
-            vif_rec['qos_algorithm_type'] = ""
+            vif_rec['qos_algorithm_type'] = ''
             vif_rec['qos_algorithm_params'] = {}
         return vif_rec
 
     def _ensure_vlan_bridge(self, network):
         """Ensure that a VLAN bridge exists"""
 
-        vlan_num = network['vlan']
+        vlan_num = network.get_meta('vlan')
         bridge = network['bridge']
-        bridge_interface = FLAGS.vlan_interface or network['bridge_interface']
+        bridge_interface = FLAGS.vlan_interface or \
+                           network.get_meta('bridge_interface')
         # Check whether bridge already exists
         # Retrieve network whose name_label is "bridge"
         network_ref = network_utils.NetworkHelper.find_network_with_name_label(
@@ -86,8 +87,8 @@ class XenAPIBridgeDriver(XenVIFDriver):
             # 1 - create network
             description = 'network for nova bridge %s' % bridge
             network_rec = {'name_label': bridge,
-                       'name_description': description,
-                       'other_config': {}}
+                           'name_description': description,
+                           'other_config': {}}
             network_ref = self._session.call_xenapi('network.create',
                                                     network_rec)
             # 2 - find PIF for VLAN NOTE(salvatore-orlando): using double
@@ -101,7 +102,7 @@ class XenAPIBridgeDriver(XenVIFDriver):
             # Multiple PIF are ok: we are dealing with a pool
             if len(pifs) == 0:
                 raise Exception(_('Found no PIF for device %s') %
-                                        bridge_interface)
+                                bridge_interface)
             for pif_ref in pifs.keys():
                 self._session.call_xenapi('VLAN.create',
                                           pif_ref,
@@ -126,14 +127,14 @@ class XenAPIBridgeDriver(XenVIFDriver):
 
         return network_ref
 
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, vif):
         pass
 
 
 class XenAPIOpenVswitchDriver(XenVIFDriver):
     """VIF driver for Open vSwitch with XenAPI."""
 
-    def plug(self, instance, network, mapping, vm_ref=None, device=None):
+    def plug(self, instance, vif, vm_ref=None, device=None):
         if not vm_ref:
             vm_ref = vm_utils.VMHelper.lookup(self._session, instance.name)
 
@@ -148,14 +149,14 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         vif_rec['device'] = str(device)
         vif_rec['network'] = network_ref
         vif_rec['VM'] = vm_ref
-        vif_rec['MAC'] = mapping['mac']
+        vif_rec['MAC'] = vif['address']
         vif_rec['MTU'] = '1500'
-        vif_rec['qos_algorithm_type'] = ""
+        vif_rec['qos_algorithm_type'] = ''
         vif_rec['qos_algorithm_params'] = {}
         # OVS on the hypervisor monitors this key and uses it to
         # set the iface-id attribute
-        vif_rec['other_config'] = {"nicira-iface-id": mapping['vif_uuid']}
+        vif_rec['other_config'] = {'nicira-iface-id': vif['id']}
         return vif_rec
 
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, vif):
         pass

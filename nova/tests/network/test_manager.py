@@ -166,7 +166,7 @@ class FlatNetworkTestCase(test.TestCase):
             self.assertDictMatch(nw, check)
 
             check = {'broadcast': '192.168.%d.255' % nid,
-                     'dhcp_server': None,
+                     'dhcp_server': '192.168.1.1',
                      'dns': ['192.168.%d.3' % nid, '192.168.%d.4' % nid],
                      'gateway': '192.168.%d.1' % nid,
                      'gateway_v6': 'fe80::def',
@@ -174,7 +174,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'ips': 'DONTCARE',
                      'label': 'test%d' % nid,
                      'mac': 'DE:AD:BE:EF:00:%02x' % nid,
-                     'rxtx_cap': 0,
+                     'rxtx_cap': 30,
                      'vif_uuid':
                         '00000000-0000-0000-0000-00000000000000%02d' % nid,
                      'should_create_vlan': False,

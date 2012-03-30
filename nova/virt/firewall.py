@@ -97,6 +97,14 @@ class FirewallDriver(object):
         """Check nova-instance-instance-xxx exists"""
         raise NotImplementedError()
 
+    def _handle_network_info_model(self, network_info):
+        # make sure this is legacy network_info
+        try:
+            return network_info.legacy()
+        except AttributeError:
+            # no "legacy" function means network_info is legacy
+            return network_info
+
 
 class IptablesFirewallDriver(FirewallDriver):
     """Driver which enforces security groups through iptables rules."""
@@ -121,6 +129,9 @@ class IptablesFirewallDriver(FirewallDriver):
         pass
 
     def unfilter_instance(self, instance, network_info):
+        # make sure this is legacy nw_info
+        network_info = self._handle_network_info_model(network_info)
+
         if self.instances.pop(instance['id'], None):
             # NOTE(vish): use the passed info instead of the stored info
             self.network_infos.pop(instance['id'])
@@ -131,6 +142,9 @@ class IptablesFirewallDriver(FirewallDriver):
                      'filtered'), instance=instance)
 
     def prepare_instance_filter(self, instance, network_info):
+        # make sure this is legacy nw_info
+        network_info = self._handle_network_info_model(network_info)
+
         self.instances[instance['id']] = instance
         self.network_infos[instance['id']] = network_info
         self.add_filters_for_instance(instance)
@@ -146,6 +160,9 @@ class IptablesFirewallDriver(FirewallDriver):
         """Creates a rule corresponding to each ip that defines a
              jump to the corresponding instance - chain for all the traffic
              destined to that ip."""
+        # make sure this is legacy nw_info
+        network_info = self._handle_network_info_model(network_info)
+
         ips_v4 = [ip['ip'] for (_n, mapping) in network_info
                  for ip in mapping['ips']]
         ipv4_rules = self._create_filter(ips_v4, chain_name)
@@ -206,6 +223,9 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv6_rules += ['-j $provider']
 
     def _do_dhcp_rules(self, ipv4_rules, network_info):
+        # make sure this is legacy nw_info
+        network_info = self._handle_network_info_model(network_info)
+
         dhcp_servers = [info['dhcp_server'] for (_n, info) in network_info]
 
         for dhcp_server in dhcp_servers:
@@ -214,6 +234,9 @@ class IptablesFirewallDriver(FirewallDriver):
                                   '-j ACCEPT' % (dhcp_server,))
 
     def _do_project_network_rules(self, ipv4_rules, ipv6_rules, network_info):
+        # make sure this is legacy nw_info
+        network_info = self._handle_network_info_model(network_info)
+
         cidrs = [network['cidr'] for (network, _i) in network_info]
         for cidr in cidrs:
             ipv4_rules.append('-s %s -j ACCEPT' % (cidr,))
@@ -225,6 +248,9 @@ class IptablesFirewallDriver(FirewallDriver):
                 ipv6_rules.append('-s %s -j ACCEPT' % (cidrv6,))
 
     def _do_ra_rules(self, ipv6_rules, network_info):
+        # make sure this is legacy nw_info
+        network_info = self._handle_network_info_model(network_info)
+
         gateways_v6 = [mapping['gateway_v6'] for (_n, mapping) in
                        network_info]
         for gateway_v6 in gateways_v6:
@@ -259,6 +285,9 @@ class IptablesFirewallDriver(FirewallDriver):
                                            rule.to_port)]
 
     def instance_rules(self, instance, network_info):
+        # make sure this is legacy nw_info
+        network_info = self._handle_network_info_model(network_info)
+
         ctxt = context.get_admin_context()
 
         ipv4_rules = []
