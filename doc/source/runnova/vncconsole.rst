@@ -15,6 +15,79 @@
       License for the specific language governing permissions and limitations
       under the License.
 
+FAQ
+===
+Q: What has changed since diablo?
+A: Previously, vnc support was done differently for libvirt and xen.
+Now, there is unified multi-hypervisor support.  To support this change,
+configuration options have been added and changed.  Also,
+a new required service called nova-consoleauth has been added.  If you
+are upgrading from diablo, you will have to take these changes into
+consideration when upgrading.
+
+If you are using diablo, please see the documentation that shipped with
+your code, as this information will not be relevant.
+
+Q: What happened to diablo's nova-vncproxy?
+A: nova-vncproxy was removed from the nova source tree.  The essex analog for
+this process is nova-novncproxy, which is provided by an external project.
+
+Q: Why is nova-vncproxy no longer part of nova?
+A: In diablo, we shipped a websocket proxy (nova-vncproxy) with nova, but
+it had poor browser support.  This nova-vncproxy code was dependent on external
+noVNC code, so changes to that system involved updating 2 projects.
+Due to the rapid evolution of websocket tech, and the tight dependence of
+the websocket proxy on javscript and html components, we decided to keep that
+code all in one place.
+
+Q: What is the difference between nova-xvpvncproxy and nova-novncproxy?
+A: nova-xvpvncproxy, which ships with nova, is a new proxy that supports
+a simple java client.  nova-novncproxy uses noVNC to provide vnc support
+through a web browser.
+
+Q: I want VNC support in horizon.  What services do I need?
+A: You need nova-novncproxy, nova-consoleauth, and correctly configured
+compute hosts.
+
+Q: When I use "nova get-vnc-console" or click on the vnc tab of Horizon,
+it hangs.  Why?
+A: Make sure you are running nova-consoleauth (In addition to nova-novncproxy).
+The proxies rely on nova-consoleauth to validate tokens, and will wait for
+a reply it  them until a timeout is reached.
+
+Q: My vnc proxy worked fine during my All-In-One test, but now it doesn't work
+on multi host.  Why?
+A: The default flag values work for an All-In-One install, but changes must
+be made on your compute hosts once you start to build a cluster.  As an
+example, suppose you have 2 servers::
+
+    PROXYSERVER (public_ip=172.24.1.1, management_ip=192.168.1.1)
+    COMPUTESERVER (management_ip=192.168.1.2)
+
+Your nova-compute configuration file would need the following values::
+
+    # These flags help construct a connection data structure
+    vncserver_proxyclient_address=192.168.1.2
+    novncproxy_base_url=http://172.24.1.1:6080/vnc_auto.html
+    xvpvncproxy_base_url=http://172.24.1.1:6081/console
+
+    # This is the address where the underlying vncserver (not the proxy)
+    # will listen for connections.
+    vncserver_listen=192.168.1.2
+
+Note that novncproxy_base_url and novncproxy_base_url use a public ip; this
+is the url that is ultimately returned to clients, who generally will not
+have access to your private network.  Your PROXYSERVER must be able to reach
+vncserver_proxyclient_address, as that is the address over which the vnc
+connection will be proxied.
+
+See "Important nova-compute Options" for more information.
+
+Q: My noVNC does not work with recent versions of web browsers.  Why?
+A: Make sure you have python-numpy installed, which is required to support
+a newer version of the WebSocket protocol (HyBi-07+).  Also, if you are
+using diablo's nova-vncproxy, note that support for this protocol is not
+provided.
 
 Overview
 ========
@@ -27,8 +100,10 @@ The VNC console Connection works as follows:
 * User connects to api and gets an access_url like http://ip:port/?token=xyz
 * User pastes url in browser or as client parameter
 * Browser/Client connects to proxy
-* Proxy authorizes users token, maps the token to the -private- host and port
-  of an instance's VNC server, which is located on the compute host.
+* Proxy talks to nova-consoleauth to authorize the user's token,
+  and then maps the token to the -private- host and port
+  of an instance's VNC server.  The compute host specifies the what address
+  the proxy should use to connect via the flag --vncserver_proxyclient_address.
   In this way, the vnc proxy works as a bridge between the public network,
   and the private host network.
 * Proxy initiates connection to VNC server, and continues proxying until
@@ -69,6 +144,8 @@ A typical deployment will consist of the following components:
    For simple deployments, this service typically will run on the same machine
    as nova-api, since it proxies between the public network and the private
    compute host network.
+ * One or more compute hosts. These compute hosts must have correctly
+   configured flags, as described below.
 
 
 Getting an Access Url
@@ -78,7 +155,16 @@ Support for accessing this url is provided by novaclient:
 
 ::
 
-    nova get-vnc-console [server_id] [xvpvnc|novnc]
+    nova get-vnc-console [server_id] [novnc|xvpvnc]
+
+Specify 'novnc' to retrieve a url suitable for pasting into a web browser.  Specify
+'xvpvnc' for a url suitable for pasting into the java client.
+
+So to request a web browser url:
+
+::
+
+    nova get-vnc-console [server_id] novnc
 
 
 Important nova-compute Options
@@ -147,15 +233,13 @@ nova-vncproxy replaced with nova-novncproxy
 -------------------------------------------
 The previous vnc proxy, nova-vncproxy, has been removed from the nova source
 tree and replaced with an improved server that can be found externally at
-http://github.com/cloudbuilders/noVNC.git (in a branch called vnc_redux while
-this patch is in review).
+http://github.com/cloudbuilders/noVNC.git
 
 To use this nova-novncproxy:
 
 ::
 
     git clone http://github.com/cloudbuilders/noVNC.git
-    git checkout vnc_redux
     utils/nova-novncproxy --flagfile=[path to flagfile]
 
 The --flagfile param should point to your nova config that includes the rabbit
