@@ -27,6 +27,7 @@ Extensions
 .. toctree::
     :maxdepth: 3
 
+    ext_aggregates.rst
     ext_config_drive.rst
     ext_floating_ip_dns.rst
     ext_floating_ips.rst
