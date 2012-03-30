@@ -1,13 +1,15 @@
-About The Fixed IPs Extension
-=============================
+The Multinic Extension
+=================================================================
+About this Extension
+--------------------
 This extension enables addFixedIp and removeFixedIp actions on servers. It is used with the OpenStack Compute 1.1 API to add or remove fixed IP addresses on named instances. 
 
 To use this extension, you must have configured Compute with more than one Network Interface Card.
 
 To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extension.
 
-Fixed IPs Extension Overview
-----------------------------
+Extension Overview
+~~~~~~~~~~~~~~~~~~
 
 Name
 	Multinic
@@ -40,7 +42,7 @@ Short Description
 	This extension enables the assignment and removal of fixed IP addresses on virtual servers running in an OpenStack Compute cloud.
 
 Sample Query Responses
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 As shown below, responses to an EXTENSION query in XML or JSON provide basic information about the extension. 
 
@@ -55,23 +57,25 @@ Extension Query Response: JSON::
 
 	{"extensions": [{"updated": "2011-06-09T00:00:00+00:00", "name": "Multinic", "links": [], "namespace": "http://docs.openstack.org/ext/multinic/api/v1.1", "alias": "NMN", "description": "Multiple network support"}]}
 
+
 Document Change History
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 ============= =====================================
 Revision Date Summary of Changes
 2011-09-14    Initial draft
+2012-03-30    Reformat of content
 ============= =====================================
 
 
 Summary of Changes
-==================
+------------------
 This extension to the Compute API allows addition and removal of fixed IP addresses to instances.
 
-To support these new actions, the extension also issues new (faults, headers, resources, states, you name it.)
+This support is provided by the addition of new <actions, faults, headers, resources, states, something else>.
 
-New Action
-----------
+New Actions
+~~~~~~~~~~~
 This extension uses POST to add or remove fixed IP addresses to instances.
 
 add_fixed_ip
@@ -79,28 +83,26 @@ remove_fixed_ip
 
 Normal Response Code: 202
 
-Enter "None" if there are no changes to the sections below. 
-
 Include the response codes, transitions if applicable, and XML and JSON examples.
 
 New Faults
-----------
+~~~~~~~~~~
 None
 
 New Headers
------------
+~~~~~~~~~~~
 None
 
 New Resources
--------------
+~~~~~~~~~~~~~
 None
 
 New States
-----------
+~~~~~~~~~~
 None
 
 Changes to the Cloud Servers Specification
-------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 List the specific changes to the API. For example: 
 

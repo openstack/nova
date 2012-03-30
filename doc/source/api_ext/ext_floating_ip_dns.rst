@@ -1,13 +1,14 @@
-About The Floating IP DNS Extension
-===================================
-
+The Floating IP DNS Extension
+=================================================================
+About this Extension
+--------------------
 The Floating IP DNS extension provides an interface for managing DNS records associated with IP addresses
 allocated by the Floating Ips extension.  Requests are dispatched to a DNS driver selected at startup.
 
 To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extension.
 
-Floating IPs Extension Overview
--------------------------------
+Extension Overview
+~~~~~~~~~~~~~~~~~~
 
 Name
         Floating IP DNS
@@ -41,7 +42,7 @@ Short Description
         This extension enables associated DNS entries with floating IPs.
 
 Sample Query Responses
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 As shown below, responses to an EXTENSION query in XML or JSON provide basic information about the extension.
 
@@ -60,33 +61,35 @@ Extension Query Response: JSON::
         'description': 'Floating IP DNS support'}]}
 
 Document Change History
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 ============= =====================================
 Revision Date Summary of Changes
 2011-12-23    Initial draft
+2012-03-30    Reformat of content
 ============= =====================================
 
 
 Summary of Changes
-==================
+------------------
 This extension to the Compute API enables management of DNS entries for floating IP addresses.
 
-New Action
-----------
+This support is provided by the addition of new resources.
+
+New Actions
+~~~~~~~~~~~
 None
 
 New Faults
-----------
+~~~~~~~~~~
 None
 
 New Headers
------------
+~~~~~~~~~~~
 None
 
 New Resources
--------------
-
+~~~~~~~~~~~~~
 Get a list of registered DNS Domains published by the DNS drivers::
 
     GET /v1.1/<tenant_id>/os-floating-ip-dns/
@@ -191,11 +194,10 @@ Delete a DNS entry::
     Normal Response Code: 200
     Failure Response Code: 404 (Entry to be deleted not found)
 
-
 New States
-----------
+~~~~~~~~~~
 None
 
 Changes to the Cloud Servers Specification
-------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 None
