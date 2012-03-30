@@ -1542,16 +1542,23 @@ class ExportCommands(object):
         am = manager.AuthManager()
 
         for user in am.get_users():
+            # NOTE(vish): Deprecated auth uses an access key, no auth uses a
+            #             the user_id in place of it.
+            if FLAGS.auth_strategy == 'deprecated':
+                access = user.access
+            else:
+                access = user.id
+
             user_dict = {
                 'id': user.id,
                 'name': user.name,
-                'password': user.access,
+                'password': access,
             }
             output['users'].append(user_dict)
 
             ec2_cred = {
                 'user_id': user.id,
-                'access_key': user.access,
+                'access_key': access,
                 'secret_key': user.secret,
             }
             output['ec2_credentials'].append(ec2_cred)
