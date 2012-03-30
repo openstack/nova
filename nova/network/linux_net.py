@@ -442,6 +442,10 @@ def init_host(ip_range=None):
     add_snat_rule(ip_range)
 
     iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
+                                          '-s %s -d %s/32 -j ACCEPT' %
+                                          (ip_range, FLAGS.metadata_host))
+
+    iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
                                           '-s %s -d %s -j ACCEPT' %
                                           (ip_range, FLAGS.dmz_cidr))
 
