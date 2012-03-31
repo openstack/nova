@@ -1,5 +1,7 @@
-About This Extension
-====================
+The Config Drive Extension
+=================================================================
+About this Extension
+--------------------
 The config-drive extension enables attaching a separate drive to the Compute guest on instance create. It is used with the OpenStack Compute 1.1 API to write configuration data into guest for those guests whose root filesystems cannot be mounted by the Compute host.
 
 To use this extension, you must have installed Compute, with libvirt or Xen using local disk.
@@ -7,7 +9,7 @@ To use this extension, you must have installed Compute, with libvirt or Xen usin
 To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
 Extension Overview
-------------------
+~~~~~~~~~~~~~~~~~~
 
 Name
     Config Drive
@@ -41,7 +43,7 @@ Short Description
 	compute guest on instance create running in an OpenStack cloud.
 
 Sample Query Responses
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 As shown below, responses to an EXTENSION query in XML or JSON provide basic information about the extension. 
 
@@ -57,35 +59,36 @@ Extension Query Response: JSON::
 
 .. todo:: Provide example of extension query JSON response.
 
-
 Document Change History
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 ============= =====================================
 Revision Date Summary of Changes
 2011-09-16    Initial draft
+2012-03-30    Reformat of content
 ============= =====================================
 
 
 Summary of Changes
-==================
+------------------
 This extension to the OpenStack Compute API allows the addition of a configuration drive to an instance.
 
-New Action
-----------
+This support is provided by the addition of new resources.
+
+New Actions
+~~~~~~~~~~~
 None
 
 New Faults
-----------
-
+~~~~~~~~~~
 None
 
 New Headers
------------
+~~~~~~~~~~~
 None
 
 New Resources
--------------
+~~~~~~~~~~~~~
 This extension to the OpenStack Compute API adds the following resources:
 
 A config_drive attribute to the servers API that is None by default, but can optionally be True or the imageRef of a config-drive image.
@@ -94,10 +97,11 @@ Upon instance create, a guest built with a True config_drive attribute will crea
 Upon instance create, a guest built with an imageRef config_drive attribute will create a local volume from the image.
 
 New States
-----------
+~~~~~~~~~~
+None
 
 Changes to the Cloud Servers Specification
-------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In section 4.1.2 (Create Servers) of the API Specification: Examples 4.3 and 4.4 should optionally add the config-drive attribute as in the below examples:
 

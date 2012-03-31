@@ -1,11 +1,13 @@
-About The Virtual Interfaces Extension
-======================================
+The Virtual Interfaces Extension
+=================================================================
+About this Extension
+--------------------
 The Virtual Interfaces extension lets you view the virtual interfaces used in an instance.
 
 To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
-Virtual Interfaces Extension Overview
--------------------------------------
+Extension Overview
+~~~~~~~~~~~~~~~~~~
 
 Name
 	Virtual Interfaces
@@ -38,7 +40,7 @@ Short Description
 	This extension enables Virtual Interfaces capabilities for OpenStack Compute servers so that you know the interfaces for the virtual instances running in the cloud. 
 
 Sample Query Responses
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 As shown below, responses to an EXTENSION query in XML or JSON provide basic information about the extension. 
 
@@ -56,40 +58,46 @@ Extension Query Response: JSON::
 
 {"extensions": [{"updated": "2011-08-17T00:00:00+00:00", "name": "VirtualInterfaces", "links": [], "namespace": "http://docs.openstack.org/ext/virtual_interfaces/api/v1.1", "alias": "virtual_interfaces", "description": "Virtual interface support"}]}
 
+
 Document Change History
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 ============= =====================================
 Revision Date Summary of Changes
 2011-09-16    Initial draft
+2012-03-30    Reformat of content
 ============= =====================================
 
+
 Summary of Changes
-==================
+------------------
 This extension to the OpenStack Compute API enables listing of Virtual Interfaces of running instances.
 
+This support is provided by the addition of new actions.
+
 New Actions
------------
+~~~~~~~~~~~
 virtual_interfaces
 
 New Faults
-----------
+~~~~~~~~~~
 None
 
 New Headers
------------
+~~~~~~~~~~~
 None
 
 New Resources
--------------
+~~~~~~~~~~~~~
 None
 
 New States
-----------
-None 
+~~~~~~~~~~
+None
 
 Changes to the Cloud Servers Specification
-------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 A new action added to the 4.3 Server Actions section. 
 
 ============= ==================

@@ -1,6 +1,7 @@
-About This Extension
-====================
-
+The Host Aggregates Extension
+=================================================================
+About this Extension
+--------------------
 This extension introduces the concept of aggregates into Nova. Host aggregates are different from zones and availability zones: while the former allows the partition of Nova deployments into logical groups for load balancing and instance distribution, the latter are for providing some form of physical isolation and redundancy from other availability zones (e.g. by using separate power supply and network gears). Availability zones do not necessarily mean geographic distribution whereas zones usually do. Host aggregates can be regarded as a mechanism to further partitioning an availability zone, i.e. into multiple groups of hosts that share common resources like storage and network. This enables a finer level of granularity in which to structure an entire OpenStack deployment. Aggregates allows higher availability of a single guest instance within an availability zone, it enables advanced VM placement strategies, and more importantly it enables hosts' zero-downtime upgrades (for example, via VM live migration across members of the aggregate, thus causing no disruption to guest instances).
 
 You can use this extension when you have multiple Compute nodes installed (only XenServer/XCP via xenapi driver is currently supported), and you want to leverage the capabilities of the underlying hypervisor resource pools. For example, you want to enable VM live migration (i.e. VM migration within the pool) or enable host maintenance with zero-downtime for guest instances. Please, note that VM migration across pools (i.e. storage migration) is not yet supported in XenServer/XCP, but will be added when available. Bear in mind that the two migration techniques are not mutually exclusive and can be used in combination for a higher level of flexibility in your cloud management.
@@ -12,7 +13,7 @@ Pre-requisites depend on the kind of hypervisor support you are going to use. As
 To obtain current information the extensions available to you, issue an EXTENSION query on the OpenStack system where it is installed, such as http://example.com/v1.1/tenant/extensions.
 
 Extension Overview
-------------------
+~~~~~~~~~~~~~~~~~~
 
 Name
 	Host Aggregates
@@ -45,7 +46,7 @@ Short Description
 	This extension enables the use of hypervisor resource pools in Nova.
 
 Sample Query Responses
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 As shown below, responses to an EXTENSION query in XML or JSON provide basic information about the extension.
 
@@ -57,23 +58,24 @@ Extension Query Response: JSON::
 
     {"extension": {"updated": "2012-01-12T00:00:00+00:00", "name": "Aggregates", "links": [], "namespace": "http://docs.openstack.org/compute/ext/aggregates/api/v1.1", "alias": "os-aggregates", "description": "Admin-only aggregate administration"}}
 
-
 Document Change History
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 ============= =====================================
 Revision Date Summary of Changes
 2012-02-28    Initial draft
+2012-03-30    Reformat of content
 ============= =====================================
 
 
 Summary of Changes
-==================
+------------------
 This extension to the OpenStack Compute API allows the creation and management of host aggregates (i.e. pools of compute nodes).
 
-New Action
-----------
+This support is provided by the addition of new actions.
 
+New Actions
+~~~~~~~~~~~
 When a new aggregate has been created, actions can be executed using:
 
 	POST /v1.1/<tenant-id>/os-aggregates/<aggregate-id>/action
@@ -101,22 +103,21 @@ For example, to remove a host from an aggregate, the following xml must be submi
 Error Response Code(s) conflict (409), badRequest (400), itemNotFound (404)
 
 New Faults
-----------
+~~~~~~~~~~
 None
 
 New Headers
------------
+~~~~~~~~~~~
 None
 
 New Resources
--------------
+~~~~~~~~~~~~~
 None
 
 New States
-----------
+~~~~~~~~~~
 None
 
 Changes to the Cloud Servers Specification
-------------------------------------------
-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 None
