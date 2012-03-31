@@ -256,6 +256,29 @@ class VolumeTestCase(test.TestCase):
                           snapshot_id)
         self.volume.delete_volume(self.context, volume['id'])
 
+    def test_cant_delete_volume_with_snapshots(self):
+        """Test snapshot can be created and deleted."""
+        volume = self._create_volume()
+        self.volume.create_volume(self.context, volume['id'])
+        snapshot_id = self._create_snapshot(volume['id'])
+        self.volume.create_snapshot(self.context, volume['id'], snapshot_id)
+        self.assertEqual(snapshot_id,
+                         db.snapshot_get(context.get_admin_context(),
+                                         snapshot_id).id)
+
+        volume['status'] = 'available'
+        volume['host'] = 'fakehost'
+
+        volume_api = nova.volume.api.API()
+
+        self.assertRaises(exception.InvalidVolume,
+                          volume_api.delete,
+                          self.context,
+                          volume)
+
+        self.volume.delete_snapshot(self.context, snapshot_id)
+        self.volume.delete_volume(self.context, volume['id'])
+
     def test_create_snapshot_force(self):
         """Test snapshot in use can be created forcibly."""
 
