@@ -282,9 +282,15 @@ class FloatingIP(object):
             return
 
         for floating_ip in floating_ips:
-            if floating_ip.get('fixed_ip', None):
-                fixed_ip_id = floating_ip['fixed_ip_id']
-                fixed_ip_ref = self.db.fixed_ip_get(admin_context, fixed_ip_id)
+            fixed_ip_id = floating_ip.get('fixed_ip_id')
+            if fixed_ip_id:
+                try:
+                    fixed_ip_ref = self.db.fixed_ip_get(admin_context,
+                                                        fixed_ip_id)
+                except exception.FixedIpNotFound:
+                    msg = _('Fixed ip %(fixed_ip_id)s not found') % locals()
+                    LOG.debug(msg)
+                    continue
                 fixed_address = fixed_ip_ref['address']
                 interface = floating_ip['interface']
                 try:
