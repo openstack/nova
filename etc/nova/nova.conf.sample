@@ -986,8 +986,8 @@
 
 ######### defined in nova.scheduler.least_cost #########
 
-###### (FloatOpt) How much weight to give the fill-first cost function
-# compute_fill_first_cost_fn_weight=1.0
+###### (FloatOpt) How much weight to give the fill-first cost function. A negative value will reverse behavior: e.g. spread-first
+# compute_fill_first_cost_fn_weight=-1.0
 ###### (ListOpt) Which cost functions the LeastCostScheduler should use
 # least_cost_functions="nova.scheduler.least_cost.compute_fill_first_cost_fn"
 ###### (FloatOpt) How much weight to give the noop cost function

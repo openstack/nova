@@ -39,8 +39,10 @@ least_cost_opts = [
              default=1.0,
                help='How much weight to give the noop cost function'),
     cfg.FloatOpt('compute_fill_first_cost_fn_weight',
-             default=1.0,
-               help='How much weight to give the fill-first cost function'),
+             default=-1.0,
+               help='How much weight to give the fill-first cost function. '
+                    'A negative value will reverse behavior: '
+                    'e.g. spread-first'),
     ]
 
 FLAGS = flags.FLAGS

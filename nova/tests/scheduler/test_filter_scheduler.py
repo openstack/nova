@@ -170,7 +170,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         fns = fixture.get_cost_functions()
         self.assertEquals(len(fns), 1)
         weight, fn = fns[0]
-        self.assertEquals(weight, 1.0)
+        self.assertEquals(weight, -1.0)
         hostinfo = host_manager.HostState('host', 'compute')
         hostinfo.update_from_compute_node(dict(memory_mb=1000,
                 local_gb=0, vcpus=1))
