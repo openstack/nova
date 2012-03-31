@@ -307,6 +307,56 @@ class DbApiTestCase(test.TestCase):
         data = db.network_get_associated_fixed_ips(ctxt, 1, 'nothing')
         self.assertEqual(len(data), 0)
 
+    def _timeout_test(self, ctxt, timeout, multi_host):
+        values = {'host': 'foo'}
+        instance = db.instance_create(ctxt, values)
+        values = {'multi_host': multi_host, 'host': 'bar'}
+        net = db.network_create_safe(ctxt, values)
+        old = time = timeout - datetime.timedelta(seconds=5)
+        new = time = timeout + datetime.timedelta(seconds=5)
+        # should deallocate
+        values = {'allocated': False,
+                  'instance_id': instance['id'],
+                  'network_id': net['id'],
+                  'updated_at': old}
+        db.fixed_ip_create(ctxt, values)
+        # still allocated
+        values = {'allocated': True,
+                  'instance_id': instance['id'],
+                  'network_id': net['id'],
+                  'updated_at': old}
+        db.fixed_ip_create(ctxt, values)
+        # wrong network
+        values = {'allocated': False,
+                  'instance_id': instance['id'],
+                  'network_id': None,
+                  'updated_at': old}
+        db.fixed_ip_create(ctxt, values)
+        # too new
+        values = {'allocated': False,
+                  'instance_id': instance['id'],
+                  'network_id': None,
+                  'updated_at': new}
+        db.fixed_ip_create(ctxt, values)
+
+    def test_fixed_ip_disassociate_all_by_timeout_single_host(self):
+        now = utils.utcnow()
+        ctxt = context.get_admin_context()
+        self._timeout_test(ctxt, now, False)
+        result = db.fixed_ip_disassociate_all_by_timeout(ctxt, 'foo', now)
+        self.assertEqual(result, 0)
+        result = db.fixed_ip_disassociate_all_by_timeout(ctxt, 'bar', now)
+        self.assertEqual(result, 1)
+
+    def test_fixed_ip_disassociate_all_by_timeout_multi_host(self):
+        now = utils.utcnow()
+        ctxt = context.get_admin_context()
+        self._timeout_test(ctxt, now, True)
+        result = db.fixed_ip_disassociate_all_by_timeout(ctxt, 'foo', now)
+        self.assertEqual(result, 1)
+        result = db.fixed_ip_disassociate_all_by_timeout(ctxt, 'bar', now)
+        self.assertEqual(result, 0)
+
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate',
