@@ -23,6 +23,7 @@ import time
 import sqlalchemy.interfaces
 import sqlalchemy.orm
 from sqlalchemy.exc import DisconnectionError
+from sqlalchemy.pool import NullPool, StaticPool
 
 import nova.exception
 import nova.flags as flags
@@ -81,7 +82,28 @@ class MySQLPingListener(object):
 
 def get_engine():
     """Return a SQLAlchemy engine."""
-    connection_dict = sqlalchemy.engine.url.make_url(FLAGS.sql_connection)
+    global _ENGINE
+    if _ENGINE is None:
+        connection_dict = sqlalchemy.engine.url.make_url(FLAGS.sql_connection)
+
+        engine_args = {
+            "pool_recycle": FLAGS.sql_idle_timeout,
+            "echo": False,
+            'convert_unicode': True,
+        }
+
+        # Map our SQL debug level to SQLAlchemy's options
+        if FLAGS.sql_connection_debug >= 100:
+            engine_args['echo'] = 'debug'
+        elif FLAGS.sql_connection_debug >= 50:
+            engine_args['echo'] = True
+
+        if "sqlite" in connection_dict.drivername:
+            engine_args["poolclass"] = NullPool
+
+            if FLAGS.sql_connection == "sqlite://":
+                engine_args["poolclass"] = StaticPool
+                engine_args["connect_args"] = {'check_same_thread': False}
 
     engine_args = {
         "pool_recycle": FLAGS.sql_idle_timeout,
