@@ -445,7 +445,7 @@ class Connection(object):
             try:
                 self._connect()
                 return
-            except self.connection_errors, e:
+            except (self.connection_errors, IOError), e:
                 pass
             except Exception, e:
                 # NOTE(comstud): Unfortunately it's possible for amqplib
@@ -488,7 +488,7 @@ class Connection(object):
         while True:
             try:
                 return method(*args, **kwargs)
-            except (self.connection_errors, socket.timeout), e:
+            except (self.connection_errors, socket.timeout, IOError), e:
                 pass
             except Exception, e:
                 # NOTE(comstud): Unfortunately it's possible for amqplib
