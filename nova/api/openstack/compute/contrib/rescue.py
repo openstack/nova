@@ -72,7 +72,11 @@ class RescueController(wsgi.Controller):
         context = req.environ["nova.context"]
         authorize(context)
         instance = self._get_instance(context, id)
-        self.compute_api.unrescue(context, instance)
+        try:
+            self.compute_api.unrescue(context, instance)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                                                                  'unrescue')
         return webob.Response(status_int=202)
 
 
