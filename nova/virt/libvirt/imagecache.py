@@ -351,6 +351,8 @@ class ImageCacheManager(object):
                 LOG.debug(_('%(id)s (%(base_file)s): image is in use'),
                           {'id': img_id,
                            'base_file': base_file})
+                if os.path.exists(base_file):
+                    os.utime(base_file, None)
 
     def verify_base_images(self, context):
         """Verify that base images are in a reasonable state."""

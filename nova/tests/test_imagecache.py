@@ -563,6 +563,10 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         self.stubs.Set(os.path, 'exists', lambda x: exists(x))
 
+        # We need to stub utime as well
+        orig_utime = os.utime
+        self.stubs.Set(os, 'utime', lambda x, y: None)
+
         # Fake up some instances in the instances directory
         orig_listdir = os.listdir
 
