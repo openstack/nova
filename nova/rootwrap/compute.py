@@ -182,6 +182,9 @@ filterlist = [
     # nova/virt/libvirt/utils.py: 'qemu-img'
     filters.CommandFilter("/usr/bin/qemu-img", "root"),
 
+    # nova/virt/disk/api.py: 'touch', target
+    filters.CommandFilter("/usr/bin/touch", "root"),
+
     # nova/virt/libvirt/connection.py:
     filters.ReadFileFilter("/etc/iscsi/initiatorname.iscsi"),
 
