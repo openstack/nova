@@ -692,6 +692,33 @@ class VlanNetworkTestCase(test.TestCase):
                                                  mox.IgnoreArg())
         self.assertTrue(self.local)
 
+    def test_floating_ip_init_host(self):
+
+        def get_all_by_host(_context, _host):
+            return [{'interface': 'foo',
+                     'address': 'foo'},
+                    {'interface': 'fakeiface',
+                     'address': 'fakefloat',
+                     'fixed_ip_id': 1},
+                    {'interface': 'bar',
+                     'address': 'bar',
+                     'fixed_ip_id': 2}]
+        self.stubs.Set(self.network.db, 'floating_ip_get_all_by_host',
+                       get_all_by_host)
+
+        def fixed_ip_get(_context, fixed_ip_id):
+            if fixed_ip_id == 1:
+                return {'address': 'fakefixed'}
+            raise exception.FixedIpNotFound()
+        self.stubs.Set(self.network.db, 'fixed_ip_get', fixed_ip_get)
+
+        self.mox.StubOutWithMock(self.network.l3driver, 'add_floating_ip')
+        self.network.l3driver.add_floating_ip('fakefloat',
+                                              'fakefixed',
+                                              'fakeiface')
+        self.mox.ReplayAll()
+        self.network.init_host_floating_ips()
+
     def test_disassociate_floating_ip(self):
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
