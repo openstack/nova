@@ -59,18 +59,9 @@ LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 baremetal_opts = [
-    cfg.StrOpt('baremetal_injected_network_template',
-                default='$pybasedir/nova/virt/interfaces.template',
-                help='Template file for injected network'),
     cfg.StrOpt('baremetal_type',
                 default='baremetal',
                 help='baremetal domain type'),
-    cfg.StrOpt('baremetal_uri',
-                default='',
-                help='Override the default baremetal URI'),
-    cfg.BoolOpt('baremetal_allow_project_net_traffic',
-                 default=True,
-                 help='Whether to allow in project network traffic')
     ]
 
 FLAGS.register_opts(baremetal_opts)
