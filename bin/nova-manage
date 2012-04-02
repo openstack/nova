@@ -740,6 +740,10 @@ class NetworkCommands(object):
         # check for certain required inputs
         if not label:
             raise exception.NetworkNotCreated(req='--label')
+        # Size of "label" column in nova.networks is 255, hence the restriction
+        if len(label) > 255:
+            reason = _("Maximum allowed length for 'label' is 255.")
+            raise exception.InvalidInput(reason=reason)
         if not (fixed_range_v4 or fixed_range_v6):
             req = '--fixed_range_v4 or --fixed_range_v6'
             raise exception.NetworkNotCreated(req=req)
