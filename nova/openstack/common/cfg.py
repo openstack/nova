@@ -128,8 +128,8 @@ manager e.g.::
 
 Options can be registered as belonging to a group::
 
-    rabbit_group = cfg.OptionGroup(name='rabbit',
-                                   title='RabbitMQ options')
+    rabbit_group = cfg.OptGroup(name='rabbit',
+                                title='RabbitMQ options')
 
     rabbit_host_opt = cfg.StrOpt('host',
                                  default='localhost',
@@ -226,7 +226,7 @@ import os
 import string
 import sys
 
-import iniparser
+from nova.openstack.common import iniparser
 
 
 class Error(Exception):
