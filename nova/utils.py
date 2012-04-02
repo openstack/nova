@@ -856,7 +856,7 @@ class GreenLockFile(lockfile.FileLock):
             t = threading.current_thread()
             # Thread objects in Python 2.4 and earlier do not have ident
             # attrs.  Worm around that.
-            ident = getattr(t, "ident", hash(t))
+            ident = getattr(t, "ident", hash(t)) or hash(t)
             gident = corolocal.get_ident()
             self.tname = "-%x-%x" % (ident & 0xffffffff, gident & 0xffffffff)
         else:
