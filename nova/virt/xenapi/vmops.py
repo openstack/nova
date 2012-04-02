@@ -32,6 +32,8 @@ from eventlet import greenthread
 
 from nova.compute import api as compute
 from nova.compute import power_state
+from nova.compute import task_states
+from nova.compute import vm_states
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -1358,36 +1360,59 @@ class VMOps(object):
         """Poll for unconfirmed resizes.
 
         Look for any unconfirmed resizes that are older than
-        `resize_confirm_window` and automatically confirm them.
+        `resize_confirm_window` and automatically confirm them.  Check
+        all migrations despite exceptions when trying to confirm and
+        yield to other greenthreads on each iteration.
         """
         ctxt = nova_context.get_admin_context()
         migrations = db.migration_get_all_unconfirmed(ctxt,
             resize_confirm_window)
 
         migrations_info = dict(migration_count=len(migrations),
-                confirm_window=FLAGS.resize_confirm_window)
+                confirm_window=resize_confirm_window)
 
         if migrations_info["migration_count"] > 0:
             LOG.info(_("Found %(migration_count)d unconfirmed migrations "
                     "older than %(confirm_window)d seconds") % migrations_info)
 
+        def _set_migration_to_error(migration_id, reason):
+            msg = _("Setting migration %(migration_id)s to error: "
+                   "%(reason)s") % locals()
+            LOG.warn(msg)
+            db.migration_update(
+                    ctxt, migration_id, {'status': 'error'})
+
         for migration in migrations:
-            LOG.info(_("Automatically confirming migration %d"),
-                     migration['id'])
+            # NOTE(comstud): Yield to other greenthreads.  Putting this
+            # at the top so we make sure to do it on each iteration.
+            greenthread.sleep(0)
+            migration_id = migration['id']
+            instance_uuid = migration['instance_uuid']
+            msg = _("Automatically confirming migration %(migration_id)s "
+                    "for instance %(instance_uuid)s")
+            LOG.info(msg % locals())
             try:
-                instance = self.compute_api.get(ctxt, migration.instance_uuid)
+                instance = db.instance_get_by_uuid(ctxt, instance_uuid)
             except exception.InstanceNotFound:
-                LOG.warn(_("Instance for migration %d not found, skipping"),
-                         migration.id)
-
-                # NOTE(sirp): setting to error so we don't keep trying to auto
-                # confirm this resize
-                db.migration_update(
-                    ctxt, migration['id'], {'status': 'error'})
-
+                reason = _("Instance %(instance_uuid)s not found")
+                _set_migration_to_error(migration_id, reason % locals())
                 continue
-            else:
+            if instance['vm_state'] == vm_states.ERROR:
+                reason = _("Instance %(instance_uuid)s in ERROR state")
+                _set_migration_to_error(migration_id, reason % locals())
+                continue
+            if instance['task_state'] != task_states.RESIZE_VERIFY:
+                task_state = instance['task_state']
+                reason = _("Instance %(instance_uuid)s in %(task_state)s "
+                        "task_state, not RESIZE_VERIFY.")
+                _set_migration_to_error(migration_id, reason % locals())
+                continue
+            try:
                 self.compute_api.confirm_resize(ctxt, instance)
+            except Exception, e:
+                msg = _("Error auto-confirming resize for instance "
+                        "%(instance_uuid)s: %(e)s.  Will retry later.")
+                LOG.error(msg % locals())
 
     def get_info(self, instance):
         """Return data about VM instance."""
