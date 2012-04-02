@@ -7,9 +7,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2012-03-22 16:23+0000\n"
-"PO-Revision-Date: 2012-03-16 07:11+0000\n"
-"Last-Translator: Vincent Hou <houshengbo@hotmail.com>\n"
+"POT-Creation-Date: 2012-04-01 23:03+0000\n"
+"PO-Revision-Date: 2012-03-26 10:54+0000\n"
+"Last-Translator: Edward <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
 "MIME-Version: 1.0\n"
@@ -29,7 +29,7 @@ msgstr ""
 
 #: nova/crypto.py:48
 msgid "Filename of root CA"
-msgstr "根证书文件名"
+msgstr "根证书的文件名"
 
 #: nova/crypto.py:51
 msgid "Filename of private key"
@@ -49,22 +49,22 @@ msgstr "保存根证书的位置"
 
 #: nova/crypto.py:63
 msgid "Should we use a CA for each project?"
-msgstr "是否所有项目都是用证书授权（CA）？"
+msgstr "是否每个项目都使用认证权威？"
 
 #: nova/crypto.py:67
 #, python-format
 msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr "用户证书的标题，%s依次分别为项目，用户，时间戳"
+msgstr "用户证书的标题，%s 依次分别为项目，用户，时间戳"
 
 #: nova/crypto.py:72
 #, python-format
 msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr "项目证书的标题，%s依次分别为项目，时间戳"
+msgstr "项目证书的标题，%s 依次分别为项目，时间戳"
 
 #: nova/crypto.py:292
 #, python-format
 msgid "Flags path: %s"
-msgstr "Flag所在路径：%s"
+msgstr "标记所在路径：%s"
 
 #: nova/exception.py:56
 msgid "Unexpected error while running command."
@@ -137,7 +137,7 @@ msgstr "没有为镜像 %(image_id)s 找到内核。"
 
 #: nova/exception.py:220
 msgid "Unacceptable parameters."
-msgstr "不能接受的参数。"
+msgstr "无法接受的参数。"
 
 #: nova/exception.py:225
 msgid "Invalid snapshot"
@@ -146,11 +146,11 @@ msgstr "无效的快照"
 #: nova/exception.py:229
 #, python-format
 msgid "Volume %(volume_id)s is not attached to anything"
-msgstr "卷 %(volume_id)s 没有与任何东西关联"
+msgstr "卷 %(volume_id)s 没有附加任何东西"
 
 #: nova/exception.py:233 nova/api/openstack/compute/contrib/keypairs.py:113
 msgid "Keypair data is invalid"
-msgstr "Keypair数据无效"
+msgstr "密钥对数据无效"
 
 #: nova/exception.py:237
 msgid "Failed to load data into json format"
@@ -163,7 +163,7 @@ msgstr "请求无效。"
 #: nova/exception.py:245
 #, python-format
 msgid "Invalid signature %(signature)s for user %(user)s."
-msgstr "针对用户 %(user)s 的无效签名 %(signature)s"
+msgstr "无效签名 %(signature)s 针对用户是 %(user)s"
 
 #: nova/exception.py:249
 msgid "Invalid input received"
@@ -220,7 +220,7 @@ msgstr "%(err)s"
 msgid ""
 "Cannot perform action '%(action)s' on aggregate %(aggregate_id)s. Reason:"
 " %(reason)s."
-msgstr "无法在aggregate %(aggregate_id)s 上执行啊action '%(action)s'。原因： %(reason)s。"
+msgstr "无法执行action '%(action)s' 于聚合 %(aggregate_id)s 上。原因： %(reason)s。"
 
 #: nova/exception.py:301
 #, fuzzy, python-format
@@ -232,7 +232,7 @@ msgstr "找不到有效主机，原因是 %(reason)s。"
 msgid ""
 "Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot %(method)s while"
 " the instance is in this state."
-msgstr "实例 %(instance_uuid)s 处于%(attr)s %(state)s 中。该实例在这种状态下不能 %(method)s。"
+msgstr "实例 %(instance_uuid)s 处于%(attr)s %(state)s 中。该实例在这种状态下不能执行 %(method)s。"
 
 #: nova/exception.py:310
 #, python-format
@@ -247,7 +247,7 @@ msgstr "实例 %(instance_id)s 没有挂起。"
 #: nova/exception.py:318
 #, python-format
 msgid "Instance %(instance_id)s is not in rescue mode"
-msgstr "实例 %(instance_id)s 不在rescue模式。"
+msgstr "实例 %(instance_id)s 不在救援模式。"
 
 #: nova/exception.py:322
 msgid "Failed to suspend instance"
@@ -255,7 +255,7 @@ msgstr "挂起实例失败"
 
 #: nova/exception.py:326
 msgid "Failed to resume server"
-msgstr "再启动服务器失败"
+msgstr "服务器恢复失败"
 
 #: nova/exception.py:330
 msgid "Failed to reboot instance"
@@ -293,11 +293,11 @@ msgstr "该时刻原始计算主机无法使用。"
 
 #: nova/exception.py:363
 msgid "The supplied hypervisor type of is invalid."
-msgstr "提供的hypervisor类型无效。"
+msgstr "提供的虚拟机管理程序类型无效。"
 
 #: nova/exception.py:367
 msgid "The instance requires a newer hypervisor version than has been provided."
-msgstr "该实例需要比当前更新版本的hypervisor。"
+msgstr "该实例需要比当前版本更新的虚拟机管理程序。"
 
 #: nova/exception.py:372
 #, python-format
@@ -369,7 +369,7 @@ msgstr "资源没有找到。"
 #: nova/exception.py:427
 #, python-format
 msgid "Required flag %(flag)s not set."
-msgstr "要求的flag %(flag)s 没有设置。"
+msgstr "要求的标记 %(flag)s 没有设置。"
 
 #: nova/exception.py:431
 #, python-format
@@ -379,7 +379,7 @@ msgstr "卷 %(volume_id)s 没有找到。"
 #: nova/exception.py:435
 #, fuzzy, python-format
 msgid "Unable to locate account %(account_name)s on Solidfire device"
-msgstr "Unable to locate account %(account_name) on Solidfire device"
+msgstr "无法找到帐户 %(account_name) on Solidfire 设备"
 
 #: nova/exception.py:440
 #, python-format
@@ -440,7 +440,7 @@ msgstr "在 %(location)s 没有磁盘"
 #: nova/exception.py:488
 #, python-format
 msgid "Could not find a handler for %(driver_type)s volume."
-msgstr "无法为 %(driver_type)s 卷找到handler。"
+msgstr "无法为 %(driver_type)s 卷找到句柄。"
 
 #: nova/exception.py:492
 #, python-format
@@ -485,7 +485,7 @@ msgstr "角色 %(role_id)s 没有找到。"
 
 #: nova/exception.py:525
 msgid "Cannot find SR to read/write VDI."
-msgstr "没有找到SR来读写VDI。"
+msgstr "没有找到存储库来读写VDI。"
 
 #: nova/exception.py:529
 #, python-format
@@ -540,7 +540,7 @@ msgstr "网络 %s 存在活跃的端口，无法删除"
 
 #: nova/exception.py:570
 msgid "Could not find the datastore reference(s) which the VM uses."
-msgstr "无法找到虚拟机使用的datastore reference(s)。"
+msgstr "无法找到虚拟机使用的数据存储引用。"
 
 #: nova/exception.py:574
 #, python-format
@@ -577,7 +577,7 @@ msgstr "主机 %(host)s 没有固定IP。"
 msgid ""
 "Fixed IP address (%(address)s) does not exist in network "
 "(%(network_uuid)s)."
-msgstr "网络 (%(network_uuid)s) 中不存在固定IP地址 (%(address)s)。"
+msgstr "固定IP地址 (%(address)s) 在网络 (%(network_uuid)s) 中不存在。"
 
 #: nova/exception.py:604
 #, python-format
@@ -643,7 +643,7 @@ msgstr "接口 %(interface)s没有找到。"
 #: nova/exception.py:656
 #, python-format
 msgid "Keypair %(name)s not found for user %(user_id)s"
-msgstr "没有为用户 %(user_id)s 找到Keypair %(name)s。"
+msgstr "密钥对 %(name)s 没有为用户 %(user_id)s 找到。"
 
 #: nova/exception.py:660
 #, python-format
@@ -668,17 +668,17 @@ msgstr "计算主机 %(host)s 没有找到。"
 #: nova/exception.py:676
 #, python-format
 msgid "Could not find binary %(binary)s on host %(host)s."
-msgstr "没有在主机 %(host)s 找到二进制 %(binary)s。"
+msgstr "没有找到二进制 %(binary)s 在主机 %(host)s 上。"
 
 #: nova/exception.py:680
 #, python-format
 msgid "Auth token %(token)s could not be found."
-msgstr "验证令牌 %(token)s 没有找到。"
+msgstr "认证令牌 %(token)s 没有找到。"
 
 #: nova/exception.py:684
 #, python-format
 msgid "Access Key %(access_key)s could not be found."
-msgstr "Access Key %(access_key)s 没有找到。"
+msgstr "访问密钥 %(access_key)s 没有找到。"
 
 #: nova/exception.py:688
 msgid "Quota could not be found"
@@ -702,7 +702,7 @@ msgstr "安全组 %(security_group_id)s 没有找到。"
 #: nova/exception.py:704
 #, python-format
 msgid "Security group %(security_group_id)s not found for project %(project_id)s."
-msgstr "没有为项目 %(project_id)s 找到 安全组 %(security_group_id)s。"
+msgstr "没有找到安全组 %(security_group_id)s 针对项目 %(project_id)s 。"
 
 #: nova/exception.py:709
 #, python-format
@@ -731,43 +731,41 @@ msgstr "迁移 %(migration_id)s 没有找到。"
 #: nova/exception.py:727
 #, python-format
 msgid "Migration not found for instance %(instance_id)s with status %(status)s."
-msgstr "没有为状态是 %(status)s 的实例 %(instance_id)s 找到迁移。"
+msgstr "没有为实例 %(instance_id)s 找到迁移其状态为 %(status)s 。"
 
 #: nova/exception.py:732
 #, python-format
 msgid "Console pool %(pool_id)s could not be found."
-msgstr "Console pool %(pool_id)s 没有找到。"
+msgstr "控制台池 %(pool_id)s 没有找到。"
 
 #: nova/exception.py:736
 #, python-format
 msgid ""
 "Console pool of type %(console_type)s for compute host %(compute_host)s "
 "on proxy host %(host)s not found."
-msgstr ""
-"没有为计算主机 %(compute_host)s 在代理主机 %(host)s 上找到类型是 %(console_type)s 的Console "
-"pool。"
+msgstr "没有找到类型是 %(console_type)s 的控制台池针对计算主机 %(compute_host)s 在代理主机 %(host)s 上。"
 
 #: nova/exception.py:742
 #, python-format
 msgid "Console %(console_id)s could not be found."
-msgstr "Console %(console_id)s 没有找到。"
+msgstr "控制台%(console_id)s 没有找到。"
 
 #: nova/exception.py:746
 #, python-format
 msgid "Console for instance %(instance_id)s could not be found."
-msgstr "没有为实例 %(instance_id)s 找到Console。"
+msgstr "没有为实例 %(instance_id)s 找到控制台。"
 
 #: nova/exception.py:750
 #, python-format
 msgid ""
 "Console for instance %(instance_id)s in pool %(pool_id)s could not be "
 "found."
-msgstr "没有为池 %(pool_id)s 中的实例 %(instance_id)s 找到console."
+msgstr "没有为实例 %(instance_id)s 在池 %(pool_id)s 中找到控制台。"
 
 #: nova/exception.py:755
 #, python-format
 msgid "Invalid console type %(console_type)s "
-msgstr "无效的console类型 %(console_type)s "
+msgstr "无效的控制台类型 %(console_type)s "
 
 #: nova/exception.py:759
 msgid "Zero instance types found."
@@ -786,7 +784,7 @@ msgstr "名为 %(instance_type_name)s 的实例类型没有找到。"
 #: nova/exception.py:772
 #, python-format
 msgid "Flavor %(flavor_id)s could not be found."
-msgstr "风格 %(flavor_id)s没有找到。"
+msgstr "类型 %(flavor_id)s 没有找到。"
 
 #: nova/exception.py:776
 #, fuzzy, python-format
@@ -796,17 +794,17 @@ msgstr "区域 %(zone_id)s 没有找到。"
 #: nova/exception.py:780
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
-msgstr "Scheduler Host Filter %(filter_name)s 没有找到。"
+msgstr "调度器主机过滤器 %(filter_name)s 没有找到。"
 
 #: nova/exception.py:784
 #, python-format
 msgid "Scheduler cost function %(cost_fn_str)s could not be found."
-msgstr "Scheduler cost function %(cost_fn_str)s 没有找到。"
+msgstr "调度器的成本函数 %(cost_fn_str)s 没有找到。"
 
 #: nova/exception.py:789
 #, python-format
 msgid "Scheduler weight flag not found: %(flag_name)s"
-msgstr "未找到Scheduler的权重标记：%(flag_name)s"
+msgstr "未找到调度器的权重标记：%(flag_name)s"
 
 #: nova/exception.py:793
 #, python-format
@@ -932,12 +930,12 @@ msgstr "%(path)s 在共享存储上：%(reason)s"
 
 #: nova/exception.py:902
 msgid "Migration error"
-msgstr "升级错误。"
+msgstr "迁移错误"
 
 #: nova/exception.py:906
 #, python-format
 msgid "Malformed message body: %(reason)s"
-msgstr "格式错误的消息体： %(reason)s"
+msgstr "错误格式的消息体： %(reason)s"
 
 #: nova/exception.py:910
 #, python-format
@@ -997,37 +995,37 @@ msgstr "超出配额"
 msgid ""
 "Aggregate %(aggregate_id)s: action '%(action)s' caused an error: "
 "%(reason)s."
-msgstr "Aggregate %(aggregate_id)s没有主机 %(host)s。"
+msgstr "聚合 %(aggregate_id)s没有主机 %(host)s。"
 
 #: nova/exception.py:963
 #, python-format
 msgid "Aggregate %(aggregate_id)s could not be found."
-msgstr "找不到 Aggregate  %(aggregate_id)s。"
+msgstr "找不到聚合 %(aggregate_id)s。"
 
 #: nova/exception.py:967
 #, python-format
 msgid "Aggregate %(aggregate_name)s already exists."
-msgstr "Aggregate %(aggregate_name)s 已经存在。"
+msgstr "聚合 %(aggregate_name)s 已经存在。"
 
 #: nova/exception.py:971
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no host %(host)s."
-msgstr "Aggregate %(aggregate_id)s没有主机 %(host)s。"
+msgstr "聚合 %(aggregate_id)s没有主机 %(host)s。"
 
 #: nova/exception.py:975
 #, python-format
 msgid "Aggregate %(aggregate_id)s has no metadata with key %(metadata_key)s."
-msgstr "Aggregate %(aggregate_id)s 没有键为 %(metadata_key)s 的元数据。"
+msgstr "聚合 %(aggregate_id)s 没有键为 %(metadata_key)s 的元数据。"
 
 #: nova/exception.py:980
 #, python-format
 msgid "Host %(host)s already member of another aggregate."
-msgstr "主机 %(host)s 已经是另外一个aggregate的成员。"
+msgstr "主机 %(host)s 已经是另外一个聚合的成员。"
 
 #: nova/exception.py:984
 #, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
-msgstr "Aggregate %(aggregate_id)s已经有主机 %(host)s。"
+msgstr "聚合 %(aggregate_id)s已经有主机 %(host)s。"
 
 #: nova/exception.py:988
 #, fuzzy, python-format
@@ -1077,7 +1075,7 @@ msgstr ""
 msgid "Could not fetch image %(image)s"
 msgstr "获取镜像 %(image)s"
 
-#: nova/log.py:310
+#: nova/log.py:315
 #, python-format
 msgid "syslog facility must be one of: %s"
 msgstr "syslog设备必须作为一个 %s 。"
@@ -1099,7 +1097,7 @@ msgstr "在 %(full_task_name)s 期间发生的错误：%(e)s"
 
 #: nova/manager.py:203
 msgid "Notifying Schedulers of capabilities ..."
-msgstr "向 Schedulers 通报能力。"
+msgstr "向调度器通报能力。"
 
 #: nova/policy.py:30
 msgid "JSON file representing policy"
@@ -1109,44 +1107,44 @@ msgstr "JSON文件表示策略。"
 msgid "Rule checked when requested rule is not found"
 msgstr "请求的规则找不到时的检查缺省规则。"
 
-#: nova/service.py:131
+#: nova/service.py:137
 msgid "SIGTERM received"
 msgstr ""
 
-#: nova/service.py:169
+#: nova/service.py:177
 #, python-format
 msgid "Starting %(topic)s node (version %(vcs_string)s)"
 msgstr "启动 %(topic)s 节点 (版本 %(vcs_string)s)"
 
-#: nova/service.py:187
+#: nova/service.py:195
 #, python-format
 msgid "Creating Consumer connection for Service %s"
 msgstr "为服务 %s 创建消费者"
 
-#: nova/service.py:261
+#: nova/service.py:282
 msgid "Service killed that has no database entry"
 msgstr "因无数据库记录，服务已被中止"
 
-#: nova/service.py:298
+#: nova/service.py:319
 msgid "The service database object disappeared, Recreating it."
 msgstr "服务数据库对象消失，正在重新创建。"
 
-#: nova/service.py:313
+#: nova/service.py:334
 msgid "Recovered model server connection!"
 msgstr "与模型服务器(model server)的连接已恢复！"
 
-#: nova/service.py:319
+#: nova/service.py:340
 msgid "model server went away"
 msgstr "失去与模型服务器的连接"
 
-#: nova/service.py:412
+#: nova/service.py:433
 msgid "Full set of FLAGS:"
-msgstr "FLAGS全集："
+msgstr "标记全集："
 
-#: nova/service.py:419
+#: nova/service.py:440
 #, python-format
 msgid "%(flag)s : FLAG SET "
-msgstr "FLAG集合：%(flag)s "
+msgstr "%(flag)s：标记集合 "
 
 #: nova/utils.py:78
 #, python-format
@@ -1166,7 +1164,7 @@ msgstr "发现未知的 utils.execute 关键字参数：%r"
 #: nova/utils.py:219
 #, python-format
 msgid "Running cmd (subprocess): %s"
-msgstr "正在运行（在子进程中）运行命令：%s"
+msgstr "正在运行cmd (subprocess)：%s"
 
 #: nova/utils.py:235 nova/utils.py:314
 #, python-format
@@ -1181,7 +1179,7 @@ msgstr "%r 失败，重试。"
 #: nova/utils.py:290
 #, python-format
 msgid "Running cmd (SSH): %s"
-msgstr "运行SSH命令：%s"
+msgstr "运行cmd (SSH)：%s"
 
 #: nova/utils.py:292
 msgid "Environment not supported over SSH"
@@ -1216,117 +1214,117 @@ msgstr "无效的后台：%s"
 msgid "backend %s"
 msgstr "后台 %s"
 
-#: nova/utils.py:707
+#: nova/utils.py:708
 msgid "in looping call"
 msgstr "循环调用中。"
 
-#: nova/utils.py:925
+#: nova/utils.py:926
 #, fuzzy, python-format
 msgid "Attempting to grab semaphore \"%(lock)s\" for method \"%(method)s\"..."
-msgstr "正在为方法 \"%(method)s\" 试图获取信号量 \"%(lock)s\"...锁"
+msgstr "正在试图获取信号量 \"%(lock)s\" 为方法 \"%(method)s\"...锁"
 
-#: nova/utils.py:929
+#: nova/utils.py:930
 #, fuzzy, python-format
 msgid "Got semaphore \"%(lock)s\" for method \"%(method)s\"..."
-msgstr "为方法 \"%(method)s\" 获得信号量 \"%(lock)s\"...锁"
+msgstr "获得信号量 \"%(lock)s\" 为方法 \"%(method)s\" ...锁"
 
-#: nova/utils.py:933
+#: nova/utils.py:934
 #, fuzzy, python-format
 msgid "Attempting to grab file lock \"%(lock)s\" for method \"%(method)s\"..."
-msgstr "正在为方法 \"%(method)s\" 试图获取锁 \"%(lock)s\"...锁"
+msgstr "正在 试图获取锁 \"%(lock)s\" 为方法 \"%(method)s\"...锁"
 
-#: nova/utils.py:940
+#: nova/utils.py:941
 #, fuzzy, python-format
 msgid "Got file lock \"%(lock)s\" for method \"%(method)s\"..."
-msgstr "为方法 \"%(method)s\" 获得文件锁 \"%(lock)s\"...锁"
+msgstr "获得文件锁 \"%(lock)s\" 为方法 \"%(method)s\"...锁"
 
-#: nova/utils.py:999
+#: nova/utils.py:1000
 #, python-format
 msgid "Found sentinel %(filename)s for pid %(pid)s"
 msgstr ""
 
-#: nova/utils.py:1006
+#: nova/utils.py:1007
 #, python-format
 msgid "Cleaned sentinel %(filename)s for pid %(pid)s"
 msgstr ""
 
-#: nova/utils.py:1021
+#: nova/utils.py:1022
 #, python-format
 msgid "Found lockfile %(file)s with link count %(count)d"
 msgstr ""
 
-#: nova/utils.py:1026
+#: nova/utils.py:1027
 #, python-format
 msgid "Cleaned lockfile %(file)s with link count %(count)d"
 msgstr ""
 
-#: nova/utils.py:1136
+#: nova/utils.py:1137
 #, python-format
 msgid "Expected object of type: %s"
 msgstr "期望的对象类型：%s"
 
-#: nova/utils.py:1167
+#: nova/utils.py:1168
 #, python-format
 msgid "Invalid server_string: %s"
 msgstr "不正确的server_string：%s"
 
-#: nova/utils.py:1296
+#: nova/utils.py:1297
 #, python-format
 msgid "timefunc: '%(name)s' took %(total_time).2f secs"
 msgstr "timefunc：'%(name)s' 用了%(total_time).2f 秒"
 
-#: nova/utils.py:1328
+#: nova/utils.py:1329
 msgid "Original exception being dropped"
 msgstr "正在丢弃原来的异常。"
 
-#: nova/utils.py:1447
+#: nova/utils.py:1448
 #, python-format
 msgid "Class %(fullname)s is deprecated: %(msg)s"
-msgstr "类 %(fullname)s 废弃不用了：%(msg)s"
+msgstr "类 %(fullname)s 是不推荐的：%(msg)s"
 
-#: nova/utils.py:1449
+#: nova/utils.py:1450
 #, python-format
 msgid "Class %(fullname)s is deprecated"
-msgstr "类 %(fullname)s 废弃不用了"
+msgstr "类 %(fullname)s 是不推荐的"
 
-#: nova/utils.py:1481
+#: nova/utils.py:1482
 #, python-format
 msgid "Function %(name)s in %(location)s is deprecated: %(msg)s"
-msgstr "%(location)s 里的函数 %(name)s 已经废弃了：%(msg)s"
+msgstr "函数 %(name)s 在%(location)s 里的是不推荐的：%(msg)s"
 
-#: nova/utils.py:1483
+#: nova/utils.py:1484
 #, python-format
 msgid "Function %(name)s in %(location)s is deprecated"
-msgstr "%(location)s 里的函数 %(name)s 已经废弃了"
+msgstr "函数 %(name)s 在%(location)s 里的是不推荐的"
 
-#: nova/utils.py:1667
+#: nova/utils.py:1668
 #, fuzzy, python-format
 msgid "Could not remove tmpdir: %s"
 msgstr "移除容器失败：%s"
 
-#: nova/wsgi.py:93
+#: nova/wsgi.py:97
 #, python-format
 msgid "Started %(name)s on %(host)s:%(port)s"
-msgstr "在 %(host)s:%(port)s 启动%(name)s"
+msgstr "启动%(name)s 位置在 %(host)s:%(port)s"
 
-#: nova/wsgi.py:104
+#: nova/wsgi.py:108
 msgid "Stopping WSGI server."
 msgstr "关闭WSGI服务器"
 
-#: nova/wsgi.py:107
+#: nova/wsgi.py:111
 msgid "Stopping raw TCP server."
 msgstr "正在停止裸TCP服务器。"
 
-#: nova/wsgi.py:113
+#: nova/wsgi.py:117
 #, python-format
 msgid "Starting TCP server %(arg0)s on %(host)s:%(port)s"
-msgstr "正在 %(host)s:%(port)s 上启动TCP服务器 %(arg0)s"
+msgstr "正在启动TCP服务器 %(arg0)s 位置在%(host)s:%(port)s"
 
-#: nova/wsgi.py:129
+#: nova/wsgi.py:133
 msgid "WSGI server has stopped."
 msgstr "WSGI服务器已经停止。"
 
-#: nova/wsgi.py:207
+#: nova/wsgi.py:211
 msgid "You must implement __call__"
 msgstr "你必须执行 __call__"
 
@@ -1338,6 +1336,10 @@ msgstr "不可用"
 #, python-format
 msgid "Returned non-serializeable type: %s"
 msgstr "返回的non-serializeable类型：%s"
+
+#: nova/api/sizelimit.py:51
+msgid "Request is too large."
+msgstr ""
 
 #: nova/api/validator.py:142
 #, python-format
@@ -1371,7 +1373,7 @@ msgstr "签名没有提供"
 
 #: nova/api/ec2/__init__.py:271
 msgid "Access key not provided"
-msgstr "访问key没有提供"
+msgstr "访问密钥没有提供"
 
 #: nova/api/ec2/__init__.py:306 nova/api/ec2/__init__.py:319
 msgid "Failure communicating with keystone"
@@ -1405,69 +1407,74 @@ msgstr "为controller=%(controller)s 以及 action=%(action)s未验证的请求"
 #: nova/api/ec2/__init__.py:584
 #, python-format
 msgid "InstanceNotFound raised: %s"
-msgstr "引发InstanceNotFound: %s"
+msgstr "引起异常 InstanceNotFound: %s"
 
 #: nova/api/ec2/__init__.py:590
 #, python-format
 msgid "VolumeNotFound raised: %s"
-msgstr "引发VolumeNotFound: %s"
+msgstr "引起异常 VolumeNotFound: %s"
 
 #: nova/api/ec2/__init__.py:596
 #, python-format
 msgid "SnapshotNotFound raised: %s"
-msgstr "引发SnapshotNotFound: %s"
+msgstr "引起异常 SnapshotNotFound: %s"
 
 #: nova/api/ec2/__init__.py:602
 #, python-format
 msgid "NotFound raised: %s"
-msgstr "引起没有找到的错误: %s"
+msgstr "引起异常 NotFound: %s"
 
 #: nova/api/ec2/__init__.py:605
 #, python-format
 msgid "EC2APIError raised: %s"
-msgstr "引发EC2APIError: %s"
+msgstr "引起异常 EC2APIError: %s"
 
 #: nova/api/ec2/__init__.py:613
 #, python-format
 msgid "KeyPairExists raised: %s"
-msgstr "引发KeyPairExists: %s"
+msgstr "引起异常 KeyPairExists: %s"
 
 #: nova/api/ec2/__init__.py:617
 #, python-format
 msgid "InvalidParameterValue raised: %s"
-msgstr "引发InvalidParameterValue: %s"
+msgstr "引起异常 InvalidParameterValue: %s"
 
 #: nova/api/ec2/__init__.py:621
 #, python-format
 msgid "InvalidPortRange raised: %s"
-msgstr "引发InvalidPortRange: %s"
+msgstr "引起异常 InvalidPortRange: %s"
 
 #: nova/api/ec2/__init__.py:625
 #, python-format
 msgid "NotAuthorized raised: %s"
-msgstr "引发NotAuthorized: %s"
+msgstr "引起异常 NotAuthorized: %s"
 
 #: nova/api/ec2/__init__.py:629
 #, python-format
 msgid "InvalidRequest raised: %s"
-msgstr "引发InvalidRequest: %s"
+msgstr "引起异常 InvalidRequest: %s"
 
 #: nova/api/ec2/__init__.py:633
 #, fuzzy, python-format
-msgid "ValidatorError raised: %s"
-msgstr "引发InvalidPortRange: %s"
+msgid "QuotaError raised: %s"
+msgstr "引起意外的错误：%s"
 
-#: nova/api/ec2/__init__.py:644
+#: nova/api/ec2/__init__.py:637
+#, python-format
+msgid "Invalid id: bogus (expecting \"i-...\"): %s"
+msgstr ""
+
+#: nova/api/ec2/__init__.py:646
 #, python-format
 msgid "Unexpected error raised: %s"
-msgstr "引发了意外的错误：%s"
+msgstr "引起意外的错误：%s"
 
-#: nova/api/ec2/__init__.py:645
+#: nova/api/ec2/__init__.py:647
 #, python-format
 msgid "Environment: %s"
 msgstr "Environment: %s"
 
-#: nova/api/ec2/__init__.py:647 nova/api/metadata/handler.py:248
+#: nova/api/ec2/__init__.py:649 nova/api/metadata/handler.py:248
 msgid "An unknown error has occurred. Please try your request again."
 msgstr "发生了一个未知的错误. 请重试你的请求."
 
@@ -1476,234 +1483,234 @@ msgstr "发生了一个未知的错误. 请重试你的请求."
 msgid "Unsupported API request: controller = %(controller)s, action = %(action)s"
 msgstr "不支持的API请求：controller = %(controller)s，action = %(action)s"
 
-#: nova/api/ec2/cloud.py:337
+#: nova/api/ec2/cloud.py:336
 #, python-format
 msgid "Create snapshot of volume %s"
 msgstr "创建卷 %s 的快照"
 
-#: nova/api/ec2/cloud.py:373
+#: nova/api/ec2/cloud.py:372
 #, fuzzy, python-format
 msgid ""
 "Value (%s) for KeyName is invalid. Content limited to Alphanumeric "
 "character, spaces, dashes, and underscore."
 msgstr "参数GroupName的值 (%s) 无效。内容仅限于含有字母数字的字符，空格，破折号和下划线。"
 
-#: nova/api/ec2/cloud.py:379
+#: nova/api/ec2/cloud.py:378
 #, fuzzy, python-format
 msgid "Value (%s) for Keyname is invalid. Length exceeds maximum of 255."
 msgstr "参数GroupName的值 (%s) 无效。长度超过了上限255。"
 
-#: nova/api/ec2/cloud.py:383
+#: nova/api/ec2/cloud.py:382
 #, python-format
 msgid "Create key pair %s"
-msgstr "创建键值对 %s"
+msgstr "创建密钥对 %s"
 
-#: nova/api/ec2/cloud.py:392
+#: nova/api/ec2/cloud.py:391
 #, python-format
 msgid "Import key %s"
-msgstr "导入key %s"
+msgstr "导入密钥 %s"
 
-#: nova/api/ec2/cloud.py:410
+#: nova/api/ec2/cloud.py:409
 #, python-format
 msgid "Delete key pair %s"
-msgstr "删除键值对 %s"
+msgstr "删除密钥对 %s"
 
-#: nova/api/ec2/cloud.py:552
+#: nova/api/ec2/cloud.py:551
 #, fuzzy
 msgid "Invalid CIDR"
 msgstr "无效的"
 
-#: nova/api/ec2/cloud.py:637 nova/api/ec2/cloud.py:691
-#: nova/api/ec2/cloud.py:798
+#: nova/api/ec2/cloud.py:639 nova/api/ec2/cloud.py:693
+#: nova/api/ec2/cloud.py:800
 msgid "Not enough parameters, need group_name or group_id"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:652
-#: nova/api/openstack/compute/contrib/security_groups.py:518
+#: nova/api/ec2/cloud.py:654
+#: nova/api/openstack/compute/contrib/security_groups.py:517
 #, python-format
 msgid "Revoke security group ingress %s"
 msgstr "撤销 %s 安全组入口权限"
 
-#: nova/api/ec2/cloud.py:664 nova/api/ec2/cloud.py:717
+#: nova/api/ec2/cloud.py:666 nova/api/ec2/cloud.py:719
 #, fuzzy, python-format
 msgid "%s Not enough parameters to build a valid rule"
 msgstr "参数不够创建有效规则。"
 
-#: nova/api/ec2/cloud.py:682 nova/api/ec2/cloud.py:742
+#: nova/api/ec2/cloud.py:684 nova/api/ec2/cloud.py:744
 msgid "No rule for the specified parameters."
 msgstr "对给定的参数无特定规则。"
 
-#: nova/api/ec2/cloud.py:706
+#: nova/api/ec2/cloud.py:708
 #: nova/api/openstack/compute/contrib/security_groups.py:354
 #, python-format
 msgid "Authorize security group ingress %s"
-msgstr "授予 %s 安全组入口权限"
+msgstr "授权 %s 安全组入口权限"
 
-#: nova/api/ec2/cloud.py:723
+#: nova/api/ec2/cloud.py:725
 #, fuzzy, python-format
 msgid "%s - This rule already exists in group"
 msgstr "这条规则已经存在于组%s 中"
 
-#: nova/api/ec2/cloud.py:767
+#: nova/api/ec2/cloud.py:769
 #, python-format
 msgid ""
 "Value (%s) for parameter GroupName is invalid. Content limited to "
 "Alphanumeric characters, spaces, dashes, and underscores."
 msgstr "参数GroupName的值 (%s) 无效。内容仅限于含有字母数字的字符，空格，破折号和下划线。"
 
-#: nova/api/ec2/cloud.py:774
+#: nova/api/ec2/cloud.py:776
 #, python-format
 msgid ""
 "Value (%s) for parameter GroupName is invalid. Length exceeds maximum of "
 "255."
 msgstr "参数GroupName的值 (%s) 无效。长度超过了上限255。"
 
-#: nova/api/ec2/cloud.py:778
+#: nova/api/ec2/cloud.py:780
 #: nova/api/openstack/compute/contrib/security_groups.py:292
 #, python-format
 msgid "Create Security Group %s"
 msgstr "创建安全组 %s"
 
-#: nova/api/ec2/cloud.py:781
+#: nova/api/ec2/cloud.py:783
 #, python-format
 msgid "group %s already exists"
 msgstr "安全组 %s 已经存在"
 
-#: nova/api/ec2/cloud.py:813
+#: nova/api/ec2/cloud.py:815
 #: nova/api/openstack/compute/contrib/security_groups.py:245
 #, python-format
 msgid "Delete security group %s"
 msgstr "删除安全组 %s"
 
-#: nova/api/ec2/cloud.py:821 nova/compute/manager.py:1629
+#: nova/api/ec2/cloud.py:823 nova/compute/manager.py:1630
 #, python-format
 msgid "Get console output for instance %s"
-msgstr "获取虚拟机 %s 控制台输出"
+msgstr "获取实例 %s 控制台输出"
 
-#: nova/api/ec2/cloud.py:892
+#: nova/api/ec2/cloud.py:894
 #, python-format
 msgid "Create volume from snapshot %s"
 msgstr "从快照 %s 创建卷"
 
-#: nova/api/ec2/cloud.py:896 nova/api/openstack/compute/contrib/volumes.py:186
+#: nova/api/ec2/cloud.py:898 nova/api/openstack/compute/contrib/volumes.py:186
 #: nova/api/openstack/volume/volumes.py:222
 #, python-format
 msgid "Create volume of %s GB"
 msgstr "创建 %s GB的卷"
 
-#: nova/api/ec2/cloud.py:919
+#: nova/api/ec2/cloud.py:921
 #, fuzzy
 msgid "Delete Failed"
 msgstr "创建失败"
 
-#: nova/api/ec2/cloud.py:929
+#: nova/api/ec2/cloud.py:931
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr "把卷 %(volume_id)s 加载到 %(device)s 的实例 %(instance_id)s 上"
+msgstr "把卷 %(volume_id)s 附加到实例 %(instance_id)s 上位置在 %(device)s"
 
-#: nova/api/ec2/cloud.py:937
+#: nova/api/ec2/cloud.py:939
 #, fuzzy
 msgid "Attach Failed."
 msgstr "创建失败"
 
-#: nova/api/ec2/cloud.py:950 nova/api/openstack/compute/contrib/volumes.py:366
+#: nova/api/ec2/cloud.py:952 nova/api/openstack/compute/contrib/volumes.py:366
 #, python-format
 msgid "Detach volume %s"
-msgstr "卸载卷 %s"
+msgstr "分离卷 %s"
 
-#: nova/api/ec2/cloud.py:957
+#: nova/api/ec2/cloud.py:959
 #, fuzzy, python-format
 msgid "Detach Volume Failed."
-msgstr "卸载卷 %s"
+msgstr "分离卷 %s"
 
-#: nova/api/ec2/cloud.py:982 nova/api/ec2/cloud.py:1039
-#: nova/api/ec2/cloud.py:1516 nova/api/ec2/cloud.py:1531
+#: nova/api/ec2/cloud.py:984 nova/api/ec2/cloud.py:1041
+#: nova/api/ec2/cloud.py:1518 nova/api/ec2/cloud.py:1533
 #, python-format
 msgid "attribute not supported: %s"
-msgstr "attribute不支持: %s"
+msgstr "属性不支持: %s"
 
-#: nova/api/ec2/cloud.py:1105
+#: nova/api/ec2/cloud.py:1107
 #, python-format
 msgid "vol = %s\n"
 msgstr "vol = %s\n"
 
-#: nova/api/ec2/cloud.py:1253
+#: nova/api/ec2/cloud.py:1255
 msgid "Allocate address"
 msgstr "分配地址"
 
-#: nova/api/ec2/cloud.py:1265
+#: nova/api/ec2/cloud.py:1267
 #, python-format
 msgid "Release address %s"
 msgstr "释放地址 %s"
 
-#: nova/api/ec2/cloud.py:1270
+#: nova/api/ec2/cloud.py:1272
 #, python-format
 msgid "Associate address %(public_ip)s to instance %(instance_id)s"
 msgstr "把地址 %(public_ip)s 关联到实例 %(instance_id)s"
 
-#: nova/api/ec2/cloud.py:1280
+#: nova/api/ec2/cloud.py:1282
 #, python-format
 msgid "Disassociate address %s"
-msgstr "解除地址 %s 的关联"
+msgstr "取消地址 %s 的关联"
 
-#: nova/api/ec2/cloud.py:1306
+#: nova/api/ec2/cloud.py:1308
 msgid "Image must be available"
 msgstr "镜像必须可用。"
 
-#: nova/api/ec2/cloud.py:1327
+#: nova/api/ec2/cloud.py:1329
 msgid "Going to start terminating instances"
-msgstr "准备开启终止实例"
+msgstr "准备开始终止实例"
 
-#: nova/api/ec2/cloud.py:1341
+#: nova/api/ec2/cloud.py:1343
 #, python-format
 msgid "Reboot instance %r"
 msgstr "重启实例 %r"
 
-#: nova/api/ec2/cloud.py:1352
+#: nova/api/ec2/cloud.py:1354
 msgid "Going to stop instances"
 msgstr "准备停止实例"
 
-#: nova/api/ec2/cloud.py:1363
+#: nova/api/ec2/cloud.py:1365
 msgid "Going to start instances"
 msgstr "准备启动实例"
 
-#: nova/api/ec2/cloud.py:1453
+#: nova/api/ec2/cloud.py:1455
 #, python-format
 msgid "De-registering image %s"
-msgstr "解除镜像 %s注册"
+msgstr "解除镜像 %s 的注册"
 
-#: nova/api/ec2/cloud.py:1469
+#: nova/api/ec2/cloud.py:1471
 msgid "imageLocation is required"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1488
+#: nova/api/ec2/cloud.py:1490
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "用 id %(image_id)s注册镜像 %(image_location)s"
+msgstr "用id %(image_id)s 注册镜像 %(image_location)s"
 
-#: nova/api/ec2/cloud.py:1534
+#: nova/api/ec2/cloud.py:1536
 msgid "user or group not specified"
 msgstr "用户或者组没有确定"
 
-#: nova/api/ec2/cloud.py:1536
+#: nova/api/ec2/cloud.py:1538
 msgid "only group \"all\" is supported"
 msgstr "仅仅支持组\"all\""
 
-#: nova/api/ec2/cloud.py:1538
+#: nova/api/ec2/cloud.py:1540
 msgid "operation_type must be add or remove"
 msgstr "operation_type必须添加或者移除"
 
-#: nova/api/ec2/cloud.py:1540
+#: nova/api/ec2/cloud.py:1542
 #, python-format
 msgid "Updating image %s publicity"
 msgstr "正在更新镜像 %s 的 publicity 属性"
 
-#: nova/api/ec2/cloud.py:1553
+#: nova/api/ec2/cloud.py:1555
 #, python-format
 msgid "Not allowed to modify attributes for image %s"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1601
+#: nova/api/ec2/cloud.py:1603
 #, python-format
 msgid "Couldn't stop instance with in %d sec"
 msgstr "无法在 %d 秒内停止实例"
@@ -1747,12 +1754,12 @@ msgstr "扩展资源的扩展 %(ext_name)s：%(collection)s"
 #: nova/api/openstack/auth.py:90
 #, python-format
 msgid "%(user_id)s could not be found with token '%(token)s'"
-msgstr "无法为令牌 '%(token)s' 找到 %(user_id)s"
+msgstr "%(user_id)s 通过令牌 '%(token)s' 是找不到的"
 
 #: nova/api/openstack/auth.py:134
 #, python-format
 msgid "%(user_id)s must be an admin or a member of %(project_id)s"
-msgstr "%(user_id)s 必须是管理员或者 %(project_id)s 的成员"
+msgstr "%(user_id)s 必须是 %(project_id)s 的管理员或者成员"
 
 #: nova/api/openstack/auth.py:152
 msgid "Authentication requests must be made against a version root (e.g. /v2)."
@@ -1770,75 +1777,75 @@ msgstr "成功验证 '%s'"
 
 #: nova/api/openstack/auth.py:241
 msgid "User not found with provided API key."
-msgstr "没有为提供的API key找到用户。"
+msgstr "没有为提供的API密钥找到用户。"
 
 #: nova/api/openstack/auth.py:258
 #, python-format
 msgid "Provided API key is valid, but not for user '%(username)s'"
-msgstr "提供的API key有效，但并不是给用户 '%(username)s' 的。"
+msgstr "提供的API密钥有效，但并不是给用户 '%(username)s' 的。"
 
 #: nova/api/openstack/common.py:133 nova/api/openstack/common.py:167
 msgid "limit param must be an integer"
-msgstr "limit param必须是整数"
+msgstr "limit 参数必须是整数"
 
 #: nova/api/openstack/common.py:136 nova/api/openstack/common.py:171
 msgid "limit param must be positive"
-msgstr "limit param必须是正数"
+msgstr "limit参数必须是正数"
 
 #: nova/api/openstack/common.py:161
 msgid "offset param must be an integer"
-msgstr "offset param必须是整数"
+msgstr "offset 参数必须是整数"
 
 #: nova/api/openstack/common.py:175
 msgid "offset param must be positive"
-msgstr "offset param必须是正数"
+msgstr "offset 参数必须是正数"
 
-#: nova/api/openstack/common.py:199
+#: nova/api/openstack/common.py:203
 #, python-format
 msgid "marker [%s] not found"
-msgstr "没有找到marker [%s]"
+msgstr "没有找到标记 [%s]"
 
-#: nova/api/openstack/common.py:239
+#: nova/api/openstack/common.py:243
 #, python-format
 msgid "href %s does not contain version"
 msgstr "href %s 不包含版本"
 
-#: nova/api/openstack/common.py:274
+#: nova/api/openstack/common.py:278
 msgid "Image metadata limit exceeded"
 msgstr "超过镜像元数据限制"
 
-#: nova/api/openstack/common.py:291
+#: nova/api/openstack/common.py:295
 #, fuzzy, python-format
 msgid "Converting nw_info: %s"
-msgstr "虚拟机的network_info：|%s|"
+msgstr "实例的network_info：|%s|"
 
-#: nova/api/openstack/common.py:301
+#: nova/api/openstack/common.py:305
 #, fuzzy, python-format
 msgid "Converted networks: %s"
 msgstr "意外错误：%s"
 
-#: nova/api/openstack/common.py:334
+#: nova/api/openstack/common.py:338
 #, python-format
 msgid "Cannot '%(action)s' while instance is in %(attr)s %(state)s"
-msgstr "实例处于 %(attr)s %(state)s 无法进行 '%(action)s'"
+msgstr "'%(action)s' 针对处于 %(attr)s %(state)s 的实例是无法进行"
 
-#: nova/api/openstack/common.py:337
+#: nova/api/openstack/common.py:341
 #, python-format
 msgid "Instance is in an invalid state for '%(action)s'"
 msgstr "实例针对 '%(action)s' 处于无效状态"
 
-#: nova/api/openstack/common.py:417
+#: nova/api/openstack/common.py:421
 msgid "Rejecting snapshot request, snapshots currently disabled"
 msgstr "拒绝快照请求，快照当前未被激活"
 
-#: nova/api/openstack/common.py:419
+#: nova/api/openstack/common.py:423
 msgid "Instance snapshots are not permitted at this time."
 msgstr "该时刻实例快照是不允许的。"
 
 #: nova/api/openstack/extensions.py:188
 #, python-format
 msgid "Loaded extension: %s"
-msgstr "Loaded extension: %s"
+msgstr "加载的扩展：%s"
 
 #: nova/api/openstack/extensions.py:225
 #, python-format
@@ -1868,17 +1875,17 @@ msgstr "Ext updated: %s"
 #: nova/api/openstack/extensions.py:232
 #, python-format
 msgid "Exception loading extension: %s"
-msgstr "Exception loading extension: %s"
+msgstr "加载扩展发生异常：%s"
 
 #: nova/api/openstack/extensions.py:246
 #, python-format
 msgid "Loading extension %s"
-msgstr "Loading extension %s"
+msgstr "正在加载扩展 %s"
 
 #: nova/api/openstack/extensions.py:252
 #, python-format
 msgid "Calling extension factory %s"
-msgstr "Calling extension factory %s"
+msgstr "调用扩展工厂 %s"
 
 #: nova/api/openstack/extensions.py:264
 #, python-format
@@ -1906,7 +1913,7 @@ msgstr "无法理解XML"
 
 #: nova/api/openstack/wsgi.py:543
 msgid "too many body keys"
-msgstr "过多主体keys"
+msgstr "过多主体密钥"
 
 #: nova/api/openstack/wsgi.py:582
 #, fuzzy, python-format
@@ -1925,11 +1932,11 @@ msgstr "HTTP 异常抛出：%s"
 
 #: nova/api/openstack/wsgi.py:697
 msgid "Unrecognized Content-Type provided in request"
-msgstr "请求提供的无法识别的Content-Type"
+msgstr "请求中提供了无法识别的 Content-Type"
 
 #: nova/api/openstack/wsgi.py:701
 msgid "No Content-Type provided in request"
-msgstr "请求中么有提供Content-Type"
+msgstr "请求中没有提供 Content-Type"
 
 #: nova/api/openstack/wsgi.py:705
 msgid "Empty body provided in request"
@@ -1948,7 +1955,7 @@ msgstr "没有该动作：%s"
 #: nova/api/openstack/compute/contrib/admin_actions.py:211
 #: nova/api/openstack/compute/contrib/console_output.py:52
 msgid "Malformed request body"
-msgstr "不合法的请求主体"
+msgstr "错误格式的请求主体"
 
 #: nova/api/openstack/wsgi.py:829
 msgid "Unsupported Content-Type"
@@ -1956,7 +1963,7 @@ msgstr "不支持的Content-Type"
 
 #: nova/api/openstack/wsgi.py:841
 msgid "Malformed request url"
-msgstr "不合法的请求url"
+msgstr "错误格式的请求url"
 
 #: nova/api/openstack/wsgi.py:889
 #, python-format
@@ -1974,7 +1981,7 @@ msgstr "根元素选择列表"
 #: nova/api/openstack/xmlutil.py:739
 #, python-format
 msgid "Template tree mismatch; adding slave %(slavetag)s to master %(mastertag)s"
-msgstr "模板数不匹配；为master %(mastertag)s 增加 slave %(slavetag)s"
+msgstr "模板数不匹配；把slave %(slavetag)s 添加到master %(mastertag)s"
 
 #: nova/api/openstack/xmlutil.py:858
 msgid "subclasses must implement construct()!"
@@ -2026,7 +2033,7 @@ msgstr "实例并不是指定网络的成员"
 msgid ""
 "Only %(value)s %(verb)s request(s) can be made to %(uri)s every "
 "%(unit_string)s."
-msgstr "每 %(unit_string)s 只能发送 %(value)s 个 %(verb)s 请求给 %(uri)s。"
+msgstr "只能有 %(value)s 个 %(verb)s 请求发送给 %(uri)s 限定是每一个 %(unit_string)s。"
 
 #: nova/api/openstack/compute/limits.py:266
 msgid "This request was rate-limited."
@@ -2054,15 +2061,15 @@ msgstr "无效的changes-since值"
 
 #: nova/api/openstack/compute/servers.py:483
 msgid "Personality file limit exceeded"
-msgstr "超过 Personality 文件限制"
+msgstr "超过个性化文件限制"
 
 #: nova/api/openstack/compute/servers.py:485
 msgid "Personality file path too long"
-msgstr "Personality 文件路径太长"
+msgstr "个性化文件路径太长"
 
 #: nova/api/openstack/compute/servers.py:487
 msgid "Personality file content too long"
-msgstr "Personality 文件内容太长"
+msgstr "个性化文件内容太长"
 
 #: nova/api/openstack/compute/servers.py:501
 msgid "Server name is not a string or unicode"
@@ -2072,175 +2079,180 @@ msgstr "服务器名称不是字符串或者unicode"
 msgid "Server name is an empty string"
 msgstr "服务器名称是空串"
 
-#: nova/api/openstack/compute/servers.py:523
+#: nova/api/openstack/compute/servers.py:509
+#, fuzzy
+msgid "Server name must be less than 256 characters."
+msgstr "密钥对名称长度必须在1到255个字符之间"
+
+#: nova/api/openstack/compute/servers.py:527
 #, python-format
 msgid "Bad personality format: missing %s"
-msgstr "错误的personality 格式：丢失 %s"
+msgstr "错误的个性化格式：丢失 %s"
 
-#: nova/api/openstack/compute/servers.py:526
+#: nova/api/openstack/compute/servers.py:530
 msgid "Bad personality format"
-msgstr "损坏的 personality 格式"
+msgstr "损坏的个性化格式"
 
-#: nova/api/openstack/compute/servers.py:531
+#: nova/api/openstack/compute/servers.py:535
 #, python-format
 msgid "Personality content for %s cannot be decoded"
-msgstr "Personality %s的内容无法解码"
+msgstr "个性化 %s 的内容无法解码"
 
-#: nova/api/openstack/compute/servers.py:546
+#: nova/api/openstack/compute/servers.py:550
 #, python-format
 msgid "Bad networks format: network uuid is not in proper format (%s)"
 msgstr "损坏的网络格式：网络 uuid 格式不正确 (%s)"
 
-#: nova/api/openstack/compute/servers.py:555
+#: nova/api/openstack/compute/servers.py:559
 #, python-format
 msgid "Invalid fixed IP address (%s)"
 msgstr "不正确的固定 IP 地址(%s)"
 
-#: nova/api/openstack/compute/servers.py:562
+#: nova/api/openstack/compute/servers.py:566
 #, python-format
 msgid "Duplicate networks (%s) are not allowed"
 msgstr "不允许重复的网络(%s)"
 
-#: nova/api/openstack/compute/servers.py:568
+#: nova/api/openstack/compute/servers.py:572
 #, python-format
 msgid "Bad network format: missing %s"
 msgstr "错误的网络格式：丢失%s"
 
-#: nova/api/openstack/compute/servers.py:571
+#: nova/api/openstack/compute/servers.py:575
 msgid "Bad networks format"
 msgstr "错误的网络格式"
 
-#: nova/api/openstack/compute/servers.py:583
+#: nova/api/openstack/compute/servers.py:587
 msgid "Userdata content cannot be decoded"
 msgstr "Userdata 内容无法解码"
 
-#: nova/api/openstack/compute/servers.py:590
+#: nova/api/openstack/compute/servers.py:594
 msgid "accessIPv4 is not proper IPv4 format"
 msgstr "accessIPv4 不是正确的IPv4格式"
 
-#: nova/api/openstack/compute/servers.py:597
+#: nova/api/openstack/compute/servers.py:601
 #, fuzzy
 msgid "accessIPv6 is not proper IPv6 format"
 msgstr "accessIPv4 不是正确的IPv4格式"
 
-#: nova/api/openstack/compute/servers.py:629
+#: nova/api/openstack/compute/servers.py:633
 msgid "Server name is not defined"
 msgstr "服务器名称未定义"
 
-#: nova/api/openstack/compute/servers.py:671
-#: nova/api/openstack/compute/servers.py:736
+#: nova/api/openstack/compute/servers.py:675
+#: nova/api/openstack/compute/servers.py:740
 msgid "Invalid flavorRef provided."
 msgstr "提供了无效的flavorRef。"
 
-#: nova/api/openstack/compute/servers.py:733
+#: nova/api/openstack/compute/servers.py:737
 msgid "Can not find requested image"
 msgstr "无法找到请求的镜像"
 
-#: nova/api/openstack/compute/servers.py:739
+#: nova/api/openstack/compute/servers.py:743
 msgid "Invalid key_name provided."
 msgstr "提供了无效的key_name。"
 
-#: nova/api/openstack/compute/servers.py:825
-#: nova/api/openstack/compute/servers.py:845
+#: nova/api/openstack/compute/servers.py:829
+#: nova/api/openstack/compute/servers.py:849
 msgid "Instance has not been resized."
-msgstr "虚拟机还没有调整大小。"
+msgstr "实例还没有调整大小。"
 
-#: nova/api/openstack/compute/servers.py:831
+#: nova/api/openstack/compute/servers.py:835
 #, python-format
 msgid "Error in confirm-resize %s"
 msgstr "confirm-resize中的错误 %s"
 
-#: nova/api/openstack/compute/servers.py:851
+#: nova/api/openstack/compute/servers.py:855
 #, python-format
 msgid "Error in revert-resize %s"
 msgstr "revert-resize中的错误 %s"
 
-#: nova/api/openstack/compute/servers.py:864
+#: nova/api/openstack/compute/servers.py:868
 msgid "Argument 'type' for reboot is not HARD or SOFT"
 msgstr "重启的参数'type'既不是HARD也不是SOFT"
 
-#: nova/api/openstack/compute/servers.py:868
+#: nova/api/openstack/compute/servers.py:872
 msgid "Missing argument 'type' for reboot"
 msgstr "缺少重启的参数'type'"
 
-#: nova/api/openstack/compute/servers.py:881
+#: nova/api/openstack/compute/servers.py:885
 #, python-format
 msgid "Error in reboot %s"
 msgstr "重启中错误 %s"
 
-#: nova/api/openstack/compute/servers.py:893
+#: nova/api/openstack/compute/servers.py:897
 msgid "Unable to locate requested flavor."
-msgstr "无法找到请求的风格。"
+msgstr "无法找到请求的类型。"
 
-#: nova/api/openstack/compute/servers.py:896
+#: nova/api/openstack/compute/servers.py:900
 msgid "Resize requires a change in size."
 msgstr "调整大小需要尺寸的改变。"
 
-#: nova/api/openstack/compute/servers.py:920
+#: nova/api/openstack/compute/servers.py:924
 msgid "Malformed server entity"
-msgstr "非正常的服务器实体"
+msgstr "错误格式的服务器实体"
 
-#: nova/api/openstack/compute/servers.py:927
+#: nova/api/openstack/compute/servers.py:931
 msgid "Missing imageRef attribute"
 msgstr "缺少属性imageRef"
 
-#: nova/api/openstack/compute/servers.py:936
+#: nova/api/openstack/compute/servers.py:940
 msgid "Invalid imageRef provided."
-msgstr "提供了错误的imageRef。"
+msgstr "提供了无效的imageRef。"
 
-#: nova/api/openstack/compute/servers.py:945
+#: nova/api/openstack/compute/servers.py:949
 msgid "Missing flavorRef attribute"
 msgstr "缺少属性flavorRef"
 
-#: nova/api/openstack/compute/servers.py:958
+#: nova/api/openstack/compute/servers.py:962
 msgid "No adminPass was specified"
 msgstr "没有确定adminPass"
 
-#: nova/api/openstack/compute/servers.py:962
-#: nova/api/openstack/compute/servers.py:1140
+#: nova/api/openstack/compute/servers.py:966
+#: nova/api/openstack/compute/servers.py:1144
 msgid "Invalid adminPass"
 msgstr "无效的adminPass"
 
-#: nova/api/openstack/compute/servers.py:976
+#: nova/api/openstack/compute/servers.py:980
 msgid "Unable to parse metadata key/value pairs."
 msgstr "无法解析元数据键/值对"
 
-#: nova/api/openstack/compute/servers.py:989
+#: nova/api/openstack/compute/servers.py:993
 msgid "Resize request has invalid 'flavorRef' attribute."
 msgstr "调整大小请求中的属性'flavorRef'无效。"
 
-#: nova/api/openstack/compute/servers.py:992
+#: nova/api/openstack/compute/servers.py:996
 msgid "Resize requests require 'flavorRef' attribute."
 msgstr "调整大小请求要求有属性'flavorRef'。"
 
-#: nova/api/openstack/compute/servers.py:1010
+#: nova/api/openstack/compute/servers.py:1014
 #: nova/api/openstack/compute/contrib/aggregates.py:142
 #: nova/api/openstack/compute/contrib/networks.py:65
 msgid "Invalid request body"
 msgstr "无效的请求主体"
 
-#: nova/api/openstack/compute/servers.py:1015
+#: nova/api/openstack/compute/servers.py:1019
 msgid "Could not parse imageRef from request."
 msgstr "无法解析请求中的imageRef。"
 
-#: nova/api/openstack/compute/servers.py:1067
+#: nova/api/openstack/compute/servers.py:1071
 msgid "Instance could not be found"
 msgstr "无法找到实例"
 
-#: nova/api/openstack/compute/servers.py:1070
+#: nova/api/openstack/compute/servers.py:1074
 msgid "Cannot find image for rebuild"
 msgstr "无法找到用来重新创建的镜像"
 
-#: nova/api/openstack/compute/servers.py:1099
+#: nova/api/openstack/compute/servers.py:1103
 msgid "createImage entity requires name attribute"
 msgstr "实体createImage需要属性name"
 
-#: nova/api/openstack/compute/servers.py:1108
+#: nova/api/openstack/compute/servers.py:1112
 #: nova/api/openstack/compute/contrib/admin_actions.py:238
 msgid "Invalid metadata"
 msgstr "无效的元数据"
 
-#: nova/api/openstack/compute/servers.py:1163
+#: nova/api/openstack/compute/servers.py:1167
 #, python-format
 msgid "Removing options '%(unk_opt_str)s' from query"
 msgstr "正在从查询语句中移除选项 '%(unk_opt_str)s'"
@@ -2253,7 +2265,7 @@ msgstr "Compute.api::暂停 %s"
 #: nova/api/openstack/compute/contrib/admin_actions.py:77
 #, python-format
 msgid "Compute.api::unpause %s"
-msgstr "Compute.api::继续 %s"
+msgstr "Compute.api::取消暂停 %s"
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:94
 #, python-format
@@ -2305,7 +2317,7 @@ msgstr "实体createBackup需要有属性 %s"
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:223
 msgid "Malformed createBackup entity"
-msgstr "非正常的实体createBackup"
+msgstr "错误格式的实体createBackup"
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:229
 msgid "createBackup attribute 'rotation' must be an integer"
@@ -2356,7 +2368,7 @@ msgstr ""
 #: nova/api/openstack/compute/contrib/aggregates.py:139
 #, python-format
 msgid "Aggregates does not have %s action"
-msgstr "Aggregates没有动作 %s"
+msgstr "聚合没有动作 %s"
 
 #: nova/api/openstack/compute/contrib/aggregates.py:152
 #: nova/api/openstack/compute/contrib/aggregates.py:158
@@ -2425,8 +2437,8 @@ msgstr "没有更多的浮动ip。"
 
 #: nova/api/openstack/compute/contrib/floating_ips.py:201
 #: nova/api/openstack/compute/contrib/floating_ips.py:230
-#: nova/api/openstack/compute/contrib/security_groups.py:572
-#: nova/api/openstack/compute/contrib/security_groups.py:605
+#: nova/api/openstack/compute/contrib/security_groups.py:571
+#: nova/api/openstack/compute/contrib/security_groups.py:604
 msgid "Missing parameter dict"
 msgstr "缺少参数 dict"
 
@@ -2482,12 +2494,12 @@ msgstr ""
 
 #: nova/api/openstack/compute/contrib/keypairs.py:95
 msgid "Keypair name must be between 1 and 255 characters long"
-msgstr "Keypair名称长度必须在1到255个字符之间"
+msgstr "密钥对名称长度必须在1到255个字符之间"
 
 #: nova/api/openstack/compute/contrib/keypairs.py:100
 #, python-format
 msgid "Key pair '%s' already exists."
-msgstr "Keypair '%s' 已经存在。"
+msgstr "密钥对 '%s' 已经存在。"
 
 #: nova/api/openstack/compute/contrib/multinic.py:52
 msgid "Missing 'networkId' argument for addFixedIp"
@@ -2530,7 +2542,7 @@ msgstr "正在删除id是 %s 的网络"
 
 #: nova/api/openstack/compute/contrib/scheduler_hints.py:41
 msgid "Malformed scheduler_hints attribute"
-msgstr "非法的scheduler_hints attribute"
+msgstr "错误格式的 scheduler_hints 属性"
 
 #: nova/api/openstack/compute/contrib/security_groups.py:222
 msgid "Security group id should be integer"
@@ -2583,26 +2595,22 @@ msgstr "这条规则已经存在于组%s 中"
 msgid "Parent or group id is not integer"
 msgstr "父组id或者组id不是整数"
 
-#: nova/api/openstack/compute/contrib/security_groups.py:418
-msgid "Parent group id and group id cannot be same"
-msgstr "父组id和组id不能一样"
-
-#: nova/api/openstack/compute/contrib/security_groups.py:508
+#: nova/api/openstack/compute/contrib/security_groups.py:507
 msgid "Rule id is not integer"
 msgstr "规则id不是整数"
 
-#: nova/api/openstack/compute/contrib/security_groups.py:511
+#: nova/api/openstack/compute/contrib/security_groups.py:510
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "没有找到规则 (%s)"
 
-#: nova/api/openstack/compute/contrib/security_groups.py:575
-#: nova/api/openstack/compute/contrib/security_groups.py:608
+#: nova/api/openstack/compute/contrib/security_groups.py:574
+#: nova/api/openstack/compute/contrib/security_groups.py:607
 msgid "Security group not specified"
 msgstr "没有指定安全组"
 
-#: nova/api/openstack/compute/contrib/security_groups.py:579
-#: nova/api/openstack/compute/contrib/security_groups.py:612
+#: nova/api/openstack/compute/contrib/security_groups.py:578
+#: nova/api/openstack/compute/contrib/security_groups.py:611
 msgid "Security group name cannot be empty"
 msgstr "安全组名称不能是空"
 
@@ -2631,7 +2639,7 @@ msgstr "删除id为 %s 的卷"
 #: nova/api/openstack/compute/contrib/volumes.py:329
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr "把卷 %(volume_id)s 挂载到实例 %(server_id)s 的 %(device)s 设备上"
+msgstr "把卷 %(volume_id)s 附加到实例 %(server_id)s 的 %(device)s 设备上"
 
 #: nova/api/openstack/compute/contrib/volumes.py:481
 #: nova/api/openstack/volume/snapshots.py:110
@@ -2696,7 +2704,7 @@ msgstr "expected_signature: %s"
 #: nova/auth/manager.py:333 nova/auth/manager.py:345
 #, python-format
 msgid "signature: %s"
-msgstr "signature: %s"
+msgstr "签名: %s"
 
 #: nova/auth/manager.py:335 nova/auth/manager.py:357
 #, python-format
@@ -2715,27 +2723,27 @@ msgstr "必须指定项目"
 #: nova/auth/manager.py:490
 #, python-format
 msgid "Adding role %(role)s to user %(uid)s in project %(pid)s"
-msgstr "为 %(pid)s 项目里的用户 %(uid)s 添加角色 %(role)s"
+msgstr "为用户 %(uid)s 添加角色 %(role)s 用户位置在%(pid)s 项目里"
 
 #: nova/auth/manager.py:493
 #, python-format
 msgid "Adding sitewide role %(role)s to user %(uid)s"
-msgstr "为用户 %(uid)s 添加全局角色 %(role)s"
+msgstr "添加全局角色 %(role)s 给用户 %(uid)s"
 
 #: nova/auth/manager.py:519
 #, python-format
 msgid "Removing role %(role)s from user %(uid)s on project %(pid)s"
-msgstr "在项目 %(pid)s 里移除用户 %(uid)s 的角色 %(role)s"
+msgstr "移除用户 %(uid)s 的角色 %(role)s 用户位置是在项目 %(pid)s 里"
 
 #: nova/auth/manager.py:522
 #, python-format
 msgid "Removing sitewide role %(role)s from user %(uid)s"
-msgstr "移除用户 %(uid)s 的全局角色 %(role)s"
+msgstr "移除全局角色 %(role)s 对象是用户 %(uid)s"
 
 #: nova/auth/manager.py:595
 #, python-format
 msgid "Created project %(name)s with manager %(manager_user)s"
-msgstr "创建管理用户为 %(manager_user)s 项目%(name)s"
+msgstr "创建项目 %(name)s 通过管理员 %(manager_user)s"
 
 #: nova/auth/manager.py:613
 #, python-format
@@ -2745,12 +2753,12 @@ msgstr "正在修改项目 %s"
 #: nova/auth/manager.py:625
 #, python-format
 msgid "Adding user %(uid)s to project %(pid)s"
-msgstr "往项目%(pid)s 添加用户%(uid)s"
+msgstr "添加用户 %(uid)s 到项目%(pid)s"
 
 #: nova/auth/manager.py:646
 #, python-format
 msgid "Remove user %(uid)s from project %(pid)s"
-msgstr "从项目 %(pid)s 移除用户 %(uid)s"
+msgstr "移除用户 %(uid)s 于项目 %(pid)s 中"
 
 #: nova/auth/manager.py:676
 #, python-format
@@ -2780,7 +2788,7 @@ msgstr "修改用户 %s 的私钥"
 #: nova/auth/manager.py:757
 #, python-format
 msgid "Admin status set to %(admin)r for user %(uid)s"
-msgstr "将用户 %(uid)s 的管理员状态设置为 %(admin)r"
+msgstr "将管理员状态设置为 %(admin)r 目的是针对用户 %(uid)s"
 
 #: nova/auth/manager.py:802
 #, python-format
@@ -2872,7 +2880,7 @@ msgstr "block_device_mapping %s"
 #: nova/compute/api.py:591
 #, python-format
 msgid "Sending create to scheduler for %(pid)s/%(uid)s's"
-msgstr "为 %(pid)s/%(uid)s 向scheduler发送创建命令"
+msgstr "为 %(pid)s/%(uid)s 向调度器发送创建命令"
 
 #: nova/compute/api.py:871
 #, fuzzy, python-format
@@ -2884,49 +2892,49 @@ msgstr "准备尝试软删除实例 %s"
 msgid "No host for instance, deleting immediately"
 msgstr "没有托管实例 %s，立刻删除"
 
-#: nova/compute/api.py:925
+#: nova/compute/api.py:939
 #, fuzzy, python-format
 msgid "Going to try to terminate instance"
-msgstr "准备尝试删除实例 %s"
+msgstr "准备尝试终止实例 %s"
 
-#: nova/compute/api.py:963
+#: nova/compute/api.py:977
 #, fuzzy, python-format
 msgid "Going to try to stop instance"
 msgstr "准备尝试停止实例 %s"
 
-#: nova/compute/api.py:982
+#: nova/compute/api.py:996
 #, fuzzy, python-format
 msgid "Going to try to start instance"
 msgstr "准备尝试启动实例 %s"
 
-#: nova/compute/api.py:986
+#: nova/compute/api.py:1000
 #, python-format
 msgid "Instance %(instance_uuid)s is not stopped. (%(vm_state)s"
 msgstr "实例 %(instance_uuid)s 没有停止。(%(vm_state)s"
 
-#: nova/compute/api.py:1057 nova/volume/api.py:167
+#: nova/compute/api.py:1071 nova/volume/api.py:173
 #: nova/volume/volume_types.py:64
 #, python-format
 msgid "Searching by: %s"
 msgstr "搜索条件： %s"
 
-#: nova/compute/api.py:1187
+#: nova/compute/api.py:1201
 #, python-format
 msgid "Image type not recognized %s"
 msgstr "无法识别镜像类型 %s"
 
-#: nova/compute/api.py:1355
+#: nova/compute/api.py:1369
 msgid "flavor_id is None. Assuming migration."
-msgstr "flavor_id为空。假定在升级。"
+msgstr "flavor_id为空。假定在迁移。"
 
-#: nova/compute/api.py:1363
+#: nova/compute/api.py:1377
 #, python-format
 msgid ""
 "Old instance type %(current_instance_type_name)s,  new instance type "
 "%(new_instance_type_name)s"
 msgstr "旧的实例类型 %(current_instance_type_name)s，新的实例类型 %(new_instance_type_name)s"
 
-#: nova/compute/api.py:1630
+#: nova/compute/api.py:1644
 #, python-format
 msgid "multiple fixedips exist, using the first: %s"
 msgstr "存在多个固定IP，使用第一个：%s"
@@ -2935,12 +2943,12 @@ msgstr "存在多个固定IP，使用第一个：%s"
 msgid "create arguments must be positive integers"
 msgstr "创建参数必须是正整数"
 
-#: nova/compute/instance_types.py:74 nova/volume/volume_types.py:41
+#: nova/compute/instance_types.py:76 nova/volume/volume_types.py:41
 #, python-format
 msgid "DB error: %s"
 msgstr "数据库错误：%s"
 
-#: nova/compute/instance_types.py:84
+#: nova/compute/instance_types.py:86
 #, python-format
 msgid "Instance type %s not found for deletion"
 msgstr "未找到要删除的实例类型 %s"
@@ -3002,7 +3010,7 @@ msgstr "nova-compute重启后，实例正在重启。"
 
 #: nova/compute/manager.py:255
 msgid "Hypervisor driver does not support firewall rules"
-msgstr "Hypervisor驱动不支持防火墙规则"
+msgstr "虚拟机管理程序驱动不支持防火墙规则"
 
 #: nova/compute/manager.py:260
 msgid "Checking state"
@@ -3021,16 +3029,16 @@ msgstr ""
 #: nova/compute/manager.py:406
 #, fuzzy, python-format
 msgid "Exception encountered while terminating the instance %s"
-msgstr "终止虚拟机 %(instance_uuid)s 时发生异常"
+msgstr "终止实例 %(instance_uuid)s 时发生异常"
 
 #: nova/compute/manager.py:444
 #, python-format
 msgid "Instance %s not found."
-msgstr "未找到虚拟机 %s"
+msgstr "未找到实例 %s"
 
 #: nova/compute/manager.py:480
 msgid "Instance has already been created"
-msgstr "虚拟机已经创建"
+msgstr "实例已经创建"
 
 #: nova/compute/manager.py:523
 #, python-format
@@ -3047,7 +3055,7 @@ msgid ""
 "Image '%(image_id)s' size %(size_bytes)d exceeded instance_type allowed "
 "size %(allowed_size_bytes)d"
 msgstr ""
-"镜像 '%(image_id)s'  的大小为 %(size_bytes)d ，超过虚拟机类型 instance_type 所允许的大小 "
+"镜像 '%(image_id)s'  的大小为 %(size_bytes)d ，超过实例类型 instance_type 所允许的大小 "
 "%(allowed_size_bytes)d"
 
 #: nova/compute/manager.py:538
@@ -3056,33 +3064,33 @@ msgstr "正在启动虚拟机"
 
 #: nova/compute/manager.py:548
 msgid "Skipping network allocation for instance"
-msgstr "虚拟机跳过网络分配"
+msgstr "实例跳过网络分配"
 
 #: nova/compute/manager.py:561
 msgid "Instance failed network setup"
-msgstr "虚拟机网络设置失败"
+msgstr "实例网络设置失败"
 
 #: nova/compute/manager.py:565
 #, python-format
 msgid "Instance network_info: |%s|"
-msgstr "虚拟机的network_info：|%s|"
+msgstr "实例的network_info：|%s|"
 
 #: nova/compute/manager.py:578
 msgid "Instance failed block device setup"
-msgstr "虚拟机块设备设置失败"
+msgstr "实例块设备设置失败"
 
 #: nova/compute/manager.py:594
 msgid "Instance failed to spawn"
-msgstr "虚拟机启动失败"
+msgstr "实例生产失败"
 
 #: nova/compute/manager.py:615
 msgid "Deallocating network for instance"
-msgstr "释放虚拟机的网络"
+msgstr "释放实例的网络"
 
 #: nova/compute/manager.py:672
 #, python-format
 msgid "%(action_str)s instance"
-msgstr "%(action_str)s 虚拟机"
+msgstr "%(action_str)s 实例"
 
 #: nova/compute/manager.py:699
 #, python-format
@@ -3094,8 +3102,8 @@ msgstr "忽略异常 DiskNotFound: %s"
 msgid "terminating bdm %s"
 msgstr "终止bdm %s"
 
-#: nova/compute/manager.py:742 nova/compute/manager.py:1327
-#: nova/compute/manager.py:1415 nova/compute/manager.py:2499
+#: nova/compute/manager.py:742 nova/compute/manager.py:1328
+#: nova/compute/manager.py:1416 nova/compute/manager.py:2501
 #, python-format
 msgid "%s. Setting instance vm_state to ERROR"
 msgstr "%s。把实例的 vm_state设置为ERROR"
@@ -3105,7 +3113,7 @@ msgstr "%s。把实例的 vm_state设置为ERROR"
 msgid ""
 "Cannot rebuild instance [%(instance_uuid)s], because the given image does"
 " not exist."
-msgstr "无法重建虚拟机 [%(instance_uuid)s]，应为给的的镜像不存在。"
+msgstr "无法重建实例 [%(instance_uuid)s]，因为给定的镜像不存在。"
 
 #: nova/compute/manager.py:816
 #, python-format
@@ -3194,176 +3202,178 @@ msgid ""
 "trying to update agent on a non-running instance: %(instance_uuid)s "
 "(state: %(current_power_state)s expected: %(expected_state)s)"
 msgstr ""
-"试图更新没有运行的实例上agent：%(instance_uuid)s (状态: %(current_power_state)s 预计: "
+"试图更新没有运行的实例上的代理：%(instance_uuid)s (状态: %(current_power_state)s 预计: "
 "%(expected_state)s)"
 
 #: nova/compute/manager.py:1103
 #, python-format
 msgid "instance %(instance_uuid)s: updating agent to %(url)s"
-msgstr "实例 %(instance_uuid)s：正在把agent更新到 %(url)s"
+msgstr "实例 %(instance_uuid)s：正在把代理更新到 %(url)s"
 
 #: nova/compute/manager.py:1116
 #, python-format
 msgid "instance %s: rescuing"
-msgstr "虚拟机 %s：正在修复中"
+msgstr "实例 %s：正在救援中"
 
 #: nova/compute/manager.py:1141
 #, python-format
 msgid "instance %s: unrescuing"
-msgstr "虚拟机 %s：取消修复"
+msgstr "实例 %s：取消救援"
 
-#: nova/compute/manager.py:1269
+#: nova/compute/manager.py:1270
 msgid "destination same as source!"
 msgstr "目标与来源一样。"
 
-#: nova/compute/manager.py:1286
+#: nova/compute/manager.py:1287
 #, python-format
 msgid "instance %s: migrating"
 msgstr "实例 %s：正在迁移"
 
-#: nova/compute/manager.py:1470
+#: nova/compute/manager.py:1471
 #, python-format
 msgid "instance %s: pausing"
 msgstr "实例 %s: 暂停"
 
-#: nova/compute/manager.py:1488
+#: nova/compute/manager.py:1489
 #, python-format
 msgid "instance %s: unpausing"
 msgstr "实例 %s: 取消暫停"
 
-#: nova/compute/manager.py:1524
+#: nova/compute/manager.py:1525
 #, python-format
 msgid "instance %s: retrieving diagnostics"
-msgstr "实例 %s: 取消检测"
+msgstr "实例 %s ：获取诊断"
 
-#: nova/compute/manager.py:1533
+#: nova/compute/manager.py:1534
 #, python-format
 msgid "instance %s: suspending"
-msgstr "虚拟机 %s：挂起"
+msgstr "实例 %s：挂起"
 
-#: nova/compute/manager.py:1555
+#: nova/compute/manager.py:1556
 #, python-format
 msgid "instance %s: resuming"
-msgstr "实例 %s: 唤醒中。。。"
+msgstr "实例 %s: 恢复中"
 
-#: nova/compute/manager.py:1578
+#: nova/compute/manager.py:1579
 #, python-format
 msgid "instance %s: locking"
 msgstr "实例%s:锁定中"
 
-#: nova/compute/manager.py:1587
+#: nova/compute/manager.py:1588
 #, python-format
 msgid "instance %s: unlocking"
 msgstr "实例%s:取消锁定"
 
-#: nova/compute/manager.py:1595
+#: nova/compute/manager.py:1596
 #, python-format
 msgid "instance %s: getting locked state"
-msgstr "实例%s：获取锁状态"
+msgstr "实例%s：获取锁定的状态"
 
-#: nova/compute/manager.py:1605
+#: nova/compute/manager.py:1606
 #, python-format
 msgid "instance %s: reset network"
 msgstr "实例%s:重置网络"
 
-#: nova/compute/manager.py:1613
+#: nova/compute/manager.py:1614
 #, python-format
 msgid "instance %s: inject network info"
 msgstr "实例 %s：注入网络信息"
 
-#: nova/compute/manager.py:1617
+#: nova/compute/manager.py:1618
 #, python-format
 msgid "network_info to inject: |%s|"
 msgstr "将注入的network_info：|%s|"
 
-#: nova/compute/manager.py:1654
+#: nova/compute/manager.py:1655
 #, python-format
 msgid "instance %s: getting vnc console"
-msgstr "实例 %s：正在获得VNC console"
+msgstr "实例 %s：正在获得VNC控制台"
 
-#: nova/compute/manager.py:1684
+#: nova/compute/manager.py:1685
 #, python-format
 msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
-msgstr "在 %(mountpoint)s 通过卷 %(volume_id)s 启动"
+msgstr "卷 %(volume_id)s 正在 %(mountpoint)s 上启动"
 
-#: nova/compute/manager.py:1702
+#: nova/compute/manager.py:1703
 #, fuzzy, python-format
 msgid ""
 "instance %(instance_uuid)s: attaching volume %(volume_id)s to "
 "%(mountpoint)s"
-msgstr "正在把卷 %(volume_id)s 挂载到 %(mountpoint)s"
+msgstr "正在把卷 %(volume_id)s 附加到 %(mountpoint)s"
 
-#: nova/compute/manager.py:1704
+#: nova/compute/manager.py:1705
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
-msgstr "正在把卷 %(volume_id)s 挂载到 %(mountpoint)s"
+msgstr "正在把卷 %(volume_id)s 附加到 %(mountpoint)s"
 
-#: nova/compute/manager.py:1713
+#: nova/compute/manager.py:1714
 #, fuzzy, python-format
 msgid "instance %(instance_uuid)s: attach failed %(mountpoint)s, removing"
-msgstr "%(mountpoint)s 挂载失败，移除中"
+msgstr "%(mountpoint)s 附加失败，移除中"
 
-#: nova/compute/manager.py:1723
+#: nova/compute/manager.py:1724
 #, python-format
 msgid "Attach failed %(mountpoint)s, removing"
-msgstr "%(mountpoint)s 挂载失败，移除中"
+msgstr "%(mountpoint)s 附加失败，移除中"
 
-#: nova/compute/manager.py:1751
+#: nova/compute/manager.py:1752
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
-msgstr "从挂载点 %(mp)s 卸载卷 %(volume_id)s"
+msgstr "卷 %(volume_id)s 从挂载点 %(mp)s 分离"
 
-#: nova/compute/manager.py:1755
+#: nova/compute/manager.py:1756
 #, python-format
 msgid "Detaching volume from unknown instance %s"
-msgstr "从未知实例%s中移除卷"
+msgstr "从未知实例%s中分离卷"
 
-#: nova/compute/manager.py:1821
+#: nova/compute/manager.py:1822
 #, python-format
 msgid ""
 "Creating tmpfile %s to notify to other compute nodes that they should "
 "mount the same storage."
-msgstr "创建tmpfile %s通知其他计算节点它们应该挂载同一个存储。"
+msgstr "创建tmpfile %s 来通知其他的计算节点需要挂载相同的存储。"
 
-#: nova/compute/manager.py:1883
+#: nova/compute/manager.py:1884
 msgid "Instance has no volume."
 msgstr "实例没有卷。"
 
-#: nova/compute/manager.py:1915
+#: nova/compute/manager.py:1916
 #, python-format
 msgid "plug_vifs() failed %(cnt)d.Retry up to %(max_retry)d for %(hostname)s."
-msgstr "plug_vifs() 失败%(cnt)d 次。为主机 %(hostname)s 重试到%(max_retry)d次。"
+msgstr "plug_vifs() 失败%(cnt)d 次。最多重新尝试 %(max_retry)d 次在主机 %(hostname)s。"
 
-#: nova/compute/manager.py:1972
+#: nova/compute/manager.py:1973
 #, python-format
 msgid "Pre live migration failed at  %(dest)s"
 msgstr "预在线迁移在%(dest)s失败"
 
-#: nova/compute/manager.py:1999
+#: nova/compute/manager.py:2000
 msgid "post_live_migration() is started.."
 msgstr "post_live_migration()已经启动。"
 
-#: nova/compute/manager.py:2029
+#: nova/compute/manager.py:2030
 msgid "No floating_ip found"
 msgstr "没有找到floating_ip"
 
-#: nova/compute/manager.py:2037
+#: nova/compute/manager.py:2038
 msgid "No floating_ip found."
 msgstr "没有找到floating_ip"
 
-#: nova/compute/manager.py:2039
+#: nova/compute/manager.py:2040
 #, python-format
 msgid ""
 "Live migration: Unexpected error: cannot inherit floating ip.\n"
 "%(e)s"
-msgstr "在线迁移：未知错误：无法继承浮动ip。%(e)s"
+msgstr ""
+"在线迁移：意外的错误：无法继承浮动ip。\n"
+"%(e)s"
 
-#: nova/compute/manager.py:2072
+#: nova/compute/manager.py:2073
 #, python-format
 msgid "Migrating instance to %(dest)s finished successfully."
 msgstr "把实例迁移到 %(dest)s 成功完成。"
 
-#: nova/compute/manager.py:2074
+#: nova/compute/manager.py:2075
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
@@ -3371,84 +3381,84 @@ msgstr ""
 "你会看到错误“libvirt: QEMU error: Domain not found: no domain with matching "
 "name。”这个错误可以放心的忽略。"
 
-#: nova/compute/manager.py:2089
+#: nova/compute/manager.py:2090
 msgid "Post operation of migraton started"
 msgstr "迁移后操作启动"
 
-#: nova/compute/manager.py:2225
+#: nova/compute/manager.py:2226
 #, python-format
 msgid "Updated the info_cache for instance %s"
 msgstr ""
 
-#: nova/compute/manager.py:2254
+#: nova/compute/manager.py:2255
 msgid "Updating bandwidth usage cache"
 msgstr "更新带宽使用缓存"
 
-#: nova/compute/manager.py:2276
+#: nova/compute/manager.py:2277
 msgid "Updating host status"
 msgstr "更新主机状态"
 
-#: nova/compute/manager.py:2304
+#: nova/compute/manager.py:2305
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
 "the hypervisor."
-msgstr "在数据库中找到 %(num_db_instances)s个实例，在hypervisor找到 %(num_vm_instances)s 个实例。"
+msgstr "在数据库中找到 %(num_db_instances)s个实例，在虚拟机管理程序找到 %(num_vm_instances)s 个实例。"
 
-#: nova/compute/manager.py:2330
+#: nova/compute/manager.py:2331
 #, python-format
 msgid ""
 "During the sync_power process the instance %(uuid)s has moved from host "
 "%(src)s to host %(dst)s"
 msgstr ""
 
-#: nova/compute/manager.py:2343
+#: nova/compute/manager.py:2344
 #, python-format
 msgid ""
 "Instance %s is in the process of migrating to this host. Wait next "
 "sync_power cycle before setting power state to NOSTATE"
 msgstr ""
 
-#: nova/compute/manager.py:2349
+#: nova/compute/manager.py:2350
 #, fuzzy, python-format
 msgid ""
 "Instance found in database but not known by hypervisor. Setting power "
 "state to NOSTATE"
-msgstr "数据库中发现虚拟机 %(name)s ，但是hypervisor不知道。设置加电状态为NOSTATE"
+msgstr "数据库中发现实例 %(name)s ，但是虚拟机管理程序不知道。设置加电状态为NOSTATE"
 
-#: nova/compute/manager.py:2379
+#: nova/compute/manager.py:2380
 msgid "FLAGS.reclaim_instance_interval <= 0, skipping..."
 msgstr "FLAGS.reclaim_instance_interval <= 0，跳过..."
 
-#: nova/compute/manager.py:2391
+#: nova/compute/manager.py:2392
 msgid "Reclaiming deleted instance"
-msgstr "回收删除的虚拟机"
+msgstr "回收删除的实例"
 
-#: nova/compute/manager.py:2456
-#, python-format
+#: nova/compute/manager.py:2458
+#, fuzzy, python-format
 msgid ""
-"Detected instance  with name label '%(name_label)s' which is marked as "
-"DELETED but still present on host."
-msgstr "检测标签名为 '%(name_label)s' 的实例，这些实例被标识为被删除的却仍然存在于主机上。"
+"Detected instance with name label '%(name)s' which is marked as DELETED "
+"but still present on host."
+msgstr "检测标签名为 '%(name_label)s' 的实例，这些实例被标识为DELETED却仍然存在于主机上。"
 
-#: nova/compute/manager.py:2463
+#: nova/compute/manager.py:2465
 #, fuzzy, python-format
 msgid ""
 "Destroying instance with name label '%(name)s' which is marked as DELETED"
 " but still present on host."
-msgstr "销毁标签名为 '%(name_label)s' 的实例，这些实例被标识为被删除的却仍然存在于主机上。"
+msgstr "销毁标签名为 '%(name_label)s' 的实例，这些实例被标识为DELETED却仍然存在于主机上。"
 
-#: nova/compute/manager.py:2470
+#: nova/compute/manager.py:2472
 #, python-format
 msgid "Unrecognized value '%(action)s' for FLAGS.running_deleted_instance_action"
-msgstr "无法识别的FLAGS的取值 '%(action)s'。running_deleted_instance_action"
+msgstr "无法识别的FLAGS.running_deleted_instance_action的取值 '%(action)s'"
 
-#: nova/compute/manager.py:2540
+#: nova/compute/manager.py:2542
 #, fuzzy, python-format
 msgid ""
 "Aggregate %(aggregate_id)s: unrecoverable state during operation on "
 "%(host)s"
-msgstr "Aggregate %(aggregate_id)s已经有主机 %(host)s。"
+msgstr "聚合 %(aggregate_id)s已经有主机 %(host)s。"
 
 #: nova/compute/utils.py:142
 msgid "v4 subnets are required for legacy nw_info"
@@ -3506,7 +3516,7 @@ msgstr "xvp不在运行中"
 #: nova/consoleauth/manager.py:63
 #, python-format
 msgid "Deleting Expired Token: (%s)"
-msgstr "删除过期的令牌：(%s)"
+msgstr "删除过期令牌：(%s)"
 
 #: nova/consoleauth/manager.py:75
 #, python-format
@@ -3520,7 +3530,7 @@ msgstr "检查令牌：%(token)s, %(token_valid)s)"
 
 #: nova/db/sqlalchemy/api.py:57
 msgid "Use of empty request context is deprecated"
-msgstr "使用空的请求上下文已经废弃不用了"
+msgstr "使用空的请求上下文是不推荐的"
 
 #: nova/db/sqlalchemy/api.py:198
 #, python-format
@@ -3532,28 +3542,33 @@ msgstr "无法识别的 read_deleted 取值”%s“"
 msgid "No ComputeNode for %(host)s"
 msgstr "主机 %(host)s 没有计算节点"
 
-#: nova/db/sqlalchemy/api.py:4030 nova/db/sqlalchemy/api.py:4056
+#: nova/db/sqlalchemy/api.py:4019 nova/db/sqlalchemy/api.py:4045
 #, python-format
 msgid "No backend config with id %(sm_backend_id)s"
 msgstr "没有id为%(sm_backend_id)s的后台配置"
 
-#: nova/db/sqlalchemy/api.py:4114
+#: nova/db/sqlalchemy/api.py:4103
 #, python-format
 msgid "No sm_flavor called %(sm_flavor)s"
 msgstr "没有 sm_flavor 调用 %(sm_flavor)s"
 
-#: nova/db/sqlalchemy/api.py:4158
+#: nova/db/sqlalchemy/api.py:4147
 #, python-format
 msgid "No sm_volume with id %(volume_id)s"
 msgstr "没有id为 %(volume_id)s 的 sm_volume"
 
-#: nova/db/sqlalchemy/migration.py:36
+#: nova/db/sqlalchemy/migration.py:66
 msgid "python-migrate is not installed. Exiting."
 msgstr "没有安装 python-migrate。正退出。"
 
-#: nova/db/sqlalchemy/migration.py:46
+#: nova/db/sqlalchemy/migration.py:78
 msgid "version should be an integer"
-msgstr "版本应该是整数"
+msgstr "version应该是整数"
+
+#: nova/db/sqlalchemy/session.py:137
+#, fuzzy, python-format
+msgid "SQL connection failed. %s attempts left."
+msgstr "SQL连接失败 (%(connstring)s)。还剩 %(attempts)d 次。"
 
 #: nova/db/sqlalchemy/migrate_repo/versions/030_multi_nic.py:48
 msgid "interface column not added to networks table"
@@ -3589,7 +3604,7 @@ msgstr "外键约束无法删除"
 
 #: nova/db/sqlalchemy/migrate_repo/versions/045_add_network_priority.py:34
 msgid "priority column not added to networks table"
-msgstr "priority 无法加入到 networks 表中"
+msgstr "priority列没有加入到 networks 表中"
 
 #: nova/db/sqlalchemy/migrate_repo/versions/047_remove_instances_fk_from_vif.py:41
 #: nova/db/sqlalchemy/migrate_repo/versions/060_remove_network_fk_from_vif.py:42
@@ -3600,14 +3615,14 @@ msgstr "外键约束无法去除"
 
 #: nova/db/sqlalchemy/migrate_repo/versions/049_add_instances_progress.py:34
 msgid "progress column not added to instances table"
-msgstr "progress 列无法加入到 instances 表中"
+msgstr "progress列没有加入到实例表中"
 
 #: nova/db/sqlalchemy/migrate_repo/versions/055_convert_flavor_id_to_str.py:97
 #, python-format
 msgid ""
 "Could not cast flavorid to integer: %s. Set flavorid to an integer-like "
 "string to downgrade."
-msgstr "无法设置 flavorid 成整数：%s。设置 flavorid 成类似整数的字符串来降级。"
+msgstr "无法把 flavorid 转化为整数：%s。设置 flavorid 成类似整数的字符串来降级。"
 
 #: nova/db/sqlalchemy/migrate_repo/versions/062_add_instance_info_cache_table.py:69
 msgid "instance_info_caches tables not dropped"
@@ -3647,7 +3662,7 @@ msgstr "为Glance 进行格式化后的元数据 %s"
 #: nova/image/glance.py:289
 #, python-format
 msgid "Metadata returned from Glance formatted for Base %s"
-msgstr "从Glance返回的为Base %s 格式化的元数据"
+msgstr "从Glance返回的为Base格式化的元数据 %s"
 
 #: nova/image/glance.py:331 nova/image/glance.py:335
 msgid "Not the image owner"
@@ -3671,7 +3686,7 @@ msgstr "解密 %(image_location)s 到 %(image_path)s失败"
 #: nova/image/s3.py:340
 #, python-format
 msgid "Failed to untar %(image_location)s to %(image_path)s"
-msgstr "解压缩 %(image_location)s 到 %(image_path)s 失败"
+msgstr "解包 %(image_location)s 到 %(image_path)s 失败"
 
 #: nova/image/s3.py:353
 #, python-format
@@ -3695,22 +3710,22 @@ msgstr "解密镜像文件 %(image_file)s 失败：%(err)s"
 
 #: nova/image/s3.py:410
 msgid "Unsafe filenames in image"
-msgstr "不安全的镜像文件名"
+msgstr "镜像中不安全的文件名"
 
 #: nova/ipv6/account_identifier.py:38 nova/ipv6/rfc2462.py:34
 #, python-format
 msgid "Bad mac for to_global_ipv6: %s"
-msgstr "不恰当的to_global_ipv6 mac：%s"
+msgstr "错误的to_global_ipv6 mac：%s"
 
 #: nova/ipv6/account_identifier.py:40 nova/ipv6/rfc2462.py:36
 #, python-format
 msgid "Bad prefix for to_global_ipv6: %s"
-msgstr "不恰当的to_global_ipv6前缀：%s"
+msgstr "错误的to_global_ipv6前缀：%s"
 
 #: nova/ipv6/account_identifier.py:42
 #, python-format
 msgid "Bad project_id for to_global_ipv6: %s"
-msgstr "不恰当的to_global_ipv6 oject_id；%s"
+msgstr "错误的to_global_ipv6 oject_id；%s"
 
 #: nova/network/ldapdns.py:321
 msgid "This driver only supports type 'a' entries."
@@ -3724,7 +3739,7 @@ msgstr "试图移除不存在的链 %s。"
 #: nova/network/linux_net.py:192
 #, python-format
 msgid "Unknown chain: %r"
-msgstr "位置链：%r"
+msgstr "未知链：%r"
 
 #: nova/network/linux_net.py:215
 #, python-format
@@ -3735,89 +3750,89 @@ msgstr "试图移除不存在的规则：%(chain)r %(rule)r %(wrap)r %(top)r"
 
 #: nova/network/linux_net.py:335
 msgid "IPTablesManager.apply completed with success"
-msgstr "IPTablesManager.apply成功完毕"
+msgstr "IPTablesManager.apply成功完成"
 
-#: nova/network/linux_net.py:690
+#: nova/network/linux_net.py:694
 #, python-format
 msgid "Hupping dnsmasq threw %s"
-msgstr "重启进程 dnsmasq 时抛出 %s"
+msgstr "挂起进程 dnsmasq 时抛出 %s"
 
-#: nova/network/linux_net.py:692
+#: nova/network/linux_net.py:696
 #, python-format
 msgid "Pid %d is stale, relaunching dnsmasq"
 msgstr "Pid %d 过期了，重新启动dnsmasq"
 
-#: nova/network/linux_net.py:752
+#: nova/network/linux_net.py:756
 #, python-format
 msgid "killing radvd threw %s"
 msgstr "杀掉进程 radvd 时抛出 %s"
 
-#: nova/network/linux_net.py:754
+#: nova/network/linux_net.py:758
 #, python-format
 msgid "Pid %d is stale, relaunching radvd"
 msgstr "Pid %d 过期了，重新启动radvd"
 
-#: nova/network/linux_net.py:963
+#: nova/network/linux_net.py:967
 #, python-format
 msgid "Starting VLAN inteface %s"
 msgstr "正在开启VLAN接口 %s"
 
-#: nova/network/linux_net.py:995
+#: nova/network/linux_net.py:999
 #, python-format
 msgid "Starting Bridge interface for %s"
 msgstr "正在为 %s 开启桥接口"
 
-#: nova/network/linux_net.py:1138
+#: nova/network/linux_net.py:1142
 #, fuzzy, python-format
 msgid "Starting bridge %s "
-msgstr "保证 bridge %s"
+msgstr "保证桥 %s"
 
-#: nova/network/linux_net.py:1145
+#: nova/network/linux_net.py:1149
 #, fuzzy, python-format
 msgid "Done starting bridge %s"
-msgstr "保证 bridge %s"
+msgstr "保证桥 %s"
 
-#: nova/network/linux_net.py:1163
+#: nova/network/linux_net.py:1167
 #, fuzzy, python-format
 msgid "Failed unplugging gateway interface '%s'"
-msgstr "去除虚拟机”%s“的虚拟网络设备时失败"
+msgstr "移除实例”%s“的虚拟网络设备时失败"
 
-#: nova/network/linux_net.py:1166
+#: nova/network/linux_net.py:1170
 #, python-format
 msgid "Unplugged gateway interface '%s'"
 msgstr ""
 
-#: nova/network/manager.py:292 nova/network/manager.py:488
+#: nova/network/manager.py:294 nova/network/manager.py:490
 #, python-format
 msgid "Interface %(interface)s not found"
 msgstr "没有找到接口 %(interface)s"
 
-#: nova/network/manager.py:307
+#: nova/network/manager.py:309
 #, python-format
 msgid "floating IP allocation for instance |%s|"
 msgstr "为实例 |%s| 分配浮动IP"
 
-#: nova/network/manager.py:345
+#: nova/network/manager.py:347
 #, python-format
 msgid "floating IP deallocation for instance |%s|"
 msgstr "为实例 |%s| 释放浮动IP"
 
-#: nova/network/manager.py:378
+#: nova/network/manager.py:380
 #, python-format
 msgid "Address |%(address)s| is not allocated"
 msgstr "地址 |%(address)s| 没有分配"
 
-#: nova/network/manager.py:382
+#: nova/network/manager.py:384
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
-msgstr "没有为你的项目 |%(project)s| 分配地址 |%(address)s|"
+msgstr "地址 |%(address)s| 没有分配给你的项目 |%(project)s|"
 
-#: nova/network/manager.py:394
+#: nova/network/manager.py:396
 #, python-format
 msgid "Quota exceeded for %s, tried to allocate address"
 msgstr "%s 的配额超出，尝试分配地址"
 
-#: nova/network/manager.py:606
+#: nova/network/manager.py:608
 #, python-format
 msgid ""
 "Database inconsistency: DNS domain |%s| is registered in the Nova db but "
@@ -3825,41 +3840,41 @@ msgid ""
 "ignored."
 msgstr "数据库不一致：DNS域|%s| 在Nova数据库中注册，但是对浮动或者实例DNS驱动均不可见。将被忽略。"
 
-#: nova/network/manager.py:652
+#: nova/network/manager.py:654
 #, python-format
 msgid "Domain |%(domain)s| already exists, changing zone to |%(av_zone)s|."
 msgstr "域 |%(domain)s| 已经存在，把区域改变为 |%(av_zone)s|。"
 
-#: nova/network/manager.py:662
+#: nova/network/manager.py:664
 #, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr "域 |%(domain)s| 已经存在，把项目改变为 |%(project)s|。"
 
-#: nova/network/manager.py:770
+#: nova/network/manager.py:772
 #, python-format
 msgid "Disassociated %s stale fixed ip(s)"
 msgstr "解除 %s 过期固定ip的关联"
 
-#: nova/network/manager.py:774
+#: nova/network/manager.py:776
 msgid "setting network host"
 msgstr "设置网络主机"
 
-#: nova/network/manager.py:888
+#: nova/network/manager.py:890
 #, python-format
 msgid "network allocations for instance |%s|"
 msgstr "为实例 |%s| 的网路分配"
 
-#: nova/network/manager.py:893
+#: nova/network/manager.py:895
 #, python-format
 msgid "networks retrieved for instance |%(instance_id)s|: |%(networks)s|"
 msgstr "为实例 |%(instance_id)s| 获取的网络：|%(networks)s|"
 
-#: nova/network/manager.py:922
+#: nova/network/manager.py:924
 #, python-format
 msgid "network deallocation for instance |%s|"
 msgstr "为实例 |%s| 解除网络分配"
 
-#: nova/network/manager.py:1144
+#: nova/network/manager.py:1146
 #, python-format
 msgid ""
 "instance-dns-zone is |%(domain)s|, which is in availability zone "
@@ -3869,68 +3884,68 @@ msgstr ""
 "instance-dns-zone是 |%(domain)s|，该域位于区域 |%(zone)s| 中。实例|%(instance)s| 在区域 "
 "|%(zone2)s| 里。没有DNS记录将创建。"
 
-#: nova/network/manager.py:1222
+#: nova/network/manager.py:1225
 #, python-format
 msgid "Leased IP |%(address)s|"
 msgstr "租用的IP |%(address)s|"
 
-#: nova/network/manager.py:1226
+#: nova/network/manager.py:1229
 #, python-format
 msgid "IP %s leased that is not associated"
 msgstr "没有关联的IP %s 被租用了"
 
-#: nova/network/manager.py:1234
+#: nova/network/manager.py:1237
 #, python-format
 msgid "IP |%s| leased that isn't allocated"
 msgstr "没有分配的IP |%s| 被租用了"
 
-#: nova/network/manager.py:1239
+#: nova/network/manager.py:1242
 #, python-format
 msgid "Released IP |%(address)s|"
 msgstr "释放的IP |%(address)s|"
 
-#: nova/network/manager.py:1243
+#: nova/network/manager.py:1246
 #, python-format
 msgid "IP %s released that is not associated"
 msgstr "没有关联的IP %s 被释放了"
 
-#: nova/network/manager.py:1246
+#: nova/network/manager.py:1249
 #, python-format
 msgid "IP %s released that was not leased"
 msgstr "没有租用的IP %s 被释放了"
 
-#: nova/network/manager.py:1309
+#: nova/network/manager.py:1312
 msgid "cidr already in use"
 msgstr "cidr 已经在使用"
 
-#: nova/network/manager.py:1312
+#: nova/network/manager.py:1315
 #, python-format
 msgid "requested cidr (%(cidr)s) conflicts with existing supernet (%(super)s)"
 msgstr "请求的cidr (%(cidr)s) 与已存在的超网络 (%(super)s) 冲突"
 
-#: nova/network/manager.py:1323
+#: nova/network/manager.py:1326
 #, python-format
 msgid ""
 "requested cidr (%(cidr)s) conflicts with existing smaller cidr "
 "(%(smaller)s)"
 msgstr "请求的cidr (%(cidr)s) 与已存在的较小的cidr (%(smaller)s) 冲突"
 
-#: nova/network/manager.py:1382
+#: nova/network/manager.py:1385
 msgid "Network already exists!"
 msgstr "网络已经存在。"
 
-#: nova/network/manager.py:1401
+#: nova/network/manager.py:1404
 #, python-format
 msgid "Network must be disassociated from project %s before delete"
 msgstr "网路在删除前必须与项目 %s 解除关联"
 
-#: nova/network/manager.py:1810
+#: nova/network/manager.py:1813
 msgid ""
 "The sum between the number of networks and the vlan start cannot be "
 "greater than 4094"
 msgstr "网络数量与VLAN起始数之和不能大于4049"
 
-#: nova/network/manager.py:1817
+#: nova/network/manager.py:1820
 #, python-format
 msgid ""
 "The network range is not big enough to fit %(num_networks)s. Network size"
@@ -4003,21 +4018,21 @@ msgstr "QuantumManager 要求一个有效的 (.1) 网关地址。"
 msgid ""
 "Unable to find existing quantum network for tenant '%(q_tenant_id)s' with"
 " net-id '%(quantum_net_id)s'"
-msgstr "无法为net-id是 '%(quantum_net_id)s'的租户 '%(q_tenant_id)s' 找到已存在的quantum网络"
+msgstr "无法为租户 '%(q_tenant_id)s' 找到已存在的 net-id是 '%(quantum_net_id)s' 的quantum网络"
 
 #: nova/network/quantum/manager.py:301
 #, python-format
 msgid "network allocations for instance %s"
 msgstr "实例 %s 的网络分配"
 
-#: nova/network/quantum/manager.py:578
+#: nova/network/quantum/manager.py:588
 #, python-format
 msgid ""
 "port deallocation failed for instance: |%(instance_id)s|, port_id: "
 "|%(port_id)s|"
 msgstr "实例的端口取消分配失败：|%(instance_id)s|, port_id: |%(port_id)s|"
 
-#: nova/network/quantum/manager.py:596
+#: nova/network/quantum/manager.py:606
 #, python-format
 msgid ""
 "ipam deallocation failed for instance: |%(instance_id)s|, vif_uuid: "
@@ -4040,8 +4055,8 @@ msgid ""
 "|%(network_tenant_id)s| to this vif |%(vif_id)s| with mac "
 "|%(mac_address)s| belonging to |%(project_id)s| "
 msgstr ""
-"在租户 |%(network_tenant_id)s| 的项目 |%(project_id)s| 里 未mac地址为 "
-"|%(mac_address)s| 的虚拟设备 |%(vif_id)s| 在网络 |%(network_id)s| 中分配IP地址。 "
+"在网络 |%(network_id)s| 中分配IP地址，该网络属于 |%(network_tenant_id)s|， 分配IP给该vif "
+"|%(vif_id)s|， 其中mac是 |%(mac_address)s| 所属项目 |%(project_id)s| "
 
 #: nova/network/quantum/melange_ipam_lib.py:133
 msgid "get_project_and_global_net_ids must be called with a non-null project_id"
@@ -4064,12 +4079,12 @@ msgstr "没有为vif %sid取消分配固定IP"
 #: nova/network/quantum/quantum_connection.py:99
 #, python-format
 msgid "Connecting interface %(interface_id)s to net %(net_id)s for %(tenant_id)s"
-msgstr "为 %(tenant_id)s 连接接口 %(interface_id)s 到net %(net_id)s"
+msgstr "将连接接口 %(interface_id)s 连接到net %(net_id)s 针对租户 %(tenant_id)s"
 
 #: nova/network/quantum/quantum_connection.py:113
 #, python-format
 msgid "Deleting port %(port_id)s on net %(net_id)s for %(tenant_id)s"
-msgstr "为 %(tenant_id)s 在net %(net_id)s 删除端口 %(port_id)s"
+msgstr "端口 %(port_id)s 在net %(net_id)s 上删除，针对租户是 %(tenant_id)s"
 
 #: nova/notifier/api.py:115
 #, python-format
@@ -4101,7 +4116,7 @@ msgstr "返回 %s 异常给调用者"
 #: nova/rpc/amqp.py:188 nova/rpc/impl_carrot.py:495
 #, python-format
 msgid "unpacked context: %s"
-msgstr "未打开的上下文：%s"
+msgstr "未打包的上下文：%s"
 
 #: nova/rpc/amqp.py:231 nova/rpc/impl_carrot.py:262
 #, python-format
@@ -4111,12 +4126,12 @@ msgstr "已接收 %s"
 #: nova/rpc/amqp.py:236 nova/rpc/impl_carrot.py:275
 #, python-format
 msgid "no method for message: %s"
-msgstr "没有适用于消息 %s 的方法"
+msgstr "没有适用于消息的方法：%s"
 
 #: nova/rpc/amqp.py:237 nova/rpc/impl_carrot.py:277
 #, python-format
 msgid "No method for message: %s"
-msgstr "没有适用于消息 %s 的方法"
+msgstr "没有适用于消息的方法：%s"
 
 #: nova/rpc/amqp.py:321 nova/rpc/impl_carrot.py:529
 #, python-format
@@ -4153,7 +4168,7 @@ msgstr ""
 
 #: nova/rpc/common.py:71
 msgid "Timeout while waiting on RPC response."
-msgstr "等待RPC返回超时"
+msgstr "等待RPC响应返回超时"
 
 #: nova/rpc/impl_carrot.py:199
 #, python-format
@@ -4169,7 +4184,7 @@ msgstr "%(tries)d 次尝试后依然无法连接到AMQP服务器。正在关闭�
 
 #: nova/rpc/impl_carrot.py:223
 msgid "Reconnected to queue"
-msgstr "重新与队列建立连接"
+msgstr "重新连接队列"
 
 #: nova/rpc/impl_carrot.py:230
 #, python-format
@@ -4184,7 +4199,7 @@ msgstr "为%s初始化适配器消费者(Adapter Consumer)"
 #: nova/rpc/impl_carrot.py:337
 #, python-format
 msgid "Created \"%(exchange)s\" fanout exchange with \"%(key)s\" routing key"
-msgstr "用路由key \"%(key)s\" 创建了\"%(exchange)s\" fanout exchange"
+msgstr "\"%(exchange)s\" fanout exchange用路由密钥 \"%(key)s\" 创建的"
 
 #: nova/rpc/impl_carrot.py:382
 msgid "Exception while processing consumer"
@@ -4198,12 +4213,12 @@ msgstr "正在创建 \"%(exchange)s\" fanout exchange"
 #: nova/rpc/impl_carrot.py:646
 #, python-format
 msgid "response %s"
-msgstr "回复 %s"
+msgstr "响应 %s"
 
 #: nova/rpc/impl_carrot.py:655
 #, python-format
 msgid "topic is %s"
-msgstr "话题是 %s"
+msgstr "主题是 %s"
 
 #: nova/rpc/impl_carrot.py:656
 #, python-format
@@ -4217,26 +4232,28 @@ msgstr ""
 #: nova/rpc/impl_kombu.py:407
 #, python-format
 msgid "Reconnecting to AMQP server on %(hostname)s:%(port)d"
-msgstr "正在重新连接%(hostname)s:%(port)d的服务器"
+msgstr "正在重新连接位于 %(hostname)s:%(port)d 的AMQP服务器"
 
 #: nova/rpc/impl_kombu.py:430
 #, python-format
 msgid "Connected to AMQP server on %(hostname)s:%(port)d"
-msgstr "连接到%(hostname)s:%(port)d的服务器"
+msgstr "连接到位于 %(hostname)s:%(port)d 的AMQP服务器"
 
 #: nova/rpc/impl_kombu.py:466
 #, python-format
 msgid ""
 "Unable to connect to AMQP server on %(hostname)s:%(port)d after "
 "%(max_retries)d tries: %(err_str)s"
-msgstr "%(max_retries)d 次尝试后无法连接到位于%(hostname)s:%(port)d的AMQP server：%(err_str)s"
+msgstr ""
+"无法连接到位于%(hostname)s:%(port)d的AMQP server，尝试已经 %(max_retries)d "
+"次：%(err_str)s"
 
 #: nova/rpc/impl_kombu.py:482
 #, python-format
 msgid ""
 "AMQP server on %(hostname)s:%(port)d is unreachable: %(err_str)s. Trying "
 "again in %(sleep_time)d seconds."
-msgstr "位于%(hostname)s:%(port)d的AMQP server不可达：%(err_str)s。%(sleep_time)d 秒钟后请再尝试。"
+msgstr "位于%(hostname)s:%(port)d的AMQP服务器不可达：%(err_str)s。%(sleep_time)d 秒钟后请再尝试。"
 
 #: nova/rpc/impl_kombu.py:533 nova/rpc/impl_qpid.py:385
 #, python-format
@@ -4246,7 +4263,7 @@ msgstr "为topic '%(topic)s'声明消费者失败：%(err_str)s"
 #: nova/rpc/impl_kombu.py:551 nova/rpc/impl_qpid.py:400
 #, python-format
 msgid "Timed out waiting for RPC response: %s"
-msgstr "等待RPC答复超时：%s"
+msgstr "等待RPC响应超时：%s"
 
 #: nova/rpc/impl_kombu.py:555 nova/rpc/impl_qpid.py:404
 #, python-format
@@ -4288,22 +4305,22 @@ msgstr "无法找到另一个计算节点"
 #: nova/scheduler/driver.py:63
 #, python-format
 msgid "Casted '%(method)s' to volume '%(host)s'"
-msgstr "设置“%(method)s”成卷节点 \"%(host)s\""
+msgstr "把“%(method)s”投放在卷%(host)s\""
 
 #: nova/scheduler/driver.py:80
 #, python-format
 msgid "Casted '%(method)s' to compute '%(host)s'"
-msgstr "设置“%(method)s”成计算节点 \"%(host)s\""
+msgstr "把“%(method)s”投放在主机 \"%(host)s\""
 
 #: nova/scheduler/driver.py:89
 #, python-format
 msgid "Casted '%(method)s' to network '%(host)s'"
-msgstr "设置“%(method)s”成网络节点 \"%(host)s\""
+msgstr "把“%(method)s”投放在网络 \"%(host)s\""
 
 #: nova/scheduler/driver.py:107
 #, python-format
 msgid "Casted '%(method)s' to %(topic)s '%(host)s'"
-msgstr "设置“%(method)s”成 %(topic)s 节点 \"%(host)s\""
+msgstr "把“%(method)s”投放在 %(topic)s \"%(host)s\""
 
 #: nova/scheduler/driver.py:181
 msgid "Must implement a fallback schedule"
@@ -4317,37 +4334,35 @@ msgstr ""
 msgid "Driver must implement schedule_run_instance"
 msgstr ""
 
-#: nova/scheduler/driver.py:324
+#: nova/scheduler/driver.py:325
 msgid "Block migration can not be used with shared storage."
-msgstr "块存储迁移无法使用共享存储"
+msgstr "块存储迁移无法在共享存储使用"
 
-#: nova/scheduler/driver.py:332
-#, python-format
-msgid ""
-"Cannot confirm tmpfile at %(ipath)s is on same shared storage between "
-"%(src)s and %(dest)s."
-msgstr "无法确认tmpfile %(ipath)s 在相同的共享存储的 %(src)s 和 %(dest)s之间。"
+#: nova/scheduler/driver.py:330
+#, fuzzy
+msgid "Live migration can not be used without shared storage."
+msgstr "块存储迁移无法在共享存储使用"
 
-#: nova/scheduler/driver.py:370 nova/scheduler/driver.py:460
+#: nova/scheduler/driver.py:367 nova/scheduler/driver.py:457
 #, python-format
 msgid "host %(dest)s is not compatible with original host %(src)s."
 msgstr "主机 %(dest)s 和原先的主机 %(src)s 不兼容。"
 
-#: nova/scheduler/driver.py:419
+#: nova/scheduler/driver.py:416
 #, fuzzy, python-format
 msgid ""
 "Unable to migrate %(instance_uuid)s to %(dest)s: Lack of "
 "memory(host:%(avail)s <= instance:%(mem_inst)s)"
-msgstr "无法迁移 %(instance_id)s 到 %(dest)s 上：缺少内存(主机：%(avail)s <= 虚拟机：%(mem_inst)s)"
+msgstr "无法迁移 %(instance_id)s 到 %(dest)s 上：缺少内存(主机：%(avail)s <= 实例：%(mem_inst)s)"
 
-#: nova/scheduler/driver.py:475
+#: nova/scheduler/driver.py:472
 #, fuzzy, python-format
 msgid ""
 "Unable to migrate %(instance_uuid)s to %(dest)s: Lack of "
 "disk(host:%(available)s <= instance:%(necessary)s)"
 msgstr ""
 "无法迁移%(instance_id)s 到 %(dest)s 上：缺少磁盘(主机:%(available)s <= "
-"虚拟机:%(necessary)s)"
+"实例:%(necessary)s)"
 
 #: nova/scheduler/filter_scheduler.py:51
 #, python-format
@@ -4357,11 +4372,11 @@ msgstr "没有主机选择所定义的 %s 主题消息"
 #: nova/scheduler/filter_scheduler.py:64
 #, python-format
 msgid "Attempting to build %(num_instances)d instance(s)"
-msgstr "尝试创建 %(num_instances)d 个虚拟机"
+msgstr "尝试创建 %(num_instances)d 个实例"
 
 #: nova/scheduler/filter_scheduler.py:157
 msgid "Scheduler only understands Compute nodes (for now)"
-msgstr "Scheduler 只能理解计算节点（暂时）"
+msgstr "调度器只能理解计算节点（暂时）"
 
 #: nova/scheduler/filter_scheduler.py:199
 #, python-format
@@ -4396,7 +4411,7 @@ msgstr "主机 %(host)s 没有计算节点"
 #: nova/scheduler/host_manager.py:272
 #, python-format
 msgid "Received %(service_name)s service update from %(host)s."
-msgstr "在 %(host)s 上接收到 %(service_name)s 服务更新。"
+msgstr "接收到 %(service_name)s 服务更新，来自 %(host)s。"
 
 #: nova/scheduler/host_manager.py:313
 msgid "host_manager only implemented for 'compute'"
@@ -4422,17 +4437,17 @@ msgstr "schedule_%(method)s 失败：%(ex)s"
 #: nova/scheduler/manager.py:159
 #, fuzzy, python-format
 msgid "Setting instance %(instance_uuid)s to %(state)s state."
-msgstr "设置虚拟机 %(instance_uuid)s 至 ERROR 状态"
+msgstr "设置实例 %(instance_uuid)s 至 ERROR 状态"
 
 #: nova/scheduler/scheduler_options.py:66
 #, python-format
 msgid "Could not stat scheduler options file %(filename)s: '%(e)s'"
-msgstr "无法统计 scheduler  的选项文件 %(filename)s：“%(e)s”"
+msgstr "无法统计调度器的选项文件 %(filename)s：“%(e)s”"
 
 #: nova/scheduler/scheduler_options.py:75
 #, python-format
 msgid "Could not decode scheduler options: '%(e)s'"
-msgstr "无法解码 scheduler 的选项：“%(e)s”"
+msgstr "无法解码调度器的选项：“%(e)s”"
 
 #: nova/scheduler/simple.py:87
 msgid "Not enough allocatable CPU cores remaining"
@@ -4469,7 +4484,7 @@ msgstr "正在声明交换(exchange) %s"
 #: nova/testing/fake/rabbit.py:96
 #, python-format
 msgid "Binding %(queue)s to %(exchange)s with key %(routing_key)s"
-msgstr "用键 %(routing_key)s 把队列 %(queue)s 绑定到 %(exchange)s"
+msgstr "把队列 %(queue)s 绑定到 %(exchange)s 采用的键是 %(routing_key)s"
 
 #: nova/testing/fake/rabbit.py:133
 #, python-format
@@ -4479,7 +4494,7 @@ msgstr "从队列 %(queue)s 取消息：%(message)s"
 #: nova/tests/fake_utils.py:72
 #, python-format
 msgid "Faking execution of cmd (subprocess): %s"
-msgstr "执行伪命令（子进程）：%s"
+msgstr "伪执行命令（子进程）：%s"
 
 #: nova/tests/fake_utils.py:80
 #, python-format
@@ -4494,11 +4509,11 @@ msgstr "伪命令引起异常 %s"
 #: nova/tests/fake_utils.py:101
 #, python-format
 msgid "Reply to faked command is stdout='%(stdout)s' stderr='%(stderr)s'"
-msgstr "伪命令的标准输出stdout='%(stdout)s' 标准错误 stderr='%(stderr)s'"
+msgstr "伪命令的标准输出stdout='%(stdout)s' 标准错误输出 stderr='%(stderr)s'"
 
 #: nova/tests/fakelibvirt.py:784
 msgid "Please extend mock libvirt module to support flags"
-msgstr "请扩展模拟的 libvirt 模块来支持 flags"
+msgstr "请扩展模拟的 libvirt 模块来支持标记"
 
 #: nova/tests/fakelibvirt.py:790
 msgid "Please extend fake libvirt module to support this auth method"
@@ -4507,12 +4522,12 @@ msgstr "请扩展伪libvirt模块来支持这种认知方法"
 #: nova/tests/test_compute.py:365 nova/tests/test_compute.py:1419
 #, python-format
 msgid "Running instances: %s"
-msgstr "正在运行的虚拟机：%s"
+msgstr "正在运行的实例：%s"
 
 #: nova/tests/test_compute.py:371
 #, python-format
 msgid "After terminating instances: %s"
-msgstr "终结虚拟机实例之后：%s"
+msgstr "终止实例之后：%s"
 
 #: nova/tests/test_compute.py:589
 msgid "Internal error"
@@ -4521,7 +4536,7 @@ msgstr "内部错误"
 #: nova/tests/test_compute.py:1430
 #, python-format
 msgid "After force-killing instances: %s"
-msgstr "强制杀死虚拟机实例后：%s"
+msgstr "强制杀死实例后：%s"
 
 #: nova/tests/test_misc.py:92
 #, python-format
@@ -4573,7 +4588,7 @@ msgstr "uuid"
 msgid "Target %s allocated"
 msgstr "目标 %s 已经分配"
 
-#: nova/tests/test_volume.py:425
+#: nova/tests/test_volume.py:468
 #, python-format
 msgid "Cannot confirm exported volume id:%s."
 msgstr "无法确认导出的卷 id：%s。"
@@ -4598,7 +4613,7 @@ msgstr "在%s 创建文件模拟客户代理"
 msgid "Removing simulated guest agent files in %s"
 msgstr "移除在 %s 的模拟的客户代理文件"
 
-#: nova/tests/api/openstack/compute/test_servers.py:2102
+#: nova/tests/api/openstack/compute/test_servers.py:2144
 #, fuzzy, python-format
 msgid "Quota exceeded: code=%(code)s"
 msgstr "超出配额"
@@ -4656,7 +4671,7 @@ msgstr "test_snapshot_detail: resp_dict=%s"
 #: nova/tests/integrated/test_login.py:31
 #, python-format
 msgid "flavor: %s"
-msgstr "风格：%s"
+msgstr "类型：%s"
 
 #: nova/tests/integrated/api/client.py:38
 #, python-format
@@ -4671,11 +4686,11 @@ msgstr ""
 
 #: nova/tests/integrated/api/client.py:47
 msgid "Authentication error"
-msgstr "验证错误"
+msgstr "认证错误"
 
 #: nova/tests/integrated/api/client.py:55
 msgid "Authorization error"
-msgstr "验证错误"
+msgstr "授权错误"
 
 #: nova/tests/integrated/api/client.py:63
 msgid "Item not found"
@@ -4703,7 +4718,7 @@ msgstr "%(relative_uri)s => code %(http_status)s"
 
 #: nova/tests/integrated/api/client.py:161
 msgid "Unexpected status code"
-msgstr "未知的状态码"
+msgstr "意外的状态码"
 
 #: nova/tests/integrated/api/client.py:168
 #, python-format
@@ -4713,12 +4728,12 @@ msgstr "解码JSON：%s"
 #: nova/tests/rpc/common.py:133
 #, python-format
 msgid "Nested received %(queue)s, %(value)s"
-msgstr "Nested received %(queue)s, %(value)s"
+msgstr "嵌套(调用)接收到 %(queue)s, %(value)s"
 
 #: nova/tests/rpc/common.py:142
 #, python-format
 msgid "Nested return %s"
-msgstr "Nested return %s"
+msgstr "嵌套(调用)返回 %s"
 
 #: nova/tests/rpc/common.py:160
 msgid "RPC backend does not support timeouts"
@@ -4731,16 +4746,16 @@ msgstr "已接收 %s"
 
 #: nova/virt/connection.py:85
 msgid "Failed to open connection to the hypervisor"
-msgstr "打开hypervisor的连接失败"
+msgstr "打开虚拟机管理程序的连接失败"
 
 #: nova/virt/fake.py:270 nova/virt/xenapi_conn.py:397
-#: nova/virt/baremetal/proxy.py:716 nova/virt/libvirt/connection.py:1833
+#: nova/virt/baremetal/proxy.py:716 nova/virt/libvirt/connection.py:2013
 #, python-format
 msgid "Compute_service record created for %s "
 msgstr "Compute_service记录为 %s 创建 "
 
 #: nova/virt/fake.py:273 nova/virt/xenapi_conn.py:400
-#: nova/virt/baremetal/proxy.py:720 nova/virt/libvirt/connection.py:1836
+#: nova/virt/baremetal/proxy.py:720 nova/virt/libvirt/connection.py:2016
 #, python-format
 msgid "Compute_service record updated for %s "
 msgstr "Compute_service记录为 %s 更新 "
@@ -4748,7 +4763,7 @@ msgstr "Compute_service记录为 %s 更新 "
 #: nova/virt/firewall.py:130
 #, python-format
 msgid "Attempted to unfilter instance %s which is not filtered"
-msgstr "试图不筛选没有筛选的实例 %s"
+msgstr "试图不过滤没有过滤的实例 %s"
 
 #: nova/virt/firewall.py:137
 #, python-format
@@ -4823,7 +4838,7 @@ msgstr ""
 "针对use connection_type=xenapi必须指定xenapi_connection_url, "
 "xenapi_connection_username (可选) 和 xenapi_connection_password"
 
-#: nova/virt/xenapi_conn.py:330 nova/virt/libvirt/connection.py:465
+#: nova/virt/xenapi_conn.py:330 nova/virt/libvirt/connection.py:454
 msgid "Could not determine iscsi initiator name"
 msgstr "无法确定iscsi initiator名字"
 
@@ -4863,7 +4878,7 @@ msgstr "没有运行的域：移除"
 
 #: nova/virt/baremetal/dom.py:111
 msgid "domain running on an unknown node: discarded"
-msgstr "运行在位置结点的域：忽略"
+msgstr "运行在位置结点的域：放弃"
 
 #: nova/virt/baremetal/dom.py:127
 #, python-format
@@ -4873,7 +4888,7 @@ msgstr "没有这个域 (%s)"
 #: nova/virt/baremetal/dom.py:134
 #, python-format
 msgid "Failed power down Bare-metal node %s"
-msgstr "纯硬件结点 %s 电源停止失败"
+msgstr "裸机结点 %s 电源停止失败"
 
 #: nova/virt/baremetal/dom.py:143
 msgid "deactivate -> activate fails"
@@ -4927,7 +4942,7 @@ msgstr "新域创建：%s"
 #: nova/virt/baremetal/dom.py:213
 #, python-format
 msgid "Failed to boot Bare-metal node %s"
-msgstr "纯硬件结点 %s 启动失败"
+msgstr "裸机结点 %s 启动失败"
 
 #: nova/virt/baremetal/dom.py:222
 msgid "No such domain exists"
@@ -4950,7 +4965,7 @@ msgstr "域不存在"
 #: nova/virt/baremetal/nodes.py:42
 #, python-format
 msgid "Unknown baremetal driver %(d)s"
-msgstr "位置的纯硬件驱动 %(d)s"
+msgstr "未知的裸机驱动 %(d)s"
 
 #: nova/virt/baremetal/proxy.py:148
 #, python-format
@@ -4974,7 +4989,7 @@ msgstr "_wait_for_reboot失败"
 #: nova/virt/baremetal/proxy.py:222
 #, python-format
 msgid "instance %s: rescued"
-msgstr "虚拟机%s：已修复"
+msgstr "实例 %s：已救援"
 
 #: nova/virt/baremetal/proxy.py:225
 msgid "_wait_for_rescue failed"
@@ -4982,21 +4997,21 @@ msgstr "_wait_for_rescue 失败"
 
 #: nova/virt/baremetal/proxy.py:242
 msgid "<============= spawn of baremetal =============>"
-msgstr "<============= 创建裸机=============>"
+msgstr "<============= 生产裸机=============>"
 
 #: nova/virt/baremetal/proxy.py:255
 #, python-format
 msgid "instance %s: is building"
-msgstr "虚拟机 %s：正在创建中"
+msgstr "实例 %s：正在创建中"
 
 #: nova/virt/baremetal/proxy.py:260
 msgid "Key is injected but instance is not running yet"
-msgstr "已经注入密钥但是虚拟机还没有运行"
+msgstr "已经注入密钥但是实例还没有运行"
 
 #: nova/virt/baremetal/proxy.py:265
 #, python-format
 msgid "instance %s: booted"
-msgstr "虚拟机 %s：已启动"
+msgstr "实例 %s：已启动"
 
 #: nova/virt/baremetal/proxy.py:268
 #, python-format
@@ -5006,7 +5021,7 @@ msgstr "~~~~~~ 当前状态 = %s ~~~~~~"
 #: nova/virt/baremetal/proxy.py:269
 #, python-format
 msgid "instance %s spawned successfully"
-msgstr "实例 %s 成功创建"
+msgstr "实例 %s 生产成功"
 
 #: nova/virt/baremetal/proxy.py:272
 #, python-format
@@ -5015,7 +5030,7 @@ msgstr "实例 %s：没有启动"
 
 #: nova/virt/baremetal/proxy.py:274
 msgid "Bremetal assignment is overcommitted."
-msgstr "过量使用裸机分配"
+msgstr "过多提交裸机分配"
 
 #: nova/virt/baremetal/proxy.py:354
 #, python-format
@@ -5044,7 +5059,7 @@ msgstr "实例 %s：开始方法 toXML"
 msgid "instance %s: finished toXML method"
 msgstr "实例 %s：方法toXML 完成"
 
-#: nova/virt/baremetal/proxy.py:574 nova/virt/libvirt/connection.py:1603
+#: nova/virt/baremetal/proxy.py:574 nova/virt/libvirt/connection.py:1783
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented "
 "for this platform. This error can be safely ignored for now."
@@ -5059,7 +5074,7 @@ msgstr "#### RLK: cpu_arch = %s "
 msgid "Updating!"
 msgstr "正在更新。"
 
-#: nova/virt/baremetal/proxy.py:773 nova/virt/libvirt/connection.py:2387
+#: nova/virt/baremetal/proxy.py:773 nova/virt/libvirt/connection.py:2577
 #: nova/virt/xenapi/host.py:129
 msgid "Updating host stats"
 msgstr "正在更新主机状态"
@@ -5083,7 +5098,7 @@ msgstr "rootfs 已经被移除了"
 
 #: nova/virt/baremetal/tilera.py:264
 msgid "Before ping to the bare-metal node"
-msgstr "在ping纯硬件节点之前"
+msgstr "在ping裸机节点之前"
 
 #: nova/virt/baremetal/tilera.py:275
 #, python-format
@@ -5109,12 +5124,12 @@ msgstr "节点处于未知的错误状态。"
 
 #: nova/virt/disk/api.py:165
 msgid "no capable image handler configured"
-msgstr "没有合适的镜像handler配置好"
+msgstr "没有合适的镜像句柄配置好"
 
 #: nova/virt/disk/api.py:178
 #, python-format
 msgid "unknown disk image handler: %s"
-msgstr "未知的磁盘进行handler：%s"
+msgstr "未知的磁盘镜像句柄：%s"
 
 #: nova/virt/disk/api.py:189
 msgid "image already mounted"
@@ -5153,7 +5168,7 @@ msgstr "未知的guestmount错误"
 #: nova/virt/disk/loop.py:30
 #, python-format
 msgid "Could not attach image to loopback: %s"
-msgstr "无法给loopback挂载镜像：%s"
+msgstr "无法给loopback附加镜像：%s"
 
 #: nova/virt/disk/mount.py:76
 msgid "no partitions found"
@@ -5182,174 +5197,180 @@ msgstr "qemu-nbd 错误：%s"
 msgid "nbd device %s did not show up"
 msgstr "nbd 设备 %s 没有出现"
 
-#: nova/virt/libvirt/connection.py:258
+#: nova/virt/libvirt/connection.py:247
 #, python-format
 msgid "Connecting to libvirt: %s"
 msgstr "正在连接 libvirt：%s"
 
-#: nova/virt/libvirt/connection.py:279
+#: nova/virt/libvirt/connection.py:268
 msgid "Connection to libvirt broke"
 msgstr "连接 libvirt 失败"
 
-#: nova/virt/libvirt/connection.py:381
+#: nova/virt/libvirt/connection.py:370
 #, python-format
 msgid "Error from libvirt during destroy. Code=%(errcode)s Error=%(e)s"
 msgstr "销毁时发生错误。Code=%(errcode)s Error=%(e)s"
 
-#: nova/virt/libvirt/connection.py:393
+#: nova/virt/libvirt/connection.py:382
 #, python-format
 msgid ""
 "Error from libvirt during saved instance removal. Code=%(errcode)s "
 "Error=%(e)s"
-msgstr "删除已保存的虚拟机时 libvirt 发生错误。Code=%(errcode)s Error=%(e)s"
+msgstr "删除已保存的实例时 libvirt 发生错误。Code=%(errcode)s Error=%(e)s"
 
-#: nova/virt/libvirt/connection.py:404
+#: nova/virt/libvirt/connection.py:393
 #, python-format
 msgid "Error from libvirt during undefine. Code=%(errcode)s Error=%(e)s"
 msgstr "在 undefine 时 libvirt 发生错误。Code=%(errcode)s Error=%(e)s"
 
-#: nova/virt/libvirt/connection.py:416
+#: nova/virt/libvirt/connection.py:405
 msgid "Instance destroyed successfully."
-msgstr "虚拟机销毁成功。"
+msgstr "实例销毁成功。"
 
-#: nova/virt/libvirt/connection.py:428
+#: nova/virt/libvirt/connection.py:417
 #, fuzzy, python-format
 msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
 msgstr "在 undefine 时 libvirt 发生错误。Code=%(errcode)s Error=%(e)s"
 
-#: nova/virt/libvirt/connection.py:454
+#: nova/virt/libvirt/connection.py:443
 #, python-format
 msgid "Deleting instance files %(target)s"
-msgstr "删除虚拟机文件 %(target)s"
+msgstr "删除实例文件 %(target)s"
 
-#: nova/virt/libvirt/connection.py:547
+#: nova/virt/libvirt/connection.py:536
 msgid "attaching LXC block device"
-msgstr "挂载 LXC 块设备"
+msgstr "附加 LXC 块设备"
 
-#: nova/virt/libvirt/connection.py:560
+#: nova/virt/libvirt/connection.py:549
 msgid "detaching LXC block device"
-msgstr "卸载 LXC 块设备"
+msgstr "分离LXC 块设备"
 
-#: nova/virt/libvirt/connection.py:681
+#: nova/virt/libvirt/connection.py:670
 #, fuzzy
 msgid "Instance soft rebooted successfully."
 msgstr "实例成功重启。"
 
-#: nova/virt/libvirt/connection.py:685
+#: nova/virt/libvirt/connection.py:674
 #, fuzzy
 msgid "Failed to soft reboot instance."
 msgstr "重新启动实例失败"
 
-#: nova/virt/libvirt/connection.py:714
+#: nova/virt/libvirt/connection.py:703
 #, fuzzy
 msgid "Instance shutdown successfully."
 msgstr "实例成功生产。"
 
-#: nova/virt/libvirt/connection.py:750 nova/virt/libvirt/connection.py:894
+#: nova/virt/libvirt/connection.py:739 nova/virt/libvirt/connection.py:883
 msgid "During reboot, instance disappeared."
 msgstr "重启过程中，实例消失。"
 
-#: nova/virt/libvirt/connection.py:755
+#: nova/virt/libvirt/connection.py:744
 msgid "Instance rebooted successfully."
 msgstr "实例成功重启。"
 
-#: nova/virt/libvirt/connection.py:856 nova/virt/xenapi/vmops.py:1389
+#: nova/virt/libvirt/connection.py:845 nova/virt/xenapi/vmops.py:1371
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 msgstr "发现 %(migration_count)d 个超过 %(confirm_window)d 秒未经确认的迁移"
 
-#: nova/virt/libvirt/connection.py:860 nova/virt/xenapi/vmops.py:1393
+#: nova/virt/libvirt/connection.py:849 nova/virt/xenapi/vmops.py:1375
 #, python-format
 msgid "Automatically confirming migration %d"
 msgstr "正在自动确认迁移 %d"
 
-#: nova/virt/libvirt/connection.py:885
+#: nova/virt/libvirt/connection.py:874
 msgid "Instance is running"
 msgstr "实例在运行"
 
-#: nova/virt/libvirt/connection.py:899
+#: nova/virt/libvirt/connection.py:888
 msgid "Instance spawned successfully."
 msgstr "实例成功生产。"
 
-#: nova/virt/libvirt/connection.py:915
+#: nova/virt/libvirt/connection.py:904
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "data：%(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/connection.py:967
+#: nova/virt/libvirt/connection.py:956
 #, fuzzy
 msgid "Guest does not have a console available"
 msgstr "用户没有管理员权限"
 
-#: nova/virt/libvirt/connection.py:1098
+#: nova/virt/libvirt/connection.py:992
+#, python-format
+msgid "Path '%(path)s' supports direct I/O"
+msgstr ""
+
+#: nova/virt/libvirt/connection.py:996
+#, python-format
+msgid "Path '%(path)s' does not support direct I/O: '%(ex)s'"
+msgstr ""
+
+#: nova/virt/libvirt/connection.py:1000 nova/virt/libvirt/connection.py:1004
+#, python-format
+msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
+msgstr ""
+
+#: nova/virt/libvirt/connection.py:1122
 msgid "Creating image"
 msgstr "正在创建镜像"
 
-#: nova/virt/libvirt/connection.py:1280
+#: nova/virt/libvirt/connection.py:1307
 #, python-format
 msgid "Injecting %(injection)s into image %(img_id)s"
-msgstr "向镜像 %(img_id)s 注入 %(injection)s"
+msgstr "将 %(injection)s 注入到镜像 %(img_id)s"
 
-#: nova/virt/libvirt/connection.py:1290
+#: nova/virt/libvirt/connection.py:1317
 #, python-format
 msgid "Ignoring error injecting data into image %(img_id)s (%(e)s)"
-msgstr "忽略向镜像 %(img_id)s (%(e)s) 错误注入的数据"
+msgstr "忽略向镜像 %(img_id)s  注入的数据的错误 (%(e)s)"
 
-#: nova/virt/libvirt/connection.py:1322
+#: nova/virt/libvirt/connection.py:1349
 #, python-format
 msgid "block_device_list %s"
 msgstr "块设备列表 block_device_list %s"
 
-#: nova/virt/libvirt/connection.py:1446
+#: nova/virt/libvirt/connection.py:1626
 msgid "Starting toXML method"
 msgstr "正在启动 toXML 方法"
 
-#: nova/virt/libvirt/connection.py:1450
+#: nova/virt/libvirt/connection.py:1630
 msgid "Finished toXML method"
 msgstr "toXML方法完成"
 
-#: nova/virt/libvirt/connection.py:1467
+#: nova/virt/libvirt/connection.py:1647
 #, python-format
 msgid ""
 "Error from libvirt while looking up %(instance_name)s: [Error Code "
 "%(error_code)s] %(ex)s"
 msgstr "查找 %(instance_name)s时libvirt出错：[错误代码 %(error_code)s] %(ex)s"
 
-#: nova/virt/libvirt/connection.py:1708
+#: nova/virt/libvirt/connection.py:1888
 msgid "libvirt version is too old (does not support getVersion)"
 msgstr "libvirt版本过旧(不支持getVersion)"
 
-#: nova/virt/libvirt/connection.py:1730
+#: nova/virt/libvirt/connection.py:1910
 #, python-format
 msgid "'<cpu>' must be 1, but %d\n"
 msgstr "'<cpu>' 必须为 1, 但是为 %d\n"
 
-#: nova/virt/libvirt/connection.py:1757
+#: nova/virt/libvirt/connection.py:1937
 #, python-format
 msgid "topology (%(topology)s) must have %(ks)s"
 msgstr "拓扑 (%(topology)s) 必须含有 %(ks)s"
 
-#: nova/virt/libvirt/connection.py:1854
+#: nova/virt/libvirt/connection.py:2035
 #, python-format
 msgid ""
 "Instance launched has CPU info:\n"
 "%s"
 msgstr ""
-"已启动虚拟机的CPU信息：\n"
+"已启动实例的CPU信息：\n"
 "%s"
 
-#: nova/virt/libvirt/connection.py:1857
-#, python-format
-msgid ""
-"to xml...\n"
-":%s "
-msgstr ""
-"转换成 xml...\n"
-"：%s "
-
-#: nova/virt/libvirt/connection.py:1860
+#: nova/virt/libvirt/connection.py:2047
 #, python-format
 msgid ""
 "CPU doesn't have compatibility.\n"
@@ -5364,45 +5385,45 @@ msgstr ""
 "\n"
 "参考 %(u)s"
 
-#: nova/virt/libvirt/connection.py:1917
+#: nova/virt/libvirt/connection.py:2104
 #, python-format
 msgid "Timeout migrating for %s. nwfilter not found."
 msgstr "迁移 %s 超时"
 
-#: nova/virt/libvirt/connection.py:2133
+#: nova/virt/libvirt/connection.py:2320
 #, python-format
 msgid "skipping %(path)s since it looks like volume"
 msgstr "因它像卷，所以跳过 %(path)s"
 
-#: nova/virt/libvirt/connection.py:2188
+#: nova/virt/libvirt/connection.py:2375
 #, python-format
 msgid "Getting disk size of %(i_name)s: %(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/connection.py:2236
+#: nova/virt/libvirt/connection.py:2426
 #, python-format
 msgid "Instance %s: Starting migrate_disk_and_power_off"
-msgstr "虚拟机 %s：开始执行 migrate_disk_and_power_off"
+msgstr "实例 %s：开始执行 migrate_disk_and_power_off"
 
-#: nova/virt/libvirt/connection.py:2291
+#: nova/virt/libvirt/connection.py:2481
 #, fuzzy, python-format
 msgid "During wait running, instance disappeared."
 msgstr "%s 在运行中消失了。"
 
-#: nova/virt/libvirt/connection.py:2296
+#: nova/virt/libvirt/connection.py:2486
 #, fuzzy, python-format
 msgid "Instance running successfully."
-msgstr "虚拟机 %s 成功运行。"
+msgstr "实例 %s 成功运行。"
 
-#: nova/virt/libvirt/connection.py:2303
+#: nova/virt/libvirt/connection.py:2493
 #, python-format
 msgid "Instance %s: Starting finish_migration"
-msgstr "虚拟机 %s：开始执行 finish_migration"
+msgstr "实例 %s：开始执行 finish_migration"
 
-#: nova/virt/libvirt/connection.py:2343
+#: nova/virt/libvirt/connection.py:2533
 #, python-format
 msgid "Instance %s: Starting finish_revert_migration"
-msgstr "虚拟机 %s：开始执行 finish_revert_migration"
+msgstr "实例 %s：开始执行 finish_revert_migration"
 
 #: nova/virt/libvirt/firewall.py:42
 msgid ""
@@ -5434,66 +5455,66 @@ msgstr "iptables 防火墙：设置基本的过滤规则"
 
 #: nova/virt/libvirt/firewall.py:252
 msgid "Attempted to unfilter instance which is not filtered"
-msgstr "尝试去取消未过滤的虚拟机"
+msgstr "试图不过滤没有过滤的实例"
 
-#: nova/virt/libvirt/imagecache.py:168
+#: nova/virt/libvirt/imagecache.py:170
 #, python-format
 msgid "%s is a valid instance name"
-msgstr "%s 是一个正确的虚拟机名称"
+msgstr "%s 是一个正确的实例名称"
 
-#: nova/virt/libvirt/imagecache.py:171
+#: nova/virt/libvirt/imagecache.py:173
 #, python-format
 msgid "%s has a disk file"
 msgstr "%s 有一个磁盘文件"
 
-#: nova/virt/libvirt/imagecache.py:173
+#: nova/virt/libvirt/imagecache.py:175
 #, python-format
 msgid "Instance %(instance)s is backed by %(backing)s"
-msgstr "虚拟机 %(instance)s  由文件 %(backing)s 来备份"
+msgstr "实例 %(instance)s  由文件 %(backing)s 来备份"
 
-#: nova/virt/libvirt/imagecache.py:184
+#: nova/virt/libvirt/imagecache.py:186
 #, python-format
 msgid ""
 "Instance %(instance)s is using a backing file %(backing)s which does not "
 "appear in the image service"
-msgstr "虚拟机 %(instance)s 正在使用的备份文件 %(backing)s 没有出现在镜像服务里。"
+msgstr "实例 %(instance)s 正在使用的备份文件 %(backing)s 没有出现在镜像服务里。"
 
-#: nova/virt/libvirt/imagecache.py:235
+#: nova/virt/libvirt/imagecache.py:237
 #, fuzzy, python-format
 msgid "%(id)s (%(base_file)s): image verification failed"
 msgstr "%(container_format)s-%(id)s (%(base_file)s)：镜像验证失败"
 
-#: nova/virt/libvirt/imagecache.py:245
+#: nova/virt/libvirt/imagecache.py:247
 #, fuzzy, python-format
 msgid "%(id)s (%(base_file)s): image verification skipped, no hash stored"
 msgstr "%(container_format)s-%(id)s (%(base_file)s)：镜像验证跳过，没有散列存储"
 
-#: nova/virt/libvirt/imagecache.py:264
+#: nova/virt/libvirt/imagecache.py:266
 #, fuzzy, python-format
 msgid "Cannot remove %(base_file)s, it does not exist"
 msgstr "删除 %(base_file)s 失败，错误是 %(error)s"
 
-#: nova/virt/libvirt/imagecache.py:276
+#: nova/virt/libvirt/imagecache.py:278
 #, python-format
 msgid "Base file too young to remove: %s"
-msgstr "Base 文件太新不需要删除：%s"
+msgstr "基文件太新不需要删除：%s"
 
-#: nova/virt/libvirt/imagecache.py:279
+#: nova/virt/libvirt/imagecache.py:281
 #, python-format
 msgid "Removing base file: %s"
-msgstr "正在删除集成文件：%s"
+msgstr "正在删除基文件：%s"
 
-#: nova/virt/libvirt/imagecache.py:286
+#: nova/virt/libvirt/imagecache.py:288
 #, python-format
 msgid "Failed to remove %(base_file)s, error was %(error)s"
 msgstr "删除 %(base_file)s 失败，错误是 %(error)s"
 
-#: nova/virt/libvirt/imagecache.py:297
+#: nova/virt/libvirt/imagecache.py:299
 #, fuzzy, python-format
 msgid "%(id)s (%(base_file)s): checking"
 msgstr "%(container_format)s-%(id)s (%(base_file)s)：正在检查中"
 
-#: nova/virt/libvirt/imagecache.py:313
+#: nova/virt/libvirt/imagecache.py:318
 #, fuzzy, python-format
 msgid ""
 "%(id)s (%(base_file)s): in use: on this node %(local)d local, %(remote)d "
@@ -5502,65 +5523,65 @@ msgstr ""
 "%(container_format)s-%(id)s (%(base_file)s)：正在使用中：本地节点 %(local)d, 远程节点 "
 "%(remote)d"
 
-#: nova/virt/libvirt/imagecache.py:325
+#: nova/virt/libvirt/imagecache.py:330
 #, fuzzy, python-format
 msgid ""
 "%(id)s (%(base_file)s): warning -- an absent base file is in use! "
 "instances: %(instance_list)s"
 msgstr ""
-"%(container_format)s-%(id)s (%(base_file)s)：警告 -- 使用中缺少基础文件! 虚拟机： "
+"%(container_format)s-%(id)s (%(base_file)s)：警告 -- 使用中缺少基文件! 实例： "
 "%(instance_list)s"
 
-#: nova/virt/libvirt/imagecache.py:333
+#: nova/virt/libvirt/imagecache.py:338
 #, fuzzy, python-format
 msgid "%(id)s (%(base_file)s): in use on (%(remote)d on other nodes)"
 msgstr "%(container_format)s-%(id)s (%(base_file)s)：在使用中： 在远程节点 (%(remote)d 上"
 
-#: nova/virt/libvirt/imagecache.py:343
+#: nova/virt/libvirt/imagecache.py:348
 #, fuzzy, python-format
 msgid "%(id)s (%(base_file)s): image is not in use"
 msgstr "%(container_format)s-%(id)s (%(base_file)s)：镜像不在使用中"
 
-#: nova/virt/libvirt/imagecache.py:349
+#: nova/virt/libvirt/imagecache.py:354
 #, fuzzy, python-format
 msgid "%(id)s (%(base_file)s): image is in use"
 msgstr "%(container_format)s-%(id)s (%(base_file)s)：镜像在使用中"
 
-#: nova/virt/libvirt/imagecache.py:369
+#: nova/virt/libvirt/imagecache.py:376
 #, python-format
 msgid "Skipping verification, no base directory at %s"
 msgstr "跳过验证，在 %s 上没有基础目录"
 
-#: nova/virt/libvirt/imagecache.py:373
+#: nova/virt/libvirt/imagecache.py:380
 msgid "Verify base images"
 msgstr "验证基础镜像"
 
-#: nova/virt/libvirt/imagecache.py:380
+#: nova/virt/libvirt/imagecache.py:387
 #, python-format
 msgid "Image id %(id)s yields fingerprint %(fingerprint)s"
 msgstr ""
 
-#: nova/virt/libvirt/imagecache.py:398
+#: nova/virt/libvirt/imagecache.py:405
 #, python-format
 msgid "Unknown base file: %s"
-msgstr "未知的基础文件：%s"
-
-#: nova/virt/libvirt/imagecache.py:403
-#, python-format
-msgid "Active base files: %s"
-msgstr "激活基础文件：%s"
-
-#: nova/virt/libvirt/imagecache.py:406
-#, python-format
-msgid "Corrupt base files: %s"
-msgstr "损坏的基础文件：%s"
+msgstr "未知的基文件：%s"
 
 #: nova/virt/libvirt/imagecache.py:410
 #, python-format
-msgid "Removable base files: %s"
-msgstr "可删除的基础文件：%s"
+msgid "Active base files: %s"
+msgstr "活跃的基文件：%s"
 
-#: nova/virt/libvirt/imagecache.py:418
+#: nova/virt/libvirt/imagecache.py:413
+#, python-format
+msgid "Corrupt base files: %s"
+msgstr "损坏的基文件：%s"
+
+#: nova/virt/libvirt/imagecache.py:417
+#, python-format
+msgid "Removable base files: %s"
+msgstr "可删除的基文件：%s"
+
+#: nova/virt/libvirt/imagecache.py:425
 msgid "Verification complete"
 msgstr "确认完成"
 
@@ -5568,34 +5589,34 @@ msgstr "确认完成"
 msgid "Unable to find an open port"
 msgstr "无法找到一个开放端口"
 
-#: nova/virt/libvirt/vif.py:85
+#: nova/virt/libvirt/vif.py:90
 #, python-format
 msgid "Ensuring vlan %(vlan)s and bridge %(bridge)s"
-msgstr "保证vlan %(vlan)s 和bridge %(bridge)s"
+msgstr "保证vlan %(vlan)s 和桥 %(bridge)s"
 
-#: nova/virt/libvirt/vif.py:94
+#: nova/virt/libvirt/vif.py:99
 #, python-format
 msgid "Ensuring bridge %s"
-msgstr "保证 bridge %s"
+msgstr "保证桥 %s"
 
-#: nova/virt/libvirt/vif.py:157 nova/virt/libvirt/vif.py:201
+#: nova/virt/libvirt/vif.py:165 nova/virt/libvirt/vif.py:220
 #, python-format
 msgid "Failed while unplugging vif of instance '%s'"
-msgstr "去除虚拟机”%s“的虚拟网络设备时失败"
+msgstr "移除实例”%s“的虚拟网络设备时失败"
 
-#: nova/virt/libvirt/volume.py:153
+#: nova/virt/libvirt/volume.py:158
 #, python-format
 msgid "iSCSI device not found at %s"
 msgstr "在 %s 未找到iSCSI设备"
 
-#: nova/virt/libvirt/volume.py:156
+#: nova/virt/libvirt/volume.py:161
 #, python-format
 msgid ""
 "ISCSI volume not yet found at: %(mount_device)s. Will rescan & retry.  "
 "Try number: %(tries)s"
 msgstr "在 %(mount_device)s 上还没有找到iSCSI卷。将再次扫描并重试。尝试次数：%(tries)s"
 
-#: nova/virt/libvirt/volume.py:168
+#: nova/virt/libvirt/volume.py:173
 #, python-format
 msgid "Found iSCSI node %(mount_device)s (after %(tries)s rescans)"
 msgstr "找到iSCSI节点 %(mount_device)s （经过%(tries)s 次再扫描）"
@@ -5613,7 +5634,7 @@ msgstr "%(text)s: _db_content => %(content)s"
 #: nova/virt/vmwareapi/fake.py:131
 #, python-format
 msgid "Property %(attr)s not set for the managed object %(objName)s"
-msgstr "没有为管理对象 %(objName)s 设置属性 %(attr)s"
+msgstr "属性 %(attr)s 没有为管理对象 %(objName)s 设置"
 
 #: nova/virt/vmwareapi/fake.py:437
 msgid "There is no VM registered"
@@ -5627,7 +5648,7 @@ msgstr "ref 为 %s 的虚拟机不存在"
 #: nova/virt/vmwareapi/fake.py:502
 #, python-format
 msgid "Logging out a session that is invalid or already logged out: %s"
-msgstr "退出不正确的会话或者已经退出了：%s"
+msgstr "退出无效的会话或者已经退出了：%s"
 
 #: nova/virt/vmwareapi/fake.py:517
 msgid "Session is faulty"
@@ -5635,7 +5656,7 @@ msgstr "会话有错误"
 
 #: nova/virt/vmwareapi/fake.py:520
 msgid "Session Invalid"
-msgstr "会话失效"
+msgstr "会话无效"
 
 #: nova/virt/vmwareapi/fake.py:606
 msgid " No Virtual Machine has been registered yet"
@@ -5644,7 +5665,7 @@ msgstr " 还没有虚拟机被注册"
 #: nova/virt/vmwareapi/io_util.py:99
 #, python-format
 msgid "Glance image %s is in killed state"
-msgstr "Glance 镜像 %s 在 killed 状态"
+msgstr "Glance 镜像 %s 在被杀死的状态"
 
 #: nova/virt/vmwareapi/io_util.py:107
 #, python-format
@@ -5707,16 +5728,16 @@ msgstr "在 %s 发生异常 "
 
 #: nova/virt/vmwareapi/vmops.py:66
 msgid "Getting list of instances"
-msgstr "获取虚拟机列表"
+msgstr "获取实例列表"
 
 #: nova/virt/vmwareapi/vmops.py:82
 #, python-format
 msgid "Got total of %s instances"
-msgstr "总共获得 %s 个虚拟机"
+msgstr "总共获得 %s 个实例"
 
 #: nova/virt/vmwareapi/vmops.py:126
 msgid "Couldn't get a local Datastore reference"
-msgstr "无法得到本地的 Datastore 引用"
+msgstr "无法得到本地的存储引用"
 
 #: nova/virt/vmwareapi/vmops.py:196
 #, python-format
@@ -5734,73 +5755,73 @@ msgid ""
 "Creating Virtual Disk of size  %(vmdk_file_size_in_kb)s KB and adapter "
 "type  %(adapter_type)s on the ESX host local store %(data_store_name)s"
 msgstr ""
-"在ESX主机的本地存储 %(data_store_name)s 上创建虚拟磁盘 %(vmdk_file_size_in_kb)s KB "
-"和适配器类型 %(adapter_type)s"
+"创建 %(vmdk_file_size_in_kb)s KB 大的虚拟磁盘和适配器类型 %(adapter_type)s 在ESX主机的本地存储 "
+"%(data_store_name)s 上"
 
 #: nova/virt/vmwareapi/vmops.py:251
 #, python-format
 msgid ""
 "Created Virtual Disk of size %(vmdk_file_size_in_kb)s KB on the ESX host "
 "local store %(data_store_name)s"
-msgstr "在ESX主机的本地存储 %(data_store_name)s 上创建虚拟磁盘 %(vmdk_file_size_in_kb)s KB"
+msgstr "创建 %(vmdk_file_size_in_kb)s KB 大的虚拟磁盘在ESX主机的本地存储 %(data_store_name)s 上"
 
 #: nova/virt/vmwareapi/vmops.py:260
 #, python-format
 msgid ""
 "Deleting the file %(flat_uploaded_vmdk_path)s on the ESX host localstore "
 "%(data_store_name)s"
-msgstr "正在ESX主机的本地存储 %(data_store_name)s 上删除文件 %(flat_uploaded_vmdk_path)s"
+msgstr "删除文件 %(flat_uploaded_vmdk_path)s 在ESX主机的本地存储 %(data_store_name)s 上"
 
 #: nova/virt/vmwareapi/vmops.py:272
 #, python-format
 msgid ""
 "Deleted the file %(flat_uploaded_vmdk_path)s on the ESX host local store "
 "%(data_store_name)s"
-msgstr "已经在ESX主机的本地存储 %(data_store_name)s 上删除文件 %(flat_uploaded_vmdk_path)s"
+msgstr "删除文件 %(flat_uploaded_vmdk_path)s 在ESX主机的本地存储 %(data_store_name)s 上"
 
 #: nova/virt/vmwareapi/vmops.py:283
 #, python-format
 msgid ""
 "Downloading image file data %(image_ref)s to the ESX data store "
 "%(data_store_name)s"
-msgstr "正在往ESX主机的数据存储 %(data_store_name)s 上下载文件数据 %(image_ref)s"
+msgstr "下载文件数据 %(image_ref)s 到ESX主机的数据存储 %(data_store_name)s 上"
 
 #: nova/virt/vmwareapi/vmops.py:298
 #, python-format
 msgid ""
 "Downloaded image file data %(image_ref)s to the ESX data store "
 "%(data_store_name)s"
-msgstr "已经在ESX数据存储 %(data_store_name)s 上下载镜像文件数据 %(image_ref)s"
+msgstr "已经下载镜像文件数据 %(image_ref)s 在ESX数据存储 %(data_store_name)s 上"
 
 #: nova/virt/vmwareapi/vmops.py:315
 #, python-format
 msgid "Reconfiguring VM instance %s to attach the image disk"
-msgstr "正在重新配置虚拟机 %s 来挂载镜像磁盘"
+msgstr "正在重新配置虚拟机实例 %s 来附加镜像磁盘"
 
 #: nova/virt/vmwareapi/vmops.py:322
 #, python-format
 msgid "Reconfigured VM instance %s to attach the image disk"
-msgstr "已经重新配置虚拟机 %s 来挂载镜像磁盘"
+msgstr "已经重新配置虚拟机实例 %s 来附加于镜像磁盘"
 
 #: nova/virt/vmwareapi/vmops.py:329
 #, python-format
 msgid "Powering on the VM instance %s"
-msgstr "正启动虚拟机 %s"
+msgstr "正启动虚拟机实例 %s"
 
 #: nova/virt/vmwareapi/vmops.py:335
 #, python-format
 msgid "Powered on the VM instance %s"
-msgstr "已经启动虚拟机 %s"
+msgstr "已经启动虚拟机实例 %s"
 
 #: nova/virt/vmwareapi/vmops.py:381
 #, python-format
 msgid "Creating Snapshot of the VM instance %s "
-msgstr "正在创建虚拟机快照 %s "
+msgstr "正在创建虚拟机实例快照 %s "
 
 #: nova/virt/vmwareapi/vmops.py:391
 #, python-format
 msgid "Created Snapshot of the VM instance %s "
-msgstr "已经创建虚拟机快照 %s "
+msgstr "已经创建虚拟机实例快照 %s "
 
 #: nova/virt/vmwareapi/vmops.py:434
 #, python-format
@@ -5834,7 +5855,7 @@ msgstr "已经删除临时的vmdk文件 %s"
 
 #: nova/virt/vmwareapi/vmops.py:520
 msgid "instance is not powered on"
-msgstr "虚拟机未启动"
+msgstr "实例未启动"
 
 #: nova/virt/vmwareapi/vmops.py:527
 #, python-format
@@ -5859,7 +5880,7 @@ msgstr "已经冷启动虚拟机 %s"
 #: nova/virt/vmwareapi/vmops.py:548
 #, python-format
 msgid "instance - %s not present"
-msgstr "虚拟机 - %s 不存在"
+msgstr "实例 - %s 不存在"
 
 #: nova/virt/vmwareapi/vmops.py:567
 #, python-format
@@ -5886,24 +5907,24 @@ msgstr "已经注销虚拟机 %s"
 msgid ""
 "In vmwareapi:vmops:destroy, got this exception while un-registering the "
 "VM: %s"
-msgstr "注销虚拟机 %s 时在 vmwareapi:vmops:destroy 中发生异常"
+msgstr "注销虚拟机时在 vmwareapi:vmops:destroy 中发生异常：%s"
 
 #: nova/virt/vmwareapi/vmops.py:592
 #, python-format
 msgid "Deleting contents of the VM %(name)s from datastore %(datastore_name)s"
-msgstr "正从数据存储 %(datastore_name)s 中删除虚拟机 %(name)s 的内容"
+msgstr "正在删除虚拟机 %(name)s 的内容位置在数据存储 %(datastore_name)s 中"
 
 #: nova/virt/vmwareapi/vmops.py:602
 #, python-format
 msgid "Deleted contents of the VM %(name)s from datastore %(datastore_name)s"
-msgstr "已经从数据存储 %(datastore_name)s 中删除虚拟机 %(name)s 的内容"
+msgstr "已经删除虚拟机 %(name)s 的内未知在数据存储 %(datastore_name)s 中"
 
 #: nova/virt/vmwareapi/vmops.py:607
 #, python-format
 msgid ""
 "In vmwareapi:vmops:destroy, got this exception while deleting the VM "
 "contents from the disk: %s"
-msgstr "当从磁盘删除虚拟机 %s 的内容时在 vmwareapi:vmops:destroy 里发生异常"
+msgstr "当从磁盘删除虚拟机的内容时在 vmwareapi:vmops:destroy 里发生异常：%s"
 
 #: nova/virt/vmwareapi/vmops.py:615
 msgid "pause not supported for vmwareapi"
@@ -5925,7 +5946,7 @@ msgstr "已经挂起虚拟机 %s "
 
 #: nova/virt/vmwareapi/vmops.py:640
 msgid "instance is powered off and can not be suspended."
-msgstr "虚拟机已关闭，无法挂起。"
+msgstr "实例已关闭，无法挂起。"
 
 #: nova/virt/vmwareapi/vmops.py:643
 #, python-format
@@ -5944,7 +5965,7 @@ msgstr "已经恢复虚拟机 %s "
 
 #: nova/virt/vmwareapi/vmops.py:663
 msgid "instance is not in a suspended state"
-msgstr "虚拟机不在挂起状态"
+msgstr "实例不在挂起状态"
 
 #: nova/virt/vmwareapi/vmops.py:699
 msgid "get_diagnostics not implemented for vmwareapi"
@@ -5955,14 +5976,14 @@ msgstr "get_diagnostics 没有在 vmwareapi 里实现"
 msgid ""
 "Reconfiguring VM instance %(name)s to set the machine id with ip - "
 "%(ip_addr)s"
-msgstr "正在重新配置虚拟机 %(name)s 来设置机器的id为ip - %(ip_addr)s"
+msgstr "正在重新配置实例 %(name)s 来设置机器的id为ip - %(ip_addr)s"
 
 #: nova/virt/vmwareapi/vmops.py:765
 #, python-format
 msgid ""
 "Reconfigured VM instance %(name)s to set the machine id with ip - "
 "%(ip_addr)s"
-msgstr "已经重新配置虚拟机 %(name)s 来设置机器的id为ip - %(ip_addr)s"
+msgstr "已经重新配置虚拟机实例 %(name)s 来设置机器的id为ip - %(ip_addr)s"
 
 #: nova/virt/vmwareapi/vmops.py:802
 #, python-format
@@ -6002,7 +6023,7 @@ msgstr "正在获取镜像 %s 的大小"
 #: nova/virt/vmwareapi/vmware_images.py:143
 #, python-format
 msgid "Got image size of %(size)s for the image %(image)s"
-msgstr "获得镜像 %(image)s 的大小为 %(size)s"
+msgstr "获得大小为 %(size)s 的镜像目的为了 %(image)s"
 
 #: nova/virt/xenapi/fake.py:553 nova/virt/xenapi/fake.py:652
 #: nova/virt/xenapi/fake.py:670 nova/virt/xenapi/fake.py:732
@@ -6041,7 +6062,7 @@ msgstr ""
 #: nova/virt/xenapi/host.py:137
 #, python-format
 msgid "Unable to get SR for this host: %s"
-msgstr "无法为主机得到SR：%s"
+msgstr "无法为主机得到存储库：%s"
 
 #: nova/virt/xenapi/host.py:169
 #, fuzzy, python-format
@@ -6061,7 +6082,7 @@ msgstr "发现不唯一的网络 name_label %s"
 #: nova/virt/xenapi/network_utils.py:55
 #, python-format
 msgid "Found non-unique network for bridge %s"
-msgstr "发现网桥 %s 的网络不唯一"
+msgstr "发现桥 %s 的网络不唯一"
 
 #: nova/virt/xenapi/network_utils.py:58
 #, python-format
@@ -6117,423 +6138,423 @@ msgstr ""
 "网络 %(bridge)s 的 PIF %(pif_rec['uuid'])s  有VLAN id %(pif_vlan)d。期待的数目是 "
 "%(vlan_num)d"
 
-#: nova/virt/xenapi/vm_utils.py:218
+#: nova/virt/xenapi/vm_utils.py:217
 #, python-format
 msgid "Created VM %s..."
 msgstr "创建虚拟机 %s ..."
 
-#: nova/virt/xenapi/vm_utils.py:221
+#: nova/virt/xenapi/vm_utils.py:220
 #, python-format
 msgid "Created VM %(instance_name)s as %(vm_ref)s."
 msgstr "已经将虚拟机 %(instance_name)s 创建成 %(vm_ref)s。"
 
-#: nova/virt/xenapi/vm_utils.py:248
+#: nova/virt/xenapi/vm_utils.py:247
 #, python-format
 msgid "VBD not found in instance %s"
-msgstr "没有找到虚拟机 %s 的VBD"
+msgstr "没有在实例 %s 找到VBD"
 
-#: nova/virt/xenapi/vm_utils.py:265
+#: nova/virt/xenapi/vm_utils.py:264
 #, fuzzy, python-format
 msgid "VBD %s already detached"
-msgstr "已经卸载"
+msgstr "已经分离"
 
-#: nova/virt/xenapi/vm_utils.py:268
+#: nova/virt/xenapi/vm_utils.py:267
 #, python-format
 msgid "VBD %(vbd_ref)s detach rejected, attempt %(num_attempt)d/%(max_attempts)d"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:273
+#: nova/virt/xenapi/vm_utils.py:272
 #, python-format
 msgid "Unable to unplug VBD %s"
-msgstr "无法卸除 VBD %s"
+msgstr "无法移除 VBD %s"
 
-#: nova/virt/xenapi/vm_utils.py:278
+#: nova/virt/xenapi/vm_utils.py:277
 #, python-format
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:289
+#: nova/virt/xenapi/vm_utils.py:288
 #, python-format
 msgid "Unable to destroy VBD %s"
 msgstr "无法销毁 VBD %s"
 
-#: nova/virt/xenapi/vm_utils.py:308
+#: nova/virt/xenapi/vm_utils.py:307
 #, fuzzy, python-format
 msgid "Creating %(vbd_type)s-type VBD for VM %(vm_ref)s, VDI %(vdi_ref)s ... "
-msgstr "为虚拟机 %(vm_ref)s，VDI %(vdi_ref)s创建了VBD %(vbd_ref)s"
+msgstr "创建了VBD %(vbd_ref)s 目的是为了虚拟机 %(vm_ref)s，VDI %(vdi_ref)s"
 
-#: nova/virt/xenapi/vm_utils.py:311
+#: nova/virt/xenapi/vm_utils.py:310
 #, python-format
 msgid "Created VBD %(vbd_ref)s for VM %(vm_ref)s, VDI %(vdi_ref)s."
-msgstr "为虚拟机 %(vm_ref)s，VDI %(vdi_ref)s创建了VBD %(vbd_ref)s"
+msgstr "创建了VBD %(vbd_ref)s 目的是为了虚拟机 %(vm_ref)s，VDI %(vdi_ref)s"
 
-#: nova/virt/xenapi/vm_utils.py:322
+#: nova/virt/xenapi/vm_utils.py:321
 #, python-format
 msgid "Unable to destroy VDI %s"
 msgstr "无法销毁 VDI %s"
 
-#: nova/virt/xenapi/vm_utils.py:339
+#: nova/virt/xenapi/vm_utils.py:338
 #, python-format
 msgid ""
 "Created VDI %(vdi_ref)s (%(name_label)s, %(virtual_size)s, %(read_only)s)"
 " on %(sr_ref)s."
 msgstr ""
-"创建了 VDI %(vdi_ref)s (%(name_label)s, %(virtual_size)s, %(read_only)s)  on"
+"创建了 VDI %(vdi_ref)s (%(name_label)s, %(virtual_size)s, %(read_only)s) 位置在"
 " %(sr_ref)s。"
 
-#: nova/virt/xenapi/vm_utils.py:348
+#: nova/virt/xenapi/vm_utils.py:347
 #, python-format
 msgid "Copied VDI %(vdi_ref)s from VDI %(vdi_to_copy_ref)s on %(sr_ref)s."
-msgstr "在 %(sr_ref)s 上将 VDI %(vdi_to_copy_ref)s 复制成了 VDI %(vdi_ref)s。"
+msgstr "复制了 VDI %(vdi_ref)s ，对象来自VDI %(vdi_to_copy_ref)s ，位置在 %(sr_ref)s。"
 
-#: nova/virt/xenapi/vm_utils.py:356
+#: nova/virt/xenapi/vm_utils.py:355
 #, python-format
 msgid "Cloned VDI %(vdi_ref)s from VDI %(vdi_to_clone_ref)s"
-msgstr "从 VDI %(vdi_to_clone_ref)s 克隆了 VDI %(vdi_ref)s"
+msgstr "克隆了 VDI %(vdi_ref)s 对象来自VDI %(vdi_to_clone_ref)s"
 
-#: nova/virt/xenapi/vm_utils.py:375
-#, python-format
-msgid "No primary VDI found for%(vm_ref)s"
+#: nova/virt/xenapi/vm_utils.py:374
+#, fuzzy, python-format
+msgid "No primary VDI found for %(vm_ref)s"
 msgstr "未找到 %(vm_ref)s 的主VDI"
 
-#: nova/virt/xenapi/vm_utils.py:382
+#: nova/virt/xenapi/vm_utils.py:381
 #, python-format
 msgid "Snapshotting VM %(vm_ref)s with label '%(label)s'..."
-msgstr "正在用标签 ”%(label)s“ 为虚拟机 %(vm_ref)s 做快照..."
+msgstr "正在为虚拟机 %(vm_ref)s 做快照，采用标签是 “%(label)s”"
 
-#: nova/virt/xenapi/vm_utils.py:395
+#: nova/virt/xenapi/vm_utils.py:394
 #, python-format
 msgid "Created snapshot %(template_vm_ref)s from VM %(vm_ref)s."
-msgstr "已经从虚拟机 %(vm_ref)s 里创建了快照 %(template_vm_ref)s"
+msgstr "已经创建了快照 %(template_vm_ref)s 快照对象是虚拟机 %(vm_ref)s。"
 
-#: nova/virt/xenapi/vm_utils.py:434
+#: nova/virt/xenapi/vm_utils.py:433
 #, python-format
 msgid "Asking xapi to upload %(vdi_uuids)s as ID %(image_id)s"
 msgstr "请求xapi 上传 %(vdi_uuids)s 作为镜像ID %(image_id)s"
 
-#: nova/virt/xenapi/vm_utils.py:641
+#: nova/virt/xenapi/vm_utils.py:640
 #, python-format
 msgid ""
 "Fast cloning is only supported on default local SR of type ext. SR on "
 "this system was found to be of type %(sr_type)s. Ignoring the cow flag."
-msgstr "只能在ext类型的缺省本地SR支持快速克隆。这个系统的SR的类型为 %(sr_type)s。忽略此 cow 标记。"
+msgstr "只能在ext类型的缺省本地存储库支持快速克隆。这个系统的存储库类型为 %(sr_type)s。忽略此 cow 标记。"
 
-#: nova/virt/xenapi/vm_utils.py:733
+#: nova/virt/xenapi/vm_utils.py:732
 #, python-format
 msgid ""
 "download_vhd %(image)s attempt %(attempt_num)d/%(max_attempts)d from "
 "%(glance_host)s:%(glance_port)s"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:743
+#: nova/virt/xenapi/vm_utils.py:742
 #, python-format
 msgid "download_vhd failed: %r"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:760
+#: nova/virt/xenapi/vm_utils.py:759
 #, python-format
 msgid "Asking xapi to fetch vhd image %(image)s"
 msgstr "请求 xapi 获取 vhd 镜像 %(image)s"
 
-#: nova/virt/xenapi/vm_utils.py:770
+#: nova/virt/xenapi/vm_utils.py:769
 #, python-format
 msgid ""
 "xapi 'download_vhd' returned VDI of type '%(vdi_type)s' with UUID "
 "'%(vdi_uuid)s'"
-msgstr "xapi 'download_vhd' 返回 UUID 为 “%(vdi_uuid)s” 的 “%(vdi_type)s” 类型的VDI"
+msgstr "xapi 'download_vhd' 返回“%(vdi_type)s”类型的VDI，其UUID为 “%(vdi_uuid)s”"
 
-#: nova/virt/xenapi/vm_utils.py:798
+#: nova/virt/xenapi/vm_utils.py:797
 #, python-format
 msgid "vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes=%(vdi_size_bytes)d"
 msgstr "vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes=%(vdi_size_bytes)d"
 
-#: nova/virt/xenapi/vm_utils.py:814
+#: nova/virt/xenapi/vm_utils.py:813
 #, python-format
 msgid "image_size_bytes=%(size_bytes)d, allowed_size_bytes=%(allowed_size_bytes)d"
 msgstr "image_size_bytes=%(size_bytes)d，allowed_size_bytes=%(allowed_size_bytes)d"
 
-#: nova/virt/xenapi/vm_utils.py:818
+#: nova/virt/xenapi/vm_utils.py:817
 #, python-format
 msgid ""
 "Image size %(size_bytes)d exceeded instance_type allowed size "
 "%(allowed_size_bytes)d"
 msgstr "镜像大小 %(size_bytes)d 超过instance_type所允许的小大 %(allowed_size_bytes)d"
 
-#: nova/virt/xenapi/vm_utils.py:841
+#: nova/virt/xenapi/vm_utils.py:840
 #, python-format
 msgid "Fetching image %(image)s"
 msgstr "获取镜像 %(image)s"
 
-#: nova/virt/xenapi/vm_utils.py:842
+#: nova/virt/xenapi/vm_utils.py:841
 #, python-format
 msgid "Image Type: %s"
 msgstr "镜像类型：%s"
 
-#: nova/virt/xenapi/vm_utils.py:846
+#: nova/virt/xenapi/vm_utils.py:845
 msgid "ISO: Found sr possibly containing the ISO image"
-msgstr "ISO：SR可能包含该ISO镜像"
+msgstr "ISO：找到可能包含该ISO镜像的存储库"
 
-#: nova/virt/xenapi/vm_utils.py:855
-#, python-format
-msgid "Size for image %(image)s:%(virtual_size)d"
+#: nova/virt/xenapi/vm_utils.py:854
+#, fuzzy, python-format
+msgid "Size for image %(image)s: %(virtual_size)d"
 msgstr "镜像 %(image)s 的大小：%(virtual_size)d"
 
-#: nova/virt/xenapi/vm_utils.py:864
+#: nova/virt/xenapi/vm_utils.py:862
 #, python-format
 msgid ""
 "Kernel/Ramdisk image is too large: %(vdi_size)d bytes, max %(max_size)d "
 "bytes"
-msgstr "Kernel/Ramdisk镜像太大：%(vdi_size)d bytes，最大 %(max_size)d bytes"
+msgstr "内核/内存盘镜像太大：%(vdi_size)d 字节，最大 %(max_size)d 字节"
 
-#: nova/virt/xenapi/vm_utils.py:881
+#: nova/virt/xenapi/vm_utils.py:879
 #, python-format
 msgid "Copying VDI %s to /boot/guest on dom0"
 msgstr "将VDI %s 复制到dom0的/boot/guest下"
 
-#: nova/virt/xenapi/vm_utils.py:894
+#: nova/virt/xenapi/vm_utils.py:892
 #, python-format
 msgid "Kernel/Ramdisk VDI %s destroyed"
-msgstr "Kernel/Ramdisk VDI %s已销毁"
+msgstr "内核/内存盘 VDI %s 已销毁"
 
-#: nova/virt/xenapi/vm_utils.py:904
+#: nova/virt/xenapi/vm_utils.py:902
 #, python-format
 msgid "instance %s: Failed to fetch glance image"
 msgstr "实例 %s：获取Glance镜像失败"
 
-#: nova/virt/xenapi/vm_utils.py:943
+#: nova/virt/xenapi/vm_utils.py:941
 #, python-format
 msgid "Detected %(image_type_str)s format for image %(image_ref)s"
-msgstr "为镜像 %(image_ref)s 检测到 %(image_type_str)s 格式"
+msgstr "检测到 %(image_type_str)s 格式，目标是镜像 %(image_ref)s"
 
-#: nova/virt/xenapi/vm_utils.py:964
+#: nova/virt/xenapi/vm_utils.py:962
 #, python-format
 msgid "Looking up vdi %s for PV kernel"
 msgstr "为PV内核查询vdi %s"
 
-#: nova/virt/xenapi/vm_utils.py:982
+#: nova/virt/xenapi/vm_utils.py:980
 #, python-format
 msgid "Unknown image format %(disk_image_type)s"
 msgstr "未知的镜像格式 %(disk_image_type)s"
 
-#: nova/virt/xenapi/vm_utils.py:1025
+#: nova/virt/xenapi/vm_utils.py:1023
 #, python-format
 msgid "VDI %s is still available"
 msgstr "VDI %s 依然可用"
 
-#: nova/virt/xenapi/vm_utils.py:1071
+#: nova/virt/xenapi/vm_utils.py:1066
 #, python-format
 msgid "(VM_UTILS) xenserver vm state -> |%s|"
 msgstr "(VM_UTILS) xenserver 虚拟机状态 -> |%s|"
 
-#: nova/virt/xenapi/vm_utils.py:1073
+#: nova/virt/xenapi/vm_utils.py:1068
 #, python-format
 msgid "(VM_UTILS) xenapi power_state -> |%s|"
 msgstr "(VM_UTILS) xenapi power_state -> |%s|"
 
-#: nova/virt/xenapi/vm_utils.py:1100
+#: nova/virt/xenapi/vm_utils.py:1095
 #, python-format
 msgid "Unable to parse rrd of %(vm_uuid)s"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1120
+#: nova/virt/xenapi/vm_utils.py:1115
 #, python-format
 msgid "Re-scanning SR %s"
-msgstr "重新扫描SR %s"
+msgstr "重新扫描存储库 %s"
 
-#: nova/virt/xenapi/vm_utils.py:1148
+#: nova/virt/xenapi/vm_utils.py:1143
 #, python-format
 msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
-msgstr "Flag sr_matching_filter '%s' 没有遵循格式要求"
+msgstr "标记sr_matching_filter '%s' 没有遵循格式要求"
 
-#: nova/virt/xenapi/vm_utils.py:1166
+#: nova/virt/xenapi/vm_utils.py:1161
 msgid ""
 "XenAPI is unable to find a Storage Repository to install guest instances "
 "on. Please check your configuration and/or configure the flag "
 "'sr_matching_filter'"
-msgstr "XenAPI无法找到安装客户实例的Storage Repository。请检查你的配置或者配置flag 'sr_matching_filter'"
+msgstr "XenAPI无法找到安装客户实例的存储库。请检查你的配置或者配置标记'sr_matching_filter'"
 
-#: nova/virt/xenapi/vm_utils.py:1179
+#: nova/virt/xenapi/vm_utils.py:1174
 msgid "Cannot find SR of content-type ISO"
-msgstr "无法找到content-type ISO的SR"
+msgstr "无法找到content-type ISO的存储库"
 
-#: nova/virt/xenapi/vm_utils.py:1187
+#: nova/virt/xenapi/vm_utils.py:1182
 #, python-format
 msgid "ISO: looking at SR %(sr_rec)s"
-msgstr "ISO：正在查看SR %(sr_rec)s"
+msgstr "ISO：正在查看存储库 %(sr_rec)s"
 
-#: nova/virt/xenapi/vm_utils.py:1189
+#: nova/virt/xenapi/vm_utils.py:1184
 msgid "ISO: not iso content"
 msgstr "ISO：非iso内容"
 
-#: nova/virt/xenapi/vm_utils.py:1192
+#: nova/virt/xenapi/vm_utils.py:1187
 msgid "ISO: iso content_type, no 'i18n-key' key"
 msgstr "ISO：iso content_type，没有 'i18n-key' 键"
 
-#: nova/virt/xenapi/vm_utils.py:1195
+#: nova/virt/xenapi/vm_utils.py:1190
 msgid "ISO: iso content_type, i18n-key value not 'local-storage-iso'"
 msgstr "ISO：iso content_type，i18n-key的值不是 'local-storage-iso'"
 
-#: nova/virt/xenapi/vm_utils.py:1199
+#: nova/virt/xenapi/vm_utils.py:1194
 msgid "ISO: SR MATCHing our criteria"
-msgstr "ISO: SR符合标准"
+msgstr "ISO: 存储库符合标准"
 
-#: nova/virt/xenapi/vm_utils.py:1201
+#: nova/virt/xenapi/vm_utils.py:1196
 msgid "ISO: ISO, looking to see if it is host local"
-msgstr "ISO: ISO, looking to see if it is host local"
+msgstr "ISO: ISO, 正在查看是否是本地的主机"
 
-#: nova/virt/xenapi/vm_utils.py:1204
+#: nova/virt/xenapi/vm_utils.py:1199
 #, python-format
 msgid "ISO: PBD %(pbd_ref)s disappeared"
 msgstr "ISO: PBD %(pbd_ref)s 消失了"
 
-#: nova/virt/xenapi/vm_utils.py:1207
+#: nova/virt/xenapi/vm_utils.py:1202
 #, python-format
 msgid "ISO: PBD matching, want %(pbd_rec)s, have %(host)s"
-msgstr "ISO: PBD matching, want %(pbd_rec)s, have %(host)s"
+msgstr "ISO: PBD匹配, 想要 %(pbd_rec)s, 目前有 %(host)s"
 
-#: nova/virt/xenapi/vm_utils.py:1210
+#: nova/virt/xenapi/vm_utils.py:1205
 msgid "ISO: SR with local PBD"
-msgstr "ISO：含有本地PBD的SR"
+msgstr "ISO：含有本地PBD的存储库"
 
-#: nova/virt/xenapi/vm_utils.py:1232
+#: nova/virt/xenapi/vm_utils.py:1227
 #, python-format
 msgid ""
 "Unable to obtain RRD XML for VM %(vm_uuid)s with server details: "
 "%(server)s."
 msgstr "无法为含服务器详细信息的虚拟机 %(vm_uuid)s 获取RRD XML：%(server)s。"
 
-#: nova/virt/xenapi/vm_utils.py:1248
+#: nova/virt/xenapi/vm_utils.py:1243
 #, python-format
 msgid "Unable to obtain RRD XML updates with server details: %(server)s."
 msgstr "无法获取包含服务器详细情况的RRD XML更新：%(server)s。"
 
-#: nova/virt/xenapi/vm_utils.py:1302
+#: nova/virt/xenapi/vm_utils.py:1297
 #, python-format
 msgid "Invalid statistics data from Xenserver: %s"
 msgstr "来自Xenserver无效的统计数据：%s"
 
-#: nova/virt/xenapi/vm_utils.py:1355
+#: nova/virt/xenapi/vm_utils.py:1350
 #, python-format
 msgid "VHD %(vdi_uuid)s has parent %(parent_ref)s"
 msgstr "VHD %(vdi_uuid)s 有父 %(parent_ref)s"
 
-#: nova/virt/xenapi/vm_utils.py:1429
+#: nova/virt/xenapi/vm_utils.py:1424
 #, python-format
 msgid ""
 "Parent %(parent_uuid)s doesn't match original parent "
 "%(original_parent_uuid)s, waiting for coalesce..."
 msgstr "父标识 %(parent_uuid)s 和原先的父标识 %(original_parent_uuid)s 不匹配，正在等待合并..."
 
-#: nova/virt/xenapi/vm_utils.py:1439
+#: nova/virt/xenapi/vm_utils.py:1434
 #, python-format
 msgid "VHD coalesce attempts exceeded (%(max_attempts)d), giving up..."
 msgstr "VHD coalesce 将要超过(%(max_attempts)d)，放弃中..."
 
-#: nova/virt/xenapi/vm_utils.py:1474
+#: nova/virt/xenapi/vm_utils.py:1469
 #, python-format
 msgid "Timeout waiting for device %s to be created"
 msgstr "等待设备 %s 创建超时"
 
-#: nova/virt/xenapi/vm_utils.py:1485
+#: nova/virt/xenapi/vm_utils.py:1480
 #, python-format
 msgid "Plugging VBD %s ... "
 msgstr "插入VBD %s... "
 
-#: nova/virt/xenapi/vm_utils.py:1488
+#: nova/virt/xenapi/vm_utils.py:1483
 #, python-format
 msgid "Plugging VBD %s done."
 msgstr "插入VBD %s 完成。"
 
-#: nova/virt/xenapi/vm_utils.py:1490
+#: nova/virt/xenapi/vm_utils.py:1485
 #, python-format
 msgid "VBD %(vbd_ref)s plugged as %(orig_dev)s"
 msgstr "VBD %(vbd_ref)s 作为 %(orig_dev)s 插入"
 
-#: nova/virt/xenapi/vm_utils.py:1493
+#: nova/virt/xenapi/vm_utils.py:1488
 #, python-format
 msgid "VBD %(vbd_ref)s plugged into wrong dev, remapping to %(dev)s"
 msgstr "VBD %(vbd_ref)s 插入错误的设备，重新映射为 %(dev)s"
 
-#: nova/virt/xenapi/vm_utils.py:1502
+#: nova/virt/xenapi/vm_utils.py:1497
 #, python-format
 msgid "Destroying VBD for VDI %s ... "
 msgstr "正在销毁VDI为 %s 的 VBD "
 
-#: nova/virt/xenapi/vm_utils.py:1510
+#: nova/virt/xenapi/vm_utils.py:1505
 #, python-format
 msgid "Destroying VBD for VDI %s done."
 msgstr "已经销毁VDI为 %s 的 VBD"
 
-#: nova/virt/xenapi/vm_utils.py:1523
+#: nova/virt/xenapi/vm_utils.py:1518
 #, python-format
 msgid "Running pygrub against %s"
 msgstr "对 %s 运行pygrub"
 
-#: nova/virt/xenapi/vm_utils.py:1530
+#: nova/virt/xenapi/vm_utils.py:1525
 #, python-format
 msgid "Found Xen kernel %s"
 msgstr "找到Xen内核 %s"
 
-#: nova/virt/xenapi/vm_utils.py:1532
+#: nova/virt/xenapi/vm_utils.py:1527
 msgid "No Xen kernel found.  Booting HVM."
 msgstr "没有找到Xen内核。正在启动HVM。"
 
-#: nova/virt/xenapi/vm_utils.py:1545
+#: nova/virt/xenapi/vm_utils.py:1540
 msgid "Partitions:"
 msgstr "分区："
 
-#: nova/virt/xenapi/vm_utils.py:1551
+#: nova/virt/xenapi/vm_utils.py:1546
 #, python-format
 msgid "  %(num)s: %(ptype)s %(size)d sectors"
 msgstr "  %(num)s: %(ptype)s %(size)d sectors"
 
-#: nova/virt/xenapi/vm_utils.py:1577
+#: nova/virt/xenapi/vm_utils.py:1572
 #, python-format
 msgid ""
 "Writing partition table %(primary_first)d %(primary_last)d to "
 "%(dev_path)s..."
 msgstr "将分区表 %(primary_first)d %(primary_last)d 写入到 %(dev_path)s..."
 
-#: nova/virt/xenapi/vm_utils.py:1590
+#: nova/virt/xenapi/vm_utils.py:1585
 #, python-format
 msgid "Writing partition table %s done."
-msgstr "书写分区表 %s 完成。"
+msgstr "完成写入分区表 %s 。"
 
-#: nova/virt/xenapi/vm_utils.py:1644
+#: nova/virt/xenapi/vm_utils.py:1639
 #, python-format
 msgid ""
 "Starting sparse_copy src=%(src_path)s dst=%(dst_path)s "
 "virtual_size=%(virtual_size)d block_size=%(block_size)d"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1676
+#: nova/virt/xenapi/vm_utils.py:1671
 #, python-format
 msgid ""
 "Finished sparse_copy in %(duration).2f secs, %(compression_pct).2f%% "
 "reduction in size"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1726
+#: nova/virt/xenapi/vm_utils.py:1721
 msgid ""
 "XenServer tools installed in this image are capable of network injection."
 "  Networking files will not bemanipulated"
 msgstr "安装在该镜像的XenServer工具可以进行网络注入。网络文件不会被操作。"
 
-#: nova/virt/xenapi/vm_utils.py:1734
+#: nova/virt/xenapi/vm_utils.py:1729
 msgid ""
 "XenServer tools are present in this image but are not capable of network "
 "injection"
 msgstr "该镜像有XenServer工具，但是不能进行网络注入"
 
-#: nova/virt/xenapi/vm_utils.py:1738
+#: nova/virt/xenapi/vm_utils.py:1733
 msgid "XenServer tools are not installed in this image"
 msgstr "没有在该镜像上安装XenServer工具"
 
-#: nova/virt/xenapi/vm_utils.py:1754
+#: nova/virt/xenapi/vm_utils.py:1749
 msgid "Manipulating interface files directly"
 msgstr "直接操作接口文件"
 
-#: nova/virt/xenapi/vm_utils.py:1764
+#: nova/virt/xenapi/vm_utils.py:1759
 #, python-format
 msgid "Failed to mount filesystem (expected for non-linux instances): %s"
 msgstr "挂载文件系统失败(期望的是非Linux实例)：%s"
@@ -6546,26 +6567,16 @@ msgstr "将实例 '%(instance_uuid)s' 的进度更新到 %(progress)d"
 #: nova/virt/xenapi/vmops.py:230
 #, python-format
 msgid "Attempted to power on non-existent instance bad instance id %s"
-msgstr "尝试过启动不存在的虚拟机，虚拟机的id %s 不正确"
+msgstr "尝试过启动不存在的实例，实例的id %s 不正确"
 
 #: nova/virt/xenapi/vmops.py:232
 #, python-format
 msgid "Starting instance %s"
 msgstr "启动实例 %s"
 
-#: nova/virt/xenapi/vmops.py:273
-#, fuzzy, python-format
-msgid "Removing VDI %(vdi_ref)s(uuid:%(vdi_uuid)s)"
-msgstr "移除VDI %(vdi_ref)s(uuid：%(vdi_to_remove)s)"
-
-#: nova/virt/xenapi/vmops.py:278
-#, python-format
-msgid "Skipping VDI destroy for %s"
-msgstr "跳过 %s 的VDI的销毁"
-
 #: nova/virt/xenapi/vmops.py:302
 msgid "Removing kernel/ramdisk files from dom0"
-msgstr "从 dom0 中移除kernel/ramdisk文件"
+msgstr "从 dom0 中移除内核/内存盘文件"
 
 #: nova/virt/xenapi/vmops.py:357
 #, fuzzy, python-format
@@ -6577,7 +6588,7 @@ msgstr "实例 %(instance_id)s 没有运行。"
 msgid ""
 "Auto configuring disk for instance %(instance_uuid)s, attempting to "
 "resize partition..."
-msgstr "正在自动配置虚拟机 %(instance_uuid)s 的磁盘，尝试调整分区大小..."
+msgstr "正在自动配置实例 %(instance_uuid)s 的磁盘，尝试调整分区大小..."
 
 #: nova/virt/xenapi/vmops.py:519
 #, python-format
@@ -6599,7 +6610,7 @@ msgstr "重置网络"
 
 #: nova/virt/xenapi/vmops.py:541
 msgid "Setting VCPU weight"
-msgstr "设置VCPU weight"
+msgstr "设置VCPU 权重"
 
 #: nova/virt/xenapi/vmops.py:547
 #, python-format
@@ -6609,7 +6620,7 @@ msgstr "启动虚拟机 %s..."
 #: nova/virt/xenapi/vmops.py:550
 #, python-format
 msgid "Spawning VM %(instance_uuid)s created %(vm_ref)s."
-msgstr "Spawning VM %(instance_uuid)s created %(vm_ref)s."
+msgstr "生产 VM %(instance_uuid)s 它是由 %(vm_ref)s 创建的。"
 
 #: nova/virt/xenapi/vmops.py:557
 #, python-format
@@ -6621,7 +6632,7 @@ msgstr "%(hypervisor)s/%(os)s/%(architecture)s 最新的agent build 是 %(versio
 #: nova/virt/xenapi/vmops.py:560
 #, python-format
 msgid "No agent build found for %(hypervisor)s/%(os)s/%(architecture)s"
-msgstr "没有找到 %(hypervisor)s/%(os)s/%(architecture)s 的 agent build"
+msgstr "没有找到 %(hypervisor)s/%(os)s/%(architecture)s 的代理创建"
 
 #: nova/virt/xenapi/vmops.py:567
 #, python-format
@@ -6726,131 +6737,126 @@ msgstr "虚拟机 %(instance_uuid)s 已经终止，跳过关闭..."
 msgid "Shutting down VM for Instance %(instance_uuid)s"
 msgstr "为实例 %(instance_uuid)s 关闭虚拟机"
 
-#: nova/virt/xenapi/vmops.py:1066
+#: nova/virt/xenapi/vmops.py:1069
 msgid "Unable to find VBD for VM"
 msgstr "无法为虚拟机找到VBD"
 
-#: nova/virt/xenapi/vmops.py:1090
-#, python-format
-msgid "Destroying VDIs for Instance %(instance_uuid)s"
-msgstr "正在为实例 %(instance_uuid)s 销毁 VDIs"
-
-#: nova/virt/xenapi/vmops.py:1145
+#: nova/virt/xenapi/vmops.py:1112
 #, python-format
 msgid ""
 "Instance %(instance_uuid)s using RAW or VHD, skipping kernel and ramdisk "
 "deletion"
-msgstr "实例 %(instance_uuid)s 使用RAW或者VHD，跳过kerne和ramdisk的删除"
+msgstr "实例 %(instance_uuid)s 使用RAW或者VHD，跳过内核和内存盘的删除"
 
-#: nova/virt/xenapi/vmops.py:1152
+#: nova/virt/xenapi/vmops.py:1119
 msgid "instance has a kernel or ramdisk but not both"
-msgstr "实例拥有kernel或者ramdisk，但不是二者均有"
+msgstr "实例拥有内核或者内存盘，但不是二者均有"
 
-#: nova/virt/xenapi/vmops.py:1159
+#: nova/virt/xenapi/vmops.py:1126
 msgid "kernel/ramdisk files removed"
-msgstr "kernel/ramdisk文件移除了"
+msgstr "内核/内存盘文件移除了"
 
-#: nova/virt/xenapi/vmops.py:1169
+#: nova/virt/xenapi/vmops.py:1136
 #, python-format
 msgid "Instance %(instance_uuid)s VM destroyed"
 msgstr "实例 %(instance_uuid)s 销毁了"
 
-#: nova/virt/xenapi/vmops.py:1187
+#: nova/virt/xenapi/vmops.py:1163
 #, python-format
 msgid "Destroying VM for Instance %(instance_uuid)s"
 msgstr "正在为实例%(instance_uuid)s 销毁虚拟机"
 
-#: nova/virt/xenapi/vmops.py:1208
+#: nova/virt/xenapi/vmops.py:1185
 msgid "VM is not present, skipping destroy..."
 msgstr "虚拟机不存在，跳过销毁..."
 
-#: nova/virt/xenapi/vmops.py:1257
+#: nova/virt/xenapi/vmops.py:1237
 #, python-format
 msgid "Instance is already in Rescue Mode: %s"
-msgstr "实例已处于Rescue模式：%s"
+msgstr "实例已处于救援模式：%s"
 
-#: nova/virt/xenapi/vmops.py:1329
+#: nova/virt/xenapi/vmops.py:1311
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
-msgstr "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
+msgstr "找到%(instance_count)d个超过%(timeout)d秒悬挂的重启"
 
-#: nova/virt/xenapi/vmops.py:1333
+#: nova/virt/xenapi/vmops.py:1315
 #, python-format
 msgid "Automatically hard rebooting %d"
 msgstr "自动冷重启 %d"
 
-#: nova/virt/xenapi/vmops.py:1398
+#: nova/virt/xenapi/vmops.py:1380
 #, python-format
 msgid "Instance for migration %d not found, skipping"
 msgstr "没有找到为迁移 %d 的实例，正在跳过"
 
-#: nova/virt/xenapi/vmops.py:1428
+#: nova/virt/xenapi/vmops.py:1410
 msgid "Could not get bandwidth info."
 msgstr "无法得到带宽信息"
 
-#: nova/virt/xenapi/vmops.py:1479
+#: nova/virt/xenapi/vmops.py:1461
 #, python-format
 msgid "injecting network info to xs for vm: |%s|"
 msgstr "为虚拟机注入网络信息到xs：|%s|"
 
-#: nova/virt/xenapi/vmops.py:1497
+#: nova/virt/xenapi/vmops.py:1479
 #, python-format
 msgid "creating vif(s) for vm: |%s|"
 msgstr "正在为虚拟机创建 vif(s)：|%s|"
 
-#: nova/virt/xenapi/vmops.py:1506
+#: nova/virt/xenapi/vmops.py:1488
 #, python-format
 msgid "Creating VIF for VM %(vm_ref)s, network %(network_ref)s."
 msgstr "正在为虚拟机 %(vm_ref)s，网络 %(network_ref)s 创建VIF。"
 
-#: nova/virt/xenapi/vmops.py:1509
+#: nova/virt/xenapi/vmops.py:1491
 #, python-format
 msgid "Created VIF %(vif_ref)s for VM %(vm_ref)s, network %(network_ref)s."
-msgstr "正在为虚拟机 %(vm_ref)s，网络 %(network_ref)s 创建VIF  %(vif_ref)s。"
+msgstr "创建VIF %(vif_ref)s 是为了虚拟机 %(vm_ref)s，网络 %(network_ref)s。"
 
-#: nova/virt/xenapi/vmops.py:1538
+#: nova/virt/xenapi/vmops.py:1520
 #, python-format
 msgid "injecting hostname to xs for vm: |%s|"
 msgstr "为虚拟机注入hostname到xs：|%s|"
 
-#: nova/virt/xenapi/vmops.py:1600
+#: nova/virt/xenapi/vmops.py:1582
 #, python-format
 msgid ""
 "The agent call to %(method)s returned an invalid response: %(ret)r. VM "
 "id=%(instance_uuid)s; path=%(path)s; args=%(addl_args)r"
 msgstr ""
-"%(method)s 的代理调用返回无效的答复：%(ret)r。虚拟机id=%(instance_uuid)s; path=%(path)s; "
+"%(method)s 的代理调用返回无效的响应：%(ret)r。虚拟机id=%(instance_uuid)s; path=%(path)s; "
 "args=%(addl_args)r"
 
-#: nova/virt/xenapi/vmops.py:1622
+#: nova/virt/xenapi/vmops.py:1604
 #, python-format
 msgid ""
 "TIMEOUT: The call to %(method)s timed out. VM id=%(instance_uuid)s; "
 "args=%(args)r"
 msgstr "超时：调用 %(method)s 超时。虚拟机id=%(instance_uuid)s; args=%(args)r"
 
-#: nova/virt/xenapi/vmops.py:1626
+#: nova/virt/xenapi/vmops.py:1608
 #, python-format
 msgid ""
 "NOT IMPLEMENTED: The call to %(method)s is not supported by the agent. VM"
 " id=%(instance_uuid)s; args=%(args)r"
 msgstr "没有执行：代理不支持 %(method)s 的调用。虚拟机id=%(instance_uuid)s; args=%(args)r"
 
-#: nova/virt/xenapi/vmops.py:1631
+#: nova/virt/xenapi/vmops.py:1613
 #, python-format
 msgid ""
 "The call to %(method)s returned an error: %(e)s. VM id=%(instance_uuid)s;"
 " args=%(args)r"
 msgstr "%(method)s 的调用返回错误：%(e)s。虚拟机id=%(instance_uuid)s; args=%(args)r"
 
-#: nova/virt/xenapi/vmops.py:1817
+#: nova/virt/xenapi/vmops.py:1799
 #, python-format
 msgid "OpenSSL error: %s"
 msgstr "OpenSSL错误：%s"
 
 #: nova/virt/xenapi/volume_utils.py:52
 msgid "creating sr within volume_utils"
-msgstr "在volume_utils创建sr"
+msgstr "在volume_utils创建存储库"
 
 #: nova/virt/xenapi/volume_utils.py:55 nova/virt/xenapi/volume_utils.py:83
 #, python-format
@@ -6869,7 +6875,7 @@ msgstr "将 %(label)s 作为 %(sr_ref)s 创建。"
 
 #: nova/virt/xenapi/volume_utils.py:76 nova/virt/xenapi/volume_utils.py:174
 msgid "Unable to create Storage Repository"
-msgstr "无法创建 Storage Repository"
+msgstr "无法创建存储库"
 
 #: nova/virt/xenapi/volume_utils.py:80
 msgid "introducing sr within volume_utils"
@@ -6883,24 +6889,24 @@ msgstr "将 %(label)s 作为 %(sr_ref)s 引入。"
 
 #: nova/virt/xenapi/volume_utils.py:106
 msgid "Creating pbd for SR"
-msgstr "为SR创建pbd"
+msgstr "为存储库创建pbd"
 
 #: nova/virt/xenapi/volume_utils.py:108
 msgid "Plugging SR"
-msgstr "Plugging SR"
+msgstr "插入存储库"
 
 #: nova/virt/xenapi/volume_utils.py:116 nova/virt/xenapi/volumeops.py:160
 msgid "Unable to introduce Storage Repository"
-msgstr "无法引入Storage Repository"
+msgstr "无法引入存储库"
 
 #: nova/virt/xenapi/volume_utils.py:127 nova/virt/xenapi/volumeops.py:50
 msgid "Unable to get SR using uuid"
-msgstr "无法得到使用uuid的SR"
+msgstr "无法得到使用uuid的存储库"
 
 #: nova/virt/xenapi/volume_utils.py:129
 #, python-format
 msgid "Forgetting SR %s..."
-msgstr "遗忘SR %s..."
+msgstr "遗忘存储库 %s..."
 
 #: nova/virt/xenapi/volume_utils.py:137
 msgid "Unable to forget Storage Repository"
@@ -6914,22 +6920,22 @@ msgstr "引入 %s..."
 #: nova/virt/xenapi/volume_utils.py:186
 #, python-format
 msgid "Unable to find SR from VBD %s"
-msgstr "无法在VBD %s找到SR"
+msgstr "无法在VBD %s找到存储库"
 
 #: nova/virt/xenapi/volume_utils.py:204
 #, python-format
 msgid "Ignoring exception %(exc)s when getting PBDs for %(sr_ref)s"
-msgstr "为 %(sr_ref)s 得到PBDs时，忽略异常 %(exc)s"
+msgstr "异常 %(exc)s 在为 %(sr_ref)s 得到PBDs时被忽略"
 
 #: nova/virt/xenapi/volume_utils.py:210
 #, python-format
 msgid "Ignoring exception %(exc)s when unplugging PBD %(pbd)s"
-msgstr "当拔开PBD  %(pbd)s 时，忽略异常 %(exc)s"
+msgstr "异常 %(exc)s 在拔开PBD %(pbd)s 时被忽略"
 
 #: nova/virt/xenapi/volume_utils.py:234
 #, python-format
 msgid "Unable to introduce VDI on SR %s"
-msgstr "无法在SR %s 上引入VDI"
+msgstr "无法在存储库 %s 上引入VDI"
 
 #: nova/virt/xenapi/volume_utils.py:242
 #, python-format
@@ -6939,12 +6945,12 @@ msgstr "无法使得VDI %s 的记录运行"
 #: nova/virt/xenapi/volume_utils.py:264
 #, python-format
 msgid "Unable to introduce VDI for SR %s"
-msgstr "无法为SR %s 引入VDI"
+msgstr "无法为存储库 %s 引入VDI"
 
 #: nova/virt/xenapi/volume_utils.py:274
 #, python-format
 msgid "Error finding vdis in SR %s"
-msgstr "在SR %s 寻找VDIs出错"
+msgstr "在存储库 %s 寻找VDIs出错"
 
 #: nova/virt/xenapi/volume_utils.py:281
 #, python-format
@@ -6968,42 +6974,42 @@ msgstr "找不到VDI ref"
 #: nova/virt/xenapi/volumeops.py:69
 #, python-format
 msgid "Creating SR %s"
-msgstr "正在创建SR %s"
+msgstr "正在创建存储库 %s"
 
 #: nova/virt/xenapi/volumeops.py:73
 msgid "Could not create SR"
-msgstr "无法创建SR"
+msgstr "无法创建存储库"
 
 #: nova/virt/xenapi/volumeops.py:76
 msgid "Could not retrieve SR record"
-msgstr "无法获取SR记录"
+msgstr "无法获取存储库记录"
 
 #: nova/virt/xenapi/volumeops.py:81
 #, python-format
 msgid "Introducing SR %s"
-msgstr "引入SR %s"
+msgstr "引入存储库 %s"
 
 #: nova/virt/xenapi/volumeops.py:85
 msgid "SR found in xapi database. No need to introduce"
-msgstr "在xapi数据库找到SR。无需引入。"
+msgstr "在xapi数据库找到存储库。无需引入。"
 
 #: nova/virt/xenapi/volumeops.py:90
 msgid "Could not introduce SR"
-msgstr "无法引入SR"
+msgstr "无法引入存储库"
 
 #: nova/virt/xenapi/volumeops.py:94
 #, python-format
 msgid "Checking for SR %s"
-msgstr "检查SR %s"
+msgstr "检查存储库 %s"
 
 #: nova/virt/xenapi/volumeops.py:106
 #, python-format
 msgid "SR %s not found in the xapi database"
-msgstr "在xapi数据库没有找到SR %s"
+msgstr "在xapi数据库没有找到存储库 %s"
 
 #: nova/virt/xenapi/volumeops.py:112
 msgid "Could not forget SR"
-msgstr "不能忘记SR"
+msgstr "不能遗忘存储库"
 
 #: nova/virt/xenapi/volumeops.py:121
 #, python-format
@@ -7013,27 +7019,27 @@ msgstr "Attach_volume: %(connection_info)s, %(instance_name)s, %(mountpoint)s"
 #: nova/virt/xenapi/volumeops.py:178
 #, python-format
 msgid "Unable to create VDI on SR %(sr_ref)s for instance %(instance_name)s"
-msgstr "无法在SR %(sr_ref)s 上为实例 %(instance_name)s 创建 VDI"
+msgstr "无法在存储库 %(sr_ref)s 上为实例 %(instance_name)s 创建 VDI"
 
 #: nova/virt/xenapi/volumeops.py:189
 #, python-format
 msgid "Unable to use SR %(sr_ref)s for instance %(instance_name)s"
-msgstr "不能为实例%(instance_name)s使用SR %(sr_ref)s"
+msgstr "存储库 %(sr_ref)s 不能为实例%(instance_name)s使用"
 
 #: nova/virt/xenapi/volumeops.py:197
 #, python-format
 msgid "Unable to attach volume to instance %s"
-msgstr "无法挂载卷到虚拟机 %s"
+msgstr "无法附加卷到实例 %s"
 
 #: nova/virt/xenapi/volumeops.py:200
 #, python-format
 msgid "Mountpoint %(mountpoint)s attached to instance %(instance_name)s"
-msgstr "挂载点 %(mountpoint)s 挂载到虚拟机 %(instance_name)s"
+msgstr "挂载点 %(mountpoint)s 附加到实例 %(instance_name)s"
 
 #: nova/virt/xenapi/volumeops.py:210
 #, python-format
 msgid "Detach_volume: %(instance_name)s, %(mountpoint)s"
-msgstr "卸载_volume: %(instance_name)s, %(mountpoint)s"
+msgstr "分离_volume: %(instance_name)s, %(mountpoint)s"
 
 #: nova/virt/xenapi/volumeops.py:219
 #, python-format
@@ -7043,7 +7049,7 @@ msgstr "无法找到 %s 卷"
 #: nova/virt/xenapi/volumeops.py:227
 #, python-format
 msgid "Unable to detach volume %s"
-msgstr "无法卸载 %s 卷"
+msgstr "无法分离 %s 卷"
 
 #: nova/virt/xenapi/volumeops.py:232
 #, python-format
@@ -7053,12 +7059,12 @@ msgstr "无法销毁VBD %s"
 #: nova/virt/xenapi/volumeops.py:239
 #, python-format
 msgid "Error purging SR %s"
-msgstr "净化SR %s 出错"
+msgstr "净化存储库 %s 出错"
 
 #: nova/virt/xenapi/volumeops.py:241
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
-msgstr "挂载点 %(mountpoint)s 从虚拟机 %(instance_name)s 卸载"
+msgstr "挂载点 %(mountpoint)s 从实例 %(instance_name)s 分离"
 
 #: nova/vnc/xvp_proxy.py:98 nova/vnc/xvp_proxy.py:103
 #, python-format
@@ -7095,7 +7101,7 @@ msgstr "意外错误：%s"
 msgid "Starting nova-xvpvncproxy node (version %s)"
 msgstr "启动nova-xvpvncproxy节点(版本 %s)"
 
-#: nova/volume/api.py:74 nova/volume/api.py:214
+#: nova/volume/api.py:74 nova/volume/api.py:220
 msgid "status must be available"
 msgstr "状态必须可用"
 
@@ -7109,17 +7115,27 @@ msgstr "%(pid)s 的配额超出，尝试创建 %(size)sG 的卷"
 msgid "Volume status must be available or error"
 msgstr "卷组状态必须可获取"
 
-#: nova/volume/api.py:217
+#: nova/volume/api.py:142
+#, python-format
+msgid "Volume still has %d dependent snapshots"
+msgstr ""
+
+#: nova/volume/api.py:223
 msgid "already attached"
-msgstr "已经加载"
+msgstr "已经附加"
 
-#: nova/volume/api.py:224
+#: nova/volume/api.py:230
 msgid "already detached"
-msgstr "已经卸载"
+msgstr "已经分离"
 
-#: nova/volume/api.py:286 nova/volume/api.py:319
+#: nova/volume/api.py:292
 msgid "must be available"
 msgstr "必须可用"
+
+#: nova/volume/api.py:325
+#, fuzzy
+msgid "Volume Snapshot status must be available or error"
+msgstr "卷组状态必须可获取"
 
 #: nova/volume/driver.py:89
 #, python-format
@@ -7155,7 +7171,7 @@ msgstr "采用discovery，ISCSI provider_location 没有存储"
 #: nova/volume/driver.py:377
 #, python-format
 msgid "Could not find iSCSI export  for volume %s"
-msgstr "无法为卷 %s 找到 iSCSI 输出"
+msgstr "无法为卷 %s 找到 iSCSI 导出"
 
 #: nova/volume/driver.py:381
 #, python-format
@@ -7194,17 +7210,17 @@ msgstr "LoggingVolumeDriver: %s"
 #: nova/volume/manager.py:96
 #, python-format
 msgid "Re-exporting %s volumes"
-msgstr "重新输出卷%s"
+msgstr "重新导出卷%s"
 
 #: nova/volume/manager.py:101
 #, python-format
 msgid "volume %s: skipping export"
-msgstr "跳过卷：%s"
+msgstr "卷 %s：跳过导出"
 
 #: nova/volume/manager.py:107
 #, python-format
 msgid "volume %s: creating"
-msgstr "儲存量 %s: 在创造"
+msgstr "卷 %s: 创建中"
 
 #: nova/volume/manager.py:119
 #, python-format
@@ -7214,7 +7230,7 @@ msgstr "卷%(vol_name)s:创建大小为%(vol_size)s的逻辑卷"
 #: nova/volume/manager.py:131
 #, python-format
 msgid "volume %s: creating export"
-msgstr "卷%s：正在创建"
+msgstr "卷%s：正在创建导出"
 
 #: nova/volume/manager.py:144
 #, python-format
@@ -7223,7 +7239,7 @@ msgstr "卷%s：创建成功"
 
 #: nova/volume/manager.py:153
 msgid "Volume is still attached"
-msgstr "卷仍在挂载中"
+msgstr "卷仍在附加中"
 
 #: nova/volume/manager.py:155
 msgid "Volume is not local to this node"
@@ -7232,7 +7248,7 @@ msgstr "卷不属于这个节点"
 #: nova/volume/manager.py:159
 #, python-format
 msgid "volume %s: removing export"
-msgstr "卷%s：移除中"
+msgstr "卷%s：正在移除导出"
 
 #: nova/volume/manager.py:161
 #, python-format
@@ -7315,12 +7331,12 @@ msgstr "连接到 %s 的AMQP服务器"
 #: nova/volume/netapp.py:159
 #, fuzzy, python-format
 msgid "Job failed: %s"
-msgstr "未知的基础文件：%s"
+msgstr "未知的基文件：%s"
 
 #: nova/volume/netapp.py:240
 #, fuzzy
 msgid "Failed to provision dataset member"
-msgstr "更新DB失败"
+msgstr "更新数据库失败"
 
 #: nova/volume/netapp.py:252
 msgid "No LUN was created by the provision job"
@@ -7338,7 +7354,7 @@ msgstr ""
 #: nova/volume/netapp.py:603 nova/volume/netapp.py:657
 #, fuzzy, python-format
 msgid "No LUN ID for volume %s"
-msgstr "无法为卷 %s 找到 iSCSI 输出"
+msgstr "无法为卷 %s 找到 iSCSI 导出"
 
 #: nova/volume/netapp.py:607 nova/volume/netapp.py:661
 #, fuzzy, python-format
@@ -7381,7 +7397,7 @@ msgstr "返回CLIQ命令 %s"
 #: nova/volume/san.py:458
 #, python-format
 msgid "Malformed response to CLIQ command %(verb)s %(cliq_args)s. Result=%(out)s"
-msgstr "CLIQ命令 %(verb)s %(cliq_args)s 的不合法答复。Result=%(out)s"
+msgstr "CLIQ命令 %(verb)s %(cliq_args)s 错误格式的响应。Result=%(out)s"
 
 #: nova/volume/san.py:466
 #, python-format
@@ -7393,7 +7409,7 @@ msgstr "在运行CLIQ命令 %(verb)s %(cliq_args)s 时发生错误。输出结�
 msgid ""
 "Unexpected number of virtual ips for cluster  %(cluster_name)s. "
 "Result=%(_xml)s"
-msgstr "集群 %(cluster_name)s 有过量的虚拟 ip 地址。输出结果 Result=%(_xml)s"
+msgstr "集群 %(cluster_name)s 有意外数量的虚拟 ip 地址。输出结果 Result=%(_xml)s"
 
 #: nova/volume/san.py:549
 #, python-format
@@ -7417,7 +7433,7 @@ msgstr "SolidFire API 调用的参数：%s"
 #: nova/volume/san.py:713
 #, python-format
 msgid "Call to json.loads() raised an exception: %s"
-msgstr "调用json.loads()抛出异常：%s"
+msgstr "调用 json.loads() 引起异常：%s"
 
 #: nova/volume/san.py:718
 #, python-format
@@ -7474,17 +7490,17 @@ msgstr "id不能是None"
 #: nova/volume/xensm.py:55
 #, python-format
 msgid "SR name = %s"
-msgstr "SR name = %s"
+msgstr "存储库 name = %s"
 
 #: nova/volume/xensm.py:56
 #, python-format
 msgid "Params: %s"
-msgstr "Params: %s"
+msgstr "参数：%s"
 
 #: nova/volume/xensm.py:60
 #, python-format
 msgid "Failed to create sr %s...continuing"
-msgstr "创建sr %s失败... 继续"
+msgstr "创建存储库 %s失败... 继续"
 
 #: nova/volume/xensm.py:62
 msgid "Create failed"
@@ -7493,16 +7509,16 @@ msgstr "创建失败"
 #: nova/volume/xensm.py:64
 #, python-format
 msgid "SR UUID of new SR is: %s"
-msgstr "新SR的SR UUID：%s"
+msgstr "新存储库的存储库 UUID：%s"
 
 #: nova/volume/xensm.py:71
 msgid "Failed to update db"
-msgstr "更新DB失败"
+msgstr "更新数据库失败"
 
 #: nova/volume/xensm.py:80
 #, python-format
 msgid "Failed to introduce sr %s...continuing"
-msgstr "引入sr %s 失败... 继续"
+msgstr "引入存储库 %s 失败... 继续"
 
 #: nova/volume/xensm.py:91
 #, python-format
@@ -7573,7 +7589,7 @@ msgstr "来自SolidFire API的错误响应"
 #: nova/volume/nexenta/jsonrpc.py:79
 #, fuzzy, python-format
 msgid "Got response: %s"
-msgstr "回复 %s"
+msgstr "响应 %s"
 
 #: nova/volume/nexenta/volume.py:96
 #, fuzzy, python-format
@@ -7634,11 +7650,14 @@ msgstr ""
 #~ msgid "Virtual Storage Array %(name)s could not be found."
 #~ msgstr "无法找到虚拟存储阵列 %(name)s。"
 
+#~ msgid "Parent group id and group id cannot be same"
+#~ msgstr "父组id和组id不能一样"
+
 #~ msgid "No body provided"
 #~ msgstr "没有提供主体"
 
 #~ msgid "Create VSA %(display_name)s of type %(vc_type)s"
-#~ msgstr "创建类型 %(vc_type)s 的VSA %(display_name)s"
+#~ msgstr "创建VSA %(display_name)s 类型是 %(vc_type)s"
 
 #~ msgid "Delete VSA with id: %s"
 #~ msgstr "删除id：%s的VSA"
@@ -7647,16 +7666,16 @@ msgstr ""
 #~ msgstr "把地址 %(ip)s 与VSA %(id)s关联"
 
 #~ msgid "Disassociate address from VSA %(id)s"
-#~ msgstr "把地址与VSA %(id)s解除关联"
+#~ msgstr "取消地址与VSA %(id)s关联"
 
 #~ msgid "%(obj)s with ID %(id)s not found"
-#~ msgstr "没有找到ID是 %(id)s 的 %(obj)s"
+#~ msgstr "没有找到 %(obj)s 该对象的ID是 %(id)s"
 
 #~ msgid ""
 #~ "%(obj)s with ID %(id)s belongs to "
 #~ "VSA %(own_vsa_id)s and not to VSA "
 #~ "%(vsa_id)s."
-#~ msgstr "ID是 %(id)s 的 %(obj)s 属于VSA %(own_vsa_id)s而不是VSA %(vsa_id)s。"
+#~ msgstr "%(obj)s 的ID是 %(id)s 它属于VSA %(own_vsa_id)s而不是VSA %(vsa_id)s。"
 
 #~ msgid "Index. vsa_id=%(vsa_id)s"
 #~ msgstr "索引。vsa_id=%(vsa_id)s"
@@ -7668,7 +7687,7 @@ msgstr ""
 #~ msgstr "创建卷。vsa_id=%(vsa_id)s, body=%(body)s"
 
 #~ msgid "Create volume of %(size)s GB from VSA ID %(vsa_id)s"
-#~ msgstr "从VSA ID %(vsa_id)s 为创建 %(size)s GB的卷"
+#~ msgstr "创建 %(size)s GB的卷来源是VSA ID %(vsa_id)s"
 
 #~ msgid "Update %(obj)s with id: %(id)s, changes: %(changes)s"
 #~ msgstr "更新%(obj)s至id：%(id)s ，修改：%(changes)s"
@@ -7693,19 +7712,22 @@ msgstr ""
 #~ "in the DB, but I will shut "
 #~ "it down anyway using a special "
 #~ "context"
-#~ msgstr "数据库中不存在虚拟机 %(instance_uuid)s，但是无论如何要用特殊上下文来关闭。"
+#~ msgstr "数据库中不存在实例 %(instance_uuid)s，但是无论如何要用特殊上下文来关闭。"
 
 #~ msgid "trying to destroy already destroyed instance: %s"
 #~ msgstr "尝试销毁已经销毁的实例: %s"
-
-#~ msgid "SQL connection failed (%(connstring)s). %(attempts)d attempts left."
-#~ msgstr "SQL连接失败 (%(connstring)s)。还剩 %(attempts)d 次。"
 
 #~ msgid "Can't downgrade without losing data"
 #~ msgstr "无法不丢失数据地降级"
 
 #~ msgid "Instance %(instance_id)s not found"
 #~ msgstr "没有找到实例 %(instance_id)s"
+
+#~ msgid ""
+#~ "Cannot confirm tmpfile at %(ipath)s is"
+#~ " on same shared storage between "
+#~ "%(src)s and %(dest)s."
+#~ msgstr "无法确认tmpfile %(ipath)s 在相同的共享存储的 %(src)s 和 %(dest)s之间。"
 
 #~ msgid "_filter_hosts: %(request_spec)s"
 #~ msgstr "_filter_hosts: %(request_spec)s"
@@ -7714,7 +7736,7 @@ msgstr ""
 #~ msgstr "按照驱动类型 %s 过滤主机"
 
 #~ msgid "Host %s has no free capacity. Skip"
-#~ msgstr "主机 %s 没有足够的能力。跳过"
+#~ msgstr "主机 %s 没有足够的容量。跳过"
 
 #~ msgid "Filter hosts: %s"
 #~ msgstr "过滤主机：%s"
@@ -7729,7 +7751,7 @@ msgstr ""
 #~ msgstr "选择超过了主机 %(host)s"
 
 #~ msgid "Provision volume %(name)s of size %(size)s GB on host %(host)s"
-#~ msgstr "在主机 %(host)s 提供大小为 %(size)s GB 的卷 %(name)s"
+#~ msgstr "提供卷 %(name)s 它的大小为 %(size)s 位置在主机 %(host)s"
 
 #~ msgid "volume_params %(volume_params)s"
 #~ msgstr "volume_params %(volume_params)s"
@@ -7738,7 +7760,7 @@ msgstr ""
 #~ msgstr "%(i)d：卷名%(name)s"
 
 #~ msgid "Attempting to spawn %(num_volumes)d volume(s)"
-#~ msgstr "正在尝试创建 %(num_volumes)d 个卷"
+#~ msgstr "正在尝试生产 %(num_volumes)d 个卷"
 
 #~ msgid "Error creating volumes"
 #~ msgstr "创建卷失败"
@@ -7747,7 +7769,7 @@ msgstr ""
 #~ msgstr "Non-VSA 卷 %d"
 
 #~ msgid "Spawning volume %(volume_id)s with drive type %(drive_type)s"
-#~ msgstr "正在创建驱动类型为%(drive_type)s 的卷 %(volume_id)s"
+#~ msgstr "正在生产卷 %(volume_id)s 它的驱动类型为 %(drive_type)s"
 
 #~ msgid "Error creating volume"
 #~ msgstr "创建卷失败"
@@ -7780,7 +7802,7 @@ msgstr ""
 #~ msgstr "测试：模拟错误的 VSA 名称。抛出异常"
 
 #~ msgid "Test: Emulate DB error. Raise"
-#~ msgstr "测试：Emulate DB error。抛出"
+#~ msgstr "测试：模拟数据测试。抛出"
 
 #~ msgid "Test: user_data = %s"
 #~ msgstr "测试：user_data = %s"
@@ -7807,7 +7829,7 @@ msgstr ""
 #~ msgstr "测试：卷获取请求：id=%(volume_id)s"
 
 #~ msgid "Test: Volume update request: id=%(volume_id)s values=%(values)s"
-#~ msgstr "测试：卷获取请求：id=%(volume_id)s values=%(values)s"
+#~ msgstr "测试：卷更新请求：id=%(volume_id)s values=%(values)s"
 
 #~ msgid "Test: Volume get: id=%(volume_id)s"
 #~ msgstr "测试：卷获取：id=%(volume_id)s"
@@ -7822,10 +7844,17 @@ msgstr ""
 #~ msgstr "virsh 输出： %r"
 
 #~ msgid "cool, it's a device"
-#~ msgstr "很酷，这是个设备"
+#~ msgstr "酷，这是个设备"
 
 #~ msgid "Unable to read LXC console"
 #~ msgstr "无法读取 LXC 控制台"
+
+#~ msgid ""
+#~ "to xml...\n"
+#~ ":%s "
+#~ msgstr ""
+#~ "转换成 xml...\n"
+#~ "：%s "
 
 #~ msgid "The nwfilter(%(instance_secgroup_filter_name)s) is not found."
 #~ msgstr "nwfilter(%(instance_secgroup_filter_name)s) 未找到"
@@ -7836,7 +7865,7 @@ msgstr ""
 #~ msgid ""
 #~ "Created a CDROM-specific VBD %(vbd_ref)s"
 #~ "  for VM %(vm_ref)s, VDI %(vdi_ref)s."
-#~ msgstr "已经为虚拟机 %(vm_ref)s 创建了一个 基于CDROM 的VBD %(vbd_ref)s，VDI为 %(vdi_ref)s。"
+#~ msgstr "已经创建了一个基于CDROM 的VBD %(vbd_ref)s，目的是为虚拟机 %(vm_ref)s，VDI %(vdi_ref)s。"
 
 #~ msgid "Creating VBD for VDI %s ... "
 #~ msgstr "正在为VDI%s创建VBD "
@@ -7874,6 +7903,15 @@ msgstr ""
 #~ msgid "Resources to remove:%s"
 #~ msgstr "将要移除的资源：%s"
 
+#~ msgid "Removing VDI %(vdi_ref)s(uuid:%(vdi_to_remove)s)"
+#~ msgstr "移除VDI %(vdi_ref)s(uuid：%(vdi_to_remove)s)"
+
+#~ msgid "Skipping VDI destroy for %s"
+#~ msgstr "跳过 %s 的VDI的销毁"
+
+#~ msgid "Destroying VDIs for Instance %(instance_uuid)s"
+#~ msgstr "正在为实例 %(instance_uuid)s 销毁 VDIs"
+
 #~ msgid "Creating VBD for VM %(vm_ref)s, VDI %(vdi_ref)s ... "
 #~ msgstr "为虚拟机 %(vm_ref)s ，VDI %(vdi_ref)s 创建VBD... "
 
@@ -7905,13 +7943,13 @@ msgstr ""
 #~ msgstr "\tFE VSA 卷 %s 本地路径调用 - 调用discover"
 
 #~ msgid "\tFE VSA Volume %s ensure export - do nothing"
-#~ msgstr "\tFE VSA Volume %s ensure export - 什么都不做"
+#~ msgstr "\tFE VSA Volume %s 确保导出 - 什么都不做"
 
 #~ msgid "\tFE VSA Volume %s create export - do nothing"
-#~ msgstr "\tFE VSA Volume %s create export - 什么都不做"
+#~ msgstr "\tFE VSA Volume %s 创建导出 - 什么都不做"
 
 #~ msgid "\tFE VSA Volume %s remove export - do nothing"
-#~ msgstr "\tFE VSA Volume %s remove export - 什么都不做"
+#~ msgstr "\tFE VSA Volume %s 删除导出 - 什么都不做"
 
 #~ msgid "VSA BE remove_export for %s failed"
 #~ msgstr "为 %s 的VSA BE remove_export失败"
@@ -7952,7 +7990,7 @@ msgstr ""
 #~ msgstr "添加%(add_cnt)s VCs到 %(vsa_name)s。"
 
 #~ msgid "Deleting %(del_cnt)s VCs from VSA %(vsa_name)s."
-#~ msgstr "从VSA %(vsa_name)s 中删除%(del_cnt)s VCs。"
+#~ msgstr "%(del_cnt)s VCs 从VSA %(vsa_name)s 中删除。"
 
 #~ msgid "VSA ID %(vsa_id)s: Deleting %(direction)s volume %(vol_name)s"
 #~ msgstr "VSA ID %(vsa_id)s：删除 %(direction)s 卷 %(vol_name)s"
@@ -7984,9 +8022,7 @@ msgstr ""
 #~ msgid ""
 #~ "VSA ID %(vsa_id)d: Not all volumes "
 #~ "are created (%(cvol_real)d of %(cvol_exp)d)"
-#~ msgstr ""
-#~ "VSA ID %(vsa_id)d: Not all volumes "
-#~ "are created (%(cvol_real)d of %(cvol_exp)d)"
+#~ msgstr "VSA ID %(vsa_id)d: 不是所有的卷都创建了 (%(cvol_real)d of %(cvol_exp)d)"
 
 #~ msgid ""
 #~ "VSA ID %(vsa_id)d: Drive %(vol_name)s "
@@ -7996,7 +8032,7 @@ msgstr ""
 #~ "(%(vol_disp_name)s)处于 %(status)s 状态。"
 
 #~ msgid "Failed to update attach status for volume %(vol_name)s. %(ex)s"
-#~ msgstr "更新卷 %(vol_name)s 的挂载状态失败。%(ex)s"
+#~ msgstr "更新卷 %(vol_name)s 的附加状态失败。%(ex)s"
 
 #~ msgid "VSA ID %(vsa_id)d: Delete all BE volumes"
 #~ msgstr "VSA ID %(vsa_id)d：删除所有BE卷"
