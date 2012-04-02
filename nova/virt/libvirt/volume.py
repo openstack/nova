@@ -86,6 +86,11 @@ class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
         conf.source_host = connection_info['data']['name']
         conf.target_dev = mount_device
         conf.target_bus = "virtio"
+        netdisk_properties = connection_info['data']
+        if netdisk_properties.get('auth_enabled'):
+            conf.auth_username = netdisk_properties['auth_username']
+            conf.auth_secret_type = netdisk_properties['secret_type']
+            conf.auth_secret_uuid = netdisk_properties['secret_uuid']
         return conf
 
 

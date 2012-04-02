@@ -56,7 +56,14 @@ volume_opts = [
                help='The port that the iSCSI daemon is listening on'),
     cfg.StrOpt('rbd_pool',
                default='rbd',
-               help='the rbd pool in which volumes are stored'),
+               help='the RADOS pool in which rbd volumes are stored'),
+    cfg.StrOpt('rbd_user',
+               default=None,
+               help='the RADOS client name for accessing rbd volumes'),
+    cfg.StrOpt('rbd_secret_uuid',
+               default=None,
+               help='the libvirt uuid of the secret for the rbd_user'
+                    'volumes'),
     ]
 
 FLAGS = flags.FLAGS
@@ -546,7 +553,11 @@ class RBDDriver(VolumeDriver):
         return {
             'driver_volume_type': 'rbd',
             'data': {
-                'name': '%s/%s' % (FLAGS.rbd_pool, volume['name'])
+                'name': '%s/%s' % (FLAGS.rbd_pool, volume['name']),
+                'auth_enabled': FLAGS.rbd_secret_uuid is not None,
+                'auth_username': FLAGS.rbd_user,
+                'secret_type': 'ceph',
+                'secret_uuid': FLAGS.rbd_secret_uuid,
             }
         }
 

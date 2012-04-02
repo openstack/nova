@@ -86,6 +86,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.target_dev = None
         self.target_path = None
         self.target_bus = None
+        self.auth_username = None
+        self.auth_secret_type = None
+        self.auth_secret_uuid = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -113,6 +116,13 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         elif self.source_type == "network":
             dev.append(etree.Element("source", protocol=self.source_protocol,
                                       name=self.source_host))
+
+        if self.auth_secret_type is not None:
+            auth = etree.Element("auth")
+            auth.set("username", self.auth_username)
+            auth.append(etree.Element("secret", type=self.auth_secret_type,
+                                      uuid=self.auth_secret_uuid))
+            dev.append(auth)
 
         if self.source_type == "mount":
             dev.append(etree.Element("target", dir=self.target_path))
