@@ -39,7 +39,6 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
 from nova import service
-from nova.testing.fake import rabbit
 from nova.tests import reset_db
 from nova.virt import fake
 
@@ -149,10 +148,6 @@ class TestCase(unittest.TestCase):
             self.mox.VerifyAll()
             super(TestCase, self).tearDown()
         finally:
-            # Clean out fake_rabbit's queue if we used it
-            if FLAGS.fake_rabbit:
-                rabbit.reset_all()
-
             if FLAGS.connection_type == 'fake':
                 if hasattr(fake.FakeConnection, '_instance'):
                     del fake.FakeConnection._instance
