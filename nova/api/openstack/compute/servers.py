@@ -485,6 +485,11 @@ class Controller(wsgi.Controller):
                     _("Personality file path too long"),
             "OnsetFileContentLimitExceeded":
                     _("Personality file content too long"),
+            "MetadataKeyValueLimitExceeded":
+                    _("Metadata property key or value greater than 255 "
+                    "characters"),
+            "MetadataKeyUnspecified":
+                    _("Metadata property key blank"),
 
             # NOTE(bcwaldon): expose the message generated below in order
             # to better explain how the quota was exceeded

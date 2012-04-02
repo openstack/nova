@@ -204,12 +204,16 @@ class API(BaseAPI):
         # In future, we may support more variable length strings, so we act
         #  as if this is quota-controlled for forwards compatibility
         for k, v in metadata.iteritems():
-            if len(k) > 255 or len(v) > 255:
-                pid = context.project_id
-                msg = _("Quota exceeded for %(pid)s, metadata property "
-                        "key or value too long") % locals()
+            if len(k) == 0:
+                msg = _("Metadata property key blank")
                 LOG.warn(msg)
-                raise exception.QuotaError(code="MetadataLimitExceeded")
+                raise exception.QuotaError(code="MetadataKeyUnspecified")
+            if len(k) > 255 or len(v) > 255:
+                msg = _("Metadata property key or value greater than 255 "
+                        "characters")
+                LOG.warn(msg)
+                raise exception.QuotaError(
+                                        code="MetadataKeyValueLimitExceeded")
 
     def _check_requested_networks(self, context, requested_networks):
         """ Check if the networks requested belongs to the project
