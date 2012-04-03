@@ -170,6 +170,24 @@ flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 flags.DECLARE('vncserver_proxyclient_address', 'nova.vnc')
 
 
+def patch_tpool_proxy():
+    """eventlet.tpool.Proxy doesn't work with old-style class in __str__()
+    or __repr__() calls. See bug #962840 for details.
+    We perform a monkey patch to replace those two instance methods.
+    """
+    def str_method(self):
+        return str(self._obj)
+
+    def repr_method(self):
+        return repr(self._obj)
+
+    tpool.Proxy.__str__ = str_method
+    tpool.Proxy.__repr__ = repr_method
+
+
+patch_tpool_proxy()
+
+
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
     # libraries when not using libvirt.
