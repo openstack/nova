@@ -98,6 +98,13 @@ class CloudpipeController(object):
         ips = [ip for ip in vif.fixed_ips() if ip['version'] == 4]
         if ips:
             rv['internal_ip'] = ips[0]['address']
+        # NOTE(vish): Currently network_api.get does an owner check on
+        #             project_id. This is probably no longer necessary
+        #             but rather than risk changes in the db layer,
+        #             we are working around it here by changing the
+        #             project_id in the context. This can be removed
+        #             if we remove the project_id check in the db.
+        elevated.project_id = project_id
         network = self.network_api.get(elevated, vif['network']['id'])
         if network:
             vpn_ip = network['vpn_public_address']

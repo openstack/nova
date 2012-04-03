@@ -34,7 +34,7 @@ FLAGS = flags.FLAGS
 def fake_vpn_instance():
     return {'id': 7, 'image_ref': FLAGS.vpn_image_id, 'vm_state': 'active',
             'created_at': utils.parse_strtime('1981-10-20T00:00:00.000000'),
-            'uuid': 7777, 'project_id': 'fake'}
+            'uuid': 7777, 'project_id': 'other'}
 
 
 def compute_api_get_all_empty(context):
@@ -76,7 +76,7 @@ class CloudpipeTest(test.TestCase):
                        compute_api_get_all)
         req = fakes.HTTPRequest.blank('/v2/fake/os-cloudpipe')
         res_dict = self.controller.index(req)
-        response = {'cloudpipes': [{'project_id': 'fake',
+        response = {'cloudpipes': [{'project_id': 'other',
                                     'instance_id': 7777,
                                     'created_at': '1981-10-20T00:00:00Z'}]}
         self.assertEqual(res_dict, response)
@@ -84,6 +84,7 @@ class CloudpipeTest(test.TestCase):
     def test_cloudpipe_list(self):
 
         def network_api_get(context, network_id):
+            self.assertEqual(context.project_id, 'other')
             return {'vpn_public_address': '127.0.0.1',
                     'vpn_public_port': 22}
 
@@ -99,7 +100,7 @@ class CloudpipeTest(test.TestCase):
                        compute_api_get_all)
         req = fakes.HTTPRequest.blank('/v2/fake/os-cloudpipe')
         res_dict = self.controller.index(req)
-        response = {'cloudpipes': [{'project_id': 'fake',
+        response = {'cloudpipes': [{'project_id': 'other',
                                     'internal_ip': '192.168.1.100',
                                     'public_ip': '127.0.0.1',
                                     'public_port': 22,
