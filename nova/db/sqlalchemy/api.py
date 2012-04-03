@@ -1907,8 +1907,21 @@ def network_create_safe(context, values):
 def network_delete_safe(context, network_id):
     session = get_session()
     with session.begin():
+        result = session.query(models.FixedIp).\
+                         filter_by(network_id=network_id).\
+                         filter_by(deleted=False).\
+                         filter_by(allocated=True).\
+                         all()
+        if result:
+            raise exception.NetworkInUse(network_id=network_id)
         network_ref = network_get(context, network_id=network_id,
                                   session=session)
+        session.query(models.FixedIp).\
+                filter_by(network_id=network_id).\
+                filter_by(deleted=False).\
+                update({'deleted': True,
+                        'updated_at': literal_column('updated_at'),
+                        'deleted_at': utils.utcnow()})
         session.delete(network_ref)
 
 
