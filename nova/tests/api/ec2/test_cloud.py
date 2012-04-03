@@ -271,6 +271,18 @@ class CloudTestCase(test.TestCase):
         delete = self.cloud.delete_security_group
         self.assertTrue(delete(self.context, 'testgrp'))
 
+    def test_security_group_quota_limit(self):
+        self.flags(quota_security_groups=10)
+        for i in range(1, 10):
+            name = 'test name %i' % i
+            descript = 'test description %i' % i
+            create = self.cloud.create_security_group
+            result = create(self.context, name, descript)
+
+        # 11'th group should fail
+        self.assertRaises(exception.EC2APIError,
+                          create, self.context, 'foo', 'bar')
+
     def test_delete_security_group_by_id(self):
         sec = db.security_group_create(self.context,
                                        {'project_id': self.context.project_id,
@@ -435,6 +447,19 @@ class CloudTestCase(test.TestCase):
         authz(self.context, group_name=sec['name'], **kwargs)
         self.assertRaises(exception.EC2APIError, authz, self.context,
                           group_name=sec['name'], **kwargs)
+
+    def test_security_group_ingress_quota_limit(self):
+        self.flags(quota_security_group_rules=20)
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        sec_group = db.security_group_create(self.context, kwargs)
+        authz = self.cloud.authorize_security_group_ingress
+        for i in range(100, 120):
+            kwargs = {'to_port': i, 'from_port': i, 'ip_protocol': 'tcp'}
+            authz(self.context, group_id=sec_group['id'], **kwargs)
+
+        kwargs = {'to_port': 121, 'from_port': 121, 'ip_protocol': 'tcp'}
+        self.assertRaises(exception.EC2APIError, authz, self.context,
+                              group_id=sec_group['id'], **kwargs)
 
     def _test_authorize_security_group_no_ports_with_source_group(self, proto):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}

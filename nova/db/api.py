@@ -1151,6 +1151,11 @@ def security_group_destroy(context, security_group_id):
     return IMPL.security_group_destroy(context, security_group_id)
 
 
+def security_group_count_by_project(context, project_id):
+    """Count number of security groups in a project."""
+    return IMPL.security_group_count_by_project(context, project_id)
+
+
 ####################
 
 
@@ -1180,6 +1185,11 @@ def security_group_rule_destroy(context, security_group_rule_id):
 def security_group_rule_get(context, security_group_rule_id):
     """Gets a security group rule."""
     return IMPL.security_group_rule_get(context, security_group_rule_id)
+
+
+def security_group_rule_count_by_group(context, security_group_id):
+    """Count rules in a given security group."""
+    return IMPL.security_group_rule_count_by_group(context, security_group_id)
 
 
 ###################

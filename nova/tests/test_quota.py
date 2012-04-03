@@ -41,6 +41,8 @@ class GetQuotaTestCase(test.TestCase):
                    quota_volumes=10,
                    quota_gigabytes=1000,
                    quota_floating_ips=10,
+                   quota_security_groups=10,
+                   quota_security_group_rules=20,
                    quota_metadata_items=128,
                    quota_injected_files=5,
                    quota_injected_file_content_bytes=10 * 1024)
@@ -57,6 +59,8 @@ class GetQuotaTestCase(test.TestCase):
                     volumes=5,
                     gigabytes=500,
                     floating_ips=5,
+                    quota_security_groups=10,
+                    quota_security_group_rules=20,
                     metadata_items=64,
                     injected_files=2,
                     injected_file_content_bytes=5 * 1024,
@@ -78,6 +82,8 @@ class GetQuotaTestCase(test.TestCase):
                     volumes=2,
                     gigabytes=250,
                     floating_ips=2,
+                    security_groups=5,
+                    security_group_rules=10,
                     metadata_items=32,
                     injected_files=1,
                     injected_file_content_bytes=2 * 1024,
@@ -97,6 +103,8 @@ class GetQuotaTestCase(test.TestCase):
                 volumes=10,
                 gigabytes=1000,
                 floating_ips=10,
+                security_groups=10,
+                security_group_rules=20,
                 metadata_items=128,
                 injected_files=5,
                 injected_file_content_bytes=10 * 1024,
@@ -109,6 +117,8 @@ class GetQuotaTestCase(test.TestCase):
                    quota_volumes=-1,
                    quota_gigabytes=-1,
                    quota_floating_ips=-1,
+                   quota_security_groups=-1,
+                   quota_security_group_rules=-1,
                    quota_metadata_items=-1,
                    quota_injected_files=-1,
                    quota_injected_file_content_bytes=-1)
@@ -120,6 +130,8 @@ class GetQuotaTestCase(test.TestCase):
                 volumes=-1,
                 gigabytes=-1,
                 floating_ips=-1,
+                security_groups=-1,
+                security_group_rules=-1,
                 metadata_items=-1,
                 injected_files=-1,
                 injected_file_content_bytes=-1,
@@ -135,6 +147,8 @@ class GetQuotaTestCase(test.TestCase):
                 volumes=10,
                 gigabytes=1000,
                 floating_ips=10,
+                security_groups=10,
+                security_group_rules=20,
                 metadata_items=128,
                 injected_files=5,
                 injected_file_content_bytes=10 * 1024,
@@ -150,6 +164,8 @@ class GetQuotaTestCase(test.TestCase):
                 volumes=5,
                 gigabytes=500,
                 floating_ips=5,
+                security_groups=10,
+                security_group_rules=20,
                 metadata_items=64,
                 injected_files=2,
                 injected_file_content_bytes=5 * 1024,
@@ -166,6 +182,8 @@ class GetQuotaTestCase(test.TestCase):
                 volumes=10,
                 gigabytes=1000,
                 floating_ips=10,
+                security_groups=10,
+                security_group_rules=20,
                 metadata_items=128,
                 injected_files=5,
                 injected_file_content_bytes=10 * 1024,
@@ -182,6 +200,8 @@ class GetQuotaTestCase(test.TestCase):
                 volumes=2,
                 gigabytes=250,
                 floating_ips=2,
+                security_groups=5,
+                security_group_rules=10,
                 metadata_items=32,
                 injected_files=1,
                 injected_file_content_bytes=2 * 1024,
@@ -199,6 +219,8 @@ class GetQuotaTestCase(test.TestCase):
                 volumes=5,
                 gigabytes=500,
                 floating_ips=5,
+                security_groups=10,
+                security_group_rules=20,
                 metadata_items=64,
                 injected_files=2,
                 injected_file_content_bytes=5 * 1024,
@@ -216,6 +238,8 @@ class GetQuotaTestCase(test.TestCase):
                 volumes=2,
                 gigabytes=250,
                 floating_ips=2,
+                security_groups=5,
+                security_group_rules=10,
                 metadata_items=32,
                 injected_files=1,
                 injected_file_content_bytes=2 * 1024,
@@ -403,6 +427,34 @@ class QuotaTestCase(test.TestCase):
         self.assertEqual(floating_ips, 100)
         floating_ips = quota.allowed_floating_ips(self.context, 101)
         self.assertEqual(floating_ips, 101)
+
+    def test_unlimited_security_groups(self):
+        self.flags(quota_security_groups=10)
+        security_groups = quota.allowed_security_groups(self.context, 100)
+        self.assertEqual(security_groups, 10)
+        db.quota_create(self.context, self.project_id, 'security_groups', -1)
+        security_groups = quota.allowed_security_groups(self.context, 100)
+        self.assertEqual(security_groups, 100)
+        security_groups = quota.allowed_security_groups(self.context, 101)
+        self.assertEqual(security_groups, 101)
+
+    def test_unlimited_security_group_rules(self):
+
+        def fake_security_group_rule_count_by_group(context, sec_group_id):
+            return 0
+
+        self.stubs.Set(db, 'security_group_rule_count_by_group',
+                       fake_security_group_rule_count_by_group)
+
+        self.flags(quota_security_group_rules=20)
+        rules = quota.allowed_security_group_rules(self.context, 1234, 100)
+        self.assertEqual(rules, 20)
+        db.quota_create(self.context, self.project_id, 'security_group_rules',
+                        -1)
+        rules = quota.allowed_security_group_rules(self.context, 1234, 100)
+        self.assertEqual(rules, 100)
+        rules = quota.allowed_security_group_rules(self.context, 1234, 101)
+        self.assertEqual(rules, 101)
 
     def test_unlimited_metadata_items(self):
         self.flags(quota_metadata_items=10)
