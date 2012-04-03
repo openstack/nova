@@ -136,6 +136,25 @@ class DbApiTestCase(test.TestCase):
         db_network = db.network_get(ctxt, network.id)
         self.assertEqual(network.uuid, db_network.uuid)
 
+    def test_network_delete_safe(self):
+        ctxt = context.get_admin_context()
+        values = {'host': 'localhost', 'project_id': 'project1'}
+        network = db.network_create_safe(ctxt, values)
+        db_network = db.network_get(ctxt, network.id)
+        values = {'network_id': network['id'], 'address': 'fake1'}
+        address1 = db.fixed_ip_create(ctxt, values)
+        values = {'network_id': network['id'],
+                  'address': 'fake2',
+                  'allocated': True}
+        address2 = db.fixed_ip_create(ctxt, values)
+        self.assertRaises(exception.NetworkInUse,
+                          db.network_delete_safe, ctxt, network['id'])
+        db.fixed_ip_update(ctxt, address2, {'allocated': False})
+        network = db.network_delete_safe(ctxt, network['id'])
+        ctxt = ctxt.elevated(read_deleted='yes')
+        fixed_ip = db.fixed_ip_get_by_address(ctxt, address1)
+        self.assertTrue(fixed_ip['deleted'])
+
     def test_network_create_with_duplicate_vlan(self):
         ctxt = context.get_admin_context()
         values1 = {'host': 'localhost', 'project_id': 'project1', 'vlan': 1}
