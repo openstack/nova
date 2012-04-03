@@ -1045,7 +1045,8 @@ class LibvirtConnection(driver.ComputeDriver):
             @utils.synchronized(fname)
             def call_if_not_exists(base, fn, *args, **kwargs):
                 if not os.path.exists(base):
-                    fn(target=base, *args, **kwargs)
+                    with utils.remove_path_on_error(base):
+                        fn(target=base, *args, **kwargs)
 
             if cow or not generating:
                 call_if_not_exists(base, fn, *args, **kwargs)
@@ -1061,8 +1062,9 @@ class LibvirtConnection(driver.ComputeDriver):
                         size_gb = size / (1024 * 1024 * 1024)
                         cow_base += "_%d" % size_gb
                         if not os.path.exists(cow_base):
-                            libvirt_utils.copy_image(base, cow_base)
-                            disk.extend(cow_base, size)
+                            with utils.remove_path_on_error(cow_base):
+                                libvirt_utils.copy_image(base, cow_base)
+                                disk.extend(cow_base, size)
                     libvirt_utils.create_cow_image(cow_base, target)
                 elif not generating:
                     libvirt_utils.copy_image(base, target)
@@ -1072,7 +1074,8 @@ class LibvirtConnection(driver.ComputeDriver):
                     if size:
                         disk.extend(target, size)
 
-            copy_and_extend(cow, generating, base, target, size)
+            with utils.remove_path_on_error(target):
+                copy_and_extend(cow, generating, base, target, size)
 
     @staticmethod
     def _create_local(target, local_size, unit='G',
@@ -1242,8 +1245,9 @@ class LibvirtConnection(driver.ComputeDriver):
                               project_id=instance['project_id'],)
         elif config_drive:
             label = 'config'
-            self._create_local(basepath('disk.config'), 64, unit='M',
-                               fs_format='msdos', label=label)  # 64MB
+            with utils.remove_path_on_error(basepath('disk.config')):
+                self._create_local(basepath('disk.config'), 64, unit='M',
+                                   fs_format='msdos', label=label)  # 64MB
 
         if instance['key_data']:
             key = str(instance['key_data'])

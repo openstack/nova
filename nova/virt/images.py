@@ -51,18 +51,10 @@ def fetch(context, image_href, path, _user_id, _project_id):
     #             checked before we got here.
     (image_service, image_id) = nova.image.get_image_service(context,
                                                              image_href)
-    try:
+    with utils.remove_path_on_error(path):
         with open(path, "wb") as image_file:
             metadata = image_service.get(context, image_id, image_file)
-    except Exception:
-        with utils.save_and_reraise_exception():
-            try:
-                os.unlink(path)
-            except OSError, e:
-                if e.errno != errno.ENOENT:
-                    LOG.warn("unable to remove stale image '%s': %s" %
-                             (path, e.strerror))
-    return metadata
+            return metadata
 
 
 def fetch_to_raw(context, image_href, path, user_id, project_id):
@@ -85,37 +77,36 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
 
         return(data)
 
-    data = _qemu_img_info(path_tmp)
+    with utils.remove_path_on_error(path_tmp):
+        data = _qemu_img_info(path_tmp)
 
-    fmt = data.get("file format")
-    if fmt is None:
-        os.unlink(path_tmp)
-        raise exception.ImageUnacceptable(
-            reason=_("'qemu-img info' parsing failed."), image_id=image_href)
+        fmt = data.get("file format")
+        if fmt is None:
+            raise exception.ImageUnacceptable(
+                reason=_("'qemu-img info' parsing failed."),
+                image_id=image_href)
 
-    if "backing file" in data:
-        backing_file = data['backing file']
-        os.unlink(path_tmp)
-        raise exception.ImageUnacceptable(image_id=image_href,
-            reason=_("fmt=%(fmt)s backed by: %(backing_file)s") % locals())
-
-    if fmt != "raw" and FLAGS.force_raw_images:
-        staged = "%s.converted" % path
-        LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
-        out, err = utils.execute('qemu-img', 'convert', '-O', 'raw',
-                                 path_tmp, staged)
-        os.unlink(path_tmp)
-
-        data = _qemu_img_info(staged)
-        if data.get('file format', None) != "raw":
-            os.unlink(staged)
+        if "backing file" in data:
+            backing_file = data['backing file']
             raise exception.ImageUnacceptable(image_id=image_href,
-                reason=_("Converted to raw, but format is now %s") %
-                data.get('file format', None))
+                reason=_("fmt=%(fmt)s backed by: %(backing_file)s") % locals())
 
-        os.rename(staged, path)
+        if fmt != "raw" and FLAGS.force_raw_images:
+            staged = "%s.converted" % path
+            LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
+            with utils.remove_path_on_error(staged):
+                out, err = utils.execute('qemu-img', 'convert', '-O', 'raw',
+                                         path_tmp, staged)
 
-    else:
-        os.rename(path_tmp, path)
+                data = _qemu_img_info(staged)
+                if data.get('file format', None) != "raw":
+                    raise exception.ImageUnacceptable(image_id=image_href,
+                        reason=_("Converted to raw, but format is now %s") %
+                        data.get('file format', None))
+
+                os.rename(staged, path)
+
+        else:
+            os.rename(path_tmp, path)
 
     return metadata
