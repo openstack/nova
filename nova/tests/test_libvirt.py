@@ -2509,3 +2509,21 @@ class LibvirtConnectionTestCase(test.TestCase):
 
         ref = self.libvirtconnection.finish_revert_migration(ins_ref, None)
         self.assertTrue(isinstance(ref, eventlet.event.Event))
+
+
+class LibvirtNonblockingTestCase(test.TestCase):
+    """Test libvirt_nonblocking option"""
+
+    def setUp(self):
+        super(LibvirtNonblockingTestCase, self).setUp()
+        self.flags(libvirt_nonblocking=True, libvirt_uri="test:///default")
+
+    def tearDown(self):
+        super(LibvirtNonblockingTestCase, self).tearDown()
+
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
+    def test_connection_to_primitive(self):
+        """Test bug 962840"""
+        import nova.virt.libvirt.connection
+        connection = nova.virt.libvirt.connection.get_connection('')
+        utils.to_primitive(connection._conn, convert_instances=True)
