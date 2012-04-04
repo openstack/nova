@@ -436,6 +436,7 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertEquals(image_cache_manager.corrupt_base_files, [])
 
     def test_handle_base_image_used(self):
+        self.stubs.Set(virtutils, 'chown', lambda x, y: None)
         img = '123'
 
         with self._make_base_file() as fname:
@@ -496,6 +497,8 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertEquals(image_cache_manager.corrupt_base_files, [])
 
     def test_handle_base_image_checksum_fails(self):
+        self.stubs.Set(virtutils, 'chown', lambda x, y: None)
+
         img = '123'
 
         with self._make_base_file() as fname:
@@ -562,6 +565,8 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.fail('Unexpected path existance check: %s' % path)
 
         self.stubs.Set(os.path, 'exists', lambda x: exists(x))
+
+        self.stubs.Set(virtutils, 'chown', lambda x, y: None)
 
         # We need to stub utime as well
         orig_utime = os.utime

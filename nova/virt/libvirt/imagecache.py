@@ -355,6 +355,7 @@ class ImageCacheManager(object):
                           {'id': img_id,
                            'base_file': base_file})
                 if os.path.exists(base_file):
+                    virtutils.chown(base_file, os.getuid())
                     os.utime(base_file, None)
 
     def verify_base_images(self, context):
