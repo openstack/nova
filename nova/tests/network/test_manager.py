@@ -29,6 +29,7 @@ import nova.policy
 from nova import rpc
 from nova import test
 from nova import utils
+from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.tests import fake_network
 
@@ -873,6 +874,41 @@ class VlanNetworkTestCase(test.TestCase):
         db.floating_ip_destroy(context1.elevated(), float_addr)
         db.fixed_ip_disassociate(context1.elevated(), fix_addr)
 
+    def test_deallocate_fixed(self):
+        """Verify that release is called properly.
+
+        Ensures https://bugs.launchpad.net/nova/+bug/973442 doesn't return"""
+
+        def network_get(_context, network_id):
+            return networks[network_id]
+
+        self.stubs.Set(db, 'network_get', network_get)
+
+        def vif_get(_context, _vif_id):
+            return {'address': 'fake_mac'}
+
+        self.stubs.Set(db, 'virtual_interface_get', vif_get)
+        context1 = context.RequestContext('user', 'project1')
+
+        instance = db.instance_create(context1,
+                {'project_id': 'project1'})
+
+        elevated = context1.elevated()
+        fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['id'])
+        values = {'allocated': True,
+                  'virtual_interface_id': 3}
+        db.fixed_ip_update(elevated, fix_addr, values)
+        fixed = db.fixed_ip_get_by_address(elevated, fix_addr)
+        network = db.network_get(elevated, fixed['network_id'])
+
+        self.flags(force_dhcp_release=True)
+        self.mox.StubOutWithMock(linux_net, 'release_dhcp')
+        linux_net.release_dhcp(network['bridge'], fixed['address'], 'fake_mac')
+        self.mox.ReplayAll()
+        self.network.deallocate_fixed_ip(context1, fix_addr, 'fake')
+        fixed = db.fixed_ip_get_by_address(elevated, fix_addr)
+        self.assertFalse(fixed['allocated'])
+
     def test_deallocate_fixed_no_vif(self):
         """Verify that deallocate doesn't raise when no vif is returned.
 
@@ -892,8 +928,11 @@ class VlanNetworkTestCase(test.TestCase):
         instance = db.instance_create(context1,
                 {'project_id': 'project1'})
 
-        fix_addr = db.fixed_ip_associate_pool(context1.elevated(),
-                1, instance['id'])
+        elevated = context1.elevated()
+        fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['id'])
+        values = {'allocated': True,
+                 'virtual_interface_id': 3}
+        db.fixed_ip_update(elevated, fix_addr, values)
 
         self.flags(force_dhcp_release=True)
         self.network.deallocate_fixed_ip(context1, fix_addr, 'fake')
