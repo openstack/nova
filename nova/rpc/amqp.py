@@ -36,8 +36,8 @@ from eventlet import pools
 from nova import context
 from nova import exception
 from nova import flags
-from nova import local
 from nova import log as logging
+from nova.openstack.common import local
 import nova.rpc.common as rpc_common
 
 LOG = logging.getLogger(__name__)
