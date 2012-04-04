@@ -1219,12 +1219,26 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         if FLAGS.force_dhcp_release:
             dev = self.driver.get_dev(network)
-            vif = self.db.virtual_interface_get_by_instance_and_network(
-                    context, instance_id, network['id'])
+            vif_id = fixed_ip_ref['virtual_interface_id']
+
+            # NOTE(vish): The below errors should never happen, but there may
+            #             be a race condition that is causing them per
+            #             https://code.launchpad.net/bugs/968457, so we log
+            #             an error to help track down the possible race.
+            msg = _("Unable to release %s because vif doesn't exist.")
+            if not vif_id:
+                LOG.error(msg % address)
+                return
+
+            vif = self.db.virtual_interface_get(context, vif_id)
+
+            if not vif:
+                LOG.error(msg % address)
+                return
+
             # NOTE(vish): This forces a packet so that the release_fixed_ip
             #             callback will get called by nova-dhcpbridge.
-            if vif:
-                self.driver.release_dhcp(dev, address, vif['address'])
+            self.driver.release_dhcp(dev, address, vif['address'])
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""

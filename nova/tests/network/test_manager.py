@@ -883,11 +883,10 @@ class VlanNetworkTestCase(test.TestCase):
 
         self.stubs.Set(db, 'network_get', network_get)
 
-        def vif_get(_context, _instance_id, _network_id):
+        def vif_get(_context, _vif_id):
             return None
 
-        self.stubs.Set(db, 'virtual_interface_get_by_instance_and_network',
-                       vif_get)
+        self.stubs.Set(db, 'virtual_interface_get', vif_get)
         context1 = context.RequestContext('user', 'project1')
 
         instance = db.instance_create(context1,
