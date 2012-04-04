@@ -105,6 +105,31 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <target bus="ide" dev="/dev/hda"/>
             </disk>""")
 
+    def test_config_network_auth(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "network"
+        obj.source_protocol = "rbd"
+        obj.source_host = "pool/image"
+        obj.driver_name = "qemu"
+        obj.driver_format = "raw"
+        obj.target_dev = "/dev/vda"
+        obj.target_bus = "virtio"
+        obj.auth_username = "foo"
+        obj.auth_secret_type = "ceph"
+        obj.auth_secret_uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="network" device="disk">
+              <driver name="qemu" type="raw"/>
+              <source protocol="rbd" name="pool/image"/>
+              <auth username="foo">
+                <secret type="ceph"
+                uuid="b38a3f43-4be2-4046-897f-b67c2f5e0147"/>
+              </auth>
+              <target bus="virtio" dev="/dev/vda"/>
+            </disk>""")
+
 
 class LibvirtConfigGuestFilesysTest(LibvirtConfigBaseTest):
 
