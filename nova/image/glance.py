@@ -111,13 +111,13 @@ def get_glance_client(context, image_href):
 
     else:
         try:
-            (image_id, host, port) = _parse_image_ref(image_href)
+            (image_id, glance_host, glance_port) = _parse_image_ref(image_href)
+            glance_client = _create_glance_client(context,
+                                                  glance_host,
+                                                  glance_port)
         except ValueError:
             raise exception.InvalidImageRef(image_href=image_href)
 
-        glance_client = _create_glance_client(context,
-                                              glance_host,
-                                              glance_port)
         return (glance_client, image_id)
 
 
