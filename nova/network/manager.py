@@ -1200,10 +1200,11 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def deallocate_fixed_ip(self, context, address, **kwargs):
         """Returns a fixed ip to the pool."""
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        vif_id = fixed_ip_ref['virtual_interface_id']
         self.db.fixed_ip_update(context, address,
                                 {'allocated': False,
                                  'virtual_interface_id': None})
-        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_id = fixed_ip_ref['instance_id']
         self._do_trigger_security_group_members_refresh_for_instance(
                                                                    instance_id)
@@ -1219,8 +1220,6 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         if FLAGS.force_dhcp_release:
             dev = self.driver.get_dev(network)
-            vif_id = fixed_ip_ref['virtual_interface_id']
-
             # NOTE(vish): The below errors should never happen, but there may
             #             be a race condition that is causing them per
             #             https://code.launchpad.net/bugs/968457, so we log
