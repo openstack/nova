@@ -623,15 +623,3 @@ class XenAPISession(object):
         except xmlrpclib.ProtocolError, exc:
             LOG.debug(_("Got exception: %s"), exc)
             raise
-
-
-def _parse_xmlrpc_value(val):
-    """Parse the given value as if it were an XML-RPC value. This is
-    sometimes used as the format for the task.result field."""
-    if not val:
-        return val
-    x = xmlrpclib.loads(
-        '<?xml version="1.0"?><methodResponse><params><param>' +
-        val +
-        '</param></params></methodResponse>')
-    return x[0][0]
