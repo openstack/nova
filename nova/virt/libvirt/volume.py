@@ -76,11 +76,25 @@ class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
         driver = self._pick_volume_driver()
         protocol = connection_info['driver_volume_type']
         name = connection_info['data']['name']
-        xml = """<disk type='network'>
-                     <driver name='%s' type='raw' cache='none'/>
-                     <source protocol='%s' name='%s'/>
-                     <target dev='%s' bus='virtio'/>
-                 </disk>""" % (driver, protocol, name, mount_device)
+        if connection_info['data'].get('auth_enabled'):
+            username = connection_info['data']['auth_username']
+            secret_type = connection_info['data']['secret_type']
+            secret_uuid = connection_info['data']['secret_uuid']
+            xml = """<disk type='network'>
+                         <driver name='%s' type='raw' cache='none'/>
+                         <source protocol='%s' name='%s'/>
+                         <auth username='%s'>
+                             <secret type='%s' uuid='%s'/>
+                         </auth>
+                         <target dev='%s' bus='virtio'/>
+                     </disk>""" % (driver, protocol, name, username,
+                                   secret_type, secret_uuid, mount_device)
+        else:
+            xml = """<disk type='network'>
+                         <driver name='%s' type='raw' cache='none'/>
+                         <source protocol='%s' name='%s'/>
+                         <target dev='%s' bus='virtio'/>
+                     </disk>""" % (driver, protocol, name, mount_device)
         return xml
 
 
