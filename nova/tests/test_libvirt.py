@@ -916,6 +916,12 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.stubs.Set(os, 'open', os_open_stub)
 
+        def connection_supports_direct_io_stub(*args, **kwargs):
+            return directio_supported
+
+        self.stubs.Set(connection.LibvirtConnection,
+            '_supports_direct_io', connection_supports_direct_io_stub)
+
         user_context = context.RequestContext(self.user_id, self.project_id)
         instance_ref = db.instance_create(user_context, self.test_instance)
         network_info = _fake_network_info(self.stubs, 1)

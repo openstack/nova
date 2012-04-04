@@ -988,7 +988,13 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @staticmethod
     def _supports_direct_io(dirpath):
+
+        if not hasattr(os, 'O_DIRECT'):
+            LOG.debug("This python runtime does not support direct I/O")
+            return False
+
         testfile = os.path.join(dirpath, ".directio.test")
+
         hasDirectIO = True
         try:
             f = os.open(testfile, os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
