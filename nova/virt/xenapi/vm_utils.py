@@ -725,7 +725,6 @@ class VMHelper(xenapi.HelperBase):
                       'glance_port': glance_port,
                       'uuid_stack': uuid_stack,
                       'sr_path': cls.get_sr_path(session),
-                      'num_retries': 0,
                       'auth_token': getattr(context, 'auth_token', None)}
             kwargs = {'params': pickle.dumps(params)}
 
