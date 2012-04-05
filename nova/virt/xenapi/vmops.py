@@ -932,7 +932,7 @@ class VMOps(object):
             # Send the encrypted password
             transaction_id = str(uuid.uuid4())
             args = {'id': transaction_id}
-            resp = self._make_agent_call('version', instance, '', args)
+            resp = self._make_agent_call('version', instance, args)
             if resp['returncode'] != '0':
                 LOG.error(_('Failed to query agent version: %(resp)r') %
                           locals())
@@ -968,7 +968,7 @@ class VMOps(object):
         # Send the encrypted password
         transaction_id = str(uuid.uuid4())
         args = {'id': transaction_id, 'url': url, 'md5sum': md5sum}
-        resp = self._make_agent_call('agentupdate', instance, '', args)
+        resp = self._make_agent_call('agentupdate', instance, args)
         if resp['returncode'] != '0':
             LOG.error(_('Failed to update agent: %(resp)r') % locals())
             return None
@@ -990,7 +990,7 @@ class VMOps(object):
         dh = SimpleDH()
         key_init_args = {'id': key_init_transaction_id,
                          'pub': str(dh.get_public())}
-        resp = self._make_agent_call('key_init', instance, '', key_init_args)
+        resp = self._make_agent_call('key_init', instance, key_init_args)
         # Successful return code from key_init is 'D0'
         if resp['returncode'] != 'D0':
             msg = _('Failed to exchange keys: %(resp)r') % locals()
@@ -1006,7 +1006,7 @@ class VMOps(object):
         # Send the encrypted password
         password_transaction_id = str(uuid.uuid4())
         password_args = {'id': password_transaction_id, 'enc_pass': enc_pass}
-        resp = self._make_agent_call('password', instance, '', password_args)
+        resp = self._make_agent_call('password', instance, password_args)
         # Successful return code from password is '0'
         if resp['returncode'] != '0':
             msg = _('Failed to update password: %(resp)r') % locals()
@@ -1034,7 +1034,7 @@ class VMOps(object):
                 'b64_contents': b64_contents}
         # If the agent doesn't support file injection, a NotImplementedError
         # will be raised with the appropriate message.
-        resp = self._make_agent_call('inject_file', instance, '', args)
+        resp = self._make_agent_call('inject_file', instance, args)
         if resp['returncode'] != '0':
             LOG.error(_('Failed to inject file: %(resp)r') % locals())
             return None
@@ -1528,7 +1528,7 @@ class VMOps(object):
             vm_ref = VMHelper.lookup(self._session, instance.name)
         args = {'id': str(uuid.uuid4())}
         # TODO(tr3buchet): fix function call after refactor
-        #resp = self._make_agent_call('resetnetwork', instance, '', args)
+        #resp = self._make_agent_call('resetnetwork', instance, args)
         resp = self._make_plugin_call('agent', 'resetnetwork', instance, '',
                                                                args, vm_ref)
 
@@ -1555,10 +1555,10 @@ class VMOps(object):
         return self._make_plugin_call('xenstore.py', method=method, vm=vm,
                 path=path, addl_args=addl_args)
 
-    def _make_agent_call(self, method, vm, path, addl_args=None):
+    def _make_agent_call(self, method, vm, addl_args=None):
         """Abstracts out the interaction with the agent xenapi plugin."""
         ret = self._make_plugin_call('agent', method=method, vm=vm,
-                path=path, addl_args=addl_args)
+                path='', addl_args=addl_args)
         if isinstance(ret, dict):
             return ret
         try:
