@@ -930,9 +930,7 @@ class VMOps(object):
 
         def _call():
             # Send the encrypted password
-            transaction_id = str(uuid.uuid4())
-            args = {'id': transaction_id}
-            resp = self._make_agent_call('version', instance, args)
+            resp = self._make_agent_call('version', instance)
             if resp['returncode'] != '0':
                 LOG.error(_('Failed to query agent version: %(resp)r') %
                           locals())
@@ -966,8 +964,7 @@ class VMOps(object):
         """Update agent on the VM instance."""
 
         # Send the encrypted password
-        transaction_id = str(uuid.uuid4())
-        args = {'id': transaction_id, 'url': url, 'md5sum': md5sum}
+        args = {'url': url, 'md5sum': md5sum}
         resp = self._make_agent_call('agentupdate', instance, args)
         if resp['returncode'] != '0':
             LOG.error(_('Failed to update agent: %(resp)r') % locals())
@@ -984,12 +981,9 @@ class VMOps(object):
         one in M2Crypto for compatibility with the agent code.
 
         """
-        # Need to uniquely identify this request.
-        key_init_transaction_id = str(uuid.uuid4())
         # The simple Diffie-Hellman class is used to manage key exchange.
         dh = SimpleDH()
-        key_init_args = {'id': key_init_transaction_id,
-                         'pub': str(dh.get_public())}
+        key_init_args = {'pub': str(dh.get_public())}
         resp = self._make_agent_call('key_init', instance, key_init_args)
         # Successful return code from key_init is 'D0'
         if resp['returncode'] != 'D0':
@@ -1004,8 +998,7 @@ class VMOps(object):
         # on password to work correctly.
         enc_pass = dh.encrypt(new_pass + '\n')
         # Send the encrypted password
-        password_transaction_id = str(uuid.uuid4())
-        password_args = {'id': password_transaction_id, 'enc_pass': enc_pass}
+        password_args = {'enc_pass': enc_pass}
         resp = self._make_agent_call('password', instance, password_args)
         # Successful return code from password is '0'
         if resp['returncode'] != '0':
@@ -1029,9 +1022,7 @@ class VMOps(object):
         b64_contents = base64.b64encode(contents)
 
         # Need to uniquely identify this request.
-        transaction_id = str(uuid.uuid4())
-        args = {'id': transaction_id, 'b64_path': b64_path,
-                'b64_contents': b64_contents}
+        args = {'b64_path': b64_path, 'b64_contents': b64_contents}
         # If the agent doesn't support file injection, a NotImplementedError
         # will be raised with the appropriate message.
         resp = self._make_agent_call('inject_file', instance, args)
@@ -1557,6 +1548,9 @@ class VMOps(object):
 
     def _make_agent_call(self, method, vm, addl_args=None):
         """Abstracts out the interaction with the agent xenapi plugin."""
+        if addl_args is None:
+            addl_args = {}
+        addl_args['id'] = str(uuid.uuid4())
         ret = self._make_plugin_call('agent', method=method, vm=vm,
                 path='', addl_args=addl_args)
         if isinstance(ret, dict):
