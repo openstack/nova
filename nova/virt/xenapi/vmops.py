@@ -1480,7 +1480,7 @@ class VMOps(object):
             location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
             self.add_to_param_xenstore(vm_ref, location, json.dumps(info))
             try:
-                self.write_to_xenstore(instance, location, info)
+                self.write_to_xenstore(instance, location, info, vm_ref=vm_ref)
             except KeyError:
                 # catch KeyError for domid if instance isn't running
                 pass
@@ -1517,11 +1517,7 @@ class VMOps(object):
         """Creates uuid arg to pass to make_agent_call and calls it."""
         if not vm_ref:
             vm_ref = VMHelper.lookup(self._session, instance.name)
-        args = {'id': str(uuid.uuid4())}
-        # TODO(tr3buchet): fix function call after refactor
-        #resp = self._make_agent_call('resetnetwork', instance, args)
-        resp = self._make_plugin_call('agent', 'resetnetwork', instance, '',
-                                                               args, vm_ref)
+        resp = self._make_agent_call('resetnetwork', instance, vm_ref=vm_ref)
 
     def inject_hostname(self, instance, vm_ref, hostname):
         """Inject the hostname of the instance into the xenstore."""
@@ -1532,50 +1528,46 @@ class VMOps(object):
         LOG.debug(_("injecting hostname to xs for vm: |%s|"), vm_ref)
         self.add_to_param_xenstore(vm_ref, 'vm-data/hostname', hostname)
 
-    def write_to_xenstore(self, vm, path, value):
+    def write_to_xenstore(self, instance, path, value, vm_ref=None):
         """
         Writes the passed value to the xenstore record for the given VM
         at the specified location. A XenAPIPlugin.PluginError will be raised
         if any error is encountered in the write process.
         """
-        return self._make_xenstore_call('write_record', vm, path,
-                {'value': json.dumps(value)})
+        return self._make_plugin_call('xenstore.py', 'write_record', instance,
+                                      vm_ref=vm_ref, path=path,
+                                      value=json.dumps(value))
 
-    def _make_xenstore_call(self, method, vm, path, addl_args=None):
-        """Handles calls to the xenstore xenapi plugin."""
-        return self._make_plugin_call('xenstore.py', method=method, vm=vm,
-                path=path, addl_args=addl_args)
-
-    def _make_agent_call(self, method, vm, addl_args=None):
+    def _make_agent_call(self, method, instance, args=None, vm_ref=None):
         """Abstracts out the interaction with the agent xenapi plugin."""
-        if addl_args is None:
-            addl_args = {}
-        addl_args['id'] = str(uuid.uuid4())
-        ret = self._make_plugin_call('agent', method=method, vm=vm,
-                path='', addl_args=addl_args)
+        if args is None:
+            args = {}
+        args['id'] = str(uuid.uuid4())
+        ret = self._make_plugin_call('agent', method, instance, vm_ref=vm_ref,
+                                     **args)
         if isinstance(ret, dict):
             return ret
         try:
             return json.loads(ret)
         except TypeError:
-            instance_uuid = vm['uuid']
+            instance_uuid = instance['uuid']
             LOG.error(_('The agent call to %(method)s returned an invalid'
                       ' response: %(ret)r. VM id=%(instance_uuid)s;'
-                      ' path=%(path)s; args=%(addl_args)r') % locals())
+                      ' path=%(path)s; args=%(args)r') % locals())
             return {'returncode': 'error',
                     'message': 'unable to deserialize response'}
 
-    def _make_plugin_call(self, plugin, method, vm, path, addl_args=None,
-                                                          vm_ref=None):
+    def _make_plugin_call(self, plugin, method, instance, vm_ref=None,
+                          **addl_args):
         """
         Abstracts out the process of calling a method of a xenapi plugin.
         Any errors raised by the plugin will in turn raise a RuntimeError here.
         """
-        instance_uuid = vm['uuid']
-        vm_ref = vm_ref or self._get_vm_opaque_ref(vm)
+        instance_uuid = instance['uuid']
+        vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-        args = {'dom_id': vm_rec['domid'], 'path': path}
-        args.update(addl_args or {})
+        args = {'dom_id': vm_rec['domid']}
+        args.update(addl_args)
         try:
             return self._session.call_plugin(plugin, method, args)
         except self.XenAPI.Failure, e:
