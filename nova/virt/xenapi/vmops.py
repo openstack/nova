@@ -1487,13 +1487,9 @@ class VMOps(object):
 
         for (network, info) in network_info:
             location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
-            self.write_to_param_xenstore(vm_ref, {location: info})
+            self.add_to_param_xenstore(vm_ref, location, json.dumps(info))
             try:
-                # TODO(tr3buchet): fix function call after refactor
-                #self.write_to_xenstore(vm_ref, location, info)
-                self._make_plugin_call('xenstore.py', 'write_record', instance,
-                                       location, {'value': json.dumps(info)},
-                                       vm_ref)
+                self.write_to_xenstore(instance, location, info)
             except KeyError:
                 # catch KeyError for domid if instance isn't running
                 pass
@@ -1543,35 +1539,7 @@ class VMOps(object):
             hostname = hostname[:15]
 
         LOG.debug(_("injecting hostname to xs for vm: |%s|"), vm_ref)
-        self._session.call_xenapi('VM.add_to_xenstore_data',
-                                  vm_ref, "vm-data/hostname", hostname)
-
-    def list_from_xenstore(self, vm, path):
-        """
-        Runs the xenstore-ls command to get a listing of all records
-        from 'path' downward. Returns a dict with the sub-paths as keys,
-        and the value stored in those paths as values. If nothing is
-        found at that path, returns None.
-        """
-        ret = self._make_xenstore_call('list_records', vm, path)
-        return json.loads(ret)
-
-    def read_from_xenstore(self, vm, path):
-        """
-        Returns the value stored in the xenstore record for the given VM
-        at the specified location. A XenAPIPlugin.PluginError will be raised
-        if any error is encountered in the read process.
-        """
-        try:
-            ret = self._make_xenstore_call('read_record', vm, path,
-                    {'ignore_missing_path': 'True'})
-        except self.XenAPI.Failure:
-            return None
-        ret = json.loads(ret)
-        if ret == "None":
-            # Can't marshall None over RPC calls.
-            return None
-        return ret
+        self.add_to_param_xenstore(vm_ref, 'vm-data/hostname', hostname)
 
     def write_to_xenstore(self, vm, path, value):
         """
@@ -1581,13 +1549,6 @@ class VMOps(object):
         """
         return self._make_xenstore_call('write_record', vm, path,
                 {'value': json.dumps(value)})
-
-    def clear_xenstore(self, vm, path):
-        """
-        Deletes the VM's xenstore record for the specified path.
-        If there is no such record, the request is ignored.
-        """
-        self._make_xenstore_call('delete_record', vm, path)
 
     def _make_xenstore_call(self, method, vm, path, addl_args=None):
         """Handles calls to the xenstore xenapi plugin."""
@@ -1640,121 +1601,22 @@ class VMOps(object):
                 return {'returncode': 'error', 'message': err_msg}
             return None
 
-    def add_to_xenstore(self, vm, path, key, value):
-        """
-        Adds the passed key/value pair to the xenstore record for
-        the given VM at the specified location. A XenAPIPlugin.PluginError
-        will be raised if any error is encountered in the write process.
-        """
-        current = self.read_from_xenstore(vm, path)
-        if not current:
-            # Nothing at that location
-            current = {key: value}
-        else:
-            current[key] = value
-        self.write_to_xenstore(vm, path, current)
-
-    def remove_from_xenstore(self, vm, path, key_or_keys):
-        """
-        Takes either a single key or a list of keys and removes
-        them from the xenstoreirecord data for the given VM.
-        If the key doesn't exist, the request is ignored.
-        """
-        current = self.list_from_xenstore(vm, path)
-        if not current:
-            return
-        if isinstance(key_or_keys, basestring):
-            keys = [key_or_keys]
-        else:
-            keys = key_or_keys
-        keys.sort(lambda x, y: cmp(y.count('/'), x.count('/')))
-        for key in keys:
-            if path:
-                keypath = "%s/%s" % (path, key)
-            else:
-                keypath = key
-            self._make_xenstore_call('delete_record', vm, keypath)
-
-    ########################################################################
-    ###### The following methods interact with the xenstore parameter
-    ###### record, not the live xenstore. They were created before I
-    ###### knew the difference, and are left in here in case they prove
-    ###### to be useful. They all have '_param' added to their method
-    ###### names to distinguish them. (dabo)
-    ########################################################################
-    def read_partial_from_param_xenstore(self, instance_or_vm, key_prefix):
-        """
-        Returns a dict of all the keys in the xenstore parameter record
-        for the given instance that begin with the key_prefix.
-        """
-        data = self.read_from_param_xenstore(instance_or_vm)
-        badkeys = [k for k in data.keys()
-                if not k.startswith(key_prefix)]
-        for badkey in badkeys:
-            del data[badkey]
-        return data
-
-    def read_from_param_xenstore(self, instance_or_vm, keys=None):
-        """
-        Returns the xenstore parameter record data for the specified VM
-        instance as a dict. Accepts an optional key or list of keys; if a
-        value for 'keys' is passed, the returned dict is filtered to only
-        return the values for those keys.
-        """
-        vm_ref = self._get_vm_opaque_ref(instance_or_vm)
-        data = self._session.call_xenapi('VM.get_xenstore_data', vm_ref)
-        ret = {}
-        if keys is None:
-            keys = data.keys()
-        elif isinstance(keys, basestring):
-            keys = [keys]
-        for key in keys:
-            raw = data.get(key)
-            if raw:
-                ret[key] = json.loads(raw)
-            else:
-                ret[key] = raw
-        return ret
-
-    def add_to_param_xenstore(self, instance_or_vm, key, val):
+    def add_to_param_xenstore(self, vm_ref, key, val):
         """
         Takes a key/value pair and adds it to the xenstore parameter
         record for the given vm instance. If the key exists in xenstore,
         it is overwritten
         """
-        vm_ref = self._get_vm_opaque_ref(instance_or_vm)
-        self.remove_from_param_xenstore(instance_or_vm, key)
-        jsonval = json.dumps(val)
-        self._session.call_xenapi('VM.add_to_xenstore_data',
-                                  vm_ref, key, jsonval)
+        self.remove_from_param_xenstore(vm_ref, key)
+        self._session.call_xenapi('VM.add_to_xenstore_data', vm_ref, key, val)
 
-    def write_to_param_xenstore(self, instance_or_vm, mapping):
+    def remove_from_param_xenstore(self, vm_ref, key):
         """
-        Takes a dict and writes each key/value pair to the xenstore
-        parameter record for the given vm instance. Any existing data for
-        those keys is overwritten.
-        """
-        for k, v in mapping.iteritems():
-            self.add_to_param_xenstore(instance_or_vm, k, v)
-
-    def remove_from_param_xenstore(self, instance_or_vm, key_or_keys):
-        """
-        Takes either a single key or a list of keys and removes
-        them from the xenstore parameter record data for the given VM.
+        Takes a single key and removes it from the xenstore parameter
+        record data for the given VM.
         If the key doesn't exist, the request is ignored.
         """
-        vm_ref = self._get_vm_opaque_ref(instance_or_vm)
-        if isinstance(key_or_keys, basestring):
-            keys = [key_or_keys]
-        else:
-            keys = key_or_keys
-        for key in keys:
-            self._session.call_xenapi('VM.remove_from_xenstore_data',
-                                      vm_ref, key)
-
-    def clear_param_xenstore(self, instance_or_vm):
-        """Removes all data from the xenstore parameter record for this VM."""
-        self.write_to_param_xenstore(instance_or_vm, {})
+        self._session.call_xenapi('VM.remove_from_xenstore_data', vm_ref, key)
 
     def refresh_security_group_rules(self, security_group_id):
         """ recreates security group rules for every instance """
