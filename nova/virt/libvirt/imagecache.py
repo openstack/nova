@@ -58,6 +58,7 @@ imagecache_opts = [
     ]
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
+flags.DECLARE('base_dir_name', 'nova.compute.manager')
 FLAGS = flags.FLAGS
 FLAGS.register_opts(imagecache_opts)
 
@@ -178,7 +179,8 @@ class ImageCacheManager(object):
                                'backing': backing_file})
 
                     backing_path = os.path.join(FLAGS.instances_path,
-                                                '_base', backing_file)
+                                                FLAGS.base_dir_name,
+                                                backing_file)
                     if not backing_path in inuse_images:
                         inuse_images.append(backing_path)
 
@@ -372,7 +374,7 @@ class ImageCacheManager(object):
         # created, but may remain from previous versions.
         self._reset_state()
 
-        base_dir = os.path.join(FLAGS.instances_path, '_base')
+        base_dir = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)
         if not os.path.exists(base_dir):
             LOG.debug(_('Skipping verification, no base directory at %s'),
                       base_dir)
