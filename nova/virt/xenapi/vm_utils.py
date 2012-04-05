@@ -319,11 +319,12 @@ class VMHelper(xenapi.HelperBase):
                     _('Unable to destroy VDI %s') % vdi_ref)
 
     @classmethod
-    def create_vdi(cls, session, sr_ref, name_label, virtual_size, read_only):
+    def create_vdi(cls, session, sr_ref, name_label, name_description,
+                   virtual_size, read_only=False):
         """Create a VDI record and returns its reference."""
         vdi_ref = session.call_xenapi("VDI.create",
              {'name_label': name_label,
-              'name_description': '',
+              'name_description': name_description,
               'SR': sr_ref,
               'virtual_size': str(virtual_size),
               'type': 'User',
@@ -355,9 +356,11 @@ class VMHelper(xenapi.HelperBase):
         return vdi_ref
 
     @classmethod
-    def set_vdi_name_label(cls, session, vdi_uuid, name_label):
-        vdi_ref = session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
-        session.call_xenapi("VDI.set_name_label", vdi_ref, name_label)
+    def set_vdi_name(cls, session, vdi_uuid, label, description,
+                     vdi_ref=None):
+        vdi_ref = vdi_ref or session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+        session.call_xenapi('VDI.set_name_label', vdi_ref, label)
+        session.call_xenapi('VDI.set_name_description', vdi_ref, description)
 
     @classmethod
     def get_vdi_for_vm_safely(cls, session, vm_ref):
@@ -462,8 +465,10 @@ class VMHelper(xenapi.HelperBase):
                                     new_gb=instance_type['root_gb'])
 
             # Create new VDI
-            new_ref = cls.fetch_blank_disk(session,
-                                           instance_type['id'])
+            vdi_size = instance_type['root_gb'] * 1024 * 1024 * 1024
+            new_ref = cls.create_vdi(session, sr_ref, instance.name, 'root',
+                                     vdi_size)
+
             new_uuid = session.call_xenapi('VDI.get_uuid', new_ref)
 
             # Manually copy contents over
@@ -518,11 +523,10 @@ class VMHelper(xenapi.HelperBase):
         """
         # 1. Create VDI
         sr_ref = cls.safe_find_sr(session)
-        name_label = '%s-%s' % (instance.name, name)
         ONE_MEG = 1024 * 1024
         virtual_size = size_mb * ONE_MEG
-        vdi_ref = cls.create_vdi(
-            session, sr_ref, name_label, virtual_size, read_only=False)
+        vdi_ref = cls.create_vdi(session, sr_ref, instance.name, name,
+                                 virtual_size)
 
         try:
             # 2. Attach VDI to compute worker (VBD hotplug)
@@ -574,21 +578,6 @@ class VMHelper(xenapi.HelperBase):
                            FLAGS.default_ephemeral_format)
 
     @classmethod
-    def fetch_blank_disk(cls, session, instance_type_id):
-        # Size the blank harddrive to suit the machine type:
-        one_gig = 1024 * 1024 * 1024
-        req_type = instance_types.get_instance_type(instance_type_id)
-        req_size = req_type['root_gb']
-
-        LOG.debug(_("Creating blank HD of size %(req_size)d gigs"), locals())
-        vdi_size = one_gig * req_size
-
-        sr_ref = cls.safe_find_sr(session)
-
-        vdi_ref = cls.create_vdi(session, sr_ref, 'blank HD', vdi_size, False)
-        return vdi_ref
-
-    @classmethod
     def create_kernel_image(cls, context, session, instance, image, user_id,
                             project_id, image_type):
         """Creates kernel/ramdisk file from the image stored in the cache.
@@ -613,19 +602,8 @@ class VMHelper(xenapi.HelperBase):
                          file=filename)]
 
     @classmethod
-    def create_image(cls, context, session, instance, image, user_id,
-                     project_id, image_type):
-        """Creates VDI from the image stored in the local cache. If the image
-        is not present in the cache, it streams it from glance.
-
-        Returns: A list of dictionaries that describe VDIs
-        """
-        if FLAGS.cache_images == False or image_type == ImageType.DISK_ISO:
-            # If caching is disabled, we do not have to keep a copy of the
-            # image. Fetch the image from glance.
-            return cls.fetch_image(context, session, instance,
-                                   instance.image_ref, image_type)
-
+    def _create_cached_image(cls, context, session, instance, image,
+                             image_type):
         sr_ref = cls.safe_find_sr(session)
         sr_type = session.call_xenapi('SR.get_record', sr_ref)["type"]
         vdi_return_list = []
@@ -642,10 +620,11 @@ class VMHelper(xenapi.HelperBase):
                                    image_type)
             vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                           vdis[0]['vdi_uuid'])
+            cls.set_vdi_name(session, vdis[0]['vdi_uuid'],
+                             'Glance Image %s' % image, 'root',
+                             vdi_ref=vdi_ref)
             session.call_xenapi('VDI.add_to_other_config',
-                                vdi_ref, "image-id", str(image))
-            session.call_xenapi('VDI.set_name_label',
-                                vdi_ref, "Cached glance image")
+                                vdi_ref, 'image-id', str(image))
 
             for vdi in vdis:
                 if vdi["vdi_type"] == "swap":
@@ -660,15 +639,14 @@ class VMHelper(xenapi.HelperBase):
 
         # Set the name label for the image we just created and remove image id
         # field from other-config.
-        session.call_xenapi('VDI.set_name_label', new_vdi_ref, instance.name)
         session.call_xenapi('VDI.remove_from_other_config',
-                            new_vdi_ref, "image-id")
+                            new_vdi_ref, 'image-id')
 
         vdi_return_list.append(dict(
-            vdi_type=("root" if image_type == ImageType.DISK_VHD
-                      else ImageType.to_string(image_type)),
-            vdi_uuid=session.call_xenapi('VDI.get_uuid', new_vdi_ref),
-            file=None))
+                vdi_type=("root" if image_type == ImageType.DISK_VHD
+                          else ImageType.to_string(image_type)),
+                vdi_uuid=session.call_xenapi('VDI.get_uuid', new_vdi_ref),
+                file=None))
 
         # Create a swap disk if the glance image had one associated with it.
         vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
@@ -679,11 +657,34 @@ class VMHelper(xenapi.HelperBase):
             new_swap_vdi_ref = cls.copy_vdi(session, sr_ref, swap_vdi_ref)
             new_swap_vdi_uuid = session.call_xenapi('VDI.get_uuid',
                                                     new_swap_vdi_ref)
-            session.call_xenapi('VDI.set_name_label', new_swap_vdi_ref,
-                                instance.name + "-swap")
             vdi_return_list.append(dict(vdi_type="swap",
-                vdi_uuid=new_swap_vdi_uuid,
-                file=None))
+                                        vdi_uuid=new_swap_vdi_uuid,
+                                        file=None))
+
+        return vdi_return_list
+
+    @classmethod
+    def create_image(cls, context, session, instance, image, image_type):
+        """Creates VDI from the image stored in the local cache. If the image
+        is not present in the cache, it streams it from glance.
+
+        Returns: A list of dictionaries that describe VDIs
+        """
+        if FLAGS.cache_images is True and image_type != ImageType.DISK_ISO:
+            vdi_return_list = cls._create_cached_image(context, session,
+                                                       instance, image,
+                                                       image_type)
+        else:
+            # If caching is disabled, we do not have to keep a copy of the
+            # image. Fetch the image from glance.
+            vdi_return_list = cls.fetch_image(context, session, instance,
+                                              instance.image_ref, image_type)
+
+        # Set the name label and description to easily identify what
+        # instance and disk it's for
+        for vdi in vdi_return_list:
+            cls.set_vdi_name(session, vdi['vdi_uuid'], instance.name,
+                             vdi['vdi_type'])
 
         return vdi_return_list
 
@@ -767,9 +768,8 @@ class VMHelper(xenapi.HelperBase):
         os_vdi_uuid = vdis[0]['vdi_uuid']
 
         # Set the name-label to ease debugging
-        vdi_ref = session.call_xenapi("VDI.get_by_uuid", os_vdi_uuid)
-        primary_name_label = instance.name
-        session.call_xenapi("VDI.set_name_label", vdi_ref, primary_name_label)
+        cls.set_vdi_name(session, os_vdi_uuid, instance.name,
+                         vdis[0]['vdi_type'])
 
         cls._check_vdi_size(context, session, instance, os_vdi_uuid)
         return vdis
@@ -854,7 +854,8 @@ class VMHelper(xenapi.HelperBase):
                   "max %(max_size)d bytes") % locals())
 
         name_label = instance.name
-        vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
+        vdi_ref = cls.create_vdi(session, sr_ref, name_label, image_type_str,
+                                vdi_size)
         # From this point we have a VDI on Xen host;
         # If anything goes wrong, we need to remember its uuid.
         try:
