@@ -150,7 +150,7 @@ class VMOps(object):
     """
     Management class for VM-related tasks
     """
-    def __init__(self, session, product_version):
+    def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
         self.compute_api = compute.API()
         self._session = session
@@ -162,7 +162,6 @@ class VMOps(object):
         self.firewall_driver = fw_class(xenapi_session=self._session)
         vif_impl = utils.import_class(FLAGS.xenapi_vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
-        self._product_version = product_version
 
     def list_instances(self):
         """List VM instances."""
@@ -899,7 +898,7 @@ class VMOps(object):
             # Resize up. Simple VDI resize will do the trick
             LOG.debug(_("Resizing up VDI %(vdi_uuid)s from %(old_gb)dGB to "
                         "%(new_gb)dGB") % locals())
-            if self._product_version[0] > 5:
+            if self._session.product_version[0] > 5:
                 resize_func_name = 'VDI.resize'
             else:
                 resize_func_name = 'VDI.resize_online'

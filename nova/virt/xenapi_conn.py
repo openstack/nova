@@ -153,8 +153,7 @@ class XenAPIConnection(driver.ComputeDriver):
         self._volumeops = volumeops.VolumeOps(self._session)
         self._host_state = None
         self._host = host.Host(self._session)
-        self._product_version = self._session.get_product_version()
-        self._vmops = vmops.VMOps(self._session, self._product_version)
+        self._vmops = vmops.VMOps(self._session)
         self._initiator = None
         self._pool = pool.ResourcePool(self._session)
 
@@ -486,13 +485,13 @@ class XenAPISession(object):
     def __init__(self, url, user, pw):
         self.XenAPI = self.get_imported_xenapi()
         self._sessions = queue.Queue()
-        self.host_uuid = None
         self.is_slave = False
         exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
                                           "(is the Dom0 disk full?)"))
         url = self._create_first_session(url, user, pw, exception)
         self._populate_session_pool(url, user, pw, exception)
-        self._populate_host_uuid()
+        self.host_uuid = self._get_host_uuid()
+        self.product_version = self._get_product_version()
 
     def _create_first_session(self, url, user, pw, exception):
         try:
@@ -519,22 +518,22 @@ class XenAPISession(object):
                 session.login_with_password(user, pw)
             self._sessions.put(session)
 
-    def _populate_host_uuid(self):
+    def _get_host_uuid(self):
         if self.is_slave:
             try:
                 aggr = db.aggregate_get_by_host(context.get_admin_context(),
                                                 FLAGS.host)
-                self.host_uuid = aggr.metadetails[FLAGS.host]
             except exception.AggregateHostNotFound:
                 LOG.exception(_('Host is member of a pool, but DB '
                                 'says otherwise'))
                 raise
+            return aggr.metadetails[FLAGS.host]
         else:
             with self._get_session() as session:
                 host_ref = session.xenapi.session.get_this_host(session.handle)
-                self.host_uuid = session.xenapi.host.get_uuid(host_ref)
+                return session.xenapi.host.get_uuid(host_ref)
 
-    def get_product_version(self):
+    def _get_product_version(self):
         """Return a tuple of (major, minor, rev) for the host version"""
         host = self.get_xenapi_host()
         software_version = self.call_xenapi('host.get_software_version',
