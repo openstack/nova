@@ -1543,8 +1543,8 @@ class VMOps(object):
             hostname = hostname[:15]
 
         LOG.debug(_("injecting hostname to xs for vm: |%s|"), vm_ref)
-        self._session.call_xenapi_request("VM.add_to_xenstore_data",
-                (vm_ref, "vm-data/hostname", hostname))
+        self._session.call_xenapi('VM.add_to_xenstore_data',
+                                  vm_ref, "vm-data/hostname", hostname)
 
     def list_from_xenstore(self, vm, path):
         """
@@ -1702,8 +1702,7 @@ class VMOps(object):
         return the values for those keys.
         """
         vm_ref = self._get_vm_opaque_ref(instance_or_vm)
-        data = self._session.call_xenapi_request('VM.get_xenstore_data',
-                (vm_ref,))
+        data = self._session.call_xenapi('VM.get_xenstore_data', vm_ref)
         ret = {}
         if keys is None:
             keys = data.keys()
@@ -1726,8 +1725,8 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance_or_vm)
         self.remove_from_param_xenstore(instance_or_vm, key)
         jsonval = json.dumps(val)
-        self._session.call_xenapi_request('VM.add_to_xenstore_data',
-                                          (vm_ref, key, jsonval))
+        self._session.call_xenapi('VM.add_to_xenstore_data',
+                                  vm_ref, key, jsonval)
 
     def write_to_param_xenstore(self, instance_or_vm, mapping):
         """
@@ -1750,8 +1749,8 @@ class VMOps(object):
         else:
             keys = key_or_keys
         for key in keys:
-            self._session.call_xenapi_request('VM.remove_from_xenstore_data',
-                                              (vm_ref, key))
+            self._session.call_xenapi('VM.remove_from_xenstore_data',
+                                      vm_ref, key)
 
     def clear_param_xenstore(self, instance_or_vm):
         """Removes all data from the xenstore parameter record for this VM."""
