@@ -895,11 +895,11 @@ class XenAPIMigrateInstance(test.TestCase):
         db.migration_get_all_unconfirmed(fake_context,
                 resize_confirm_window).AndReturn(migrations)
         # Found unconfirmed migrations message
-        vmops.LOG.info(mox.IgnoreArg())
+        vmops.LOG.info(mox.IgnoreArg(), mox.IgnoreArg())
 
         # test success (ACTIVE/RESIZE_VERIFY)
         instance = instances.pop(0)
-        vmops.LOG.info(mox.IgnoreArg())
+        vmops.LOG.info(mox.IgnoreArg(), mox.IgnoreArg())
         db.instance_get_by_uuid(fake_context,
                 instance['uuid']).AndReturn(instance)
         conn._vmops.compute_api.confirm_resize(fake_context,
@@ -908,7 +908,7 @@ class XenAPIMigrateInstance(test.TestCase):
         # test instance that doesn't exist anymore sets migration to
         # error
         instance = instances.pop(0)
-        vmops.LOG.info(mox.IgnoreArg())
+        vmops.LOG.info(mox.IgnoreArg(), mox.IgnoreArg())
         db.instance_get_by_uuid(fake_context,
                 instance['uuid']).AndRaise(exception.InstanceNotFound)
         vmops.LOG.warn(mox.IgnoreArg())
@@ -916,32 +916,32 @@ class XenAPIMigrateInstance(test.TestCase):
 
         # test instance in ERROR/RESIZE_VERIFY sets migration to error
         instance = instances.pop(0)
-        vmops.LOG.info(mox.IgnoreArg())
+        vmops.LOG.info(mox.IgnoreArg(), mox.IgnoreArg())
         db.instance_get_by_uuid(fake_context,
                 instance['uuid']).AndReturn(instance)
-        vmops.LOG.warn(mox.IgnoreArg())
+        vmops.LOG.warn(mox.IgnoreArg(), instance=instance)
         db.migration_update(fake_context, 3, {'status': 'error'})
 
         # test instance in ACTIVE/REBOOTING sets migration to error
         instance = instances.pop(0)
-        vmops.LOG.info(mox.IgnoreArg())
+        vmops.LOG.info(mox.IgnoreArg(), mox.IgnoreArg())
         db.instance_get_by_uuid(fake_context,
                 instance['uuid']).AndReturn(instance)
-        vmops.LOG.warn(mox.IgnoreArg())
+        vmops.LOG.warn(mox.IgnoreArg(), instance=instance)
         db.migration_update(fake_context, 4, {'status': 'error'})
 
         # test confirm_resize raises and doesn't set migration to error
         instance = instances.pop(0)
-        vmops.LOG.info(mox.IgnoreArg())
+        vmops.LOG.info(mox.IgnoreArg(), mox.IgnoreArg())
         db.instance_get_by_uuid(fake_context,
                 instance['uuid']).AndReturn(instance)
         conn._vmops.compute_api.confirm_resize(fake_context,
                 instance).AndRaise(test.TestingException)
-        vmops.LOG.error(mox.IgnoreArg())
+        vmops.LOG.error(mox.IgnoreArg(), instance=instance)
 
         # test succeeds again (ACTIVE/RESIZE_VERIFY)
         instance = instances.pop(0)
-        vmops.LOG.info(mox.IgnoreArg())
+        vmops.LOG.info(mox.IgnoreArg(), mox.IgnoreArg())
         db.instance_get_by_uuid(fake_context,
                 instance['uuid']).AndReturn(instance)
         conn._vmops.compute_api.confirm_resize(fake_context,

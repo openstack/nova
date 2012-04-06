@@ -1715,7 +1715,7 @@ class UndoManager(object):
         for undo_func in reversed(self.undo_stack):
             undo_func()
 
-    def rollback_and_reraise(self, msg=None):
+    def rollback_and_reraise(self, msg=None, **kwargs):
         """Rollback a series of actions then re-raise the exception.
 
         .. note:: (sirp) This should only be called within an
@@ -1723,6 +1723,6 @@ class UndoManager(object):
         """
         with save_and_reraise_exception():
             if msg:
-                LOG.exception(msg)
+                LOG.exception(msg, **kwargs)
 
             self._rollback()

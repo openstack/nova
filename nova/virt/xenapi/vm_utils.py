@@ -214,10 +214,8 @@ class VMHelper(xenapi.HelperBase):
             rec['HVM_boot_params'] = {'order': 'dc'}
             rec['HVM_boot_policy'] = 'BIOS order'
 
-        LOG.debug(_('Created VM %s...'), instance.name)
         vm_ref = session.call_xenapi('VM.create', rec)
-        instance_name = instance.name
-        LOG.debug(_('Created VM %(instance_name)s as %(vm_ref)s.') % locals())
+        LOG.debug(_('Created VM'), instance=instance)
         return vm_ref
 
     @classmethod
@@ -378,8 +376,8 @@ class VMHelper(xenapi.HelperBase):
     def create_snapshot(cls, session, instance, vm_ref, label):
         """Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
         Snapshot VHD"""
-        LOG.debug(_("Snapshotting VM %(vm_ref)s with label '%(label)s'...")
-                % locals())
+        LOG.debug(_("Snapshotting with label '%(label)s'"), locals(),
+                  instance=instance)
 
         vm_vdi_ref, vm_vdi_rec = cls.get_vdi_for_vm_safely(session, vm_ref)
         sr_ref = vm_vdi_rec["SR"]
@@ -391,8 +389,8 @@ class VMHelper(xenapi.HelperBase):
                 template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
 
-        LOG.debug(_('Created snapshot %(template_vm_ref)s from'
-                    ' VM %(vm_ref)s.') % locals())
+        LOG.debug(_('Created snapshot %(template_vm_ref)s'), locals(),
+                  instance=instance)
 
         parent_uuid, base_uuid = _wait_for_vhd_coalesce(
             session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
@@ -431,7 +429,7 @@ class VMHelper(xenapi.HelperBase):
         # NOTE(sirp): Currently we only support uploading images as VHD, there
         # is no RAW equivalent (yet)
         LOG.debug(_("Asking xapi to upload %(vdi_uuids)s as"
-                    " ID %(image_id)s") % locals())
+                    " ID %(image_id)s"), locals(), instance=instance)
 
         glance_host, glance_port = glance.pick_glance_api_server()
 
@@ -582,11 +580,9 @@ class VMHelper(xenapi.HelperBase):
         req_type = instance_types.get_instance_type(instance_type_id)
         req_size = req_type['root_gb']
 
-        LOG.debug("Creating blank HD of size %(req_size)d gigs"
-                    % locals())
+        LOG.debug(_("Creating blank HD of size %(req_size)d gigs"), locals())
         vdi_size = one_gig * req_size
 
-        LOG.debug("ISO vm create: Looking for the SR")
         sr_ref = cls.safe_find_sr(session)
 
         vdi_ref = cls.create_vdi(session, sr_ref, 'blank HD', vdi_size, False)
@@ -751,8 +747,8 @@ class VMHelper(xenapi.HelperBase):
 
         Returns: A list of dictionaries that describe VDIs
         """
-        LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
-                    % locals())
+        LOG.debug(_("Asking xapi to fetch vhd image %(image)s"), locals(),
+                  instance=instance)
         sr_ref = cls.safe_find_sr(session)
 
         vdis = cls._retry_glance_download_vhd(context, session, image)
@@ -762,7 +758,8 @@ class VMHelper(xenapi.HelperBase):
         # 'vdi_type' can be 'os' or 'swap' right now.
         for vdi in vdis:
             LOG.debug(_("xapi 'download_vhd' returned VDI of "
-                    "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'") % vdi)
+                        "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'"),
+                      vdi, instance=instance)
 
         cls.scan_sr(session, sr_ref)
 
@@ -806,13 +803,12 @@ class VMHelper(xenapi.HelperBase):
         allowed_size_bytes = allowed_size_gb * 1024 * 1024 * 1024
 
         LOG.debug(_("image_size_bytes=%(size_bytes)d, allowed_size_bytes="
-                    "%(allowed_size_bytes)d") % locals())
+                    "%(allowed_size_bytes)d"), locals(), instance=instance)
 
         if size_bytes > allowed_size_bytes:
-            LOG.info(_("Image size %(size_bytes)d exceeded"
-                       " instance_type allowed size "
-                       "%(allowed_size_bytes)d")
-                       % locals())
+            LOG.info(_("Image size %(size_bytes)d exceeded instance_type "
+                       "allowed size %(allowed_size_bytes)d"),
+                     locals(), instance=instance)
             raise exception.ImageTooLarge()
 
     @classmethod
@@ -828,16 +824,15 @@ class VMHelper(xenapi.HelperBase):
         Returns: A single filename if image_type is KERNEL_RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
-        instance_id = instance.id
         # FIXME(sirp): Since the Glance plugin seems to be required for the
         # VHD disk, it may be worth using the plugin for both VHD and RAW and
         # DISK restores
-        LOG.debug(_("Fetching image %(image)s") % locals())
-        LOG.debug(_("Image Type: %s"), ImageType.to_string(image_type))
+        image_type_str = ImageType.to_string(image_type)
+        LOG.debug(_("Fetching image %(image)s, type %(image_type_str)"),
+                  locals(), instance=instance)
 
         if image_type == ImageType.DISK_ISO:
             sr_ref = cls.safe_find_iso_sr(session)
-            LOG.debug(_("ISO: Found sr possibly containing the ISO image"))
         else:
             sr_ref = cls.safe_find_sr(session)
 
@@ -846,7 +841,8 @@ class VMHelper(xenapi.HelperBase):
         meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
-        LOG.debug(_("Size for image %(image)s: %(virtual_size)d"), locals())
+        LOG.debug(_("Size for image %(image)s: %(virtual_size)d"), locals(),
+                  instance=instance)
         if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
@@ -871,7 +867,8 @@ class VMHelper(xenapi.HelperBase):
             if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
                 # We need to invoke a plugin for copying the
                 # content of the VDI into the proper path.
-                LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
+                LOG.debug(_("Copying VDI %s to /boot/guest on dom0"),
+                          vdi_ref, instance=instance)
                 fn = "copy_kernel_vdi"
                 args = {}
                 args['vdi-ref'] = vdi_ref
@@ -884,7 +881,8 @@ class VMHelper(xenapi.HelperBase):
 
                 # Remove the VDI as it is not needed anymore.
                 cls.destroy_vdi(session, vdi_ref)
-                LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
+                LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref,
+                          instance=instance)
                 return [dict(vdi_type=ImageType.to_string(image_type),
                              vdi_uuid=None,
                              file=filename)]
@@ -894,8 +892,8 @@ class VMHelper(xenapi.HelperBase):
                              file=None)]
         except (cls.XenAPI.Failure, IOError, OSError) as e:
             # We look for XenAPI and OS failures.
-            LOG.exception(_("instance %s: Failed to fetch glance image"),
-                          instance_id)
+            LOG.exception(_("Failed to fetch glance image"),
+                          instance=instance)
             e.args = e.args + ([dict(vdi_type=ImageType.
                                               to_string(image_type),
                                     vdi_uuid=vdi_uuid,
@@ -1417,8 +1415,8 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
             LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
-                    " %(original_parent_uuid)s, waiting for coalesce...")
-                    % locals())
+                        " %(original_parent_uuid)s, waiting for coalesce..."),
+                      locals(), instance=instance)
         else:
             parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
             base_uuid = get_vhd_parent_uuid(session, parent_ref)
@@ -1565,7 +1563,7 @@ def _write_partition(virtual_size, dev):
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
     LOG.debug(_('Writing partition table %(primary_first)d %(primary_last)d'
-            ' to %(dev_path)s...') % locals())
+                ' to %(dev_path)s...'), locals())
 
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
@@ -1633,7 +1631,7 @@ def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
 
     LOG.debug(_("Starting sparse_copy src=%(src_path)s dst=%(dst_path)s "
                 "virtual_size=%(virtual_size)d block_size=%(block_size)d"),
-                locals())
+              locals())
 
     # NOTE(sirp): we need read/write access to the devices; since we don't have
     # the luxury of shelling out to a sudo'd command, we temporarily take
@@ -1714,19 +1712,19 @@ def _find_guest_agent(base_dir, agent_rel_path):
         # so manipulation of files in /etc is not
         # required
         LOG.info(_('XenServer tools installed in this '
-                'image are capable of network injection.  '
-                'Networking files will not be'
-                'manipulated'))
+                   'image are capable of network injection.  '
+                   'Networking files will not be'
+                   'manipulated'))
         return True
     xe_daemon_filename = os.path.join(base_dir,
         'usr', 'sbin', 'xe-daemon')
     if os.path.isfile(xe_daemon_filename):
         LOG.info(_('XenServer tools are present '
-                'in this image but are not capable '
-                'of network injection'))
+                   'in this image but are not capable '
+                   'of network injection'))
     else:
         LOG.info(_('XenServer tools are not '
-                'installed in this image'))
+                   'installed in this image'))
     return False
 
 
@@ -1741,8 +1739,7 @@ def _mounted_processing(device, key, net, metadata):
             try:
                 # This try block ensures that the umount occurs
                 if not _find_guest_agent(tmpdir, FLAGS.xenapi_agent_path):
-                    LOG.info(_('Manipulating interface files '
-                            'directly'))
+                    LOG.info(_('Manipulating interface files directly'))
                     # for xenapi, we don't 'inject' admin_password here,
                     # it's handled at instance startup time
                     disk.inject_data_into_fs(tmpdir,
@@ -1752,7 +1749,7 @@ def _mounted_processing(device, key, net, metadata):
                 utils.execute('umount', dev_path, run_as_root=True)
         else:
             LOG.info(_('Failed to mount filesystem (expected for '
-                'non-linux instances): %s') % err)
+                       'non-linux instances): %s') % err)
 
 
 def _prepare_injectables(inst, networks_info):
