@@ -2275,24 +2275,7 @@ class LibvirtConnectionTestCase(test.TestCase):
     """Test for nova.virt.libvirt.connection.LibvirtConnection."""
     def setUp(self):
         super(LibvirtConnectionTestCase, self).setUp()
-
         self.libvirtconnection = connection.LibvirtConnection(read_only=True)
-
-        self.temp_path = os.path.join(flags.FLAGS.instances_path,
-                                      'instance-00000001/', '')
-        try:
-            os.makedirs(self.temp_path)
-        except Exception:
-            print 'testcase init error'
-            pass
-
-    def tearDown(self):
-        super(LibvirtConnectionTestCase, self).tearDown()
-
-        try:
-            shutil.rmtree(flags.FLAGS.instances_path)
-        except Exception:
-            pass
 
     def _create_instance(self, params=None):
         """Create a test instance"""
@@ -2501,14 +2484,18 @@ class LibvirtConnectionTestCase(test.TestCase):
         self.stubs.Set(self.libvirtconnection, '_create_new_domain',
                        fake_create_new_domain)
 
-        ins_ref = self._create_instance()
-        libvirt_xml_path = os.path.join(flags.FLAGS.instances_path,
-                                        ins_ref['name'], 'libvirt.xml')
-        f = open(libvirt_xml_path, 'w')
-        f.close()
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            ins_ref = self._create_instance()
+            os.mkdir(os.path.join(tmpdir, ins_ref['name']))
+            libvirt_xml_path = os.path.join(tmpdir,
+                                            ins_ref['name'],
+                                            'libvirt.xml')
+            f = open(libvirt_xml_path, 'w')
+            f.close()
 
-        ref = self.libvirtconnection.finish_revert_migration(ins_ref, None)
-        self.assertTrue(isinstance(ref, eventlet.event.Event))
+            ref = self.libvirtconnection.finish_revert_migration(ins_ref, None)
+            self.assertTrue(isinstance(ref, eventlet.event.Event))
 
 
 class LibvirtNonblockingTestCase(test.TestCase):
