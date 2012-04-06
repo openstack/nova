@@ -2241,9 +2241,6 @@ def quota_get_all_by_project(context, project_id):
 
 @require_admin_context
 def quota_create(context, project_id, resource, limit):
-    # NOTE: Treat -1 as unlimited for consistency w/ flags
-    if limit == -1:
-        limit = None
     quota_ref = models.Quota()
     quota_ref.project_id = project_id
     quota_ref.resource = resource
@@ -2254,9 +2251,6 @@ def quota_create(context, project_id, resource, limit):
 
 @require_admin_context
 def quota_update(context, project_id, resource, limit):
-    # NOTE: Treat -1 as unlimited for consistency w/ flags
-    if limit == -1:
-        limit = None
     session = get_session()
     with session.begin():
         quota_ref = quota_get(context, project_id, resource, session=session)

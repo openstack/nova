@@ -79,9 +79,6 @@ def _get_default_quotas():
             FLAGS.quota_max_injected_file_content_bytes,
     }
     # -1 in the quota flags means unlimited
-    for key in defaults.keys():
-        if defaults[key] == -1:
-            defaults[key] = None
     return defaults
 
 
@@ -111,7 +108,7 @@ def get_project_quotas(context, project_id):
 
 
 def _get_request_allotment(requested, used, quota):
-    if quota is None:
+    if quota == -1:
         return requested
     return quota - used
 
