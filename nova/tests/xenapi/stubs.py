@@ -40,8 +40,7 @@ def stubout_firewall_driver(stubs, conn):
 
 def stubout_instance_snapshot(stubs):
     @classmethod
-    def fake_fetch_image(cls, context, session, instance, image, user,
-                         project, type):
+    def fake_fetch_image(cls, context, session, instance, image, type):
         return [dict(vdi_type='os', vdi_uuid=_make_fake_vdi())]
 
     stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)

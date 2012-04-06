@@ -610,7 +610,7 @@ class VMHelper(xenapi.HelperBase):
 
         if filename == "":
             return cls.fetch_image(context, session, instance, image,
-                                   user_id, project_id, image_type)
+                                   image_type)
         else:
             return [dict(vdi_type=ImageType.to_string(image_type),
                          vdi_uuid=None,
@@ -627,10 +627,8 @@ class VMHelper(xenapi.HelperBase):
         if FLAGS.cache_images == False or image_type == ImageType.DISK_ISO:
             # If caching is disabled, we do not have to keep a copy of the
             # image. Fetch the image from glance.
-            return cls.fetch_image(context, session,
-                instance, instance.image_ref,
-                instance.user_id, instance.project_id,
-                image_type)
+            return cls.fetch_image(context, session, instance,
+                                   instance.image_ref, image_type)
 
         sr_ref = cls.safe_find_sr(session)
         sr_type = session.call_xenapi('SR.get_record', sr_ref)["type"]
@@ -644,8 +642,8 @@ class VMHelper(xenapi.HelperBase):
 
         vdi_ref = cls.find_cached_image(session, image, sr_ref)
         if vdi_ref is None:
-            vdis = cls.fetch_image(context, session, instance, image, user_id,
-                                   project_id, image_type)
+            vdis = cls.fetch_image(context, session, instance, image,
+                                   image_type)
             vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                           vdis[0]['vdi_uuid'])
             session.call_xenapi('VDI.add_to_other_config',
@@ -694,19 +692,18 @@ class VMHelper(xenapi.HelperBase):
         return vdi_return_list
 
     @classmethod
-    def fetch_image(cls, context, session, instance, image, _user_id,
-                    _project_id, image_type):
+    def fetch_image(cls, context, session, instance, image, image_type):
         """Fetch image from glance based on image type.
 
         Returns: A single filename if image_type is KERNEL or RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
         if image_type == ImageType.DISK_VHD:
-            return cls._fetch_image_glance_vhd(context,
-                session, instance, image, image_type)
+            return cls._fetch_image_glance_vhd(context, session, instance,
+                                               image)
         else:
-            return cls._fetch_image_glance_disk(context,
-                session, instance, image, image_type)
+            return cls._fetch_image_glance_disk(context, session, instance,
+                                                image, image_type)
 
     @classmethod
     def _retry_glance_download_vhd(cls, context, session, image):
@@ -749,8 +746,7 @@ class VMHelper(xenapi.HelperBase):
         raise exception.CouldNotFetchImage(image=image)
 
     @classmethod
-    def _fetch_image_glance_vhd(cls, context, session, instance, image,
-                                _image_type):
+    def _fetch_image_glance_vhd(cls, context, session, instance, image):
         """Tell glance to download an image and put the VHDs into the SR
 
         Returns: A list of dictionaries that describe VDIs
