@@ -220,9 +220,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._instance_update(context,
                     instance_uuid, vm_state=vm_states.ERROR)
         except exception.InstanceNotFound:
-            LOG.debug(_("Instance %(instance_uuid)s has been destroyed "
-                    "from under us while trying to set it to ERROR") %
-                    locals())
+            LOG.debug(_('Instance has been destroyed from under us while '
+                        'trying to set it to ERROR'),
+                      instance_uuid=instance_uuid)
 
     def init_host(self):
         """Initialization for a standalone compute service."""
@@ -253,7 +253,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                 self._legacy_nw_info(net_info))
                 except NotImplementedError:
                     LOG.warning(_('Hypervisor driver does not support '
-                                  'firewall rules'))
+                                  'firewall rules'), instance=instance)
 
     def _get_power_state(self, context, instance):
         """Retrieve the power state for the given instance."""
@@ -397,14 +397,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             try:
                 self.terminate_instance(context, instance_uuid)
             except exception.InstanceNotFound:
-                LOG.info(_("Instance %s already deleted from database. "
-                           "Attempting forceful vm deletion")
-                            % instance_uuid)
+                LOG.info(_("Instance already deleted from database. "
+                           "Attempting forceful vm deletion"),
+                         instance_uuid=instance_uuid)
                 ctxt = nova.context.get_admin_context(read_deleted='yes')
                 self.terminate_instance(ctxt, instance_uuid)
         except Exception as ex:
             LOG.exception(_("Exception encountered while terminating the "
-                            "instance %s") % instance_uuid)
+                            "instance"), instance_uuid=instance_uuid)
 
     def _run_instance(self, context, instance_uuid,
                       requested_networks=None,
@@ -441,7 +441,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             if self._is_instance_terminated(instance_uuid):
                 raise exception.InstanceNotFound
         except exception.InstanceNotFound:
-            LOG.exception(_("Instance %s not found.") % instance_uuid)
+            LOG.exception(_("Instance not found."),
+                          instance_uuid=instance_uuid)
             # assuming the instance was already deleted, run "delete" again
             # just in case
             self._shutdown_instance_even_if_deleted(context, instance_uuid)
@@ -522,13 +523,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         image_id = image_meta['id']
         LOG.debug(_("image_id=%(image_id)s, image_size_bytes="
                     "%(size_bytes)d, allowed_size_bytes="
-                    "%(allowed_size_bytes)d") % locals())
+                    "%(allowed_size_bytes)d") % locals(),
+                  instance=instance)
 
         if size_bytes > allowed_size_bytes:
             LOG.info(_("Image '%(image_id)s' size %(size_bytes)d exceeded"
                        " instance_type allowed size "
                        "%(allowed_size_bytes)d")
-                       % locals())
+                       % locals(), instance=instance)
             raise exception.ImageTooLarge()
 
         return image_meta
@@ -740,10 +742,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._delete_instance(context, instance)
             except exception.InstanceTerminationFailure as error:
                 msg = _('%s. Setting instance vm_state to ERROR')
-                LOG.error(msg % error)
+                LOG.error(msg % error, instance_uuid=instance_uuid)
                 self._set_instance_error_state(context, instance_uuid)
             except exception.InstanceNotFound as e:
-                LOG.warn(e)
+                LOG.warn(e, instance_uuid=instance_uuid)
         do_terminate_instance()
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -808,19 +810,20 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self._rebuild_instance(context, instance_uuid, kwargs)
         except exception.ImageNotFound:
-            msg = _("Cannot rebuild instance [%(instance_uuid)s]"
-                    ", because the given image does not exist.")
-            LOG.error(msg % instance_uuid, context=context)
+            LOG.error(_('Cannot rebuild instance because the given image does '
+                        'not exist.'),
+                      context=context, instance_uuid=instance_uuid)
             self._set_instance_error_state(context, instance_uuid)
         except Exception as exc:
-            msg = _("Cannot rebuild instance [%(instance_uuid)s]: %(exc)s")
-            LOG.error(msg % locals(), context=context)
+            LOG.error(_('Cannot rebuild instance: %(exc)s'), locals(),
+                      context=context, instance_uuid=instance_uuid)
             self._set_instance_error_state(context, instance_uuid)
 
     def _rebuild_instance(self, context, instance_uuid, kwargs):
         context = context.elevated()
 
-        LOG.audit(_("Rebuilding instance %s"), instance_uuid, context=context)
+        LOG.audit(_("Rebuilding instance"), context=context,
+                  instance_uuid=instance_uuid)
 
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
         self._notify_about_instance_usage(instance, "rebuild.start")
@@ -873,7 +876,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_instance_fault
     def reboot_instance(self, context, instance_uuid, reboot_type="SOFT"):
         """Reboot an instance on this host."""
-        LOG.audit(_("Rebooting instance %s"), instance_uuid, context=context)
+        LOG.audit(_("Rebooting instance"), context=context,
+                  instance_uuid=instance_uuid)
         context = context.elevated()
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
@@ -889,9 +893,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             state = instance['power_state']
             running = power_state.RUNNING
             LOG.warn(_('trying to reboot a non-running '
-                     'instance: %(instance_uuid)s (state: %(state)s '
+                     'instance: (state: %(state)s '
                      'expected: %(running)s)') % locals(),
-                     context=context)
+                     context=context, instance_uuid=instance_uuid)
 
         network_info = self._get_instance_nw_info(context, instance)
         self.driver.reboot(instance, self._legacy_nw_info(network_info),
@@ -930,15 +934,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE)
 
-        LOG.audit(_('instance %s: snapshotting'), instance_uuid,
-                  context=context)
+        LOG.audit(_('instance %s: snapshotting'), context=context,
+                  instance_uuid=instance_uuid)
 
         if instance_ref['power_state'] != power_state.RUNNING:
             state = instance_ref['power_state']
             running = power_state.RUNNING
             LOG.warn(_('trying to snapshot a non-running '
-                       'instance: %(instance_uuid)s (state: %(state)s '
-                       'expected: %(running)s)') % locals())
+                       'instance: (state: %(state)s '
+                       'expected: %(running)s)') % locals(),
+                     instance_uuid=instance_uuid)
 
         self._notify_about_instance_usage(instance_ref, "snapshot.start")
 
@@ -992,17 +997,19 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         images = fetch_images()
         num_images = len(images)
-        LOG.debug(_("Found %(num_images)d images (rotation: %(rotation)d)"),
-                  locals())
+        LOG.debug(_("Found %(num_images)d images (rotation: %(rotation)d)")
+                  % locals(), instance_uuid=instance_uuid)
         if num_images > rotation:
             # NOTE(sirp): this deletes all backups that exceed the rotation
             # limit
             excess = len(images) - rotation
-            LOG.debug(_("Rotating out %d backups"), excess)
+            LOG.debug(_("Rotating out %d backups") % excess,
+                      instance_uuid=instance_uuid)
             for i in xrange(excess):
                 image = images.pop()
                 image_id = image['id']
-                LOG.debug(_("Deleting image %s"), image_id)
+                LOG.debug(_("Deleting image %s") % image_id,
+                          instance_uuid=instance_uuid)
                 image_service.delete(context, image_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1038,8 +1045,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             else:
                 try:
                     self.driver.set_admin_password(instance_ref, new_pass)
-                    LOG.audit(_("Instance %s: Root password set"),
-                                instance_ref["uuid"])
+                    LOG.audit(_("Root password set"), instance=instance_ref)
                     self._instance_update(context,
                                           instance_id,
                                           task_state=None)
@@ -1048,14 +1054,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # NOTE(dprince): if the driver doesn't implement
                     # set_admin_password we break to avoid a loop
                     LOG.warn(_('set_admin_password is not implemented '
-                             'by this driver.'))
+                             'by this driver.'), instance=instance_ref)
                     self._instance_update(context,
                                           instance_id,
                                           task_state=None)
                     break
                 except Exception, e:
                     # Catch all here because this could be anything.
-                    LOG.exception(e)
+                    LOG.exception(e, instance=instance_ref)
                     if i == max_tries - 1:
                         self._set_instance_error_state(context, instance_id)
                         # We create a new exception here so that we won't
