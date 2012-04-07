@@ -65,10 +65,6 @@ log_opts = [
     cfg.StrOpt('logging_exception_prefix',
                default='%(asctime)s TRACE %(name)s %(instance)s',
                help='prefix each line of exception output with this format'),
-    cfg.StrOpt('instance_format',
-               default='[instance: %(uuid)s] ',
-               help='If an instance is passed with the log message, format '
-                    'it like this'),
     cfg.ListOpt('default_log_levels',
                 default=[
                   'amqplib=WARN',
@@ -81,6 +77,18 @@ log_opts = [
     cfg.BoolOpt('publish_errors',
                 default=False,
                 help='publish error events'),
+
+    # NOTE(mikal): there are two options here because sometimes we are handed
+    # a full instance (and could include more information), and other times we
+    # are just handed a UUID for the instance.
+    cfg.StrOpt('instance_format',
+               default='[instance: %(uuid)s] ',
+               help='If an instance is passed with the log message, format '
+                    'it like this'),
+    cfg.StrOpt('instance_uuid_format',
+               default='[instance: %(uuid)s] ',
+               help='If an instance UUID is passed with the log message, '
+                    'format it like this'),
     ]
 
 FLAGS = flags.FLAGS
@@ -158,6 +166,11 @@ class NovaContextAdapter(logging.LoggerAdapter):
         instance_extra = ''
         if instance:
             instance_extra = FLAGS.instance_format % instance
+        else:
+            instance_uuid = kwargs.pop('instance_uuid', None)
+            if instance_uuid:
+                instance_extra = (FLAGS.instance_uuid_format
+                                  % {'uuid': instance_uuid})
         extra.update({'instance': instance_extra})
 
         extra.update({"nova_version": version.version_string_with_vcs()})
