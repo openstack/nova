@@ -124,7 +124,7 @@ class EC2ValidateTestCase(test.TestCase):
                               instance_id='i-1234',
                               device='/dev/vdc')
 
-    def test_describe_instance_ttribute(self):
+    def test_describe_instance_attribute(self):
         for ec2_id, e in self.ec2_id_exception_map:
             self.assertRaises(e,
                               self.cloud.describe_instance_attribute,

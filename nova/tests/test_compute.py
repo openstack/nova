@@ -1402,37 +1402,38 @@ class ComputeTestCase(BaseTestCase):
         """Confirm exception when pre_live_migration fails."""
         # creating instance testdata
         inst_ref = self._create_fake_instance({'host': 'dummy'})
-        instance_id = inst_ref['id']
+
         c = context.get_admin_context()
         topic = db.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
         # creating volume testdata
         volume_id = 1
         db.volume_create(c, {'id': volume_id})
-        values = {'instance_id': instance_id, 'device_name': '/dev/vdc',
-            'delete_on_termination': False, 'volume_id': volume_id}
+        values = {'instance_uuid': inst_ref['uuid'], 'device_name': '/dev/vdc',
+                  'delete_on_termination': False, 'volume_id': volume_id}
         db.block_device_mapping_create(c, values)
 
         # creating mocks
         self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, FLAGS.volume_topic, {"method": "check_for_export",
-                                         "args": {'instance_id': instance_id}})
+        rpc.call(c, FLAGS.volume_topic,
+                 {"method": "check_for_export",
+                  "args": {'instance_id': inst_ref['id']}})
 
         self.mox.StubOutWithMock(self.compute.driver, 'get_instance_disk_info')
         self.compute.driver.get_instance_disk_info(inst_ref.name)
 
         rpc.call(c, topic,
                  {"method": "pre_live_migration",
-                  "args": {'instance_id': instance_id,
+                  "args": {'instance_id': inst_ref['id'],
                            'block_migration': True,
                            'disk': None}
                  }).AndRaise(rpc.common.RemoteError('', '', ''))
         # mocks for rollback
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
-                                'args': {'instance_id': instance_id,
+                                'args': {'instance_id': inst_ref['id'],
                                          'host': self.compute.host,
                                          'teardown': False}})
         rpc.call(c, topic, {"method": "remove_volume_connection",
-                            "args": {'instance_id': instance_id,
+                            "args": {'instance_id': inst_ref['id'],
                                      'volume_id': volume_id}})
         rpc.cast(c, topic, {"method": "rollback_live_migration_at_destination",
                             "args": {'instance_id': inst_ref['id']}})
@@ -1441,11 +1442,11 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.RemoteError,
                           self.compute.live_migration,
-                          c, instance_id, inst_ref['host'], True)
+                          c, inst_ref['id'], inst_ref['host'], True)
 
         # cleanup
-        for bdms in db.block_device_mapping_get_all_by_instance(c,
-                                                                instance_id):
+        for bdms in db.block_device_mapping_get_all_by_instance(
+            c, inst_ref['uuid']):
             db.block_device_mapping_destroy(c, bdms['id'])
         db.volume_destroy(c, volume_id)
         db.instance_destroy(c, inst_ref['id'])
@@ -1675,7 +1676,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute, "_cleanup_volumes")
         self.compute._cleanup_volumes(admin_context,
-                                      instance['id']).AndReturn(None)
+                                      instance['uuid']).AndReturn(None)
 
         self.mox.ReplayAll()
         self.compute._cleanup_running_deleted_instances(admin_context)
@@ -3095,11 +3096,11 @@ class ComputeAPITestCase(BaseTestCase):
                  'no_device': True}]
 
         self.compute_api._update_image_block_device_mapping(
-            self.context, instance_type, instance['id'], mappings)
+            self.context, instance_type, instance['uuid'], mappings)
 
         bdms = [self._parse_db_block_device_mapping(bdm_ref)
                 for bdm_ref in db.block_device_mapping_get_all_by_instance(
-                    self.context, instance['id'])]
+                    self.context, instance['uuid'])]
         expected_result = [
             {'virtual_name': 'swap', 'device_name': '/dev/sdb1',
              'volume_size': swap_size},
@@ -3116,10 +3117,10 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute_api._update_block_device_mapping(
             self.context, instance_types.get_default_instance_type(),
-            instance['id'], block_device_mapping)
+            instance['uuid'], block_device_mapping)
         bdms = [self._parse_db_block_device_mapping(bdm_ref)
                 for bdm_ref in db.block_device_mapping_get_all_by_instance(
-                    self.context, instance['id'])]
+                    self.context, instance['uuid'])]
         expected_result = [
             {'snapshot_id': 0x12345678, 'device_name': '/dev/sda1'},
 
@@ -3143,7 +3144,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertDictListMatch(bdms, expected_result)
 
         for bdm in db.block_device_mapping_get_all_by_instance(
-            self.context, instance['id']):
+            self.context, instance['uuid']):
             db.block_device_mapping_destroy(self.context, bdm['id'])
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.compute.terminate_instance(self.context, instance['uuid'])

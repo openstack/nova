@@ -482,12 +482,14 @@ class BlockDeviceMapping(BASE, NovaBase):
     __tablename__ = "block_device_mapping"
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance_uuid = Column(Integer, ForeignKey('instances.uuid'),
+                           nullable=False)
     instance = relationship(Instance,
                             backref=backref('balock_device_mapping'),
-                            foreign_keys=instance_id,
-                            primaryjoin='and_(BlockDeviceMapping.instance_id=='
-                                              'Instance.id,'
+                            foreign_keys=instance_uuid,
+                            primaryjoin='and_(BlockDeviceMapping.'
+                                              'instance_uuid=='
+                                              'Instance.uuid,'
                                               'BlockDeviceMapping.deleted=='
                                               'False)')
     device_name = Column(String(255), nullable=False)

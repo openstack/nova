@@ -1316,7 +1316,7 @@ def instance_destroy(context, instance_id):
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.BlockDeviceMapping).\
-                filter_by(instance_id=instance_id).\
+                filter_by(instance_uuid=instance_ref['uuid']).\
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
@@ -2726,7 +2726,7 @@ def block_device_mapping_update_or_create(context, values):
     session = get_session()
     with session.begin():
         result = _block_device_mapping_get_query(context, session=session).\
-                 filter_by(instance_id=values['instance_id']).\
+                 filter_by(instance_uuid=values['instance_uuid']).\
                  filter_by(device_name=values['device_name']).\
                  first()
         if not result:
@@ -2742,7 +2742,7 @@ def block_device_mapping_update_or_create(context, values):
         if (virtual_name is not None and
             block_device.is_swap_or_ephemeral(virtual_name)):
             session.query(models.BlockDeviceMapping).\
-                filter_by(instance_id=values['instance_id']).\
+                filter_by(instance_uuid=values['instance_uuid']).\
                 filter_by(virtual_name=virtual_name).\
                 filter(models.BlockDeviceMapping.device_name !=
                        values['device_name']).\
@@ -2752,9 +2752,9 @@ def block_device_mapping_update_or_create(context, values):
 
 
 @require_context
-def block_device_mapping_get_all_by_instance(context, instance_id):
+def block_device_mapping_get_all_by_instance(context, instance_uuid):
     return _block_device_mapping_get_query(context).\
-                 filter_by(instance_id=instance_id).\
+                 filter_by(instance_uuid=instance_uuid).\
                  all()
 
 
@@ -2770,12 +2770,12 @@ def block_device_mapping_destroy(context, bdm_id):
 
 
 @require_context
-def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
+def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
                                                         volume_id):
     session = get_session()
     with session.begin():
         _block_device_mapping_get_query(context, session=session).\
-            filter_by(instance_id=instance_id).\
+            filter_by(instance_uuid=instance_uuid).\
             filter_by(volume_id=volume_id).\
             update({'deleted': True,
                     'deleted_at': utils.utcnow(),

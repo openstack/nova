@@ -945,42 +945,43 @@ class CloudTestCase(test.TestCase):
                                    'root_device_name': '/dev/sdc1'})
 
         instance_id = inst1['id']
+        instance_uuid = inst1['uuid']
         mappings0 = [
-            {'instance_id': instance_id,
+            {'instance_uuid': instance_uuid,
              'device_name': '/dev/sdb1',
              'snapshot_id': '1',
              'volume_id': '2'},
-            {'instance_id': instance_id,
+            {'instance_uuid': instance_uuid,
              'device_name': '/dev/sdb2',
              'volume_id': '3',
              'volume_size': 1},
-            {'instance_id': instance_id,
+            {'instance_uuid': instance_uuid,
              'device_name': '/dev/sdb3',
              'delete_on_termination': True,
              'snapshot_id': '4',
              'volume_id': '5'},
-            {'instance_id': instance_id,
+            {'instance_uuid': instance_uuid,
              'device_name': '/dev/sdb4',
              'delete_on_termination': False,
              'snapshot_id': '6',
              'volume_id': '7'},
-            {'instance_id': instance_id,
+            {'instance_uuid': instance_uuid,
              'device_name': '/dev/sdb5',
              'snapshot_id': '8',
              'volume_id': '9',
              'volume_size': 0},
-            {'instance_id': instance_id,
+            {'instance_uuid': instance_uuid,
              'device_name': '/dev/sdb6',
              'snapshot_id': '10',
              'volume_id': '11',
              'volume_size': 1},
-            {'instance_id': instance_id,
+            {'instance_uuid': instance_uuid,
              'device_name': '/dev/sdb7',
              'no_device': True},
-            {'instance_id': instance_id,
+            {'instance_uuid': instance_uuid,
              'device_name': '/dev/sdb8',
              'virtual_name': 'swap'},
-            {'instance_id': instance_id,
+            {'instance_uuid': instance_uuid,
              'device_name': '/dev/sdb9',
              'virtual_name': 'ephemeral3'}]
 
@@ -990,9 +991,9 @@ class CloudTestCase(test.TestCase):
     def _tearDownBlockDeviceMapping(self, inst1, inst2, volumes):
         for vol in volumes:
             db.volume_destroy(self.context, vol['id'])
-        for id in (inst1['id'], inst2['id']):
+        for uuid in (inst1['uuid'], inst2['uuid']):
             for bdm in db.block_device_mapping_get_all_by_instance(
-                self.context, id):
+                self.context, uuid):
                 db.block_device_mapping_destroy(self.context, bdm['id'])
         db.instance_destroy(self.context, inst2['id'])
         db.instance_destroy(self.context, inst1['id'])
@@ -1043,8 +1044,8 @@ class CloudTestCase(test.TestCase):
         (inst1, inst2, volumes) = self._setUpBlockDeviceMapping()
 
         result = {}
-        self.cloud._format_instance_bdm(self.context, inst1['id'], '/dev/sdb1',
-                                        result)
+        self.cloud._format_instance_bdm(self.context, inst1['uuid'],
+                                        '/dev/sdb1', result)
         self.assertSubDictMatch(
             {'rootDeviceType': self._expected_instance_bdm1['rootDeviceType']},
             result)
@@ -1052,8 +1053,8 @@ class CloudTestCase(test.TestCase):
             self._expected_block_device_mapping0, result['blockDeviceMapping'])
 
         result = {}
-        self.cloud._format_instance_bdm(self.context, inst2['id'], '/dev/sdc1',
-                                        result)
+        self.cloud._format_instance_bdm(self.context, inst2['uuid'],
+                                        '/dev/sdc1', result)
         self.assertSubDictMatch(
             {'rootDeviceType': self._expected_instance_bdm2['rootDeviceType']},
             result)
@@ -2166,6 +2167,7 @@ class CloudTestCase(test.TestCase):
         def fake_get(ctxt, instance_id):
             return {
                 'id': 0,
+                'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',
                 'root_device_name': '/dev/sdh',
                 'security_groups': [{'name': 'fake0'}, {'name': 'fake1'}],
                 'vm_state': vm_states.STOPPED,
