@@ -29,7 +29,7 @@ Instance types can be in either the active or inactive state:
   * Active instance types are available to be used for launching instances
   * Inactive instance types are not available for launching instances
 
-In the current (Cactus) version of nova, instance types can only be created by the nova administrator through the nova-manage command. Future versions of nova (in concert with the OpenStack API or EC2 API), may expose this functionality directly to users.
+In the current (Essex) version of nova, instance types can be created by the nova administrator through the nova-manage command, or the nova command (which uses the OpenStack API).
 
 Basic Management
 ----------------
