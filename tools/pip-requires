@@ -8,7 +8,6 @@ kombu==1.0.4
 lockfile==0.8
 lxml==2.3
 python-daemon==1.5.5
-python-gflags==1.3
 python-novaclient
 routes==1.12.3
 WebOb==1.0.8
