@@ -20,6 +20,7 @@ import json
 
 import webob
 from lxml import etree
+import iso8601
 
 from nova.api.openstack import compute
 from nova.api.openstack import extensions as base_extensions
@@ -29,6 +30,7 @@ from nova.api.openstack import xmlutil
 from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova import utils
 
 FLAGS = flags.FLAGS
 
@@ -201,6 +203,10 @@ class ExtensionControllerTest(ExtensionTestCase):
                  if str(x['name']) in self.ext_list]
         names.sort()
         self.assertEqual(names, self.ext_list)
+
+        # Ensure all the timestamps are valid according to iso8601
+        for ext in data['extensions']:
+            iso8601.parse_date(ext['updated'])
 
         # Make sure that at least Fox in Sox is correct.
         (fox_ext, ) = [
