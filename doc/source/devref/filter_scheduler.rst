@@ -42,6 +42,10 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   enough available RAM.
 * |SimpleCIDRAffinityFilter| - allows to put a new instance on a host within
   the same IP block.
+* |DifferentHostFilter| - allows to put the instance on a different host from a
+  set of instances.
+* |SameHostFilter| - puts the instance on the same host as another instance in
+  a set of of instances.
 
 Now we can focus on these standard filter classes in details. I will pass the
 simplest ones, such as |AllHostsFilter|, |CoreFilter| and |RamFilter| are,
@@ -86,6 +90,13 @@ reserved for specific images. These hosts are called **isolated**. So the
 images to run on the isolated hosts are also called isolated. This Scheduler
 checks if `image_isolated` flag named in instance specifications is the same
 that the host has.
+
+|DifferentHostFilter| - its method `host_passes` returns `True` if host to
+place instance on is different from all the hosts used by set of instances.
+
+|SameHostFilter| does the opposite to what |DifferentHostFilter| does. So its
+`host_passes` returns `True` if the host we want to place instance on is one
+of the set of instances uses.
 
 |SimpleCIDRAffinityFilter| looks at the subnet mask and investigates if
 the network address of the current host is in the same sub network as it was
@@ -243,3 +254,5 @@ in :mod:`nova.tests.scheduler`.
 .. |JsonFilter| replace:: :class:`JsonFilter <nova.scheduler.filters.json_filter.JsonFilter>`
 .. |RamFilter| replace:: :class:`RamFilter <nova.scheduler.filters.ram_filter.RamFilter>`
 .. |SimpleCIDRAffinityFilter| replace:: :class:`SimpleCIDRAffinityFilter <nova.scheduler.filters.affinity_filter.SimpleCIDRAffinityFilter>`
+.. |DifferentHostFilter| replace:: :class:`DifferentHostFilter <nova.scheduler.filters.affinity_filter.DifferentHostFilter>`
+.. |SameHostFilter| replace:: :class:`SameHostFilter <nova.scheduler.filters.affinity_filter.SameHostFilter>`
