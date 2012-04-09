@@ -800,6 +800,10 @@ class Controller(wsgi.Controller):
                     body['server']['auto_disk_config'])
             update_dict['auto_disk_config'] = auto_disk_config
 
+        if 'hostId' in body['server']:
+            msg = _("HostId cannot be updated.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
             instance = self.compute_api.get(ctxt, id)
             self.compute_api.update(ctxt, instance, **update_dict)
