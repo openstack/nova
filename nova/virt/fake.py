@@ -150,9 +150,6 @@ class FakeConnection(driver.ComputeDriver):
     def finish_revert_migration(self, instance, network_info):
         pass
 
-    def poll_unconfirmed_resizes(self, resize_confirm_window):
-        pass
-
     def pause(self, instance):
         pass
 

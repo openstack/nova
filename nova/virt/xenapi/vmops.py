@@ -1305,62 +1305,6 @@ class VMOps(object):
             self._session.call_xenapi("VM.start", original_vm_ref, False,
                                       False)
 
-    def poll_unconfirmed_resizes(self, resize_confirm_window):
-        """Poll for unconfirmed resizes.
-
-        Look for any unconfirmed resizes that are older than
-        `resize_confirm_window` and automatically confirm them.  Check
-        all migrations despite exceptions when trying to confirm and
-        yield to other greenthreads on each iteration.
-        """
-        ctxt = nova_context.get_admin_context()
-        migrations = db.migration_get_all_unconfirmed(ctxt,
-            resize_confirm_window)
-
-        if migrations:
-            LOG.info(_("Found %(migration_count)d unconfirmed migrations "
-                    "older than %(confirm_window)d seconds") %
-                     {'migration_count': len(migrations),
-                      'confirm_window': resize_confirm_window})
-
-        def _set_migration_to_error(migration_id, reason, **kwargs):
-            msg = _("Setting migration %(migration_id)s to error: "
-                   "%(reason)s") % locals()
-            LOG.warn(msg, **kwargs)
-            db.migration_update(ctxt, migration_id, {'status': 'error'})
-
-        for migration in migrations:
-            # NOTE(comstud): Yield to other greenthreads.  Putting this
-            # at the top so we make sure to do it on each iteration.
-            greenthread.sleep(0)
-            migration_id = migration['id']
-            instance_uuid = migration['instance_uuid']
-            LOG.info(_("Automatically confirming migration %(migration_id)s "
-                       "for instance %(instance_uuid)s"), locals())
-            try:
-                instance = db.instance_get_by_uuid(ctxt, instance_uuid)
-            except exception.InstanceNotFound:
-                reason = _("Instance %(instance_uuid)s not found")
-                _set_migration_to_error(migration_id, reason % locals())
-                continue
-            if instance['vm_state'] == vm_states.ERROR:
-                reason = _("In ERROR state")
-                _set_migration_to_error(migration_id, reason % locals(),
-                                        instance=instance)
-                continue
-            if instance['task_state'] != task_states.RESIZE_VERIFY:
-                task_state = instance['task_state']
-                reason = _("In %(task_state)s task_state, not RESIZE_VERIFY")
-                _set_migration_to_error(migration_id, reason % locals(),
-                                        instance=instance)
-                continue
-            try:
-                self.compute_api.confirm_resize(ctxt, instance)
-            except Exception, e:
-                msg = _("Error auto-confirming resize: %(e)s. "
-                        "Will retry later.")
-                LOG.error(msg % locals(), instance=instance)
-
     def get_info(self, instance):
         """Return data about VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)

@@ -1802,6 +1802,77 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(call_info['get_by_uuid'], 3)
         self.assertEqual(call_info['get_nw_info'], 4)
 
+    def test_poll_unconfirmed_resizes(self):
+        instances = [{'uuid': 'fake_uuid1', 'vm_state': vm_states.ACTIVE,
+                      'task_state': task_states.RESIZE_VERIFY},
+                     {'uuid': 'noexist'},
+                     {'uuid': 'fake_uuid2', 'vm_state': vm_states.ERROR,
+                      'task_state': task_states.RESIZE_VERIFY},
+                     {'uuid': 'fake_uuid3', 'vm_state': vm_states.ACTIVE,
+                      'task_state': task_states.REBOOTING},
+                     {'uuid': 'fake_uuid4', 'vm_state': vm_states.ACTIVE,
+                      'task_state': task_states.RESIZE_VERIFY},
+                     {'uuid': 'fake_uuid5', 'vm_state': vm_states.ACTIVE,
+                      'task_state': task_states.RESIZE_VERIFY}]
+        expected_migration_status = {'fake_uuid1': 'confirmed',
+                                     'noexist': 'error',
+                                     'fake_uuid2': 'error',
+                                     'fake_uuid3': 'error',
+                                     'fake_uuid4': None,
+                                     'fake_uuid5': 'confirmed'}
+        migrations = []
+        for i, instance in enumerate(instances, start=1):
+            migrations.append({'id': i,
+                               'instance_uuid': instance['uuid'],
+                               'status': None})
+
+        def fake_instance_get_by_uuid(context, instance_uuid):
+            # raise InstanceNotFound exception for uuid 'noexist'
+            if instance_uuid == 'noexist':
+                raise exception.InstanceNotFound(instance_id=instance_uuid)
+            for instance in instances:
+                if instance['uuid'] == instance_uuid:
+                    return instance
+
+        def fake_migration_get_all_unconfirmed(context, resize_confirm_window):
+            return migrations
+
+        def fake_migration_update(context, migration_id, values):
+            for migration in migrations:
+                if migration['id'] == migration_id and 'status' in values:
+                    migration['status'] = values['status']
+
+        def fake_confirm_resize(context, instance):
+            # raise exception for 'fake_uuid4' to check migration status
+            # does not get set to 'error' on confirm_resize failure.
+            if instance['uuid'] == 'fake_uuid4':
+                raise test.TestingException
+            for migration in migrations:
+                if migration['instance_uuid'] == instance['uuid']:
+                    migration['status'] = 'confirmed'
+
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                fake_instance_get_by_uuid)
+        self.stubs.Set(db, 'migration_get_all_unconfirmed',
+                fake_migration_get_all_unconfirmed)
+        self.stubs.Set(db, 'migration_update',
+                fake_migration_update)
+        self.stubs.Set(self.compute.compute_api, 'confirm_resize',
+                fake_confirm_resize)
+
+        def fetch_instance_migration_status(instance_uuid):
+            for migration in migrations:
+                if migration['instance_uuid'] == instance_uuid:
+                    return migration['status']
+
+        self.flags(resize_confirm_window=60)
+        ctxt = context.get_admin_context()
+
+        self.compute._poll_unconfirmed_resizes(ctxt)
+
+        for uuid, status in expected_migration_status.iteritems():
+            self.assertEqual(status, fetch_instance_migration_status(uuid))
+
 
 class ComputeAPITestCase(BaseTestCase):
 

@@ -46,6 +46,7 @@ import traceback
 from eventlet import greenthread
 
 from nova import block_device
+from nova import compute
 from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -237,6 +238,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
         self._last_info_cache_heal = 0
+        self.compute_api = compute.API()
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -2278,7 +2280,57 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _poll_unconfirmed_resizes(self, context):
         if FLAGS.resize_confirm_window > 0:
-            self.driver.poll_unconfirmed_resizes(FLAGS.resize_confirm_window)
+            migrations = self.db.migration_get_all_unconfirmed(context,
+                    FLAGS.resize_confirm_window)
+
+            migrations_info = dict(migration_count=len(migrations),
+                    confirm_window=FLAGS.resize_confirm_window)
+
+            if migrations_info["migration_count"] > 0:
+                LOG.info(_("Found %(migration_count)d unconfirmed migrations "
+                           "older than %(confirm_window)d seconds"),
+                         migrations_info)
+
+            def _set_migration_to_error(migration_id, reason, **kwargs):
+                msg = _("Setting migration %(migration_id)s to error: "
+                       "%(reason)s") % locals()
+                LOG.warn(msg, **kwargs)
+                self.db.migration_update(context, migration_id,
+                                        {'status': 'error'})
+
+            for migration in migrations:
+                # NOTE(comstud): Yield to other greenthreads.  Putting this
+                # at the top so we make sure to do it on each iteration.
+                greenthread.sleep(0)
+                migration_id = migration['id']
+                instance_uuid = migration['instance_uuid']
+                LOG.info(_("Automatically confirming migration "
+                           "%(migration_id)s for instance %(instance_uuid)s"),
+                           locals())
+                try:
+                    instance = self.db.instance_get_by_uuid(context,
+                                                            instance_uuid)
+                except exception.InstanceNotFound:
+                    reason = _("Instance %(instance_uuid)s not found")
+                    _set_migration_to_error(migration_id, reason % locals())
+                    continue
+                if instance['vm_state'] == vm_states.ERROR:
+                    reason = _("In ERROR state")
+                    _set_migration_to_error(migration_id, reason % locals(),
+                                            instance=instance)
+                    continue
+                if instance['task_state'] != task_states.RESIZE_VERIFY:
+                    state = instance['task_state']
+                    reason = _("In %(state)s task_state, not RESIZE_VERIFY")
+                    _set_migration_to_error(migration_id, reason % locals(),
+                                            instance=instance)
+                    continue
+                try:
+                    self.compute_api.confirm_resize(context, instance)
+                except Exception, e:
+                    msg = _("Error auto-confirming resize: %(e)s. "
+                            "Will retry later.")
+                    LOG.error(msg % locals(), instance=instance)
 
     @manager.periodic_task
     def _poll_bandwidth_usage(self, context, start_time=None, stop_time=None):
