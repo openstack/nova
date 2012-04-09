@@ -39,7 +39,7 @@ detailed information in the `OpenStack Compute Administration Guide`_
 but you'll probably want to read this section straight-through before tackling
 the specifics presented there.
 
-.. _OpenStack Compute Administration Guide: http://docs.openstack.org/diablo/openstack-compute/admin/content/
+.. _OpenStack Compute Administration Guide: http://docs.openstack.org/trunk/openstack-compute/admin/content/
 
 
 Concept: Users and Projects
