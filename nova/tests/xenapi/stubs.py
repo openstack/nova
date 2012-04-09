@@ -250,6 +250,9 @@ class FakeSessionForVMTests(fake.SessionBase):
     def VDI_set_name_label(self, session_ref, vdi_ref, name_label):
         pass
 
+    def VDI_set_name_description(self, session_ref, vdi_ref, name_description):
+        pass
+
 
 class FakeSessionForFirewallTests(FakeSessionForVMTests):
     """ Stubs out a XenApi Session for doing IPTable Firewall tests """

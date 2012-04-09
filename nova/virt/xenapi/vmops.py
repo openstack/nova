@@ -238,9 +238,8 @@ class VMOps(object):
     def _create_disks(self, context, instance, image_meta):
         disk_image_type = VMHelper.determine_disk_image_type(image_meta)
         vdis = VMHelper.create_image(context, self._session,
-                instance, instance.image_ref,
-                instance.user_id, instance.project_id,
-                disk_image_type)
+                                     instance, instance.image_ref,
+                                     disk_image_type)
 
         for vdi in vdis:
             if vdi["vdi_type"] == "root":
@@ -866,14 +865,12 @@ class VMOps(object):
 
         # Set name-label so we can find if we need to clean up a failed
         # migration
-        VMHelper.set_vdi_name_label(self._session, new_uuid,
-                                    instance.name)
+        VMHelper.set_vdi_name(self._session, new_uuid, instance.name, 'root')
 
         return new_uuid
 
     def _resize_instance(self, instance, vdi_uuid):
-        """Resize a running instance by changing its disk size."""
-        #TODO(mdietz): this will need to be adjusted for swap later
+        """Resize an instances root disk."""
 
         new_disk_size = instance.root_gb * 1024 * 1024 * 1024
         if not new_disk_size:
