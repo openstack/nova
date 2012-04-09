@@ -36,6 +36,13 @@ import pep8
 #N5xx dictionaries/lists
 #N6xx Calling methods
 
+IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session']
+
+
+def is_import_exception(mod):
+    return mod in IMPORT_EXCEPTIONS or \
+        any(mod.startswith(m + '.') for m in IMPORT_EXCEPTIONS)
+
 
 def nova_todo_format(physical_line):
     """
@@ -77,13 +84,13 @@ def nova_one_import_per_line(logical_line):
 
     Examples:
     BAD: from nova.rpc.common import RemoteError, LOG
-    BAD: from sqlalchemy import MetaData, Table
     N301
     """
     pos = logical_line.find(',')
-    if (pos > -1 and (logical_line.startswith("import ") or
-       (logical_line.startswith("from ") and
-       logical_line.split()[2] == "import"))):
+    parts = logical_line.split()
+    if pos > -1 and (parts[0] == "import" or
+       parts[0] == "from" and parts[2] == "import") and \
+       not is_import_exception(parts[1]):
         return pos, "NOVA N301: one import per line"
 
 
@@ -104,6 +111,8 @@ def nova_import_module_only(logical_line):
         try:
             valid = True
             if parent:
+                if is_import_exception(parent):
+                    return
                 parent_mod = __import__(parent, globals(), locals(), [mod], -1)
                 valid = inspect.ismodule(getattr(parent_mod, mod))
             else:
