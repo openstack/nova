@@ -119,7 +119,7 @@ class ImageType:
 
     KERNEL_STR = "kernel"
     RAMDISK_STR = "ramdisk"
-    DISK_STR = "os"
+    DISK_STR = "root"
     DISK_RAW_STR = "os_raw"
     DISK_VHD_STR = "vhd"
     DISK_ISO_STR = "iso"
@@ -665,7 +665,7 @@ class VMHelper(xenapi.HelperBase):
                             new_vdi_ref, "image-id")
 
         vdi_return_list.append(dict(
-            vdi_type=("os" if image_type == ImageType.DISK_VHD
+            vdi_type=("root" if image_type == ImageType.DISK_VHD
                       else ImageType.to_string(image_type)),
             vdi_uuid=session.call_xenapi('VDI.get_uuid', new_vdi_ref),
             file=None))
@@ -755,7 +755,7 @@ class VMHelper(xenapi.HelperBase):
 
         # 'download_vhd' will return a list of dictionaries describing VDIs.
         # The dictionary will contain 'vdi_type' and 'vdi_uuid' keys.
-        # 'vdi_type' can be 'os' or 'swap' right now.
+        # 'vdi_type' can be 'root' or 'swap' right now.
         for vdi in vdis:
             LOG.debug(_("xapi 'download_vhd' returned VDI of "
                         "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'"),
@@ -828,7 +828,7 @@ class VMHelper(xenapi.HelperBase):
         # VHD disk, it may be worth using the plugin for both VHD and RAW and
         # DISK restores
         image_type_str = ImageType.to_string(image_type)
-        LOG.debug(_("Fetching image %(image)s, type %(image_type_str)"),
+        LOG.debug(_("Fetching image %(image)s, type %(image_type_str)s"),
                   locals(), instance=instance)
 
         if image_type == ImageType.DISK_ISO:

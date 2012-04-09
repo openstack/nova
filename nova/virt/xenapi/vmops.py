@@ -214,7 +214,7 @@ class VMOps(object):
             self._resize_instance(instance, vdi_uuid)
 
         vm_ref = self._create_vm(context, instance,
-                                 [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
+                                 [dict(vdi_type='root', vdi_uuid=vdi_uuid)],
                                  network_info, image_meta)
 
         # 5. Start VM
@@ -243,7 +243,7 @@ class VMOps(object):
                 disk_image_type)
 
         for vdi in vdis:
-            if vdi["vdi_type"] == "os":
+            if vdi["vdi_type"] == "root":
                 self._resize_instance(instance, vdi["vdi_uuid"])
 
         return vdis
@@ -384,7 +384,7 @@ class VMOps(object):
 
         disk_image_type = VMHelper.determine_disk_image_type(image_meta)
 
-        # NOTE(jk0): Since vdi_type may contain either 'os' or 'swap', we
+        # NOTE(jk0): Since vdi_type may contain either 'root' or 'swap', we
         # need to ensure that the 'swap' VDI is not chosen as the mount
         # point for file injection.
         first_vdi_ref = None

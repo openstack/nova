@@ -186,11 +186,11 @@ def _import_vhds(sr_path, staging_path, uuid_stack):
 
     Returns: A list of VDIs.  Each list element is a dictionary containing
     information about the VHD.  Dictionary keys are:
-        1. "vdi_type" - The type of VDI. Currently they can be "os_disk" or
+        1. "vdi_type" - The type of VDI. Currently they can be "root" or
            "swap"
         2. "vdi_uuid" - The UUID of the VDI
 
-    Example return: [{"vdi_type": "os_disk","vdi_uuid": "ffff-aaa..vhd"},
+    Example return: [{"vdi_type": "root","vdi_uuid": "ffff-aaa..vhd"},
                      {"vdi_type": "swap","vdi_uuid": "ffff-bbb..vhd"}]
     """
     def rename_with_uuid(orig_path):
@@ -318,12 +318,12 @@ def _import_vhds(sr_path, staging_path, uuid_stack):
         # delete the base_copy since it is an unreferenced parent.
         paths_to_move.insert(0, snap_info[0])
         # We return this snap as the VDI instead of image.vhd
-        vdi_return_list.append(dict(vdi_type="os", vdi_uuid=snap_info[1]))
+        vdi_return_list.append(dict(vdi_type="root", vdi_uuid=snap_info[1]))
     else:
         validate_vdi_chain(image_info[0])
         assert_vhd_not_hidden(image_info[0])
         # If there's no snap, we return the image.vhd UUID
-        vdi_return_list.append(dict(vdi_type="os", vdi_uuid=image_info[1]))
+        vdi_return_list.append(dict(vdi_type="root", vdi_uuid=image_info[1]))
 
     swap_info = prepare_if_exists(staging_path, 'swap.vhd')
     if swap_info:

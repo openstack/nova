@@ -41,7 +41,7 @@ def stubout_firewall_driver(stubs, conn):
 def stubout_instance_snapshot(stubs):
     @classmethod
     def fake_fetch_image(cls, context, session, instance, image, type):
-        return [dict(vdi_type='os', vdi_uuid=_make_fake_vdi())]
+        return [dict(vdi_type='root', vdi_uuid=_make_fake_vdi())]
 
     stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
 
@@ -192,7 +192,7 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def host_call_plugin(self, _1, _2, plugin, method, _5):
         if (plugin, method) == ('glance', 'download_vhd'):
-            return fake.as_json(dict(vdi_type='os',
+            return fake.as_json(dict(vdi_type='root',
                                      vdi_uuid=_make_fake_vdi()))
         elif (plugin, method) == ("xenhost", "iptables_config"):
             return fake.as_json(out=self._fake_iptables_save_output,
@@ -203,7 +203,7 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def host_call_plugin_swap(self, _1, _2, plugin, method, _5):
         if (plugin, method) == ('glance', 'download_vhd'):
-            return fake.as_json(dict(vdi_type='os',
+            return fake.as_json(dict(vdi_type='root',
                                      vdi_uuid=_make_fake_vdi()),
                                 dict(vdi_type='swap',
                                      vdi_uuid=_make_fake_vdi()))
