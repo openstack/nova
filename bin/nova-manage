@@ -1721,8 +1721,10 @@ def main():
     for k, v in fn_kwargs.items():
         if v is None:
             del fn_kwargs[k]
-        else:
+        elif isinstance(v, basestring):
             fn_kwargs[k] = v.decode('utf-8')
+        else:
+            fn_kwargs[k] = v
 
     fn_args = [arg.decode('utf-8') for arg in fn_args]
 
