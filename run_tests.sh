@@ -112,13 +112,12 @@ function run_pep8 {
   echo "Running pep8 ..."
   # Just run PEP8 in current environment
   #
-  pep8_opts="--repeat"
-  ${wrapper} pep8 ${pep8_opts} ${srcfiles}
+  ${wrapper} pep8 ${srcfiles}
 }
 
 function run_hacking {
   echo "Running hacking compliance testing..."
-  hacking_opts="--ignore=E202 --repeat"
+  hacking_opts="--ignore=E202"
   ${wrapper} python tools/hacking.py ${hacking_opts} ${srcfiles}
 }
 
