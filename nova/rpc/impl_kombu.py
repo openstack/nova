@@ -28,7 +28,6 @@ import kombu.entity
 import kombu.messaging
 import kombu.connection
 
-from nova import flags
 from nova.openstack.common import cfg
 from nova.rpc import amqp as rpc_amqp
 from nova.rpc import common as rpc_common
@@ -49,8 +48,6 @@ kombu_opts = [
                     '(valid only if SSL enabled)')),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(kombu_opts)
 LOG = rpc_common.LOG
 
 
@@ -126,7 +123,7 @@ class ConsumerBase(object):
 class DirectConsumer(ConsumerBase):
     """Queue/consumer class for 'direct'"""
 
-    def __init__(self, channel, msg_id, callback, tag, **kwargs):
+    def __init__(self, conf, channel, msg_id, callback, tag, **kwargs):
         """Init a 'direct' queue.
 
         'channel' is the amqp channel to use
@@ -159,7 +156,7 @@ class DirectConsumer(ConsumerBase):
 class TopicConsumer(ConsumerBase):
     """Consumer class for 'topic'"""
 
-    def __init__(self, channel, topic, callback, tag, **kwargs):
+    def __init__(self, conf, channel, topic, callback, tag, **kwargs):
         """Init a 'topic' queue.
 
         'channel' is the amqp channel to use
@@ -170,12 +167,12 @@ class TopicConsumer(ConsumerBase):
         Other kombu options may be passed
         """
         # Default options
-        options = {'durable': FLAGS.rabbit_durable_queues,
+        options = {'durable': conf.rabbit_durable_queues,
                 'auto_delete': False,
                 'exclusive': False}
         options.update(kwargs)
         exchange = kombu.entity.Exchange(
-                name=FLAGS.control_exchange,
+                name=conf.control_exchange,
                 type='topic',
                 durable=options['durable'],
                 auto_delete=options['auto_delete'])
@@ -192,7 +189,7 @@ class TopicConsumer(ConsumerBase):
 class FanoutConsumer(ConsumerBase):
     """Consumer class for 'fanout'"""
 
-    def __init__(self, channel, topic, callback, tag, **kwargs):
+    def __init__(self, conf, channel, topic, callback, tag, **kwargs):
         """Init a 'fanout' queue.
 
         'channel' is the amqp channel to use
@@ -252,7 +249,7 @@ class Publisher(object):
 
 class DirectPublisher(Publisher):
     """Publisher class for 'direct'"""
-    def __init__(self, channel, msg_id, **kwargs):
+    def __init__(self, conf, channel, msg_id, **kwargs):
         """init a 'direct' publisher.
 
         Kombu options may be passed as keyword args to override defaults
@@ -271,17 +268,17 @@ class DirectPublisher(Publisher):
 
 class TopicPublisher(Publisher):
     """Publisher class for 'topic'"""
-    def __init__(self, channel, topic, **kwargs):
+    def __init__(self, conf, channel, topic, **kwargs):
         """init a 'topic' publisher.
 
         Kombu options may be passed as keyword args to override defaults
         """
-        options = {'durable': FLAGS.rabbit_durable_queues,
+        options = {'durable': conf.rabbit_durable_queues,
                 'auto_delete': False,
                 'exclusive': False}
         options.update(kwargs)
         super(TopicPublisher, self).__init__(channel,
-                FLAGS.control_exchange,
+                conf.control_exchange,
                 topic,
                 type='topic',
                 **options)
@@ -289,7 +286,7 @@ class TopicPublisher(Publisher):
 
 class FanoutPublisher(Publisher):
     """Publisher class for 'fanout'"""
-    def __init__(self, channel, topic, **kwargs):
+    def __init__(self, conf, channel, topic, **kwargs):
         """init a 'fanout' publisher.
 
         Kombu options may be passed as keyword args to override defaults
@@ -308,9 +305,9 @@ class FanoutPublisher(Publisher):
 class NotifyPublisher(TopicPublisher):
     """Publisher class for 'notify'"""
 
-    def __init__(self, *args, **kwargs):
-        self.durable = kwargs.pop('durable', FLAGS.rabbit_durable_queues)
-        super(NotifyPublisher, self).__init__(*args, **kwargs)
+    def __init__(self, conf, channel, topic, **kwargs):
+        self.durable = kwargs.pop('durable', conf.rabbit_durable_queues)
+        super(NotifyPublisher, self).__init__(conf, channel, topic, **kwargs)
 
     def reconnect(self, channel):
         super(NotifyPublisher, self).reconnect(channel)
@@ -329,15 +326,18 @@ class NotifyPublisher(TopicPublisher):
 class Connection(object):
     """Connection object."""
 
-    def __init__(self, server_params=None):
+    pool = None
+
+    def __init__(self, conf, server_params=None):
         self.consumers = []
         self.consumer_thread = None
-        self.max_retries = FLAGS.rabbit_max_retries
+        self.conf = conf
+        self.max_retries = self.conf.rabbit_max_retries
         # Try forever?
         if self.max_retries <= 0:
             self.max_retries = None
-        self.interval_start = FLAGS.rabbit_retry_interval
-        self.interval_stepping = FLAGS.rabbit_retry_backoff
+        self.interval_start = self.conf.rabbit_retry_interval
+        self.interval_stepping = self.conf.rabbit_retry_backoff
         # max retry-interval = 30 seconds
         self.interval_max = 30
         self.memory_transport = False
@@ -353,21 +353,21 @@ class Connection(object):
             p_key = server_params_to_kombu_params.get(sp_key, sp_key)
             params[p_key] = value
 
-        params.setdefault('hostname', FLAGS.rabbit_host)
-        params.setdefault('port', FLAGS.rabbit_port)
-        params.setdefault('userid', FLAGS.rabbit_userid)
-        params.setdefault('password', FLAGS.rabbit_password)
-        params.setdefault('virtual_host', FLAGS.rabbit_virtual_host)
+        params.setdefault('hostname', self.conf.rabbit_host)
+        params.setdefault('port', self.conf.rabbit_port)
+        params.setdefault('userid', self.conf.rabbit_userid)
+        params.setdefault('password', self.conf.rabbit_password)
+        params.setdefault('virtual_host', self.conf.rabbit_virtual_host)
 
         self.params = params
 
-        if FLAGS.fake_rabbit:
+        if self.conf.fake_rabbit:
             self.params['transport'] = 'memory'
             self.memory_transport = True
         else:
             self.memory_transport = False
 
-        if FLAGS.rabbit_use_ssl:
+        if self.conf.rabbit_use_ssl:
             self.params['ssl'] = self._fetch_ssl_params()
 
         self.connection = None
@@ -379,14 +379,14 @@ class Connection(object):
         ssl_params = dict()
 
         # http://docs.python.org/library/ssl.html - ssl.wrap_socket
-        if FLAGS.kombu_ssl_version:
-            ssl_params['ssl_version'] = FLAGS.kombu_ssl_version
-        if FLAGS.kombu_ssl_keyfile:
-            ssl_params['keyfile'] = FLAGS.kombu_ssl_keyfile
-        if FLAGS.kombu_ssl_certfile:
-            ssl_params['certfile'] = FLAGS.kombu_ssl_certfile
-        if FLAGS.kombu_ssl_ca_certs:
-            ssl_params['ca_certs'] = FLAGS.kombu_ssl_ca_certs
+        if self.conf.kombu_ssl_version:
+            ssl_params['ssl_version'] = self.conf.kombu_ssl_version
+        if self.conf.kombu_ssl_keyfile:
+            ssl_params['keyfile'] = self.conf.kombu_ssl_keyfile
+        if self.conf.kombu_ssl_certfile:
+            ssl_params['certfile'] = self.conf.kombu_ssl_certfile
+        if self.conf.kombu_ssl_ca_certs:
+            ssl_params['ca_certs'] = self.conf.kombu_ssl_ca_certs
             # We might want to allow variations in the
             # future with this?
             ssl_params['cert_reqs'] = ssl.CERT_REQUIRED
@@ -534,7 +534,7 @@ class Connection(object):
                 "%(err_str)s") % log_info)
 
         def _declare_consumer():
-            consumer = consumer_cls(self.channel, topic, callback,
+            consumer = consumer_cls(self.conf, self.channel, topic, callback,
                     self.consumer_num.next())
             self.consumers.append(consumer)
             return consumer
@@ -590,7 +590,7 @@ class Connection(object):
                 "'%(topic)s': %(err_str)s") % log_info)
 
         def _publish():
-            publisher = cls(self.channel, topic, **kwargs)
+            publisher = cls(self.conf, self.channel, topic, **kwargs)
             publisher.send(msg)
 
         self.ensure(_error_callback, _publish)
@@ -648,58 +648,66 @@ class Connection(object):
 
     def create_consumer(self, topic, proxy, fanout=False):
         """Create a consumer that calls a method in a proxy object"""
+        proxy_cb = rpc_amqp.ProxyCallback(self.conf, proxy,
+                rpc_amqp.get_connection_pool(self, Connection))
+
         if fanout:
-            self.declare_fanout_consumer(topic,
-                    rpc_amqp.ProxyCallback(proxy, Connection.pool))
+            self.declare_fanout_consumer(topic, proxy_cb)
         else:
-            self.declare_topic_consumer(topic,
-                    rpc_amqp.ProxyCallback(proxy, Connection.pool))
+            self.declare_topic_consumer(topic, proxy_cb)
 
 
-Connection.pool = rpc_amqp.Pool(connection_cls=Connection)
-
-
-def create_connection(new=True):
+def create_connection(conf, new=True):
     """Create a connection"""
-    return rpc_amqp.create_connection(new, Connection.pool)
+    return rpc_amqp.create_connection(conf, new,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def multicall(context, topic, msg, timeout=None):
+def multicall(conf, context, topic, msg, timeout=None):
     """Make a call that returns multiple times."""
-    return rpc_amqp.multicall(context, topic, msg, timeout, Connection.pool)
+    return rpc_amqp.multicall(conf, context, topic, msg, timeout,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def call(context, topic, msg, timeout=None):
+def call(conf, context, topic, msg, timeout=None):
     """Sends a message on a topic and wait for a response."""
-    return rpc_amqp.call(context, topic, msg, timeout, Connection.pool)
+    return rpc_amqp.call(conf, context, topic, msg, timeout,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def cast(context, topic, msg):
+def cast(conf, context, topic, msg):
     """Sends a message on a topic without waiting for a response."""
-    return rpc_amqp.cast(context, topic, msg, Connection.pool)
+    return rpc_amqp.cast(conf, context, topic, msg,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def fanout_cast(context, topic, msg):
+def fanout_cast(conf, context, topic, msg):
     """Sends a message on a fanout exchange without waiting for a response."""
-    return rpc_amqp.fanout_cast(context, topic, msg, Connection.pool)
+    return rpc_amqp.fanout_cast(conf, context, topic, msg,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def cast_to_server(context, server_params, topic, msg):
+def cast_to_server(conf, context, server_params, topic, msg):
     """Sends a message on a topic to a specific server."""
-    return rpc_amqp.cast_to_server(context, server_params, topic, msg,
-            Connection.pool)
+    return rpc_amqp.cast_to_server(conf, context, server_params, topic, msg,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def fanout_cast_to_server(context, server_params, topic, msg):
+def fanout_cast_to_server(conf, context, server_params, topic, msg):
     """Sends a message on a fanout exchange to a specific server."""
-    return rpc_amqp.cast_to_server(context, server_params, topic, msg,
-            Connection.pool)
+    return rpc_amqp.cast_to_server(conf, context, server_params, topic, msg,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def notify(context, topic, msg):
+def notify(conf, context, topic, msg):
     """Sends a notification event on a topic."""
-    return rpc_amqp.notify(context, topic, msg, Connection.pool)
+    return rpc_amqp.notify(conf, context, topic, msg,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
 def cleanup():
     return rpc_amqp.cleanup(Connection.pool)
+
+
+def register_opts(conf):
+    conf.register_opts(kombu_opts)
