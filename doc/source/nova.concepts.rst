@@ -57,7 +57,6 @@ Concept: Virtualization
 * KVM
 * UML
 * XEN
-* HyperV
 * qemu
 * LXC
 

@@ -246,7 +246,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                          locals(), instance=instance)
                 self.reboot_instance(context, instance['uuid'])
             elif drv_state == power_state.RUNNING:
-                # Hyper-V and VMWareAPI drivers will raise an exception
+                # VMWareAPI drivers will raise an exception
                 try:
                     net_info = self._get_instance_nw_info(context, instance)
                     self.driver.ensure_filtering_rules_for_instance(instance,
