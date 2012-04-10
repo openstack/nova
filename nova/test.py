@@ -39,7 +39,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
 from nova import service
-from nova.tests import reset_db
+from nova import tests
 from nova.virt import fake
 
 
@@ -129,7 +129,7 @@ class TestCase(unittest.TestCase):
         #             now that we have some required db setup for the system
         #             to work properly.
         self.start = utils.utcnow()
-        reset_db()
+        tests.reset_db()
 
         # emulate some of the mox stuff, we can't use the metaclass
         # because it screws with our generators
