@@ -350,11 +350,11 @@
 ###### (IntOpt) number of instances allowed per project
 # quota_instances=10
 ###### (IntOpt) number of bytes allowed per injected file
-# quota_max_injected_file_content_bytes=10240
+# quota_injected_file_content_bytes=10240
 ###### (IntOpt) number of bytes allowed per injected file path
-# quota_max_injected_file_path_bytes=255
+# quota_injected_file_path_bytes=255
 ###### (IntOpt) number of injected files allowed
-# quota_max_injected_files=5
+# quota_injected_files=5
 ###### (IntOpt) number of metadata items allowed per instance
 # quota_metadata_items=128
 ###### (IntOpt) megabytes of instance ram allowed per project
