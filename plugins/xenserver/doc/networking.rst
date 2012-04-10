@@ -48,12 +48,12 @@ the instances to ensure they have permission to talk on the internet.
 How it works - Long
 ===================
 
-Any time an underprivileged domain or domU is started or stopped, it gets a
-unique domain id (dom_id).  This dom_id is utilized in a number of places, one
-of which is it's assigned to the virtual interface (vif).  The vifs are attached
-to the bridge that is attached to the physical network.  For instance, if you
-had a public bridge attached to eth0 and your domain id was 5, your vif would be
-vif5.0.  
+Any time an underprivileged domain or domU is started or stopped, it
+gets a unique domain id (dom_id).  This dom_id is utilized in a number
+of places, one of which is that it is assigned to the virtual
+interface (vif).  The vifs are attached to the bridge that is attached
+to the physical network.  For instance, if you had a public bridge
+attached to eth0 and your domain id was 5, your vif would be vif5.0.
 
 The networking rules are applied to the VIF directly so they apply at the lowest
 level of the networking stack.  Because the VIF changes along with the domain id
@@ -85,8 +85,9 @@ ebtables -A FORWARD -p 0806 -o vif1.0 --arp-ip-dst 10.1.135.22 -j ACCEPT
 ebtables -A FORWARD -p 0800 -o vif1.0 --ip-dst 10.1.135.22 -j ACCEPT 
 ebtables -I FORWARD 1 -s ! 9e:6e:cc:19:7f:fe -i vif1.0 -j DROP
 
-Typically when you see a vif, it'll look like vif<domain id>.<network bridge>.
-vif2.1 for example would be domain 2 on the second interface.
+Typically when you see a vif, it'll look like
+vif<domain id>.<network bridge>.  vif2.1 for example would be domain 2 on the
+second interface.
 
 The vif_rules.py script needs to pull information about the IPs and MAC
 addresses assigned to the instance.  The current implementation assumes that
@@ -121,11 +122,12 @@ vm-data/networking/40402321c9b8:
             "gateway":"10.177.10.1"}],
  "mac":"40:40:23:21:c9:b8"}
 
-The key is used for two purposes.  One, the vif_rules.py script will read from
-it to apply the rules needed after parsing the JSON.  The second is that because
-it's put into the xenstore-data field, the xenstore will be populated with this
-data on boot.  This allows a guest agent the ability to read out data about the
-instance and apply configurations as needed.  
+The key is used for two purposes.  First, the vif_rules.py script
+reads from it to apply the rules needed after parsing the JSON.
+Second, because it is put into the xenstore-data field, the xenstore
+is populated with this data on boot.  This allows a guest agent the
+ability to read out data about the instance and apply configurations
+as needed.
 
 Installation
 ============
