@@ -43,8 +43,8 @@ import traceback
 
 import nova
 from nova import flags
-from nova import local
 from nova.openstack.common import cfg
+from nova.openstack.common import local
 from nova import version
 
 
