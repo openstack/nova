@@ -89,7 +89,7 @@ class DbApiTestCase(test.TestCase):
 
         # Ensure one migration older than 10 seconds is returned.
         updated_at = datetime.datetime(2000, 01, 01, 12, 00, 00)
-        values = {"status": "FINISHED", "updated_at": updated_at}
+        values = {"status": "finished", "updated_at": updated_at}
         migration = db.migration_create(ctxt, values)
         results = db.migration_get_all_unconfirmed(ctxt, 10)
         self.assertEqual(1, len(results))
@@ -97,7 +97,7 @@ class DbApiTestCase(test.TestCase):
 
         # Ensure the new migration is not returned.
         updated_at = datetime.datetime.utcnow()
-        values = {"status": "FINISHED", "updated_at": updated_at}
+        values = {"status": "finished", "updated_at": updated_at}
         migration = db.migration_create(ctxt, values)
         results = db.migration_get_all_unconfirmed(ctxt, 10)
         self.assertEqual(0, len(results))
