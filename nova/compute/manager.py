@@ -136,24 +136,24 @@ def checks_instance_lock(function):
     @functools.wraps(function)
     def decorated_function(self, context, instance_uuid, *args, **kwargs):
         LOG.info(_("check_instance_lock: decorating: |%s|"), function,
-                 context=context)
-        LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|"
-                " |%(instance_uuid)s|") % locals(), context=context)
+                 context=context, instance_uuid=instance_uuid)
+        LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|")
+                 % locals(), context=context, instance_uuid=instance_uuid)
         locked = self.get_lock(context, instance_uuid)
         admin = context.is_admin
         LOG.info(_("check_instance_lock: locked: |%s|"), locked,
-                 context=context)
+                 context=context, instance_uuid=instance_uuid)
         LOG.info(_("check_instance_lock: admin: |%s|"), admin,
-                 context=context)
+                 context=context, instance_uuid=instance_uuid)
 
         # if admin or unlocked call function otherwise log error
         if admin or not locked:
             LOG.info(_("check_instance_lock: executing: |%s|"), function,
-                     context=context)
+                     context=context, instance_uuid=instance_uuid)
             function(self, context, instance_uuid, *args, **kwargs)
         else:
             LOG.error(_("check_instance_lock: not executing |%s|"),
-                      function, context=context)
+                      function, context=context, instance_uuid=instance_uuid)
             return False
 
     return decorated_function
