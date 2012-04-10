@@ -1542,7 +1542,7 @@ def instance_get_all_by_reservation(context, reservation_id):
 # NOTE(jkoelker) This is only being left here for compat with floating
 #                ips. Currently the network_api doesn't return floaters
 #                in network_info. Once it starts return the model. This
-#                function and it's call in compute/manager.py on 1829 can
+#                function and its call in compute/manager.py on 1829 can
 #                go away
 @require_context
 def instance_get_floating_address(context, instance_id):

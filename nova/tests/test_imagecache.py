@@ -133,7 +133,7 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         image_cache_manager = imagecache.ImageCacheManager()
 
-        # The argument here should be a context, but its mocked out
+        # The argument here should be a context, but it's mocked out
         image_cache_manager._list_running_instances(None)
 
         self.assertEqual(len(image_cache_manager.used_images), 2)

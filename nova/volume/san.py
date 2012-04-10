@@ -853,7 +853,7 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
         volumeID is what's guaranteed unique.
 
         What we'll do here is check volumes based on account. this
-        should work because nova will increment it's volume_id
+        should work because nova will increment its volume_id
         so we should always get the correct volume. This assumes
         that nova does not assign duplicate ID's.
         """

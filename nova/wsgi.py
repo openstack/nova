@@ -100,7 +100,7 @@ class Server(object):
         """Stop this server.
 
         This is not a very nice action, as currently the method by which a
-        server is stopped is by killing it's eventlet.
+        server is stopped is by killing its eventlet.
 
         :returns: None
 
