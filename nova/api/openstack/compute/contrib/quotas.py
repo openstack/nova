@@ -53,6 +53,12 @@ class QuotaSetsController(object):
 
         return dict(quota_set=result)
 
+    def _validate_quota_limit(self, limit):
+        # NOTE: -1 is a flag value for unlimited
+        if limit < -1:
+            msg = _("Quota limit must be -1 or greater.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
     @wsgi.serializers(xml=QuotaTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -72,6 +78,7 @@ class QuotaSetsController(object):
         for key in body['quota_set'].keys():
             if key in quota.quota_resources:
                 value = int(body['quota_set'][key])
+                self._validate_quota_limit(value)
                 try:
                     db.quota_update(context, project_id, key, value)
                 except exception.ProjectQuotaNotFound:
