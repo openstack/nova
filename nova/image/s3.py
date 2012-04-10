@@ -232,6 +232,9 @@ class S3ImageService(object):
         properties = metadata['properties']
         properties['architecture'] = arch
 
+        if FLAGS.auth_strategy == 'deprecated':
+            properties['project_id'] = context.project_id
+
         def _translate_dependent_image_id(image_key, image_id):
             image_uuid = ec2utils.ec2_id_to_glance_id(context, image_id)
             properties[image_key] = image_uuid

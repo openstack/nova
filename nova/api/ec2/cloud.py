@@ -1398,7 +1398,11 @@ class CloudController(object):
         ramdisk_id = image['properties'].get('ramdisk_id')
         if ramdisk_id:
             i['ramdiskId'] = ec2utils.image_ec2_id(ramdisk_id, 'ari')
-        i['imageOwnerId'] = image.get('owner')
+
+        if FLAGS.auth_strategy == 'deprecated':
+            i['imageOwnerId'] = image['properties'].get('owner_id')
+        else:
+            i['imageOwnerId'] = image.get('owner')
 
         img_loc = image['properties'].get('image_location')
         if img_loc:
