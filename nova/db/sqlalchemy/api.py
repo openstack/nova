@@ -3264,7 +3264,7 @@ def migration_get_all_unconfirmed(context, confirm_window, session=None):
     return model_query(context, models.Migration, session=session,
                        read_deleted="yes").\
             filter(models.Migration.updated_at <= confirm_window).\
-            filter_by(status="FINISHED").\
+            filter_by(status="finished").\
             all()
 
 
