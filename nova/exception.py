@@ -168,6 +168,11 @@ class NovaException(Exception):
                 message = self.message % kwargs
 
             except Exception as e:
+                # kwargs doesn't match a variable in the message
+                # log the issue and the kwargs
+                LOG.exception(_('Exception in string format operation'))
+                for name, value in kwargs.iteritems():
+                    LOG.error("%s: %s" % (name, value))
                 # at least get the core message out if something happened
                 message = self.message
 

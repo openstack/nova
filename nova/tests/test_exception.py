@@ -118,6 +118,13 @@ class NovaExceptionTestCase(test.TestCase):
         exc = FakeNovaException(code=500)
         self.assertEquals(unicode(exc), 'default message: 500')
 
+    def test_error_msg_exception_with_kwargs(self):
+        class FakeNovaException(exception.NovaException):
+            message = "default message: %(mispelled_code)s"
+
+        exc = FakeNovaException(code=500)
+        self.assertEquals(unicode(exc), 'default message: %(mispelled_code)s')
+
     def test_default_error_code(self):
         class FakeNovaException(exception.NovaException):
             code = 404
