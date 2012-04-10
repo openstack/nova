@@ -494,7 +494,7 @@ class InvalidImageRef(Invalid):
 
 class ListingImageRefsNotSupported(Invalid):
     message = _("Some images have been stored via hrefs."
-        + " This version of the api does not support displaying image hrefs.")
+          " This version of the api does not support displaying image hrefs.")
 
 
 class ImageNotFound(NotFound):

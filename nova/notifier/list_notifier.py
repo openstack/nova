@@ -62,7 +62,7 @@ def notify(message):
             driver.notify(message)
         except Exception as e:
             LOG.exception(_("Problem '%(e)s' attempting to send to "
-                            "notification driver %(driver)s." % locals()))
+                            "notification driver %(driver)s."), locals())
 
 
 def _reset_drivers():

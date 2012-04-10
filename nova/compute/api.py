@@ -266,7 +266,7 @@ class API(BaseAPI):
                 msg = (_("Can only run %s more instances of this type.") %
                        num_instances)
             LOG.warn(_("Quota exceeded for %(pid)s,"
-                  " tried to run %(min_count)s instances. " + msg) % locals())
+                  " tried to run %(min_count)s instances. %(msg)s"), locals())
             raise exception.QuotaError(code="InstanceLimitExceeded")
 
         self._check_metadata_properties_quota(context, metadata)

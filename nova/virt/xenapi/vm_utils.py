@@ -787,7 +787,7 @@ class VMHelper(xenapi.HelperBase):
             cur_vdi_uuid = vdi_rec['uuid']
             vdi_size_bytes = int(vdi_rec['physical_utilisation'])
             LOG.debug(_('vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes='
-                        '%(vdi_size_bytes)d') % locals())
+                        '%(vdi_size_bytes)d'), locals())
             size_bytes += vdi_size_bytes
         return size_bytes
 

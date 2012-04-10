@@ -218,7 +218,7 @@ class QuantumNovaIPAMLib(object):
                                {'allocated': False,
                                 'virtual_interface_id': None})
         if len(fixed_ips) == 0:
-            LOG.error(_('No fixed IPs to deallocate for vif %s') %
+            LOG.error(_('No fixed IPs to deallocate for vif %s'),
                       vif_ref['id'])
 
     def get_allocated_ips(self, context, subnet_id, project_id):

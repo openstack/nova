@@ -297,8 +297,7 @@ class FloatingIP(object):
                     self.l3driver.add_floating_ip(floating_ip['address'],
                             fixed_address, floating_ip['interface'])
                 except exception.ProcessExecutionError:
-                    msg = _('Interface %(interface)s not found') % locals()
-                    LOG.debug(msg)
+                    LOG.debug(_('Interface %(interface)s not found'), locals())
                     raise exception.NoFloatingIpInterface(interface=interface)
 
     @wrap_check_policy
@@ -493,8 +492,7 @@ class FloatingIP(object):
             fixed_address = self.db.floating_ip_disassociate(context,
                                                              floating_address)
             if "Cannot find device" in str(e):
-                msg = _('Interface %(interface)s not found') % locals()
-                LOG.error(msg)
+                LOG.error(_('Interface %(interface)s not found'), locals())
                 raise exception.NoFloatingIpInterface(interface=interface)
 
     @wrap_check_policy

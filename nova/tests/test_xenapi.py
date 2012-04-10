@@ -623,8 +623,8 @@ class XenAPIVMTestCase(test.TestCase):
 
             # mount point will be the last item of the command list
             self._tmpdir = cmd[len(cmd) - 1]
-            LOG.debug(_('Creating files in %s to simulate guest agent') %
-                self._tmpdir)
+            LOG.debug(_('Creating files in %s to simulate guest agent'),
+                      self._tmpdir)
             os.makedirs(os.path.join(self._tmpdir, 'usr', 'sbin'))
             # Touch the file using open
             open(os.path.join(self._tmpdir, 'usr', 'sbin',
@@ -634,8 +634,8 @@ class XenAPIVMTestCase(test.TestCase):
         def _umount_handler(cmd, *ignore_args, **ignore_kwargs):
             # Umount would normall make files in the m,ounted filesystem
             # disappear, so do that here
-            LOG.debug(_('Removing simulated guest agent files in %s') %
-                self._tmpdir)
+            LOG.debug(_('Removing simulated guest agent files in %s'),
+                      self._tmpdir)
             os.remove(os.path.join(self._tmpdir, 'usr', 'sbin',
                 'xe-update-networking'))
             os.rmdir(os.path.join(self._tmpdir, 'usr', 'sbin'))
