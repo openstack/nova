@@ -3286,8 +3286,8 @@ class ComputeAPIAggrTestCase(test.TestCase):
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         self.api.delete_aggregate(self.context, aggr['id'])
-        expected = db.aggregate_get(self.context, aggr['id'],
-                                    read_deleted='yes')
+        expected = db.aggregate_get(self.context.elevated(read_deleted='yes'),
+                                    aggr['id'])
         self.assertNotEqual(aggr['operational_state'],
                             expected['operational_state'])
 
