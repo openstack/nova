@@ -20,6 +20,7 @@ import webob
 
 from nova.api.openstack.compute.contrib import networks
 from nova import exception
+from nova.rpc import common
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -28,7 +29,8 @@ FAKE_NETWORKS = [
     {
         'bridge': 'br100', 'vpn_public_port': 1000,
         'dhcp_start': '10.0.0.3', 'bridge_interface': 'eth0',
-        'updated_at': '2011-08-16 09:26:13.048257', 'id': 1,
+        'updated_at': '2011-08-16 09:26:13.048257',
+        'id': 1, 'uuid': '20c8acc0-f747-4d71-a389-46d078ebf047',
         'cidr_v6': None, 'deleted_at': None,
         'gateway': '10.0.0.1', 'label': 'mynet_0',
         'project_id': '1234',
@@ -68,21 +70,21 @@ class FakeNetworkAPI(object):
             if network['id'] == network_id:
                 del self.networks[0]
                 return True
-        raise exception.NetworkNotFound()
+        raise exception.NetworkNotFoundForUUID()
 
     #NOTE(bcwaldon): this does nothing other than check for existance
     def disassociate(self, context, network_id):
         for i, network in enumerate(self.networks):
-            if network['id'] == network_id:
+            if network.get('uuid') == network_id:
                 return True
-        raise exception.NetworkNotFound()
+        raise common.RemoteError(type(exception.NetworkNotFound()).__name__)
 
     def get_all(self, context):
         return self.networks
 
     def get(self, context, network_id):
         for network in self.networks:
-            if network['id'] == network_id:
+            if network.get('uuid') == network_id:
                 return network
         raise exception.NetworkNotFound()
 
@@ -99,11 +101,15 @@ class NetworksTest(test.TestCase):
     def test_network_list_all(self):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks')
         res_dict = self.controller.index(req)
-        self.assertEquals(res_dict, {'networks': FAKE_NETWORKS})
+        expected = copy.deepcopy(FAKE_NETWORKS)
+        expected[0]['id'] = expected[0]['uuid']
+        del expected[0]['uuid']
+        self.assertEquals(res_dict, {'networks': expected})
 
     def test_network_disassociate(self):
-        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/1/action')
-        res = self.controller.action(req, 1, {'disassociate': None})
+        uuid = FAKE_NETWORKS[0]['uuid']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        res = self.controller.action(req, uuid, {'disassociate': None})
         self.assertEqual(res.status_int, 202)
 
     def test_network_disassociate_not_found(self):
@@ -113,9 +119,12 @@ class NetworksTest(test.TestCase):
                           req, 100, {'disassociate': None})
 
     def test_network_get(self):
-        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/1')
-        res_dict = self.controller.show(req, 1)
-        expected = {'network': FAKE_NETWORKS[0]}
+        uuid = FAKE_NETWORKS[0]['uuid']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s' % uuid)
+        res_dict = self.controller.show(req, uuid)
+        expected = {'network': copy.deepcopy(FAKE_NETWORKS[0])}
+        expected['network']['id'] = expected['network']['uuid']
+        del expected['network']['uuid']
         self.assertEqual(res_dict, expected)
 
     def test_network_get_not_found(self):
@@ -124,7 +133,8 @@ class NetworksTest(test.TestCase):
                           self.controller.show, req, 100)
 
     def test_network_delete(self):
-        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/1')
+        uuid = FAKE_NETWORKS[0]['uuid']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s' % uuid)
         res = self.controller.delete(req, 1)
         self.assertEqual(res.status_int, 202)
 

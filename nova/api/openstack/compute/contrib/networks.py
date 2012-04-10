@@ -24,6 +24,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 import nova.network.api
+from nova.rpc import common
 
 
 FLAGS = flags.FLAGS
@@ -40,7 +41,10 @@ def network_dict(network):
                   'netmask', 'injected', 'cidr', 'vpn_public_address',
                   'multi_host', 'dns1', 'host', 'gateway_v6', 'netmask_v6',
                   'created_at')
-        return dict((field, network[field]) for field in fields)
+        result = dict((field, network[field]) for field in fields)
+        if 'uuid' in network:
+            result['id'] = network['uuid']
+        return result
     else:
         return {}
 
@@ -72,6 +76,11 @@ class NetworkController(object):
             self.network_api.disassociate(context, network_id)
         except exception.NetworkNotFound:
             raise exc.HTTPNotFound(_("Network not found"))
+        except common.RemoteError as ex:
+            if ex.exc_type in ["NetworkNotFound", "NetworkNotFoundForUUID"]:
+                raise exc.HTTPNotFound(_("Network not found"))
+            else:
+                raise
         return exc.HTTPAccepted()
 
     def index(self, req):
@@ -89,6 +98,11 @@ class NetworkController(object):
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
             raise exc.HTTPNotFound(_("Network not found"))
+        except common.RemoteError as ex:
+            if ex.exc_type in ["NetworkNotFound", "NetworkNotFoundForUUID"]:
+                raise exc.HTTPNotFound(_("Network not found"))
+            else:
+                raise
         return {'network': network_dict(network)}
 
     def delete(self, req, id):
@@ -99,6 +113,11 @@ class NetworkController(object):
             self.network_api.delete(context, id)
         except exception.NetworkNotFound:
             raise exc.HTTPNotFound(_("Network not found"))
+        except common.RemoteError as ex:
+            if ex.exc_type in ["NetworkNotFound", "NetworkNotFoundForUUID"]:
+                raise exc.HTTPNotFound(_("Network not found"))
+            else:
+                raise
         return exc.HTTPAccepted()
 
     def create(self, req, id, body=None):
