@@ -55,7 +55,6 @@ import netaddr
 
 from nova.compute import api as compute_api
 from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import ipv6
@@ -1414,15 +1413,16 @@ class NetworkManager(manager.SchedulerDependentManager):
             require_disassociated=True):
 
         # Prefer uuid but we'll also take cidr for backwards compatibility
+        elevated = context.elevated()
         if uuid:
-            network = db.network_get_by_uuid(context.elevated(), uuid)
+            network = self.db.network_get_by_uuid(elevated, uuid)
         elif fixed_range:
-            network = db.network_get_by_cidr(context.elevated(), fixed_range)
+            network = self.db.network_get_by_cidr(elevated, fixed_range)
 
         if require_disassociated and network.project_id is not None:
             raise ValueError(_('Network must be disassociated from project %s'
                                ' before delete') % network.project_id)
-        db.network_delete_safe(context, network.id)
+        self.db.network_delete_safe(context, network.id)
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable=R0201
@@ -1559,12 +1559,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     @wrap_check_policy
     def get_network(self, context, network_uuid):
-        networks = self._get_networks_by_uuids(context, [network_uuid])
-        try:
-            network = networks[0]
-        except (IndexError, TypeError):
-            raise exception.NetworkNotFound(network_id=network_uuid)
-
+        network = self.db.network_get_by_uuid(context.elevated(), network_uuid)
         return dict(network.iteritems())
 
     @wrap_check_policy
@@ -1848,7 +1843,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
             net = {}
             address = FLAGS.vpn_ip
             net['vpn_public_address'] = address
-            network = db.network_update(context, network['id'], net)
+            network = self.db.network_update(context, network['id'], net)
         else:
             address = network['vpn_public_address']
         network['dhcp_server'] = self._get_dhcp_ip(context, network)
