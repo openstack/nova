@@ -213,26 +213,10 @@ class API(base.Base):
                 'rxtx_factor': instance['instance_type']['rxtx_factor'],
                 'host': instance['host'],
                 'project_id': instance['project_id']}
-        try:
-            nw_info = rpc.call(context, FLAGS.network_topic,
-                               {'method': 'get_instance_nw_info',
-                                'args': args})
-            return network_model.NetworkInfo.hydrate(nw_info)
-        # FIXME(comstud) rpc calls raise RemoteError if the remote raises
-        # an exception.  In the case here, because of a race condition,
-        # it's possible the remote will raise a InstanceNotFound when
-        # someone deletes the instance while this call is in progress.
-        #
-        # Unfortunately, we don't have access to the original exception
-        # class now.. but we do have the exception class's name.  So,
-        # we're checking it here and raising a new exception.
-        #
-        # Ultimately we need RPC to be able to serialize more things like
-        # classes.
-        except rpc_common.RemoteError as err:
-            if err.exc_type == 'InstanceNotFound':
-                raise exception.InstanceNotFound(instance_id=instance['id'])
-            raise
+        nw_info = rpc.call(context, FLAGS.network_topic,
+                           {'method': 'get_instance_nw_info',
+                            'args': args})
+        return network_model.NetworkInfo.hydrate(nw_info)
 
     def validate_networks(self, context, requested_networks):
         """validate the networks passed at the time of creating

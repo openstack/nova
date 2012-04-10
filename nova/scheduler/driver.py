@@ -362,7 +362,7 @@ class Scheduler(object):
                      {"method": 'compare_cpu',
                       "args": {'cpu_info': oservice_ref['cpu_info']}})
 
-        except rpc_common.RemoteError:
+        except exception.InvalidCPUInfo:
             src = instance_ref['host']
             LOG.exception(_("host %(dest)s is not compatible with "
                                 "original host %(src)s.") % locals())
@@ -446,17 +446,12 @@ class Scheduler(object):
         available = available_gb * (1024 ** 3)
 
         # Getting necessary disk size
-        try:
-            topic = db.queue_get_for(context, FLAGS.compute_topic,
-                                              instance_ref['host'])
-            ret = rpc.call(context, topic,
-                           {"method": 'get_instance_disk_info',
-                            "args": {'instance_name': instance_ref['name']}})
-            disk_infos = utils.loads(ret)
-        except rpc_common.RemoteError:
-            LOG.exception(_("host %(dest)s is not compatible with "
-                                "original host %(src)s.") % locals())
-            raise
+        topic = db.queue_get_for(context, FLAGS.compute_topic,
+                                          instance_ref['host'])
+        ret = rpc.call(context, topic,
+                       {"method": 'get_instance_disk_info',
+                        "args": {'instance_name': instance_ref['name']}})
+        disk_infos = utils.loads(ret)
 
         necessary = 0
         if disk_over_commit:

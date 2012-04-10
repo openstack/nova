@@ -918,6 +918,11 @@
 ###### (StrOpt) path to s3 buckets
 # buckets_path="$state_path/buckets"
 
+######### defined in nova.rpc.common #########
+
+###### (ListOpt) Modules of exceptions that are permitted to be recreated
+# allowed_rpc_exception_modules="nova.exception"
+
 ######### defined in nova.rpc.impl_kombu #########
 
 ###### (StrOpt) SSL certification authority file (valid only if SSL enabled)

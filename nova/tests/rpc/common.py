@@ -25,6 +25,7 @@ from eventlet import greenthread
 import nose
 
 from nova import context
+from nova import exception
 from nova import log as logging
 from nova.rpc import amqp as rpc_amqp
 from nova.rpc import common as rpc_common
@@ -99,30 +100,6 @@ class BaseRpcTestCase(test.TestCase):
                           'test', {"method": "context",
                                    "args": {"value": value}})
         self.assertEqual(self.context.to_dict(), result)
-
-    def test_call_exception(self):
-        """Test that exception gets passed back properly.
-
-        rpc.call returns a RemoteError object.  The value of the
-        exception is converted to a string, so we convert it back
-        to an int in the test.
-
-        """
-        value = 42
-        self.assertRaises(rpc_common.RemoteError,
-                          self.rpc.call,
-                          self.context,
-                          'test',
-                          {"method": "fail",
-                           "args": {"value": value}})
-        try:
-            self.rpc.call(self.context,
-                     'test',
-                     {"method": "fail",
-                      "args": {"value": value}})
-            self.fail("should have thrown RemoteError")
-        except rpc_common.RemoteError as exc:
-            self.assertEqual(int(exc.value), value)
 
     def test_nested_calls(self):
         """Test that we can do an rpc.call inside another call."""
@@ -248,7 +225,12 @@ class TestReceiver(object):
     @staticmethod
     def fail(context, value):
         """Raises an exception with the value sent in."""
-        raise Exception(value)
+        raise NotImplementedError(value)
+
+    @staticmethod
+    def fail_converted(context, value):
+        """Raises an exception with the value sent in."""
+        raise exception.ConvertedException(explanation=value)
 
     @staticmethod
     def block(context, value):
