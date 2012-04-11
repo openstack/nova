@@ -8,7 +8,6 @@ kombu==1.0.4
 lockfile==0.8
 lxml==2.3
 python-daemon==1.5.5
-python-novaclient
 routes==1.12.3
 WebOb==1.0.8
 wsgiref==0.1.2
@@ -24,3 +23,4 @@ feedparser
 pycrypto
 Babel>=0.9.6
 iso8601>=0.1.4
+httplib2

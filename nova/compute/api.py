@@ -24,7 +24,6 @@ import functools
 import re
 import time
 
-import novaclient
 import webob.exc
 
 from nova import block_device

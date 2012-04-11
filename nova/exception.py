@@ -27,7 +27,6 @@ SHOULD include dedicated exception logging.
 import functools
 import sys
 
-import novaclient.exceptions
 import webob.exc
 
 from nova import log as logging
