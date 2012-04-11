@@ -88,6 +88,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
     def init_host(self):
         # Initialize general L3 networking
         self.l3driver.initialize()
+        super(QuantumManager, self).init_host()
         # Initialize floating ip support (only works for nova ipam currently)
         if FLAGS.quantum_ipam_lib == 'nova.network.quantum.nova_ipam_lib':
             LOG.debug("Initializing FloatingIP support")
@@ -106,6 +107,22 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         # .. and for each network
         for c in cidrs:
             self.l3driver.initialize_network(c)
+
+    # Similar to FlatDHCPMananger, except we check for quantum_use_dhcp flag
+    # before we try to update_dhcp
+    def _setup_network_on_host(self, context, network):
+        """Sets up network on this host."""
+        network['dhcp_server'] = self._get_dhcp_ip(context, network)
+        self.l3driver.initialize_gateway(network)
+
+        if FLAGS.quantum_use_dhcp and not FLAGS.fake_network:
+            dev = self.driver.get_dev(network)
+            self.driver.update_dhcp(context, dev, network)
+            if FLAGS.use_ipv6:
+                self.driver.update_ra(context, dev, network)
+                gateway = utils.get_my_linklocal(dev)
+                self.db.network_update(context, network['id'],
+                                       {'gateway_v6': gateway})
 
     def _update_network_host(self, context, net_uuid):
         """Set the host column in the networks table: note that this won't
