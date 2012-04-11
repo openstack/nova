@@ -11,7 +11,7 @@ eventlet
 kombu==1.0.4
 lockfile==0.8
 lxml==2.3
-python-novaclient==2.6.0
+python-novaclient==2.6.0.1
 python-daemon==1.5.5
 python-gflags==1.3
 redis==2.0.0
@@ -26,7 +26,7 @@ paste
 sqlalchemy-migrate
 netaddr
 sphinx
-glance
+glance==2011.3.1
 xattr>=0.6.0
 nova-adminclient
 suds==0.4
