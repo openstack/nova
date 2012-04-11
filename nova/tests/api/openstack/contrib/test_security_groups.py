@@ -22,9 +22,12 @@ import webob
 from xml.dom import minidom
 
 from nova import exception
+from nova import flags
 from nova import test
 from nova.api.openstack.contrib import security_groups
 from nova.tests.api.openstack import fakes
+
+FLAGS = flags.FLAGS
 
 
 def _get_create_request_json(body_dict):
@@ -254,6 +257,19 @@ class TestSecurityGroups(test.TestCase):
         security_group = {}
         security_group['name'] = "test"
         security_group['description'] = 12
+        response = _create_security_group_json(security_group)
+        self.assertEquals(response.status_int, 400)
+
+    def test_create_security_group_quota_limit(self):
+        security_group = {}
+        for num in range(1, FLAGS.quota_security_groups):
+            security_group['name'] = "test%i" % num
+            security_group['description'] = "test%i" % num
+            response = _create_security_group_json(security_group)
+            self.assertEquals(response.status_int, 200)
+
+        security_group['name'] = "test_to_many"
+        security_group['description'] = "test_to_many"
         response = _create_security_group_json(security_group)
         self.assertEquals(response.status_int, 400)
 
@@ -916,6 +932,34 @@ class TestSecurityGroupRules(test.TestCase):
             }
 
         response = self._create_security_group_rule_json(rules)
+        self.assertEquals(response.status_int, 400)
+
+    def test_create_rule_quota_limit(self):
+        #NOTE: subtract 1 because we create 1 rule in setup
+        for num in range(100, (100 + FLAGS.quota_security_group_rules) - 1):
+            rule = {
+                      "security_group_rule": {
+                            "ip_protocol": "tcp",
+                            "from_port": num,
+                            "to_port": num,
+                            "parent_group_id": "%s"
+                                       % self.parent_security_group['id'],
+                         }
+                      }
+            response = self._create_security_group_rule_json(rule)
+            print response.body
+            self.assertEquals(response.status_int, 200)
+
+        rule = {
+                  "security_group_rule": {
+                        "ip_protocol": "tcp",
+                        "from_port": "121",
+                        "to_port": "121",
+                        "parent_group_id": "%s"
+                                   % self.parent_security_group['id'],
+                     }
+                  }
+        response = self._create_security_group_rule_json(rule)
         self.assertEquals(response.status_int, 400)
 
     def test_delete(self):

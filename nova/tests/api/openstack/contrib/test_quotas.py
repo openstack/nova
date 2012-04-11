@@ -29,7 +29,8 @@ def quota_set(id):
     return {'quota_set': {'id': id, 'metadata_items': 128, 'volumes': 10,
             'gigabytes': 1000, 'ram': 51200, 'floating_ips': 10,
             'instances': 10, 'injected_files': 5, 'cores': 20,
-            'injected_file_content_bytes': 10240}}
+            'injected_file_content_bytes': 10240,
+            'security_groups': 10, 'security_group_rules': 20}}
 
 
 def quota_set_list():
@@ -60,7 +61,9 @@ class QuotaSetsTest(test.TestCase):
             'metadata_items': 128,
             'gigabytes': 1000,
             'injected_files': 5,
-            'injected_file_content_bytes': 10240}
+            'injected_file_content_bytes': 10240,
+            'security_groups': 10,
+            'security_group_rules': 20}
 
         quota_set = QuotaSetsController()._format_quota_set('1234',
                                                             raw_quota_set)
@@ -95,7 +98,9 @@ class QuotaSetsTest(test.TestCase):
                     'floating_ips': 10,
                     'metadata_items': 128,
                     'injected_files': 5,
-                    'injected_file_content_bytes': 10240}}
+                    'injected_file_content_bytes': 10240,
+                    'security_groups': 10,
+                    'security_group_rules': 20}}
 
         self.assertEqual(json.loads(res.body), expected)
 
@@ -123,7 +128,10 @@ class QuotaSetsTest(test.TestCase):
                              'cores': 50, 'ram': 51200, 'volumes': 10,
                              'gigabytes': 1000, 'floating_ips': 10,
                              'metadata_items': 128, 'injected_files': 5,
-                             'injected_file_content_bytes': 10240}}
+                             'injected_file_content_bytes': 10240,
+                             'security_groups': 40,
+                             'security_group_rules': 80
+                             }}
 
         req = webob.Request.blank('/v1.1/fake/os-quota-sets/update_me')
         req.method = 'PUT'

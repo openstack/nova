@@ -40,6 +40,8 @@ class QuotaSetsController(object):
             'instances': quota_set['instances'],
             'injected_files': quota_set['injected_files'],
             'cores': quota_set['cores'],
+            'security_groups': quota_set['security_groups'],
+            'security_group_rules': quota_set['security_group_rules'],
         }}
 
     def show(self, req, id):
@@ -56,7 +58,8 @@ class QuotaSetsController(object):
         project_id = id
         resources = ['metadata_items', 'injected_file_content_bytes',
                 'volumes', 'gigabytes', 'ram', 'floating_ips', 'instances',
-                'injected_files', 'cores']
+                'injected_files', 'cores', 'security_groups',
+                'security_group_rules']
         for key in body['quota_set'].keys():
             if key in resources:
                 value = int(body['quota_set'][key])

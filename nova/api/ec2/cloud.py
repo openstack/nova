@@ -42,6 +42,7 @@ from nova import ipv6
 from nova import log as logging
 from nova import network
 from nova import rpc
+from nova import quota
 from nova import utils
 from nova import volume
 from nova.api.ec2 import ec2utils
@@ -856,6 +857,13 @@ class CloudController(object):
                     raise exception.ApiError(_(err) % values_for_rule)
                 postvalues.append(values_for_rule)
 
+        allowed = quota.allowed_security_group_rules(context,
+                                                   security_group['id'],
+                                                   1)
+        if allowed < 1:
+            msg = _("Quota exceeded, too many security group rules.")
+            raise exception.ApiError(msg)
+
         for values_for_rule in postvalues:
             security_group_rule = db.security_group_rule_create(
                     context,
@@ -907,6 +915,10 @@ class CloudController(object):
         self.compute_api.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
             raise exception.ApiError(_('group %s already exists') % group_name)
+
+        if quota.allowed_security_groups(context, 1) < 1:
+            msg = _("Quota exceeded, too many security groups.")
+            raise exception.ApiError(msg)
 
         group = {'user_id': context.user_id,
                  'project_id': context.project_id,
