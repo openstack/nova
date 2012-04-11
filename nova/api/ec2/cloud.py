@@ -1400,7 +1400,7 @@ class CloudController(object):
             i['ramdiskId'] = ec2utils.image_ec2_id(ramdisk_id, 'ari')
 
         if FLAGS.auth_strategy == 'deprecated':
-            i['imageOwnerId'] = image['properties'].get('owner_id')
+            i['imageOwnerId'] = image['properties'].get('project_id')
         else:
             i['imageOwnerId'] = image.get('owner')
 
