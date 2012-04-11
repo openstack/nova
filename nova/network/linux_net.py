@@ -64,7 +64,7 @@ linux_net_opts = [
                default='10.128.0.0/24',
                help='dmz range that should be accepted'),
     cfg.StrOpt('dnsmasq_config_file',
-               default="",
+               default='',
                help='Override the default dnsmasq settings with this file'),
     cfg.StrOpt('linuxnet_interface_driver',
                default='nova.network.linux_net.LinuxBridgeInterfaceDriver',
@@ -163,8 +163,8 @@ class IptablesTable(object):
             chain_set = self.unwrapped_chains
 
         if name not in chain_set:
-            LOG.debug(_('Attempted to remove chain %s which does not exist'),
-                      name)
+            LOG.warn(_('Attempted to remove chain %s which does not exist'),
+                     name)
             return
 
         chain_set.remove(name)
@@ -212,10 +212,10 @@ class IptablesTable(object):
         try:
             self.rules.remove(IptablesRule(chain, rule, wrap, top))
         except ValueError:
-            LOG.debug(_('Tried to remove rule that was not there:'
-                        ' %(chain)r %(rule)r %(wrap)r %(top)r'),
-                      {'chain': chain, 'rule': rule,
-                       'top': top, 'wrap': wrap})
+            LOG.warn(_('Tried to remove rule that was not there:'
+                       ' %(chain)r %(rule)r %(wrap)r %(top)r'),
+                     {'chain': chain, 'rule': rule,
+                      'top': top, 'wrap': wrap})
 
     def empty_chain(self, chain, wrap=True):
         """Remove all rules from a chain."""
@@ -492,9 +492,9 @@ def ensure_vpn_forward(public_ip, port, private_ip):
                                           '-d %s -p udp '
                                           '--dport %s -j DNAT --to %s:1194' %
                                           (public_ip, port, private_ip))
-    iptables_manager.ipv4['nat'].add_rule("OUTPUT",
-                                          "-d %s -p udp "
-                                          "--dport %s -j DNAT --to %s:1194" %
+    iptables_manager.ipv4['nat'].add_rule('OUTPUT',
+                                          '-d %s -p udp '
+                                          '--dport %s -j DNAT --to %s:1194' %
                                           (public_ip, port, private_ip))
     iptables_manager.apply()
 
@@ -551,21 +551,21 @@ def initialize_gateway_device(dev, network_ref):
                          check_exit_code=[0, 7])
         for ip_params in old_ip_params:
             _execute(*_ip_bridge_cmd('del', ip_params, dev),
-                        run_as_root=True, check_exit_code=[0, 2, 254])
+                     run_as_root=True, check_exit_code=[0, 2, 254])
         for ip_params in new_ip_params:
             _execute(*_ip_bridge_cmd('add', ip_params, dev),
-                        run_as_root=True, check_exit_code=[0, 2, 254])
+                     run_as_root=True, check_exit_code=[0, 2, 254])
         if gateway:
             _execute('route', 'add', 'default', 'gw', gateway,
                      run_as_root=True, check_exit_code=[0, 7])
         if FLAGS.send_arp_for_ha:
             _execute('arping', '-U', network_ref['dhcp_server'],
-                      '-A', '-I', dev,
-                      '-c', 1, run_as_root=True, check_exit_code=False)
+                     '-A', '-I', dev,
+                     '-c', 1, run_as_root=True, check_exit_code=False)
     if(FLAGS.use_ipv6):
         _execute('ip', '-f', 'inet6', 'addr',
-                     'change', network_ref['cidr_v6'],
-                     'dev', dev, run_as_root=True)
+                 'change', network_ref['cidr_v6'],
+                 'dev', dev, run_as_root=True)
 
 
 def get_dhcp_leases(context, network_ref):
@@ -686,7 +686,7 @@ def restart_dhcp(context, dev, network_ref):
                              check_exit_code=False)
         # Using symlinks can cause problems here so just compare the name
         # of the file itself
-        if conffile.split("/")[-1] in out:
+        if conffile.split('/')[-1] in out:
             try:
                 _execute('kill', '-HUP', pid, run_as_root=True)
                 return
@@ -753,7 +753,7 @@ interface %s
             try:
                 _execute('kill', pid, run_as_root=True)
             except Exception as exc:  # pylint: disable=W0703
-                LOG.debug(_('killing radvd threw %s'), exc)
+                LOG.error(_('killing radvd threw %s'), exc)
         else:
             LOG.debug(_('Pid %d is stale, relaunching radvd'), pid)
 
@@ -790,7 +790,7 @@ def _host_dhcp(data):
                                data['instance_hostname'],
                                FLAGS.dhcp_domain,
                                data['address'],
-                               "net:" + _host_dhcp_network(data))
+                               'net:' + _host_dhcp_network(data))
     else:
         return '%s,%s.%s,%s' % (data['vif_address'],
                                data['instance_hostname'],
@@ -971,8 +971,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             # (danwent) the bridge will inherit this address, so we want to
             # make sure it is the value set from the NetworkManager
             if mac_address:
-                _execute('ip', 'link', 'set', interface, "address",
-                            mac_address, run_as_root=True)
+                _execute('ip', 'link', 'set', interface, 'address',
+                         mac_address, run_as_root=True)
             _execute('ip', 'link', 'set', interface, 'up', run_as_root=True)
             if FLAGS.network_device_mtu:
                 _execute('ip', 'link', 'set', interface, 'mtu',
@@ -1009,7 +1009,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
         if interface:
             out, err = _execute('brctl', 'addif', bridge, interface,
-                            check_exit_code=False, run_as_root=True)
+                                check_exit_code=False, run_as_root=True)
 
             # NOTE(vish): This will break if there is already an ip on the
             #             interface, so we move any ips to the bridge
@@ -1030,9 +1030,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 if fields and fields[0] == 'inet':
                     params = fields[1:-1]
                     _execute(*_ip_bridge_cmd('del', params, fields[-1]),
-                                run_as_root=True, check_exit_code=[0, 2, 254])
+                             run_as_root=True, check_exit_code=[0, 2, 254])
                     _execute(*_ip_bridge_cmd('add', params, bridge),
-                                run_as_root=True, check_exit_code=[0, 2, 254])
+                             run_as_root=True, check_exit_code=[0, 2, 254])
             if old_gateway:
                 _execute('route', 'add', 'default', 'gw', old_gateway,
                          run_as_root=True, check_exit_code=[0, 7])
@@ -1063,17 +1063,17 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         if not _device_exists(dev):
             bridge = FLAGS.linuxnet_ovs_integration_bridge
             _execute('ovs-vsctl',
-                        '--', '--may-exist', 'add-port', bridge, dev,
-                        '--', 'set', 'Interface', dev, "type=internal",
-                        '--', 'set', 'Interface', dev,
-                                "external-ids:iface-id=%s" % dev,
-                        '--', 'set', 'Interface', dev,
-                                "external-ids:iface-status=active",
-                        '--', 'set', 'Interface', dev,
-                                "external-ids:attached-mac=%s" % mac_address,
-                        run_as_root=True)
-            _execute('ip', 'link', 'set', dev, "address", mac_address,
-                        run_as_root=True)
+                     '--', '--may-exist', 'add-port', bridge, dev,
+                     '--', 'set', 'Interface', dev, 'type=internal',
+                     '--', 'set', 'Interface', dev,
+                     'external-ids:iface-id=%s' % dev,
+                     '--', 'set', 'Interface', dev,
+                     'external-ids:iface-status=active',
+                     '--', 'set', 'Interface', dev,
+                     'external-ids:attached-mac=%s' % mac_address,
+                     run_as_root=True)
+            _execute('ip', 'link', 'set', dev, 'address', mac_address,
+                     run_as_root=True)
             if FLAGS.network_device_mtu:
                 _execute('ip', 'link', 'set', dev, 'mtu',
                          FLAGS.network_device_mtu, run_as_root=True)
@@ -1082,11 +1082,11 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                 # If we weren't instructed to act as a gateway then add the
                 # appropriate flows to block all non-dhcp traffic.
                 _execute('ovs-ofctl',
-                    'add-flow', bridge, "priority=1,actions=drop",
-                     run_as_root=True)
+                         'add-flow', bridge, 'priority=1,actions=drop',
+                         run_as_root=True)
                 _execute('ovs-ofctl', 'add-flow', bridge,
-                    "udp,tp_dst=67,dl_dst=%s,priority=2,actions=normal" %
-                    mac_address, run_as_root=True)
+                         'udp,tp_dst=67,dl_dst=%s,priority=2,actions=normal' %
+                         mac_address, run_as_root=True)
                 # .. and make sure iptbles won't forward it as well.
                 iptables_manager.ipv4['filter'].add_rule('FORWARD',
                         '--in-interface %s -j DROP' % bridge)
@@ -1104,19 +1104,19 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         dev = self.get_dev(network)
         bridge = FLAGS.linuxnet_ovs_integration_bridge
         _execute('ovs-vsctl', '--', '--if-exists', 'del-port',
-                               bridge, dev, run_as_root=True)
+                 bridge, dev, run_as_root=True)
         return dev
 
     def get_dev(self, network):
-        dev = "gw-" + str(network['uuid'][0:11])
+        dev = 'gw-' + str(network['uuid'][0:11])
         return dev
 
 
 # plugs interfaces using Linux Bridge when using QuantumManager
 class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
-    BRIDGE_NAME_PREFIX = "brq"
-    GATEWAY_INTERFACE_PREFIX = "gw-"
+    BRIDGE_NAME_PREFIX = 'brq'
+    GATEWAY_INTERFACE_PREFIX = 'gw-'
 
     def plug(self, network, mac_address, gateway=True):
         dev = self.get_dev(network)
@@ -1143,7 +1143,7 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             utils.execute('brctl', 'addbr', bridge, run_as_root=True)
             utils.execute('brctl', 'setfd', bridge, str(0), run_as_root=True)
             utils.execute('brctl', 'stp', bridge, 'off', run_as_root=True)
-            utils.execute('ip', 'link', 'set', bridge, "address", mac_address,
+            utils.execute('ip', 'link', 'set', bridge, 'address', mac_address,
                           run_as_root=True)
             utils.execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
             LOG.debug(_("Done starting bridge %s"), bridge)
@@ -1151,7 +1151,7 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         full_ip = '%s/%s' % (network['dhcp_server'],
                              network['cidr'].rpartition('/')[2])
         utils.execute('ip', 'address', 'add', full_ip, 'dev', bridge,
-                run_as_root=True)
+                      run_as_root=True)
 
         return dev
 
@@ -1164,8 +1164,7 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             try:
                 utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
             except exception.ProcessExecutionError:
-                LOG.warning(_("Failed unplugging gateway interface '%s'"),
-                            dev)
+                LOG.error(_("Failed unplugging gateway interface '%s'"), dev)
                 raise
             LOG.debug(_("Unplugged gateway interface '%s'"), dev)
             return dev
@@ -1176,12 +1175,12 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             try:
                 # First, try with 'ip'
                 utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
-                          run_as_root=True)
+                              run_as_root=True)
             except exception.ProcessExecutionError:
                 # Second option: tunctl
                 utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
             if mac_address:
-                utils.execute('ip', 'link', 'set', dev, "address", mac_address,
+                utils.execute('ip', 'link', 'set', dev, 'address', mac_address,
                               run_as_root=True)
             utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
 
