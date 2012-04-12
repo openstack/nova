@@ -208,7 +208,7 @@ class VMOps(object):
         if resize_instance:
             self._resize_instance(instance, root_vdi)
 
-        vm_ref = self._create_vm(context, instance,
+        vm_ref = self._create_vm(context, instance, instance['name'],
                                  {'root': root_vdi},
                                  network_info, image_meta)
 
@@ -226,11 +226,12 @@ class VMOps(object):
                                   self._session.get_xenapi_host(),
                                   False, False)
 
-    def _create_disks(self, context, instance, image_meta,
+    def _create_disks(self, context, instance, name_label, image_meta,
                       block_device_info=None):
         disk_image_type = vm_utils.determine_disk_image_type(image_meta)
         vdis = vm_utils.get_vdis_for_instance(context, self._session,
-                                          instance, instance['image_ref'],
+                                          instance, name_label,
+                                          instance['image_ref'],
                                           disk_image_type,
                                           block_device_info=block_device_info)
         # Just get the VDI ref once
@@ -245,7 +246,10 @@ class VMOps(object):
         return vdis
 
     def spawn(self, context, instance, image_meta, network_info,
-              block_device_info=None):
+              block_device_info=None, name_label=None, rescue=False):
+        if name_label is None:
+            name_label = instance['name']
+
         step = make_step_decorator(context, instance)
 
         @step
@@ -260,8 +264,8 @@ class VMOps(object):
 
         @step
         def create_disks_step(undo_mgr):
-            vdis = self._create_disks(context, instance, image_meta,
-                                      block_device_info)
+            vdis = self._create_disks(context, instance, name_label,
+                                      image_meta, block_device_info)
 
             def undo_create_disks():
                 vdi_refs = [vdi['ref'] for vdi in vdis.values()]
@@ -277,13 +281,13 @@ class VMOps(object):
 
             if instance['kernel_id']:
                 vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, instance['kernel_id'],
+                        instance, name_label, instance['kernel_id'],
                         vm_utils.ImageType.KERNEL)
                 kernel_file = vdis['kernel'].get('file')
 
             if instance['ramdisk_id']:
                 vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, instance['ramdisk_id'],
+                        instance, name_label, instance['ramdisk_id'],
                         vm_utils.ImageType.RAMDISK)
                 ramdisk_file = vdis['ramdisk'].get('file')
 
@@ -299,9 +303,11 @@ class VMOps(object):
 
         @step
         def create_vm_step(undo_mgr, vdis, kernel_file, ramdisk_file):
-            vm_ref = self._create_vm(context, instance, vdis, network_info,
-                                     image_meta, kernel_file=kernel_file,
-                                     ramdisk_file=ramdisk_file)
+            vm_ref = self._create_vm(context, instance, name_label, vdis,
+                                     network_info, image_meta,
+                                     kernel_file=kernel_file,
+                                     ramdisk_file=ramdisk_file,
+                                     rescue=rescue)
 
             def undo_create_vm():
                 self._destroy(instance, vm_ref, network_info)
@@ -357,21 +363,13 @@ class VMOps(object):
             msg = _("Failed to spawn, rolling back")
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
-    def _generate_hostname(self, instance):
-        """Generate the instance's hostname."""
-        hostname = instance["hostname"]
-        if getattr(instance, "_rescue", False):
-            hostname = "RESCUE-%s" % hostname
-
-        return hostname
-
-    def _create_vm(self, context, instance, vdis, network_info, image_meta,
-                   kernel_file=None, ramdisk_file=None):
+    def _create_vm(self, context, instance, name_label, vdis, network_info,
+                   image_meta, kernel_file=None, ramdisk_file=None,
+                   rescue=False):
         """Create VM instance."""
-        instance_name = instance['name']
-        vm_ref = vm_utils.lookup(self._session, instance_name)
+        vm_ref = vm_utils.lookup(self._session, name_label)
         if vm_ref is not None:
-            raise exception.InstanceExists(name=instance_name)
+            raise exception.InstanceExists(name=name_label)
 
         # Ensure enough free memory is available
         if not vm_utils.ensure_free_mem(self._session, instance):
@@ -394,12 +392,12 @@ class VMOps(object):
             db.instance_update(nova_context.get_admin_context(),
                                instance['uuid'], {'vm_mode': mode})
 
-        vm_ref = vm_utils.create_vm(
-            self._session, instance, kernel_file, ramdisk_file,
-            use_pv_kernel)
+        vm_ref = vm_utils.create_vm(self._session, instance, name_label,
+                                    kernel_file, ramdisk_file, use_pv_kernel)
 
         # Add disks to VM
-        self._attach_disks(instance, disk_image_type, vm_ref, vdis)
+        self._attach_disks(instance, vm_ref, name_label, disk_image_type,
+                           vdis)
 
         # Alter the image before VM start for network injection.
         if FLAGS.flat_injected:
@@ -409,14 +407,18 @@ class VMOps(object):
         self._create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
 
-        hostname = self._generate_hostname(instance)
+        hostname = instance['hostname']
+        if rescue:
+            hostname = 'RESCUE-%s' % hostname
+
         self.inject_hostname(instance, vm_ref, hostname)
 
         self.inject_instance_metadata(instance, vm_ref)
 
         return vm_ref
 
-    def _attach_disks(self, instance, disk_image_type, vm_ref, vdis):
+    def _attach_disks(self, instance, vm_ref, name_label, disk_image_type,
+                      vdis):
         ctx = nova_context.get_admin_context()
 
         # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
@@ -457,7 +459,7 @@ class VMOps(object):
         generate_swap = swap_mb and FLAGS.xenapi_generate_swap
         if generate_swap:
             vm_utils.generate_swap(self._session, instance, vm_ref,
-                                   DEVICE_SWAP, swap_mb)
+                                   DEVICE_SWAP, name_label, swap_mb)
 
             if swap_vdi:
                 # We won't be using packaged swap VDI, so destroy it
@@ -471,7 +473,8 @@ class VMOps(object):
         ephemeral_gb = instance_type['ephemeral_gb']
         if ephemeral_gb:
             vm_utils.generate_ephemeral(self._session, instance, vm_ref,
-                                        DEVICE_EPHEMERAL, ephemeral_gb)
+                                        DEVICE_EPHEMERAL, name_label,
+                                        ephemeral_gb)
 
     def _boot_new_instance(self, instance, vm_ref):
         """Boot a new instance and configure it."""
@@ -496,7 +499,7 @@ class VMOps(object):
                   instance=instance)
         expiration = time.time() + FLAGS.xenapi_running_timeout
         while time.time() < expiration:
-            state = self.get_info(instance)['state']
+            state = self.get_info(instance, vm_ref)['state']
             if state == power_state.RUNNING:
                 break
 
@@ -1062,8 +1065,8 @@ class VMOps(object):
             - spawn a rescue VM (the vm name-label will be instance-N-rescue).
 
         """
-        rescue_vm_ref = vm_utils.lookup(self._session,
-                                        "%s-rescue" % instance['name'])
+        rescue_name_label = '%s-rescue' % instance['name']
+        rescue_vm_ref = vm_utils.lookup(self._session, rescue_name_label)
         if rescue_vm_ref:
             raise RuntimeError(_("Instance is already in Rescue Mode: %s")
                                % instance['name'])
@@ -1071,10 +1074,9 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         vm_utils.shutdown_vm(self._session, instance, vm_ref)
         self._acquire_bootlock(vm_ref)
-        instance._rescue = True
-        self.spawn(context, instance, image_meta, network_info)
-        # instance['name'] now has -rescue appended because of magic
-        rescue_vm_ref = vm_utils.lookup(self._session, instance['name'])
+        self.spawn(context, instance, image_meta, network_info,
+                   name_label=rescue_name_label, rescue=True)
+        rescue_vm_ref = vm_utils.lookup(self._session, rescue_name_label)
         vdi_ref = self._find_root_vdi_ref(vm_ref)
 
         rescue_vbd_ref = vm_utils.create_vbd(self._session, rescue_vm_ref,
@@ -1097,7 +1099,6 @@ class VMOps(object):
                     instance_id=instance['uuid'])
 
         original_vm_ref = self._get_vm_opaque_ref(instance)
-        instance._rescue = False
 
         self._destroy_rescue_instance(rescue_vm_ref, original_vm_ref)
         self._release_bootlock(original_vm_ref)
@@ -1191,9 +1192,9 @@ class VMOps(object):
             self._session.call_xenapi("VM.start", original_vm_ref, False,
                                       False)
 
-    def get_info(self, instance):
+    def get_info(self, instance, vm_ref=None):
         """Return data about VM instance."""
-        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
         return vm_utils.compile_info(vm_rec)
 

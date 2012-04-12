@@ -1298,7 +1298,8 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
         vdis = {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}}
 
-        self.conn._vmops._attach_disks(instance, disk_image_type, vm_ref, vdis)
+        self.conn._vmops._attach_disks(instance, vm_ref, instance['name'],
+                                       disk_image_type, vdis)
 
         self.assertEqual(marker["partition_called"], called)
 
@@ -1383,7 +1384,8 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         vdis = {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}}
 
         self.called = False
-        self.conn._vmops._attach_disks(instance, disk_image_type, vm_ref, vdis)
+        self.conn._vmops._attach_disks(instance, vm_ref, instance['name'],
+                                       disk_image_type, vdis)
         self.assertTrue(self.called)
 
     def test_generate_swap(self):

@@ -139,7 +139,8 @@ class ImageType(object):
         return dict(zip(ImageType._strs, ImageType._ids)).get(image_type_str)
 
 
-def create_vm(session, instance, kernel, ramdisk, use_pv_kernel=False):
+def create_vm(session, instance, name_label, kernel, ramdisk,
+              use_pv_kernel=False):
     """Create a VM record.  Returns new VM reference.
     the use_pv_kernel flag indicates whether the guest is HVM or PV
 
@@ -173,7 +174,7 @@ def create_vm(session, instance, kernel, ramdisk, use_pv_kernel=False):
         'memory_static_max': mem,
         'memory_target': mem,
         'name_description': '',
-        'name_label': instance['name'],
+        'name_label': name_label,
         'other_config': {'allowvssprovider': str(False),
                          'nova_uuid': str(instance['uuid'])},
         'PCI_bus': '',
@@ -353,18 +354,14 @@ def safe_destroy_vdis(session, vdi_refs):
             LOG.error(exc)
 
 
-def create_vdi(session, sr_ref, info, disk_type, virtual_size,
+def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
                read_only=False):
     """Create a VDI record and returns its reference."""
     # create_vdi may be called simply while creating a volume
     # hence information about instance may or may not be present
-    otherconf = {}
-    if not isinstance(info, basestring):
-        name_label = info['name']
-        otherconf = {'nova_instance_uuid': info['uuid'],
-                     'nova_disk_type': disk_type}
-    else:
-        name_label = info
+    otherconf = {'nova_disk_type': disk_type}
+    if instance:
+        otherconf['nova_instance_uuid'] = instance['uuid']
     vdi_ref = session.call_xenapi("VDI.create",
          {'name_label': name_label,
           'name_description': disk_type,
@@ -412,9 +409,8 @@ def _volume_in_mapping(mount_device, block_device_info):
     return block_device.strip_prefix(mount_device) in block_device_list
 
 
-def get_vdis_for_instance(context, session, instance, image,
-                          image_type,
-                          block_device_info=None):
+def get_vdis_for_instance(context, session, instance, name_label, image,
+                          image_type, block_device_info=None):
     if block_device_info:
         LOG.debug(_("block device info: %s"), block_device_info)
         rootdev = block_device_info['root_device_name']
@@ -428,7 +424,7 @@ def get_vdis_for_instance(context, session, instance, image,
             return get_vdis_for_boot_from_vol(session,
                                              instance,
                                              dev_params)
-    return create_image(context, session, instance, image,
+    return _create_image(context, session, instance, name_label, image,
                         image_type)
 
 
@@ -601,7 +597,10 @@ def resize_disk(session, instance, vdi_ref, instance_type):
 
         # Create new VDI
         vdi_size = instance_type['root_gb'] * 1024 * 1024 * 1024
-        new_ref = create_vdi(session, sr_ref, instance, 'root', vdi_size)
+        # NOTE(johannes): No resizing allowed for rescue instances, so
+        # using instance['name'] is safe here
+        new_ref = create_vdi(session, sr_ref, instance, instance['name'],
+                             'root', vdi_size)
 
         new_uuid = session.call_xenapi('VDI.get_uuid', new_ref)
 
@@ -642,8 +641,8 @@ def auto_configure_disk(session, vdi_ref, new_gb):
             _resize_part_and_fs(dev, start, old_sectors, new_sectors)
 
 
-def _generate_disk(session, instance, vm_ref, userdevice, name, size_mb,
-                   fs_type):
+def _generate_disk(session, instance, vm_ref, userdevice, name_label,
+                   disk_type, size_mb, fs_type):
     """
     Steps to programmatically generate a disk:
 
@@ -659,7 +658,8 @@ def _generate_disk(session, instance, vm_ref, userdevice, name, size_mb,
     sr_ref = safe_find_sr(session)
     ONE_MEG = 1024 * 1024
     virtual_size = size_mb * ONE_MEG
-    vdi_ref = create_vdi(session, sr_ref, instance, name, virtual_size)
+    vdi_ref = create_vdi(session, sr_ref, instance, name_label, disk_type,
+                         virtual_size)
 
     try:
         # 2. Attach VDI to compute worker (VBD hotplug)
@@ -692,22 +692,25 @@ def _generate_disk(session, instance, vm_ref, userdevice, name, size_mb,
             destroy_vdi(session, vdi_ref)
 
 
-def generate_swap(session, instance, vm_ref, userdevice, swap_mb):
+def generate_swap(session, instance, vm_ref, userdevice, name_label, swap_mb):
     # NOTE(jk0): We use a FAT32 filesystem for the Windows swap
     # partition because that is what parted supports.
     is_windows = instance['os_type'] == "windows"
     fs_type = "vfat" if is_windows else "linux-swap"
 
-    _generate_disk(session, instance, vm_ref, userdevice, 'swap', swap_mb,
-                   fs_type)
+    _generate_disk(session, instance, vm_ref, userdevice, name_label,
+                   'swap', swap_mb, fs_type)
 
 
-def generate_ephemeral(session, instance, vm_ref, userdevice, size_gb):
-    _generate_disk(session, instance, vm_ref, userdevice, 'ephemeral',
-                   size_gb * 1024, FLAGS.default_ephemeral_format)
+def generate_ephemeral(session, instance, vm_ref, userdevice, name_label,
+                       size_gb):
+    _generate_disk(session, instance, vm_ref, userdevice, name_label,
+                   'ephemeral', size_gb * 1024,
+                   FLAGS.default_ephemeral_format)
 
 
-def create_kernel_image(context, session, instance, image_id, image_type):
+def create_kernel_image(context, session, instance, name_label, image_id,
+                        image_type):
     """Creates kernel/ramdisk file from the image stored in the cache.
     If the image is not present in the cache, it streams it from glance.
 
@@ -721,8 +724,8 @@ def create_kernel_image(context, session, instance, image_id, image_type):
         filename = session.call_plugin('kernel', 'create_kernel_ramdisk', args)
 
     if filename == "":
-        return _fetch_disk_image(context, session, instance, image_id,
-                                 image_type)
+        return _fetch_disk_image(context, session, instance, name_label,
+                                 image_id, image_type)
     else:
         vdi_type = ImageType.to_string(image_type)
         return {vdi_type: dict(uuid=None, file=filename)}
@@ -737,7 +740,8 @@ def destroy_kernel_ramdisk(session, kernel, ramdisk):
     session.call_plugin('kernel', 'remove_kernel_ramdisk', args)
 
 
-def _create_cached_image(context, session, instance, image_id, image_type):
+def _create_cached_image(context, session, instance, name_label,
+                         image_id, image_type):
     sr_ref = safe_find_sr(session)
     sr_type = session.call_xenapi('SR.get_record', sr_ref)["type"]
     vdis = {}
@@ -750,7 +754,8 @@ def _create_cached_image(context, session, instance, image_id, image_type):
 
     root_vdi_ref = find_cached_image(session, image_id, sr_ref)
     if root_vdi_ref is None:
-        vdis = _fetch_image(context, session, instance, image_id, image_type)
+        vdis = _fetch_image(context, session, instance, name_label,
+                            image_id, image_type)
         root_vdi = vdis['root']
         root_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                            root_vdi['uuid'])
@@ -802,7 +807,8 @@ def _create_cached_image(context, session, instance, image_id, image_type):
     return vdis
 
 
-def create_image(context, session, instance, image_id, image_type):
+def _create_image(context, session, instance, name_label, image_id,
+                  image_type):
     """Creates VDI from the image stored in the local cache. If the image
     is not present in the cache, it streams it from glance.
 
@@ -832,21 +838,21 @@ def create_image(context, session, instance, image_id, image_type):
 
     # Fetch (and cache) the image
     if cache:
-        vdis = _create_cached_image(
-                context, session, instance, image_id, image_type)
+        vdis = _create_cached_image(context, session, instance, name_label,
+                                    image_id, image_type)
     else:
-        vdis = _fetch_image(
-                context, session, instance, image_id, image_type)
+        vdis = _fetch_image(context, session, instance, name_label,
+                            image_id, image_type)
 
     # Set the name label and description to easily identify what
     # instance and disk it's for
     for vdi_type, vdi in vdis.iteritems():
-        set_vdi_name(session, vdi['uuid'], instance['name'], vdi_type)
+        set_vdi_name(session, vdi['uuid'], name_label, vdi_type)
 
     return vdis
 
 
-def _fetch_image(context, session, instance, image_id, image_type):
+def _fetch_image(context, session, instance, name_label, image_id, image_type):
     """Fetch image from glance based on image type.
 
     Returns: A single filename if image_type is KERNEL or RAMDISK
@@ -855,8 +861,8 @@ def _fetch_image(context, session, instance, image_id, image_type):
     if image_type == ImageType.DISK_VHD:
         vdis = _fetch_vhd_image(context, session, instance, image_id)
     else:
-        vdis = _fetch_disk_image(context, session, instance, image_id,
-                                 image_type)
+        vdis = _fetch_disk_image(context, session, instance, name_label,
+                                 image_id, image_type)
 
     for vdi_type, vdi in vdis.iteritems():
         vdi_uuid = vdi['uuid']
@@ -979,7 +985,8 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
         raise exception.ImageTooLarge()
 
 
-def _fetch_disk_image(context, session, instance, image_id, image_type):
+def _fetch_disk_image(context, session, instance, name_label, image_id,
+                      image_type):
     """Fetch the image from Glance
 
     NOTE:
@@ -1019,7 +1026,8 @@ def _fetch_disk_image(context, session, instance, image_id, image_type):
             _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
               "max %(max_size)d bytes") % locals())
 
-    vdi_ref = create_vdi(session, sr_ref, instance, image_type_str, vdi_size)
+    vdi_ref = create_vdi(session, sr_ref, instance, name_label,
+                         image_type_str, vdi_size)
     # From this point we have a VDI on Xen host;
     # If anything goes wrong, we need to remember its uuid.
     try:

@@ -202,8 +202,6 @@ class Instance(BASE, NovaBase):
                 base_name = FLAGS.instance_name_template % info
             except KeyError:
                 base_name = self.uuid
-        if getattr(self, '_rescue', False):
-            base_name += "-rescue"
         return base_name
 
     def _extra_keys(self):

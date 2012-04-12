@@ -39,7 +39,7 @@ def stubout_firewall_driver(stubs, conn):
 
 
 def stubout_instance_snapshot(stubs):
-    def fake_fetch_image(context, session, instance, image, type):
+    def fake_fetch_image(context, session, instance, name_label, image, type):
         return {'root': dict(uuid=_make_fake_vdi(), file=None),
                 'kernel': dict(uuid=_make_fake_vdi(), file=None),
                 'ramdisk': dict(uuid=_make_fake_vdi(), file=None)}
@@ -117,8 +117,8 @@ def stubout_lookup_image(stubs):
 def stubout_fetch_disk_image(stubs, raise_failure=False):
     """Simulates a failure in fetch image_glance_disk."""
 
-    def _fake_fetch_disk_image(context, session, instance, image,
-                                      image_type):
+    def _fake_fetch_disk_image(context, session, instance, name_label, image,
+                               image_type):
         if raise_failure:
             raise fake.Failure("Test Exception raised by "
                                "fake fetch_image_glance_disk")
