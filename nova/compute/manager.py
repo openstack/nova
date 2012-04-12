@@ -2253,7 +2253,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _poll_bandwidth_usage(self, context, start_time=None, stop_time=None):
         if not start_time:
-            start_time = utils.current_audit_period()[1]
+            start_time = utils.last_completed_audit_period()[1]
 
         curr_time = time.time()
         if curr_time - self._last_bw_usage_poll > FLAGS.bandwith_poll_interval:

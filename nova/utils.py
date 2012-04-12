@@ -371,7 +371,7 @@ EASIER_PASSWORD_SYMBOLS = ('23456789',  # Removed: 0, 1
                            'ABCDEFGHJKLMNPQRSTUVWXYZ')  # Removed: I, O
 
 
-def current_audit_period(unit=None):
+def last_completed_audit_period(unit=None):
     """This method gives you the most recently *completed* audit period.
 
     arguments:

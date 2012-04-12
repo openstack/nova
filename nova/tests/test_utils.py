@@ -1042,7 +1042,7 @@ class AuditPeriodTest(test.TestCase):
         super(AuditPeriodTest, self).tearDown()
 
     def test_hour(self):
-        begin, end = utils.current_audit_period(unit='hour')
+        begin, end = utils.last_completed_audit_period(unit='hour')
         self.assertEquals(begin, datetime.datetime(
                                            hour=7,
                                            day=5,
@@ -1055,7 +1055,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_hour_with_offset_before_current(self):
-        begin, end = utils.current_audit_period(unit='hour@10')
+        begin, end = utils.last_completed_audit_period(unit='hour@10')
         self.assertEquals(begin, datetime.datetime(
                                            minute=10,
                                            hour=7,
@@ -1070,7 +1070,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_hour_with_offset_after_current(self):
-        begin, end = utils.current_audit_period(unit='hour@30')
+        begin, end = utils.last_completed_audit_period(unit='hour@30')
         self.assertEquals(begin, datetime.datetime(
                                            minute=30,
                                            hour=6,
@@ -1085,7 +1085,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_day(self):
-        begin, end = utils.current_audit_period(unit='day')
+        begin, end = utils.last_completed_audit_period(unit='day')
         self.assertEquals(begin, datetime.datetime(
                                            day=4,
                                            month=3,
@@ -1096,7 +1096,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_day_with_offset_before_current(self):
-        begin, end = utils.current_audit_period(unit='day@6')
+        begin, end = utils.last_completed_audit_period(unit='day@6')
         self.assertEquals(begin, datetime.datetime(
                                            hour=6,
                                            day=4,
@@ -1109,7 +1109,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_day_with_offset_after_current(self):
-        begin, end = utils.current_audit_period(unit='day@10')
+        begin, end = utils.last_completed_audit_period(unit='day@10')
         self.assertEquals(begin, datetime.datetime(
                                            hour=10,
                                            day=3,
@@ -1122,7 +1122,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_month(self):
-        begin, end = utils.current_audit_period(unit='month')
+        begin, end = utils.last_completed_audit_period(unit='month')
         self.assertEquals(begin, datetime.datetime(
                                            day=1,
                                            month=2,
@@ -1133,7 +1133,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_month_with_offset_before_current(self):
-        begin, end = utils.current_audit_period(unit='month@2')
+        begin, end = utils.last_completed_audit_period(unit='month@2')
         self.assertEquals(begin, datetime.datetime(
                                            day=2,
                                            month=2,
@@ -1144,7 +1144,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_month_with_offset_after_current(self):
-        begin, end = utils.current_audit_period(unit='month@15')
+        begin, end = utils.last_completed_audit_period(unit='month@15')
         self.assertEquals(begin, datetime.datetime(
                                            day=15,
                                            month=1,
@@ -1155,7 +1155,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_year(self):
-        begin, end = utils.current_audit_period(unit='year')
+        begin, end = utils.last_completed_audit_period(unit='year')
         self.assertEquals(begin, datetime.datetime(
                                            day=1,
                                            month=1,
@@ -1166,7 +1166,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_year_with_offset_before_current(self):
-        begin, end = utils.current_audit_period(unit='year@2')
+        begin, end = utils.last_completed_audit_period(unit='year@2')
         self.assertEquals(begin, datetime.datetime(
                                            day=1,
                                            month=2,
@@ -1177,7 +1177,7 @@ class AuditPeriodTest(test.TestCase):
                                            year=2012))
 
     def test_year_with_offset_after_current(self):
-        begin, end = utils.current_audit_period(unit='year@6')
+        begin, end = utils.last_completed_audit_period(unit='year@6')
         self.assertEquals(begin, datetime.datetime(
                                            day=1,
                                            month=6,

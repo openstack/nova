@@ -65,7 +65,7 @@ if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
-    begin, end = utils.current_audit_period()
+    begin, end = utils.last_completed_audit_period()
     print "Creating usages for %s until %s" % (str(begin), str(end))
     instances = db.instance_get_active_by_window_joined(admin_context,
                                                         begin,
