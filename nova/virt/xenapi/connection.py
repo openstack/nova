@@ -319,14 +319,15 @@ class XenAPIConnection(driver.ComputeDriver):
         """Return link to instance's VNC console"""
         return self._vmops.get_vnc_console(instance)
 
-    def get_volume_connector(self, _instance):
+    def get_volume_connector(self, instance):
         """Return volume connector information"""
         if not self._initiator:
             stats = self.get_host_stats(refresh=True)
             try:
                 self._initiator = stats['host_other-config']['iscsi_iqn']
             except (TypeError, KeyError):
-                LOG.warn(_('Could not determine iscsi initiator name'))
+                LOG.warn(_('Could not determine iscsi initiator name'),
+                         instance=instance)
                 self._initiator = None
         return {
             'ip': self.get_host_ip_addr(),
