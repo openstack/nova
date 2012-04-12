@@ -664,7 +664,7 @@ class XenAPIVMTestCase(test.TestCase):
         def dummy(*args, **kwargs):
             pass
 
-        self.stubs.Set(vmops.VMOps, 'create_vifs', dummy)
+        self.stubs.Set(vmops.VMOps, '_create_vifs', dummy)
         # Reset network table
         xenapi_fake.reset_table('network')
         # Instance id = 2 will use vlan network (see db/fakes.py)
@@ -703,6 +703,11 @@ class XenAPIVMTestCase(test.TestCase):
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         vm = vm_utils.VMHelper.lookup(session, instance.name)
         vbd = xenapi_fake.create_vbd(vm, None)
+
+        def fake_spawn(self, context, inst, network_info, image_meta):
+            inst._rescue = False
+        self.stubs.Set(vmops.VMOps, 'spawn', fake_spawn)
+
         conn = xenapi_conn.get_connection(False)
         conn.rescue(self.context, instance, [], None)
 

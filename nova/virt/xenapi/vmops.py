@@ -357,10 +357,6 @@ class VMOps(object):
             msg = _("Failed to spawn, rolling back")
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
-    def spawn_rescue(self, context, instance, image_meta, network_info):
-        """Spawn a rescue instance."""
-        self.spawn(context, instance, image_meta, network_info)
-
     def _generate_hostname(self, instance):
         """Generate the instance's hostname."""
         hostname = instance["hostname"]
@@ -422,7 +418,7 @@ class VMOps(object):
             VMHelper.preconfigure_instance(self._session, instance,
                                            first_vdi_ref, network_info)
 
-        self.create_vifs(vm_ref, instance, network_info)
+        self._create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
 
         hostname = self._generate_hostname(instance)
@@ -570,7 +566,7 @@ class VMOps(object):
         # Update agent, if necessary
         # This also waits until the agent starts
         LOG.debug(_("Querying agent version"), instance=instance)
-        version = self.get_agent_version(instance)
+        version = self._get_agent_version(instance)
         if version:
             LOG.info(_('Instance agent version: %s'), version,
                      instance=instance)
@@ -579,8 +575,8 @@ class VMOps(object):
             cmp_version(version, agent_build['version']) < 0):
             LOG.info(_('Updating Agent to %s'), agent_build['version'],
                      instance=instance)
-            self.agent_update(instance, agent_build['url'],
-                          agent_build['md5hash'])
+            self._agent_update(instance, agent_build['url'],
+                               agent_build['md5hash'])
 
         # if the guest agent is not available, configure the
         # instance, but skip the admin password configuration
@@ -909,7 +905,7 @@ class VMOps(object):
         else:
             self._session.call_xenapi('VM.clean_reboot', vm_ref)
 
-    def get_agent_version(self, instance):
+    def _get_agent_version(self, instance):
         """Get the version of the agent running on the VM instance."""
 
         # The agent can be slow to start for a variety of reasons. On Windows,
@@ -949,7 +945,7 @@ class VMOps(object):
 
         return None
 
-    def agent_update(self, instance, url, md5sum):
+    def _agent_update(self, instance, url, md5sum):
         """Update agent on the VM instance."""
 
         # Send the encrypted password
@@ -1223,7 +1219,7 @@ class VMOps(object):
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
         instance._rescue = True
-        self.spawn_rescue(context, instance, image_meta, network_info)
+        self.spawn(context, instance, image_meta, network_info)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
         vdi_ref = self._find_root_vdi_ref(vm_ref)
 
@@ -1467,14 +1463,15 @@ class VMOps(object):
 
         for (network, info) in network_info:
             location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
-            self.add_to_param_xenstore(vm_ref, location, json.dumps(info))
+            self._add_to_param_xenstore(vm_ref, location, json.dumps(info))
             try:
-                self.write_to_xenstore(instance, location, info, vm_ref=vm_ref)
+                self._write_to_xenstore(instance, location, info,
+                                        vm_ref=vm_ref)
             except KeyError:
                 # catch KeyError for domid if instance isn't running
                 pass
 
-    def create_vifs(self, vm_ref, instance, network_info):
+    def _create_vifs(self, vm_ref, instance, network_info):
         """Creates vifs for an instance."""
 
         LOG.debug(_("Creating vifs"), instance=instance)
@@ -1515,9 +1512,9 @@ class VMOps(object):
             hostname = hostname[:15]
 
         LOG.debug(_("Injecting hostname to xenstore"), instance=instance)
-        self.add_to_param_xenstore(vm_ref, 'vm-data/hostname', hostname)
+        self._add_to_param_xenstore(vm_ref, 'vm-data/hostname', hostname)
 
-    def write_to_xenstore(self, instance, path, value, vm_ref=None):
+    def _write_to_xenstore(self, instance, path, value, vm_ref=None):
         """
         Writes the passed value to the xenstore record for the given VM
         at the specified location. A XenAPIPlugin.PluginError will be raised
@@ -1574,16 +1571,16 @@ class VMOps(object):
                 return {'returncode': 'error', 'message': err_msg}
             return None
 
-    def add_to_param_xenstore(self, vm_ref, key, val):
+    def _add_to_param_xenstore(self, vm_ref, key, val):
         """
         Takes a key/value pair and adds it to the xenstore parameter
         record for the given vm instance. If the key exists in xenstore,
         it is overwritten
         """
-        self.remove_from_param_xenstore(vm_ref, key)
+        self._remove_from_param_xenstore(vm_ref, key)
         self._session.call_xenapi('VM.add_to_xenstore_data', vm_ref, key, val)
 
-    def remove_from_param_xenstore(self, vm_ref, key):
+    def _remove_from_param_xenstore(self, vm_ref, key):
         """
         Takes a single key and removes it from the xenstore parameter
         record data for the given VM.
