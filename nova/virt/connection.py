@@ -28,7 +28,7 @@ from nova.virt import driver
 from nova.virt import fake
 from nova.virt.libvirt import connection as libvirt_conn
 from nova.virt import vmwareapi_conn
-from nova.virt import xenapi_conn
+from nova.virt.xenapi import connection as xenapi_conn
 
 
 LOG = logging.getLogger(__name__)

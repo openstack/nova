@@ -43,7 +43,7 @@ from nova.tests.glance import stubs as glance_stubs
 from nova.tests import fake_network
 from nova.tests import fake_utils
 from nova import utils
-from nova.virt import xenapi_conn
+from nova.virt.xenapi import connection as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vmops

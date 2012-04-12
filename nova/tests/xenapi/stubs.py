@@ -20,7 +20,7 @@ import random
 
 from eventlet import tpool
 
-from nova.virt import xenapi_conn
+from nova.virt.xenapi import connection as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vm_utils

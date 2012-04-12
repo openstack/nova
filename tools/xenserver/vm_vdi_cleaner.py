@@ -27,7 +27,7 @@ from nova import exception
 from nova import flags
 from nova import utils
 
-from nova.virt import xenapi_conn
+from nova.virt.xenapi import connection as xenapi_conn
 
 
 flags.DECLARE("resize_confirm_window", "nova.compute.manager")
