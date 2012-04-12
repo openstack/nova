@@ -373,7 +373,8 @@ def fanout_cast_to_server(context, server_params, topic, msg,
 
 def notify(context, topic, msg, connection_pool):
     """Sends a notification event on a topic."""
-    LOG.debug(_('Sending notification on %s...'), topic)
+    event_type = msg.get('event_type')
+    LOG.debug(_('Sending %(event_type)s on %(topic)s'), locals())
     pack_context(msg, context)
     with ConnectionContext(connection_pool) as conn:
         conn.notify_send(topic, msg)
