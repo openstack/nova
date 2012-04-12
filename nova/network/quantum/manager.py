@@ -625,6 +625,19 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             LOG.exception(msg)
         return ipam_tenant_id
 
+    # enable_dhcp() could also use this
+    #
+    # Use semaphore to :
+    # 1) avoid race between restart_dhcps
+    # 2) avoid race between update_dhcp_hostfile_with_texts
+    @utils.synchronized('quantum-restart-dhcp')
+    def _atomic_restart_dhcp(self, context, dev, hosts, network_ref):
+        self.driver.update_dhcp_hostfile_with_text(dev, hosts)
+        # Since we only update hosts file, explict kill_dhcp() isn't needed.
+        # restart_dhcp() will reload hostfile if dnsmasq is already running,
+        # or start new dnsmasq
+        self.driver.restart_dhcp(context, dev, network_ref)
+
     # TODO(bgh): At some point we should consider merging enable_dhcp() and
     # update_dhcp()
     # TODO(tr3buchet): agree, i'm curious why they differ even now..
@@ -650,10 +663,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             # And remove the dhcp mappings for the subnet
             hosts = self.get_dhcp_hosts_text(context,
                 subnet['network_id'], project_id)
-            self.driver.update_dhcp_hostfile_with_text(dev, hosts)
-            # Restart dnsmasq
-            self.driver.kill_dhcp(dev)
-            self.driver.restart_dhcp(context, dev, network_ref)
+
+            self._atomic_restart_dhcp(context, dev, hosts, network_ref)
 
     def validate_networks(self, context, networks):
         """Validates that this tenant has quantum networks with the associated
