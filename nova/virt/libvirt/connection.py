@@ -2458,8 +2458,8 @@ class LibvirtConnection(driver.ComputeDriver):
     @exception.wrap_exception()
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info):
-        LOG.debug(_("Instance %s: Starting migrate_disk_and_power_off"),
-                   instance['name'])
+        LOG.debug(_("Starting migrate_disk_and_power_off"),
+                   instance=instance)
         disk_info_text = self.get_instance_disk_info(instance['name'])
         disk_info = utils.loads(disk_info_text)
 
@@ -2518,15 +2518,13 @@ class LibvirtConnection(driver.ComputeDriver):
             raise utils.LoopingCallDone(False)
 
         if state == power_state.RUNNING:
-            LOG.info(_("Instance running successfully."),
-                     instance=instance)
+            LOG.info(_("Instance running successfully."), instance=instance)
             raise utils.LoopingCallDone(True)
 
     @exception.wrap_exception()
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance):
-        LOG.debug(_("Instance %s: Starting finish_migration"),
-                   instance['name'])
+        LOG.debug(_("Starting finish_migration"), instance=instance)
 
         # resize disks. only "disk" and "disk.local" are necessary.
         disk_info = utils.loads(disk_info)
@@ -2565,8 +2563,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception()
     def finish_revert_migration(self, instance, network_info):
-        LOG.debug(_("Instance %s: Starting finish_revert_migration"),
-                   instance['name'])
+        LOG.debug(_("Starting finish_revert_migration"),
+                   instance=instance)
 
         inst_base = "%s/%s" % (FLAGS.instances_path, instance['name'])
         inst_base_resize = inst_base + "_resize"
