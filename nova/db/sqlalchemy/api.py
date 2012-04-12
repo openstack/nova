@@ -2813,6 +2813,13 @@ def security_group_destroy(context, security_group_id):
                         'updated_at': literal_column('updated_at')})
 
 
+@require_context
+def security_group_count_by_project(context, project_id):
+    authorize_project_context(context, project_id)
+    return model_query(context, models.SecurityGroup, read_deleted="no").\
+                   filter_by(project_id=project_id).\
+                   count()
+
 ###################
 
 
@@ -2871,6 +2878,14 @@ def security_group_rule_destroy(context, security_group_rule_id):
         security_group_rule.delete(session=session)
 
 
+@require_context
+def security_group_rule_count_by_group(context, security_group_id):
+    return model_query(context, models.SecurityGroupIngressRule,
+                   read_deleted="no").\
+                   filter_by(parent_group_id=security_group_id).\
+                   count()
+
+#
 ###################
 
 
@@ -3018,6 +3033,7 @@ def user_update(context, user_id, values):
         user_ref.save(session=session)
 
 
+#
 ###################
 
 

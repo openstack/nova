@@ -42,6 +42,7 @@ from nova.image import s3
 from nova import log as logging
 from nova import network
 from nova.rpc import common as rpc_common
+from nova import quota
 from nova import utils
 from nova import volume
 
@@ -727,6 +728,13 @@ class CloudController(object):
                     raise exception.EC2APIError(err % values_for_rule)
                 postvalues.append(values_for_rule)
 
+        allowed = quota.allowed_security_group_rules(context,
+                                                   security_group['id'],
+                                                   1)
+        if allowed < 1:
+            msg = _("Quota exceeded, too many security group rules.")
+            raise exception.EC2APIError(msg)
+
         rule_ids = []
         for values_for_rule in postvalues:
             security_group_rule = db.security_group_rule_create(
@@ -783,6 +791,10 @@ class CloudController(object):
         if db.security_group_exists(context, context.project_id, group_name):
             msg = _('group %s already exists')
             raise exception.EC2APIError(msg % group_name)
+
+        if quota.allowed_security_groups(context, 1) < 1:
+            msg = _("Quota exceeded, too many security groups.")
+            raise exception.EC2APIError(msg)
 
         group = {'user_id': context.user_id,
                  'project_id': context.project_id,

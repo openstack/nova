@@ -235,6 +235,34 @@ class QuotaTestCase(test.TestCase):
         floating_ips = quota.allowed_floating_ips(self.context, 101)
         self.assertEqual(floating_ips, 101)
 
+    def test_unlimited_security_groups(self):
+        self.flags(quota_security_groups=10)
+        security_groups = quota.allowed_security_groups(self.context, 100)
+        self.assertEqual(security_groups, 10)
+        db.quota_create(self.context, self.project_id, 'security_groups', None)
+        security_groups = quota.allowed_security_groups(self.context, 100)
+        self.assertEqual(security_groups, 100)
+        security_groups = quota.allowed_security_groups(self.context, 101)
+        self.assertEqual(security_groups, 101)
+
+    def test_unlimited_security_group_rules(self):
+
+        def fake_security_group_rule_count_by_group(context, sec_group_id):
+            return 0
+
+        self.stubs.Set(db, 'security_group_rule_count_by_group',
+                       fake_security_group_rule_count_by_group)
+
+        self.flags(quota_security_group_rules=20)
+        rules = quota.allowed_security_group_rules(self.context, 1234, 100)
+        self.assertEqual(rules, 20)
+        db.quota_create(self.context, self.project_id, 'security_group_rules',
+                        None)
+        rules = quota.allowed_security_group_rules(self.context, 1234, 100)
+        self.assertEqual(rules, 100)
+        rules = quota.allowed_security_group_rules(self.context, 1234, 101)
+        self.assertEqual(rules, 101)
+
     def test_unlimited_metadata_items(self):
         self.flags(quota_metadata_items=10)
         items = quota.allowed_metadata_items(self.context, 100)

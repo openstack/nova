@@ -54,6 +54,12 @@ quota_opts = [
     cfg.IntOpt('quota_max_injected_file_path_bytes',
                default=255,
                help='number of bytes allowed per injected file path'),
+    cfg.IntOpt('quota_security_groups',
+               default=10,
+               help='number of security groups per project'),
+    cfg.IntOpt('quota_security_group_rules',
+               default=20,
+               help='number of security rules per security group'),
     ]
 
 FLAGS = flags.FLAGS
@@ -72,6 +78,8 @@ def _get_default_quotas():
         'injected_files': FLAGS.quota_max_injected_files,
         'injected_file_content_bytes':
             FLAGS.quota_max_injected_file_content_bytes,
+        'security_groups': FLAGS.quota_security_groups,
+        'security_group_rules': FLAGS.quota_security_group_rules,
     }
     # -1 in the quota flags means unlimited
     for key in defaults.keys():
@@ -150,6 +158,32 @@ def allowed_floating_ips(context, requested_floating_ips):
                                                   used_floating_ips,
                                                   quota['floating_ips'])
     return min(requested_floating_ips, allowed_floating_ips)
+
+
+def allowed_security_groups(context, requested_security_groups):
+    """Check quota and return min(requested, allowed) security groups."""
+    project_id = context.project_id
+    context = context.elevated()
+    used_sec_groups = db.security_group_count_by_project(context, project_id)
+    quota = get_project_quotas(context, project_id)
+    allowed_sec_groups = _get_request_allotment(requested_security_groups,
+                                                  used_sec_groups,
+                                                  quota['security_groups'])
+    return min(requested_security_groups, allowed_sec_groups)
+
+
+def allowed_security_group_rules(context, security_group_id,
+        requested_rules):
+    """Check quota and return min(requested, allowed) sec group rules."""
+    project_id = context.project_id
+    context = context.elevated()
+    used_rules = db.security_group_rule_count_by_group(context,
+                                                            security_group_id)
+    quota = get_project_quotas(context, project_id)
+    allowed_rules = _get_request_allotment(requested_rules,
+                                              used_rules,
+                                              quota['security_group_rules'])
+    return min(requested_rules, allowed_rules)
 
 
 def _calculate_simple_quota(context, resource, requested):

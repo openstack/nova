@@ -31,6 +31,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import quota
 from nova import utils
 
 
@@ -289,6 +290,10 @@ class SecurityGroupController(SecurityGroupControllerBase):
         group_name = group_name.strip()
         group_description = group_description.strip()
 
+        if quota.allowed_security_groups(context, 1) < 1:
+            msg = _("Quota exceeded, too many security groups.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         LOG.audit(_("Create Security Group %s"), group_name, context=context)
         self.compute_api.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
@@ -374,6 +379,13 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
 
         if self._security_group_rule_exists(security_group, values):
             msg = _('This rule already exists in group %s') % parent_group_id
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        allowed = quota.allowed_security_group_rules(context,
+                                                   parent_group_id,
+                                                   1)
+        if allowed < 1:
+            msg = _("Quota exceeded, too many security group rules.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         security_group_rule = db.security_group_rule_create(context, values)
