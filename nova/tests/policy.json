@@ -116,7 +116,6 @@
     "compute_extension:zones": [],
 
 
-
     "volume:create": [],
     "volume:get": [],
     "volume:get_all": [],
@@ -125,7 +124,6 @@
     "volume:update": [],
     "volume:delete_volume_metadata": [],
     "volume:update_volume_metadata": [],
-
     "volume:attach": [],
     "volume:detach": [],
     "volume:reserve_volume": [],
@@ -134,11 +132,14 @@
     "volume:check_detach": [],
     "volume:initialize_connection": [],
     "volume:terminate_connection": [],
-
     "volume:create_snapshot": [],
     "volume:delete_snapshot": [],
     "volume:get_snapshot": [],
     "volume:get_all_snapshots": [],
+
+
+    "volume_extension:types_manage": [],
+    "volume_extension:types_extra_specs": [],
 
 
     "network:get_all_networks": [],
