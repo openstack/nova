@@ -877,7 +877,7 @@ class Controller(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'reboot')
         except Exception, e:
-            LOG.exception(_("Error in reboot %s"), e)
+            LOG.exception(_("Error in reboot %s"), e, instance=instance)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
