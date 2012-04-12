@@ -75,7 +75,6 @@ fi
 
 function run_tests {
   # Cleanup *pyc
-  echo "cleaning *.pyc files"
   ${wrapper} find . -type f -name "*.pyc" -delete
   # Just run the test suites in current environment
   ${wrapper} $NOSETESTS 2> run_tests.log
