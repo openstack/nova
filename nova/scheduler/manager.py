@@ -156,8 +156,8 @@ class SchedulerManager(manager.Manager):
 
         if instance_uuid:
             state = vm_state.upper()
-            msg = _("Setting instance %(instance_uuid)s to %(state)s state.")
-            LOG.warning(msg % locals())
+            LOG.warning(_('Setting instance to %(state)s state.'), locals(),
+                        instance_uuid=instance_uuid)
             db.instance_update(context, instance_uuid, updates)
 
         payload = dict(request_spec=request_spec,
