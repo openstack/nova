@@ -225,11 +225,7 @@ class VMOps(object):
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
-        if not vm_ref:
-            vm_ref = VMHelper.lookup(self._session, instance.name)
-        if vm_ref is None:
-            raise Exception(_('Attempted to power on non-existent instance'
-            ' bad instance id %s') % instance.id)
+        vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         LOG.debug(_("Starting instance"), instance=instance)
         self._session.call_xenapi('VM.start_on', vm_ref,
                                   self._session.get_xenapi_host(),
@@ -583,33 +579,11 @@ class VMOps(object):
         no_agent = version is None
         self._configure_instance(ctx, instance, vm_ref, no_agent)
 
-    def _get_vm_opaque_ref(self, instance_or_vm):
-        """
-        Refactored out the common code of many methods that receive either
-        a vm name or a vm instance, and want a vm instance in return.
-        """
-        # if instance_or_vm is a string it must be opaque ref or instance name
-        if isinstance(instance_or_vm, basestring):
-            obj = None
-            try:
-                # check for opaque ref
-                obj = self._session.call_xenapi("VM.get_uuid", instance_or_vm)
-                return instance_or_vm
-            except self.XenAPI.Failure:
-                # wasn't an opaque ref, can be an instance name
-                instance_name = instance_or_vm
-
-        # if instance_or_vm is an int/long it must be instance id
-        elif isinstance(instance_or_vm, (int, long)):
-            ctx = nova_context.get_admin_context()
-            instance_obj = db.instance_get(ctx, instance_or_vm)
-            instance_name = instance_obj.name
-        else:
-            instance_name = instance_or_vm.name
-        vm_ref = VMHelper.lookup(self._session, instance_name)
+    def _get_vm_opaque_ref(self, instance):
+        vm_ref = VMHelper.lookup(self._session, instance['name'])
         if vm_ref is None:
-            raise exception.NotFound(_("No opaque_ref could be determined "
-                    "for '%s'.") % instance_or_vm)
+            raise exception.NotFound(_('Could not find VM by name'),
+                                     instance=instance)
         return vm_ref
 
     def _acquire_bootlock(self, vm):
@@ -670,7 +644,7 @@ class VMOps(object):
         # is added
 
         LOG.debug(_("Starting snapshot for VM"), instance=instance)
-        vm_ref = VMHelper.lookup(self._session, instance.name)
+        vm_ref = self._get_vm_opaque_ref(instance)
 
         label = "%s-snapshot" % instance.name
         try:
@@ -733,7 +707,7 @@ class VMOps(object):
                                        step=0,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        vm_ref = VMHelper.lookup(self._session, instance.name)
+        vm_ref = self._get_vm_opaque_ref(instance)
 
         # The primary VDI becomes the COW after the snapshot, and we can
         # identify it via the VBD. The base copy is the parent_uuid returned
@@ -1139,7 +1113,7 @@ class VMOps(object):
         """
         LOG.info(_("Destroying VM"), instance=instance)
 
-        vm_ref = VMHelper.lookup(self._session, instance.name)
+        vm_ref = self._get_vm_opaque_ref(instance)
 
         rescue_vm_ref = VMHelper.lookup(self._session,
                                         "%s-rescue" % instance.name)
@@ -1215,11 +1189,12 @@ class VMOps(object):
             raise RuntimeError(_("Instance is already in Rescue Mode: %s")
                                % instance.name)
 
-        vm_ref = VMHelper.lookup(self._session, instance.name)
+        vm_ref = self._get_vm_opaque_ref(instance)
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
         instance._rescue = True
         self.spawn(context, instance, image_meta, network_info)
+        # instance.name now has -rescue appended because of magic
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
         vdi_ref = self._find_root_vdi_ref(vm_ref)
 
@@ -1237,11 +1212,10 @@ class VMOps(object):
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
                                         "%s-rescue" % instance.name)
-
         if not rescue_vm_ref:
             raise exception.InstanceNotInRescueMode(instance_id=instance.uuid)
 
-        original_vm_ref = VMHelper.lookup(self._session, instance.name)
+        original_vm_ref = self._get_vm_opaque_ref(instance)
         instance._rescue = False
 
         self._destroy_rescue_instance(rescue_vm_ref, original_vm_ref)
@@ -1392,7 +1366,7 @@ class VMOps(object):
 
     def get_info(self, instance):
         """Return data about VM instance."""
-        vm_ref = self._get_vm_opaque_ref(instance['name'])
+        vm_ref = self._get_vm_opaque_ref(instance)
         vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
         return VMHelper.compile_info(vm_rec)
 
@@ -1454,11 +1428,7 @@ class VMOps(object):
         vm_ref can be passed in because it will sometimes be different than
         what VMHelper.lookup(session, instance.name) will find (ex: rescue)
         """
-        if vm_ref:
-            # this function raises if vm_ref is not a vm_opaque_ref
-            self._session.call_xenapi("VM.get_record", vm_ref)
-        else:
-            vm_ref = VMHelper.lookup(self._session, instance.name)
+        vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         LOG.debug(_("Injecting network info to xenstore"), instance=instance)
 
         for (network, info) in network_info:
@@ -1500,10 +1470,8 @@ class VMOps(object):
                 self.vif_driver.unplug(instance, network, mapping)
 
     def reset_network(self, instance, vm_ref=None):
-        """Creates uuid arg to pass to make_agent_call and calls it."""
-        if not vm_ref:
-            vm_ref = VMHelper.lookup(self._session, instance.name)
-        resp = self._make_agent_call('resetnetwork', instance, vm_ref=vm_ref)
+        """Calls resetnetwork method in agent."""
+        self._make_agent_call('resetnetwork', instance, vm_ref=vm_ref)
 
     def inject_hostname(self, instance, vm_ref, hostname):
         """Inject the hostname of the instance into the xenstore."""

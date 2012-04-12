@@ -330,12 +330,12 @@ class XenAPIVMTestCase(test.TestCase):
             name_label = vdi_rec["name_label"]
             self.assert_(not name_label.endswith('snapshot'))
 
-    def create_vm_record(self, conn, os_type, instance_id=1):
+    def create_vm_record(self, conn, os_type, name):
         instances = conn.list_instances()
-        self.assertEquals(instances, [str(instance_id)])
+        self.assertEquals(instances, [name])
 
         # Get Nova record for VM
-        vm_info = conn.get_info({'name': instance_id})
+        vm_info = conn.get_info({'name': name})
         # Get XenAPI record for VM
         vms = [rec for ref, rec
                in xenapi_fake.get_all_records('VM').iteritems()
@@ -483,7 +483,7 @@ class XenAPIVMTestCase(test.TestCase):
         image_meta = {'id': glance_stubs.FakeGlance.IMAGE_VHD,
                       'disk_format': 'vhd'}
         self.conn.spawn(self.context, instance, image_meta, network_info)
-        self.create_vm_record(self.conn, os_type, instance_id)
+        self.create_vm_record(self.conn, os_type, instance['name'])
         self.check_vm_record(self.conn, check_injection)
         self.assertTrue(instance.os_type)
         self.assertTrue(instance.architecture)
@@ -988,6 +988,7 @@ class XenAPIMigrateInstance(test.TestCase):
 
     def test_migrate_disk_and_power_off_passes_exceptions(self):
         instance = db.instance_create(self.context, self.instance_values)
+        xenapi_fake.create_vm(instance.name, 'Running')
         instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
 
