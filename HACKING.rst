@@ -82,7 +82,7 @@ Example::
   """A one line docstring looks like this and ends in a period."""
 
 
-  """A multiline docstring has a one-line summary, less than 80 characters.
+  """A multi line docstring has a one-line summary, less than 80 characters.
 
   Then a new paragraph after a newline that explains in more detail any
   general information about the function, class or method. Example usages

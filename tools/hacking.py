@@ -22,14 +22,18 @@ built on top of pep8.py
 """
 
 import inspect
+import logging
 import os
 import re
 import sys
 import tokenize
 import traceback
+import warnings
 
 import pep8
 
+# Don't need this for testing
+logging.disable('LOG')
 
 #N1xx comments
 #N2xx except
@@ -40,6 +44,8 @@ import pep8
 #N7xx localization
 
 IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session']
+DOCSTRING_TRIPLE = ['"""', "'''"]
+VERBOSE_MISSING_IMPORT = False
 
 
 def is_import_exception(mod):
@@ -47,8 +53,24 @@ def is_import_exception(mod):
         any(mod.startswith(m + '.') for m in IMPORT_EXCEPTIONS)
 
 
+def import_normalize(line):
+    # convert "from x import y" to "import x.y"
+    # handle "from x import y as z" to "import x.y as z"
+    split_line = line.split()
+    if (line.startswith("from ") and "," not in line and
+           split_line[2] == "import" and split_line[3] != "*" and
+           split_line[1] != "__future__" and
+           (len(split_line) == 4 or
+           (len(split_line) == 6  and split_line[4] == "as"))):
+        mod = split_line[3]
+        return "import %s.%s" % (split_line[1], split_line[3])
+    else:
+        return line
+
+
 def nova_todo_format(physical_line):
-    """
+    """Check for 'TODO()'.
+
     nova HACKING guide recommendation for TODO:
     Include your name with TODOs as in "#TODO(termie)"
     N101
@@ -61,7 +83,8 @@ def nova_todo_format(physical_line):
 
 
 def nova_except_format(logical_line):
-    """
+    """Check for 'except:'.
+
     nova HACKING guide recommends not using except:
     Do not write "except:", use "except Exception:" at the very least
     N201
@@ -70,8 +93,9 @@ def nova_except_format(logical_line):
         return 6, "NOVA N201: no 'except:' at least use 'except Exception:'"
 
 
-def nova_except_format(logical_line):
-    """
+def nova_except_format_assert(logical_line):
+    """Check for 'assertRaises(Exception'.
+
     nova HACKING guide recommends not using assertRaises(Exception...):
     Do not use overly broad Exception type
     N202
@@ -81,7 +105,8 @@ def nova_except_format(logical_line):
 
 
 def nova_one_import_per_line(logical_line):
-    """
+    """Check for import format.
+
     nova HACKING guide recommends one import per line:
     Do not import more than one module per line
 
@@ -96,9 +121,12 @@ def nova_one_import_per_line(logical_line):
        not is_import_exception(parts[1]):
         return pos, "NOVA N301: one import per line"
 
+_missingImport = set([])
+
 
 def nova_import_module_only(logical_line):
-    """
+    """Check for import module only.
+
     nova HACKING guide recommends importing only modules:
     Do not import objects, only modules
     N302 import only modules
@@ -112,24 +140,28 @@ def nova_import_module_only(logical_line):
         """
         current_path = os.path.dirname(pep8.current_file)
         try:
-            valid = True
-            if parent:
-                if is_import_exception(parent):
-                    return
-                parent_mod = __import__(parent, globals(), locals(), [mod], -1)
-                valid = inspect.ismodule(getattr(parent_mod, mod))
-            else:
-                __import__(mod, globals(), locals(), [], -1)
-                valid = inspect.ismodule(sys.modules[mod])
-            if not valid:
-                if added:
-                    sys.path.pop()
-                    added = False
-                    return logical_line.find(mod), ("NOVA N304: No relative "
-                        "imports. '%s' is a relative import" % logical_line)
-
-                return logical_line.find(mod), ("NOVA N302: import only "
-                    "modules. '%s' does not import a module" % logical_line)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', DeprecationWarning)
+                valid = True
+                if parent:
+                    if is_import_exception(parent):
+                        return
+                    parent_mod = __import__(parent, globals(), locals(),
+                        [mod], -1)
+                    valid = inspect.ismodule(getattr(parent_mod, mod))
+                else:
+                    __import__(mod, globals(), locals(), [], -1)
+                    valid = inspect.ismodule(sys.modules[mod])
+                if not valid:
+                    if added:
+                        sys.path.pop()
+                        added = False
+                        return logical_line.find(mod), ("NOVA N304: No "
+                            "relative  imports. '%s' is a relative import"
+                            % logical_line)
+                    return logical_line.find(mod), ("NOVA N302: import only "
+                        "modules. '%s' does not import a module"
+                        % logical_line)
 
         except (ImportError, NameError) as exc:
             if not added:
@@ -137,8 +169,12 @@ def nova_import_module_only(logical_line):
                 sys.path.append(current_path)
                 return importModuleCheck(mod, parent, added)
             else:
-                print >> sys.stderr, ("ERROR: import '%s' failed: %s" %
-                                                       (logical_line, exc))
+                name = logical_line.split()[1]
+                if (name not in _missingImport and name):
+                    if VERBOSE_MISSING_IMPORT:
+                        print >> sys.stderr, ("ERROR: import '%s' failed: %s" %
+                            (name, exc))
+                    _missingImport.add(name)
                 added = False
                 sys.path.pop()
                 return
@@ -148,27 +184,83 @@ def nova_import_module_only(logical_line):
             return logical_line.find(mod), ("NOVA N303: Invalid import, "
                 "AttributeError raised")
 
+    # convert "from x import y" to " import x.y"
+    # convert "from x import y as z" to " import x.y"
+    import_normalize(logical_line)
     split_line = logical_line.split()
 
-    # handle "import x"
-    # handle "import x as y"
     if (logical_line.startswith("import ") and "," not in logical_line and
             (len(split_line) == 2 or
             (len(split_line) == 4 and split_line[2] == "as"))):
         mod = split_line[1]
         return importModuleCheck(mod)
 
-    # handle "from x import y"
-    # handle "from x import y as z"
-    elif (logical_line.startswith("from ") and "," not in logical_line and
-           split_line[2] == "import" and split_line[3] != "*" and
-           split_line[1] != "__future__" and
-           (len(split_line) == 4 or
-           (len(split_line) == 6  and split_line[4] == "as"))):
-        mod = split_line[3]
-        return importModuleCheck(mod, split_line[1])
-
     # TODO(jogo) handle "from x import *"
+
+#TODO(jogo): import template: N305
+
+
+def nova_import_alphabetical(physical_line, line_number, lines):
+    """Check for imports in alphabetical order.
+
+    nova HACKING guide recommendation for imports:
+    imports in human alphabetical order
+    N306
+    """
+    # handle import x
+    # use .lower since capitalization shouldn't dictate order
+    split_line = import_normalize(physical_line.strip()).lower().split()
+    split_previous = import_normalize(lines[line_number - 2]
+            ).strip().lower().split()
+    # with or without "as y"
+    length = [2, 4]
+    if (len(split_line) in length  and len(split_previous) in length and
+        split_line[0] == "import" and  split_previous[0] == "import"):
+        if split_line[1] < split_previous[1]:
+            return (0, "NOVA N306: imports not in alphabetical order (%s, %s)"
+                % (split_previous[1], split_line[1]))
+
+
+def nova_docstring_start_space(physical_line):
+    """Check for docstring not start with space.
+
+    nova HACKING guide recommendation for docstring:
+    Docstring should not start with space
+    N401
+    """
+    pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])  # start
+    if (pos != -1 and len(physical_line) > pos + 1):
+        if (physical_line[pos + 3] == ' '):
+            return (pos, "NOVA N401: one line docstring should not start with"
+                " a space")
+
+
+def nova_docstring_one_line(physical_line):
+    """Check one line docstring end.
+
+    nova HACKING guide recommendation for one line docstring:
+    A one line docstring looks like this and ends in a period.
+    N402
+    """
+    pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])  # start
+    end = max([physical_line[-4:-1] == i for i in DOCSTRING_TRIPLE])  # end
+    if (pos != -1  and end and len(physical_line) > pos + 4):
+        if (physical_line[-5] != '.'):
+            return pos, "NOVA N402: one line docstring needs a period"
+
+
+def nova_docstring_multiline_end(physical_line):
+    """Check multi line docstring end.
+
+    nova HACKING guide recommendation for docstring:
+    Docstring should end on a new line
+    N403
+    """
+    pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])  # start
+    if (pos != -1 and len(physical_line) == pos):
+        print physical_line
+        if (physical_line[pos + 3] == ' '):
+            return (pos, "NOVA N403: multi line docstring end on new line")
 
 
 FORMAT_RE = re.compile("%(?:"
@@ -264,15 +356,14 @@ current_file = ""
 
 
 def readlines(filename):
-    """
-    record the current file being tested
-    """
+    """Record the current file being tested."""
     pep8.current_file = filename
     return open(filename).readlines()
 
 
 def add_nova():
-    """
+    """Monkey patch in nova guidelines.
+
     Look for functions that start with nova_  and have arguments
     and add them to pep8 module
     Assumes you know how to write pep8.py checks
@@ -292,4 +383,10 @@ if __name__ == "__main__":
     add_nova()
     pep8.current_file = current_file
     pep8.readlines = readlines
-    pep8._main()
+    try:
+        pep8._main()
+    except SystemExit:
+        if len(_missingImport) > 0:
+            print >> sys.stderr, ("%i Missing imports in this test environment"
+                    % len(_missingImport))
+        raise
