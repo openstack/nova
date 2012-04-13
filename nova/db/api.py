@@ -43,8 +43,10 @@ these objects be simple dictionaries.
 
 """
 
+from nova.cells import rpcapi as cells_rpcapi
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
 from nova import utils
 
 
@@ -68,6 +70,7 @@ CONF.register_opts(db_opts)
 
 IMPL = utils.LazyPluggable('db_backend',
                            sqlalchemy='nova.db.sqlalchemy.api')
+LOG = logging.getLogger(__name__)
 
 
 class NoMoreNetworks(exception.NovaException):
@@ -566,9 +569,16 @@ def instance_data_get_for_project(context, project_id, session=None):
                                               session=session)
 
 
-def instance_destroy(context, instance_uuid, constraint=None):
+def instance_destroy(context, instance_uuid, constraint=None,
+        update_cells=True):
     """Destroy the instance or raise if it does not exist."""
-    return IMPL.instance_destroy(context, instance_uuid, constraint)
+    rv = IMPL.instance_destroy(context, instance_uuid, constraint)
+    if update_cells:
+        try:
+            cells_rpcapi.CellsAPI().instance_destroy_at_top(context, rv)
+        except Exception:
+            LOG.exception(_("Failed to notify cells of instance destroy"))
+    return rv
 
 
 def instance_get_by_uuid(context, uuid):
@@ -665,13 +675,19 @@ def instance_test_and_set(context, instance_uuid, attr, ok_states,
                                       ok_states, new_state)
 
 
-def instance_update(context, instance_uuid, values):
+def instance_update(context, instance_uuid, values, update_cells=True):
     """Set the given properties on an instance and update it.
 
     Raises NotFound if instance does not exist.
 
     """
-    return IMPL.instance_update(context, instance_uuid, values)
+    rv = IMPL.instance_update(context, instance_uuid, values)
+    if update_cells:
+        try:
+            cells_rpcapi.CellsAPI().instance_update_at_top(context, rv)
+        except Exception:
+            LOG.exception(_("Failed to notify cells of instance update"))
+    return rv
 
 
 def instance_update_and_get_original(context, instance_uuid, values):
@@ -687,8 +703,12 @@ def instance_update_and_get_original(context, instance_uuid, values):
 
     Raises NotFound if instance does not exist.
     """
-    return IMPL.instance_update_and_get_original(context, instance_uuid,
-                                                 values)
+    rv = IMPL.instance_update_and_get_original(context, instance_uuid, values)
+    try:
+        cells_rpcapi.CellsAPI().instance_update_at_top(context, rv[1])
+    except Exception:
+        LOG.exception(_("Failed to notify cells of instance update"))
+    return rv
 
 
 def instance_add_security_group(context, instance_id, security_group_id):
@@ -714,13 +734,21 @@ def instance_info_cache_get(context, instance_uuid):
     return IMPL.instance_info_cache_get(context, instance_uuid)
 
 
-def instance_info_cache_update(context, instance_uuid, values):
+def instance_info_cache_update(context, instance_uuid, values,
+        update_cells=True):
     """Update an instance info cache record in the table.
 
     :param instance_uuid: = uuid of info cache's instance
     :param values: = dict containing column values to update
     """
-    return IMPL.instance_info_cache_update(context, instance_uuid, values)
+    rv = IMPL.instance_info_cache_update(context, instance_uuid, values)
+    try:
+        cells_rpcapi.CellsAPI().instance_info_cache_update_at_top(context,
+                                                                  rv)
+    except Exception:
+        LOG.exception(_("Failed to notify cells of instance info cache "
+                        "update"))
+    return rv
 
 
 def instance_info_cache_delete(context, instance_uuid):
@@ -1354,7 +1382,7 @@ def instance_metadata_delete(context, instance_uuid, key):
 def instance_metadata_update(context, instance_uuid, metadata, delete):
     """Update metadata if it exists, otherwise create it."""
     return IMPL.instance_metadata_update(context, instance_uuid,
-                                             metadata, delete)
+                                         metadata, delete)
 
 
 ####################
@@ -1414,12 +1442,21 @@ def bw_usage_get_by_uuids(context, uuids, start_period):
 
 
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
-                    last_ctr_in, last_ctr_out, last_refreshed=None):
+                    last_ctr_in, last_ctr_out, last_refreshed=None,
+                    update_cells=True):
     """Update cached bandwidth usage for an instance's network based on mac
     address.  Creates new record if needed.
     """
-    return IMPL.bw_usage_update(context, uuid, mac, start_period, bw_in,
+    rv = IMPL.bw_usage_update(context, uuid, mac, start_period, bw_in,
             bw_out, last_ctr_in, last_ctr_out, last_refreshed=last_refreshed)
+    if update_cells:
+        try:
+            cells_rpcapi.CellsAPI().bw_usage_update_at_top(context,
+                    uuid, mac, start_period, bw_in, bw_out,
+                    last_ctr_in, last_ctr_out, last_refreshed)
+        except Exception:
+            LOG.exception(_("Failed to notify cells of bw_usage update"))
+    return rv
 
 
 ####################
@@ -1555,9 +1592,15 @@ def aggregate_host_delete(context, aggregate_id, host):
 ####################
 
 
-def instance_fault_create(context, values):
+def instance_fault_create(context, values, update_cells=True):
     """Create a new Instance Fault."""
-    return IMPL.instance_fault_create(context, values)
+    rv = IMPL.instance_fault_create(context, values)
+    if update_cells:
+        try:
+            cells_rpcapi.CellsAPI().instance_fault_create_at_top(context, rv)
+        except Exception:
+            LOG.exception(_("Failed to notify cells of instance fault"))
+    return rv
 
 
 def instance_fault_get_by_instance_uuids(context, instance_uuids):

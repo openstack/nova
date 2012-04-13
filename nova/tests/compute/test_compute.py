@@ -3696,8 +3696,12 @@ class ComputeAPITestCase(BaseTestCase):
                                       {'vm_state': vm_states.SOFT_DELETED,
                                        'task_state': None})
 
+        # Ensure quotas are committed
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
         nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
+        if self.__class__.__name__ == 'CellsComputeAPITestCase':
+            # Called a 2nd time (for the child cell) when testing cells
+            nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.compute_api.restore(self.context, instance)
