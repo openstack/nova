@@ -311,9 +311,6 @@ def stub_out_vm_methods(stubs):
     def fake_release_bootlock(self, vm):
         pass
 
-    def fake_spawn_rescue(self, context, inst, network_info, image_meta):
-        inst._rescue = False
-
     @classmethod
     def fake_generate_ephemeral(cls, *args):
         pass
@@ -321,7 +318,6 @@ def stub_out_vm_methods(stubs):
     stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
     stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
     stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
-    stubs.Set(vmops.VMOps, "spawn_rescue", fake_spawn_rescue)
     stubs.Set(vm_utils.VMHelper, 'generate_ephemeral', fake_generate_ephemeral)
 
 
