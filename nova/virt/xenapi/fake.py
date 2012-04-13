@@ -85,7 +85,7 @@ def reset():
               'Running',
               is_a_template=False,
               is_control_domain=True,
-              host_ref=host)
+              resident_on=host)
 
 
 def reset_table(table):
@@ -112,16 +112,15 @@ def create_network(name_label, bridge):
                            'bridge': bridge})
 
 
-def create_vm(name_label, status,
-              is_a_template=False, is_control_domain=False, host_ref=None):
+def create_vm(name_label, status, **kwargs):
     domid = status == 'Running' and random.randrange(1, 1 << 16) or -1
-    return _create_object('VM',
-                          {'name_label': name_label,
-                           'domid': domid,
-                           'power-state': status,
-                           'is_a_template': is_a_template,
-                           'is_control_domain': is_control_domain,
-                           'resident_on': host_ref})
+    vm_rec = kwargs.copy()
+    vm_rec.update({'name_label': name_label,
+                   'domid': domid,
+                   'power_state': status})
+    vm_ref = _create_object('VM', vm_rec)
+    after_VM_create(vm_ref, vm_rec)
+    return vm_ref
 
 
 def destroy_vm(vm_ref):
@@ -176,10 +175,7 @@ def after_VBD_create(vbd_ref, vbd_rec):
     vbd_rec['device'] = ''
     vm_ref = vbd_rec['VM']
     vm_rec = _db_content['VM'][vm_ref]
-    if vm_rec.get('VBDs', None):
-        vm_rec['VBDs'].append(vbd_ref)
-    else:
-        vm_rec['VBDs'] = [vbd_ref]
+    vm_rec['VBDs'].append(vbd_ref)
 
     vm_name_label = _db_content['VM'][vm_ref]['name_label']
     vbd_rec['vm_name_label'] = vm_name_label
@@ -187,8 +183,11 @@ def after_VBD_create(vbd_ref, vbd_rec):
 
 def after_VM_create(vm_ref, vm_rec):
     """Create read-only fields in the VM record."""
-    if 'is_control_domain' not in vm_rec:
-        vm_rec['is_control_domain'] = False
+    vm_rec.setdefault('is_control_domain', False)
+    vm_rec.setdefault('memory_static_max', str(8 * 1024 * 1024 * 1024))
+    vm_rec.setdefault('memory_dynamic_max', str(8 * 1024 * 1024 * 1024))
+    vm_rec.setdefault('VCPUs_max', str(4))
+    vm_rec.setdefault('VBDs', [])
 
 
 def create_pbd(config, host_ref, sr_ref, attached):
@@ -524,8 +523,13 @@ class SessionBase(object):
 
     VDI_resize = VDI_resize_online
 
-    def VM_clean_reboot(self, *args):
-        return 'burp'
+    def VM_clean_reboot(self, session, vm_ref):
+        pass
+
+    def VM_hard_shutdown(self, session, vm_ref):
+        db_ref = _db_content['VM'][vm_ref]
+        db_ref['power_state'] = 'Halted'
+    VM_clean_shutdown = VM_hard_shutdown
 
     def pool_eject(self, session, host_ref):
         pass

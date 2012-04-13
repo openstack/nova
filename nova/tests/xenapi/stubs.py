@@ -215,7 +215,7 @@ class FakeSessionForVMTests(fake.SessionBase):
         vm = fake.get_record('VM', ref)
         if vm['power_state'] != 'Halted':
             raise fake.Failure(['VM_BAD_POWER_STATE', ref, 'Halted',
-                                  vm['power_state']])
+                                vm['power_state']])
         vm['power_state'] = 'Running'
         vm['is_a_template'] = False
         vm['is_control_domain'] = False
@@ -302,9 +302,6 @@ class FakeSessionForFirewallTests(FakeSessionForVMTests):
 
 
 def stub_out_vm_methods(stubs):
-    def fake_shutdown(self, inst, vm, method="clean"):
-        pass
-
     def fake_acquire_bootlock(self, vm):
         pass
 
@@ -315,7 +312,6 @@ def stub_out_vm_methods(stubs):
     def fake_generate_ephemeral(cls, *args):
         pass
 
-    stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
     stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
     stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
     stubs.Set(vm_utils.VMHelper, 'generate_ephemeral', fake_generate_ephemeral)
@@ -382,9 +378,6 @@ def stub_out_migration_methods(stubs):
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         return vdi_ref, {'uuid': vdi_rec['uuid'], }
 
-    def fake_shutdown(self, inst, vm, hard=True):
-        pass
-
     @classmethod
     def fake_sr(cls, session, *args):
         pass
@@ -410,5 +403,4 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vm_utils.VMHelper, 'get_vdi_for_vm_safely', fake_get_vdi)
     stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)
     stubs.Set(vmops.VMOps, 'reset_network', fake_reset_network)
-    stubs.Set(vmops.VMOps, '_shutdown', fake_shutdown)
     stubs.Set(vm_utils.VMHelper, 'generate_ephemeral', fake_generate_ephemeral)

@@ -703,15 +703,20 @@ class XenAPIVMTestCase(test.TestCase):
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         vm = vm_utils.VMHelper.lookup(session, instance.name)
         vbd = xenapi_fake.create_vbd(vm, None)
-
-        def fake_spawn(self, context, inst, network_info, image_meta):
-            inst._rescue = False
-        self.stubs.Set(vmops.VMOps, 'spawn', fake_spawn)
-
         conn = xenapi_conn.get_connection(False)
-        conn.rescue(self.context, instance, [], None)
+        image_meta = {'id': glance_stubs.FakeGlance.IMAGE_VHD,
+                      'disk_format': 'vhd'}
+        conn.rescue(self.context, instance, [], image_meta)
 
     def test_unrescue(self):
+        instance = self._create_instance()
+        conn = xenapi_conn.get_connection(False)
+        # Unrescue expects the original instance to be powered off
+        conn.power_off(instance)
+        rescue_vm = xenapi_fake.create_vm(instance.name + '-rescue', 'Running')
+        conn.unrescue(instance, None)
+
+    def test_unrescue_not_in_rescue(self):
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
         # Ensure that it will not unrescue a non-rescued instance.
@@ -974,6 +979,7 @@ class XenAPIMigrateInstance(test.TestCase):
 
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.instance_values)
+        xenapi_fake.create_vm(instance.name, 'Running')
         instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
