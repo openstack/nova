@@ -24,7 +24,6 @@ import sys
 import time
 
 import mox
-import webob.exc
 
 import nova
 import nova.common.policy
@@ -3643,3 +3642,50 @@ class ComputePolicyTestCase(BaseTestCase):
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.get_instance_faults,
                           self.context, instances)
+
+
+class ComputeHostAPITestCase(BaseTestCase):
+    def setUp(self):
+        super(ComputeHostAPITestCase, self).setUp()
+        self.host_api = compute_api.HostAPI()
+
+    def _rpc_call_stub(self, call_info):
+        def fake_rpc_call(context, topic, msg):
+            call_info['context'] = context
+            call_info['topic'] = topic
+            call_info['msg'] = msg
+        self.stubs.Set(rpc, 'call', fake_rpc_call)
+
+    def test_set_host_enabled(self):
+        ctxt = context.RequestContext('fake', 'fake')
+        call_info = {}
+        self._rpc_call_stub(call_info)
+
+        self.host_api.set_host_enabled(ctxt, 'fake_host', 'fake_enabled')
+        self.assertEqual(call_info['context'], ctxt)
+        self.assertEqual(call_info['topic'], 'compute.fake_host')
+        self.assertEqual(call_info['msg'],
+                {'method': 'set_host_enabled',
+                 'args': {'enabled': 'fake_enabled'}})
+
+    def test_host_power_action(self):
+        ctxt = context.RequestContext('fake', 'fake')
+        call_info = {}
+        self._rpc_call_stub(call_info)
+        self.host_api.host_power_action(ctxt, 'fake_host', 'fake_action')
+        self.assertEqual(call_info['context'], ctxt)
+        self.assertEqual(call_info['topic'], 'compute.fake_host')
+        self.assertEqual(call_info['msg'],
+                {'method': 'host_power_action',
+                 'args': {'action': 'fake_action'}})
+
+    def test_set_host_maintenance(self):
+        ctxt = context.RequestContext('fake', 'fake')
+        call_info = {}
+        self._rpc_call_stub(call_info)
+        self.host_api.set_host_maintenance(ctxt, 'fake_host', 'fake_mode')
+        self.assertEqual(call_info['context'], ctxt)
+        self.assertEqual(call_info['topic'], 'compute.fake_host')
+        self.assertEqual(call_info['msg'],
+                {'method': 'host_maintenance_mode',
+                 'args': {'host': 'fake_host', 'mode': 'fake_mode'}})
