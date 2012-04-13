@@ -131,7 +131,7 @@ def _parse_block_device_mapping(bdm):
     if ebs:
         ec2_id = ebs.pop('snapshot_id', None)
         if ec2_id:
-            id = ec2utils.ec2_id_to_id(ec2_id)
+            id = ec2utils.ec2_vol_id_to_uuid(ec2_id)
             if ec2_id.startswith('snap-'):
                 bdm['snapshot_id'] = id
             elif ec2_id.startswith('vol-'):
@@ -310,7 +310,7 @@ class CloudController(object):
         if snapshot_id:
             snapshots = []
             for ec2_id in snapshot_id:
-                internal_id = ec2utils.ec2_id_to_id(ec2_id)
+                internal_id = ec2utils.ec2_snap_id_to_uuid(ec2_id)
                 snapshot = self.volume_api.get_snapshot(
                     context,
                     snapshot_id=internal_id)
@@ -336,7 +336,7 @@ class CloudController(object):
         validate_ec2_id(volume_id)
         LOG.audit(_("Create snapshot of volume %s"), volume_id,
                   context=context)
-        volume_id = ec2utils.ec2_id_to_id(volume_id)
+        volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
         volume = self.volume_api.get(context, volume_id)
         snapshot = self.volume_api.create_snapshot(
                 context,
@@ -346,7 +346,7 @@ class CloudController(object):
         return self._format_snapshot(context, snapshot)
 
     def delete_snapshot(self, context, snapshot_id, **kwargs):
-        snapshot_id = ec2utils.ec2_id_to_id(snapshot_id)
+        snapshot_id = ec2utils.ec2_snap_id_to_uuid(snapshot_id)
         snapshot = self.volume_api.get_snapshot(context, snapshot_id)
         self.volume_api.delete_snapshot(context, snapshot)
         return True
@@ -853,7 +853,7 @@ class CloudController(object):
             volumes = []
             for ec2_id in volume_id:
                 validate_ec2_id(ec2_id)
-                internal_id = ec2utils.ec2_id_to_id(ec2_id)
+                internal_id = ec2utils.ec2_vol_id_to_uuid(ec2_id)
                 volume = self.volume_api.get(context, internal_id)
                 volumes.append(volume)
         else:
@@ -901,7 +901,7 @@ class CloudController(object):
     def create_volume(self, context, **kwargs):
         size = kwargs.get('size')
         if kwargs.get('snapshot_id') is not None:
-            snapshot_id = ec2utils.ec2_id_to_id(kwargs['snapshot_id'])
+            snapshot_id = ec2utils.ec2_snap_id_to_uuid(kwargs['snapshot_id'])
             snapshot = self.volume_api.get_snapshot(context, snapshot_id)
             LOG.audit(_("Create volume from snapshot %s"), snapshot_id,
                       context=context)
@@ -924,7 +924,7 @@ class CloudController(object):
 
     def delete_volume(self, context, volume_id, **kwargs):
         validate_ec2_id(volume_id)
-        volume_id = ec2utils.ec2_id_to_id(volume_id)
+        volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
 
         try:
             volume = self.volume_api.get(context, volume_id)
@@ -937,7 +937,7 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         validate_ec2_id(instance_id)
         validate_ec2_id(volume_id)
-        volume_id = ec2utils.ec2_id_to_id(volume_id)
+        volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
         instance_id = ec2utils.ec2_id_to_id(instance_id)
         instance = self.compute_api.get(context, instance_id)
         msg = _("Attach volume %(volume_id)s to instance %(instance_id)s"
@@ -960,7 +960,7 @@ class CloudController(object):
 
     def detach_volume(self, context, volume_id, **kwargs):
         validate_ec2_id(volume_id)
-        volume_id = ec2utils.ec2_id_to_id(volume_id)
+        volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
         volume = self.volume_api.get(context, volume_id)
 

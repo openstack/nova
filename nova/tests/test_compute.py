@@ -1406,9 +1406,9 @@ class ComputeTestCase(BaseTestCase):
 
         c = context.get_admin_context()
         topic = db.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
+
         # creating volume testdata
-        volume_id = 1
-        db.volume_create(c, {'id': volume_id})
+        volume_id = db.volume_create(c, {'size': 1})['id']
         values = {'instance_uuid': inst_ref['uuid'], 'device_name': '/dev/vdc',
                   'delete_on_termination': False, 'volume_id': volume_id}
         db.block_device_mapping_create(c, values)
@@ -1428,6 +1428,7 @@ class ComputeTestCase(BaseTestCase):
                            'block_migration': True,
                            'disk': None}
                  }).AndRaise(rpc.common.RemoteError('', '', ''))
+
         # mocks for rollback
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
                                 'args': {'instance_id': inst_ref['id'],
@@ -3063,36 +3064,36 @@ class ComputeAPITestCase(BaseTestCase):
         block_device_mapping = [
                 # root
                 {'device_name': '/dev/sda1',
-                 'snapshot_id': 0x12345678,
+                 'snapshot_id': '00000000-aaaa-bbbb-cccc-000000000000',
                  'delete_on_termination': False},
 
 
                 # overwrite swap
                 {'device_name': '/dev/sdb2',
-                 'snapshot_id': 0x23456789,
+                 'snapshot_id': '11111111-aaaa-bbbb-cccc-111111111111',
                  'delete_on_termination': False},
                 {'device_name': '/dev/sdb3',
-                 'snapshot_id': 0x3456789A},
+                 'snapshot_id': '22222222-aaaa-bbbb-cccc-222222222222'},
                 {'device_name': '/dev/sdb4',
                  'no_device': True},
 
                 # overwrite ephemeral
                 {'device_name': '/dev/sdc2',
-                 'snapshot_id': 0x456789AB,
+                 'snapshot_id': '33333333-aaaa-bbbb-cccc-333333333333',
                  'delete_on_termination': False},
                 {'device_name': '/dev/sdc3',
-                 'snapshot_id': 0x56789ABC},
+                 'snapshot_id': '44444444-aaaa-bbbb-cccc-444444444444'},
                 {'device_name': '/dev/sdc4',
                  'no_device': True},
 
                 # volume
                 {'device_name': '/dev/sdd1',
-                 'snapshot_id': 0x87654321,
+                 'snapshot_id': '55555555-aaaa-bbbb-cccc-555555555555',
                  'delete_on_termination': False},
                 {'device_name': '/dev/sdd2',
-                 'snapshot_id': 0x98765432},
+                 'snapshot_id': '66666666-aaaa-bbbb-cccc-666666666666'},
                 {'device_name': '/dev/sdd3',
-                 'snapshot_id': 0xA9875463},
+                 'snapshot_id': '77777777-aaaa-bbbb-cccc-777777777777'},
                 {'device_name': '/dev/sdd4',
                  'no_device': True}]
 
@@ -3123,22 +3124,30 @@ class ComputeAPITestCase(BaseTestCase):
                 for bdm_ref in db.block_device_mapping_get_all_by_instance(
                     self.context, instance['uuid'])]
         expected_result = [
-            {'snapshot_id': 0x12345678, 'device_name': '/dev/sda1'},
+            {'snapshot_id': '00000000-aaaa-bbbb-cccc-000000000000',
+               'device_name': '/dev/sda1'},
 
             {'virtual_name': 'swap', 'device_name': '/dev/sdb1',
              'volume_size': swap_size},
-            {'snapshot_id': 0x23456789, 'device_name': '/dev/sdb2'},
-            {'snapshot_id': 0x3456789A, 'device_name': '/dev/sdb3'},
+            {'snapshot_id': '11111111-aaaa-bbbb-cccc-111111111111',
+               'device_name': '/dev/sdb2'},
+            {'snapshot_id': '22222222-aaaa-bbbb-cccc-222222222222',
+                'device_name': '/dev/sdb3'},
             {'no_device': True, 'device_name': '/dev/sdb4'},
 
             {'virtual_name': 'ephemeral0', 'device_name': '/dev/sdc1'},
-            {'snapshot_id': 0x456789AB, 'device_name': '/dev/sdc2'},
-            {'snapshot_id': 0x56789ABC, 'device_name': '/dev/sdc3'},
+            {'snapshot_id': '33333333-aaaa-bbbb-cccc-333333333333',
+                'device_name': '/dev/sdc2'},
+            {'snapshot_id': '44444444-aaaa-bbbb-cccc-444444444444',
+                'device_name': '/dev/sdc3'},
             {'no_device': True, 'device_name': '/dev/sdc4'},
 
-            {'snapshot_id': 0x87654321, 'device_name': '/dev/sdd1'},
-            {'snapshot_id': 0x98765432, 'device_name': '/dev/sdd2'},
-            {'snapshot_id': 0xA9875463, 'device_name': '/dev/sdd3'},
+            {'snapshot_id': '55555555-aaaa-bbbb-cccc-555555555555',
+                'device_name': '/dev/sdd1'},
+            {'snapshot_id': '66666666-aaaa-bbbb-cccc-666666666666',
+                'device_name': '/dev/sdd2'},
+            {'snapshot_id': '77777777-aaaa-bbbb-cccc-777777777777',
+                'device_name': '/dev/sdd3'},
             {'no_device': True, 'device_name': '/dev/sdd4'}]
         bdms.sort()
         expected_result.sort()

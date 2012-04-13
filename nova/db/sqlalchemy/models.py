@@ -335,16 +335,17 @@ class InstanceTypes(BASE, NovaBase):
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String(36), primary_key=True)
 
     @property
     def name(self):
         return FLAGS.volume_name_template % self.id
 
+    ec2_id = Column(Integer)
     user_id = Column(String(255))
     project_id = Column(String(255))
 
-    snapshot_id = Column(String(255))
+    snapshot_id = Column(String(36))
 
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
@@ -379,7 +380,7 @@ class VolumeMetadata(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     key = Column(String(255))
     value = Column(String(255))
-    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=False)
+    volume_id = Column(String(36), ForeignKey('volumes.id'), nullable=False)
     volume = relationship(Volume, backref="volume_metadata",
                             foreign_keys=volume_id,
                             primaryjoin='and_('
@@ -455,7 +456,7 @@ class QuotaClass(BASE, NovaBase):
 class Snapshot(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'snapshots'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String(36), primary_key=True)
 
     @property
     def name(self):
@@ -468,7 +469,7 @@ class Snapshot(BASE, NovaBase):
     user_id = Column(String(255))
     project_id = Column(String(255))
 
-    volume_id = Column(Integer)
+    volume_id = Column(String(36))
     status = Column(String(255))
     progress = Column(String(255))
     volume_size = Column(Integer)
@@ -504,12 +505,12 @@ class BlockDeviceMapping(BASE, NovaBase):
     virtual_name = Column(String(255), nullable=True)
 
     # for snapshot or volume
-    snapshot_id = Column(Integer, ForeignKey('snapshots.id'), nullable=True)
+    snapshot_id = Column(String(36), ForeignKey('snapshots.id'))
     # outer join
     snapshot = relationship(Snapshot,
                             foreign_keys=snapshot_id)
 
-    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume_id = Column(String(36), ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume,
                           foreign_keys=volume_id)
     volume_size = Column(Integer, nullable=True)
@@ -528,7 +529,7 @@ class IscsiTarget(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     target_num = Column(Integer)
     host = Column(String(255))
-    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume_id = Column(String(36), ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume,
                           backref=backref('iscsi_target', uselist=False),
                           foreign_keys=volume_id,
@@ -962,6 +963,20 @@ class S3Image(BASE, NovaBase):
     uuid = Column(String(36), nullable=False)
 
 
+class VolumeIdMapping(BASE, NovaBase):
+    """Compatability layer for the EC2 volume service"""
+    __tablename__ = 'volume_id_mappings'
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    uuid = Column(String(36), nullable=False)
+
+
+class SnapshotIdMapping(BASE, NovaBase):
+    """Compatability layer for the EC2 snapshot service"""
+    __tablename__ = 'snapshot_id_mappings'
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    uuid = Column(String(36), nullable=False)
+
+
 class SMFlavors(BASE, NovaBase):
     """Represents a flavor for SM volumes."""
     __tablename__ = 'sm_flavors'
@@ -982,7 +997,7 @@ class SMBackendConf(BASE, NovaBase):
 
 class SMVolume(BASE, NovaBase):
     __tablename__ = 'sm_volume'
-    id = Column(Integer(), ForeignKey(Volume.id), primary_key=True)
+    id = Column(String(36), ForeignKey(Volume.id), primary_key=True)
     backend_id = Column(Integer, ForeignKey('sm_backend_config.id'),
                         nullable=False)
     vdi_uuid = Column(String(255))
@@ -1040,6 +1055,8 @@ def register_models():
               VolumeMetadata,
               VolumeTypeExtraSpecs,
               VolumeTypes,
+              VolumeIdMapping,
+              SnapshotIdMapping,
               )
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
