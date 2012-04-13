@@ -389,9 +389,6 @@ def stub_out_migration_methods(stubs):
     def fake_destroy(*args, **kwargs):
         pass
 
-    def fake_reset_network(*args, **kwargs):
-        pass
-
     @classmethod
     def fake_generate_ephemeral(cls, *args):
         pass
@@ -402,5 +399,4 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vmops.VMOps, '_create_snapshot', fake_create_snapshot)
     stubs.Set(vm_utils.VMHelper, 'get_vdi_for_vm_safely', fake_get_vdi)
     stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)
-    stubs.Set(vmops.VMOps, 'reset_network', fake_reset_network)
     stubs.Set(vm_utils.VMHelper, 'generate_ephemeral', fake_generate_ephemeral)

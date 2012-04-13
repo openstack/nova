@@ -330,7 +330,7 @@ class VMOps(object):
 
         @step
         def boot_instance_step(undo_mgr, vm_ref):
-            self._spawn(instance, vm_ref)
+            self._boot_new_instance(instance, vm_ref)
 
         @step
         def apply_security_group_filters_step(undo_mgr):
@@ -493,45 +493,8 @@ class VMOps(object):
                                 userdevice, bootable=False)
             userdevice += 1
 
-    def _configure_instance(self, ctx, instance, vm_ref,
-                            skip_set_password=False):
-        # Inject files, if necessary
-        injected_files = instance.injected_files
-        if injected_files:
-            # Check if this is a JSON-encoded string and convert if needed.
-            if isinstance(injected_files, basestring):
-                try:
-                    injected_files = json.loads(injected_files)
-                except ValueError:
-                    LOG.exception(_("Invalid value for injected_files: %r"),
-                                  injected_files, instance=instance)
-                    injected_files = []
-            # Inject any files, if specified
-            for path, contents in instance.injected_files:
-                LOG.debug(_("Injecting file path: '%s'") % path,
-                          instance=instance)
-                self.inject_file(instance, path, contents)
-
-        admin_password = instance.admin_pass
-        # Set admin password, if necessary
-        if admin_password and not skip_set_password:
-            LOG.debug(_("Setting admin password"), instance=instance)
-            self.set_admin_password(instance, admin_password)
-
-        # Reset network config
-        LOG.debug(_("Resetting network"), instance=instance)
-        self.reset_network(instance, vm_ref)
-
-        # Set VCPU weight
-        inst_type = db.instance_type_get(ctx, instance.instance_type_id)
-        vcpu_weight = inst_type['vcpu_weight']
-        if vcpu_weight is not None:
-            LOG.debug(_("Setting VCPU weight"), instance=instance)
-            self._session.call_xenapi("VM.add_to_VCPUs_params", vm_ref,
-                    "weight", str(vcpu_weight))
-
-    def _spawn(self, instance, vm_ref):
-        """Spawn a new instance."""
+    def _boot_new_instance(self, instance, vm_ref):
+        """Boot a new instance and configure it."""
         LOG.debug(_('Starting VM'), instance=instance)
         self._start(instance, vm_ref)
 
@@ -577,7 +540,41 @@ class VMOps(object):
         # if the guest agent is not available, configure the
         # instance, but skip the admin password configuration
         no_agent = version is None
-        self._configure_instance(ctx, instance, vm_ref, no_agent)
+
+        # Inject files, if necessary
+        injected_files = instance.injected_files
+        if injected_files:
+            # Check if this is a JSON-encoded string and convert if needed.
+            if isinstance(injected_files, basestring):
+                try:
+                    injected_files = json.loads(injected_files)
+                except ValueError:
+                    LOG.exception(_("Invalid value for injected_files: %r"),
+                                  injected_files, instance=instance)
+                    injected_files = []
+            # Inject any files, if specified
+            for path, contents in instance.injected_files:
+                LOG.debug(_("Injecting file path: '%s'") % path,
+                          instance=instance)
+                self.inject_file(instance, path, contents)
+
+        admin_password = instance.admin_pass
+        # Set admin password, if necessary
+        if admin_password and not no_agent:
+            LOG.debug(_("Setting admin password"), instance=instance)
+            self.set_admin_password(instance, admin_password)
+
+        # Reset network config
+        LOG.debug(_("Resetting network"), instance=instance)
+        self.reset_network(instance, vm_ref)
+
+        # Set VCPU weight
+        inst_type = db.instance_type_get(ctx, instance.instance_type_id)
+        vcpu_weight = inst_type['vcpu_weight']
+        if vcpu_weight is not None:
+            LOG.debug(_("Setting VCPU weight"), instance=instance)
+            self._session.call_xenapi('VM.add_to_VCPUs_params', vm_ref,
+                                      'weight', str(vcpu_weight))
 
     def _get_vm_opaque_ref(self, instance):
         vm_ref = VMHelper.lookup(self._session, instance['name'])

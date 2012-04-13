@@ -211,10 +211,6 @@ class XenAPIVolumeTestCase(test.TestCase):
                           '/dev/sdc')
 
 
-def configure_instance(*args):
-    pass
-
-
 class XenAPIVMTestCase(test.TestCase):
     """Unit tests for VM operations."""
     def setUp(self):
@@ -234,8 +230,6 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stubout_stream_disk(self.stubs)
         stubs.stubout_is_vdi_pv(self.stubs)
-        self.stubs.Set(vmops.VMOps, '_configure_instance',
-                configure_instance)
         stubs.stub_out_vm_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
         fake_utils.stub_out_utils_execute(self.stubs)
@@ -480,6 +474,9 @@ class XenAPIVMTestCase(test.TestCase):
         if empty_dns:
             network_info[0][1]['dns'] = []
 
+        # admin_pass isn't part of the DB model, but it does get set as
+        # an attribute for spawn to use
+        instance.admin_pass = 'herp'
         image_meta = {'id': glance_stubs.FakeGlance.IMAGE_VHD,
                       'disk_format': 'vhd'}
         self.conn.spawn(self.context, instance, image_meta, network_info)
@@ -778,6 +775,7 @@ class XenAPIVMTestCase(test.TestCase):
         image_meta = {'id': glance_stubs.FakeGlance.IMAGE_VHD,
                       'disk_format': 'vhd'}
         if spawn:
+            instance.admin_pass = 'herp'
             self.conn.spawn(self.context, instance, image_meta, network_info)
         return instance
 

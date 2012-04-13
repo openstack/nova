@@ -489,11 +489,19 @@ class SessionBase(object):
     def host_call_plugin(self, _1, _2, plugin, method, _5):
         if (plugin, method) == ('agent', 'version'):
             return as_json(returncode='0', message='1.0')
+        elif (plugin, method) == ('agent', 'key_init'):
+            return as_json(returncode='D0', message='1')
+        elif (plugin, method) == ('agent', 'password'):
+            return as_json(returncode='0', message='success')
+        elif (plugin, method) == ('agent', 'resetnetwork'):
+            return as_json(returncode='0', message='success')
         elif (plugin, method) == ('glance', 'copy_kernel_vdi'):
             return ''
         elif (plugin, method) == ('glance', 'upload_vhd'):
             return ''
         elif (plugin, method) == ('glance', 'create_kernel_ramdisk'):
+            return ''
+        elif (plugin, method) == ('glance', 'remove_kernel_ramdisk'):
             return ''
         elif (plugin, method) == ('migration', 'move_vhds_into_sr'):
             return ''
