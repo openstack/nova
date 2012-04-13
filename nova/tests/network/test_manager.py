@@ -1266,10 +1266,9 @@ class CommonNetworkTestCase(test.TestCase):
     def test_get_network(self):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
-        self.mox.StubOutWithMock(manager.db, 'network_get_all_by_uuids')
-        manager.db.network_get_all_by_uuids(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(networks)
+        self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
+        manager.db.network_get_by_uuid(mox.IgnoreArg(),
+                                       mox.IgnoreArg()).AndReturn(networks[0])
         self.mox.ReplayAll()
         uuid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         network = manager.get_network(fake_context, uuid)
@@ -1278,9 +1277,10 @@ class CommonNetworkTestCase(test.TestCase):
     def test_get_network_not_found(self):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
-        self.mox.StubOutWithMock(manager.db, 'network_get_all_by_uuids')
-        manager.db.network_get_all_by_uuids(mox.IgnoreArg(),
-                                            mox.IgnoreArg()).AndReturn([])
+        self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
+        manager.db.network_get_by_uuid(
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(exception.NetworkNotFoundForUUID)
         self.mox.ReplayAll()
         uuid = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         self.assertRaises(exception.NetworkNotFound,
@@ -1302,10 +1302,9 @@ class CommonNetworkTestCase(test.TestCase):
     def test_disassociate_network(self):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
-        self.mox.StubOutWithMock(manager.db, 'network_get_all_by_uuids')
-        manager.db.network_get_all_by_uuids(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(networks)
+        self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
+        manager.db.network_get_by_uuid(mox.IgnoreArg(),
+                                       mox.IgnoreArg()).AndReturn(networks[0])
         self.mox.ReplayAll()
         uuid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         manager.disassociate_network(fake_context, uuid)
@@ -1313,9 +1312,10 @@ class CommonNetworkTestCase(test.TestCase):
     def test_disassociate_network_not_found(self):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
-        self.mox.StubOutWithMock(manager.db, 'network_get_all_by_uuids')
-        manager.db.network_get_all_by_uuids(mox.IgnoreArg(),
-                                            mox.IgnoreArg()).AndReturn([])
+        self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
+        manager.db.network_get_by_uuid(
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndRaise(exception.NetworkNotFoundForUUID)
         self.mox.ReplayAll()
         uuid = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         self.assertRaises(exception.NetworkNotFound,
