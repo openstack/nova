@@ -1028,7 +1028,6 @@ class VMOps(object):
 
         LOG.debug(_("Shutting down VM"), instance=instance)
         try:
-            task = None
             if hard:
                 self._session.call_xenapi('VM.hard_shutdown', vm_ref)
             else:
