@@ -96,8 +96,10 @@ class XmlConversionTestCase(test.TestCase):
         conv = ec2utils._try_convert
         self.assertEqual(conv('None'), None)
         self.assertEqual(conv('True'), True)
+        self.assertEqual(conv('TRUE'), True)
         self.assertEqual(conv('true'), True)
         self.assertEqual(conv('False'), False)
+        self.assertEqual(conv('FALSE'), False)
         self.assertEqual(conv('false'), False)
         self.assertEqual(conv('0'), 0)
         self.assertEqual(conv('42'), 42)
@@ -107,6 +109,16 @@ class XmlConversionTestCase(test.TestCase):
         self.assertEqual(conv('-0x57'), -0x57)
         self.assertEqual(conv('-'), '-')
         self.assertEqual(conv('-0'), 0)
+        self.assertEqual(conv('0.0'), 0.0)
+        self.assertEqual(conv('1e-8'), 0.0)
+        self.assertEqual(conv('-1e-8'), 0.0)
+        self.assertEqual(conv('0xDD8G'), '0xDD8G')
+        self.assertEqual(conv('0XDD8G'), '0XDD8G')
+        self.assertEqual(conv('-stringy'), '-stringy')
+        self.assertEqual(conv('stringy'), 'stringy')
+        self.assertEqual(conv('add'), 'add')
+        self.assertEqual(conv('remove'), 'remove')
+        self.assertEqual(conv(''), '')
 
 
 class Ec2utilsTestCase(test.TestCase):
