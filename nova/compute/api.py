@@ -273,7 +273,8 @@ class API(BaseAPI):
 
         return kernel_id, ramdisk_id
 
-    def _handle_availability_zone(self, availability_zone):
+    @staticmethod
+    def _handle_availability_zone(availability_zone):
         # NOTE(vish): We have a legacy hack to allow admins to specify hosts
         #             via az using az:host. It might be nice to expose an
         #             api to specify specific hosts to force onto, but for
@@ -286,6 +287,30 @@ class API(BaseAPI):
             availability_zone = FLAGS.default_schedule_zone
 
         return availability_zone, forced_host
+
+    @staticmethod
+    def _inherit_properties_from_image(image, auto_disk_config):
+        def prop(prop_, prop_type=None):
+            """Return the value of an image property."""
+            value = image['properties'].get(prop_)
+
+            if value is not None:
+                if prop_type == 'bool':
+                    value = utils.bool_from_str(value)
+
+            return value
+
+        options_from_image = {'os_type': prop('os_type'),
+                              'architecture': prop('arch'),
+                              'vm_mode': prop('vm_mode')}
+
+        # If instance doesn't have auto_disk_config overridden by request, use
+        # whatever the image indicates
+        if auto_disk_config is None:
+            auto_disk_config = prop('auto_disk_config', prop_type='bool')
+
+        options_from_image['auto_disk_config'] = auto_disk_config
+        return options_from_image
 
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
@@ -343,24 +368,6 @@ class API(BaseAPI):
             # Ensure config_drive image exists
             image_service.show(context, config_drive_id)
 
-        os_type = None
-        if 'properties' in image and 'os_type' in image['properties']:
-            os_type = image['properties']['os_type']
-        architecture = None
-        if 'properties' in image and 'arch' in image['properties']:
-            architecture = image['properties']['arch']
-        vm_mode = None
-        if 'properties' in image and 'vm_mode' in image['properties']:
-            vm_mode = image['properties']['vm_mode']
-
-        # If instance doesn't have auto_disk_config overridden by request, use
-        # whatever the image indicates
-        if auto_disk_config is None:
-            if ('properties' in image and
-                'auto_disk_config' in image['properties']):
-                auto_disk_config = utils.bool_from_str(
-                    image['properties']['auto_disk_config'])
-
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, kernel_id, ramdisk_id, image, image_service)
 
@@ -406,12 +413,13 @@ class API(BaseAPI):
             'access_ip_v4': access_ip_v4,
             'access_ip_v6': access_ip_v6,
             'availability_zone': availability_zone,
-            'os_type': os_type,
-            'architecture': architecture,
-            'vm_mode': vm_mode,
             'root_device_name': root_device_name,
-            'progress': 0,
-            'auto_disk_config': auto_disk_config}
+            'progress': 0}
+
+        options_from_image = self._inherit_properties_from_image(
+                image, auto_disk_config)
+
+        base_options.update(options_from_image)
 
         LOG.debug(_("Going to run %s instances...") % num_instances)
 
