@@ -221,6 +221,40 @@ class API(BaseAPI):
 
         self.network_api.validate_networks(context, requested_networks)
 
+    @staticmethod
+    def _handle_kernel_and_ramdisk(context, kernel_id, ramdisk_id, image,
+                                   image_service):
+        """Choose kernel and ramdisk appropriate for the instance.
+
+        The kernel and ramdisk can be chosen in one of three ways:
+
+            1. Passed in with create-instance request.
+
+            2. Inherited from image.
+
+            3. Forced to None by using `null_kernel` FLAG.
+        """
+        # Inherit from image if not specified
+        if kernel_id is None:
+            kernel_id = image['properties'].get('kernel_id')
+
+        if ramdisk_id is None:
+            ramdisk_id = image['properties'].get('ramdisk_id')
+
+        # Force to None if using null_kernel
+        if kernel_id == str(FLAGS.null_kernel):
+            kernel_id = None
+            ramdisk_id = None
+
+        # Verify kernel and ramdisk exist (fail-fast)
+        if kernel_id is not None:
+            image_service.show(context, kernel_id)
+
+        if ramdisk_id is not None:
+            image_service.show(context, ramdisk_id)
+
+        return kernel_id, ramdisk_id
+
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
                min_count, max_count,
@@ -304,23 +338,9 @@ class API(BaseAPI):
                 auto_disk_config = utils.bool_from_str(
                     image['properties']['auto_disk_config'])
 
-        if kernel_id is None:
-            kernel_id = image['properties'].get('kernel_id', None)
-        if ramdisk_id is None:
-            ramdisk_id = image['properties'].get('ramdisk_id', None)
-        # FIXME(sirp): is there a way we can remove null_kernel?
-        # No kernel and ramdisk for raw images
-        if kernel_id == str(FLAGS.null_kernel):
-            kernel_id = None
-            ramdisk_id = None
-            LOG.debug(_("Creating a raw instance"))
-        # Make sure we have access to kernel and ramdisk (if not raw)
-        LOG.debug(_("Using Kernel=%(kernel_id)s, Ramdisk=%(ramdisk_id)s")
-                  % locals())
-        if kernel_id:
-            image_service.show(context, kernel_id)
-        if ramdisk_id:
-            image_service.show(context, ramdisk_id)
+        kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
+                context, kernel_id, ramdisk_id, image, image_service)
+
         if config_drive_id:
             image_service.show(context, config_drive_id)
 
