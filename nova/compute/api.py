@@ -187,6 +187,24 @@ class API(BaseAPI):
                 code = "OnsetFileContentLimitExceeded"
                 raise exception.QuotaError(code=code)
 
+    def _check_num_instances_quota(self, context, instance_type, min_count,
+                                   max_count):
+        """Enforce quota limits on number of instances created."""
+        num_instances = quota.allowed_instances(context, max_count,
+                                                instance_type)
+        if num_instances < min_count:
+            pid = context.project_id
+            if num_instances <= 0:
+                msg = _("Cannot run any more instances of this type.")
+            else:
+                msg = (_("Can only run %s more instances of this type.") %
+                       num_instances)
+            LOG.warn(_("Quota exceeded for %(pid)s,"
+                  " tried to run %(min_count)s instances. %(msg)s"), locals())
+            raise exception.QuotaError(code="InstanceLimitExceeded")
+
+        return num_instances
+
     def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
         if not metadata:
@@ -273,8 +291,6 @@ class API(BaseAPI):
 
         if not metadata:
             metadata = {}
-        if not display_description:
-            display_description = ''
         if not security_group:
             security_group = 'default'
 
@@ -284,24 +300,12 @@ class API(BaseAPI):
             min_count = 1
         if not max_count:
             max_count = min_count
-        if not metadata:
-            metadata = {}
 
         block_device_mapping = block_device_mapping or []
 
-        num_instances = quota.allowed_instances(context, max_count,
-                                                instance_type)
-        if num_instances < min_count:
-            pid = context.project_id
-            if num_instances <= 0:
-                msg = _("Cannot run any more instances of this type.")
-            else:
-                msg = (_("Can only run %s more instances of this type.") %
-                       num_instances)
-            LOG.warn(_("Quota exceeded for %(pid)s,"
-                  " tried to run %(min_count)s instances. %(msg)s"), locals())
-            raise exception.QuotaError(code="InstanceLimitExceeded")
-
+        # Check quotas
+        num_instances = self._check_num_instances_quota(
+                context, instance_type, min_count, max_count)
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
         self._check_requested_networks(context, requested_networks)
@@ -392,7 +396,7 @@ class API(BaseAPI):
             'root_gb': instance_type['root_gb'],
             'ephemeral_gb': instance_type['ephemeral_gb'],
             'display_name': display_name,
-            'display_description': display_description,
+            'display_description': display_description or '',
             'user_data': user_data or '',
             'key_name': key_name,
             'key_data': key_data,
