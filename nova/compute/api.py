@@ -315,10 +315,15 @@ class API(BaseAPI):
         if instance_type['root_gb'] < int(image.get('min_disk') or 0):
             raise exception.InstanceTypeDiskTooSmall()
 
+        # Handle config_drive
         config_drive_id = None
         if config_drive and config_drive is not True:
             # config_drive is volume id
-            config_drive, config_drive_id = None, config_drive
+            config_drive_id = config_drive
+            config_drive = None
+
+            # Ensure config_drive image exists
+            image_service.show(context, config_drive_id)
 
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
@@ -340,9 +345,6 @@ class API(BaseAPI):
 
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, kernel_id, ramdisk_id, image, image_service)
-
-        if config_drive_id:
-            image_service.show(context, config_drive_id)
 
         self.ensure_default_security_group(context)
 
