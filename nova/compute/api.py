@@ -273,6 +273,20 @@ class API(BaseAPI):
 
         return kernel_id, ramdisk_id
 
+    def _handle_availability_zone(self, availability_zone):
+        # NOTE(vish): We have a legacy hack to allow admins to specify hosts
+        #             via az using az:host. It might be nice to expose an
+        #             api to specify specific hosts to force onto, but for
+        #             now it just supports this legacy hack.
+        forced_host = None
+        if availability_zone and ':' in availability_zone:
+            availability_zone, forced_host = availability_zone.split(':')
+
+        if not availability_zone:
+            availability_zone = FLAGS.default_schedule_zone
+
+        return availability_zone, forced_host
+
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
                min_count, max_count,
@@ -362,21 +376,8 @@ class API(BaseAPI):
         root_device_name = block_device.properties_root_device_name(
             image['properties'])
 
-        # NOTE(vish): We have a legacy hack to allow admins to specify hosts
-        #             via az using az:host. It might be nice to expose an
-        #             api to specify specific hosts to force onto, but for
-        #             now it just supports this legacy hack.
-        host = None
-        if availability_zone:
-            availability_zone, _x, host = availability_zone.partition(':')
-        if not availability_zone:
-            availability_zone = FLAGS.default_schedule_zone
-        if context.is_admin and host:
-            filter_properties = {'force_hosts': [host]}
-        else:
-            filter_properties = {}
-
-        filter_properties['scheduler_hints'] = scheduler_hints
+        availability_zone, forced_host = self._handle_availability_zone(
+                availability_zone)
 
         base_options = {
             'reservation_id': reservation_id,
@@ -426,6 +427,10 @@ class API(BaseAPI):
             # DB entries, because the instance *could* be # created in
             # a child zone.
             rpc_method = rpc.call
+
+        filter_properties = dict(scheduler_hints=scheduler_hints)
+        if context.is_admin and forced_host:
+            filter_properties['force_hosts'] = [forced_host]
 
         # TODO(comstud): We should use rpc.multicall when we can
         # retrieve the full instance dictionary from the scheduler.
