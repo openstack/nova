@@ -60,9 +60,9 @@ linux_net_opts = [
     cfg.StrOpt('dns_server',
                default=None,
                help='if set, uses specific dns server for dnsmasq'),
-    cfg.StrOpt('dmz_cidr',
-               default='10.128.0.0/24',
-               help='dmz range that should be accepted'),
+    cfg.ListOpt('dmz_cidr',
+               default=[],
+               help='A list of dmz range that should be accepted'),
     cfg.StrOpt('dnsmasq_config_file',
                default='',
                help='Override the default dnsmasq settings with this file'),
@@ -445,9 +445,10 @@ def init_host(ip_range=None):
                                           '-s %s -d %s/32 -j ACCEPT' %
                                           (ip_range, FLAGS.metadata_host))
 
-    iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
-                                          '-s %s -d %s -j ACCEPT' %
-                                          (ip_range, FLAGS.dmz_cidr))
+    for dmz in FLAGS.dmz_cidr:
+        iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
+                                              '-s %s -d %s -j ACCEPT' %
+                                              (ip_range, dmz))
 
     iptables_manager.ipv4['nat'].add_rule('POSTROUTING',
                                           '-s %(range)s -d %(range)s '
