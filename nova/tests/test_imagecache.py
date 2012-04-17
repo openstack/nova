@@ -59,6 +59,10 @@ class ImageCacheManagerTestCase(test.TestCase):
 
     def test_read_stored_checksum(self):
         with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            self.flags(image_info_filename_pattern=('$instances_path/'
+                                                    '%(image)s.sha1'))
+
             fname = os.path.join(tmpdir, 'aaa')
 
             csum_input = 'fdghkfhkgjjksfdgjksjkghsdf'
@@ -86,6 +90,8 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.stubs.Set(os.path, 'isfile', lambda x: True)
 
         base_dir = '/var/lib/nova/instances/_base'
+        self.flags(instances_path='/var/lib/nova/instances')
+
         image_cache_manager = imagecache.ImageCacheManager()
         image_cache_manager._list_base_images(base_dir)
 
@@ -299,6 +305,10 @@ class ImageCacheManagerTestCase(test.TestCase):
 
         with self._intercept_log_messages() as stream:
             with utils.tempdir() as tmpdir:
+                self.flags(instances_path=tmpdir)
+                self.flags(image_info_filename_pattern=('$instances_path/'
+                                                        '%(image)s.sha1'))
+
                 fname = os.path.join(tmpdir, 'aaa')
 
                 f = open(fname, 'w')
@@ -342,6 +352,10 @@ class ImageCacheManagerTestCase(test.TestCase):
         """Make a base file for testing."""
 
         with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            self.flags(image_info_filename_pattern=('$instances_path/'
+                                                    '%(image)s.sha1'))
+
             fname = os.path.join(tmpdir, 'aaa')
 
             base_file = open(fname, 'w')
@@ -679,3 +693,60 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.flags(instances_path='/tmp/no/such/dir/name/please')
         image_cache_manager = imagecache.ImageCacheManager()
         image_cache_manager.verify_base_images(None)
+
+    def test_is_valid_info_file(self):
+        hashed = 'e97222e91fc4241f49a7f520d1dcf446751129b3'
+
+        self.flags(instances_path='/tmp/no/such/dir/name/please')
+        self.flags(image_info_filename_pattern=('$instances_path/_base/'
+                                                '%(image)s.info'))
+        base_filename = os.path.join(FLAGS.instances_path, '_base', hashed)
+
+        self.assertFalse(imagecache.is_valid_info_file('banana'))
+        self.assertFalse(imagecache.is_valid_info_file(
+                os.path.join(FLAGS.instances_path, '_base', '00000001')))
+        self.assertFalse(imagecache.is_valid_info_file(base_filename))
+        self.assertFalse(imagecache.is_valid_info_file(base_filename +
+                                                       '.sha1'))
+        self.assertTrue(imagecache.is_valid_info_file(base_filename + '.info'))
+
+    def test_configured_checksum_path(self):
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            self.flags(image_info_filename_pattern=('$instances_path/'
+                                                    '%(image)s.info'))
+            self.flags(remove_unused_base_images=True)
+
+            # Ensure there is a base directory
+            os.mkdir(os.path.join(tmpdir, '_base'))
+
+            # Fake the database call which lists running instances
+            self.stubs.Set(db, 'instance_get_all',
+                           lambda x: [{'image_ref': '1',
+                                       'host': FLAGS.host,
+                                       'name': 'instance-1',
+                                       'uuid': '123'},
+                                      {'image_ref': '1',
+                                       'host': FLAGS.host,
+                                       'name': 'instance-2',
+                                       'uuid': '456'}])
+
+            def touch(filename):
+                f = open(filename, 'w')
+                f.write('Touched')
+                f.close()
+
+            old = time.time() - (25 * 3600)
+            hashed = 'e97222e91fc4241f49a7f520d1dcf446751129b3'
+            base_filename = os.path.join(tmpdir, hashed)
+            touch(base_filename)
+            touch(base_filename + '.info')
+            os.utime(base_filename + '.info', (old, old))
+            touch(base_filename + '.sha1')
+            os.utime(base_filename + '.sha1', (old, old))
+
+            image_cache_manager = imagecache.ImageCacheManager()
+            image_cache_manager.verify_base_images(None)
+
+            self.assertTrue(os.path.exists(base_filename))
+            self.assertTrue(os.path.exists(base_filename + '.info'))
