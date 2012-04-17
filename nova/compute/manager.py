@@ -1245,6 +1245,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               root_gb=instance_type['root_gb'],
                               ephemeral_gb=instance_type['ephemeral_gb'],
                               instance_type_id=instance_type['id'],
+                              launched_at=utils.utcnow(),
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
 
@@ -1390,6 +1391,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               instance_ref.uuid,
                               vm_state=vm_states.ACTIVE,
                               host=migration_ref['dest_compute'],
+                              launched_at=utils.utcnow(),
                               task_state=task_states.RESIZE_VERIFY)
 
         self.db.migration_update(context, migration_ref.id,
