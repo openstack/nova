@@ -19,16 +19,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import hashlib
+import json
 import os
 import random
+import re
 
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
+from nova.openstack.common import cfg
 from nova.virt import images
 
 
+LOG = logging.getLogger(__name__)
+
+
+util_opts = [
+    cfg.StrOpt('image_info_filename_pattern',
+               default='$instances_path/$base_dir_name/%(image)s.info',
+               help='Allows image information files to be stored in '
+                    'non-standard locations')
+    ]
+
+flags.DECLARE('instances_path', 'nova.compute.manager')
+flags.DECLARE('base_dir_name', 'nova.compute.manager')
 FLAGS = flags.FLAGS
+FLAGS.register_opts(util_opts)
 
 
 def execute(*args, **kwargs):
@@ -286,3 +304,83 @@ def get_fs_info(path):
 def fetch_image(context, target, image_id, user_id, project_id):
     """Grab image"""
     images.fetch_to_raw(context, image_id, target, user_id, project_id)
+
+
+def get_info_filename(base_path):
+    """Construct a filename for storing addtional information about a base
+    image.
+
+    Returns a filename.
+    """
+
+    base_file = os.path.basename(base_path)
+    return (FLAGS.image_info_filename_pattern
+            % {'image': base_file})
+
+
+def is_valid_info_file(path):
+    """Test if a given path matches the pattern for info files."""
+
+    digest_size = hashlib.sha1().digestsize * 2
+    regexp = (FLAGS.image_info_filename_pattern
+              % {'image': ('([0-9a-f]{%(digest_size)d}|'
+                           '[0-9a-f]{%(digest_size)d}_sm|'
+                           '[0-9a-f]{%(digest_size)d}_[0-9]+)'
+                           % {'digest_size': digest_size})})
+    m = re.match(regexp, path)
+    if m:
+        return True
+    return False
+
+
+def read_stored_info(base_path, field=None):
+    """Read information about an image.
+
+    Returns an empty dictionary if there is no info, just the field value if
+    a field is requested, or the entire dictionary otherwise.
+    """
+
+    info_file = get_info_filename(base_path)
+    if not os.path.exists(info_file):
+        d = {}
+
+    else:
+        LOG.info(_('Reading image info file: %s'), info_file)
+        f = open(info_file, 'r')
+        serialized = f.read().rstrip()
+        f.close()
+        LOG.info(_('Read: %s'), serialized)
+
+        try:
+            d = json.loads(serialized)
+
+        except ValueError, e:
+            LOG.error(_('Error reading image info file %(filename)s: '
+                        '%(error)s'),
+                      {'filename': info_file,
+                       'error': e})
+            d = {}
+
+    if field:
+        return d.get(field, None)
+    return d
+
+
+def write_stored_info(target, field=None, value=None):
+    """Write information about an image."""
+
+    if not field:
+        return
+
+    info_file = get_info_filename(target)
+    ensure_tree(os.path.dirname(info_file))
+
+    d = read_stored_info(info_file)
+    d[field] = value
+    serialized = json.dumps(d)
+
+    LOG.info(_('Writing image info file: %s'), info_file)
+    LOG.info(_('Wrote: %s'), serialized)
+    f = open(info_file, 'w')
+    f.write(serialized)
+    f.close()

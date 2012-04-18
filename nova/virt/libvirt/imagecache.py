@@ -55,10 +55,6 @@ imagecache_opts = [
     cfg.BoolOpt('checksum_base_images',
                 default=False,
                 help='Write a checksum for files in _base to disk'),
-    cfg.StrOpt('image_info_filename_pattern',
-               default='$instances_path/$base_dir_name/%(image)s.sha1',
-               help='Allows image information files to be stored in '
-                    'non-standard locations'),
     ]
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
@@ -67,65 +63,23 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(imagecache_opts)
 
 
-def get_info_filename(base_path):
-    """Construct a filename for storing addtional information about a base
-    image.
-
-    Returns a filename.
-    """
-
-    base_file = os.path.basename(base_path)
-    return (FLAGS.image_info_filename_pattern
-            % {'image': base_file})
-
-
-def is_valid_info_file(path):
-    """Test if a given path matches the pattern for info files."""
-
-    digest_size = hashlib.sha1().digestsize * 2
-    regexp = (FLAGS.image_info_filename_pattern
-              % {'instances_path': FLAGS.instances_path,
-                 'image': ('([0-9a-f]{%(digest_size)d}|'
-                           '[0-9a-f]{%(digest_size)d}_sm|'
-                           '[0-9a-f]{%(digest_size)d}_[0-9]+)'
-                           % {'digest_size': digest_size})})
-    m = re.match(regexp, path)
-    if m:
-        return True
-    return False
-
-
-def read_stored_checksum(base_path):
-    """Read the checksum which was created at image fetch time.
+def read_stored_checksum(target):
+    """Read the checksum.
 
     Returns the checksum (as hex) or None.
     """
-
-    checksum_file = get_info_filename(base_path)
-    if not os.path.exists(checksum_file):
-        return None
-
-    f = open(checksum_file, 'r')
-    stored_checksum = f.read().rstrip()
-    f.close()
-    return stored_checksum
+    return virtutils.read_stored_info(target, field='sha1')
 
 
 def write_stored_checksum(target):
     """Write a checksum to disk for a file in _base."""
 
-    checksum_filename = get_info_filename(target)
-    if os.path.exists(target) and not os.path.exists(checksum_filename):
-        # NOTE(mikal): Create the checksum file first to exclude possible
-        # overlap in checksum operations. An empty checksum file is ignored if
-        # encountered during verification.
-        sum_file = open(checksum_filename, 'w')
+    if not read_stored_checksum(target):
         img_file = open(target, 'r')
         checksum = utils.hash_file(img_file)
         img_file.close()
 
-        sum_file.write(checksum)
-        sum_file.close()
+        virtutils.write_stored_info(target, field='sha1', value=checksum)
 
 
 class ImageCacheManager(object):
@@ -170,7 +124,8 @@ class ImageCacheManager(object):
 
             elif (len(ent) > digest_size + 2 and
                   ent[digest_size] == '_' and
-                  not is_valid_info_file(os.path.join(base_dir, ent))):
+                  not virtutils.is_valid_info_file(os.path.join(base_dir,
+                                                                ent))):
                 self._store_image(base_dir, ent, original=False)
 
     def _list_running_instances(self, context):
@@ -254,7 +209,7 @@ class ImageCacheManager(object):
             if m:
                 yield img, False, True
 
-    def _verify_checksum(self, img_id, base_file):
+    def _verify_checksum(self, img_id, base_file, create_if_missing=True):
         """Compare the checksum stored on disk with the current file.
 
         Note that if the checksum fails to verify this is logged, but no actual
@@ -279,15 +234,15 @@ class ImageCacheManager(object):
                 return True
 
         else:
-            LOG.debug(_('%(id)s (%(base_file)s): image verification skipped, '
-                        'no hash stored'),
-                      {'id': img_id,
-                       'base_file': base_file})
+            LOG.info(_('%(id)s (%(base_file)s): image verification skipped, '
+                       'no hash stored'),
+                     {'id': img_id,
+                      'base_file': base_file})
 
             # NOTE(mikal): If the checksum file is missing, then we should
             # create one. We don't create checksums when we download images
             # from glance because that would delay VM startup.
-            if FLAGS.checksum_base_images:
+            if FLAGS.checksum_base_images and create_if_missing:
                 write_stored_checksum(base_file)
 
             return None
@@ -316,7 +271,7 @@ class ImageCacheManager(object):
             LOG.info(_('Removing base file: %s'), base_file)
             try:
                 os.remove(base_file)
-                signature = get_info_filename(base_file)
+                signature = virtutils.get_info_filename(base_file)
                 if os.path.exists(signature):
                     os.remove(signature)
             except OSError, e:
