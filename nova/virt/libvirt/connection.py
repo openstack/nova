@@ -905,7 +905,7 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 state = self.get_info(instance)['state']
             except exception.NotFound:
-                LOG.error(_("During reboot, instance disappeared."),
+                LOG.error(_("During spawn, instance disappeared."),
                           instance=instance)
                 raise utils.LoopingCallDone
 
