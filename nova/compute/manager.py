@@ -1317,7 +1317,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_type_ref = self.db.instance_type_get(context,
                 migration_ref.new_instance_type_id)
 
-        network_info = self._get_instance_nw_info(context, instance_ref)
+        try:
+            network_info = self._get_instance_nw_info(context, instance_ref)
+        except Exception, error:
+            with utils.save_and_reraise_exception():
+                msg = _('%s. Setting instance vm_state to ERROR')
+                LOG.error(msg % error)
+                self._set_instance_error_state(context, instance_uuid)
+
         self.db.migration_update(context,
                                  migration_id,
                                  {'status': 'migrating'})
