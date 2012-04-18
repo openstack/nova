@@ -271,7 +271,10 @@ class ActionDeserializer(CommonDeserializer):
     def _action_rebuild(self, node):
         rebuild = {}
         if node.hasAttribute("name"):
-            rebuild['name'] = node.getAttribute("name")
+            name = node.getAttribute("name")
+            if not name:
+                raise AttributeError("Name cannot be blank")
+            rebuild['name'] = name
 
         if node.hasAttribute("auto_disk_config"):
             rebuild['auto_disk_config'] = node.getAttribute("auto_disk_config")

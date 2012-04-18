@@ -877,3 +877,14 @@ class TestServerActionXMLDeserializer(test.TestCase):
                           self.deserializer.deserialize,
                           serial_request,
                           'action')
+
+    def test_rebuild_blank_name(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    imageRef="http://localhost/images/1"
+                    name=""/>"""
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')
