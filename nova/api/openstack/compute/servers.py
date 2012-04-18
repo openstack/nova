@@ -140,9 +140,7 @@ def FullServerTemplate():
 
 
 class CommonDeserializer(wsgi.MetadataXMLDeserializer):
-    """
-    Common deserializer to handle xml-formatted server create
-    requests.
+    """Common deserializer to handle xml-formatted server create requests.
 
     Handles standard server attributes as well as optional metadata
     and personality attributes
@@ -151,7 +149,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
     metadata_deserializer = common.MetadataXMLDeserializer()
 
     def _extract_personality(self, server_node):
-        """Marshal the personality attribute of a parsed request"""
+        """Marshal the personality attribute of a parsed request."""
         node = self.find_first_child_named(server_node, "personality")
         if node is not None:
             personality = []
@@ -166,7 +164,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
             return None
 
     def _extract_server(self, node):
-        """Marshal the server attribute of a parsed request"""
+        """Marshal the server attribute of a parsed request."""
         server = {}
         server_node = self.find_first_child_named(node, 'server')
 
@@ -199,7 +197,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         return server
 
     def _extract_networks(self, server_node):
-        """Marshal the networks attribute of a parsed request"""
+        """Marshal the networks attribute of a parsed request."""
         node = self.find_first_child_named(server_node, "networks")
         if node is not None:
             networks = []
@@ -216,7 +214,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
             return None
 
     def _extract_security_groups(self, server_node):
-        """Marshal the security_groups attribute of a parsed request"""
+        """Marshal the security_groups attribute of a parsed request."""
         node = self.find_first_child_named(server_node, "security_groups")
         if node is not None:
             security_groups = []
@@ -232,8 +230,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
 
 
 class ActionDeserializer(CommonDeserializer):
-    """
-    Deserializer to handle xml-formatted server action requests.
+    """Deserializer to handle xml-formatted server action requests.
 
     Handles standard server attributes as well as optional metadata
     and personality attributes
@@ -327,22 +324,21 @@ class ActionDeserializer(CommonDeserializer):
 
 
 class CreateDeserializer(CommonDeserializer):
-    """
-    Deserializer to handle xml-formatted server create requests.
+    """Deserializer to handle xml-formatted server create requests.
 
     Handles standard server attributes as well as optional metadata
     and personality attributes
     """
 
     def default(self, string):
-        """Deserialize an xml-formatted server create request"""
+        """Deserialize an xml-formatted server create request."""
         dom = minidom.parseString(string)
         server = self._extract_server(dom)
         return {'body': {'server': server}}
 
 
 class Controller(wsgi.Controller):
-    """ The Server API base controller class for the OpenStack API """
+    """The Server API base controller class for the OpenStack API."""
 
     _view_builder_class = views_servers.ViewBuilder
 
@@ -366,7 +362,7 @@ class Controller(wsgi.Controller):
 
     @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
-        """ Returns a list of server names and ids for a given user """
+        """Returns a list of server names and ids for a given user."""
         try:
             servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
@@ -377,7 +373,7 @@ class Controller(wsgi.Controller):
 
     @wsgi.serializers(xml=ServersTemplate)
     def detail(self, req):
-        """ Returns a list of server details for a given user """
+        """Returns a list of server details for a given user."""
         try:
             servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
@@ -388,6 +384,7 @@ class Controller(wsgi.Controller):
 
     def _get_block_device_mapping(self, data):
         """Get block_device_mapping from 'server' dictionary.
+
         Overridden by volumes controller.
         """
         return None
@@ -405,9 +402,7 @@ class Controller(wsgi.Controller):
         return instances
 
     def _get_servers(self, req, is_detail):
-        """Returns a list of servers, taking into account any search
-        options specified.
-        """
+        """Returns a list of servers, based on any search options specified."""
 
         search_opts = {}
         search_opts.update(req.GET)
@@ -467,16 +462,14 @@ class Controller(wsgi.Controller):
             return self._view_builder.index(req, limited_list)
 
     def _get_server(self, context, instance_uuid):
-        """Utility function for looking up an instance by uuid"""
+        """Utility function for looking up an instance by uuid."""
         try:
             return self.compute_api.get(context, instance_uuid)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
     def _handle_quota_error(self, error):
-        """
-        Reraise quota errors as api-specific http exceptions
-        """
+        """Reraise quota errors as api-specific http exceptions."""
 
         code_mappings = {
             "OnsetFileLimitExceeded":
@@ -510,8 +503,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
     def _get_injected_files(self, personality):
-        """
-        Create a list of injected files from the personality attribute
+        """Create a list of injected files from the personality attribute.
 
         At this time, injected_files must be formatted as a list of
         (file_path, file_content) pairs for compatibility with the
@@ -538,9 +530,7 @@ class Controller(wsgi.Controller):
         return injected_files
 
     def _get_requested_networks(self, requested_networks):
-        """
-        Create a list of requested networks from the networks attribute
-        """
+        """Create a list of requested networks from the networks attribute."""
         networks = []
         for network in requested_networks:
             try:
@@ -578,7 +568,7 @@ class Controller(wsgi.Controller):
         return networks
 
     def _validate_user_data(self, user_data):
-        """Check if the user_data is encoded properly"""
+        """Check if the user_data is encoded properly."""
         if not user_data:
             return
         try:
@@ -603,7 +593,7 @@ class Controller(wsgi.Controller):
 
     @wsgi.serializers(xml=ServerTemplate)
     def show(self, req, id):
-        """ Returns server details by server id """
+        """Returns server details by server id."""
         try:
             context = req.environ['nova.context']
             instance = self.compute_api.get(context, id)
@@ -616,7 +606,7 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=CreateDeserializer)
     def create(self, req, body):
-        """ Creates a new server for a given user """
+        """Creates a new server for a given user."""
         if not body:
             raise exc.HTTPUnprocessableEntity()
 
@@ -775,7 +765,7 @@ class Controller(wsgi.Controller):
 
     @wsgi.serializers(xml=ServerTemplate)
     def update(self, req, id, body):
-        """Update server then pass on to version-specific controller"""
+        """Update server then pass on to version-specific controller."""
         if len(req.body) == 0:
             raise exc.HTTPUnprocessableEntity()
 
@@ -907,7 +897,7 @@ class Controller(wsgi.Controller):
 
     @wsgi.response(204)
     def delete(self, req, id):
-        """ Destroys a server """
+        """Destroys a server."""
         try:
             self._delete(req.environ['nova.context'], id)
         except exception.NotFound:
@@ -986,7 +976,7 @@ class Controller(wsgi.Controller):
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('resize')
     def _action_resize(self, req, id, body):
-        """ Resizes a given instance to the flavor size requested """
+        """Resizes a given instance to the flavor size requested."""
         try:
             flavor_ref = body["resize"]["flavorRef"]
             if not flavor_ref:
@@ -1007,7 +997,7 @@ class Controller(wsgi.Controller):
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('rebuild')
     def _action_rebuild(self, req, id, body):
-        """Rebuild an instance with the given attributes"""
+        """Rebuild an instance with the given attributes."""
         try:
             body = body['rebuild']
         except (KeyError, TypeError):
@@ -1135,7 +1125,7 @@ class Controller(wsgi.Controller):
         return resp
 
     def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
+        """Determine the admin password for a server on creation."""
         password = server.get('adminPass')
 
         if password is None:
@@ -1146,7 +1136,7 @@ class Controller(wsgi.Controller):
         return password
 
     def _get_server_search_options(self):
-        """Return server search options allowed by non-admin"""
+        """Return server search options allowed by non-admin."""
         return ('reservation_id', 'name', 'status', 'image', 'flavor',
                 'changes-since')
 
@@ -1156,7 +1146,7 @@ def create_resource():
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):
-    """Remove search options that are not valid for non-admin API/context"""
+    """Remove search options that are not valid for non-admin API/context."""
     if context.is_admin:
         # Allow all options
         return
