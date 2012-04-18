@@ -259,7 +259,7 @@ class ActionDeserializer(CommonDeserializer):
         return self._deserialize_image_action(node, ('name',))
 
     def _action_change_password(self, node):
-        if not node.hasAttribute("adminPass"):
+        if not node.getAttribute("adminPass"):
             raise AttributeError("No adminPass was specified in request")
         return {"adminPass": node.getAttribute("adminPass")}
 

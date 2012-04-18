@@ -758,6 +758,16 @@ class TestServerActionXMLDeserializer(test.TestCase):
                           serial_request,
                           'action')
 
+    def test_change_pass_empty_pass(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <changePassword
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    adminPass=""/> """
+        self.assertRaises(AttributeError,
+                          self.deserializer.deserialize,
+                          serial_request,
+                          'action')
+
     def test_reboot(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
                 <reboot
