@@ -579,8 +579,8 @@ class VMOps(object):
     def _get_vm_opaque_ref(self, instance):
         vm_ref = VMHelper.lookup(self._session, instance['name'])
         if vm_ref is None:
-            raise exception.NotFound(_('Could not find VM by name'),
-                                     instance=instance)
+            raise exception.NotFound(_('Could not find VM with name %s') %
+                                     instance['name'])
         return vm_ref
 
     def _acquire_bootlock(self, vm):
