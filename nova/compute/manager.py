@@ -1870,7 +1870,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.get_instance_disk_info(instance_name)
 
-    def pre_live_migration(self, context, instance_id, time=None,
+    def pre_live_migration(self, context, instance_id,
                            block_migration=False, disk=None):
         """Preparations for live migration at dest host.
 
@@ -1879,9 +1879,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param block_migration: if true, prepare for block migration
 
         """
-        if not time:
-            time = greenthread
-
         # Getting instance info
         instance_ref = self.db.instance_get(context, instance_id)
 

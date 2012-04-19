@@ -58,14 +58,6 @@ flags.DECLARE('stub_network', 'nova.compute.manager')
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 
 
-class FakeTime(object):
-    def __init__(self):
-        self.counter = 0
-
-    def sleep(self, t):
-        self.counter += t
-
-
 orig_rpc_call = rpc.call
 orig_rpc_cast = rpc.cast
 
@@ -1244,9 +1236,10 @@ class ComputeTestCase(BaseTestCase):
         c = context.get_admin_context()
 
         # start test
+        self.stubs.Set(time, 'sleep', lambda t: None)
         self.assertRaises(exception.FixedIpNotFoundForInstance,
                           self.compute.pre_live_migration,
-                          c, inst_ref['id'], time=FakeTime())
+                          c, inst_ref['id'])
         # cleanup
         db.instance_destroy(c, inst_ref['id'])
 
