@@ -1109,7 +1109,10 @@ class VMOps(object):
         """
         LOG.info(_("Destroying VM"), instance=instance)
 
-        vm_ref = self._get_vm_opaque_ref(instance)
+        # We don't use _get_vm_opaque_ref because the instance may
+        # truly not exist because of a failure during build. A valid
+        # vm_ref is checked correctly where necessary.
+        vm_ref = VMHelper.lookup(self._session, instance['name'])
 
         rescue_vm_ref = VMHelper.lookup(self._session,
                                         "%s-rescue" % instance.name)
