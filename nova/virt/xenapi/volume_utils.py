@@ -71,7 +71,7 @@ class VolumeHelper(xenapi.HelperBase):
             LOG.debug(_('Created %(label)s as %(sr_ref)s.') % locals())
             return sr_ref
 
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to create Storage Repository'))
 
@@ -111,7 +111,7 @@ class VolumeHelper(xenapi.HelperBase):
             session.call_xenapi("SR.scan", sr_ref)
             return sr_ref
 
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to introduce Storage Repository'))
 
@@ -122,7 +122,7 @@ class VolumeHelper(xenapi.HelperBase):
         """
         try:
             sr_ref = session.call_xenapi("SR.get_by_uuid", sr_uuid)
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to get SR using uuid'))
 
@@ -132,7 +132,7 @@ class VolumeHelper(xenapi.HelperBase):
             cls.unplug_pbds(session, sr_ref)
             sr_ref = session.call_xenapi("SR.forget", sr_ref)
 
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to forget Storage Repository'))
 
@@ -169,7 +169,7 @@ class VolumeHelper(xenapi.HelperBase):
             try:
                 LOG.debug(_('Introduced %(label)s as %(sr_ref)s.') % locals())
                 return sr_ref
-            except cls.XenAPI.Failure, exc:
+            except session.XenAPI.Failure, exc:
                 LOG.exception(exc)
                 raise StorageError(_('Unable to create Storage Repository'))
         else:
@@ -181,7 +181,7 @@ class VolumeHelper(xenapi.HelperBase):
         try:
             vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
             sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to find SR from VBD %s') % vbd_ref)
         return sr_ref
@@ -200,13 +200,13 @@ class VolumeHelper(xenapi.HelperBase):
         pbds = []
         try:
             pbds = session.call_xenapi("SR.get_PBDs", sr_ref)
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.warn(_('Ignoring exception %(exc)s when getting PBDs'
                     ' for %(sr_ref)s') % locals())
         for pbd in pbds:
             try:
                 session.call_xenapi("PBD.unplug", pbd)
-            except cls.XenAPI.Failure, exc:
+            except session.XenAPI.Failure, exc:
                 LOG.warn(_('Ignoring exception %(exc)s when unplugging'
                         ' PBD %(pbd)s') % locals())
 
@@ -229,7 +229,7 @@ class VolumeHelper(xenapi.HelperBase):
                         break
             else:
                 vdi_ref = (session.call_xenapi("SR.get_VDIs", sr_ref))[0]
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to introduce VDI on SR %s') % sr_ref)
 
@@ -237,7 +237,7 @@ class VolumeHelper(xenapi.HelperBase):
             vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
             LOG.debug(vdi_rec)
             LOG.debug(type(vdi_rec))
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to get record'
                                  ' of VDI %s on') % vdi_ref)
@@ -259,7 +259,7 @@ class VolumeHelper(xenapi.HelperBase):
                                         vdi_rec['location'],
                                         vdi_rec['xenstore_data'],
                                         vdi_rec['sm_config'])
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to introduce VDI for SR %s')
                                 % sr_ref)
