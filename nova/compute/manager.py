@@ -606,7 +606,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _notify_about_instance_usage(self, instance, event_suffix,
                                      usage_info=None, network_info=None):
         if not usage_info:
-            usage_info = utils.usage_from_instance(instance,
+            usage_info = compute_utils.usage_from_instance(instance,
                                                    network_info=network_info)
         notifier.notify('compute.%s' % self.host,
                         'compute.instance.%s' % event_suffix,
@@ -1301,7 +1301,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                           'migration_id': migration_ref['id'],
                           'image': image}})
 
-        usage_info = utils.usage_from_instance(instance_ref,
+        usage_info = compute_utils.usage_from_instance(instance_ref,
                               new_instance_type=new_instance_type['name'],
                               new_instance_type_id=new_instance_type['id'])
         self._notify_about_instance_usage(instance_ref, "resize.prep.end",
@@ -1552,7 +1552,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.SUSPENDED,
                               task_state=None)
 
-        usage_info = utils.usage_from_instance(instance_ref)
+        usage_info = compute_utils.usage_from_instance(instance_ref)
         notifier.notify('compute.%s' % self.host, 'compute.instance.suspend',
                 notifier.INFO, usage_info)
 
@@ -1574,7 +1574,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
 
-        usage_info = utils.usage_from_instance(instance_ref)
+        usage_info = compute_utils.usage_from_instance(instance_ref)
         notifier.notify('compute.%s' % self.host, 'compute.instance.resume',
                 notifier.INFO, usage_info)
 

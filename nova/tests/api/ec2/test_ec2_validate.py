@@ -22,6 +22,7 @@ from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
 from nova.compute import power_state
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -46,7 +47,7 @@ class EC2ValidateTestCase(test.TestCase):
         def dumb(*args, **kwargs):
             pass
 
-        self.stubs.Set(utils, 'usage_from_instance', dumb)
+        self.stubs.Set(compute_utils, 'usage_from_instance', dumb)
         # set up our cloud
         self.cloud = cloud.CloudController()
 

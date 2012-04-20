@@ -457,36 +457,6 @@ def last_completed_audit_period(unit=None):
     return (begin, end)
 
 
-def usage_from_instance(instance_ref, network_info=None, **kw):
-    def null_safe_str(s):
-        return str(s) if s else ''
-
-    image_ref_url = "%s/images/%s" % (generate_glance_url(),
-            instance_ref['image_ref'])
-
-    usage_info = dict(
-          tenant_id=instance_ref['project_id'],
-          user_id=instance_ref['user_id'],
-          instance_id=instance_ref['uuid'],
-          instance_type=instance_ref['instance_type']['name'],
-          instance_type_id=instance_ref['instance_type_id'],
-          memory_mb=instance_ref['memory_mb'],
-          disk_gb=instance_ref['root_gb'] + instance_ref['ephemeral_gb'],
-          display_name=instance_ref['display_name'],
-          created_at=str(instance_ref['created_at']),
-          deleted_at=null_safe_str(instance_ref['deleted_at']),
-          launched_at=null_safe_str(instance_ref['launched_at']),
-          image_ref_url=image_ref_url,
-          state=instance_ref['vm_state'],
-          state_description=null_safe_str(instance_ref['task_state']))
-
-    if network_info is not None:
-        usage_info['fixed_ips'] = network_info.fixed_ips()
-
-    usage_info.update(kw)
-    return usage_info
-
-
 def generate_password(length=20, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
     """Generate a random password from the supplied symbol groups.
 

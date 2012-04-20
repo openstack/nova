@@ -67,7 +67,7 @@ def notify_usage_exists(instance_ref, current_period=False):
                 break
 
         bw[label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
-    usage_info = utils.usage_from_instance(instance_ref,
+    usage_info = usage_from_instance(instance_ref,
                           audit_period_beginning=str(audit_start),
                           audit_period_ending=str(audit_end),
                           bandwidth=bw)
@@ -190,3 +190,33 @@ def legacy_network_info(network_model):
 
         network_info.append((network_dict, info_dict))
     return network_info
+
+
+def usage_from_instance(instance_ref, network_info=None, **kw):
+    def null_safe_str(s):
+        return str(s) if s else ''
+
+    image_ref_url = "%s/images/%s" % (utils.generate_glance_url(),
+                                      instance_ref['image_ref'])
+
+    usage_info = dict(
+          tenant_id=instance_ref['project_id'],
+          user_id=instance_ref['user_id'],
+          instance_id=instance_ref['uuid'],
+          instance_type=instance_ref['instance_type']['name'],
+          instance_type_id=instance_ref['instance_type_id'],
+          memory_mb=instance_ref['memory_mb'],
+          disk_gb=instance_ref['root_gb'] + instance_ref['ephemeral_gb'],
+          display_name=instance_ref['display_name'],
+          created_at=str(instance_ref['created_at']),
+          deleted_at=null_safe_str(instance_ref['deleted_at']),
+          launched_at=null_safe_str(instance_ref['launched_at']),
+          image_ref_url=image_ref_url,
+          state=instance_ref['vm_state'],
+          state_description=null_safe_str(instance_ref['task_state']))
+
+    if network_info is not None:
+        usage_info['fixed_ips'] = network_info.fixed_ips()
+
+    usage_info.update(kw)
+    return usage_info
