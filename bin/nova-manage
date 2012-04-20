@@ -1613,6 +1613,7 @@ CATEGORIES = [
     ('floating', FloatingIpCommands),
     ('host', HostCommands),
     ('instance_type', InstanceTypeCommands),
+    ('logs', GetLogCommands),
     ('network', NetworkCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
@@ -1624,7 +1625,7 @@ CATEGORIES = [
     ('vm', VmCommands),
     ('volume', VolumeCommands),
     ('vpn', VpnCommands),
-    ('logs', GetLogCommands)]
+]
 
 
 def lazy_match(name, key_value_tuples):
