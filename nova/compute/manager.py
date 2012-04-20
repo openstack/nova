@@ -2517,11 +2517,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self.driver.add_to_aggregate(context, aggregate, host, **kwargs)
         except exception.AggregateError:
-            error = sys.exc_info()
-            self._undo_aggregate_operation(context,
-                                           self.db.aggregate_host_delete,
-                                           aggregate.id, host)
-            raise error[0], error[1], error[2]
+            with utils.save_and_reraise_exception():
+                self._undo_aggregate_operation(context,
+                                               self.db.aggregate_host_delete,
+                                               aggregate.id, host)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def remove_aggregate_host(self, context, aggregate_id, host, **kwargs):
@@ -2532,12 +2531,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                                               aggregate, host, **kwargs)
         except (exception.AggregateError,
                 exception.InvalidAggregateAction) as e:
-            error = sys.exc_info()
-            self._undo_aggregate_operation(
+            with utils.save_and_reraise_exception():
+                self._undo_aggregate_operation(
                                     context, self.db.aggregate_host_add,
                                     aggregate.id, host,
                                     isinstance(e, exception.AggregateError))
-            raise error[0], error[1], error[2]
 
     def _undo_aggregate_operation(self, context, op, aggregate_id,
                                   host, set_error=True):
