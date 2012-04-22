@@ -73,6 +73,11 @@ def _gen_key(context, user_id, key_name):
         raise exception.KeyPairExists(key_name=key_name)
     except exception.NotFound:
         pass
+
+    if quota.allowed_key_pairs(context, 1) < 1:
+        msg = _("Quota exceeded, too many key pairs.")
+        raise exception.EC2APIError(msg)
+
     private_key, public_key, fingerprint = crypto.generate_key_pair()
     key = {}
     key['user_id'] = user_id
@@ -395,6 +400,11 @@ class CloudController(object):
             raise exception.KeyPairExists(key_name=key_name)
         except exception.NotFound:
             pass
+
+        if quota.allowed_key_pairs(context, 1) < 1:
+            msg = _("Quota exceeded, too many key pairs.")
+            raise exception.EC2APIError(msg)
+
         public_key = base64.b64decode(public_key_material)
         fingerprint = crypto.generate_fingerprint(public_key)
         key = {}

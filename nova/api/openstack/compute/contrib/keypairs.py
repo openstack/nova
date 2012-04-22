@@ -28,6 +28,7 @@ from nova.api.openstack import extensions
 from nova import crypto
 from nova import db
 from nova import exception
+from nova import quota
 
 
 authorize = extensions.extension_authorizer('compute', 'keypairs')
@@ -105,6 +106,11 @@ class KeypairController(object):
         keypair = {'user_id': context.user_id,
                    'name': name}
 
+        if quota.allowed_key_pairs(context, 1) < 1:
+            msg = _("Quota exceeded, too many key pairs.")
+            raise webob.exc.HTTPRequestEntityTooLarge(
+                      explanation=msg,
+                      headers={'Retry-After': 0})
         # import if public_key is sent
         if 'public_key' in params:
             try:

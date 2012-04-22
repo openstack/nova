@@ -60,6 +60,9 @@ quota_opts = [
     cfg.IntOpt('quota_security_group_rules',
                default=20,
                help='number of security rules per security group'),
+    cfg.IntOpt('quota_key_pairs',
+               default=100,
+               help='number of key pairs per user'),
     ]
 
 FLAGS = flags.FLAGS
@@ -68,7 +71,8 @@ FLAGS.register_opts(quota_opts)
 
 quota_resources = ['metadata_items', 'injected_file_content_bytes',
         'volumes', 'gigabytes', 'ram', 'floating_ips', 'instances',
-        'injected_files', 'cores', 'security_groups', 'security_group_rules']
+        'injected_files', 'cores', 'security_groups', 'security_group_rules',
+        'key_pairs']
 
 
 def _get_default_quotas():
@@ -85,6 +89,7 @@ def _get_default_quotas():
             FLAGS.quota_injected_file_content_bytes,
         'security_groups': FLAGS.quota_security_groups,
         'security_group_rules': FLAGS.quota_security_group_rules,
+        'key_pairs': FLAGS.quota_key_pairs,
     }
     # -1 in the quota flags means unlimited
     return defaults
@@ -202,6 +207,19 @@ def allowed_security_group_rules(context, security_group_id,
                                               used_rules,
                                               quota['security_group_rules'])
     return min(requested_rules, allowed_rules)
+
+
+def allowed_key_pairs(context, requested_key_pairs):
+    """Check quota and return min(requested, allowed) key pairs."""
+    user_id = context.user_id
+    project_id = context.project_id
+    context = context.elevated()
+    used_key_pairs = db.key_pair_count_by_user(context, user_id)
+    quota = get_project_quotas(context, project_id)
+    allowed_key_pairs = _get_request_allotment(requested_key_pairs,
+                                                  used_key_pairs,
+                                                  quota['key_pairs'])
+    return min(requested_key_pairs, allowed_key_pairs)
 
 
 def _calculate_simple_quota(context, resource, requested):
