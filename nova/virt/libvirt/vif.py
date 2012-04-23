@@ -89,14 +89,16 @@ class LibvirtBridgeDriver(vif.VIFDriver):
                 iface = FLAGS.vlan_interface or network['bridge_interface']
                 LOG.debug(_('Ensuring vlan %(vlan)s and bridge %(bridge)s'),
                           {'vlan': network['vlan'],
-                           'bridge': network['bridge']})
+                           'bridge': network['bridge']},
+                          instance=instance)
                 linux_net.LinuxBridgeInterfaceDriver.ensure_vlan_bridge(
                                              network['vlan'],
                                              network['bridge'],
                                              iface)
             else:
                 iface = FLAGS.flat_interface or network['bridge_interface']
-                LOG.debug(_("Ensuring bridge %s"), network['bridge'])
+                LOG.debug(_("Ensuring bridge %s"), network['bridge'],
+                          instance=instance)
                 linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(
                                         network['bridge'],
                                         iface)
@@ -162,8 +164,7 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
                           FLAGS.libvirt_ovs_bridge, dev, run_as_root=True)
             utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
         except exception.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif of instance '%s'"),
-                        instance['name'])
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
 
 class LibvirtOpenVswitchVirtualPortDriver(vif.VIFDriver):
@@ -217,6 +218,5 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
         try:
             utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
         except exception.ProcessExecutionError:
-            LOG.warning(_("Failed while unplugging vif of instance '%s'"),
-                        instance['name'])
+            LOG.warning(_("Failed while unplugging vif"), instance=instance)
             raise
