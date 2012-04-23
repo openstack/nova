@@ -96,12 +96,12 @@ function run_tests {
 #                when running on devstack.
 # NOTE(lzyeval): Avoid selecting *.pyc files to reduce pep8 check-up time
 #                when running on devstack.
-xen_api_path="plugins/xenserver/xenapi/etc/xapi.d/plugins"
+# NOTE(dprince): Exclude xenapi plugins. They are Python 2.4 code and as such
+#                cannot be expected to work with tools/hacking checks.
 xen_net_path="plugins/xenserver/networking/etc/xensource/scripts"
 srcfiles=`find nova -type f -name "*.py"`
 srcfiles+=" `find bin -type f ! -name "nova.conf*" ! -name "*api-paste.ini*"`"
 srcfiles+=" `find tools -type f -name "*.py"`"
-srcfiles+=" `find ${xen_api_path} ${xen_net_path} -type f ! -name "*.patch" ! -name "*.pyc"`"
 srcfiles+=" setup.py"
 
 function run_pep8 {
