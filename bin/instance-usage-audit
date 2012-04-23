@@ -72,4 +72,4 @@ if __name__ == '__main__':
                                                         end)
     print "%s instances" % len(instances)
     for instance_ref in instances:
-        nova.compute.utils.notify_usage_exists(instance_ref)
+        nova.compute.utils.notify_usage_exists(context, instance_ref)

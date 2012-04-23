@@ -18,7 +18,7 @@
 
 import netaddr
 
-from nova import context
+import nova.context
 from nova import db
 from nova import exception
 from nova import flags
@@ -31,13 +31,13 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 
-def notify_usage_exists(instance_ref, current_period=False):
+def notify_usage_exists(context, instance_ref, current_period=False):
     """ Generates 'exists' notification for an instance for usage auditing
         purposes.
 
         Generates usage for last completed period, unless 'current_period'
         is True."""
-    admin_context = context.get_admin_context(read_deleted='yes')
+    admin_context = nova.context.get_admin_context(read_deleted='yes')
     begin, end = utils.last_completed_audit_period()
     bw = {}
     if current_period:
@@ -73,7 +73,7 @@ def notify_usage_exists(instance_ref, current_period=False):
                             bandwidth=bw)
 
     notify_about_instance_usage(
-            instance_ref, 'exists', extra_usage_info=extra_usage_info)
+            context, instance_ref, 'exists', extra_usage_info=extra_usage_info)
 
 
 def legacy_network_info(network_model):
@@ -191,7 +191,7 @@ def legacy_network_info(network_model):
     return network_info
 
 
-def _usage_from_instance(instance_ref, network_info=None, **kw):
+def _usage_from_instance(context, instance_ref, network_info=None, **kw):
     def null_safe_str(s):
         return str(s) if s else ''
 
@@ -221,8 +221,9 @@ def _usage_from_instance(instance_ref, network_info=None, **kw):
     return usage_info
 
 
-def notify_about_instance_usage(instance, event_suffix, network_info=None,
-                                extra_usage_info=None, host=None):
+def notify_about_instance_usage(context, instance, event_suffix,
+                                network_info=None, extra_usage_info=None,
+                                host=None):
     if not host:
         host = FLAGS.host
 
@@ -230,7 +231,7 @@ def notify_about_instance_usage(instance, event_suffix, network_info=None,
         extra_usage_info = {}
 
     usage_info = _usage_from_instance(
-            instance, network_info=network_info, **extra_usage_info)
+            context, instance, network_info=network_info, **extra_usage_info)
 
     notifier_api.notify('compute.%s' % host,
                         'compute.instance.%s' % event_suffix,

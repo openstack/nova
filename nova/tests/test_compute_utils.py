@@ -82,7 +82,7 @@ class UsageInfoTestCase(test.TestCase):
         """Ensure 'exists' notification generates apropriate usage data."""
         instance_id = self._create_instance()
         instance = db.instance_get(self.context, instance_id)
-        compute_utils.notify_usage_exists(instance)
+        compute_utils.notify_usage_exists(self.context, instance)
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['priority'], 'INFO')
