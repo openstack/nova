@@ -46,6 +46,7 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(scheduler_driver_opts)
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
+flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 
 
 def cast_to_volume_host(context, host, method, update_db=True, **kwargs):
@@ -247,7 +248,9 @@ class Scheduler(object):
         """
 
         # Checking instance is running.
-        if instance_ref['power_state'] != power_state.RUNNING:
+        if instance_ref['power_state'] != power_state.RUNNING and not (
+            FLAGS.libvirt_type == 'xen' and
+            instance_ref['power_state'] == power_state.BLOCKED):
             raise exception.InstanceNotRunning(
                     instance_id=instance_ref['uuid'])
 
