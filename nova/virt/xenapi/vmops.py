@@ -51,7 +51,6 @@ from nova.virt.xenapi import volume_utils
 VolumeHelper = volume_utils.VolumeHelper
 NetworkHelper = network_utils.NetworkHelper
 VMHelper = vm_utils.VMHelper
-XenAPI = None
 LOG = logging.getLogger(__name__)
 
 xenapi_vmops_opts = [
