@@ -604,13 +604,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      launched_at=utils.utcnow())
 
     def _notify_about_instance_usage(self, instance, event_suffix,
-                                     usage_info=None, network_info=None):
-        if not usage_info:
-            usage_info = compute_utils.usage_from_instance(instance,
-                                                   network_info=network_info)
-        notifier.notify('compute.%s' % self.host,
-                        'compute.instance.%s' % event_suffix,
-                        notifier.INFO, usage_info)
+                                     network_info=None,
+                                     extra_usage_info=None):
+        # NOTE(sirp): The only thing this wrapper function does extra is handle
+        # the passing in of `self.host`. Ordinarily this will just be
+        # `FLAGS.host`, but `Manager`'s gets a chance to override this in its
+        # `__init__`.
+        compute_utils.notify_about_instance_usage(
+                instance, event_suffix, network_info=network_info,
+                extra_usage_info=extra_usage_info, host=self.host)
 
     def _deallocate_network(self, context, instance):
         if not FLAGS.stub_network:
@@ -1299,11 +1301,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                           'migration_id': migration_ref['id'],
                           'image': image}})
 
-        usage_info = compute_utils.usage_from_instance(instance_ref,
-                              new_instance_type=new_instance_type['name'],
-                              new_instance_type_id=new_instance_type['id'])
+        extra_usage_info = dict(new_instance_type=new_instance_type['name'],
+                                new_instance_type_id=new_instance_type['id'])
+
         self._notify_about_instance_usage(instance_ref, "resize.prep.end",
-                                          usage_info=usage_info)
+                                          extra_usage_info=extra_usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1548,9 +1550,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.SUSPENDED,
                               task_state=None)
 
-        usage_info = compute_utils.usage_from_instance(instance_ref)
-        notifier.notify('compute.%s' % self.host, 'compute.instance.suspend',
-                notifier.INFO, usage_info)
+        self._notify_about_instance_usage(instance_ref, 'suspend')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1570,9 +1570,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
 
-        usage_info = compute_utils.usage_from_instance(instance_ref)
-        notifier.notify('compute.%s' % self.host, 'compute.instance.resume',
-                notifier.INFO, usage_info)
+        self._notify_about_instance_usage(instance_ref, 'resume')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault

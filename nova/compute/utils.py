@@ -67,14 +67,13 @@ def notify_usage_exists(instance_ref, current_period=False):
                 break
 
         bw[label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
-    usage_info = usage_from_instance(instance_ref,
-                          audit_period_beginning=str(audit_start),
-                          audit_period_ending=str(audit_end),
-                          bandwidth=bw)
-    notifier_api.notify('compute.%s' % FLAGS.host,
-                        'compute.instance.exists',
-                        notifier_api.INFO,
-                        usage_info)
+
+    extra_usage_info = dict(audit_period_beginning=str(audit_start),
+                            audit_period_ending=str(audit_end),
+                            bandwidth=bw)
+
+    notify_about_instance_usage(
+            instance_ref, 'exists', extra_usage_info=extra_usage_info)
 
 
 def legacy_network_info(network_model):
@@ -192,7 +191,7 @@ def legacy_network_info(network_model):
     return network_info
 
 
-def usage_from_instance(instance_ref, network_info=None, **kw):
+def _usage_from_instance(instance_ref, network_info=None, **kw):
     def null_safe_str(s):
         return str(s) if s else ''
 
@@ -220,3 +219,19 @@ def usage_from_instance(instance_ref, network_info=None, **kw):
 
     usage_info.update(kw)
     return usage_info
+
+
+def notify_about_instance_usage(instance, event_suffix, network_info=None,
+                                extra_usage_info=None, host=None):
+    if not host:
+        host = FLAGS.host
+
+    if not extra_usage_info:
+        extra_usage_info = {}
+
+    usage_info = _usage_from_instance(
+            instance, network_info=network_info, **extra_usage_info)
+
+    notifier_api.notify('compute.%s' % host,
+                        'compute.instance.%s' % event_suffix,
+                        notifier_api.INFO, usage_info)

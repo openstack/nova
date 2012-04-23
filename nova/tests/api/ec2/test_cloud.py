@@ -95,7 +95,7 @@ class CloudTestCase(test.TestCase):
         def dumb(*args, **kwargs):
             pass
 
-        self.stubs.Set(compute_utils, 'usage_from_instance', dumb)
+        self.stubs.Set(compute_utils, 'notify_about_instance_usage', dumb)
         # set up our cloud
         self.cloud = cloud.CloudController()
         self.flags(compute_scheduler_driver='nova.scheduler.'
@@ -1560,7 +1560,7 @@ class CloudTestCase(test.TestCase):
         def dumb(*args, **kwargs):
             pass
 
-        self.stubs.Set(compute_utils, 'usage_from_instance', dumb)
+        self.stubs.Set(compute_utils, 'notify_about_instance_usage', dumb)
         # NOTE(comstud): Make 'cast' behave like a 'call' which will
         # ensure that operations complete
         self.stubs.Set(rpc, 'cast', rpc.call)
