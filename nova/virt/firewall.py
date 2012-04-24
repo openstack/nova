@@ -313,7 +313,7 @@ class IptablesFirewallDriver(FirewallDriver):
                 elif protocol == 'icmp':
                     args += self._build_icmp_rule(rule, version)
                 if rule.cidr:
-                    LOG.info('Using cidr %r', rule.cidr)
+                    LOG.debug('Using cidr %r', rule.cidr)
                     args += ['-s', rule.cidr]
                     fw_rules += [' '.join(args)]
                 else:
@@ -326,7 +326,7 @@ class IptablesFirewallDriver(FirewallDriver):
                         import nova.network
                         nw_api = nova.network.API()
                         for instance in rule['grantee_group']['instances']:
-                            LOG.info('instance: %r', instance)
+                            LOG.debug('instance: %r', instance)
                             nw_info = nw_api.get_instance_nw_info(ctxt,
                                                                   instance)
 
@@ -334,12 +334,12 @@ class IptablesFirewallDriver(FirewallDriver):
                                 for ip in nw_info.fixed_ips()
                                     if ip['version'] == version]
 
-                            LOG.info('ips: %r', ips)
+                            LOG.debug('ips: %r', ips)
                             for ip in ips:
                                 subrule = args + ['-s %s' % ip]
                                 fw_rules += [' '.join(subrule)]
 
-                LOG.info('Using fw_rules: %r', fw_rules)
+                LOG.debug('Using fw_rules: %r', fw_rules)
         ipv4_rules += ['-j $sg-fallback']
         ipv6_rules += ['-j $sg-fallback']
 
