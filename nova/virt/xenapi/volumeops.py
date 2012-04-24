@@ -35,9 +35,6 @@ class VolumeOps(object):
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
-        # Load XenAPI module in the helper classes respectively
-        volume_utils.VolumeHelper.XenAPI = self.XenAPI
-        vm_utils.VMHelper.XenAPI = self.XenAPI
 
     def create_volume_for_sm(self, volume, sr_uuid):
         LOG.debug("Creating volume for Storage Manager")

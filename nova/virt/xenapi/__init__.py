@@ -22,15 +22,13 @@
 
 class HelperBase(object):
     """
-    The base for helper classes. This adds the XenAPI class attribute
+    The base for helper classes.
     """
-    XenAPI = None
-
     @classmethod
     def get_rec(cls, session, record_type, ref):
         try:
             return session.call_xenapi('%s.get_record' % record_type, ref)
-        except cls.XenAPI.Failure, e:
+        except session.XenAPI.Failure, e:
             if e.details[0] != 'HANDLE_INVALID':
                 raise
 

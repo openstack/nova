@@ -239,7 +239,7 @@ class VMHelper(xenapi.HelperBase):
                     vbd_rec = session.call_xenapi("VBD.get_record", vbd_ref)
                     if vbd_rec['userdevice'] == str(number):
                         return vbd_ref
-                except cls.XenAPI.Failure, exc:
+                except session.XenAPI.Failure, exc:
                     LOG.exception(exc)
         raise volume_utils.StorageError(
                 _('VBD not found in instance %s') % vm_ref)
@@ -256,7 +256,7 @@ class VMHelper(xenapi.HelperBase):
             try:
                 session.call_xenapi('VBD.unplug', vbd_ref)
                 return
-            except cls.XenAPI.Failure, exc:
+            except session.XenAPI.Failure, exc:
                 err = len(exc.details) > 0 and exc.details[0]
                 if err == 'DEVICE_ALREADY_DETACHED':
                     LOG.info(_('VBD %s already detached'), vbd_ref)
@@ -280,7 +280,7 @@ class VMHelper(xenapi.HelperBase):
         """Destroy VBD from host database"""
         try:
             session.call_xenapi('VBD.destroy', vbd_ref)
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise volume_utils.StorageError(
                     _('Unable to destroy VBD %s') % vbd_ref)
@@ -313,7 +313,7 @@ class VMHelper(xenapi.HelperBase):
     def destroy_vdi(cls, session, vdi_ref):
         try:
             session.call_xenapi('VDI.destroy', vdi_ref)
-        except cls.XenAPI.Failure, exc:
+        except session.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise volume_utils.StorageError(
                     _('Unable to destroy VDI %s') % vdi_ref)
@@ -729,7 +729,7 @@ class VMHelper(xenapi.HelperBase):
             try:
                 result = session.call_plugin('glance', 'download_vhd', kwargs)
                 return json.loads(result)
-            except cls.XenAPI.Failure as exc:
+            except session.XenAPI.Failure as exc:
                 _type, _method, error = exc.details[:3]
                 if error == 'RetryableError':
                     LOG.error(_('download_vhd failed: %r') %
@@ -891,7 +891,7 @@ class VMHelper(xenapi.HelperBase):
                 return [dict(vdi_type=ImageType.to_string(image_type),
                              vdi_uuid=vdi_uuid,
                              file=None)]
-        except (cls.XenAPI.Failure, IOError, OSError) as e:
+        except (session.XenAPI.Failure, IOError, OSError) as e:
             # We look for XenAPI and OS failures.
             LOG.exception(_("Failed to fetch glance image"),
                           instance=instance)
@@ -1015,7 +1015,7 @@ class VMHelper(xenapi.HelperBase):
                     # Test valid VDI
                     record = session.call_xenapi("VDI.get_record", vdi_ref)
                     LOG.debug(_('VDI %s is still available'), record['uuid'])
-                except cls.XenAPI.Failure, exc:
+                except session.XenAPI.Failure, exc:
                     LOG.exception(exc)
                 else:
                     vdi_refs.append(vdi_ref)
@@ -1321,7 +1321,7 @@ def _get_all_vdis_in_sr(session, sr_ref):
         try:
             vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
             yield vdi_ref, vdi_rec
-        except VMHelper.XenAPI.Failure:
+        except session.XenAPI.Failure:
             continue
 
 

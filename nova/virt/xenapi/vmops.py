@@ -154,7 +154,6 @@ class VMOps(object):
         self.compute_api = compute.API()
         self._session = session
         self.poll_rescue_last_ran = None
-        VMHelper.XenAPI = self.XenAPI
         if FLAGS.firewall_driver not in firewall.drivers:
             FLAGS.set_default('firewall_driver', firewall.drivers[0])
         fw_class = utils.import_class(FLAGS.firewall_driver)
