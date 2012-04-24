@@ -56,6 +56,7 @@ LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 flags.DECLARE('stub_network', 'nova.compute.manager')
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
+flags.DECLARE('additional_compute_capabilities', 'nova.compute.manager')
 
 
 orig_rpc_call = rpc.call
@@ -1615,6 +1616,36 @@ class ComputeTestCase(BaseTestCase):
         ctxt = context.get_admin_context()
         self.compute.add_instance_fault_from_exc(ctxt, instance_uuid,
                                                  NotImplementedError('test'))
+
+    def test_get_additional_capabilities(self):
+        self.flags(additional_compute_capabilities=['test3=xyzzy',
+                                                    'test4',
+                                                    'nothertest=blat'])
+        caps = compute_manager._get_additional_capabilities()
+        all_caps = dict(test3='xyzzy',
+                        test4=True,
+                        nothertest='blat')
+        for c, val in all_caps.items():
+            self.assertTrue(c in caps, c)
+            self.assertEquals(val, caps[c])
+
+    def test_report_driver_status(self):
+        test_caps = dict(test1=1024, test2='foo', nothertest='bar')
+        self.flags(additional_compute_capabilities=['test3=xyzzy',
+                                                    'test4',
+                                                    'nothertest=blat'])
+        self.mox.StubOutWithMock(self.compute.driver, 'get_host_stats')
+        self.compute.driver.get_host_stats(refresh=True).AndReturn(test_caps)
+        self.compute._last_host_check = 0
+        self.mox.ReplayAll()
+
+        self.compute._report_driver_status(context)
+        caps = self.compute.last_capabilities
+        all_caps = dict(test1=1024, test2='foo', test3='xyzzy',
+                        test4=True, nothertest='bar')
+        for c, val in all_caps.items():
+            self.assertTrue(c in caps, c)
+            self.assertEquals(val, caps[c])
 
     def test_cleanup_running_deleted_instances(self):
         admin_context = context.get_admin_context()

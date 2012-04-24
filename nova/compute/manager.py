@@ -124,7 +124,15 @@ compute_opts = [
     cfg.IntOpt("heal_instance_info_cache_interval",
                default=60,
                help="Number of seconds between instance info_cache self "
-                        "healing updates")
+                        "healing updates"),
+    cfg.ListOpt('additional_compute_capabilities',
+               default=[],
+               help='a list of additional capabilities for this compute '
+               'host to advertise. Valid entries are name=value pairs '
+               'this functionality will be replaced when HostAggregates '
+               'become more funtional for general grouping in Folsom. (see: '
+               'http://etherpad.openstack.org/FolsomNovaHostAggregates-v2)'),
+
     ]
 
 FLAGS = flags.FLAGS
@@ -188,6 +196,21 @@ def wrap_instance_fault(function):
 def _get_image_meta(context, image_ref):
     image_service, image_id = nova.image.get_image_service(context, image_ref)
     return image_service.show(context, image_id)
+
+
+def _get_additional_capabilities():
+    """Return additional capabilities to advertise for this compute host
+    This will be replaced once HostAggrgates are able to handle more general
+    host grouping for custom schedulers."""
+    capabilities = {}
+    for cap in FLAGS.additional_compute_capabilities:
+        if '=' in cap:
+            name, value = cap.split('=', 1)
+        else:
+            name = cap
+            value = True
+        capabilities[name] = value
+    return capabilities
 
 
 class ComputeManager(manager.SchedulerDependentManager):
@@ -2265,8 +2288,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.info(_("Updating host status"))
             # This will grab info about the host and queue it
             # to be sent to the Schedulers.
-            self.update_service_capabilities(
-                self.driver.get_host_stats(refresh=True))
+            capabilities = _get_additional_capabilities()
+            capabilities.update(self.driver.get_host_stats(refresh=True))
+            self.update_service_capabilities(capabilities)
 
     @manager.periodic_task(ticks_between_runs=10)
     def _sync_power_states(self, context):
