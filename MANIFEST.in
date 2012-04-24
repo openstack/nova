@@ -4,6 +4,7 @@ include README.rst
 include MANIFEST.in pylintrc Authors
 include openstack-common.conf
 include babel.cfg tox.ini
+include ChangeLog
 graft nova/CA
 graft doc
 graft smoketests
