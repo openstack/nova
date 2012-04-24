@@ -1038,7 +1038,7 @@ class LibvirtConnection(driver.ComputeDriver):
         finally:
             try:
                 os.unlink(testfile)
-            except:
+            except Exception:
                 pass
 
         return hasDirectIO
