@@ -170,7 +170,7 @@ def nova_import_module_only(logical_line):
                 return importModuleCheck(mod, parent, added)
             else:
                 name = logical_line.split()[1]
-                if (name not in _missingImport and name):
+                if name not in _missingImport:
                     if VERBOSE_MISSING_IMPORT:
                         print >> sys.stderr, ("ERROR: import '%s' failed: %s" %
                             (name, exc))
@@ -385,8 +385,7 @@ if __name__ == "__main__":
     pep8.readlines = readlines
     try:
         pep8._main()
-    except SystemExit:
+    finally:
         if len(_missingImport) > 0:
-            print >> sys.stderr, ("%i Missing imports in this test environment"
+            print >> sys.stderr, ("%i imports missing in this test environment"
                     % len(_missingImport))
-        raise
