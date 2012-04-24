@@ -1690,8 +1690,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
         instance_id = instance_ref['id']
-        msg = _("instance %(instance_uuid)s: attaching volume %(volume_id)s"
-                " to %(mountpoint)s")
         LOG.audit(_('Attaching volume %(volume_id)s to %(mountpoint)s'),
                   locals(), context=context, instance=instance_ref)
         try:
@@ -1701,8 +1699,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                                     connector)
         except Exception:  # pylint: disable=W0702
             with utils.save_and_reraise_exception():
-                msg = _("instance %(instance_uuid)s: attach failed"
-                        " %(mountpoint)s, removing")
+                msg = _("Failed to connect to volume %(volume_id)s "
+                        "while attaching at %(mountpoint)s")
                 LOG.exception(msg % locals(), context=context,
                               instance=instance_ref)
                 self.volume_api.unreserve_volume(context, volume)
@@ -1712,8 +1710,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       mountpoint)
         except Exception:  # pylint: disable=W0702
             with utils.save_and_reraise_exception():
-                LOG.exception(_('Attach failed %(mountpoint)s, removing'),
-                              locals(), context=context,
+                msg = _("Failed to attach volume %(volume_id)s "
+                        "at %(mountpoint)s")
+                LOG.exception(msg % locals(), context=context,
                               instance=instance_ref)
                 self.volume_api.terminate_connection(context,
                                                      volume,
