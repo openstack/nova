@@ -31,9 +31,9 @@ from nova.virt.xenapi import connection as xenapi_conn
 
 
 flags.DECLARE("resize_confirm_window", "nova.compute.manager")
-flags.DECLARE("xenapi_connection_url", "nova.virt.xenapi_conn")
-flags.DECLARE("xenapi_connection_username", "nova.virt.xenapi_conn")
-flags.DECLARE("xenapi_connection_password", "nova.virt.xenapi_conn")
+flags.DECLARE("xenapi_connection_url", "nova.virt.xenapi.connection")
+flags.DECLARE("xenapi_connection_username", "nova.virt.xenapi.connection")
+flags.DECLARE("xenapi_connection_password", "nova.virt.xenapi.connection")
 
 FLAGS = flags.FLAGS
 # NOTE(sirp): Nova futzs with the sys.argv in order to provide default
