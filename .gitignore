@@ -18,3 +18,4 @@ tools/conf/nova.conf*
 cover/*
 dist/*
 .coverage
+covhtml
