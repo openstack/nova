@@ -1036,6 +1036,60 @@ class ServersControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
             self.controller._action_rebuild, req, FAKE_UUID, body)
 
+    def test_rebuild_instance_fails_when_min_ram_too_small(self):
+        # make min_ram larger than our instance ram size
+        def fake_get_image(self, context, image_href):
+            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                name='public image', is_public=True,
+                status='active', properties={'key1': 'value1'},
+                min_ram="4096", min_disk="10")
+        self.stubs.Set(nova.compute.api.API, '_get_image',
+                fake_get_image)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': image_href,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller._action_rebuild, req, FAKE_UUID, body)
+
+    def test_rebuild_instance_fails_when_min_disk_too_small(self):
+        # make min_disk larger than our instance disk size
+        def fake_get_image(self, context, image_href):
+            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                name='public image', is_public=True,
+                status='active', properties={'key1': 'value1'},
+                min_ram="128", min_disk="100000")
+        self.stubs.Set(nova.compute.api.API, '_get_image',
+                fake_get_image)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': image_href,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller._action_rebuild, req, FAKE_UUID, body)
+
     def test_rebuild_instance_with_access_ipv6_bad_format(self):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))

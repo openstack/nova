@@ -1063,6 +1063,10 @@ class Controller(wsgi.Controller):
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.InstanceTypeMemoryTooSmall as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
+        except exception.InstanceTypeDiskTooSmall as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
 
         instance = self._get_server(context, id)
 
