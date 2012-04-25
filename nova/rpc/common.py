@@ -32,7 +32,7 @@ LOG = logging.getLogger(__name__)
 
 rpc_opts = [
     cfg.IntOpt('rpc_thread_pool_size',
-               default=1024,
+               default=64,
                help='Size of RPC thread pool'),
     cfg.IntOpt('rpc_conn_pool_size',
                default=30,
