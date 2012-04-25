@@ -380,32 +380,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             'block_device_mapping': block_device_mapping
         }
 
-    def _is_instance_terminated(self, instance_uuid):
-        """Instance in DELETING task state or not found in DB"""
-        context = nova.context.get_admin_context()
-        try:
-            instance = self.db.instance_get_by_uuid(context, instance_uuid)
-            if instance['task_state'] == task_states.DELETING:
-                return True
-            return False
-        except Exception:
-            return True
-
-    def _shutdown_instance_even_if_deleted(self, context, instance_uuid):
-        """Call terminate_instance even for already deleted instances"""
-        try:
-            try:
-                self.terminate_instance(context, instance_uuid)
-            except exception.InstanceNotFound:
-                LOG.info(_("Instance already deleted from database. "
-                           "Attempting forceful vm deletion"),
-                         instance_uuid=instance_uuid)
-                ctxt = nova.context.get_admin_context(read_deleted='yes')
-                self.terminate_instance(ctxt, instance_uuid)
-        except Exception as ex:
-            LOG.exception(_("Exception encountered while terminating the "
-                            "instance"), instance_uuid=instance_uuid)
-
     def _run_instance(self, context, instance_uuid,
                       requested_networks=None,
                       injected_files=[],
@@ -438,16 +412,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._notify_about_instance_usage(
                     context, instance, "create.end", network_info=network_info)
-
-            if self._is_instance_terminated(instance_uuid):
-                raise exception.InstanceNotFound
         except exception.InstanceNotFound:
-            LOG.exception(_("Instance not found."),
-                          instance_uuid=instance_uuid)
-            # assuming the instance was already deleted, run "delete" again
-            # just in case
-            self._shutdown_instance_even_if_deleted(context, instance_uuid)
-            return
+            LOG.warn(_("Instance not found."), instance_uuid=instance_uuid)
         except Exception as e:
             with utils.save_and_reraise_exception():
                 self._set_instance_error_state(context, instance_uuid)
