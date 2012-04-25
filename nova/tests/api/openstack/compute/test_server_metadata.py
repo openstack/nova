@@ -346,6 +346,31 @@ class ServerMetaDataTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller.create, req, self.uuid, data)
 
+    def test_invalid_metadata_items_on_create(self):
+        self.stubs.Set(nova.db, 'instance_metadata_update',
+                       return_create_instance_metadata)
+        req = fakes.HTTPRequest.blank(self.url)
+        req.method = 'POST'
+        req.headers["content-type"] = "application/json"
+
+        #test for long key
+        data = {"metadata": {"a" * 260: "value1"}}
+        req.body = json.dumps(data)
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+                          self.controller.create, req, self.uuid, data)
+
+        #test for long value
+        data = {"metadata": {"key": "v" * 260}}
+        req.body = json.dumps(data)
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+                          self.controller.create, req, self.uuid, data)
+
+        #test for empty key.
+        data = {"metadata": {"": "value1"}}
+        req.body = json.dumps(data)
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+                          self.controller.create, req, self.uuid, data)
+
     def test_too_many_metadata_items_on_update_item(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
@@ -357,5 +382,34 @@ class ServerMetaDataTest(test.TestCase):
         req.body = json.dumps(data)
         req.headers["content-type"] = "application/json"
 
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+                          self.controller.update_all, req, self.uuid, data)
+
+    def test_invalid_metadata_items_on_update_item(self):
+        self.stubs.Set(nova.db, 'instance_metadata_update',
+                       return_create_instance_metadata)
+        data = {"metadata": {}}
+        for num in range(FLAGS.quota_metadata_items + 1):
+            data['metadata']['key%i' % num] = "blah"
+        req = fakes.HTTPRequest.blank(self.url)
+        req.method = 'PUT'
+        req.body = json.dumps(data)
+        req.headers["content-type"] = "application/json"
+
+        #test for long key
+        data = {"metadata": {"a" * 260: "value1"}}
+        req.body = json.dumps(data)
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+                          self.controller.update_all, req, self.uuid, data)
+
+        #test for long value
+        data = {"metadata": {"key": "v" * 260}}
+        req.body = json.dumps(data)
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+                          self.controller.update_all, req, self.uuid, data)
+
+        #test for empty key.
+        data = {"metadata": {"": "value1"}}
+        req.body = json.dumps(data)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller.update_all, req, self.uuid, data)

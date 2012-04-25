@@ -161,8 +161,18 @@ class Controller(object):
 
     def _handle_quota_error(self, error):
         """Reraise quota errors as api-specific http exceptions."""
-        if error.kwargs['code'] == "MetadataLimitExceeded":
-            raise exc.HTTPRequestEntityTooLarge(explanation=error.message,
+        code_mappings = {
+            "MetadataKeyValueLimitExceeded":
+                    _("Metadata property key or value greater than 255 "
+                    "characters"),
+            "MetadataKeyUnspecified":
+                    _("Metadata property key blank"),
+            "MetadataLimitExceeded":
+                    error.message % error.kwargs
+        }
+        expl = code_mappings.get(error.kwargs['code'])
+        if expl:
+            raise exc.HTTPRequestEntityTooLarge(explanation=expl,
                                                 headers={'Retry-After': 0})
         raise error
 
