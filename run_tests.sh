@@ -171,5 +171,5 @@ fi
 
 if [ $coverage -eq 1 ]; then
     echo "Generating coverage report in covhtml/"
-    ${wrapper} coverage html -d covhtml -i
+    ${wrapper} coverage html --include=nova/* -d covhtml -i
 fi
