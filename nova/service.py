@@ -27,6 +27,7 @@ import signal
 import eventlet
 import greenlet
 
+from nova.common import eventlet_backdoor
 from nova import context
 from nova import db
 from nova import exception
@@ -80,7 +81,7 @@ service_opts = [
                help='IP address for OpenStack Volume API to listen'),
     cfg.IntOpt('osapi_volume_listen_port',
                default=8776,
-               help='port for os volume api to listen'),
+               help='port for os volume api to listen')
     ]
 
 FLAGS = flags.FLAGS
@@ -430,6 +431,8 @@ def serve(*servers):
         _launcher = Launcher()
     for server in servers:
         _launcher.launch_server(server)
+
+    eventlet_backdoor.initialize_if_enabled()
 
 
 def wait():
