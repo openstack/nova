@@ -28,6 +28,7 @@ terminating it.
 **Related Flags**
 
 :instances_path:  Where instances are kept on disk
+:base_dir_name:  Where cached images are stored under instances_path
 :compute_driver:  Name of class that is used to handle virtualization, loaded
                   by :func:`nova.utils.import_object`
 
@@ -72,6 +73,11 @@ compute_opts = [
     cfg.StrOpt('instances_path',
                default='$state_path/instances',
                help='where instances are stored on disk'),
+    cfg.StrOpt('base_dir_name',
+               default='_base',
+               help="where cached images are stored under $instances_path"
+                    "This is NOT full path - just a folder name"
+                    "For per-compute-host cached images, Set to _base_$my_ip"),
     cfg.StrOpt('compute_driver',
                default='nova.virt.connection.get_connection',
                help='Driver to use for controlling virtualization'),

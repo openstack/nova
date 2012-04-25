@@ -325,7 +325,7 @@ class CacheConcurrencyTestCase(test.TestCase):
         self.flags(instances_path='nova.compute.manager')
 
         def fake_exists(fname):
-            basedir = os.path.join(FLAGS.instances_path, '_base')
+            basedir = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)
             if fname == basedir:
                 return True
             return False
@@ -1393,9 +1393,10 @@ class LibvirtConnTestCase(test.TestCase):
         if os.path.isdir(path):
             shutil.rmtree(path)
 
-        path = os.path.join(FLAGS.instances_path, '_base')
+        path = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)
         if os.path.isdir(path):
-            shutil.rmtree(os.path.join(FLAGS.instances_path, '_base'))
+            shutil.rmtree(os.path.join(FLAGS.instances_path,
+                                       FLAGS.base_dir_name))
 
     def test_get_host_ip_addr(self):
         conn = connection.LibvirtConnection(False)
