@@ -63,7 +63,7 @@ class VolumeOps(object):
         if vdi_ref is None:
             raise exception.Error(_('Could not find VDI ref'))
 
-        vm_utils.VMHelper.destroy_vdi(vdi_ref)
+        vm_utils.VMHelper.destroy_vdi(self._session, vdi_ref)
 
     def create_sr(self, label, params):
         LOG.debug(_("Creating SR %s") % label)
