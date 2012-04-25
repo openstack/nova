@@ -1315,11 +1315,11 @@ class API(BaseAPI):
         self._cast_compute_message('reboot_instance', context, instance,
                 params={'reboot_type': reboot_type})
 
-    def _validate_image_href(self, context, image_href):
+    def _get_image(self, context, image_href):
         """Throws an ImageNotFound exception if image_href does not exist."""
         (image_service, image_id) = nova.image.get_image_service(context,
                                                                  image_href)
-        image_service.show(context, image_id)
+        return image_service.show(context, image_id)
 
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
@@ -1327,13 +1327,19 @@ class API(BaseAPI):
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
         """Rebuild the given instance with the provided attributes."""
 
-        self._validate_image_href(context, image_href)
+        image = self._get_image(context, image_href)
 
         files_to_inject = kwargs.pop('files_to_inject', [])
         self._check_injected_file_quota(context, files_to_inject)
 
         metadata = kwargs.get('metadata', {})
         self._check_metadata_properties_quota(context, metadata)
+
+        instance_type = instance['instance_type']
+        if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
+            raise exception.InstanceTypeMemoryTooSmall()
+        if instance_type['root_gb'] < int(image.get('min_disk') or 0):
+            raise exception.InstanceTypeDiskTooSmall()
 
         self.update(context,
                     instance,
