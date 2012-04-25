@@ -39,6 +39,7 @@ from nova import flags
 from nova import local
 from nova import log as logging
 import nova.rpc.common as rpc_common
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -296,7 +297,11 @@ class MulticallWaiter(object):
         if self._done:
             raise StopIteration
         while True:
-            self._iterator.next()
+            try:
+                self._iterator.next()
+            except Exception:
+                with utils.save_and_reraise_exception():
+                    self.done()
             if self._got_ending:
                 self.done()
                 raise StopIteration
