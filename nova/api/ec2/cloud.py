@@ -1237,30 +1237,32 @@ class CloudController(object):
 
         return list(reservations.values())
 
-    def describe_addresses(self, context, **kwargs):
-        return self.format_addresses(context)
-
-    def format_addresses(self, context):
-        addresses = []
-        floaters = self.network_api.get_floating_ips_by_project(context)
-        for floating_ip_ref in floaters:
-            if floating_ip_ref['project_id'] is None:
-                continue
-            address = floating_ip_ref['address']
-            ec2_id = None
-            if floating_ip_ref['fixed_ip_id']:
-                fixed_id = floating_ip_ref['fixed_ip_id']
-                fixed = self.network_api.get_fixed_ip(context, fixed_id)
-                if fixed['instance_id'] is not None:
-                    ec2_id = ec2utils.id_to_ec2_id(fixed['instance_id'])
-            address_rv = {'public_ip': address,
-                          'instance_id': ec2_id}
-            if context.is_admin:
-                details = "%s (%s)" % (address_rv['instance_id'],
-                                       floating_ip_ref['project_id'])
-                address_rv['instance_id'] = details
-            addresses.append(address_rv)
+    def describe_addresses(self, context, public_ip=None, **kwargs):
+        if public_ip:
+            floatings = []
+            for address in public_ip:
+                floating = self.network_api.get_floating_ip_by_address(context,
+                                                                       address)
+                floatings.append(floating)
+        else:
+            floatings = self.network_api.get_floating_ips_by_project(context)
+        addresses = [self._format_address(context, f) for f in floatings]
         return {'addressesSet': addresses}
+
+    def _format_address(self, context, floating_ip):
+        ec2_id = None
+        if floating_ip['fixed_ip_id']:
+            fixed_id = floating_ip['fixed_ip_id']
+            fixed = self.network_api.get_fixed_ip(context, fixed_id)
+            if fixed['instance_id'] is not None:
+                ec2_id = ec2utils.id_to_ec2_id(fixed['instance_id'])
+        address = {'public_ip': floating_ip['address'],
+                   'instance_id': ec2_id}
+        if context.is_admin:
+            details = "%s (%s)" % (address['instance_id'],
+                                   floating_ip['project_id'])
+            address['instance_id'] = details
+        return address
 
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
