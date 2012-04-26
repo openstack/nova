@@ -66,67 +66,6 @@ def parse_options():
     return options, args
 
 
-def get_instance_id_from_name_label(name_label, template):
-    """In order to derive the instance_id from the name label on the VM, we
-    take the following steps:
-
-        1. We substitute a dummy value in to the instance_name_template so we
-           can figure out the prefix and the suffix of the template (the
-           instance_id is between the two)
-
-        2. We delete the prefix and suffix from the name_label.
-
-        3. What's left *should* be the instance_id which we cast to an int
-           and return.
-
-    >>> get_instance_id_from_name_label("", "instance-%08x")
-    Traceback (most recent call last):
-        ...
-    UnrecognizedNameLabel
-
-    >>> get_instance_id_from_name_label("instance-00000001", "instance-%08x")
-    1
-
-    >>> get_instance_id_from_name_label("instance-0000000A", "instance-%08x")
-    10
-
-    >>> get_instance_id_from_name_label("instance-42-suffix", \
-            "instance-%d-suffix")
-    42
-    """
-
-    # Interpolate template to figure out where to extract the instance_id from.
-    # The instance_id may be in hex "%x" or decimal "%d", so try decimal first
-    # then fall back to hex.
-    fake_instance_id = 123456789
-    result = template % fake_instance_id
-    in_hex = False
-    base_10 = "%d" % fake_instance_id
-
-    try:
-        prefix, suffix = result.split(base_10)
-    except ValueError:
-        base_16 = "%x" % fake_instance_id
-        prefix, suffix = result.split(base_16)
-        in_hex = True
-
-    if prefix:
-        name_label = name_label.replace(prefix, '')
-
-    if suffix:
-        name_label = name_label.replace(suffix, '')
-
-    try:
-        if in_hex:
-            instance_id = int(name_label, 16)
-        else:
-            instance_id = int(name_label)
-    except ValueError:
-        raise UnrecognizedNameLabel(name_label)
-
-    return instance_id
-
-
 def find_orphaned_instances(session, verbose=False):
     """Find and return a list of orphaned instances."""
     ctxt = context.get_admin_context(read_deleted="only")
@@ -135,16 +74,9 @@ def find_orphaned_instances(session, verbose=False):
 
     for vm_rec in _get_applicable_vm_recs(session):
         try:
-            instance_id = get_instance_id_from_name_label(
-                vm_rec["name_label"], FLAGS.instance_name_template)
-        except UnrecognizedNameLabel, exc:
-            print_xen_object("WARNING: Unrecognized VM", vm_rec,
-                    indent_level=0, verbose=verbose)
-            continue
-
-        try:
-            instance = db.api.instance_get(ctxt, instance_id)
-        except exception.InstanceNotFound:
+            uuid = vm_rec['other_config']['nova_uuid']
+            instance = db.api.instance_get(ctxt, uuid)
+        except (KeyError, exception.InstanceNotFound):
             # NOTE(jk0): Err on the side of caution here. If we don't know
             # anything about the particular instance, ignore it.
             print_xen_object("INFO: Ignoring VM", vm_rec, indent_level=0,
