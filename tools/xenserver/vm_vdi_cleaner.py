@@ -32,40 +32,17 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
 from nova.virt.xenapi import connection as xenapi_conn
 
 
+CONF = cfg.CONF
 flags.DECLARE("resize_confirm_window", "nova.compute.manager")
 
-FLAGS = flags.FLAGS
-# NOTE(sirp): Nova futzs with the sys.argv in order to provide default
-# flagfile. To isolate this awful practice, we're supplying a dummy
-# argument list.
-dummy = ["fakearg"]
-flags.parse_args(dummy)
 
-
-class UnrecognizedNameLabel(Exception):
-    pass
-
-
-def parse_options():
-    """Generate command line options."""
-
-    ALLOWED_COMMANDS = ["list-vdis", "clean-vdis", "list-instances",
-                        "clean-instances", "test"]
-    arg_str = "|".join(ALLOWED_COMMANDS)
-    parser = optparse.OptionParser("%prog [options] [" + arg_str + "]")
-    parser.add_option("--verbose", action="store_true")
-
-    options, args = parser.parse_args()
-
-    if not args:
-        parser.print_usage()
-        sys.exit(1)
-
-    return options, args
+ALLOWED_COMMANDS = ["list-vdis", "clean-vdis", "list-instances",
+                    "clean-instances", "test"]
 
 
 def call_xenapi(xenapi, method, *args):
@@ -73,7 +50,7 @@ def call_xenapi(xenapi, method, *args):
     return xenapi._session.call_xenapi(method, *args)
 
 
-def find_orphaned_instances(xenapi, verbose=False):
+def find_orphaned_instances(xenapi):
     """Find and return a list of orphaned instances."""
     ctxt = context.get_admin_context(read_deleted="only")
 
@@ -86,8 +63,7 @@ def find_orphaned_instances(xenapi, verbose=False):
         except (KeyError, exception.InstanceNotFound):
             # NOTE(jk0): Err on the side of caution here. If we don't know
             # anything about the particular instance, ignore it.
-            print_xen_object("INFO: Ignoring VM", vm_rec, indent_level=0,
-                    verbose=verbose)
+            print_xen_object("INFO: Ignoring VM", vm_rec, indent_level=0)
             continue
 
         # NOTE(jk0): This would be triggered if a VM was deleted but the
@@ -99,7 +75,7 @@ def find_orphaned_instances(xenapi, verbose=False):
         # been updated in over the specified period.
         is_zombie_vm = (instance.vm_state != "active"
                 and timeutils.is_older_than(instance.updated_at,
-                        FLAGS.zombie_instance_updated_at_window))
+                        CONF.zombie_instance_updated_at_window))
 
         if is_active_and_deleting or is_zombie_vm:
             orphaned_instances.append((vm_ref, vm_rec, instance))
@@ -129,15 +105,14 @@ def _get_applicable_vm_recs(xenapi):
         yield vm_ref, vm_rec
 
 
-def print_xen_object(obj_type, obj, indent_level=0, spaces_per_indent=4,
-                     verbose=False):
+def print_xen_object(obj_type, obj, indent_level=0, spaces_per_indent=4):
     """Pretty-print a Xen object.
 
     Looks like:
 
         VM (abcd-abcd-abcd): 'name label here'
     """
-    if not verbose:
+    if not CONF.verbose:
         return
     uuid = obj["uuid"]
     try:
@@ -149,7 +124,7 @@ def print_xen_object(obj_type, obj, indent_level=0, spaces_per_indent=4,
     print "".join([indent, msg])
 
 
-def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids, verbose=False):
+def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids):
     """Find VDIs which are connected to VBDs which are connected to VMs."""
     def _is_null_ref(ref):
         return ref == "OpaqueRef:NULL"
@@ -161,8 +136,7 @@ def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids, verbose=False):
         cur_vdi_rec = vdi_rec
         while True:
             cur_vdi_uuid = cur_vdi_rec["uuid"]
-            print_xen_object("VDI", vdi_rec, indent_level=indent_level,
-                             verbose=verbose)
+            print_xen_object("VDI", vdi_rec, indent_level=indent_level)
             connected_vdi_uuids.add(cur_vdi_uuid)
             vdi_and_parent_uuids.append(cur_vdi_uuid)
 
@@ -188,8 +162,7 @@ def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids, verbose=False):
 
     for vm_ref, vm_rec in _get_applicable_vm_recs(xenapi):
         indent_level = 0
-        print_xen_object("VM", vm_rec, indent_level=indent_level,
-                         verbose=verbose)
+        print_xen_object("VM", vm_rec, indent_level=indent_level)
 
         vbd_refs = vm_rec["VBDs"]
         for vbd_ref in vbd_refs:
@@ -201,8 +174,7 @@ def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids, verbose=False):
                 continue
 
             indent_level = 1
-            print_xen_object("VBD", vbd_rec, indent_level=indent_level,
-                             verbose=verbose)
+            print_xen_object("VBD", vbd_rec, indent_level=indent_level)
 
             vbd_vdi_ref = vbd_rec["VDI"]
 
@@ -219,8 +191,7 @@ def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids, verbose=False):
             _add_vdi_and_parents_to_connected(vdi_rec, indent_level)
 
 
-def _find_all_vdis_and_system_vdis(xenapi, all_vdi_uuids, connected_vdi_uuids,
-                                   verbose=False):
+def _find_all_vdis_and_system_vdis(xenapi, all_vdi_uuids, connected_vdi_uuids):
     """Collects all VDIs and adds system VDIs to the connected set."""
     def _system_owned(vdi_rec):
         vdi_name = vdi_rec["name_label"]
@@ -241,42 +212,39 @@ def _find_all_vdis_and_system_vdis(xenapi, all_vdi_uuids, connected_vdi_uuids,
         # System owned and non-managed VDIs should be considered 'connected'
         # for our purposes.
         if _system_owned(vdi_rec):
-            print_xen_object("SYSTEM VDI", vdi_rec, indent_level=0,
-                             verbose=verbose)
+            print_xen_object("SYSTEM VDI", vdi_rec, indent_level=0)
             connected_vdi_uuids.add(vdi_uuid)
         elif not vdi_rec["managed"]:
-            print_xen_object("UNMANAGED VDI", vdi_rec, indent_level=0,
-                             verbose=verbose)
+            print_xen_object("UNMANAGED VDI", vdi_rec, indent_level=0)
             connected_vdi_uuids.add(vdi_uuid)
 
 
-def find_orphaned_vdi_uuids(xenapi, verbose=False):
+def find_orphaned_vdi_uuids(xenapi):
     """Walk VM -> VBD -> VDI change and accumulate connected VDIs."""
     connected_vdi_uuids = set()
 
-    _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids, verbose=verbose)
+    _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids)
 
     all_vdi_uuids = set()
-    _find_all_vdis_and_system_vdis(xenapi, all_vdi_uuids, connected_vdi_uuids,
-                                   verbose=verbose)
+    _find_all_vdis_and_system_vdis(xenapi, all_vdi_uuids, connected_vdi_uuids)
 
     orphaned_vdi_uuids = all_vdi_uuids - connected_vdi_uuids
     return orphaned_vdi_uuids
 
 
-def list_orphaned_vdis(vdi_uuids, verbose=False):
+def list_orphaned_vdis(vdi_uuids):
     """List orphaned VDIs."""
     for vdi_uuid in vdi_uuids:
-        if verbose:
+        if CONF.verbose:
             print "ORPHANED VDI (%s)" % vdi_uuid
         else:
             print vdi_uuid
 
 
-def clean_orphaned_vdis(xenapi, vdi_uuids, verbose=False):
+def clean_orphaned_vdis(xenapi, vdi_uuids):
     """Clean orphaned VDIs."""
     for vdi_uuid in vdi_uuids:
-        if verbose:
+        if CONF.verbose:
             print "CLEANING VDI (%s)" % vdi_uuid
 
         vdi_ref = call_xenapi(xenapi, 'VDI.get_by_uuid', vdi_uuid)
@@ -286,19 +254,19 @@ def clean_orphaned_vdis(xenapi, vdi_uuids, verbose=False):
             print >> sys.stderr, "Skipping %s: %s" % (vdi_uuid, exc)
 
 
-def list_orphaned_instances(orphaned_instances, verbose=False):
+def list_orphaned_instances(orphaned_instances):
     """List orphaned instances."""
     for vm_ref, vm_rec, orphaned_instance in orphaned_instances:
-        if verbose:
+        if CONF.verbose:
             print "ORPHANED INSTANCE (%s)" % orphaned_instance.name
         else:
             print orphaned_instance.name
 
 
-def clean_orphaned_instances(xenapi, orphaned_instances, verbose=False):
+def clean_orphaned_instances(xenapi, orphaned_instances):
     """Clean orphaned instances."""
     for vm_ref, vm_rec, instance in orphaned_instances:
-        if verbose:
+        if CONF.verbose:
             print "CLEANING INSTANCE (%s)" % instance.name
 
         cleanup_instance(xenapi, instance, vm_ref, vm_rec)
@@ -306,33 +274,36 @@ def clean_orphaned_instances(xenapi, orphaned_instances, verbose=False):
 
 def main():
     """Main loop."""
-    options, args = parse_options()
-    verbose = options.verbose
-    command = args[0]
+    args = CONF(args=sys.argv,
+                usage='%prog [options] [' + '|'.join(ALLOWED_COMMANDS) + ']')
+    if len(args) < 2:
+        CONF.print_usage()
+        sys.exit(1)
 
-    if FLAGS.zombie_instance_updated_at_window < FLAGS.resize_confirm_window:
+    command = args[1]
+
+    if CONF.zombie_instance_updated_at_window < CONF.resize_confirm_window:
         raise Exception("`zombie_instance_updated_at_window` has to be longer"
                 " than `resize_confirm_window`.")
 
     xenapi = xenapi_conn.XenAPIDriver()
 
     if command == "list-vdis":
-        if verbose:
+        if CONF.verbose:
             print "Connected VDIs:\n"
-        orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi, verbose=verbose)
-        if verbose:
+        orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi)
+        if CONF.verbose:
             print "\nOrphaned VDIs:\n"
-        list_orphaned_vdis(orphaned_vdi_uuids, verbose=verbose)
+        list_orphaned_vdis(orphaned_vdi_uuids)
     elif command == "clean-vdis":
-        orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi, verbose=verbose)
-        clean_orphaned_vdis(xenapi, orphaned_vdi_uuids, verbose=verbose)
+        orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi)
+        clean_orphaned_vdis(xenapi, orphaned_vdi_uuids)
     elif command == "list-instances":
-        orphaned_instances = find_orphaned_instances(xenapi, verbose=verbose)
-        list_orphaned_instances(orphaned_instances, verbose=verbose)
+        orphaned_instances = find_orphaned_instances(xenapi)
+        list_orphaned_instances(orphaned_instances)
     elif command == "clean-instances":
-        orphaned_instances = find_orphaned_instances(xenapi, verbose=verbose)
-        clean_orphaned_instances(xenapi, orphaned_instances,
-                verbose=verbose)
+        orphaned_instances = find_orphaned_instances(xenapi)
+        clean_orphaned_instances(xenapi, orphaned_instances)
     elif command == "test":
         doctest.testmod()
     else:
