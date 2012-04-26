@@ -86,7 +86,8 @@ def start_transfer(read_file_handle, data_size, write_file_handle=None,
 
 def fetch_image(context, image, instance, **kwargs):
     """Download image from the glance image server."""
-    LOG.debug(_("Downloading image %s from glance image server") % image)
+    LOG.debug(_("Downloading image %s from glance image server") % image,
+              instance=instance)
     (glance_client, image_id) = glance.get_glance_client(context, image)
     metadata, read_iter = glance_client.get_image(image_id)
     read_file_handle = read_write_util.GlanceFileRead(read_iter)
@@ -100,12 +101,14 @@ def fetch_image(context, image, instance, **kwargs):
                                 file_size)
     start_transfer(read_file_handle, file_size,
                    write_file_handle=write_file_handle)
-    LOG.debug(_("Downloaded image %s from glance image server") % image)
+    LOG.debug(_("Downloaded image %s from glance image server") % image,
+              instance=instance)
 
 
 def upload_image(context, image, instance, **kwargs):
     """Upload the snapshotted vm disk file to Glance image server."""
-    LOG.debug(_("Uploading image %s to the Glance image server") % image)
+    LOG.debug(_("Uploading image %s to the Glance image server") % image,
+              instance=instance)
     read_file_handle = read_write_util.VmWareHTTPReadFile(
                                 kwargs.get("host"),
                                 kwargs.get("data_center_name"),
@@ -126,7 +129,8 @@ def upload_image(context, image, instance, **kwargs):
                                             kwargs.get("image_version")}}
     start_transfer(read_file_handle, file_size, glance_client=glance_client,
                         image_id=image_id, image_meta=image_metadata)
-    LOG.debug(_("Uploaded image %s to the Glance image server") % image)
+    LOG.debug(_("Uploaded image %s to the Glance image server") % image,
+              instance=instance)
 
 
 def get_vmdk_size_and_properties(context, image, instance):
@@ -136,10 +140,11 @@ def get_vmdk_size_and_properties(context, image, instance):
     geometry of the disk created depends on the size.
     """
 
-    LOG.debug(_("Getting image size for the image %s") % image)
+    LOG.debug(_("Getting image size for the image %s") % image,
+              instance=instance)
     (glance_client, image_id) = glance.get_glance_client(context, image)
     meta_data = glance_client.get_image_meta(image_id)
     size, properties = meta_data["size"], meta_data["properties"]
     LOG.debug(_("Got image size of %(size)s for the image %(image)s") %
-              locals())
+              locals(), instance=instance)
     return size, properties
