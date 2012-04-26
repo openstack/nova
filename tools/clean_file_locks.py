@@ -26,8 +26,8 @@ import logging
 import optparse
 
 from nova import flags
-from nova import utils
 from nova import log
+from nova import utils
 
 
 LOG = log.getLogger('nova.utils')

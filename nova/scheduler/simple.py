@@ -22,11 +22,11 @@ Simple Scheduler
 """
 
 from nova import db
-from nova import flags
 from nova import exception
+from nova import flags
 from nova.openstack.common import cfg
-from nova.scheduler import driver
 from nova.scheduler import chance
+from nova.scheduler import driver
 from nova import utils
 
 

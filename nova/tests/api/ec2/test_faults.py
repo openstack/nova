@@ -14,8 +14,8 @@
 
 import webob
 
-from nova import test
 from nova.api.ec2 import faults
+from nova import test
 
 
 class TestFaults(test.TestCase):
