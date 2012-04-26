@@ -319,11 +319,11 @@ class VMHelper(xenapi.HelperBase):
                     _('Unable to destroy VDI %s') % vdi_ref)
 
     @classmethod
-    def create_vdi(cls, session, sr_ref, name_label, name_description,
+    def create_vdi(cls, session, sr_ref, instance, name_description,
                    virtual_size, read_only=False):
         """Create a VDI record and returns its reference."""
         vdi_ref = session.call_xenapi("VDI.create",
-             {'name_label': name_label,
+             {'name_label': instance['name'],
               'name_description': name_description,
               'SR': sr_ref,
               'virtual_size': str(virtual_size),
@@ -331,7 +331,7 @@ class VMHelper(xenapi.HelperBase):
               'sharable': False,
               'read_only': read_only,
               'xenstore_data': {},
-              'other_config': {},
+              'other_config': {'nova_instance_uuid': instance['uuid']},
               'sm_config': {},
               'tags': []})
         LOG.debug(_('Created VDI %(vdi_ref)s (%(name_label)s,'
@@ -466,7 +466,7 @@ class VMHelper(xenapi.HelperBase):
 
             # Create new VDI
             vdi_size = instance_type['root_gb'] * 1024 * 1024 * 1024
-            new_ref = cls.create_vdi(session, sr_ref, instance.name, 'root',
+            new_ref = cls.create_vdi(session, sr_ref, instance, 'root',
                                      vdi_size)
 
             new_uuid = session.call_xenapi('VDI.get_uuid', new_ref)
@@ -525,7 +525,7 @@ class VMHelper(xenapi.HelperBase):
         sr_ref = cls.safe_find_sr(session)
         ONE_MEG = 1024 * 1024
         virtual_size = size_mb * ONE_MEG
-        vdi_ref = cls.create_vdi(session, sr_ref, instance.name, name,
+        vdi_ref = cls.create_vdi(session, sr_ref, instance, name,
                                  virtual_size)
 
         try:
@@ -853,9 +853,8 @@ class VMHelper(xenapi.HelperBase):
                 _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
                   "max %(max_size)d bytes") % locals())
 
-        name_label = instance.name
-        vdi_ref = cls.create_vdi(session, sr_ref, name_label, image_type_str,
-                                vdi_size)
+        vdi_ref = cls.create_vdi(session, sr_ref, instance, image_type_str,
+                                 vdi_size)
         # From this point we have a VDI on Xen host;
         # If anything goes wrong, we need to remember its uuid.
         try:
@@ -1457,6 +1456,29 @@ def _wait_for_device(dev):
 
     raise volume_utils.StorageError(
         _('Timeout waiting for device %s to be created') % dev)
+
+
+def cleanup_attached_vdis(session):
+    """Unplug any instance VDIs left after an unclean restart"""
+    this_vm_ref = get_this_vm_ref(session)
+
+    vbd_refs = session.call_xenapi('VM.get_VBDs', this_vm_ref)
+    for vbd_ref in vbd_refs:
+        try:
+            vbd_rec = session.call_xenapi('VBD.get_record', vbd_ref)
+            vdi_rec = session.call_xenapi('VDI.get_record', vbd_rec['VDI'])
+        except session.XenAPI.Failure, e:
+            if e.details[0] != 'HANDLE_INVALID':
+                raise
+            continue
+
+        if 'nova_instance_uuid' in vdi_rec['other_config']:
+            # Belongs to an instance and probably left over after an
+            # unclean restart
+            LOG.info(_('Disconnecting stale VDI %s from compute domU'),
+                     vdi_rec['uuid'])
+            VMHelper.unplug_vbd(session, vbd_ref)
+            VMHelper.destroy_vbd(session, vbd_ref)
 
 
 @contextlib.contextmanager

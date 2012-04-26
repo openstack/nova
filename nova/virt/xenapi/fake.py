@@ -141,21 +141,24 @@ def destroy_vdi(vdi_ref):
     del _db_content['VDI'][vdi_ref]
 
 
-def create_vdi(name_label, read_only, sr_ref, sharable):
-    return _create_object('VDI',
-                          {'name_label': name_label,
-                           'read_only': read_only,
-                           'SR': sr_ref,
-                           'type': '',
-                           'name_description': '',
-                           'sharable': sharable,
-                           'other_config': {},
-                           'location': '',
-                           'xenstore_data': '',
-                           'sm_config': {},
-                           'physical_utilisation': '123',
-                           'managed': True,
-                           'VBDs': {}})
+def create_vdi(name_label, sr_ref, **kwargs):
+    vdi_rec = {
+        'SR': sr_ref,
+        'read_only': False,
+        'type': '',
+        'name_label': name_label,
+        'name_description': '',
+        'sharable': False,
+        'other_config': {},
+        'location': '',
+        'xenstore_data': '',
+        'sm_config': {},
+        'physical_utilisation': '123',
+        'managed': True,
+        'VBDs': {},
+    }
+    vdi_rec.update(kwargs)
+    return _create_object('VDI', vdi_rec)
 
 
 def create_vbd(vm_ref, vdi_ref):
@@ -277,7 +280,7 @@ def _create_sr(table, obj):
         raise Failure(['SR_UNKNOWN_DRIVER', sr_type])
     host_ref = _db_content['host'].keys()[0]
     sr_ref = _create_object(table, obj[2])
-    vdi_ref = create_vdi('', False, sr_ref, False)
+    vdi_ref = create_vdi('', sr_ref)
     pbd_ref = create_pbd('', host_ref, sr_ref, True)
     _db_content['SR'][sr_ref]['VDIs'] = [vdi_ref]
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
@@ -423,7 +426,7 @@ class SessionBase(object):
             if vdi_per_lun:
                 # we need to create a vdi because this introduce
                 # is likely meant for a single vdi
-                vdi_ref = create_vdi('', False, sr_ref, False)
+                vdi_ref = create_vdi('', sr_ref)
                 _db_content['SR'][sr_ref]['VDIs'] = [vdi_ref]
                 _db_content['VDI'][vdi_ref]['SR'] = sr_ref
             return sr_ref
@@ -470,7 +473,8 @@ class SessionBase(object):
         name_label = db_ref['name_label']
         read_only = db_ref['read_only']
         sharable = db_ref['sharable']
-        vdi_ref = create_vdi(name_label, read_only, sr_ref, sharable)
+        vdi_ref = create_vdi(name_label, sr_ref, sharable=sharable,
+                             read_only=read_only)
         return vdi_ref
 
     def VDI_clone(self, _1, vdi_to_clone_ref):
@@ -479,7 +483,8 @@ class SessionBase(object):
         read_only = db_ref['read_only']
         sr_ref = db_ref['SR']
         sharable = db_ref['sharable']
-        vdi_ref = create_vdi(name_label, read_only, sr_ref, sharable)
+        vdi_ref = create_vdi(name_label, sr_ref, sharable=sharable,
+                             read_only=read_only)
         return vdi_ref
 
     def host_compute_free_memory(self, _1, ref):
