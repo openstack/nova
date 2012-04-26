@@ -65,7 +65,7 @@ class FilterScheduler(driver.Scheduler):
                 locals())
 
         payload = dict(request_spec=request_spec)
-        notifier.notify(notifier.publisher_id("scheduler"),
+        notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
         weighted_hosts = self._schedule(context, "compute", request_spec,
@@ -91,7 +91,7 @@ class FilterScheduler(driver.Scheduler):
             if instance:
                 instances.append(instance)
 
-        notifier.notify(notifier.publisher_id("scheduler"),
+        notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.end', notifier.INFO, payload)
 
         return instances
@@ -125,7 +125,7 @@ class FilterScheduler(driver.Scheduler):
         payload = dict(request_spec=request_spec,
                        weighted_host=weighted_host.to_dict(),
                        instance_id=instance['uuid'])
-        notifier.notify(notifier.publisher_id("scheduler"),
+        notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.scheduled', notifier.INFO,
                         payload)
 

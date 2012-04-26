@@ -20,6 +20,6 @@ FLAGS = flags.FLAGS
 NOTIFICATIONS = []
 
 
-def notify(message):
+def notify(_context, message):
     """Test notifier, stores notifications in memory for unittests."""
     NOTIFICATIONS.append(message)

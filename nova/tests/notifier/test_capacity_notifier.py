@@ -34,16 +34,16 @@ class CapacityNotifierTestCase(test.TestCase):
     def test_event_type(self):
         msg = self._make_msg("myhost", "mymethod")
         msg['event_type'] = 'random'
-        self.assertFalse(cn.notify(msg))
+        self.assertFalse(cn.notify(None, msg))
 
     def test_bad_event_suffix(self):
         msg = self._make_msg("myhost", "mymethod.badsuffix")
-        self.assertFalse(cn.notify(msg))
+        self.assertFalse(cn.notify(None, msg))
 
     def test_bad_publisher_id(self):
         msg = self._make_msg("myhost", "mymethod.start")
         msg['publisher_id'] = 'badpublisher'
-        self.assertFalse(cn.notify(msg))
+        self.assertFalse(cn.notify(None, msg))
 
     def test_update_called(self):
         def _verify_called(host, context, free_ram_mb_delta,
@@ -56,4 +56,4 @@ class CapacityNotifierTestCase(test.TestCase):
         self.stubs.Set(nova.db.api, "compute_node_utilization_update",
                        _verify_called)
         msg = self._make_msg("myhost", "delete.end")
-        self.assertTrue(cn.notify(msg))
+        self.assertTrue(cn.notify(None, msg))

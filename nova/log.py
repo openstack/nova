@@ -283,8 +283,10 @@ class PublishErrorsHandler(logging.Handler):
         if 'list_notifier_drivers' in FLAGS:
             if 'nova.notifier.log_notifier' in FLAGS.list_notifier_drivers:
                 return
-        nova.notifier.api.notify('nova.error.publisher', 'error_notification',
-            nova.notifier.api.ERROR, dict(error=record.msg))
+        nova.notifier.api.notify(None, 'nova.error.publisher',
+                                 'error_notification',
+                                 nova.notifier.api.ERROR,
+                                 dict(error=record.msg))
 
 
 def handle_exception(type, value, tb):

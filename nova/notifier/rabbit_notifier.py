@@ -31,9 +31,10 @@ FLAGS = flags.FLAGS
 FLAGS.register_opt(notification_topic_opt)
 
 
-def notify(message):
+def notify(context, message):
     """Sends a notification to the RabbitMQ"""
-    context = nova.context.get_admin_context()
+    if not context:
+        context = nova.context.get_admin_context()
     priority = message.get('priority',
                            FLAGS.default_notification_level)
     priority = priority.lower()

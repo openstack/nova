@@ -44,11 +44,12 @@ class FakeNotifier(object):
         self.provided_priority = None
         self.provided_payload = None
 
-    def notify(self, publisher, event, priority, payload):
+    def notify(self, context, publisher, event, priority, payload):
         self.provided_publisher = publisher
         self.provided_event = event
         self.provided_priority = priority
         self.provided_payload = payload
+        self.provided_context = context
 
 
 def good_function():
@@ -59,7 +60,7 @@ def bad_function_error():
     raise exception.Error()
 
 
-def bad_function_exception():
+def bad_function_exception(blah="a", boo="b", context=None):
     raise test.TestingException()
 
 
@@ -82,10 +83,11 @@ class WrapExceptionTestCase(test.TestCase):
         wrapped = exception.wrap_exception(notifier, "publisher", "event",
                                            "level")
         self.assertRaises(test.TestingException,
-                          wrapped(bad_function_exception))
+                          wrapped(bad_function_exception), context="context")
         self.assertEquals(notifier.provided_publisher, "publisher")
         self.assertEquals(notifier.provided_event, "event")
         self.assertEquals(notifier.provided_priority, "level")
+        self.assertEquals(notifier.provided_context, "context")
         for key in ['exception', 'args']:
             self.assertTrue(key in notifier.provided_payload.keys())
 

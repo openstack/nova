@@ -22,7 +22,7 @@ from nova import log as logging
 FLAGS = flags.FLAGS
 
 
-def notify(message):
+def notify(_context, message):
     """Notifies the recipient of the desired event given the model.
     Log notifications using nova's default logging system"""
 
