@@ -74,7 +74,7 @@ class ConsoleProxyManager(manager.Manager):
                                                       pool['id'],
                                                       instance_id)
         except exception.NotFound:
-            LOG.debug(_('Adding console'))
+            LOG.debug(_('Adding console'), instance=instance)
             if not password:
                 password = utils.generate_password(8)
             if not port:
