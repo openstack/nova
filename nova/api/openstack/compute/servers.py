@@ -499,7 +499,7 @@ class Controller(wsgi.Controller):
             msg = _("Server name is not a string or unicode")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        if value.strip() == '':
+        if not value.strip():
             msg = _("Server name is an empty string")
             raise exc.HTTPBadRequest(explanation=msg)
 
@@ -1042,6 +1042,9 @@ class Controller(wsgi.Controller):
 
         if 'accessIPv6' in body:
             self._validate_access_ipv6(body['accessIPv6'])
+
+        if 'name' in body:
+            self._validate_server_name(body['name'])
 
         kwargs = {}
 
