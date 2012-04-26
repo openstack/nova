@@ -1148,10 +1148,12 @@ class NetworkManager(manager.SchedulerDependentManager):
         if dns_zone and (dns_zone != instance_zone):
             LOG.warn(_('instance-dns-zone is |%(domain)s|, '
                        'which is in availability zone |%(zone)s|. '
-                       'Instance |%(instance)s| is in zone |%(zone2)s|. '
+                       'Instance is in zone |%(zone2)s|. '
                        'No DNS record will be created.'),
-                     {'domain': instance_domain, 'zone': dns_zone,
-                       'instance': instance_id, 'zone2': instance_zone})
+                     {'domain': instance_domain,
+                      'zone': dns_zone,
+                      'zone2': instance_zone},
+                     instance=instance)
             return False
         else:
             return True
