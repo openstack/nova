@@ -868,7 +868,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         #                 a non-vlan instance should connect to
         if requested_networks is not None and len(requested_networks) != 0:
             network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
-            networks = self.network_get_all_by_uuids(context, network_uuids)
+            networks = self.db.network_get_all_by_uuids(context, network_uuids)
         else:
             try:
                 networks = self.db.network_get_all(context)
