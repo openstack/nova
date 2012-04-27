@@ -22,11 +22,11 @@ Driver base-classes:
     types that support that contract
 """
 
+from nova.compute import power_state
 from nova import context as nova_context
 from nova import db
 from nova import flags
 from nova import log as logging
-from nova.compute import power_state
 
 
 LOG = logging.getLogger(__name__)

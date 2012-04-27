@@ -18,9 +18,9 @@ Fakes For Scheduler tests.
 
 import mox
 
-from nova import db
 from nova.compute import instance_types
 from nova.compute import vm_states
+from nova import db
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 

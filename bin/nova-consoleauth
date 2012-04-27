@@ -31,11 +31,11 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
 
+from nova.consoleauth import manager
 from nova import flags
 from nova import log as logging
 from nova import service
 from nova import utils
-from nova.consoleauth import manager
 
 
 if __name__ == "__main__":

@@ -42,9 +42,9 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
 
 from nova import flags
 from nova import log as logging
+from nova.objectstore import s3server
 from nova import service
 from nova import utils
-from nova.objectstore import s3server
 from nova.vnc import xvp_proxy
 
 

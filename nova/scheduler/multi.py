@@ -23,8 +23,8 @@ Scheduler that allows routing some calls to one driver and others to another.
 
 from nova import flags
 from nova.openstack.common import cfg
-from nova import utils
 from nova.scheduler import driver
+from nova import utils
 
 
 multi_scheduler_opts = [

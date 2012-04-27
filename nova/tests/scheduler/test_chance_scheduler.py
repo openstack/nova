@@ -24,8 +24,8 @@ import mox
 
 from nova import context
 from nova import exception
-from nova.scheduler import driver
 from nova.scheduler import chance
+from nova.scheduler import driver
 from nova.tests.scheduler import test_scheduler
 
 
