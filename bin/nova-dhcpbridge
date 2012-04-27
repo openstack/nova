@@ -99,6 +99,8 @@ def main():
     argv = FLAGS(sys.argv)
     logging.setup()
 
+    rpc.register_opts(FLAGS)
+
     if int(os.environ.get('TESTING', '0')):
         from nova.tests import fake_flags
 

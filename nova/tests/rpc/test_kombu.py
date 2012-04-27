@@ -53,6 +53,7 @@ def _raise_exc_stub(stubs, times, obj, method, exc_msg,
 class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
     def setUp(self):
         self.rpc = impl_kombu
+        impl_kombu.register_opts(FLAGS)
         super(RpcKombuTestCase, self).setUp()
 
     def tearDown(self):
@@ -61,10 +62,10 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
 
     def test_reusing_connection(self):
         """Test that reusing a connection returns same one."""
-        conn_context = self.rpc.create_connection(new=False)
+        conn_context = self.rpc.create_connection(FLAGS, new=False)
         conn1 = conn_context.connection
         conn_context.close()
-        conn_context = self.rpc.create_connection(new=False)
+        conn_context = self.rpc.create_connection(FLAGS, new=False)
         conn2 = conn_context.connection
         conn_context.close()
         self.assertEqual(conn1, conn2)
@@ -72,7 +73,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
     def test_topic_send_receive(self):
         """Test sending to a topic exchange/queue"""
 
-        conn = self.rpc.create_connection()
+        conn = self.rpc.create_connection(FLAGS)
         message = 'topic test message'
 
         self.received_message = None
@@ -89,7 +90,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
 
     def test_direct_send_receive(self):
         """Test sending to a direct exchange/queue"""
-        conn = self.rpc.create_connection()
+        conn = self.rpc.create_connection(FLAGS)
         message = 'direct test message'
 
         self.received_message = None
@@ -123,10 +124,10 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
             def topic_send(_context, topic, msg):
                 pass
 
-        MyConnection.pool = rpc_amqp.Pool(connection_cls=MyConnection)
+        MyConnection.pool = rpc_amqp.Pool(FLAGS, MyConnection)
         self.stubs.Set(impl_kombu, 'Connection', MyConnection)
 
-        impl_kombu.cast(ctxt, 'fake_topic', {'msg': 'fake'})
+        impl_kombu.cast(FLAGS, ctxt, 'fake_topic', {'msg': 'fake'})
 
     def test_cast_to_server_uses_server_params(self):
         """Test kombu rpc.cast"""
@@ -153,10 +154,10 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
             def topic_send(_context, topic, msg):
                 pass
 
-        MyConnection.pool = rpc_amqp.Pool(connection_cls=MyConnection)
+        MyConnection.pool = rpc_amqp.Pool(FLAGS, MyConnection)
         self.stubs.Set(impl_kombu, 'Connection', MyConnection)
 
-        impl_kombu.cast_to_server(ctxt, server_params,
+        impl_kombu.cast_to_server(FLAGS, ctxt, server_params,
                 'fake_topic', {'msg': 'fake'})
 
     @test.skip_test("kombu memory transport seems buggy with fanout queues "
@@ -192,7 +193,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         info = _raise_exc_stub(self.stubs, 2, self.rpc.DirectConsumer,
                 '__init__', 'foo timeout foo')
 
-        conn = self.rpc.Connection()
+        conn = self.rpc.Connection(FLAGS)
         result = conn.declare_consumer(self.rpc.DirectConsumer,
                 'test_topic', None)
 
@@ -206,7 +207,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         info = _raise_exc_stub(self.stubs, 1, self.rpc.DirectConsumer,
                 '__init__', 'meow')
 
-        conn = self.rpc.Connection()
+        conn = self.rpc.Connection(FLAGS)
         conn.connection_errors = (MyException, )
 
         result = conn.declare_consumer(self.rpc.DirectConsumer,
@@ -220,7 +221,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         info = _raise_exc_stub(self.stubs, 2, self.rpc.DirectConsumer,
                 '__init__', 'Socket closed', exc_class=IOError)
 
-        conn = self.rpc.Connection()
+        conn = self.rpc.Connection(FLAGS)
         result = conn.declare_consumer(self.rpc.DirectConsumer,
                 'test_topic', None)
 
@@ -234,7 +235,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         info = _raise_exc_stub(self.stubs, 2, self.rpc.DirectPublisher,
                 '__init__', 'foo timeout foo')
 
-        conn = self.rpc.Connection()
+        conn = self.rpc.Connection(FLAGS)
         conn.publisher_send(self.rpc.DirectPublisher, 'test_topic', 'msg')
 
         self.assertEqual(info['called'], 3)
@@ -243,7 +244,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         info = _raise_exc_stub(self.stubs, 2, self.rpc.DirectPublisher,
                 'send', 'foo timeout foo')
 
-        conn = self.rpc.Connection()
+        conn = self.rpc.Connection(FLAGS)
         conn.publisher_send(self.rpc.DirectPublisher, 'test_topic', 'msg')
 
         self.assertEqual(info['called'], 3)
@@ -256,7 +257,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         info = _raise_exc_stub(self.stubs, 1, self.rpc.DirectPublisher,
                 '__init__', 'meow')
 
-        conn = self.rpc.Connection()
+        conn = self.rpc.Connection(FLAGS)
         conn.connection_errors = (MyException, )
 
         conn.publisher_send(self.rpc.DirectPublisher, 'test_topic', 'msg')
@@ -267,7 +268,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         info = _raise_exc_stub(self.stubs, 1, self.rpc.DirectPublisher,
                 'send', 'meow')
 
-        conn = self.rpc.Connection()
+        conn = self.rpc.Connection(FLAGS)
         conn.connection_errors = (MyException, )
 
         conn.publisher_send(self.rpc.DirectPublisher, 'test_topic', 'msg')
@@ -275,7 +276,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         self.assertEqual(info['called'], 2)
 
     def test_iterconsume_errors_will_reconnect(self):
-        conn = self.rpc.Connection()
+        conn = self.rpc.Connection(FLAGS)
         message = 'reconnect test message'
 
         self.received_message = None
@@ -305,12 +306,13 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         value = "This is the exception message"
         self.assertRaises(NotImplementedError,
                           self.rpc.call,
+                          FLAGS,
                           self.context,
                           'test',
                           {"method": "fail",
                            "args": {"value": value}})
         try:
-            self.rpc.call(self.context,
+            self.rpc.call(FLAGS, self.context,
                      'test',
                      {"method": "fail",
                       "args": {"value": value}})
@@ -330,12 +332,13 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         value = "This is the exception message"
         self.assertRaises(exception.ConvertedException,
                           self.rpc.call,
+                          FLAGS,
                           self.context,
                           'test',
                           {"method": "fail_converted",
                            "args": {"value": value}})
         try:
-            self.rpc.call(self.context,
+            self.rpc.call(FLAGS, self.context,
                      'test',
                      {"method": "fail_converted",
                       "args": {"value": value}})

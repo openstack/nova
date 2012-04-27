@@ -93,7 +93,7 @@ class RpcCommonTestCase(test.TestCase):
         }
         serialized = json.dumps(failure)
 
-        after_exc = rpc_common.deserialize_remote_exception(serialized)
+        after_exc = rpc_common.deserialize_remote_exception(FLAGS, serialized)
         self.assertTrue(isinstance(after_exc, exception.NovaException))
         self.assertTrue('test message' in unicode(after_exc))
         #assure the traceback was added
@@ -108,7 +108,7 @@ class RpcCommonTestCase(test.TestCase):
         }
         serialized = json.dumps(failure)
 
-        after_exc = rpc_common.deserialize_remote_exception(serialized)
+        after_exc = rpc_common.deserialize_remote_exception(FLAGS, serialized)
         self.assertTrue(isinstance(after_exc, rpc_common.RemoteError))
 
     def test_deserialize_remote_exception_user_defined_exception(self):
@@ -121,7 +121,7 @@ class RpcCommonTestCase(test.TestCase):
         }
         serialized = json.dumps(failure)
 
-        after_exc = rpc_common.deserialize_remote_exception(serialized)
+        after_exc = rpc_common.deserialize_remote_exception(FLAGS, serialized)
         self.assertTrue(isinstance(after_exc, FakeUserDefinedException))
         #assure the traceback was added
         self.assertTrue('raise FakeUserDefinedException' in unicode(after_exc))
@@ -141,7 +141,7 @@ class RpcCommonTestCase(test.TestCase):
         }
         serialized = json.dumps(failure)
 
-        after_exc = rpc_common.deserialize_remote_exception(serialized)
+        after_exc = rpc_common.deserialize_remote_exception(FLAGS, serialized)
         self.assertTrue(isinstance(after_exc, rpc_common.RemoteError))
         #assure the traceback was added
         self.assertTrue('raise FakeIDontExistException' in unicode(after_exc))

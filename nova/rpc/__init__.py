@@ -17,17 +17,37 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import flags
 from nova.openstack.common import cfg
 from nova import utils
 
 
-rpc_backend_opt = cfg.StrOpt('rpc_backend',
-        default='nova.rpc.impl_kombu',
-        help="The messaging module to use, defaults to kombu.")
+rpc_opts = [
+    cfg.StrOpt('rpc_backend',
+               default='nova.rpc.impl_kombu',
+               help="The messaging module to use, defaults to kombu."),
+    cfg.IntOpt('rpc_thread_pool_size',
+               default=64,
+               help='Size of RPC thread pool'),
+    cfg.IntOpt('rpc_conn_pool_size',
+               default=30,
+               help='Size of RPC connection pool'),
+    cfg.IntOpt('rpc_response_timeout',
+               default=60,
+               help='Seconds to wait for a response from call or multicall'),
+    cfg.IntOpt('allowed_rpc_exception_modules',
+               default=['nova.exception'],
+               help='Modules of exceptions that are permitted to be recreated'
+                    'upon receiving exception data from an rpc call.'),
+    ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opt(rpc_backend_opt)
+_CONF = None
+
+
+def register_opts(conf):
+    global _CONF
+    _CONF = conf
+    _CONF.register_opts(rpc_opts)
+    _get_impl().register_opts(_CONF)
 
 
 def create_connection(new=True):
@@ -43,7 +63,7 @@ def create_connection(new=True):
 
     :returns: An instance of nova.rpc.common.Connection
     """
-    return _get_impl().create_connection(new=new)
+    return _get_impl().create_connection(_CONF, new=new)
 
 
 def call(context, topic, msg, timeout=None):
@@ -65,7 +85,7 @@ def call(context, topic, msg, timeout=None):
     :raises: nova.rpc.common.Timeout if a complete response is not received
              before the timeout is reached.
     """
-    return _get_impl().call(context, topic, msg, timeout)
+    return _get_impl().call(_CONF, context, topic, msg, timeout)
 
 
 def cast(context, topic, msg):
@@ -82,7 +102,7 @@ def cast(context, topic, msg):
 
     :returns: None
     """
-    return _get_impl().cast(context, topic, msg)
+    return _get_impl().cast(_CONF, context, topic, msg)
 
 
 def fanout_cast(context, topic, msg):
@@ -102,7 +122,7 @@ def fanout_cast(context, topic, msg):
 
     :returns: None
     """
-    return _get_impl().fanout_cast(context, topic, msg)
+    return _get_impl().fanout_cast(_CONF, context, topic, msg)
 
 
 def multicall(context, topic, msg, timeout=None):
@@ -131,7 +151,7 @@ def multicall(context, topic, msg, timeout=None):
     :raises: nova.rpc.common.Timeout if a complete response is not received
              before the timeout is reached.
     """
-    return _get_impl().multicall(context, topic, msg, timeout)
+    return _get_impl().multicall(_CONF, context, topic, msg, timeout)
 
 
 def notify(context, topic, msg):
@@ -144,7 +164,7 @@ def notify(context, topic, msg):
 
     :returns: None
     """
-    return _get_impl().notify(context, topic, msg)
+    return _get_impl().notify(_CONF, context, topic, msg)
 
 
 def cleanup():
@@ -172,7 +192,8 @@ def cast_to_server(context, server_params, topic, msg):
 
     :returns: None
     """
-    return _get_impl().cast_to_server(context, server_params, topic, msg)
+    return _get_impl().cast_to_server(_CONF, context, server_params, topic,
+                                      msg)
 
 
 def fanout_cast_to_server(context, server_params, topic, msg):
@@ -187,16 +208,16 @@ def fanout_cast_to_server(context, server_params, topic, msg):
 
     :returns: None
     """
-    return _get_impl().fanout_cast_to_server(context, server_params, topic,
-            msg)
+    return _get_impl().fanout_cast_to_server(_CONF, context, server_params,
+                                             topic, msg)
 
 
 _RPCIMPL = None
 
 
 def _get_impl():
-    """Delay import of rpc_backend until FLAGS are loaded."""
+    """Delay import of rpc_backend until configuration is loaded."""
     global _RPCIMPL
     if _RPCIMPL is None:
-        _RPCIMPL = utils.import_object(FLAGS.rpc_backend)
+        _RPCIMPL = utils.import_object(_CONF.rpc_backend)
     return _RPCIMPL

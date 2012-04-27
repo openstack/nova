@@ -25,7 +25,6 @@ import greenlet
 import qpid.messaging
 import qpid.messaging.exceptions
 
-from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.rpc import amqp as rpc_amqp
@@ -77,9 +76,6 @@ qpid_opts = [
                 default=True,
                 help='Disable Nagle algorithm'),
     ]
-
-FLAGS = flags.FLAGS
-FLAGS.register_opts(qpid_opts)
 
 
 class ConsumerBase(object):
@@ -147,7 +143,7 @@ class ConsumerBase(object):
 class DirectConsumer(ConsumerBase):
     """Queue/consumer class for 'direct'"""
 
-    def __init__(self, session, msg_id, callback):
+    def __init__(self, conf, session, msg_id, callback):
         """Init a 'direct' queue.
 
         'session' is the amqp session to use
@@ -165,7 +161,7 @@ class DirectConsumer(ConsumerBase):
 class TopicConsumer(ConsumerBase):
     """Consumer class for 'topic'"""
 
-    def __init__(self, session, topic, callback):
+    def __init__(self, conf, session, topic, callback):
         """Init a 'topic' queue.
 
         'session' is the amqp session to use
@@ -174,14 +170,14 @@ class TopicConsumer(ConsumerBase):
         """
 
         super(TopicConsumer, self).__init__(session, callback,
-                        "%s/%s" % (FLAGS.control_exchange, topic), {},
+                        "%s/%s" % (conf.control_exchange, topic), {},
                         topic, {})
 
 
 class FanoutConsumer(ConsumerBase):
     """Consumer class for 'fanout'"""
 
-    def __init__(self, session, topic, callback):
+    def __init__(self, conf, session, topic, callback):
         """Init a 'fanout' queue.
 
         'session' is the amqp session to use
@@ -236,7 +232,7 @@ class Publisher(object):
 
 class DirectPublisher(Publisher):
     """Publisher class for 'direct'"""
-    def __init__(self, session, msg_id):
+    def __init__(self, conf, session, msg_id):
         """Init a 'direct' publisher."""
         super(DirectPublisher, self).__init__(session, msg_id,
                                               {"type": "Direct"})
@@ -244,16 +240,16 @@ class DirectPublisher(Publisher):
 
 class TopicPublisher(Publisher):
     """Publisher class for 'topic'"""
-    def __init__(self, session, topic):
+    def __init__(self, conf, session, topic):
         """init a 'topic' publisher.
         """
         super(TopicPublisher, self).__init__(session,
-                                "%s/%s" % (FLAGS.control_exchange, topic))
+                                "%s/%s" % (conf.control_exchange, topic))
 
 
 class FanoutPublisher(Publisher):
     """Publisher class for 'fanout'"""
-    def __init__(self, session, topic):
+    def __init__(self, conf, session, topic):
         """init a 'fanout' publisher.
         """
         super(FanoutPublisher, self).__init__(session,
@@ -262,29 +258,32 @@ class FanoutPublisher(Publisher):
 
 class NotifyPublisher(Publisher):
     """Publisher class for notifications"""
-    def __init__(self, session, topic):
+    def __init__(self, conf, session, topic):
         """init a 'topic' publisher.
         """
         super(NotifyPublisher, self).__init__(session,
-                                "%s/%s" % (FLAGS.control_exchange, topic),
+                                "%s/%s" % (conf.control_exchange, topic),
                                 {"durable": True})
 
 
 class Connection(object):
     """Connection object."""
 
-    def __init__(self, server_params=None):
+    pool = None
+
+    def __init__(self, conf, server_params=None):
         self.session = None
         self.consumers = {}
         self.consumer_thread = None
+        self.conf = conf
 
         if server_params is None:
             server_params = {}
 
-        default_params = dict(hostname=FLAGS.qpid_hostname,
-                port=FLAGS.qpid_port,
-                username=FLAGS.qpid_username,
-                password=FLAGS.qpid_password)
+        default_params = dict(hostname=self.conf.qpid_hostname,
+                port=self.conf.qpid_port,
+                username=self.conf.qpid_username,
+                password=self.conf.qpid_password)
 
         params = server_params
         for key in default_params.keys():
@@ -298,23 +297,25 @@ class Connection(object):
         # before we call open
         self.connection.username = params['username']
         self.connection.password = params['password']
-        self.connection.sasl_mechanisms = FLAGS.qpid_sasl_mechanisms
-        self.connection.reconnect = FLAGS.qpid_reconnect
-        if FLAGS.qpid_reconnect_timeout:
-            self.connection.reconnect_timeout = FLAGS.qpid_reconnect_timeout
-        if FLAGS.qpid_reconnect_limit:
-            self.connection.reconnect_limit = FLAGS.qpid_reconnect_limit
-        if FLAGS.qpid_reconnect_interval_max:
+        self.connection.sasl_mechanisms = self.conf.qpid_sasl_mechanisms
+        self.connection.reconnect = self.conf.qpid_reconnect
+        if self.conf.qpid_reconnect_timeout:
+            self.connection.reconnect_timeout = (
+                    self.conf.qpid_reconnect_timeout)
+        if self.conf.qpid_reconnect_limit:
+            self.connection.reconnect_limit = self.conf.qpid_reconnect_limit
+        if self.conf.qpid_reconnect_interval_max:
             self.connection.reconnect_interval_max = (
-                    FLAGS.qpid_reconnect_interval_max)
-        if FLAGS.qpid_reconnect_interval_min:
+                    self.conf.qpid_reconnect_interval_max)
+        if self.conf.qpid_reconnect_interval_min:
             self.connection.reconnect_interval_min = (
-                    FLAGS.qpid_reconnect_interval_min)
-        if FLAGS.qpid_reconnect_interval:
-            self.connection.reconnect_interval = FLAGS.qpid_reconnect_interval
-        self.connection.hearbeat = FLAGS.qpid_heartbeat
-        self.connection.protocol = FLAGS.qpid_protocol
-        self.connection.tcp_nodelay = FLAGS.qpid_tcp_nodelay
+                    self.conf.qpid_reconnect_interval_min)
+        if self.conf.qpid_reconnect_interval:
+            self.connection.reconnect_interval = (
+                    self.conf.qpid_reconnect_interval)
+        self.connection.hearbeat = self.conf.qpid_heartbeat
+        self.connection.protocol = self.conf.qpid_protocol
+        self.connection.tcp_nodelay = self.conf.qpid_tcp_nodelay
 
         # Open is part of reconnect -
         # NOTE(WGH) not sure we need this with the reconnect flags
@@ -339,7 +340,7 @@ class Connection(object):
                 self.connection.open()
             except qpid.messaging.exceptions.ConnectionError, e:
                 LOG.error(_('Unable to connect to AMQP server: %s'), e)
-                time.sleep(FLAGS.qpid_reconnect_interval or 1)
+                time.sleep(self.conf.qpid_reconnect_interval or 1)
             else:
                 break
 
@@ -386,7 +387,7 @@ class Connection(object):
                 "%(err_str)s") % log_info)
 
         def _declare_consumer():
-            consumer = consumer_cls(self.session, topic, callback)
+            consumer = consumer_cls(self.conf, self.session, topic, callback)
             self._register_consumer(consumer)
             return consumer
 
@@ -435,7 +436,7 @@ class Connection(object):
                 "'%(topic)s': %(err_str)s") % log_info)
 
         def _publisher_send():
-            publisher = cls(self.session, topic)
+            publisher = cls(self.conf, self.session, topic)
             publisher.send(msg)
 
         return self.ensure(_connect_error, _publisher_send)
@@ -493,60 +494,70 @@ class Connection(object):
 
     def create_consumer(self, topic, proxy, fanout=False):
         """Create a consumer that calls a method in a proxy object"""
+        proxy_cb = rpc_amqp.ProxyCallback(self.conf, proxy,
+                rpc_amqp.get_connection_pool(self, Connection))
+
         if fanout:
-            consumer = FanoutConsumer(self.session, topic,
-                    rpc_amqp.ProxyCallback(proxy, Connection.pool))
+            consumer = FanoutConsumer(self.conf, self.session, topic, proxy_cb)
         else:
-            consumer = TopicConsumer(self.session, topic,
-                    rpc_amqp.ProxyCallback(proxy, Connection.pool))
+            consumer = TopicConsumer(self.conf, self.session, topic, proxy_cb)
+
         self._register_consumer(consumer)
+
         return consumer
 
 
-Connection.pool = rpc_amqp.Pool(connection_cls=Connection)
-
-
-def create_connection(new=True):
+def create_connection(conf, new=True):
     """Create a connection"""
-    return rpc_amqp.create_connection(new, Connection.pool)
+    return rpc_amqp.create_connection(conf, new,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def multicall(context, topic, msg, timeout=None):
+def multicall(conf, context, topic, msg, timeout=None):
     """Make a call that returns multiple times."""
-    return rpc_amqp.multicall(context, topic, msg, timeout, Connection.pool)
+    return rpc_amqp.multicall(conf, context, topic, msg, timeout,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def call(context, topic, msg, timeout=None):
+def call(conf, context, topic, msg, timeout=None):
     """Sends a message on a topic and wait for a response."""
-    return rpc_amqp.call(context, topic, msg, timeout, Connection.pool)
+    return rpc_amqp.call(conf, context, topic, msg, timeout,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def cast(context, topic, msg):
+def cast(conf, context, topic, msg):
     """Sends a message on a topic without waiting for a response."""
-    return rpc_amqp.cast(context, topic, msg, Connection.pool)
+    return rpc_amqp.cast(conf, context, topic, msg,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def fanout_cast(context, topic, msg):
+def fanout_cast(conf, context, topic, msg):
     """Sends a message on a fanout exchange without waiting for a response."""
-    return rpc_amqp.fanout_cast(context, topic, msg, Connection.pool)
+    return rpc_amqp.fanout_cast(conf, context, topic, msg,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def cast_to_server(context, server_params, topic, msg):
+def cast_to_server(conf, context, server_params, topic, msg):
     """Sends a message on a topic to a specific server."""
-    return rpc_amqp.cast_to_server(context, server_params, topic, msg,
-            Connection.pool)
+    return rpc_amqp.cast_to_server(conf, context, server_params, topic, msg,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def fanout_cast_to_server(context, server_params, topic, msg):
+def fanout_cast_to_server(conf, context, server_params, topic, msg):
     """Sends a message on a fanout exchange to a specific server."""
-    return rpc_amqp.fanout_cast_to_server(context, server_params, topic,
-            msg, Connection.pool)
+    return rpc_amqp.fanout_cast_to_server(conf, context, server_params, topic,
+            msg, rpc_amqp.get_connection_pool(conf, Connection))
 
 
-def notify(context, topic, msg):
+def notify(conf, context, topic, msg):
     """Sends a notification event on a topic."""
-    return rpc_amqp.notify(context, topic, msg, Connection.pool)
+    return rpc_amqp.notify(conf, context, topic, msg,
+            rpc_amqp.get_connection_pool(conf, Connection))
 
 
 def cleanup():
     return rpc_amqp.cleanup(Connection.pool)
+
+
+def register_opts(conf):
+    conf.register_opts(qpid_opts)

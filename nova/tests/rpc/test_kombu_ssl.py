@@ -19,6 +19,7 @@
 Unit Tests for remote procedure calls using kombu + ssl
 """
 
+from nova import flags
 from nova import test
 from nova.rpc import impl_kombu
 
@@ -28,11 +29,14 @@ SSL_CERT = "/tmp/cert.blah.blah"
 SSL_CA_CERT = "/tmp/cert.ca.blah.blah"
 SSL_KEYFILE = "/tmp/keyfile.blah.blah"
 
+FLAGS = flags.FLAGS
+
 
 class RpcKombuSslTestCase(test.TestCase):
 
     def setUp(self):
         super(RpcKombuSslTestCase, self).setUp()
+        impl_kombu.register_opts(FLAGS)
         self.flags(kombu_ssl_keyfile=SSL_KEYFILE,
                    kombu_ssl_ca_certs=SSL_CA_CERT,
                    kombu_ssl_certfile=SSL_CERT,
@@ -41,7 +45,7 @@ class RpcKombuSslTestCase(test.TestCase):
 
     def test_ssl_on_extended(self):
         rpc = impl_kombu
-        conn = rpc.create_connection(True)
+        conn = rpc.create_connection(FLAGS, True)
         c = conn.connection
         #This might be kombu version dependent...
         #Since we are now peaking into the internals of kombu...

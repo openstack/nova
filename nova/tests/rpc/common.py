@@ -26,19 +26,21 @@ import nose
 
 from nova import context
 from nova import exception
+from nova import flags
 from nova import log as logging
 from nova.rpc import amqp as rpc_amqp
 from nova.rpc import common as rpc_common
 from nova import test
 
 
+FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
 class BaseRpcTestCase(test.TestCase):
     def setUp(self, supports_timeouts=True):
         super(BaseRpcTestCase, self).setUp()
-        self.conn = self.rpc.create_connection(True)
+        self.conn = self.rpc.create_connection(FLAGS, True)
         self.receiver = TestReceiver()
         self.conn.create_consumer('test', self.receiver, False)
         self.conn.consume_in_thread()
@@ -51,20 +53,20 @@ class BaseRpcTestCase(test.TestCase):
 
     def test_call_succeed(self):
         value = 42
-        result = self.rpc.call(self.context, 'test', {"method": "echo",
-                                                 "args": {"value": value}})
+        result = self.rpc.call(FLAGS, self.context, 'test',
+                               {"method": "echo", "args": {"value": value}})
         self.assertEqual(value, result)
 
     def test_call_succeed_despite_multiple_returns_yield(self):
         value = 42
-        result = self.rpc.call(self.context, 'test',
+        result = self.rpc.call(FLAGS, self.context, 'test',
                           {"method": "echo_three_times_yield",
                            "args": {"value": value}})
         self.assertEqual(value + 2, result)
 
     def test_multicall_succeed_once(self):
         value = 42
-        result = self.rpc.multicall(self.context,
+        result = self.rpc.multicall(FLAGS, self.context,
                               'test',
                               {"method": "echo",
                                "args": {"value": value}})
@@ -75,7 +77,7 @@ class BaseRpcTestCase(test.TestCase):
 
     def test_multicall_three_nones(self):
         value = 42
-        result = self.rpc.multicall(self.context,
+        result = self.rpc.multicall(FLAGS, self.context,
                               'test',
                               {"method": "multicall_three_nones",
                                "args": {"value": value}})
@@ -86,7 +88,7 @@ class BaseRpcTestCase(test.TestCase):
 
     def test_multicall_succeed_three_times_yield(self):
         value = 42
-        result = self.rpc.multicall(self.context,
+        result = self.rpc.multicall(FLAGS, self.context,
                               'test',
                               {"method": "echo_three_times_yield",
                                "args": {"value": value}})
@@ -96,7 +98,7 @@ class BaseRpcTestCase(test.TestCase):
     def test_context_passed(self):
         """Makes sure a context is passed through rpc call."""
         value = 42
-        result = self.rpc.call(self.context,
+        result = self.rpc.call(FLAGS, self.context,
                           'test', {"method": "context",
                                    "args": {"value": value}})
         self.assertEqual(self.context.to_dict(), result)
@@ -112,7 +114,7 @@ class BaseRpcTestCase(test.TestCase):
                 # TODO(comstud):
                 # so, it will replay the context and use the same REQID?
                 # that's bizarre.
-                ret = self.rpc.call(context,
+                ret = self.rpc.call(FLAGS, context,
                                queue,
                                {"method": "echo",
                                 "args": {"value": value}})
@@ -120,11 +122,11 @@ class BaseRpcTestCase(test.TestCase):
                 return value
 
         nested = Nested()
-        conn = self.rpc.create_connection(True)
+        conn = self.rpc.create_connection(FLAGS, True)
         conn.create_consumer('nested', nested, False)
         conn.consume_in_thread()
         value = 42
-        result = self.rpc.call(self.context,
+        result = self.rpc.call(FLAGS, self.context,
                           'nested', {"method": "echo",
                                      "args": {"queue": "test",
                                               "value": value}})
@@ -139,12 +141,12 @@ class BaseRpcTestCase(test.TestCase):
         value = 42
         self.assertRaises(rpc_common.Timeout,
                           self.rpc.call,
-                          self.context,
+                          FLAGS, self.context,
                           'test',
                           {"method": "block",
                            "args": {"value": value}}, timeout=1)
         try:
-            self.rpc.call(self.context,
+            self.rpc.call(FLAGS, self.context,
                      'test',
                      {"method": "block",
                       "args": {"value": value}},
@@ -169,8 +171,8 @@ class BaseRpcAMQPTestCase(BaseRpcTestCase):
         self.stubs.Set(rpc_amqp, 'unpack_context', fake_unpack_context)
 
         value = 41
-        self.rpc.cast(self.context, 'test', {"method": "echo",
-                                             "args": {"value": value}})
+        self.rpc.cast(FLAGS, self.context, 'test',
+                      {"method": "echo", "args": {"value": value}})
 
         # Wait for the cast to complete.
         for x in xrange(50):
@@ -185,7 +187,7 @@ class BaseRpcAMQPTestCase(BaseRpcTestCase):
         self.stubs.Set(rpc_amqp, 'unpack_context', orig_unpack)
 
         value = 42
-        result = self.rpc.call(self.context, 'test',
+        result = self.rpc.call(FLAGS, self.context, 'test',
                 {"method": "echo",
                  "args": {"value": value}})
         self.assertEqual(value, result)

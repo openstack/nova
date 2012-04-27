@@ -22,32 +22,12 @@ import sys
 import traceback
 
 from nova import exception
-from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
 
 
 LOG = logging.getLogger(__name__)
-
-rpc_opts = [
-    cfg.IntOpt('rpc_thread_pool_size',
-               default=64,
-               help='Size of RPC thread pool'),
-    cfg.IntOpt('rpc_conn_pool_size',
-               default=30,
-               help='Size of RPC connection pool'),
-    cfg.IntOpt('rpc_response_timeout',
-               default=60,
-               help='Seconds to wait for a response from call or multicall'),
-    cfg.IntOpt('allowed_rpc_exception_modules',
-               default=['nova.exception'],
-               help='Modules of exceptions that are permitted to be recreated'
-                    'upon receiving exception data from an rpc call.'),
-    ]
-
-flags.FLAGS.register_opts(rpc_opts)
-FLAGS = flags.FLAGS
 
 
 class RemoteError(exception.NovaException):
@@ -95,7 +75,7 @@ class Connection(object):
         """
         raise NotImplementedError()
 
-    def create_consumer(self, topic, proxy, fanout=False):
+    def create_consumer(self, conf, topic, proxy, fanout=False):
         """Create a consumer on this connection.
 
         A consumer is associated with a message queue on the backend message
@@ -104,6 +84,7 @@ class Connection(object):
         off of the queue will determine which method gets called on the proxy
         object.
 
+        :param conf:  An openstack.common.cfg configuration object.
         :param topic: This is a name associated with what to consume from.
                       Multiple instances of a service may consume from the same
                       topic. For example, all instances of nova-compute consume
@@ -197,7 +178,7 @@ def serialize_remote_exception(failure_info):
     return json_data
 
 
-def deserialize_remote_exception(data):
+def deserialize_remote_exception(conf, data):
     failure = utils.loads(str(data))
 
     trace = failure.get('tb', [])
@@ -207,7 +188,7 @@ def deserialize_remote_exception(data):
 
     # NOTE(ameade): We DO NOT want to allow just any module to be imported, in
     # order to prevent arbitrary code execution.
-    if not module in FLAGS.allowed_rpc_exception_modules:
+    if not module in conf.allowed_rpc_exception_modules:
         return RemoteError(name, failure.get('message'), trace)
 
     try:

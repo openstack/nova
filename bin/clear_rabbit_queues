@@ -74,6 +74,7 @@ if __name__ == '__main__':
     utils.default_flagfile()
     args = flags.FLAGS(sys.argv)
     logging.setup()
+    rpc.register_opts(flags.FLAGS)
     delete_queues(args[1:])
     if FLAGS.delete_exchange:
         delete_exchange(FLAGS.control_exchange)

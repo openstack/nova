@@ -23,6 +23,7 @@ Unit Tests for remote procedure calls using qpid
 import mox
 
 from nova import context
+from nova import flags
 from nova import log as logging
 from nova.rpc import amqp as rpc_amqp
 from nova import test
@@ -35,6 +36,7 @@ except ImportError:
     impl_qpid = None
 
 
+FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
@@ -64,6 +66,7 @@ class RpcQpidTestCase(test.TestCase):
         self.mock_receiver = None
 
         if qpid:
+            impl_qpid.register_opts(FLAGS)
             self.orig_connection = qpid.messaging.Connection
             self.orig_session = qpid.messaging.Session
             self.orig_sender = qpid.messaging.Sender
@@ -98,7 +101,7 @@ class RpcQpidTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        connection = impl_qpid.create_connection()
+        connection = impl_qpid.create_connection(FLAGS)
         connection.close()
 
     def _test_create_consumer(self, fanout):
@@ -130,7 +133,7 @@ class RpcQpidTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        connection = impl_qpid.create_connection()
+        connection = impl_qpid.create_connection(FLAGS)
         connection.create_consumer("impl_qpid_test",
                                    lambda *_x, **_y: None,
                                    fanout)
@@ -176,11 +179,11 @@ class RpcQpidTestCase(test.TestCase):
         try:
             ctx = context.RequestContext("user", "project")
 
-            args = [ctx, "impl_qpid_test",
+            args = [FLAGS, ctx, "impl_qpid_test",
                     {"method": "test_method", "args": {}}]
 
             if server_params:
-                args.insert(1, server_params)
+                args.insert(2, server_params)
                 if fanout:
                     method = impl_qpid.fanout_cast_to_server
                 else:
@@ -218,7 +221,7 @@ class RpcQpidTestCase(test.TestCase):
                         server_params['hostname'] + ':' +
                                 str(server_params['port']))
 
-        MyConnection.pool = rpc_amqp.Pool(connection_cls=MyConnection)
+        MyConnection.pool = rpc_amqp.Pool(FLAGS, MyConnection)
         self.stubs.Set(impl_qpid, 'Connection', MyConnection)
 
     @test.skip_if(qpid is None, "Test requires qpid")
@@ -295,7 +298,7 @@ class RpcQpidTestCase(test.TestCase):
             else:
                 method = impl_qpid.call
 
-            res = method(ctx, "impl_qpid_test",
+            res = method(FLAGS, ctx, "impl_qpid_test",
                            {"method": "test_method", "args": {}})
 
             if multi:
