@@ -24,6 +24,7 @@ import traceback
 from nova import exception
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import utils
 
 
@@ -192,8 +193,7 @@ def deserialize_remote_exception(conf, data):
         return RemoteError(name, failure.get('message'), trace)
 
     try:
-        __import__(module)
-        mod = sys.modules[module]
+        mod = importutils.import_module(module)
         klass = getattr(mod, name)
         if not issubclass(klass, Exception):
             raise TypeError("Can only deserialize Exceptions")

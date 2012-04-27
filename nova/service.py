@@ -33,6 +33,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import rpc
 from nova import utils
 from nova import version
@@ -163,7 +164,7 @@ class Service(object):
         self.binary = binary
         self.topic = topic
         self.manager_class_name = manager
-        manager_class = utils.import_class(self.manager_class_name)
+        manager_class = importutils.import_class(self.manager_class_name)
         self.manager = manager_class(host=self.host, *args, **kwargs)
         self.report_interval = report_interval
         self.periodic_interval = periodic_interval
@@ -381,7 +382,7 @@ class WSGIService(object):
         if not manager_class_name:
             return None
 
-        manager_class = utils.import_class(manager_class_name)
+        manager_class = importutils.import_class(manager_class_name)
         return manager_class()
 
     def start(self):

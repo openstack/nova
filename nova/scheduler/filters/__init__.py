@@ -21,7 +21,7 @@ import os
 import types
 
 from nova import exception
-from nova import utils
+from nova.openstack.common import importutils
 
 
 class BaseHostFilter(object):
@@ -43,7 +43,7 @@ def _is_filter_class(cls):
 def _get_filter_classes_from_module(module_name):
     """Get all filter classes from a module."""
     classes = []
-    module = utils.import_object(module_name)
+    module = importutils.import_module(module_name)
     for obj_name in dir(module):
         itm = getattr(module, obj_name)
         if _is_filter_class(itm):
@@ -75,7 +75,7 @@ def get_filter_classes(filter_class_names):
     """Get filter classes from class names."""
     classes = []
     for cls_name in filter_class_names:
-        obj = utils.import_class(cls_name)
+        obj = importutils.import_class(cls_name)
         if _is_filter_class(obj):
             classes.append(obj)
         elif type(obj) is types.FunctionType:

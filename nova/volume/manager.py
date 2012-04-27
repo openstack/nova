@@ -44,6 +44,7 @@ from nova import flags
 from nova import log as logging
 from nova import manager
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import rpc
 from nova import utils
 from nova.volume import volume_types
@@ -76,7 +77,7 @@ class VolumeManager(manager.SchedulerDependentManager):
         """Load the driver from the one specified in args, or from flags."""
         if not volume_driver:
             volume_driver = FLAGS.volume_driver
-        self.driver = utils.import_object(volume_driver)
+        self.driver = importutils.import_object(volume_driver)
         super(VolumeManager, self).__init__(service_name='volume',
                                                     *args, **kwargs)
         # NOTE(vish): Implementation specific db handling is done

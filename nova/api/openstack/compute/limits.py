@@ -31,8 +31,8 @@ import webob.exc
 from nova.api.openstack.compute.views import limits as limits_views
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.openstack.common import importutils
 from nova import quota
-from nova import utils
 from nova import wsgi as base_wsgi
 
 
@@ -233,7 +233,7 @@ class RateLimitingMiddleware(base_wsgi.Middleware):
         if limiter is None:
             limiter = Limiter
         else:
-            limiter = utils.import_class(limiter)
+            limiter = importutils.import_class(limiter)
 
         # Parse the limits, if any are provided
         if limits is not None:

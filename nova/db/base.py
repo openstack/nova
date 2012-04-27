@@ -18,9 +18,9 @@
 
 """Base class for classes that need modular database access."""
 
-from nova import utils
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 
 
 db_driver_opt = cfg.StrOpt('db_driver',
@@ -37,4 +37,4 @@ class Base(object):
     def __init__(self, db_driver=None):
         if not db_driver:
             db_driver = FLAGS.db_driver
-        self.db = utils.import_object(db_driver)  # pylint: disable=C0103
+        self.db = importutils.import_module(db_driver)  # pylint: disable=C0103

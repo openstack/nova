@@ -40,6 +40,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi import firewall
@@ -156,9 +157,9 @@ class VMOps(object):
         self.poll_rescue_last_ran = None
         if FLAGS.firewall_driver not in firewall.drivers:
             FLAGS.set_default('firewall_driver', firewall.drivers[0])
-        fw_class = utils.import_class(FLAGS.firewall_driver)
+        fw_class = importutils.import_class(FLAGS.firewall_driver)
         self.firewall_driver = fw_class(xenapi_session=self._session)
-        vif_impl = utils.import_class(FLAGS.xenapi_vif_driver)
+        vif_impl = importutils.import_class(FLAGS.xenapi_vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
 
     def list_instances(self):

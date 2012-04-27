@@ -31,7 +31,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
-from nova import utils
+from nova.openstack.common import importutils
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmware_images
@@ -59,7 +59,7 @@ class VMWareVMOps(object):
     def __init__(self, session):
         """Initializer."""
         self._session = session
-        self._vif_driver = utils.import_object(FLAGS.vmware_vif_driver)
+        self._vif_driver = importutils.import_object(FLAGS.vmware_vif_driver)
 
     def list_instances(self):
         """Lists the VM instances that are registered with the ESX host."""

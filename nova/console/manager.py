@@ -23,6 +23,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import manager
 from nova import rpc
 from nova import utils
@@ -55,7 +56,7 @@ class ConsoleProxyManager(manager.Manager):
     def __init__(self, console_driver=None, *args, **kwargs):
         if not console_driver:
             console_driver = FLAGS.console_driver
-        self.driver = utils.import_object(console_driver)
+        self.driver = importutils.import_object(console_driver)
         super(ConsoleProxyManager, self).__init__(*args, **kwargs)
         self.driver.host = self.host
 

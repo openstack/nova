@@ -63,6 +63,7 @@ from nova import manager
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 import nova.policy
 from nova import quota
 from nova import utils
@@ -704,28 +705,28 @@ class NetworkManager(manager.SchedulerDependentManager):
     def __init__(self, network_driver=None, *args, **kwargs):
         if not network_driver:
             network_driver = FLAGS.network_driver
-        self.driver = utils.import_object(network_driver)
-        temp = utils.import_object(FLAGS.instance_dns_manager)
+        self.driver = importutils.import_module(network_driver)
+        temp = importutils.import_object(FLAGS.instance_dns_manager)
         self.instance_dns_manager = temp
         self.instance_dns_domain = FLAGS.instance_dns_domain
-        temp = utils.import_object(FLAGS.floating_ip_dns_manager)
+        temp = importutils.import_object(FLAGS.floating_ip_dns_manager)
         self.floating_dns_manager = temp
         self.network_api = network_api.API()
         self.compute_api = compute_api.API()
-        self.sgh = utils.import_object(FLAGS.security_group_handler)
+        self.sgh = importutils.import_object(FLAGS.security_group_handler)
 
         # NOTE(tr3buchet: unless manager subclassing NetworkManager has
         #                 already imported ipam, import nova ipam here
         if not hasattr(self, 'ipam'):
             self._import_ipam_lib('nova.network.quantum.nova_ipam_lib')
         l3_lib = kwargs.get("l3_lib", FLAGS.l3_lib)
-        self.l3driver = utils.import_object(l3_lib)
+        self.l3driver = importutils.import_object(l3_lib)
 
         super(NetworkManager, self).__init__(service_name='network',
                                                 *args, **kwargs)
 
     def _import_ipam_lib(self, ipam_lib):
-        self.ipam = utils.import_object(ipam_lib).get_ipam_lib(self)
+        self.ipam = importutils.import_module(ipam_lib).get_ipam_lib(self)
 
     @utils.synchronized('get_dhcp')
     def _get_dhcp_ip(self, context, network_ref, host=None):

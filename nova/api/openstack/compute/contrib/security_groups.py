@@ -31,6 +31,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import importutils
 from nova import quota
 from nova import utils
 
@@ -180,7 +181,7 @@ class SecurityGroupControllerBase(object):
 
     def __init__(self):
         self.compute_api = compute.API()
-        self.sgh = utils.import_object(FLAGS.security_group_handler)
+        self.sgh = importutils.import_object(FLAGS.security_group_handler)
 
     def _format_security_group_rule(self, context, rule):
         sg_rule = {}
@@ -569,7 +570,7 @@ class SecurityGroupActionController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(SecurityGroupActionController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
-        self.sgh = utils.import_object(FLAGS.security_group_handler)
+        self.sgh = importutils.import_object(FLAGS.security_group_handler)
 
     @wsgi.action('addSecurityGroup')
     def _addSecurityGroup(self, req, id, body):

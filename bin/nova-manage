@@ -76,21 +76,22 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
+from nova.api.ec2 import ec2utils
+from nova.auth import manager
 from nova.compat import flagfile
+from nova.compute import instance_types
 from nova import context
 from nova import crypto
 from nova import db
+from nova.db import migration
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import importutils
 from nova import quota
 from nova import rpc
 from nova import utils
 from nova import version
-from nova.api.ec2 import ec2utils
-from nova.auth import manager
-from nova.compute import instance_types
-from nova.db import migration
 from nova.volume import volume_types
 
 FLAGS = flags.FLAGS
@@ -794,7 +795,7 @@ class NetworkCommands(object):
             fixed_cidr = netaddr.IPNetwork(fixed_cidr)
 
         # create the network
-        net_manager = utils.import_object(FLAGS.network_manager)
+        net_manager = importutils.import_object(FLAGS.network_manager)
         net_manager.create_networks(context.get_admin_context(),
                                     label=label,
                                     cidr=fixed_range_v4,
@@ -863,7 +864,7 @@ class NetworkCommands(object):
         if fixed_range is None and uuid is None:
             raise Exception("Please specify either fixed_range or uuid")
 
-        net_manager = utils.import_object(FLAGS.network_manager)
+        net_manager = importutils.import_object(FLAGS.network_manager)
         if "QuantumManager" in FLAGS.network_manager:
             if uuid is None:
                 raise Exception("UUID is required to delete Quantum Networks")

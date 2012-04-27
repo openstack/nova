@@ -37,6 +37,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import utils
 from nova import wsgi
 
@@ -410,7 +411,7 @@ class Requestify(wsgi.Middleware):
 
     def __init__(self, app, controller):
         super(Requestify, self).__init__(app)
-        self.controller = utils.import_class(controller)()
+        self.controller = importutils.import_object(controller)
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):

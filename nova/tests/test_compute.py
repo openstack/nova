@@ -42,6 +42,7 @@ from nova import flags
 from nova.image import fake as fake_image
 from nova import log as logging
 from nova.notifier import test_notifier
+from nova.openstack.common import importutils
 import nova.policy
 from nova import rpc
 from nova.rpc import common as rpc_common
@@ -104,7 +105,7 @@ class BaseTestCase(test.TestCase):
                    stub_network=True,
                    notification_driver='nova.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager')
-        self.compute = utils.import_object(FLAGS.compute_manager)
+        self.compute = importutils.import_object(FLAGS.compute_manager)
 
         self.user_id = 'fake'
         self.project_id = 'fake'

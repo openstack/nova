@@ -19,6 +19,7 @@ from nova import flags
 from nova import utils
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 
 
 LOG = logging.getLogger(__name__)
@@ -117,7 +118,7 @@ def notify(publisher_id, event_type, priority, payload):
     # Ensure everything is JSON serializable.
     payload = utils.to_primitive(payload, convert_instances=True)
 
-    driver = utils.import_object(FLAGS.notification_driver)
+    driver = importutils.import_module(FLAGS.notification_driver)
     msg = dict(message_id=str(uuid.uuid4()),
                    publisher_id=publisher_id,
                    event_type=event_type,

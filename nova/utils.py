@@ -57,6 +57,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 
 
 LOG = logging.getLogger(__name__)
@@ -67,27 +68,6 @@ FLAGS = flags.FLAGS
 FLAGS.register_opt(
     cfg.BoolOpt('disable_process_locking', default=False,
                 help='Whether to disable inter-process locks'))
-
-
-def import_class(import_str):
-    """Returns a class from a string including module and class."""
-    mod_str, _sep, class_str = import_str.rpartition('.')
-    try:
-        __import__(mod_str)
-        return getattr(sys.modules[mod_str], class_str)
-    except (ImportError, ValueError, AttributeError), exc:
-        LOG.debug(_('Inner Exception: %s'), exc)
-        raise exception.ClassNotFound(class_name=class_str, exception=exc)
-
-
-def import_object(import_str):
-    """Returns an object including a module or module and class."""
-    try:
-        __import__(import_str)
-        return sys.modules[import_str]
-    except ImportError:
-        cls = import_class(import_str)
-        return cls()
 
 
 def find_config(config_path):
@@ -1229,20 +1209,20 @@ def monkey_patch():
     for module_and_decorator in FLAGS.monkey_patch_modules:
         module, decorator_name = module_and_decorator.split(':')
         # import decorator function
-        decorator = import_class(decorator_name)
+        decorator = importutils.import_class(decorator_name)
         __import__(module)
         # Retrieve module information using pyclbr
         module_data = pyclbr.readmodule_ex(module)
         for key in module_data.keys():
             # set the decorator for the class methods
             if isinstance(module_data[key], pyclbr.Class):
-                clz = import_class("%s.%s" % (module, key))
+                clz = importutils.import_class("%s.%s" % (module, key))
                 for method, func in inspect.getmembers(clz, inspect.ismethod):
                     setattr(clz, method,
                         decorator("%s.%s.%s" % (module, key, method), func))
             # set the decorator for the function
             if isinstance(module_data[key], pyclbr.Function):
-                func = import_class("%s.%s" % (module, key))
+                func = importutils.import_class("%s.%s" % (module, key))
                 setattr(sys.modules[module], key,
                     decorator("%s.%s" % (module, key), func))
 

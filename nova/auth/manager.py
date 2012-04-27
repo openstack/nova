@@ -35,6 +35,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import utils
 from nova.auth import signer
 
@@ -247,9 +248,9 @@ class AuthManager(object):
         __init__ is run every time AuthManager() is called, so we only
         reset the driver if it is not set or a new driver is specified.
         """
-        self.network_manager = utils.import_object(FLAGS.network_manager)
+        self.network_manager = importutils.import_object(FLAGS.network_manager)
         if driver or not getattr(self, 'driver', None):
-            self.driver = utils.import_class(driver or FLAGS.auth_driver)
+            self.driver = importutils.import_class(driver or FLAGS.auth_driver)
         if AuthManager.mc is None:
             AuthManager.mc = memcache.Client(FLAGS.memcached_servers, debug=0)
 

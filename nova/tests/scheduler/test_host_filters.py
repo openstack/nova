@@ -20,6 +20,7 @@ import json
 from nova import context
 from nova import exception
 from nova import flags
+from nova.openstack.common import exception as common_exception
 from nova.scheduler import filters
 from nova import test
 from nova.tests.scheduler import fakes
@@ -64,7 +65,7 @@ class HostFiltersTestCase(test.TestCase):
         self.assertEqual(len(classes), 1 + len(self.class_map))
 
     def test_get_filter_classes_raises_on_invalid_classes(self):
-        self.assertRaises(exception.ClassNotFound,
+        self.assertRaises(common_exception.NotFound,
                 filters.get_filter_classes,
                 ['nova.tests.scheduler.test_host_filters.NoExist'])
         self.assertRaises(exception.ClassNotFound,
