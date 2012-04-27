@@ -151,7 +151,13 @@ libvirt_opts = [
     cfg.BoolOpt('libvirt_nonblocking',
                 default=False,
                 help='Use a separated OS thread pool to realize non-blocking'
-                     ' libvirt calls')
+                     ' libvirt calls'),
+    # force_config_drive is a string option, to allow for future behaviors
+    #  (e.g. use config_drive based on image properties)
+    cfg.StrOpt('force_config_drive',
+               default=None,
+               help='Set to force injection to take place on a config drive '
+                    '(if set, valid options are: always)'),
     ]
 
 FLAGS = flags.FLAGS
@@ -1265,8 +1271,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if not instance['kernel_id']:
             target_partition = "1"
 
-        config_drive_id = instance.get('config_drive_id')
-        config_drive = instance.get('config_drive')
+        config_drive, config_drive_id = self._get_config_drive_info(instance)
 
         if any((FLAGS.libvirt_type == 'lxc', config_drive, config_drive_id)):
             target_partition = None
@@ -1388,6 +1393,18 @@ class LibvirtConnection(driver.ComputeDriver):
 
         LOG.debug(_("block_device_list %s"), block_device_list)
         return block_device.strip_dev(mount_device) in block_device_list
+
+    def _get_config_drive_info(self, instance):
+        config_drive = instance.get('config_drive')
+        config_drive_id = instance.get('config_drive_id')
+        if FLAGS.force_config_drive:
+            if not config_drive_id:
+                config_drive = True
+        return config_drive, config_drive_id
+
+    def _has_config_drive(self, instance):
+        config_drive, config_drive_id = self._get_config_drive_info(instance)
+        return any((config_drive, config_drive_id))
 
     def get_guest_config(self, instance, network_info, image_meta, rescue,
                          block_device_info=None):
@@ -1610,7 +1627,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                                     mountpoint)
                     guest.add_device(cfg)
 
-            if instance.get('config_drive') or instance.get('config_drive_id'):
+            if self._has_config_drive(instance):
                 diskconfig = config.LibvirtConfigGuestDisk()
                 diskconfig.source_type = "file"
                 diskconfig.driver_format = "raw"
