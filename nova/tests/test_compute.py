@@ -872,27 +872,29 @@ class ComputeTestCase(BaseTestCase):
 
     def test_terminate_usage_notification(self):
         """Ensure terminate_instance generates apropriate usage notification"""
+        old_time = datetime.datetime(2012, 4, 1)
+        cur_time = datetime.datetime(2012, 12, 21, 12, 21)
+        utils.set_time_override(old_time)
+
         inst_ref = self._create_fake_instance()
         self.compute.run_instance(self.context, inst_ref['uuid'])
         test_notifier.NOTIFICATIONS = []
+        utils.set_time_override(cur_time)
         self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 5)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 4)
+
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['priority'], 'INFO')
-        self.assertEquals(msg['event_type'], 'compute.instance.exists')
-
-        msg = test_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.delete.start')
-        msg1 = test_notifier.NOTIFICATIONS[2]
+        msg1 = test_notifier.NOTIFICATIONS[1]
         self.assertEquals(msg1['event_type'],
                                             'compute.instance.shutdown.start')
-        msg1 = test_notifier.NOTIFICATIONS[3]
+        msg1 = test_notifier.NOTIFICATIONS[2]
         self.assertEquals(msg1['event_type'], 'compute.instance.shutdown.end')
-        msg1 = test_notifier.NOTIFICATIONS[4]
+        msg1 = test_notifier.NOTIFICATIONS[3]
         self.assertEquals(msg1['event_type'], 'compute.instance.delete.end')
-        payload = msg['payload']
+        payload = msg1['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], inst_ref.uuid)
@@ -902,6 +904,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
+        self.assertTrue('deleted_at' in payload)
+        self.assertEqual(payload['deleted_at'], str(cur_time))
         image_ref_url = "%s/images/1" % utils.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
 

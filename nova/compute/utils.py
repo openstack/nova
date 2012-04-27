@@ -208,7 +208,10 @@ def _usage_from_instance(context, instance_ref, network_info=None, **kw):
           disk_gb=instance_ref['root_gb'] + instance_ref['ephemeral_gb'],
           display_name=instance_ref['display_name'],
           created_at=str(instance_ref['created_at']),
-          deleted_at=null_safe_str(instance_ref['deleted_at']),
+          # Nova's deleted vs terminated instance terminology is confusing,
+          # this should be when the instance was deleted (i.e. terminated_at),
+          # not when the db record was deleted. (mdragon)
+          deleted_at=null_safe_str(instance_ref['terminated_at']),
           launched_at=null_safe_str(instance_ref['launched_at']),
           image_ref_url=image_ref_url,
           state=instance_ref['vm_state'],

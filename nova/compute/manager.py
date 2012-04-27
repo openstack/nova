@@ -717,12 +717,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "delete.start")
         self._shutdown_instance(context, instance, 'Terminating')
         self._cleanup_volumes(context, instance_id)
-        self._instance_update(context,
+        instance = self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.DELETED,
                               task_state=None,
                               terminated_at=utils.utcnow())
-
         self.db.instance_destroy(context, instance_id)
         self._notify_about_instance_usage(context, instance, "delete.end")
 
@@ -735,8 +734,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         def do_terminate_instance():
             elevated = context.elevated()
             instance = self.db.instance_get_by_uuid(elevated, instance_uuid)
-            compute_utils.notify_usage_exists(
-                    context, instance, current_period=True)
             try:
                 self._delete_instance(context, instance)
             except exception.InstanceTerminationFailure as error:
