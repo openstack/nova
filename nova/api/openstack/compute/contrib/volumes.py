@@ -308,7 +308,8 @@ class VolumeAttachmentController(object):
 
         instance = vol['instance']
         if instance is None or str(instance['uuid']) != server_id:
-            LOG.debug("instance_id != server_id")
+            LOG.debug("Instance not found (server_id=%(server_id)s)",
+                      {'server_id': server_id}, instance=instance)
             raise exc.HTTPNotFound()
 
         return {'volumeAttachment': _translate_attachment_detail_view(context,
@@ -372,7 +373,8 @@ class VolumeAttachmentController(object):
 
         instance = vol['instance']
         if instance is None or str(instance['uuid']) != server_id:
-            LOG.debug("instance_id != server_id")
+            LOG.debug("Instance not found (server_id=%(server_id)s)",
+                      {'server_id': server_id}, instance=instance)
             raise exc.HTTPNotFound()
 
         self.compute_api.detach_volume(context,
