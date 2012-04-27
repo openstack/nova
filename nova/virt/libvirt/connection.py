@@ -105,6 +105,9 @@ libvirt_opts = [
                 default=False,
                 help='Inject the admin password at boot time, '
                      'without an agent.'),
+    cfg.BoolOpt('libvirt_inject_key',
+                default=True,
+                help='Inject the ssh public key at boot time'),
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
                 help='Sync virtual and real mouse cursors in Windows VMs'),
@@ -1294,7 +1297,7 @@ class LibvirtConnection(driver.ComputeDriver):
             self._create_local(basepath('disk.config'), 64, unit='M',
                                fs_format='msdos', label=label)  # 64MB
 
-        if instance['key_data']:
+        if FLAGS.libvirt_inject_key and instance['key_data']:
             key = str(instance['key_data'])
         else:
             key = None
