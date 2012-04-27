@@ -802,6 +802,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                   instance_uuid=instance_uuid)
 
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        compute_utils.notify_usage_exists(
+                context, instance, current_period=True)
         self._notify_about_instance_usage(context, instance, "rebuild.start")
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
@@ -837,12 +839,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                           self._legacy_nw_info(network_info), device_info)
 
         current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context,
-                              instance_uuid,
-                              power_state=current_power_state,
-                              vm_state=vm_states.ACTIVE,
-                              task_state=None,
-                              launched_at=utils.utcnow())
+        instance = self._instance_update(context,
+                                          instance_uuid,
+                                          power_state=current_power_state,
+                                          vm_state=vm_states.ACTIVE,
+                                          task_state=None,
+                                          launched_at=utils.utcnow())
 
         self._notify_about_instance_usage(context, instance, "rebuild.end",
                                           network_info=network_info)
@@ -1370,12 +1372,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      self._legacy_nw_info(network_info),
                                      image, resize_instance)
 
-        self._instance_update(context,
-                              instance_ref.uuid,
-                              vm_state=vm_states.ACTIVE,
-                              host=migration_ref['dest_compute'],
-                              launched_at=utils.utcnow(),
-                              task_state=task_states.RESIZE_VERIFY)
+        instance_ref = self._instance_update(context,
+                                          instance_ref.uuid,
+                                          vm_state=vm_states.ACTIVE,
+                                          host=migration_ref['dest_compute'],
+                                          launched_at=utils.utcnow(),
+                                          task_state=task_states.RESIZE_VERIFY)
 
         self.db.migration_update(context, migration_ref.id,
                                  {'status': 'finished'})

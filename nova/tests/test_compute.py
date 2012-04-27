@@ -190,6 +190,10 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.network.API, 'allocate_for_instance',
                        fake_get_nw_info)
 
+    def tearDown(self):
+        super(ComputeTestCase, self).tearDown()
+        utils.clear_time_override()
+
     def test_wrap_instance_fault(self):
         inst_uuid = "fake_uuid"
 
@@ -483,6 +487,21 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.rebuild_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance_uuid)
+
+    def test_rebuild_launch_time(self):
+        """Ensure instance can be rebuilt"""
+        old_time = datetime.datetime(2012, 4, 1)
+        cur_time = datetime.datetime(2012, 12, 21, 12, 21)
+        utils.set_time_override(old_time)
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+
+        self.compute.run_instance(self.context, instance_uuid)
+        utils.set_time_override(cur_time)
+        self.compute.rebuild_instance(self.context, instance_uuid)
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEquals(cur_time, instance['launched_at'])
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_reboot_soft(self):
@@ -1032,13 +1051,114 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
+    def test_rebuild_instance_notification(self):
+        """Ensure notifications on instance migrate/resize"""
+        old_time = datetime.datetime(2012, 4, 1)
+        cur_time = datetime.datetime(2012, 12, 21, 12, 21)
+        utils.set_time_override(old_time)
+        inst_ref = self._create_fake_instance()
+        instance_uuid = inst_ref['uuid']
+        self.compute.run_instance(self.context, instance_uuid)
+        utils.set_time_override(cur_time)
+
+        test_notifier.NOTIFICATIONS = []
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+
+        image_ref = instance["image_ref"]
+        password = "new_password"
+        self.compute._rebuild_instance(self.context, instance_uuid,
+                                        dict(image_ref=image_ref,
+                                             new_pass=password))
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['event_type'],
+                          'compute.instance.exists')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg['event_type'],
+                          'compute.instance.rebuild.start')
+        msg = test_notifier.NOTIFICATIONS[2]
+        self.assertEquals(msg['event_type'],
+                          'compute.instance.rebuild.end')
+        self.assertEquals(msg['priority'], 'INFO')
+        payload = msg['payload']
+        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['user_id'], self.user_id)
+        self.assertEquals(payload['instance_id'], instance_uuid)
+        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertTrue('display_name' in payload)
+        self.assertTrue('created_at' in payload)
+        self.assertTrue('launched_at' in payload)
+        self.assertEqual(payload['launched_at'], str(cur_time))
+        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.compute.terminate_instance(self.context, instance_uuid)
+
+    def test_finish_resize_instance_notification(self):
+        """Ensure notifications on instance migrate/resize"""
+        old_time = datetime.datetime(2012, 4, 1)
+        cur_time = datetime.datetime(2012, 12, 21, 12, 21)
+        utils.set_time_override(old_time)
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+        context = self.context.elevated()
+        old_type_id = instance_types.get_instance_type_by_name(
+                                                'm1.tiny')['id']
+        new_type_id = instance_types.get_instance_type_by_name(
+                                                'm1.small')['id']
+        self.compute.run_instance(self.context, instance_uuid)
+
+        db.instance_update(self.context, instance_uuid, {'host': 'foo'})
+        self.compute.prep_resize(context, instance_uuid, new_type_id, {},
+                                 filter_properties={})
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                                                instance_uuid,
+                                                'pre-migrating')
+        self.compute.resize_instance(context, instance_uuid,
+                                     migration_ref['id'], {})
+        utils.set_time_override(cur_time)
+        test_notifier.NOTIFICATIONS = []
+
+        self.compute.finish_resize(context, instance['uuid'],
+                                   int(migration_ref['id']), {}, {})
+
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['event_type'],
+                          'compute.instance.finish_resize.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg['event_type'],
+                          'compute.instance.finish_resize.end')
+        self.assertEquals(msg['priority'], 'INFO')
+        payload = msg['payload']
+        self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['user_id'], self.user_id)
+        self.assertEquals(payload['instance_id'], instance_uuid)
+        self.assertEquals(payload['instance_type'], 'm1.small')
+        self.assertEquals(str(payload['instance_type_id']), str(new_type_id))
+        self.assertTrue('display_name' in payload)
+        self.assertTrue('created_at' in payload)
+        self.assertTrue('launched_at' in payload)
+        self.assertEqual(payload['launched_at'], str(cur_time))
+        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.compute.terminate_instance(context, instance_uuid)
+
     def test_resize_instance_notification(self):
         """Ensure notifications on instance migrate/resize"""
+        old_time = datetime.datetime(2012, 4, 1)
+        cur_time = datetime.datetime(2012, 12, 21, 12, 21)
+        utils.set_time_override(old_time)
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
         context = self.context.elevated()
 
         self.compute.run_instance(self.context, instance_uuid)
+        utils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
         db.instance_update(self.context, instance_uuid, {'host': 'foo'})
