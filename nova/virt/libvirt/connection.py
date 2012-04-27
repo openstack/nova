@@ -1009,6 +1009,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         self._chown_console_log_for_instance(instance['name'])
         data = self._flush_libvirt_console(pty)
+        console_log = self._get_console_log_path(instance_name)
         fpath = self._append_to_file(data, console_log)
 
         return libvirt_utils.load_file(fpath)
@@ -1150,9 +1151,12 @@ class LibvirtConnection(driver.ComputeDriver):
         libvirt_utils.mkfs('swap', target)
 
     @staticmethod
-    def _chown_console_log_for_instance(instance_name):
-        console_log = os.path.join(FLAGS.instances_path, instance_name,
-                                   'console.log')
+    def _get_console_log_path(instance_name):
+        return os.path.join(FLAGS.instances_path, instance_name,
+                'console.log')
+
+    def _chown_console_log_for_instance(self, instance_name):
+        console_log = self._get_console_log_path(instance_name)
         if os.path.exists(console_log):
             libvirt_utils.chown(console_log, os.getuid())
 
