@@ -63,6 +63,7 @@ from nova.virt import driver
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
 from nova.virt.xenapi import vmops
+from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volumeops
 
 
@@ -164,11 +165,10 @@ class XenAPIConnection(driver.ComputeDriver):
         return self._host_state
 
     def init_host(self, host):
-        #FIXME(armando): implement this
-        #NOTE(armando): would we need a method
-        #to call when shutting down the host?
-        #e.g. to do session logout?
-        pass
+        try:
+            vm_utils.cleanup_attached_vdis(self._session)
+        except Exception:
+            LOG.exception(_('Failure while cleaning up attached VDIs'))
 
     def list_instances(self):
         """List VM instances"""

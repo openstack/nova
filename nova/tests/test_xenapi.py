@@ -238,6 +238,23 @@ class XenAPIVMTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.conn = xenapi_conn.get_connection(False)
 
+    def test_init_host(self):
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
+        vm = vm_utils.get_this_vm_ref(session)
+        # Local root disk
+        vdi0 = xenapi_fake.create_vdi('compute', None)
+        vbd0 = xenapi_fake.create_vbd(vm, vdi0)
+        # Instance VDI
+        vdi1 = xenapi_fake.create_vdi('instance-aaaa', None,
+                other_config={'nova_instance_uuid': 'aaaa'})
+        vbd1 = xenapi_fake.create_vbd(vm, vdi1)
+        # Only looks like instance VDI
+        vdi2 = xenapi_fake.create_vdi('instance-bbbb', None)
+        vbd2 = xenapi_fake.create_vbd(vm, vdi2)
+
+        self.conn.init_host(None)
+        self.assertEquals(set(xenapi_fake.get_all('VBD')), set([vbd0, vbd2]))
+
     def test_list_instances_0(self):
         instances = self.conn.list_instances()
         self.assertEquals(instances, [])

@@ -170,7 +170,7 @@ def stubout_loopingcall_start(stubs):
 
 def _make_fake_vdi():
     sr_ref = fake.get_all('SR')[0]
-    vdi_ref = fake.create_vdi('', False, sr_ref, False)
+    vdi_ref = fake.create_vdi('', sr_ref)
     vdi_rec = fake.get_record('VDI', vdi_ref)
     return vdi_rec['uuid']
 
@@ -232,8 +232,7 @@ class FakeSessionForVMTests(fake.SessionBase):
             is_control_domain=False)
 
         sr_ref = "fakesr"
-        template_vdi_ref = fake.create_vdi(label, read_only=True,
-            sr_ref=sr_ref, sharable=False)
+        template_vdi_ref = fake.create_vdi(label, sr_ref, read_only=True)
 
         template_vbd_ref = fake.create_vbd(template_vm_ref, template_vdi_ref)
         return template_vm_ref
@@ -373,8 +372,7 @@ def stub_out_migration_methods(stubs):
 
     @classmethod
     def fake_get_vdi(cls, session, vm_ref):
-        vdi_ref = fake.create_vdi(name_label='derp', read_only=False,
-                             sr_ref='herp', sharable=False)
+        vdi_ref = fake.create_vdi('derp', 'herp')
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         return vdi_ref, {'uuid': vdi_rec['uuid'], }
 
