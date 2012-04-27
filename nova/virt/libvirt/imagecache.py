@@ -55,6 +55,10 @@ imagecache_opts = [
     cfg.BoolOpt('checksum_base_images',
                 default=False,
                 help='Write a checksum for files in _base to disk'),
+    cfg.StrOpt('image_info_filename_pattern',
+               default='$instances_path/$base_dir_name/%(image)s.sha1',
+               help='Allows image information files to be stored in '
+                    'non-standard locations'),
     ]
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
@@ -63,12 +67,41 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(imagecache_opts)
 
 
-def read_stored_checksum(base_file):
+def get_info_filename(base_path):
+    """Construct a filename for storing addtional information about a base
+    image.
+
+    Returns a filename.
+    """
+
+    base_file = os.path.basename(base_path)
+    return (FLAGS.image_info_filename_pattern
+            % {'image': base_file})
+
+
+def is_valid_info_file(path):
+    """Test if a given path matches the pattern for info files."""
+
+    digest_size = hashlib.sha1().digestsize * 2
+    regexp = (FLAGS.image_info_filename_pattern
+              % {'instances_path': FLAGS.instances_path,
+                 'image': ('([0-9a-f]{%(digest_size)d}|'
+                           '[0-9a-f]{%(digest_size)d}_sm|'
+                           '[0-9a-f]{%(digest_size)d}_[0-9]+)'
+                           % {'digest_size': digest_size})})
+    m = re.match(regexp, path)
+    if m:
+        return True
+    return False
+
+
+def read_stored_checksum(base_path):
     """Read the checksum which was created at image fetch time.
 
     Returns the checksum (as hex) or None.
     """
-    checksum_file = '%s.sha1' % base_file
+
+    checksum_file = get_info_filename(base_path)
     if not os.path.exists(checksum_file):
         return None
 
@@ -81,7 +114,7 @@ def read_stored_checksum(base_file):
 def write_stored_checksum(target):
     """Write a checksum to disk for a file in _base."""
 
-    checksum_filename = '%s.sha1' % target
+    checksum_filename = get_info_filename(target)
     if os.path.exists(target) and not os.path.exists(checksum_filename):
         # NOTE(mikal): Create the checksum file first to exclude possible
         # overlap in checksum operations. An empty checksum file is ignored if
@@ -137,7 +170,7 @@ class ImageCacheManager(object):
 
             elif (len(ent) > digest_size + 2 and
                   ent[digest_size] == '_' and
-                  not ent.endswith('.sha1')):
+                  not is_valid_info_file(os.path.join(base_dir, ent))):
                 self._store_image(base_dir, ent, original=False)
 
     def _list_running_instances(self, context):
@@ -283,7 +316,7 @@ class ImageCacheManager(object):
             LOG.info(_('Removing base file: %s'), base_file)
             try:
                 os.remove(base_file)
-                signature = base_file + '.sha1'
+                signature = get_info_filename(base_file)
                 if os.path.exists(signature):
                     os.remove(signature)
             except OSError, e:
