@@ -1614,7 +1614,7 @@ class CloudController(object):
                 # NOTE(yamahata): timeout and error. 1 hour for now for safety.
                 #                 Is it too short/long?
                 #                 Or is there any better way?
-                timeout = 1 * 60 * 60 * 60
+                timeout = 1 * 60 * 60
                 if time.time() > start_time + timeout:
                     raise exception.EC2APIError(
                         _('Couldn\'t stop instance with in %d sec') % timeout)
