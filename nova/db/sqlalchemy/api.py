@@ -3718,15 +3718,16 @@ def agent_build_update(context, agent_build_id, values):
 ####################
 
 @require_context
-def bw_usage_get_by_macs(context, macs, start_period):
+def bw_usage_get_by_uuids(context, uuids, start_period):
     return model_query(context, models.BandwidthUsage, read_deleted="yes").\
-                   filter(models.BandwidthUsage.mac.in_(macs)).\
+                   filter(models.BandwidthUsage.uuid.in_(uuids)).\
                    filter_by(start_period=start_period).\
                    all()
 
 
 @require_context
 def bw_usage_update(context,
+                    uuid,
                     mac,
                     start_period,
                     bw_in, bw_out,
@@ -3738,12 +3739,13 @@ def bw_usage_update(context,
         bwusage = model_query(context, models.BandwidthUsage,
                               session=session, read_deleted="yes").\
                       filter_by(start_period=start_period).\
-                      filter_by(mac=mac).\
+                      filter_by(uuid=uuid).\
                       first()
 
         if not bwusage:
             bwusage = models.BandwidthUsage()
             bwusage.start_period = start_period
+            bwusage.uuid = uuid
             bwusage.mac = mac
 
         bwusage.last_refreshed = utils.utcnow()

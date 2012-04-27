@@ -1485,7 +1485,13 @@ class XenAPIBWUsageTestCase(test.TestCase):
         """Test that get_all_bw_usage returns an empty list when metrics
         compilation failed.  c.f. bug #910045.
         """
-        result = self.conn.get_all_bw_usage(datetime.datetime.utcnow())
+        class testinstance(object):
+            def __init__(self):
+                self.name = "instance-0001"
+                self.uuid = "1-2-3-4-5"
+
+        result = self.conn.get_all_bw_usage([testinstance()],
+                datetime.datetime.utcnow())
         self.assertEqual(result, [])
 
 
