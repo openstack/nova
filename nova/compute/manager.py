@@ -1327,6 +1327,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  migration_id,
                                  {'status': 'migrating'})
 
+        self._instance_update(context, instance_uuid,
+                              task_state=task_states.RESIZE_MIGRATING)
+
         self._notify_about_instance_usage(
             context, instance_ref, "resize.start", network_info=network_info)
 
@@ -1343,6 +1346,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.migration_update(context,
                                  migration_id,
                                  {'status': 'post-migrating'})
+
+        self._instance_update(context, instance_uuid,
+                              task_state=task_states.RESIZE_MIGRATED)
 
         service = self.db.service_get_by_host_and_topic(
                 context, migration_ref['dest_compute'], FLAGS.compute_topic)
@@ -1382,6 +1388,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                 migration_ref['dest_compute'])
 
         network_info = self._get_instance_nw_info(context, instance_ref)
+
+        self._instance_update(context, instance_ref.uuid,
+                              task_state=task_states.RESIZE_FINISH)
 
         self._notify_about_instance_usage(
             context, instance_ref, "finish_resize.start",
