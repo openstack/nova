@@ -272,7 +272,6 @@ class ProxyCallback(object):
             LOG.exception('Exception during message handling')
             ctxt.reply(None, sys.exc_info(),
                        connection_pool=self.connection_pool)
-        return
 
 
 class MulticallWaiter(object):

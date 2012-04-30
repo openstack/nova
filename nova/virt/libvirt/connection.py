@@ -2116,8 +2116,6 @@ class LibvirtConnection(driver.ComputeDriver):
         if ret <= 0:
             raise exception.InvalidCPUInfo(reason=m % locals())
 
-        return
-
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info,
                                             time=None):
         """Setting up filtering rules and waiting for its completion.

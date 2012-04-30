@@ -617,7 +617,6 @@ class FakeDfmServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             out.write('</operation>')
         out.write('</binding>')
         out.write(WSDL_TRAILER)
-        return
 
     def do_POST(s):
         """Respond to a POST request."""
@@ -825,7 +824,6 @@ class FakeDfmServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         s.wfile.write(RESPONSE_PREFIX)
         s.wfile.write(body)
         s.wfile.write(RESPONSE_SUFFIX)
-        return
 
 
 class FakeHttplibSocket(object):

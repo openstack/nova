@@ -475,8 +475,6 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEqual(len(rv), 1)
         self.assertEqual(rv[0].name, 'default')
 
-        return
-
     def test_authorize_revoke_security_group_cidr_v6(self):
         """
         Test that we can add and remove CIDR based rules
@@ -528,8 +526,6 @@ class ApiEc2TestCase(test.TestCase):
 
         self.assertEqual(len(rv), 1)
         self.assertEqual(rv[0].name, 'default')
-
-        return
 
     def test_authorize_revoke_security_group_foreign_group(self):
         """
