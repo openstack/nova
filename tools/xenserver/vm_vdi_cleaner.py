@@ -293,7 +293,7 @@ def main():
             print "Connected VDIs:\n"
         orphaned_vdi_uuids = find_orphaned_vdi_uuids(session, verbose=verbose)
         if verbose:
-            print "\nOprhaned VDIs:\n"
+            print "\nOrphaned VDIs:\n"
         list_orphaned_vdis(orphaned_vdi_uuids, verbose=verbose)
     elif command == "clean-vdis":
         orphaned_vdi_uuids = find_orphaned_vdi_uuids(session, verbose=verbose)
