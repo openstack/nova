@@ -39,6 +39,7 @@ import gettext
 import os
 import sys
 import time
+import traceback
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -66,10 +67,16 @@ if __name__ == '__main__':
     flags.FLAGS(sys.argv)
     logging.setup()
     begin, end = utils.last_completed_audit_period()
+    print "Starting instance usage audit"
     print "Creating usages for %s until %s" % (str(begin), str(end))
     instances = db.instance_get_active_by_window_joined(admin_context,
                                                         begin,
                                                         end)
-    print "%s instances" % len(instances)
+    print "Found %d instances" % len(instances)
     for instance_ref in instances:
-        nova.compute.utils.notify_usage_exists(admin_context, instance_ref)
+        try:
+            nova.compute.utils.notify_usage_exists(
+                    admin_context, instance_ref, safe=False)
+        except Exception, e:
+            print traceback.format_exc(e)
+    print "Instance usage audit completed"
