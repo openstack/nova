@@ -24,10 +24,10 @@ import os
 import shutil
 import tarfile
 import tempfile
-from xml.etree import ElementTree
 
 import boto.s3.connection
 import eventlet
+from lxml import etree
 
 from nova import rpc
 from nova import exception
@@ -180,7 +180,7 @@ class S3ImageService(object):
         return local_filename
 
     def _s3_parse_manifest(self, context, metadata, manifest):
-        manifest = ElementTree.fromstring(manifest)
+        manifest = etree.fromstring(manifest)
         image_format = 'ami'
         image_type = 'machine'
 

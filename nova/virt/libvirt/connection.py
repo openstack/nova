@@ -39,8 +39,8 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 """
 
 import errno
-import hashlib
 import functools
+import hashlib
 import glob
 import multiprocessing
 import os
@@ -51,9 +51,8 @@ import uuid
 
 from eventlet import greenthread
 from eventlet import tpool
-
+from lxml import etree
 from xml.dom import minidom
-from xml.etree import ElementTree
 
 from nova import block_device
 from nova.compute import instance_types
@@ -534,7 +533,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def _get_disk_xml(xml, device):
         """Returns the xml for the disk mounted at device"""
         try:
-            doc = ElementTree.fromstring(xml)
+            doc = etree.fromstring(xml)
         except Exception:
             return None
         ret = doc.findall('./devices/disk')
@@ -542,7 +541,7 @@ class LibvirtConnection(driver.ComputeDriver):
             for child in node.getchildren():
                 if child.tag == 'target':
                     if child.get('dev') == device:
-                        return ElementTree.tostring(node)
+                        return etree.tostring(node)
 
     @exception.wrap_exception()
     def detach_volume(self, connection_info, instance_name, mountpoint):
@@ -592,7 +591,7 @@ class LibvirtConnection(driver.ComputeDriver):
     @staticmethod
     def get_lxc_container_root(virt_dom):
         xml = virt_dom.XMLDesc(0)
-        doc = ElementTree.fromstring(xml)
+        doc = etree.fromstring(xml)
         filesystem_block = doc.findall('./devices/filesystem')
         for cnt, filesystem_nodes in enumerate(filesystem_block):
             return filesystem_nodes[cnt].get('dir')
@@ -667,7 +666,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         # Find the disk
         xml_desc = virt_dom.XMLDesc(0)
-        domain = ElementTree.fromstring(xml_desc)
+        domain = etree.fromstring(xml_desc)
         source = domain.find('devices/disk/source')
         disk_path = source.get('file')
 
@@ -952,7 +951,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def get_console_output(self, instance):
         virt_dom = self._lookup_by_name(instance['name'])
         xml = virt_dom.XMLDesc(0)
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
 
         console_types = {}
 
@@ -1751,7 +1750,7 @@ class LibvirtConnection(driver.ComputeDriver):
         for dom_id in self._conn.listDomainsID():
             domain = self._conn.lookupByID(dom_id)
             try:
-                doc = ElementTree.fromstring(domain.XMLDesc(0))
+                doc = etree.fromstring(domain.XMLDesc(0))
             except Exception:
                 continue
             ret = doc.findall('./devices/disk')
@@ -1774,7 +1773,7 @@ class LibvirtConnection(driver.ComputeDriver):
         doc = None
 
         try:
-            doc = ElementTree.fromstring(xml)
+            doc = etree.fromstring(xml)
         except Exception:
             return []
 
@@ -1807,7 +1806,7 @@ class LibvirtConnection(driver.ComputeDriver):
         doc = None
 
         try:
-            doc = ElementTree.fromstring(xml)
+            doc = etree.fromstring(xml)
         except Exception:
             return []
 
@@ -1965,7 +1964,7 @@ class LibvirtConnection(driver.ComputeDriver):
         """
 
         xml = self._conn.getCapabilities()
-        xml = ElementTree.fromstring(xml)
+        xml = etree.fromstring(xml)
         nodes = xml.findall('.//host/cpu')
         if len(nodes) != 1:
             reason = _("'<cpu>' must be 1, but %d\n") % len(nodes)
@@ -2366,7 +2365,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         virt_dom = self._lookup_by_name(instance_name)
         xml = virt_dom.XMLDesc(0)
-        doc = ElementTree.fromstring(xml)
+        doc = etree.fromstring(xml)
         disk_nodes = doc.findall('.//devices/disk')
         path_nodes = doc.findall('.//devices/disk/source')
         driver_nodes = doc.findall('.//devices/disk/driver')

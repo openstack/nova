@@ -14,15 +14,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from xml.etree import ElementTree
+from lxml import etree
 
 from nova import flags
 from nova import test
 from nova import utils
 from nova.virt import firewall
-from nova.virt.libvirt import vif
-from nova.virt.libvirt import connection
 from nova.virt.libvirt import config
+from nova.virt.libvirt import connection
+from nova.virt.libvirt import vif
 
 FLAGS = flags.FLAGS
 
@@ -83,7 +83,7 @@ class LibvirtVifTestCase(test.TestCase):
         d = vif.LibvirtBridgeDriver()
         xml = self._get_instance_xml(d)
 
-        doc = ElementTree.fromstring(xml)
+        doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]
@@ -99,7 +99,7 @@ class LibvirtVifTestCase(test.TestCase):
         d = vif.LibvirtOpenVswitchDriver()
         xml = self._get_instance_xml(d)
 
-        doc = ElementTree.fromstring(xml)
+        doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]
@@ -117,7 +117,7 @@ class LibvirtVifTestCase(test.TestCase):
         d = vif.LibvirtOpenVswitchVirtualPortDriver()
         xml = self._get_instance_xml(d)
 
-        doc = ElementTree.fromstring(xml)
+        doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]
@@ -143,7 +143,7 @@ class LibvirtVifTestCase(test.TestCase):
         d = vif.QuantumLinuxBridgeVIFDriver()
         xml = self._get_instance_xml(d)
 
-        doc = ElementTree.fromstring(xml)
+        doc = etree.fromstring(xml)
         ret = doc.findall('./devices/interface')
         self.assertEqual(len(ret), 1)
         node = ret[0]

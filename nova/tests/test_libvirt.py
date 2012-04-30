@@ -24,7 +24,7 @@ import shutil
 import sys
 import tempfile
 
-from xml.etree import ElementTree
+from lxml import etree
 from xml.dom import minidom
 
 from nova.api.ec2 import cloud
@@ -885,7 +885,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn = connection.LibvirtConnection(True)
         instance_ref = db.instance_create(self.context, instance_data)
         xml = conn.to_xml(instance_ref, network_info, None, False)
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
         interfaces = tree.findall("./devices/interface")
         self.assertEquals(len(interfaces), 2)
         parameters = interfaces[0].findall('./filterref/parameter')
@@ -907,7 +907,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         network_info = _fake_network_info(self.stubs, 1)
         xml = conn.to_xml(instance_ref, network_info)
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
 
         check = [
         (lambda t: t.find('.').get('type'), 'lxc'),
@@ -948,7 +948,7 @@ class LibvirtConnTestCase(test.TestCase):
 
             network_info = _fake_network_info(self.stubs, 1)
             xml = conn.to_xml(instance_ref, network_info)
-            tree = ElementTree.fromstring(xml)
+            tree = etree.fromstring(xml)
 
             for i, (check, expected_result) in enumerate(checks):
                 self.assertEqual(check(tree),
@@ -983,7 +983,7 @@ class LibvirtConnTestCase(test.TestCase):
         xml = connection.LibvirtConnection(True).to_xml(instance_ref,
                                                         network_info,
                                                         image_meta)
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
         disks = tree.findall('./devices/disk/driver')
         for disk in disks:
             self.assertEqual(disk.get("cache"), "none")
@@ -995,7 +995,7 @@ class LibvirtConnTestCase(test.TestCase):
         xml = connection.LibvirtConnection(True).to_xml(instance_ref,
                                                         network_info,
                                                         image_meta)
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
         disks = tree.findall('./devices/disk/driver')
         for disk in disks:
             self.assertEqual(disk.get("cache"), "writethrough")
@@ -1008,7 +1008,7 @@ class LibvirtConnTestCase(test.TestCase):
         xml = connection.LibvirtConnection(True).to_xml(instance_ref,
                                                         network_info,
                                                         image_meta)
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
         self.assertEqual(tree.find('./devices/disk').get('device'),
                          device_type)
         self.assertEqual(tree.find('./devices/disk/target').get('bus'), bus)
@@ -1021,7 +1021,7 @@ class LibvirtConnTestCase(test.TestCase):
         xml = connection.LibvirtConnection(True).to_xml(instance_ref,
                                                         network_info,
                                                         image_meta)
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
         self.assertEqual(tree.find('./uuid').text,
                          instance_ref['uuid'])
 
@@ -1120,7 +1120,7 @@ class LibvirtConnTestCase(test.TestCase):
 
             network_info = _fake_network_info(self.stubs, 1)
             xml = conn.to_xml(instance_ref, network_info, None, rescue)
-            tree = ElementTree.fromstring(xml)
+            tree = etree.fromstring(xml)
             for i, (check, expected_result) in enumerate(checks):
                 self.assertEqual(check(tree),
                                  expected_result,
@@ -1677,7 +1677,7 @@ class NWFilterFakes:
             def undefine(self):
                 del self.parent.filters[self.name]
                 pass
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
         name = tree.get('name')
         if name not in self.filters:
             self.filters[name] = FakeNWFilterInternal(self, name)

@@ -16,7 +16,7 @@
 
 from nova import test
 
-from xml.etree import ElementTree
+from lxml import etree
 
 import fakelibvirt as libvirt
 
@@ -252,7 +252,7 @@ class FakeLibvirtTests(test.TestCase):
         conn.defineXML(get_vm_xml())
         dom = conn.lookupByName('testname')
         xml = dom.XMLDesc(0)
-        ElementTree.fromstring(xml)
+        etree.fromstring(xml)
 
     def _test_accepts_source_type(self, source_type):
         conn = self.get_openAuth_curry_func()('qemu:///system')
@@ -260,7 +260,7 @@ class FakeLibvirtTests(test.TestCase):
         conn.defineXML(get_vm_xml(source_type=source_type))
         dom = conn.lookupByName('testname')
         xml = dom.XMLDesc(0)
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
         elem = tree.find('./devices/disk/source')
         self.assertEquals(elem.get('file'), '/somefile')
 
@@ -282,7 +282,7 @@ class FakeLibvirtTests(test.TestCase):
         conn.defineXML(get_vm_xml(interface_type=network_type))
         dom = conn.lookupByName('testname')
         xml = dom.XMLDesc(0)
-        tree = ElementTree.fromstring(xml)
+        tree = etree.fromstring(xml)
         elem = tree.find('./devices/interface')
         self.assertEquals(elem.get('type'), network_type)
         elem = elem.find('./source')
@@ -298,7 +298,7 @@ class FakeLibvirtTests(test.TestCase):
 
     def test_getCapabilities(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        ElementTree.fromstring(conn.getCapabilities())
+        etree.fromstring(conn.getCapabilities())
 
     def test_nwfilter_define_undefine(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
