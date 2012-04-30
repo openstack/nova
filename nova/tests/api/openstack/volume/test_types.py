@@ -19,13 +19,8 @@ import webob
 from nova.api.openstack.volume import types
 from nova import exception
 from nova import test
-from nova import log as logging
 from nova.volume import volume_types
 from nova.tests.api.openstack import fakes
-
-
-LOG = logging.getLogger(__name__)
-last_param = {}
 
 
 def stub_volume_type(id):
@@ -54,16 +49,6 @@ def return_volume_types_get_volume_type(context, id):
     return stub_volume_type(int(id))
 
 
-def return_volume_types_destroy(context, name):
-    if name == "777":
-        raise exception.VolumeTypeNotFoundByName(volume_type_name=name)
-    pass
-
-
-def return_volume_types_create(context, name, specs):
-    pass
-
-
 def return_volume_types_get_by_name(context, name):
     if name == "777":
         raise exception.VolumeTypeNotFoundByName(volume_type_name=name)
@@ -73,14 +58,13 @@ def return_volume_types_get_by_name(context, name):
 class VolumeTypesApiTest(test.TestCase):
     def setUp(self):
         super(VolumeTypesApiTest, self).setUp()
-        fakes.stub_out_key_pair_funcs(self.stubs)
         self.controller = types.VolumeTypesController()
 
     def test_volume_types_index(self):
         self.stubs.Set(volume_types, 'get_all_types',
                        return_volume_types_get_all_types)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types')
+        req = fakes.HTTPRequest.blank('/v1/fake/types')
         res_dict = self.controller.index(req)
 
         self.assertEqual(3, len(res_dict['volume_types']))
@@ -95,7 +79,7 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'get_all_types',
                        return_empty_volume_types_get_all_types)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types')
+        req = fakes.HTTPRequest.blank('/v1/fake/types')
         res_dict = self.controller.index(req)
 
         self.assertEqual(0, len(res_dict['volume_types']))
@@ -104,7 +88,7 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'get_volume_type',
                        return_volume_types_get_volume_type)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types/1')
+        req = fakes.HTTPRequest.blank('/v1/fake/types/1')
         res_dict = self.controller.show(req, 1)
 
         self.assertEqual(1, len(res_dict))
@@ -115,7 +99,7 @@ class VolumeTypesApiTest(test.TestCase):
         self.stubs.Set(volume_types, 'get_volume_type',
                        return_volume_types_get_volume_type)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-volume-types/777')
+        req = fakes.HTTPRequest.blank('/v1/fake/types/777')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
                           req, '777')
 
@@ -142,7 +126,6 @@ class VolumeTypesSerializerTest(test.TestCase):
         vtypes = return_volume_types_get_all_types(None)
         text = serializer.serialize({'volume_types': vtypes.values()})
 
-        print text
         tree = etree.fromstring(text)
 
         self.assertEqual('volume_types', tree.tag)
@@ -158,7 +141,6 @@ class VolumeTypesSerializerTest(test.TestCase):
         vtype = stub_volume_type(1)
         text = serializer.serialize(dict(volume_type=vtype))
 
-        print text
         tree = etree.fromstring(text)
 
         self._verify_volume_type(vtype, tree)

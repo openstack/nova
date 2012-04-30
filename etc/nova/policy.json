@@ -65,6 +65,10 @@
     "volume:get_all_snapshots": [],
 
 
+    "volume_extension:types_manage": [["rule:admin_api"]],
+    "volume_extension:types_extra_specs": [["rule:admin_api"]],
+
+
     "network:get_all_networks": [],
     "network:get_network": [],
     "network:delete_network": [],

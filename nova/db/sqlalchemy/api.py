@@ -3883,7 +3883,7 @@ def volume_type_get(context, id, session=None):
                     first()
 
     if not result:
-        raise exception.VolumeTypeNotFound(volume_type=id)
+        raise exception.VolumeTypeNotFound(volume_type_id=id)
 
     return _dict_with_extra_specs(result)
 

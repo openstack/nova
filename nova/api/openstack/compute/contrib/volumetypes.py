@@ -85,8 +85,6 @@ class VolumeTypesController(object):
         try:
             volume_types.create(context, name, specs)
             vol_type = volume_types.get_volume_type_by_name(context, name)
-        except exception.QuotaError as error:
-            self._handle_quota_error(error)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
@@ -171,12 +169,9 @@ class VolumeTypeExtraSpecsController(object):
         authorize(context)
         self._check_body(body)
         specs = body.get('extra_specs')
-        try:
-            db.volume_type_extra_specs_update_or_create(context,
-                                                            vol_type_id,
-                                                            specs)
-        except exception.QuotaError as error:
-            self._handle_quota_error(error)
+        db.volume_type_extra_specs_update_or_create(context,
+                                                    vol_type_id,
+                                                    specs)
         return body
 
     @wsgi.serializers(xml=VolumeTypeExtraSpecTemplate)
@@ -190,13 +185,9 @@ class VolumeTypeExtraSpecsController(object):
         if len(body) > 1:
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
-        try:
-            db.volume_type_extra_specs_update_or_create(context,
-                                                            vol_type_id,
-                                                            body)
-        except exception.QuotaError as error:
-            self._handle_quota_error(error)
-
+        db.volume_type_extra_specs_update_or_create(context,
+                                                    vol_type_id,
+                                                    body)
         return body
 
     @wsgi.serializers(xml=VolumeTypeExtraSpecTemplate)
@@ -215,12 +206,6 @@ class VolumeTypeExtraSpecsController(object):
         context = req.environ['nova.context']
         authorize(context)
         db.volume_type_extra_specs_delete(context, vol_type_id, id)
-
-    def _handle_quota_error(self, error):
-        """Reraise quota errors as api-specific http exceptions."""
-        if error.code == "MetadataLimitExceeded":
-            raise exc.HTTPBadRequest(explanation=error.message)
-        raise error
 
 
 class Volumetypes(extensions.ExtensionDescriptor):
