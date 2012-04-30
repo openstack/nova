@@ -920,7 +920,7 @@ class XenAPIMigrateInstance(test.TestCase):
         db.migration_get_all_unconfirmed(fake_context,
                 resize_confirm_window).AndReturn(migrations)
         # Found unconfirmed migrations message
-        vmops.LOG.info(mox.IgnoreArg(), mox.IgnoreArg())
+        vmops.LOG.info(mox.IgnoreArg())
 
         # test success (ACTIVE/RESIZE_VERIFY)
         instance = instances.pop(0)
