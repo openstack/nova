@@ -1398,6 +1398,88 @@ class LibvirtConnTestCase(test.TestCase):
             shutil.rmtree(os.path.join(FLAGS.instances_path,
                                        FLAGS.base_dir_name))
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
+    def test_get_console_output_file(self):
+
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+
+            instance_ref = self.test_instance
+            instance_ref['image_ref'] = 123456
+            instance = db.instance_create(self.context, instance_ref)
+
+            console_dir = (os.path.join(tmpdir, instance['name']))
+            os.mkdir(console_dir)
+            console_log = '%s/console.log' % (console_dir)
+            f = open(console_log, "w")
+            f.write("foo")
+            f.close()
+            fake_dom_xml = """
+                <domain type='kvm'>
+                    <devices>
+                        <disk type='file'>
+                            <source file='filename'/>
+                        </disk>
+                        <console type='file'>
+                            <source path='%s'/>
+                            <target port='0'/>
+                        </console>
+                    </devices>
+                </domain>
+            """ % console_log
+
+            def fake_lookup(id):
+                return FakeVirtDomain(fake_dom_xml)
+
+            self.create_fake_libvirt_mock()
+            connection.LibvirtConnection._conn.lookupByName = fake_lookup
+            connection.libvirt_utils = libvirt_utils
+
+            conn = connection.LibvirtConnection(False)
+            output = conn.get_console_output(instance)
+            self.assertEquals("foo", output)
+
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
+    def test_get_console_output_pty(self):
+
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+
+            instance_ref = self.test_instance
+            instance_ref['image_ref'] = 123456
+            instance = db.instance_create(self.context, instance_ref)
+
+            console_dir = (os.path.join(tmpdir, instance['name']))
+            os.mkdir(console_dir)
+            pty_file = '%s/fake_pty' % (console_dir)
+            f = open(pty_file, "w")
+            f.write("foo")
+            f.close()
+            fake_dom_xml = """
+                <domain type='kvm'>
+                    <devices>
+                        <disk type='file'>
+                            <source file='filename'/>
+                        </disk>
+                        <console type='pty'>
+                            <source path='%s'/>
+                            <target port='0'/>
+                        </console>
+                    </devices>
+                </domain>
+            """ % pty_file
+
+            def fake_lookup(id):
+                return FakeVirtDomain(fake_dom_xml)
+
+            self.create_fake_libvirt_mock()
+            connection.LibvirtConnection._conn.lookupByName = fake_lookup
+            connection.libvirt_utils = libvirt_utils
+
+            conn = connection.LibvirtConnection(False)
+            output = conn.get_console_output(instance)
+            self.assertEquals("foo", output)
+
     def test_get_host_ip_addr(self):
         conn = connection.LibvirtConnection(False)
         ip = conn.get_host_ip_addr()
