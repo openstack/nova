@@ -18,7 +18,7 @@ from nova.scheduler import filters
 
 
 class AvailabilityZoneFilter(filters.BaseHostFilter):
-    """Filters Hosts by availabilty zone."""
+    """Filters Hosts by availability zone."""
 
     def host_passes(self, host_state, filter_properties):
         spec = filter_properties.get('request_spec', {})
