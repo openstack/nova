@@ -166,6 +166,24 @@ class CloudTestCase(test.TestCase):
                                   public_ip=address)
         db.floating_ip_destroy(self.context, address)
 
+    def test_describe_specific_address(self):
+        """Makes sure describe specific address works"""
+        addresses = ["10.10.10.10", "10.10.10.11"]
+        for address in addresses:
+            db.floating_ip_create(self.context,
+                                  {'address': address,
+                                   'pool': 'nova'})
+            self.cloud.allocate_address(self.context)
+        result = self.cloud.describe_addresses(self.context)
+        self.assertEqual(len(result['addressesSet']), 2)
+        result = self.cloud.describe_addresses(self.context,
+                                               public_ip=['10.10.10.10'])
+        self.assertEqual(len(result['addressesSet']), 1)
+        for address in addresses:
+            self.cloud.release_address(self.context,
+                                       public_ip=address)
+            db.floating_ip_destroy(self.context, address)
+
     def test_allocate_address(self):
         address = "10.10.10.10"
         allocate = self.cloud.allocate_address
