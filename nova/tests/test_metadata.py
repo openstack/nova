@@ -47,20 +47,21 @@ class MetadataTestCase(test.TestCase):
     def setUp(self):
         super(MetadataTestCase, self).setUp()
         self.instance = ({'id': 1,
-                         'name': 'fake',
-                         'project_id': 'test',
-                         'key_name': None,
-                         'host': 'test',
-                         'launch_index': 1,
-                         'instance_type': {'name': 'm1.tiny'},
-                         'reservation_id': 'r-xxxxxxxx',
-                         'user_data': '',
-                         'image_ref': 7,
-                         'vcpus': 1,
-                         'fixed_ips': [],
-                         'root_device_name': '/dev/sda1',
-                         'info_cache': {'network_info': []},
-                         'hostname': 'test'})
+                          'uuid': 'b65cee2f-8c69-4aeb-be2f-f79742548fc2',
+                          'name': 'fake',
+                          'project_id': 'test',
+                          'key_name': None,
+                          'host': 'test',
+                          'launch_index': 1,
+                          'instance_type': {'name': 'm1.tiny'},
+                          'reservation_id': 'r-xxxxxxxx',
+                          'user_data': '',
+                          'image_ref': 7,
+                          'vcpus': 1,
+                          'fixed_ips': [],
+                          'root_device_name': '/dev/sda1',
+                          'info_cache': {'network_info': []},
+                          'hostname': 'test'})
 
         def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
             return ['1.2.3.4', '5.6.7.8']
@@ -144,11 +145,13 @@ class MetadataTestCase(test.TestCase):
         """Make sure that _get_instance_mapping works"""
         ctxt = None
         instance_ref0 = {'id': 0,
+                         'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',
                          'root_device_name': None}
         instance_ref1 = {'id': 0,
+                         'uuid': 'b65cee2f-8c69-4aeb-be2f-f79742548fc2',
                          'root_device_name': '/dev/sda1'}
 
-        def fake_bdm_get(ctxt, id):
+        def fake_bdm_get(ctxt, uuid):
             return [{'volume_id': 87654321,
                      'snapshot_id': None,
                      'no_device': None,

@@ -355,7 +355,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         swap = None
         ephemerals = []
         for bdm in self.db.block_device_mapping_get_all_by_instance(
-            context, instance['id']):
+            context, instance['uuid']):
             LOG.debug(_('Setting up bdm %s'), bdm, instance=instance)
 
             if bdm['no_device']:
@@ -617,13 +617,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                       instance=instance)
             self.network_api.deallocate_for_instance(context, instance)
 
-    def _get_instance_volume_bdms(self, context, instance_id):
+    def _get_instance_volume_bdms(self, context, instance_uuid):
         bdms = self.db.block_device_mapping_get_all_by_instance(context,
-                                                                instance_id)
+                                                                instance_uuid)
         return [bdm for bdm in bdms if bdm['volume_id']]
 
-    def _get_instance_volume_bdm(self, context, instance_id, volume_id):
-        bdms = self._get_instance_volume_bdms(context, instance_id)
+    def _get_instance_volume_bdm(self, context, instance_uuid, volume_id):
+        bdms = self._get_instance_volume_bdms(context, instance_uuid)
         for bdm in bdms:
             # NOTE(vish): Comparing as strings because the os_api doesn't
             #             convert to integer and we may wish to support uuids
@@ -631,8 +631,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             if str(bdm['volume_id']) == str(volume_id):
                 return bdm
 
-    def _get_instance_volume_block_device_info(self, context, instance_id):
-        bdms = self._get_instance_volume_bdms(context, instance_id)
+    def _get_instance_volume_block_device_info(self, context, instance_uuid):
+        bdms = self._get_instance_volume_bdms(context, instance_uuid)
         block_device_mapping = []
         for bdm in bdms:
             cinfo = utils.loads(bdm['connection_info'])
@@ -668,8 +668,6 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _shutdown_instance(self, context, instance, action_str):
         """Shutdown an instance on this host."""
         context = context.elevated()
-        instance_id = instance['id']
-        instance_uuid = instance['uuid']
         LOG.audit(_('%(action_str)s instance') % {'action_str': action_str},
                   context=context, instance=instance)
 
@@ -681,9 +679,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._deallocate_network(context, instance)
 
         # NOTE(vish) get bdms before destroying the instance
-        bdms = self._get_instance_volume_bdms(context, instance_id)
+        bdms = self._get_instance_volume_bdms(context, instance['uuid'])
         block_device_info = self._get_instance_volume_block_device_info(
-            context, instance_id)
+            context, instance['uuid'])
         self.driver.destroy(instance, self._legacy_nw_info(network_info),
                             block_device_info)
         for bdm in bdms:
@@ -702,11 +700,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self._notify_about_instance_usage(context, instance, "shutdown.end")
 
-    def _cleanup_volumes(self, context, instance_id):
+    def _cleanup_volumes(self, context, instance_uuid):
         bdms = self.db.block_device_mapping_get_all_by_instance(context,
-                                                                instance_id)
+                                                                instance_uuid)
         for bdm in bdms:
-            LOG.debug(_("terminating bdm %s") % bdm)
+            LOG.debug(_("terminating bdm %s") % bdm,
+                      instance_uuid=instance_uuid)
             if bdm['volume_id'] and bdm['delete_on_termination']:
                 volume = self.volume_api.get(context, bdm['volume_id'])
                 self.volume_api.delete(context, volume)
@@ -717,7 +716,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_id = instance['id']
         self._notify_about_instance_usage(context, instance, "delete.start")
         self._shutdown_instance(context, instance, 'Terminating')
-        self._cleanup_volumes(context, instance_id)
+        self._cleanup_volumes(context, instance['uuid'])
         instance = self._instance_update(context,
                               instance_id,
                               vm_state=vm_states.DELETED,
@@ -1712,7 +1711,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         volume = self.volume_api.get(context, volume_id)
         context = context.elevated()
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        instance_id = instance_ref['id']
         LOG.audit(_('Attaching volume %(volume_id)s to %(mountpoint)s'),
                   locals(), context=context, instance=instance_ref)
         try:
@@ -1741,9 +1739,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                      volume,
                                                      connector)
 
-        self.volume_api.attach(context, volume, instance_id, mountpoint)
+        self.volume_api.attach(context, volume, instance_ref['id'], mountpoint)
         values = {
-            'instance_id': instance_id,
+            'instance_uuid': instance_ref['uuid'],
             'connection_info': utils.dumps(connection_info),
             'device_name': mountpoint,
             'delete_on_termination': False,
@@ -1778,15 +1776,14 @@ class ComputeManager(manager.SchedulerDependentManager):
     def detach_volume(self, context, instance_uuid, volume_id):
         """Detach a volume from an instance."""
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        instance_id = instance_ref['id']
-        bdm = self._get_instance_volume_bdm(context, instance_id, volume_id)
+        bdm = self._get_instance_volume_bdm(context, instance_uuid, volume_id)
         self._detach_volume(context, instance_ref, bdm)
         volume = self.volume_api.get(context, volume_id)
         connector = self.driver.get_volume_connector(instance_ref)
         self.volume_api.terminate_connection(context, volume, connector)
         self.volume_api.detach(context.elevated(), volume)
         self.db.block_device_mapping_destroy_by_instance_and_volume(
-            context, instance_id, volume_id)
+            context, instance_uuid, volume_id)
         return True
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1889,7 +1886,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # If any volume is mounted, prepare here.
         block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance_id)
+                            context, instance_ref['uuid'])
         if not block_device_info['block_device_mapping']:
             LOG.info(_('Instance has no volume.'), instance=instance_ref)
 
@@ -1959,7 +1956,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             # Checking volume node is working correctly when any volumes
             # are attached to instances.
-            if self._get_instance_volume_bdms(context, instance_id):
+            if self._get_instance_volume_bdms(context, instance_ref['uuid']):
                 rpc.call(context,
                           FLAGS.volume_topic,
                           {'method': 'check_for_export',
@@ -2011,7 +2008,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                  instance=instance_ref)
 
         # Detaching volumes.
-        for bdm in self._get_instance_volume_bdms(ctxt, instance_ref['id']):
+        for bdm in self._get_instance_volume_bdms(ctxt, instance_ref['uuid']):
             # NOTE(vish): We don't want to actually mark the volume
             #             detached, or delete the bdm, just remove the
             #             connection from this host.
@@ -2147,7 +2144,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api.setup_networks_on_host(context, instance_ref,
                                                          self.host)
 
-        for bdm in self._get_instance_volume_bdms(context, instance_ref['id']):
+        for bdm in self._get_instance_volume_bdms(context,
+                                                  instance_ref['uuid']):
             volume_id = bdm['volume_id']
             volume = self.volume_api.get(context, volume_id)
             self.volume_api.update(context, volume, {'status': 'in-use'})
@@ -2478,7 +2476,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                "DELETED but still present on host."),
                              locals(), instance=instance)
                     self._shutdown_instance(context, instance, 'Terminating')
-                    self._cleanup_volumes(context, instance['id'])
+                    self._cleanup_volumes(context, instance['uuid'])
                 else:
                     raise Exception(_("Unrecognized value '%(action)s'"
                                       " for FLAGS.running_deleted_"

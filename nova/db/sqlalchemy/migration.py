@@ -23,10 +23,15 @@ import sys
 from nova.db.sqlalchemy.session import get_engine
 from nova import exception
 from nova import flags
+from nova import log as logging
+
 
 import sqlalchemy
 import migrate
 from migrate.versioning import util as migrate_util
+
+
+LOG = logging.getLogger(__name__)
 
 
 @migrate_util.decorator

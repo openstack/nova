@@ -484,7 +484,7 @@ class API(BaseAPI):
         return size
 
     def _update_image_block_device_mapping(self, elevated_context,
-                                           instance_type, instance_id,
+                                           instance_type, instance_uuid,
                                            mappings):
         """tell vm driver to create ephemeral/swap device at boot time by
         updating BlockDeviceMapping
@@ -507,7 +507,7 @@ class API(BaseAPI):
                 continue
 
             values = {
-                'instance_id': instance_id,
+                'instance_uuid': instance_uuid,
                 'device_name': bdm['device'],
                 'virtual_name': virtual_name,
                 'volume_size': size}
@@ -515,7 +515,7 @@ class API(BaseAPI):
                                                           values)
 
     def _update_block_device_mapping(self, elevated_context,
-                                     instance_type, instance_id,
+                                     instance_type, instance_uuid,
                                      block_device_mapping):
         """tell vm driver to attach volume at boot time by updating
         BlockDeviceMapping
@@ -524,7 +524,7 @@ class API(BaseAPI):
         for bdm in block_device_mapping:
             assert 'device_name' in bdm
 
-            values = {'instance_id': instance_id}
+            values = {'instance_uuid': instance_uuid}
             for key in ('device_name', 'delete_on_termination', 'virtual_name',
                         'snapshot_id', 'volume_id', 'volume_size',
                         'no_device'):
@@ -587,12 +587,13 @@ class API(BaseAPI):
 
         # BlockDeviceMapping table
         self._update_image_block_device_mapping(elevated, instance_type,
-            instance_id, image['properties'].get('mappings', []))
-        self._update_block_device_mapping(elevated, instance_type, instance_id,
+            instance_uuid, image['properties'].get('mappings', []))
+        self._update_block_device_mapping(elevated, instance_type,
+                                          instance_uuid,
             image['properties'].get('block_device_mapping', []))
         # override via command line option
-        self._update_block_device_mapping(elevated, instance_type, instance_id,
-                                          block_device_mapping)
+        self._update_block_device_mapping(elevated, instance_type,
+                                          instance_uuid, block_device_mapping)
 
         # Set sane defaults if not specified
         updates = {}

@@ -1086,9 +1086,10 @@ def block_device_mapping_update_or_create(context, values):
     return IMPL.block_device_mapping_update_or_create(context, values)
 
 
-def block_device_mapping_get_all_by_instance(context, instance_id):
+def block_device_mapping_get_all_by_instance(context, instance_uuid):
     """Get all block device mapping belonging to a instance"""
-    return IMPL.block_device_mapping_get_all_by_instance(context, instance_id)
+    return IMPL.block_device_mapping_get_all_by_instance(context,
+                                                         instance_uuid)
 
 
 def block_device_mapping_destroy(context, bdm_id):
@@ -1096,11 +1097,11 @@ def block_device_mapping_destroy(context, bdm_id):
     return IMPL.block_device_mapping_destroy(context, bdm_id)
 
 
-def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
+def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
                                                         volume_id):
     """Destroy the block device mapping or raise if it does not exist."""
     return IMPL.block_device_mapping_destroy_by_instance_and_volume(
-        context, instance_id, volume_id)
+        context, instance_uuid, volume_id)
 
 
 ####################
