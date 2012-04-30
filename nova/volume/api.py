@@ -84,7 +84,7 @@ class API(base.Base):
             pid = context.project_id
             LOG.warn(_("Quota exceeded for %(pid)s, tried to create"
                     " %(size)sG volume") % locals())
-            raise exception.QuotaError(code="VolumeSizeTooLarge")
+            raise exception.VolumeSizeTooLarge()
 
         if availability_zone is None:
             availability_zone = FLAGS.storage_availability_zone

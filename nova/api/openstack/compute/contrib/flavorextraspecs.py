@@ -66,8 +66,8 @@ class FlavorExtraSpecsController(object):
             db.instance_type_extra_specs_update_or_create(context,
                                                               flavor_id,
                                                               specs)
-        except exception.QuotaError as error:
-            self._handle_quota_error(error)
+        except exception.MetadataLimitExceeded as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
         return body
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
@@ -85,8 +85,8 @@ class FlavorExtraSpecsController(object):
             db.instance_type_extra_specs_update_or_create(context,
                                                                flavor_id,
                                                                body)
-        except exception.QuotaError as error:
-            self._handle_quota_error(error)
+        except exception.MetadataLimitExceeded as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
 
         return body
 
@@ -106,12 +106,6 @@ class FlavorExtraSpecsController(object):
         context = req.environ['nova.context']
         authorize(context)
         db.instance_type_extra_specs_delete(context, flavor_id, id)
-
-    def _handle_quota_error(self, error):
-        """Reraise quota errors as api-specific http exceptions."""
-        if error.code == "MetadataLimitExceeded":
-            raise exc.HTTPBadRequest(explanation=error.message)
-        raise error
 
 
 class Flavorextraspecs(extensions.ExtensionDescriptor):

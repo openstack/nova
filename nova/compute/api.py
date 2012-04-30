@@ -176,16 +176,15 @@ class API(BaseAPI):
             return
         limit = quota.allowed_injected_files(context, len(injected_files))
         if len(injected_files) > limit:
-            raise exception.QuotaError(code="OnsetFileLimitExceeded")
+            raise exception.OnsetFileLimitExceeded()
         path_limit = quota.allowed_injected_file_path_bytes(context)
         for path, content in injected_files:
             if len(path) > path_limit:
-                raise exception.QuotaError(code="OnsetFilePathLimitExceeded")
+                raise exception.OnsetFilePathLimitExceeded()
             content_limit = quota.allowed_injected_file_content_bytes(
                                                     context, len(content))
             if len(content) > content_limit:
-                code = "OnsetFileContentLimitExceeded"
-                raise exception.QuotaError(code=code)
+                raise exception.OnsetFileContentLimitExceeded()
 
     def _check_num_instances_quota(self, context, instance_type, min_count,
                                    max_count):
@@ -196,12 +195,14 @@ class API(BaseAPI):
             pid = context.project_id
             if num_instances <= 0:
                 msg = _("Cannot run any more instances of this type.")
+                used = max_count
             else:
                 msg = (_("Can only run %s more instances of this type.") %
                        num_instances)
+                used = max_count - num_instances
             LOG.warn(_("Quota exceeded for %(pid)s,"
                   " tried to run %(min_count)s instances. %(msg)s"), locals())
-            raise exception.QuotaError(code="InstanceLimitExceeded")
+            raise exception.TooManyInstances(used=used, allowed=max_count)
 
         return num_instances
 
@@ -216,7 +217,7 @@ class API(BaseAPI):
             msg = _("Quota exceeded for %(pid)s, tried to set "
                     "%(num_metadata)s metadata properties") % locals()
             LOG.warn(msg)
-            raise exception.QuotaError(code="MetadataLimitExceeded")
+            raise exception.MetadataLimitExceeded(allowed=quota_metadata)
 
         # Because metadata is stored in the DB, we hard-code the size limits
         # In future, we may support more variable length strings, so we act
@@ -225,13 +226,15 @@ class API(BaseAPI):
             if len(k) == 0:
                 msg = _("Metadata property key blank")
                 LOG.warn(msg)
-                raise exception.QuotaError(code="MetadataKeyUnspecified")
-            if len(k) > 255 or len(v) > 255:
-                msg = _("Metadata property key or value greater than 255 "
-                        "characters")
+                raise exception.InvalidMetadata(reason=msg)
+            if len(k) > 255:
+                msg = _("Metadata property key greater than 255 characters")
                 LOG.warn(msg)
-                raise exception.QuotaError(
-                                        code="MetadataKeyValueLimitExceeded")
+                raise exception.InvalidMetadata(reason=msg)
+            if len(v) > 255:
+                msg = _("Metadata property value greater than 255 characters")
+                LOG.warn(msg)
+                raise exception.InvalidMetadata(reason=msg)
 
     def _check_requested_networks(self, context, requested_networks):
         """ Check if the networks requested belongs to the project

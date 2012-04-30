@@ -114,12 +114,6 @@ class VolumeTypesController(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-    def _handle_quota_error(self, error):
-        """Reraise quota errors as api-specific http exceptions."""
-        if error.code == "MetadataLimitExceeded":
-            raise exc.HTTPBadRequest(explanation=error.message)
-        raise error
-
 
 class VolumeTypeExtraSpecsTemplate(xmlutil.TemplateBuilder):
     def construct(self):

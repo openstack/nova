@@ -1003,7 +1003,7 @@ class ServersControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_rebuild_instance_with_access_ipv4_bad_format(self):
-        self.stubs.Set(nova.db, 'instance_get',
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -1018,6 +1018,108 @@ class ServersControllerTest(test.TestCase):
                 'accessIPv6': access_ipv6,
                 'metadata': {
                     'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller._action_rebuild, req, FAKE_UUID, body)
+
+    def test_rebuild_instance_with_blank_metadata_key(self):
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        access_ipv4 = '0.0.0.0'
+        access_ipv6 = 'fead::1234'
+        body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': image_href,
+                'accessIPv4': access_ipv4,
+                'accessIPv6': access_ipv6,
+                'metadata': {
+                    '': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller._action_rebuild, req, FAKE_UUID, body)
+
+    def test_rebuild_instance_with_metadata_key_too_long(self):
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        access_ipv4 = '0.0.0.0'
+        access_ipv6 = 'fead::1234'
+        body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': image_href,
+                'accessIPv4': access_ipv4,
+                'accessIPv6': access_ipv6,
+                'metadata': {
+                    ('a' * 260): 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/a/action')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller._action_rebuild, req, FAKE_UUID, body)
+
+    def test_rebuild_instance_with_metadata_value_too_long(self):
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+        access_ipv4 = '0.0.0.0'
+        access_ipv6 = 'fead::1234'
+        body = {
+            'rebuild': {
+                'name': 'new_name',
+                'imageRef': image_href,
+                'accessIPv4': access_ipv4,
+                'accessIPv6': access_ipv6,
+                'metadata': {
+                    'key1': ('a' * 260),
                     'open': 'stack',
                 },
                 'personality': [
@@ -1845,13 +1947,7 @@ class ServersControllerCreateTest(test.TestCase):
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
                 'metadata': {
-                    ('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'): '12345',
+                    ('a' * 260): '12345',
                 },
             },
         }
@@ -1861,7 +1957,55 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, req, body)
+
+    def test_create_instance_metadata_value_too_long(self):
+        self.flags(quota_metadata_items=1)
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'key1': ('a' * 260),
+                },
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, req, body)
+
+    def test_create_instance_metadata_key_blank(self):
+        self.flags(quota_metadata_items=1)
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v2/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/123/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    '': '12345',
+                },
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
 
     def test_create_instance_invalid_key_name(self):
@@ -2193,9 +2337,8 @@ class ServersControllerCreateTest(test.TestCase):
             server = self.controller.create(req, body).obj['server']
             fail('excepted quota to be exceeded')
         except webob.exc.HTTPRequestEntityTooLarge as e:
-            code = {'code': 'InstanceLimitExceeded'}
             self.assertEquals(e.explanation,
-                              _('Quota exceeded: code=%(code)s') % code)
+                      _('Quota exceeded: already used 1 of 1 instances'))
 
 
 class TestServerCreateRequestXMLDeserializer(test.TestCase):

@@ -265,6 +265,10 @@ class InvalidVolume(Invalid):
     message = _("Invalid volume") + ": %(reason)s"
 
 
+class InvalidMetadata(Invalid):
+    message = _("Invalid metadata") + ": %(reason)s"
+
+
 class InvalidPortRange(Invalid):
     message = _("Invalid port range %(from_port)s:%(to_port)s. %(msg)s")
 
@@ -960,6 +964,31 @@ class WillNotSchedule(NovaException):
 
 class QuotaError(NovaException):
     message = _("Quota exceeded") + ": code=%(code)s"
+
+
+class TooManyInstances(QuotaError):
+    message = _("Quota exceeded: already used %(used)d of %(allowed)d"
+                " instances")
+
+
+class VolumeSizeTooLarge(QuotaError):
+    message = _("Maximum volume size exceeded")
+
+
+class MetadataLimitExceeded(QuotaError):
+    message = _("Maximum number of metadata items exceeds %(allowed)d")
+
+
+class OnsetFileLimitExceeded(QuotaError):
+    message = _("Personality file limit exceeded")
+
+
+class OnsetFilePathLimitExceeded(QuotaError):
+    message = _("Personality file path too long")
+
+
+class OnsetFileContentLimitExceeded(QuotaError):
+    message = _("Personality file content too long")
 
 
 class AggregateError(NovaException):

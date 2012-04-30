@@ -126,8 +126,12 @@ class Controller(object):
             msg = _("Malformed request body")
             raise exc.HTTPBadRequest(explanation=msg)
 
+        except exception.InvalidMetadata as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
+
         except exception.QuotaError as error:
-            self._handle_quota_error(error)
+            raise exc.HTTPRequestEntityTooLarge(explanation=unicode(error),
+                                                headers={'Retry-After': 0})
 
     @wsgi.serializers(xml=common.MetaItemTemplate)
     def show(self, req, server_id, id):
@@ -158,23 +162,6 @@ class Controller(object):
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
-
-    def _handle_quota_error(self, error):
-        """Reraise quota errors as api-specific http exceptions."""
-        code_mappings = {
-            "MetadataKeyValueLimitExceeded":
-                    _("Metadata property key or value greater than 255 "
-                    "characters"),
-            "MetadataKeyUnspecified":
-                    _("Metadata property key blank"),
-            "MetadataLimitExceeded":
-                    error.message % error.kwargs
-        }
-        expl = code_mappings.get(error.kwargs['code'])
-        if expl:
-            raise exc.HTTPRequestEntityTooLarge(explanation=expl,
-                                                headers={'Retry-After': 0})
-        raise error
 
 
 def create_resource():

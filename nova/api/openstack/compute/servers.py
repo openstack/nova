@@ -471,32 +471,6 @@ class Controller(wsgi.Controller):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-    def _handle_quota_error(self, error):
-        """Reraise quota errors as api-specific http exceptions."""
-
-        code_mappings = {
-            "OnsetFileLimitExceeded":
-                    _("Personality file limit exceeded"),
-            "OnsetFilePathLimitExceeded":
-                    _("Personality file path too long"),
-            "OnsetFileContentLimitExceeded":
-                    _("Personality file content too long"),
-            "MetadataKeyValueLimitExceeded":
-                    _("Metadata property key or value greater than 255 "
-                    "characters"),
-            "MetadataKeyUnspecified":
-                    _("Metadata property key blank"),
-
-            # NOTE(bcwaldon): expose the message generated below in order
-            # to better explain how the quota was exceeded
-            "InstanceLimitExceeded": error.message,
-        }
-
-        code = error.kwargs['code']
-        expl = code_mappings.get(code, error.message) % error.kwargs
-        raise exc.HTTPRequestEntityTooLarge(explanation=expl,
-                                            headers={'Retry-After': 0})
-
     def _validate_server_name(self, value):
         if not isinstance(value, basestring):
             msg = _("Server name is not a string or unicode")
@@ -726,10 +700,13 @@ class Controller(wsgi.Controller):
                             auto_disk_config=auto_disk_config,
                             scheduler_hints=scheduler_hints)
         except exception.QuotaError as error:
-            self._handle_quota_error(error)
+            raise exc.HTTPRequestEntityTooLarge(explanation=unicode(error),
+                                                headers={'Retry-After': 0})
         except exception.InstanceTypeMemoryTooSmall as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
         except exception.InstanceTypeDiskTooSmall as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
+        except exception.InvalidMetadata as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
@@ -1075,6 +1052,8 @@ class Controller(wsgi.Controller):
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
+        except exception.InvalidMetadata as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
