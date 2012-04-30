@@ -452,7 +452,7 @@ class VMHelper(xenapi.HelperBase):
         session.call_plugin('glance', 'upload_vhd', kwargs)
 
     @classmethod
-    def resize_disk(cls, session, vdi_ref, instance_type):
+    def resize_disk(cls, session, instance, vdi_ref, instance_type):
         # Copy VDI over to something we can resize
         # NOTE(jerdfelt): Would be nice to just set vdi_ref to read/write
         sr_ref = cls.safe_find_sr(session)
