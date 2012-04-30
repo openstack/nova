@@ -19,6 +19,7 @@
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.compute import <foo>' elsewhere.
 import nova.flags
-import nova.utils
+import nova.openstack.common.importutils
 
-API = nova.utils.import_class(nova.flags.FLAGS.compute_api_class)
+API = nova.openstack.common.importutils.import_class(
+        nova.flags.FLAGS.compute_api_class)

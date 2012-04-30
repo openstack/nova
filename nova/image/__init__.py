@@ -17,15 +17,15 @@
 
 
 import nova
-from nova import utils
 from nova import flags
 from nova.image import glance
+from nova.openstack.common import importutils
 
 FLAGS = flags.FLAGS
 
 
 def get_default_image_service():
-    ImageService = utils.import_class(FLAGS.image_service)
+    ImageService = importutils.import_class(FLAGS.image_service)
     return ImageService()
 
 

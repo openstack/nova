@@ -18,7 +18,7 @@
 #    under the License.
 
 from nova.openstack.common import cfg
-from nova import utils
+from nova.openstack.common import importutils
 
 
 rpc_opts = [
@@ -219,5 +219,5 @@ def _get_impl():
     """Delay import of rpc_backend until configuration is loaded."""
     global _RPCIMPL
     if _RPCIMPL is None:
-        _RPCIMPL = utils.import_object(_CONF.rpc_backend)
+        _RPCIMPL = importutils.import_module(_CONF.rpc_backend)
     return _RPCIMPL

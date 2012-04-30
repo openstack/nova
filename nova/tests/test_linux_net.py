@@ -23,6 +23,7 @@ from nova import context
 from nova import db
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import importutils
 from nova import test
 from nova import utils
 from nova.network import linux_net
@@ -211,7 +212,7 @@ class LinuxNetworkTestCase(test.TestCase):
     def setUp(self):
         super(LinuxNetworkTestCase, self).setUp()
         network_driver = FLAGS.network_driver
-        self.driver = utils.import_object(network_driver)
+        self.driver = importutils.import_module(network_driver)
         self.driver.db = db
         self.context = context.RequestContext('testuser', 'testproject',
                                               is_admin=True)

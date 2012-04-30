@@ -29,10 +29,10 @@ from nova import exception
 from nova import db
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import importutils
 import nova.policy
 from nova import rpc
 from nova import test
-from nova import utils
 import nova.volume.api
 
 FLAGS = flags.FLAGS
@@ -44,9 +44,9 @@ class VolumeTestCase(test.TestCase):
 
     def setUp(self):
         super(VolumeTestCase, self).setUp()
-        self.compute = utils.import_object(FLAGS.compute_manager)
+        self.compute = importutils.import_object(FLAGS.compute_manager)
         self.flags(connection_type='fake')
-        self.volume = utils.import_object(FLAGS.volume_manager)
+        self.volume = importutils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
         self.instance_id = db.instance_create(self.context, {})['id']
 
@@ -354,7 +354,7 @@ class DriverTestCase(test.TestCase):
         super(DriverTestCase, self).setUp()
         self.flags(volume_driver=self.driver_name,
                    logging_default_format_string="%(message)s")
-        self.volume = utils.import_object(FLAGS.volume_manager)
+        self.volume = importutils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
         self.output = ""
 

@@ -30,7 +30,7 @@ terminating it.
 :instances_path:  Where instances are kept on disk
 :base_dir_name:  Where cached images are stored under instances_path
 :compute_driver:  Name of class that is used to handle virtualization, loaded
-                  by :func:`nova.utils.import_object`
+                  by :func:`nova.openstack.common.importutils.import_object`
 
 """
 
@@ -62,6 +62,7 @@ from nova import network
 from nova.network import model as network_model
 from nova.notifier import api as notifier
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import rpc
 from nova import utils
 from nova.virt import driver
@@ -224,15 +225,15 @@ class ComputeManager(manager.SchedulerDependentManager):
             compute_driver = FLAGS.compute_driver
         try:
             self.driver = utils.check_isinstance(
-                                        utils.import_object(compute_driver),
-                                        driver.ComputeDriver)
+                    importutils.import_object(compute_driver),
+                    driver.ComputeDriver)
         except ImportError as e:
             LOG.error(_("Unable to load the virtualization driver: %s") % (e))
             sys.exit(1)
 
         self.network_api = network.API()
         self.volume_api = volume.API()
-        self.network_manager = utils.import_object(FLAGS.network_manager)
+        self.network_manager = importutils.import_object(FLAGS.network_manager)
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
         self._last_info_cache_heal = 0

@@ -40,6 +40,7 @@ from nova import db
 from nova import flags
 from nova import log as logging
 from nova.network import linux_net
+from nova.openstack.common import importutils
 from nova import rpc
 from nova import utils
 
@@ -52,7 +53,7 @@ def add_lease(mac, ip_address):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
         LOG.debug(_("leasing ip"))
-        network_manager = utils.import_object(FLAGS.network_manager)
+        network_manager = importutils.import_object(FLAGS.network_manager)
         network_manager.lease_fixed_ip(context.get_admin_context(),
                                        ip_address)
     else:
@@ -74,7 +75,7 @@ def del_lease(mac, ip_address):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
         LOG.debug(_("releasing ip"))
-        network_manager = utils.import_object(FLAGS.network_manager)
+        network_manager = importutils.import_object(FLAGS.network_manager)
         network_manager.release_fixed_ip(context.get_admin_context(),
                                          ip_address)
     else:
@@ -88,7 +89,7 @@ def init_leases(network_id):
     """Get the list of hosts for a network."""
     ctxt = context.get_admin_context()
     network_ref = db.network_get(ctxt, network_id)
-    network_manager = utils.import_object(FLAGS.network_manager)
+    network_manager = importutils.import_object(FLAGS.network_manager)
     return network_manager.get_dhcp_leases(ctxt, network_ref)
 
 

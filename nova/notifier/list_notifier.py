@@ -13,11 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
-from nova import utils
+from nova.openstack.common import exception as common_exception
+from nova.openstack.common import importutils
 
 
 list_notifier_drivers_opt = cfg.MultiStrOpt('list_notifier_drivers',
@@ -49,8 +49,8 @@ def _get_drivers():
         drivers = []
         for notification_driver in FLAGS.list_notifier_drivers:
             try:
-                drivers.append(utils.import_object(notification_driver))
-            except exception.ClassNotFound as e:
+                drivers.append(importutils.import_module(notification_driver))
+            except ImportError as e:
                 drivers.append(ImportFailureNotifier(e))
     return drivers
 

@@ -27,18 +27,21 @@ import tempfile
 from xml.etree import ElementTree
 from xml.dom import minidom
 
-from nova import context
-from nova import db
-from nova import exception
-from nova import flags
-from nova import log as logging
-from nova import test
-from nova import utils
 from nova.api.ec2 import cloud
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova import context
+from nova import db
+from nova import exception
+from nova import flags
+from nova import log as logging
+from nova.openstack.common import importutils
+from nova import test
+from nova.tests import fake_network
+from nova.tests import fake_libvirt_utils
+from nova import utils
 from nova.virt import images
 from nova.virt import driver
 from nova.virt import firewall as base_firewall
@@ -48,8 +51,6 @@ from nova.virt.libvirt import firewall
 from nova.virt.libvirt import volume
 from nova.volume import driver as volume_driver
 from nova.virt.libvirt import utils as libvirt_utils
-from nova.tests import fake_network
-from nova.tests import fake_libvirt_utils
 
 
 try:
@@ -693,7 +694,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(image_service='nova.image.fake.FakeImageService')
 
         # Start test
-        image_service = utils.import_object(FLAGS.image_service)
+        image_service = importutils.import_object(FLAGS.image_service)
 
         # Assign different image_ref from nova/images/fakes for testing ami
         test_instance = copy.deepcopy(self.test_instance)
@@ -731,7 +732,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(image_service='nova.image.fake.FakeImageService')
 
         # Start test
-        image_service = utils.import_object(FLAGS.image_service)
+        image_service = importutils.import_object(FLAGS.image_service)
 
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -766,7 +767,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(snapshot_image_format='qcow2')
 
         # Start test
-        image_service = utils.import_object(FLAGS.image_service)
+        image_service = importutils.import_object(FLAGS.image_service)
 
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -800,7 +801,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(image_service='nova.image.fake.FakeImageService')
 
         # Start test
-        image_service = utils.import_object(FLAGS.image_service)
+        image_service = importutils.import_object(FLAGS.image_service)
 
         # Assign different image_ref from nova/images/fakes for
         # testing different base image
@@ -838,7 +839,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(image_service='nova.image.fake.FakeImageService')
 
         # Start test
-        image_service = utils.import_object(FLAGS.image_service)
+        image_service = importutils.import_object(FLAGS.image_service)
 
         # Assign a non-existent image
         test_instance = copy.deepcopy(self.test_instance)
@@ -1166,8 +1167,8 @@ class LibvirtConnTestCase(test.TestCase):
         fake_timer = FakeTime()
 
         # _fake_network_info must be called before create_fake_libvirt_mock(),
-        # as _fake_network_info calls utils.import_class() and
-        # create_fake_libvirt_mock() mocks utils.import_class().
+        # as _fake_network_info calls importutils.import_class() and
+        # create_fake_libvirt_mock() mocks importutils.import_class().
         network_info = _fake_network_info(self.stubs, 1)
         self.create_fake_libvirt_mock()
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -1201,7 +1202,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_live_migration_raises_exception(self):
         """Confirms recover method is called when exceptions are raised."""
         # Preparing data
-        self.compute = utils.import_object(FLAGS.compute_manager)
+        self.compute = importutils.import_object(FLAGS.compute_manager)
         instance_dict = {'host': 'fake',
                          'power_state': power_state.RUNNING,
                          'vm_state': vm_states.ACTIVE}
@@ -1362,8 +1363,8 @@ class LibvirtConnTestCase(test.TestCase):
             return
 
         # _fake_network_info must be called before create_fake_libvirt_mock(),
-        # as _fake_network_info calls utils.import_class() and
-        # create_fake_libvirt_mock() mocks utils.import_class().
+        # as _fake_network_info calls importutils.import_class() and
+        # create_fake_libvirt_mock() mocks importutils.import_class().
         network_info = _fake_network_info(self.stubs, 1)
         self.create_fake_libvirt_mock()
 

@@ -27,6 +27,7 @@ import nova.image.fake
 from nova.compute import utils as compute_utils
 from nova.compute import instance_types
 from nova.notifier import test_notifier
+from nova.openstack.common import importutils
 from nova.tests import fake_network
 
 
@@ -51,7 +52,7 @@ class UsageInfoTestCase(test.TestCase):
                    stub_network=True,
                    notification_driver='nova.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager')
-        self.compute = utils.import_object(FLAGS.compute_manager)
+        self.compute = importutils.import_object(FLAGS.compute_manager)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)

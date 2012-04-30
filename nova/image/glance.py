@@ -32,6 +32,7 @@ from glance.common import exception as glance_exception
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import importutils
 from nova import utils
 
 
@@ -41,7 +42,7 @@ LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 
-GlanceClient = utils.import_class('glance.client.Client')
+GlanceClient = importutils.import_class('glance.client.Client')
 
 
 def _parse_image_ref(image_href):

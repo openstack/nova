@@ -25,10 +25,11 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.notifier import api as notifier
+from nova.openstack.common import exception as common_exception
+from nova.openstack.common import importutils
 from nova.scheduler import driver
 from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options
-from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -243,8 +244,8 @@ class FilterScheduler(driver.Scheduler):
                 # NOTE: import_class is somewhat misnamed since
                 # the weighing function can be any non-class callable
                 # (i.e., no 'self')
-                cost_fn = utils.import_class(cost_fn_str)
-            except exception.ClassNotFound:
+                cost_fn = importutils.import_class(cost_fn_str)
+            except common_exception.NotFound:
                 raise exception.SchedulerCostFunctionNotFound(
                         cost_fn_str=cost_fn_str)
 

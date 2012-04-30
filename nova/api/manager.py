@@ -18,7 +18,7 @@
 
 from nova import flags
 from nova import manager
-from nova import utils
+from nova.openstack.common import importutils
 
 FLAGS = flags.FLAGS
 
@@ -31,7 +31,7 @@ class MetadataManager(manager.Manager):
     """
     def __init__(self, *args, **kwargs):
         super(MetadataManager, self).__init__(*args, **kwargs)
-        self.network_driver = utils.import_object(FLAGS.network_driver)
+        self.network_driver = importutils.import_module(FLAGS.network_driver)
 
     def init_host(self):
         """Perform any initialization.

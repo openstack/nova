@@ -25,13 +25,14 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.network import linux_net
+from nova.network import manager as network_manager
+from nova.openstack.common import importutils
 import nova.policy
 from nova import rpc
 from nova import test
-from nova import utils
-from nova.network import linux_net
-from nova.network import manager as network_manager
 from nova.tests import fake_network
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -132,7 +133,7 @@ class FlatNetworkTestCase(test.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.flags(logdir=self.tempdir)
         self.network = network_manager.FlatManager(host=HOST)
-        temp = utils.import_object('nova.network.minidns.MiniDNS')
+        temp = importutils.import_object('nova.network.minidns.MiniDNS')
         self.network.instance_dns_manager = temp
         self.network.instance_dns_domain = ''
         self.network.db = db
@@ -1407,7 +1408,7 @@ class FloatingIPTestCase(test.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.flags(logdir=self.tempdir)
         self.network = TestFloatingIPManager()
-        temp = utils.import_object('nova.network.minidns.MiniDNS')
+        temp = importutils.import_object('nova.network.minidns.MiniDNS')
         self.network.floating_dns_manager = temp
         self.network.db = db
         self.project_id = 'testproject'
@@ -1610,9 +1611,9 @@ class InstanceDNSTestCase(test.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.flags(logdir=self.tempdir)
         self.network = TestFloatingIPManager()
-        temp = utils.import_object('nova.network.minidns.MiniDNS')
+        temp = importutils.import_object('nova.network.minidns.MiniDNS')
         self.network.instance_dns_manager = temp
-        temp = utils.import_object('nova.network.dns_driver.DNSDriver')
+        temp = importutils.import_object('nova.network.dns_driver.DNSDriver')
         self.network.floating_dns_manager = temp
         self.network.db = db
         self.project_id = 'testproject'
@@ -1659,7 +1660,7 @@ class LdapDNSTestCase(test.TestCase):
         import nova.auth.fakeldap
         sys.modules['ldap'] = nova.auth.fakeldap
 
-        temp = utils.import_object('nova.network.ldapdns.FakeLdapDNS')
+        temp = importutils.import_object('nova.network.ldapdns.FakeLdapDNS')
         self.driver = temp
         self.driver.create_domain(domain1)
         self.driver.create_domain(domain2)

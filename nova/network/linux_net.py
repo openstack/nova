@@ -29,6 +29,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import utils
 
 
@@ -889,7 +890,8 @@ interface_driver = None
 def _get_interface_driver():
     global interface_driver
     if not interface_driver:
-        interface_driver = utils.import_object(FLAGS.linuxnet_interface_driver)
+        interface_driver = importutils.import_object(
+                FLAGS.linuxnet_interface_driver)
     return interface_driver
 
 

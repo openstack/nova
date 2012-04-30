@@ -41,6 +41,7 @@ from nova import flags
 from nova.image import s3
 from nova import log as logging
 from nova import network
+from nova.openstack.common import importutils
 from nova import quota
 from nova import utils
 from nova import volume
@@ -211,7 +212,7 @@ class CloudController(object):
         self.volume_api = volume.API()
         self.compute_api = compute.API(network_api=self.network_api,
                                        volume_api=self.volume_api)
-        self.sgh = utils.import_object(FLAGS.security_group_handler)
+        self.sgh = importutils.import_object(FLAGS.security_group_handler)
 
     def __str__(self):
         return 'CloudController'

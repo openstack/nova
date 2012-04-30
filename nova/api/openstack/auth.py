@@ -28,6 +28,7 @@ from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import importutils
 from nova import utils
 from nova import wsgi as base_wsgi
 
@@ -76,7 +77,7 @@ class AuthMiddleware(base_wsgi.Middleware):
     def __init__(self, application, db_driver=None):
         if not db_driver:
             db_driver = FLAGS.db_driver
-        self.db = utils.import_object(db_driver)
+        self.db = importutils.import_module(db_driver)
         self.auth = manager.AuthManager()
         super(AuthMiddleware, self).__init__(application)
 

@@ -29,6 +29,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova import utils
@@ -131,7 +132,7 @@ class Scheduler(object):
     """The base class that all Scheduler classes should inherit from."""
 
     def __init__(self):
-        self.host_manager = utils.import_object(
+        self.host_manager = importutils.import_object(
                 FLAGS.scheduler_host_manager)
         self.compute_api = compute_api.API()
 

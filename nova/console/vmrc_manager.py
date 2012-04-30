@@ -22,8 +22,8 @@ from nova import flags
 from nova import log as logging
 from nova import manager
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import rpc
-from nova import utils
 from nova.virt import vmwareapi_conn
 
 
@@ -46,7 +46,7 @@ class ConsoleVMRCManager(manager.Manager):
     """Manager to handle VMRC connections for accessing instance consoles."""
 
     def __init__(self, console_driver=None, *args, **kwargs):
-        self.driver = utils.import_object(FLAGS.console_driver)
+        self.driver = importutils.import_object(FLAGS.console_driver)
         super(ConsoleVMRCManager, self).__init__(*args, **kwargs)
 
     def init_host(self):

@@ -27,8 +27,9 @@ from nova.api.openstack import xmlutil
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import exception as common_exception
+from nova.openstack.common import importutils
 import nova.policy
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -246,7 +247,7 @@ class ExtensionManager(object):
         LOG.debug(_("Loading extension %s"), ext_factory)
 
         # Load the factory
-        factory = utils.import_class(ext_factory)
+        factory = importutils.import_class(ext_factory)
 
         # Call it
         LOG.debug(_("Calling extension factory %s"), ext_factory)
@@ -356,8 +357,8 @@ def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
             ext_name = ("%s%s.%s.extension" %
                         (package, relpkg, dname))
             try:
-                ext = utils.import_class(ext_name)
-            except exception.ClassNotFound:
+                ext = importutils.import_class(ext_name)
+            except common_exception.NotFound:
                 # extension() doesn't exist on it, so we'll explore
                 # the directory for ourselves
                 subdirs.append(dname)

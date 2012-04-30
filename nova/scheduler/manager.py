@@ -31,6 +31,7 @@ from nova import log as logging
 from nova import manager
 from nova.notifier import api as notifier
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import utils
 
 
@@ -50,7 +51,7 @@ class SchedulerManager(manager.Manager):
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
             scheduler_driver = FLAGS.scheduler_driver
-        self.driver = utils.import_object(scheduler_driver)
+        self.driver = importutils.import_object(scheduler_driver)
         super(SchedulerManager, self).__init__(*args, **kwargs)
 
     def __getattr__(self, key):

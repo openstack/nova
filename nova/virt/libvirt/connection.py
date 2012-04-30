@@ -65,6 +65,7 @@ from nova import flags
 import nova.image
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import importutils
 from nova import utils
 from nova.virt import driver
 from nova.virt.disk import api as disk
@@ -226,13 +227,13 @@ class LibvirtConnection(driver.ComputeDriver):
         self.read_only = read_only
         if FLAGS.firewall_driver not in firewall.drivers:
             FLAGS.set_default('firewall_driver', firewall.drivers[0])
-        fw_class = utils.import_class(FLAGS.firewall_driver)
+        fw_class = importutils.import_class(FLAGS.firewall_driver)
         self.firewall_driver = fw_class(get_connection=self._get_connection)
-        self.vif_driver = utils.import_object(FLAGS.libvirt_vif_driver)
+        self.vif_driver = importutils.import_object(FLAGS.libvirt_vif_driver)
         self.volume_drivers = {}
         for driver_str in FLAGS.libvirt_volume_drivers:
             driver_type, _sep, driver = driver_str.partition('=')
-            driver_class = utils.import_class(driver)
+            driver_class = importutils.import_class(driver)
             self.volume_drivers[driver_type] = driver_class(self)
         self._host_state = None
 
