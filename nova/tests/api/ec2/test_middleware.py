@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from lxml import etree
 import webob
 import webob.dec
 import webob.exc
@@ -26,8 +27,6 @@ from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
-
-from xml.etree import ElementTree
 
 FLAGS = flags.FLAGS
 
@@ -108,7 +107,7 @@ class ExecutorTestCase(test.TestCase):
         return self.executor(fake_wsgi_request)
 
     def _extract_message(self, result):
-        tree = ElementTree.fromstring(result.body)
+        tree = etree.fromstring(result.body)
         return tree.findall('./Errors')[0].find('Error/Message').text
 
     def test_instance_not_found(self):

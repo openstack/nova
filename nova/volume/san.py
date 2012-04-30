@@ -30,7 +30,8 @@ import random
 import socket
 import string
 import uuid
-from xml.etree import ElementTree
+
+from lxml import etree
 
 from nova import exception
 from nova import flags
@@ -145,7 +146,7 @@ class SanISCSIDriver(nova.volume.driver.ISCSIDriver):
         pass
 
     def check_for_setup_error(self):
-        """Returns an error if prerequisites aren't met"""
+        """Returns an error if prerequisites aren't met."""
         if not self.run_local:
             if not (FLAGS.san_password or FLAGS.san_private_key):
                 raise exception.Error(_('Specify san_password or '
@@ -451,7 +452,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
 
         LOG.debug(_("CLIQ command returned %s"), out)
 
-        result_xml = ElementTree.fromstring(out)
+        result_xml = etree.fromstring(out)
         if check_cliq_result:
             response_node = result_xml.find("response")
             if response_node is None:
@@ -492,7 +493,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
         if len(vips) == 1:
             return vips[0]
 
-        _xml = ElementTree.tostring(cluster_xml)
+        _xml = etree.tostring(cluster_xml)
         msg = (_("Unexpected number of virtual ips for cluster "
                  " %(cluster_name)s. Result=%(_xml)s") %
                locals())
