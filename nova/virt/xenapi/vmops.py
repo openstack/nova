@@ -1315,13 +1315,11 @@ class VMOps(object):
         migrations = db.migration_get_all_unconfirmed(ctxt,
             resize_confirm_window)
 
-        migrations_info = dict(migration_count=len(migrations),
-                confirm_window=resize_confirm_window)
-
-        if migrations_info["migration_count"] > 0:
+        if migrations:
             LOG.info(_("Found %(migration_count)d unconfirmed migrations "
-                       "older than %(confirm_window)d seconds"),
-                     migrations_info)
+                    "older than %(confirm_window)d seconds") %
+                     {'migration_count': len(migrations),
+                      'confirm_window': resize_confirm_window})
 
         def _set_migration_to_error(migration_id, reason, **kwargs):
             msg = _("Setting migration %(migration_id)s to error: "
