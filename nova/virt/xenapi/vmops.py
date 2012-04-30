@@ -744,6 +744,7 @@ class VMOps(object):
                 # 3. Copy VDI, resize partition and filesystem, forget VDI,
                 # truncate VHD
                 new_ref, new_uuid = VMHelper.resize_disk(self._session,
+                                                         instance,
                                                          vdi_ref,
                                                          instance_type)
                 self._update_instance_progress(context, instance,
