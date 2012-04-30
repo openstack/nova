@@ -57,9 +57,12 @@ def notify_usage_exists(context, instance_ref, current_period=False):
                                                          instance_ref)
 
     macs = [vif['address'] for vif in nw_info]
-    for b in db.bw_usage_get_by_macs(admin_context,
-                                     macs,
-                                     audit_start):
+    uuids = [instance_ref.uuid]
+
+    bw_usages = db.bw_usage_get_by_uuids(admin_context, uuids, audit_start)
+    bw_usages = [b for b in bw_usages if b.mac in macs]
+
+    for b in bw_usages:
         label = 'net-name-not-found-%s' % b['mac']
         for vif in nw_info:
             if vif['address'] == b['mac']:

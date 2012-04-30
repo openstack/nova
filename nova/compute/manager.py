@@ -2262,8 +2262,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._last_bw_usage_poll = curr_time
             LOG.info(_("Updating bandwidth usage cache"))
 
+            instances = self.db.instance_get_all_by_host(context, self.host)
             try:
-                bw_usage = self.driver.get_all_bw_usage(start_time, stop_time)
+                bw_usage = self.driver.get_all_bw_usage(instances, start_time,
+                        stop_time)
             except NotImplementedError:
                 # NOTE(mdragon): Not all hypervisors have bandwidth polling
                 # implemented yet.  If they don't it doesn't break anything,
@@ -2271,9 +2273,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 return
 
             for usage in bw_usage:
-                mac = usage['mac_address']
                 self.db.bw_usage_update(context,
-                                        mac,
+                                        usage['uuid'],
+                                        usage['mac_address'],
                                         start_time,
                                         usage['bw_in'], usage['bw_out'])
 

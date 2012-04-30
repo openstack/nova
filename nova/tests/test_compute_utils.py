@@ -79,7 +79,7 @@ class UsageInfoTestCase(test.TestCase):
         return db.instance_create(self.context, inst)['id']
 
     def test_notify_usage_exists(self):
-        """Ensure 'exists' notification generates apropriate usage data."""
+        """Ensure 'exists' notification generates appropriate usage data."""
         instance_id = self._create_instance()
         instance = db.instance_get(self.context, instance_id)
         compute_utils.notify_usage_exists(self.context, instance)
