@@ -171,5 +171,6 @@ fi
 
 if [ $coverage -eq 1 ]; then
     echo "Generating coverage report in covhtml/"
-    ${wrapper} coverage html --include=nova/* -d covhtml -i
+    # Don't compute coverage for common code, which is tested elsewhere
+    ${wrapper} coverage html --include='nova/*' --omit='nova/openstack/common/*' -d covhtml -i
 fi
