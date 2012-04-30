@@ -20,32 +20,24 @@ from sqlalchemy import MetaData
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
+
+    tables = ["agent_builds", "aggregate_hosts", "aggregate_metadata",
+              "aggregates", "block_device_mapping", "bw_usage_cache",
+              "dns_domains", "instance_faults", "instance_type_extra_specs",
+              "provider_fw_rules", "quota_classes", "s3_images",
+              "sm_backend_config", "sm_flavors", "sm_volume",
+              "virtual_storage_arrays", "volume_metadata",
+              "volume_type_extra_specs", "volume_types"]
+
     meta = MetaData()
     meta.bind = migrate_engine
     if migrate_engine.name == "mysql":
-        migrate_engine.execute("ALTER TABLE agent_builds Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE aggregate_hosts Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE aggregate_metadata Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE aggregates Engine=InnoDB")
-        migrate_engine.execute(
-            "ALTER TABLE block_device_mapping Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE bw_usage_cache Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE dns_domains Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE instance_faults Engine=InnoDB")
-        migrate_engine.execute(
-            "ALTER TABLE instance_type_extra_specs Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE provider_fw_rules Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE quota_classes Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE s3_images Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE sm_backend_config Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE sm_flavors Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE sm_volume Engine=InnoDB")
-        migrate_engine.execute(
-            "ALTER TABLE virtual_storage_arrays Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE volume_metadata Engine=InnoDB")
-        migrate_engine.execute(
-            "ALTER TABLE volume_type_extra_specs Engine=InnoDB")
-        migrate_engine.execute("ALTER TABLE volume_types Engine=InnoDB")
+        d = migrate_engine.execute("SHOW TABLE STATUS WHERE Engine!='InnoDB';")
+        for row in d.fetchall():
+            table_name = row[0]
+            if table_name in tables:
+                migrate_engine.execute("ALTER TABLE %s Engine=InnoDB" %
+                                       table_name)
 
 
 def downgrade(migrate_engine):
