@@ -58,7 +58,9 @@ class Mount(object):
         """Map partitions of the device to the file system namespace."""
         assert(os.path.exists(self.device))
 
-        if self.partition:
+        if self.partition == -1:
+            self.error = _('partition search unsupported with %s') % self.mode
+        elif self.partition:
             map_path = '/dev/mapper/%sp%s' % (os.path.basename(self.device),
                                               self.partition)
             assert(not os.path.exists(map_path))
@@ -73,7 +75,7 @@ class Mount(object):
             # so given we only use it when we expect a partitioned image, fail
             if not os.path.exists(map_path):
                 if not err:
-                    err = _('no partitions found')
+                    err = _('partition %s not found') % self.partition
                 self.error = _('Failed to map partitions: %s') % err
             else:
                 self.mapped_device = map_path
