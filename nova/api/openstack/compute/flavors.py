@@ -98,13 +98,15 @@ class Controller(wsgi.Controller):
             try:
                 filters['min_memory_mb'] = int(req.params['minRam'])
             except ValueError:
-                pass  # ignore bogus values per spec
+                msg = _('Invalid minRam filter [%s]') % req.params['minRam']
+                raise webob.exc.HTTPBadRequest(explanation=msg)
 
         if 'minDisk' in req.params:
             try:
                 filters['min_root_gb'] = int(req.params['minDisk'])
             except ValueError:
-                pass  # ignore bogus values per spec
+                msg = _('Invalid minDisk filter [%s]') % req.params['minDisk']
+                raise webob.exc.HTTPBadRequest(explanation=msg)
 
         flavors = instance_types.get_all_types(filters=filters)
         flavors_list = flavors.values()
