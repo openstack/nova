@@ -69,7 +69,7 @@ class RootwrapTestCase(test.TestCase):
         p = subprocess.Popen(["/bin/sleep", "5"])
         f = filters.KillFilter("/bin/kill", "root",
                                ["-ALRM"],
-                               ["/bin/sleep"])
+                               ["/bin/sleep", "/usr/bin/sleep"])
         usercmd = ['kill', '-9', p.pid]
         # Incorrect signal should fail
         self.assertFalse(f.match(usercmd))
@@ -79,7 +79,7 @@ class RootwrapTestCase(test.TestCase):
 
         f = filters.KillFilter("/bin/kill", "root",
                                ["-9", ""],
-                               ["/bin/sleep"])
+                               ["/bin/sleep", "/usr/bin/sleep"])
         usercmd = ['kill', '-9', os.getpid()]
         # Our own PID does not match /bin/sleep, so it should fail
         self.assertFalse(f.match(usercmd))
