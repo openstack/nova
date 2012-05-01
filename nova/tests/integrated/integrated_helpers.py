@@ -96,6 +96,12 @@ class _IntegratedTestBase(test.TestCase):
         """An opportunity to setup flags, before the services are started."""
         f = {}
 
+        # Ensure tests only listen on localhost
+        f['ec2_listen'] = '127.0.0.1'
+        f['osapi_compute_listen'] = '127.0.0.1'
+        f['osapi_volume_listen'] = '127.0.0.1'
+        f['metadata_listen'] = '127.0.0.1'
+
         # Auto-assign ports to allow concurrent tests
         f['ec2_listen_port'] = 0
         f['osapi_compute_listen_port'] = 0
