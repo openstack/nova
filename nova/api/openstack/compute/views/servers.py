@@ -170,11 +170,10 @@ class ViewBuilder(common.ViewBuilder):
 
     def _get_flavor(self, request, instance):
         flavor_id = instance["instance_type"]["flavorid"]
-        flavor_ref = self._flavor_builder._get_href_link(request, flavor_id)
         flavor_bookmark = self._flavor_builder._get_bookmark_link(request,
                                                                   flavor_id)
         return {
-            "id": str(common.get_id_from_href(flavor_ref)),
+            "id": str(flavor_id),
             "links": [{
                 "rel": "bookmark",
                 "href": flavor_bookmark,
