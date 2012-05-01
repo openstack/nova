@@ -27,7 +27,6 @@ if possible.
 import ConfigParser
 import commands
 import os
-import unittest
 import urlparse
 
 from migrate.versioning import repository
@@ -41,7 +40,40 @@ from nova import test
 LOG = logging.getLogger('nova.tests.test_migrations')
 
 
-class TestMigrations(unittest.TestCase):
+def _mysql_get_connect_string(user="openstack_citest",
+                              passwd="openstack_citest",
+                              database="openstack_citest"):
+    """
+    Try to get a connection with a very specfic set of values, if we get
+    these then we'll run the mysql tests, otherwise they are skipped
+    """
+    return "mysql://%(user)s:%(passwd)s@localhost/%(database)s" % locals()
+
+
+def _is_mysql_avail(user="openstack_citest",
+                    passwd="openstack_citest",
+                    database="openstack_citest"):
+    try:
+        connect_uri = _mysql_get_connect_string(
+            user=user, passwd=passwd, database=database)
+        engine = sqlalchemy.create_engine(connect_uri)
+        connection = engine.connect()
+    except Exception:
+        # intential catch all to handle exceptions even if we don't
+        # have mysql code loaded at all.
+        return False
+    else:
+        connection.close()
+        return True
+
+
+def _missing_mysql():
+    if "NOVA_TEST_MYSQL_PRESENT" in os.environ:
+        return True
+    return not _is_mysql_avail()
+
+
+class TestMigrations(test.TestCase):
     """Test sqlalchemy-migrate migrations"""
 
     TEST_DATABASES = {}
@@ -87,7 +119,6 @@ class TestMigrations(unittest.TestCase):
         self._reset_databases()
 
     def tearDown(self):
-        super(TestMigrations, self).tearDown()
 
         # We destroy the test data store between each test case,
         # and recreate it, which ensures that we have no side-effects
@@ -99,6 +130,7 @@ class TestMigrations(unittest.TestCase):
             del self.engines["mysqlcitest"]
         if "mysqlcitest" in TestMigrations.TEST_DATABASES:
             del TestMigrations.TEST_DATABASES["mysqlcitest"]
+        super(TestMigrations, self).tearDown()
 
     def _reset_databases(self):
         def execute_cmd(cmd=None):
@@ -174,56 +206,25 @@ class TestMigrations(unittest.TestCase):
         for key, engine in self.engines.items():
             self._walk_versions(engine, self.snake_walk)
 
-    def _mysql_get_connect_string(self, user="openstack_citest",
-                               passwd="openstack_citest",
-                               database="openstack_citest"):
-        """
-        Try to get a connection with a very specfic set of values, if we get
-        these then we'll run the mysql tests, otherwise they are skipped
-        """
-        return "mysql://%(user)s:%(passwd)s@localhost/%(database)s" % locals()
-
-    def _is_mysql_avail(self, user="openstack_citest",
-                        passwd="openstack_citest",
-                        database="openstack_citest"):
-        try:
-            connect_uri = self._mysql_get_connect_string(
-                user=user, passwd=passwd, database=database)
-            engine = sqlalchemy.create_engine(connect_uri)
-            connection = engine.connect()
-        except Exception:
-            # intential catch all to handle exceptions even if we don't
-            # have mysql code loaded at all.
-            return False
-        else:
-            connection.close()
-            return True
-
     def test_mysql_connect_fail(self):
         """
         Test that we can trigger a mysql connection failure and we fail
         gracefully to ensure we don't break people without mysql
         """
-        if self._is_mysql_avail(user="openstack_cifail"):
-            self.assertTrue(False, "Shouldn't have connected")
-        else:
-            self.assertTrue(True)
+        if _is_mysql_avail(user="openstack_cifail"):
+            self.fail("Shouldn't have connected")
 
-    # @unittest.expectedFailure
+    @test.skip_if(_missing_mysql(), "mysql not available")
     def test_mysql_innodb(self):
         """
         Test that table creation on mysql only builds InnoDB tables
         """
-        if "NOVA_TEST_MYSQL_PRESENT" not in os.environ:
-            if self._is_mysql_avail() != True:
-                return unittest.skip("mysql not available")
-
         # add this to the global lists to make reset work with it, it's removed
         # automaticaly in tearDown so no need to clean it up here.
-        engine = sqlalchemy.create_engine(self._mysql_get_connect_string())
+        connect_string = _mysql_get_connect_string()
+        engine = sqlalchemy.create_engine(connect_string)
         self.engines["mysqlcitest"] = engine
-        TestMigrations.TEST_DATABASES["mysqlcitest"] = \
-            self._mysql_get_connect_string()
+        TestMigrations.TEST_DATABASES["mysqlcitest"] = connect_string
 
         # build a fully populated mysql database with all the tables
         self._reset_databases()
