@@ -55,6 +55,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import rpc
 from nova import utils
 import nova.compute.utils
 
@@ -62,6 +63,7 @@ import nova.compute.utils
 FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
+    rpc.register_opts(FLAGS)
     admin_context = context.get_admin_context()
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
