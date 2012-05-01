@@ -358,7 +358,7 @@ class FlavorsTest(test.TestCase):
         self.assertEqual(flavors, expected)
 
     def test_get_flavor_list_filter_min_ram(self):
-        """Flavor lists may be filtered by minRam"""
+        """Flavor lists may be filtered by minRam."""
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?minRam=512')
         flavor = self.controller.index(req)
         expected = {
@@ -381,8 +381,14 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
+    def test_get_flavor_list_filter_invalid_min_ram(self):
+        """Ensure you cannot list flavors with invalid minRam param."""
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors?minRam=NaN')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.index, req)
+
     def test_get_flavor_list_filter_min_disk(self):
-        """Flavor lists may be filtered by minRam"""
+        """Flavor lists may be filtered by minDisk."""
         req = fakes.HTTPRequest.blank('/v2/fake/flavors?minDisk=20')
         flavor = self.controller.index(req)
         expected = {
@@ -405,6 +411,12 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
+    def test_get_flavor_list_filter_invalid_min_disk(self):
+        """Ensure you cannot list flavors with invalid minDisk param."""
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors?minDisk=NaN')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.index, req)
+
     def test_get_flavor_list_detail_min_ram_and_min_disk(self):
         """Tests that filtering work on flavor details and that minRam and
         minDisk filters can be combined
@@ -414,102 +426,6 @@ class FlavorsTest(test.TestCase):
         flavor = self.controller.detail(req)
         expected = {
             "flavors": [
-                {
-                    "id": "2",
-                    "name": "flavor 2",
-                    "ram": "512",
-                    "disk": "20",
-                    "rxtx_factor": "",
-                    "swap": "",
-                    "vcpus": "",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://localhost/v2/fake/flavors/2",
-                        },
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost/fake/flavors/2",
-                        },
-                    ],
-                },
-            ],
-        }
-        self.assertEqual(flavor, expected)
-
-    def test_get_flavor_list_detail_bogus_min_ram(self):
-        """Tests that bogus minRam filtering values are ignored"""
-        req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail?minRam=16GB')
-        flavor = self.controller.detail(req)
-        expected = {
-            "flavors": [
-                {
-                    "id": "1",
-                    "name": "flavor 1",
-                    "ram": "256",
-                    "disk": "10",
-                    "rxtx_factor": "",
-                    "swap": "",
-                    "vcpus": "",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://localhost/v2/fake/flavors/1",
-                        },
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost/fake/flavors/1",
-                        },
-                    ],
-                },
-                {
-                    "id": "2",
-                    "name": "flavor 2",
-                    "ram": "512",
-                    "disk": "20",
-                    "rxtx_factor": "",
-                    "swap": "",
-                    "vcpus": "",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://localhost/v2/fake/flavors/2",
-                        },
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost/fake/flavors/2",
-                        },
-                    ],
-                },
-            ],
-        }
-        self.assertEqual(flavor, expected)
-
-    def test_get_flavor_list_detail_bogus_min_disk(self):
-        """Tests that bogus minDisk filtering values are ignored"""
-        req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail?minDisk=16GB')
-        flavor = self.controller.detail(req)
-        expected = {
-            "flavors": [
-                {
-                    "id": "1",
-                    "name": "flavor 1",
-                    "ram": "256",
-                    "disk": "10",
-                    "rxtx_factor": "",
-                    "swap": "",
-                    "vcpus": "",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://localhost/v2/fake/flavors/1",
-                        },
-                        {
-                            "rel": "bookmark",
-                            "href": "http://localhost/fake/flavors/1",
-                        },
-                    ],
-                },
                 {
                     "id": "2",
                     "name": "flavor 2",
