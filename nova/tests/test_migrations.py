@@ -58,6 +58,8 @@ class TestMigrations(unittest.TestCase):
     def setUp(self):
         super(TestMigrations, self).setUp()
 
+        self.snake_walk = False
+
         # Load test databases from the config file. Only do this
         # once. No need to re-run this on each test...
         LOG.debug('config_path is %s' % TestMigrations.CONFIG_FILE_PATH)
@@ -92,6 +94,12 @@ class TestMigrations(unittest.TestCase):
         # from the tests
         self._reset_databases()
 
+        # remove these from the list so they aren't used in the migration tests
+        if "mysqlcitest" in self.engines:
+            del self.engines["mysqlcitest"]
+        if "mysqlcitest" in TestMigrations.TEST_DATABASES:
+            del TestMigrations.TEST_DATABASES["mysqlcitest"]
+
     def _reset_databases(self):
         def execute_cmd(cmd=None):
             status, output = commands.getstatusoutput(cmd)
@@ -120,11 +128,11 @@ class TestMigrations(unittest.TestCase):
                 password = ""
                 if len(auth_pieces) > 1:
                     if auth_pieces[1].strip():
-                        password = "-p%s" % auth_pieces[1]
+                        password = "-p\"%s\"" % auth_pieces[1]
                 sql = ("drop database if exists %(database)s; "
                        "create database %(database)s;") % locals()
-                cmd = ("mysql -u%(user)s %(password)s -h%(host)s "
-                       "-e\"%(sql)s\"") % locals()
+                cmd = ("mysql -u \"%(user)s\" %(password)s -h %(host)s "
+                       "-e \"%(sql)s\"") % locals()
                 execute_cmd(cmd)
             elif conn_string.startswith('postgresql'):
                 database = conn_pieces.path.strip('/')
@@ -166,7 +174,78 @@ class TestMigrations(unittest.TestCase):
         for key, engine in self.engines.items():
             self._walk_versions(engine, self.snake_walk)
 
-    def _walk_versions(self, engine=None, snake_walk=False):
+    def _mysql_get_connect_string(self, user="openstack_citest",
+                               passwd="openstack_citest",
+                               database="openstack_citest"):
+        """
+        Try to get a connection with a very specfic set of values, if we get
+        these then we'll run the mysql tests, otherwise they are skipped
+        """
+        return "mysql://%(user)s:%(passwd)s@localhost/%(database)s" % locals()
+
+    def _is_mysql_avail(self, user="openstack_citest",
+                        passwd="openstack_citest",
+                        database="openstack_citest"):
+        try:
+            connect_uri = self._mysql_get_connect_string(
+                user=user, passwd=passwd, database=database)
+            engine = sqlalchemy.create_engine(connect_uri)
+            connection = engine.connect()
+        except Exception:
+            # intential catch all to handle exceptions even if we don't
+            # have mysql code loaded at all.
+            return False
+        else:
+            connection.close()
+            return True
+
+    def test_mysql_connect_fail(self):
+        """
+        Test that we can trigger a mysql connection failure and we fail
+        gracefully to ensure we don't break people without mysql
+        """
+        if self._is_mysql_avail(user="openstack_cifail"):
+            self.assertTrue(False, "Shouldn't have connected")
+        else:
+            self.assertTrue(True)
+
+    # @unittest.expectedFailure
+    def test_mysql_innodb(self):
+        """
+        Test that table creation on mysql only builds InnoDB tables
+        """
+        if "NOVA_TEST_MYSQL_PRESENT" not in os.environ:
+            if self._is_mysql_avail() != True:
+                return unittest.skip("mysql not available")
+
+        # add this to the global lists to make reset work with it, it's removed
+        # automaticaly in tearDown so no need to clean it up here.
+        engine = sqlalchemy.create_engine(self._mysql_get_connect_string())
+        self.engines["mysqlcitest"] = engine
+        TestMigrations.TEST_DATABASES["mysqlcitest"] = \
+            self._mysql_get_connect_string()
+
+        # build a fully populated mysql database with all the tables
+        self._reset_databases()
+        self._walk_versions(engine, False, False)
+
+        uri = self._mysql_get_connect_string(database="information_schema")
+        connection = sqlalchemy.create_engine(uri).connect()
+
+        # sanity check
+        total = connection.execute("SELECT count(*) "
+                                   "from information_schema.TABLES "
+                                   "where TABLE_SCHEMA='openstack_citest'")
+        self.assertTrue(total.scalar() > 0, "No tables found. Wrong schema?")
+
+        noninnodb = connection.execute("SELECT count(*) "
+                                       "from information_schema.TABLES "
+                                       "where TABLE_SCHEMA='openstack_citest' "
+                                       "and ENGINE!='InnoDB'")
+        count = noninnodb.scalar()
+        self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
+
+    def _walk_versions(self, engine=None, snake_walk=False, downgrade=True):
         # Determine latest version script from the repo, then
         # upgrade from 1 through to the latest, with no data
         # in the databases. This just checks that the schema itself
@@ -182,43 +261,34 @@ class TestMigrations(unittest.TestCase):
 
         for version in xrange(1, TestMigrations.REPOSITORY.latest + 1):
             # upgrade -> downgrade -> upgrade
-            migration_api.upgrade(engine, TestMigrations.REPOSITORY, version)
-            self.assertEqual(version,
-                    migration_api.db_version(engine,
-                                             TestMigrations.REPOSITORY))
+            self._migrate_up(engine, version)
             if snake_walk:
-                migration_api.downgrade(engine,
-                                        TestMigrations.REPOSITORY,
-                                        version - 1)
-                self.assertEqual(version - 1,
-                        migration_api.db_version(engine,
-                                                 TestMigrations.REPOSITORY))
-                migration_api.upgrade(engine,
-                                      TestMigrations.REPOSITORY,
-                                      version)
-                self.assertEqual(version,
-                        migration_api.db_version(engine,
-                                                 TestMigrations.REPOSITORY))
+                self._migrate_down(engine, version - 1)
+                self._migrate_up(engine, version)
 
-        # Now walk it back down to 0 from the latest, testing
-        # the downgrade paths.
-        for version in reversed(
-            xrange(0, TestMigrations.REPOSITORY.latest)):
-            # downgrade -> upgrade -> downgrade
-            migration_api.downgrade(engine, TestMigrations.REPOSITORY, version)
-            self.assertEqual(version,
-                    migration_api.db_version(engine,
-                                             TestMigrations.REPOSITORY))
-            if snake_walk:
-                migration_api.upgrade(engine,
-                                      TestMigrations.REPOSITORY,
-                                      version + 1)
-                self.assertEqual(version + 1,
-                        migration_api.db_version(engine,
-                                                 TestMigrations.REPOSITORY))
-                migration_api.downgrade(engine,
-                                        TestMigrations.REPOSITORY,
-                                        version)
-                self.assertEqual(version,
-                        migration_api.db_version(engine,
-                                                 TestMigrations.REPOSITORY))
+        if downgrade:
+            # Now walk it back down to 0 from the latest, testing
+            # the downgrade paths.
+            for version in reversed(
+                xrange(0, TestMigrations.REPOSITORY.latest)):
+                # downgrade -> upgrade -> downgrade
+                self._migrate_down(engine, version)
+                if snake_walk:
+                    self._migrate_up(engine, version + 1)
+                    self._migrate_down(engine, version)
+
+    def _migrate_down(self, engine, version):
+        migration_api.downgrade(engine,
+                                TestMigrations.REPOSITORY,
+                                version)
+        self.assertEqual(version,
+                         migration_api.db_version(engine,
+                                                  TestMigrations.REPOSITORY))
+
+    def _migrate_up(self, engine, version):
+        migration_api.upgrade(engine,
+                              TestMigrations.REPOSITORY,
+                              version)
+        self.assertEqual(version,
+                migration_api.db_version(engine,
+                                         TestMigrations.REPOSITORY))
