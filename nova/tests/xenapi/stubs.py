@@ -311,9 +311,13 @@ def stub_out_vm_methods(stubs):
     def fake_generate_ephemeral(cls, *args):
         pass
 
+    def fake_wait_for_device(dev):
+        pass
+
     stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
     stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
     stubs.Set(vm_utils.VMHelper, 'generate_ephemeral', fake_generate_ephemeral)
+    stubs.Set(vm_utils, '_wait_for_device', fake_wait_for_device)
 
 
 class FakeSessionForVolumeTests(fake.SessionBase):
