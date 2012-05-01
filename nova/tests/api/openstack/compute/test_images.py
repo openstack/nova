@@ -68,8 +68,8 @@ class ImagesControllerTest(test.TestCase):
         bookmark = "http://localhost/fake/images/124"
         alternate = "%s/fake/images/124" % utils.generate_glance_url()
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/servers/" + server_uuid
-        server_bookmark = "http://localhost/servers/" + server_uuid
+        server_href = "http://localhost/v2/fake/servers/" + server_uuid
+        server_bookmark = "http://localhost/fake/servers/" + server_uuid
 
         expected_image = {
             "image": {
@@ -123,8 +123,8 @@ class ImagesControllerTest(test.TestCase):
         bookmark = "https://zoo.com:42/fake/images/124"
         alternate = "http://circus.com:34/fake/images/124"
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "https://zoo.com:42/v2/servers/" + server_uuid
-        server_bookmark = "https://zoo.com:42/servers/" + server_uuid
+        server_href = "https://zoo.com:42/v2/fake/servers/" + server_uuid
+        server_bookmark = "https://zoo.com:42/fake/servers/" + server_uuid
 
         expected_image = {
             "image": {
@@ -449,8 +449,8 @@ class ImagesControllerTest(test.TestCase):
         response_list = response["images"]
 
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/servers/" + server_uuid
-        server_bookmark = "http://localhost/servers/" + server_uuid
+        server_href = "http://localhost/v2/fake/servers/" + server_uuid
+        server_bookmark = "http://localhost/fake/servers/" + server_uuid
         alternate = "%s/fake/images/%s"
 
         expected = [{
@@ -740,8 +740,8 @@ class ImagesControllerTest(test.TestCase):
         response_links = response["images_links"]
 
         server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
-        server_href = "http://localhost/v2/servers/" + server_uuid
-        server_bookmark = "http://localhost/servers/" + server_uuid
+        server_href = "http://localhost/v2/fake/servers/" + server_uuid
+        server_bookmark = "http://localhost/fake/servers/" + server_uuid
         alternate = "%s/fake/images/%s"
 
         expected = [{
@@ -1063,8 +1063,8 @@ class ImageXMLSerializationTest(test.TestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
     SERVER_UUID = 'aa640691-d1a7-4a67-9d3c-d35ee6b3cc74'
-    SERVER_HREF = 'http://localhost/v2/servers/' + SERVER_UUID
-    SERVER_BOOKMARK = 'http://localhost/servers/' + SERVER_UUID
+    SERVER_HREF = 'http://localhost/v2/fake/servers/' + SERVER_UUID
+    SERVER_BOOKMARK = 'http://localhost/fake/servers/' + SERVER_UUID
     IMAGE_HREF = 'http://localhost/v2/fake/images/%s'
     IMAGE_NEXT = 'http://localhost/v2/fake/images?limit=%s&marker=%s'
     IMAGE_BOOKMARK = 'http://localhost/fake/images/%s'
