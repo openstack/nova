@@ -676,12 +676,13 @@ class ComputeDriver(object):
         """Get connector information for the instance for attaching to volumes.
 
         Connector information is a dictionary representing the ip of the
-        machine that will be making the connection and and the name of the
-        iscsi initiator as follows::
+        machine that will be making the connection, the name of the iscsi
+        initiator and the hostname of the machine as follows::
 
             {
                 'ip': ip,
                 'initiator': initiator,
+                'host': hostname
             }
         """
         raise NotImplementedError()

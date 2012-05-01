@@ -231,6 +231,7 @@ class _VirtDriverTestCase(test.TestCase):
         result = self.connection.get_volume_connector({'id': 'fake'})
         self.assertTrue('ip' in result)
         self.assertTrue('initiator' in result)
+        self.assertTrue('host' in result)
 
     @catch_notimplementederror
     def test_attach_detach_volume(self):

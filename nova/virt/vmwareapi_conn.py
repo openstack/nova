@@ -177,10 +177,11 @@ class VMWareESXConnection(driver.ComputeDriver):
     def get_volume_connector(self, _instance):
         """Return volume connector information"""
         # TODO(vish): When volume attaching is supported, return the
-        #             proper initiator iqn.
+        #             proper initiator iqn and host.
         return {
             'ip': FLAGS.vmwareapi_host_ip,
-            'initiator': None
+            'initiator': None,
+            'host': None
         }
 
     def attach_volume(self, connection_info, instance_name, mountpoint):

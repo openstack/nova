@@ -335,4 +335,4 @@ class FakeConnection(driver.ComputeDriver):
         pass
 
     def get_volume_connector(self, instance):
-        return {'ip': '127.0.0.1', 'initiator': 'fake'}
+        return {'ip': '127.0.0.1', 'initiator': 'fake', 'host': 'fakehost'}

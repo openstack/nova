@@ -488,6 +488,7 @@ class LibvirtConnection(driver.ComputeDriver):
         return {
             'ip': FLAGS.my_ip,
             'initiator': self._initiator,
+            'host': FLAGS.host
         }
 
     def _cleanup_resize(self, instance):
