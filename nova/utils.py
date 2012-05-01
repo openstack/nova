@@ -1116,7 +1116,7 @@ def parse_server_string(server_str):
         return (address, port)
 
     except Exception:
-        LOG.debug(_('Invalid server_string: %s'), server_str)
+        LOG.error(_('Invalid server_string: %s'), server_str)
         return ('', '')
 
 
@@ -1628,7 +1628,7 @@ def tempdir(**kwargs):
         try:
             shutil.rmtree(tmpdir)
         except OSError, e:
-            LOG.debug(_('Could not remove tmpdir: %s'), str(e))
+            LOG.error(_('Could not remove tmpdir: %s'), str(e))
 
 
 def strcmp_const_time(s1, s2):
