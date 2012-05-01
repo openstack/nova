@@ -22,6 +22,8 @@ Unit Tests for remote procedure calls using queue
 
 import mox
 
+from eventlet import greenthread
+
 from nova import context
 from nova import db
 from nova import exception
@@ -217,5 +219,7 @@ class TestLauncher(test.TestCase):
         self.assertEquals(0, self.service.port)
         launcher = service.Launcher()
         launcher.launch_server(self.service)
-        self.assertEquals(0, self.service.port)
+        # Give spawned thread a chance to execute
+        greenthread.sleep(0)
+        self.assertNotEquals(0, self.service.port)
         launcher.stop()
