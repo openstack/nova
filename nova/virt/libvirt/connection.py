@@ -64,6 +64,7 @@ from nova import flags
 import nova.image
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova import utils
 from nova.virt import driver
@@ -2220,7 +2221,7 @@ class LibvirtConnection(driver.ComputeDriver):
                              FLAGS.live_migration_bandwidth)
 
         except Exception:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 recover_method(ctxt, instance_ref, dest, block_migration)
 
         # Waiting for completion of live_migration.

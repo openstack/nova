@@ -44,6 +44,7 @@ from nova import flags
 from nova import log as logging
 from nova import manager
 from nova.openstack.common import cfg
+from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova import rpc
 from nova import utils
@@ -134,7 +135,7 @@ class VolumeManager(manager.SchedulerDependentManager):
             if model_update:
                 self.db.volume_update(context, volume_ref['id'], model_update)
         except Exception:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 self.db.volume_update(context,
                                       volume_ref['id'], {'status': 'error'})
 
@@ -168,7 +169,7 @@ class VolumeManager(manager.SchedulerDependentManager):
                                   {'status': 'available'})
             return True
         except Exception:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 self.db.volume_update(context,
                                       volume_ref['id'],
                                       {'status': 'error_deleting'})
@@ -192,7 +193,7 @@ class VolumeManager(manager.SchedulerDependentManager):
                                         model_update)
 
         except Exception:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 self.db.snapshot_update(context,
                                         snapshot_ref['id'],
                                         {'status': 'error'})
@@ -218,7 +219,7 @@ class VolumeManager(manager.SchedulerDependentManager):
                                     {'status': 'available'})
             return True
         except Exception:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 self.db.snapshot_update(context,
                                         snapshot_ref['id'],
                                         {'status': 'error_deleting'})
