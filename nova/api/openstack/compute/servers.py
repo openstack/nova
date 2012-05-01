@@ -1145,14 +1145,19 @@ class Controller(wsgi.Controller):
 
     def _get_server_admin_password(self, server):
         """Determine the admin password for a server on creation."""
-        password = server.get('adminPass')
+        try:
+            password = server['adminPass']
+            self._validate_admin_password(password)
+        except KeyError:
+            password = utils.generate_password(FLAGS.password_length)
+        except ValueError:
+            raise exc.HTTPBadRequest(explanation=_("Invalid adminPass"))
 
-        if password is None:
-            return utils.generate_password(FLAGS.password_length)
-        if not isinstance(password, basestring) or password == '':
-            msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(explanation=msg)
         return password
+
+    def _validate_admin_password(self, password):
+        if not isinstance(password, basestring):
+            raise ValueError()
 
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin."""
