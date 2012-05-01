@@ -1666,11 +1666,11 @@ def methods_of(obj):
 
 def main():
     """Parse options and call the appropriate class/method."""
-    flagfile = utils.default_flagfile()
+    cfgfile = utils.default_cfgfile()
 
-    if flagfile and not os.access(flagfile, os.R_OK):
-        st = os.stat(flagfile)
-        print "Could not read %s. Re-running with sudo" % flagfile
+    if cfgfile and not os.access(cfgfile, os.R_OK):
+        st = os.stat(cfgfile)
+        print "Could not read %s. Re-running with sudo" % cfgfile
         try:
             os.execvp('sudo', ['sudo', '-u', '#%s' % st.st_uid] + sys.argv)
         except Exception:

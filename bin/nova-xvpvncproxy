@@ -42,7 +42,7 @@ FLAGS = flags.FLAGS
 
 if __name__ == "__main__":
     rpc.register_opts(FLAGS)
-    utils.default_flagfile()
+    utils.default_cfgfile()
     flags.FLAGS(sys.argv)
     logging.setup()
 

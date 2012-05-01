@@ -71,7 +71,7 @@ def delete_queues(queues):
         x.queue_delete(q)
 
 if __name__ == '__main__':
-    utils.default_flagfile()
+    utils.default_cfgfile()
     args = flags.FLAGS(sys.argv)
     logging.setup()
     rpc.register_opts(flags.FLAGS)
