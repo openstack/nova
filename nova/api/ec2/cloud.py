@@ -1282,18 +1282,24 @@ class CloudController(object):
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
-        self.network_api.release_floating_ip(context, address=public_ip)
-        return {'return': "true"}
+        try:
+            self.network_api.release_floating_ip(context, address=public_ip)
+            return {'return': "true"}
+        except exception.FloatingIpNotFound:
+            raise exception.EC2APIError(_('Unable to release IP Address.'))
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         LOG.audit(_("Associate address %(public_ip)s to"
                 " instance %(instance_id)s") % locals(), context=context)
         instance_id = ec2utils.ec2_id_to_id(instance_id)
         instance = self.compute_api.get(context, instance_id)
-        self.compute_api.associate_floating_ip(context,
-                                               instance,
-                                               address=public_ip)
-        return {'return': "true"}
+        try:
+            self.compute_api.associate_floating_ip(context,
+                                                   instance,
+                                                   address=public_ip)
+            return {'return': "true"}
+        except exception.FloatingIpNotFound:
+            raise exception.EC2APIError(_('Unable to associate IP Address.'))
 
     def disassociate_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Disassociate address %s"), public_ip, context=context)
