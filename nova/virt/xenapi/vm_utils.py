@@ -322,8 +322,9 @@ class VMHelper(xenapi.HelperBase):
     def create_vdi(cls, session, sr_ref, instance, name_description,
                    virtual_size, read_only=False):
         """Create a VDI record and returns its reference."""
+        name_label = instance['name']
         vdi_ref = session.call_xenapi("VDI.create",
-             {'name_label': instance['name'],
+             {'name_label': name_label,
               'name_description': name_description,
               'SR': sr_ref,
               'virtual_size': str(virtual_size),
