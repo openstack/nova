@@ -54,6 +54,98 @@ class LibvirtConfigTest(LibvirtConfigBaseTest):
         self.assertXmlEqual(xml, "<demo><foo>bar</foo></demo>")
 
 
+class LibvirtConfigGuestTimerTest(LibvirtConfigBaseTest):
+    def test_config_platform(self):
+        obj = config.LibvirtConfigGuestTimer()
+        obj.track = "host"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <timer name="platform" track="host"/>
+        """)
+
+    def test_config_pit(self):
+        obj = config.LibvirtConfigGuestTimer()
+        obj.name = "pit"
+        obj.tickpolicy = "discard"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <timer name="pit" tickpolicy="discard"/>
+        """)
+
+    def test_config_hpet(self):
+        obj = config.LibvirtConfigGuestTimer()
+        obj.name = "hpet"
+        obj.present = False
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <timer name="hpet" present="no"/>
+        """)
+
+
+class LibvirtConfigGuestClockTest(LibvirtConfigBaseTest):
+    def test_config_utc(self):
+        obj = config.LibvirtConfigGuestClock()
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <clock offset="utc"/>
+        """)
+
+    def test_config_localtime(self):
+        obj = config.LibvirtConfigGuestClock()
+        obj.offset = "localtime"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <clock offset="localtime"/>
+        """)
+
+    def test_config_timezone(self):
+        obj = config.LibvirtConfigGuestClock()
+        obj.offset = "timezone"
+        obj.timezone = "EDT"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <clock offset="timezone" timezone="EDT"/>
+        """)
+
+    def test_config_variable(self):
+        obj = config.LibvirtConfigGuestClock()
+        obj.offset = "variable"
+        obj.adjustment = "123456"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <clock offset="variable" adjustment="123456"/>
+        """)
+
+    def test_config_timers(self):
+        obj = config.LibvirtConfigGuestClock()
+
+        tmpit = config.LibvirtConfigGuestTimer()
+        tmpit.name = "pit"
+        tmpit.tickpolicy = "discard"
+
+        tmrtc = config.LibvirtConfigGuestTimer()
+        tmrtc.name = "rtc"
+        tmrtc.tickpolicy = "merge"
+
+        obj.add_timer(tmpit)
+        obj.add_timer(tmrtc)
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <clock offset="utc">
+               <timer name="pit" tickpolicy="discard"/>
+               <timer name="rtc" tickpolicy="merge"/>
+            </clock>
+        """)
+
+
 class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
 
     def test_config_file(self):
