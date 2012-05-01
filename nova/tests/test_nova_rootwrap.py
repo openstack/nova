@@ -103,6 +103,20 @@ class RootwrapTestCase(test.TestCase):
         usercmd = ['kill', 'notapid']
         self.assertFalse(f.match(usercmd))
 
+    def test_KillFilter_deleted_exe(self):
+        """Makes sure deleted exe's are killed correctly"""
+        # See bug #967931.
+        def fake_readlink(blah):
+            return '/bin/commandddddd (deleted)'
+
+        f = filters.KillFilter("/bin/kill", "root",
+                               [""],
+                               ["/bin/commandddddd"])
+        usercmd = ['kill', 1234]
+        # Providing no signal should work
+        self.stubs.Set(os, 'readlink', fake_readlink)
+        self.assertTrue(f.match(usercmd))
+
     def test_ReadFileFilter(self):
         goodfn = '/good/file.name'
         f = filters.ReadFileFilter(goodfn)
