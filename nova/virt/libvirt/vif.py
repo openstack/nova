@@ -43,6 +43,7 @@ libvirt_vif_opts = [
 
 FLAGS = flags.FLAGS
 FLAGS.register_opts(libvirt_vif_opts)
+flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 
 
 class LibvirtBridgeDriver(vif.VIFDriver):
@@ -200,7 +201,9 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
     def plug(self, instance, network, mapping):
         iface_id = mapping['vif_uuid']
         dev = self.get_dev_name(iface_id)
-        linux_net.QuantumLinuxBridgeInterfaceDriver.create_tap_dev(dev)
+
+        if FLAGS.libvirt_type != 'xen':
+            linux_net.QuantumLinuxBridgeInterfaceDriver.create_tap_dev(dev)
 
         conf = config.LibvirtConfigGuestInterface()
 
