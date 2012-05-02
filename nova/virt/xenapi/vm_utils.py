@@ -35,14 +35,15 @@ from xml.parsers import expat
 
 from eventlet import greenthread
 
+from nova.compute import instance_types
+from nova.compute import power_state
 from nova import exception
 from nova import flags
 from nova.image import glance
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import excutils
 from nova import utils
-from nova.compute import instance_types
-from nova.compute import power_state
 from nova.virt.disk import api as disk
 from nova.virt import xenapi
 from nova.virt.xenapi import volume_utils
@@ -558,7 +559,7 @@ class VMHelper(xenapi.HelperBase):
             cls.create_vbd(session, vm_ref, vdi_ref, userdevice,
                            bootable=False)
         except Exception:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 cls.destroy_vdi(session, vdi_ref)
 
     @classmethod

@@ -31,8 +31,8 @@ from nova import log as logging
 from nova import manager
 from nova.notifier import api as notifier
 from nova.openstack.common import cfg
+from nova.openstack.common import excutils
 from nova.openstack.common import importutils
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ class SchedulerManager(manager.Manager):
         try:
             return driver_method(*args, **kwargs)
         except Exception as ex:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify(method,
                                              {'vm_state': vm_states.ERROR},
                                              context, ex, *args, **kwargs)
@@ -110,7 +110,7 @@ class SchedulerManager(manager.Manager):
                                          {'vm_state': vm_states.ERROR},
                                           context, ex, *args, **kwargs)
         except Exception as ex:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('run_instance',
                                              {'vm_state': vm_states.ERROR},
                                              context, ex, *args, **kwargs)
@@ -129,7 +129,7 @@ class SchedulerManager(manager.Manager):
                                           'task_state': None},
                                          context, ex, *args, **kwargs)
         except Exception as ex:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('prep_resize',
                                              {'vm_state': vm_states.ERROR},
                                              context, ex, *args, **kwargs)

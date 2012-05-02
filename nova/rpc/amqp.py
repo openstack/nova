@@ -36,9 +36,10 @@ from eventlet import semaphore
 from nova import context
 from nova import exception
 from nova import log as logging
+from nova.openstack.common import excutils
 from nova.openstack.common import local
 import nova.rpc.common as rpc_common
-from nova import utils
+
 
 LOG = logging.getLogger(__name__)
 
@@ -312,7 +313,7 @@ class MulticallWaiter(object):
             try:
                 self._iterator.next()
             except Exception:
-                with utils.save_and_reraise_exception():
+                with excutils.save_and_reraise_exception():
                     self.done()
             if self._got_ending:
                 self.done()
