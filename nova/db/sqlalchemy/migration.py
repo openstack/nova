@@ -20,6 +20,7 @@ import distutils.version as dist_version
 import os
 import sys
 
+from nova.db import migration
 from nova.db.sqlalchemy.session import get_engine
 from nova import exception
 from nova import flags
@@ -87,29 +88,17 @@ def db_version():
     try:
         return versioning_api.db_version(get_engine(), repository)
     except versioning_exceptions.DatabaseNotControlledError:
-        # If we aren't version controlled we may already have the database
-        # in the state from before we started version control, check for that
-        # and set up version_control appropriately
         meta = sqlalchemy.MetaData()
         engine = get_engine()
         meta.reflect(bind=engine)
-        try:
-            for table in ('auth_tokens', 'zones', 'export_devices',
-                          'fixed_ips', 'floating_ips', 'instances',
-                          'key_pairs', 'networks', 'projects', 'quotas',
-                          'security_group_instance_association',
-                          'security_group_rules', 'security_groups',
-                          'services', 'migrations',
-                          'users', 'user_project_association',
-                          'user_project_role_association',
-                          'user_role_association',
-                          'virtual_storage_arrays',
-                          'volumes', 'volume_metadata',
-                          'volume_types', 'volume_type_extra_specs'):
-                assert table in meta.tables
-            return db_version_control(1)
-        except AssertionError:
-            return db_version_control(0)
+        tables = meta.tables
+        if len(tables) == 0:
+            db_version_control(migration.INIT_VERSION)
+            return versioning_api.db_version(get_engine(), repository)
+        else:
+            # Some pre-Essex DB's may not be version controlled.
+            # Require them to upgrade using Essex first.
+            raise exception.Error(_("Upgrade DB using Essex release first."))
 
 
 def db_version_control(version=None):
