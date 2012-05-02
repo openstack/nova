@@ -136,11 +136,25 @@ def require_instance_exists(f):
     Requires the wrapped function to use context and instance_id as
     their first two arguments.
     """
-
+    @functools.wraps(f)
     def wrapper(context, instance_id, *args, **kwargs):
         db.instance_get(context, instance_id)
         return f(context, instance_id, *args, **kwargs)
-    wrapper.__name__ = f.__name__
+
+    return wrapper
+
+
+def require_instance_exists_using_uuid(f):
+    """Decorator to require the specified instance to exist.
+
+    Requires the wrapped function to use context and instance_uuid as
+    their first two arguments.
+    """
+    @functools.wraps(f)
+    def wrapper(context, instance_uuid, *args, **kwargs):
+        db.instance_get_by_uuid(context, instance_uuid)
+        return f(context, instance_uuid, *args, **kwargs)
+
     return wrapper
 
 
@@ -1259,8 +1273,12 @@ def instance_create(context, values):
     values - dict containing column values.
     """
     values = values.copy()
-    values['metadata'] = _metadata_refs(values.get('metadata'),
-                                        models.InstanceMetadata)
+    values['metadata'] = _metadata_refs(
+            values.get('metadata'), models.InstanceMetadata)
+
+    values['system_metadata'] = _metadata_refs(
+            values.get('system_metadata'), models.InstanceSystemMetadata)
+
     instance_ref = models.Instance()
     if not values.get('uuid'):
         values['uuid'] = str(utils.gen_uuid())
@@ -1620,10 +1638,15 @@ def instance_update(context, instance_id, values):
 
     metadata = values.get('metadata')
     if metadata is not None:
-        instance_metadata_update(context,
-                                 instance_ref['id'],
-                                 values.pop('metadata'),
-                                 delete=True)
+        instance_metadata_update(
+            context, instance_ref['id'], values.pop('metadata'), delete=True)
+
+    system_metadata = values.get('system_metadata')
+    if system_metadata is not None:
+        instance_system_metadata_update(
+             context, instance_ref['uuid'], values.pop('system_metadata'),
+             delete=True)
+
     with session.begin():
         instance_ref.update(values)
         instance_ref.save(session=session)
@@ -3682,8 +3705,8 @@ def cell_get_all(context):
     return model_query(context, models.Cell, read_deleted="no").all()
 
 
-####################
-
+########################
+# User-provided metadata
 
 def _instance_metadata_get_query(context, instance_id, session=None):
     return model_query(context, models.InstanceMetadata, session=session,
@@ -3757,6 +3780,88 @@ def instance_metadata_update(context, instance_id, metadata, delete):
         except exception.InstanceMetadataNotFound, e:
             meta_ref = models.InstanceMetadata()
             item.update({"key": meta_key, "instance_id": instance_id})
+
+        meta_ref.update(item)
+        meta_ref.save(session=session)
+
+    return metadata
+
+
+#######################
+# System-owned metadata
+
+def _instance_system_metadata_get_query(context, instance_uuid, session=None):
+    return model_query(context, models.InstanceSystemMetadata, session=session,
+                       read_deleted="no").\
+                    filter_by(instance_uuid=instance_uuid)
+
+
+@require_context
+@require_instance_exists_using_uuid
+def instance_system_metadata_get(context, instance_uuid):
+    rows = _instance_system_metadata_get_query(context, instance_uuid).all()
+
+    result = {}
+    for row in rows:
+        result[row['key']] = row['value']
+
+    return result
+
+
+@require_context
+@require_instance_exists_using_uuid
+def instance_system_metadata_delete(context, instance_uuid, key):
+    _instance_system_metadata_get_query(context, instance_uuid).\
+        filter_by(key=key).\
+        update({'deleted': True,
+                'deleted_at': utils.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+def _instance_system_metadata_get_item(context, instance_uuid, key,
+                                       session=None):
+    result = _instance_system_metadata_get_query(
+                            context, instance_uuid, session=session).\
+                    filter_by(key=key).\
+                    first()
+
+    if not result:
+        raise exception.InstanceSystemMetadataNotFound(
+                metadata_key=key, instance_uuid=instance_uuid)
+
+    return result
+
+
+@require_context
+@require_instance_exists_using_uuid
+def instance_system_metadata_update(context, instance_uuid, metadata, delete):
+    session = get_session()
+
+    # Set existing metadata to deleted if delete argument is True
+    if delete:
+        original_metadata = instance_system_metadata_get(
+                context, instance_uuid)
+        for meta_key, meta_value in original_metadata.iteritems():
+            if meta_key not in metadata:
+                meta_ref = _instance_system_metadata_get_item(
+                        context, instance_uuid, meta_key, session)
+                meta_ref.update({'deleted': True})
+                meta_ref.save(session=session)
+
+    meta_ref = None
+
+    # Now update all existing items with new values, or create new meta objects
+    for meta_key, meta_value in metadata.iteritems():
+
+        # update the value whether it exists or not
+        item = {"value": meta_value}
+
+        try:
+            meta_ref = _instance_system_metadata_get_item(
+                    context, instance_uuid, meta_key, session)
+        except exception.InstanceSystemMetadataNotFound, e:
+            meta_ref = models.InstanceSystemMetadata()
+            item.update({"key": meta_key, "instance_uuid": instance_uuid})
 
         meta_ref.update(item)
         meta_ref.save(session=session)

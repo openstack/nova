@@ -168,36 +168,46 @@ class DbApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
 
         # Create an instance with some metadata
-        metadata = {'host': 'foo'}
-        values = {'metadata': metadata}
+        values = {'metadata': {'host': 'foo'},
+                  'system_metadata': {'original_image_ref': 'blah'}}
         instance = db.instance_create(ctxt, values)
 
         # Update the metadata
-        metadata = {'host': 'bar'}
-        values = {'metadata': metadata}
+        values = {'metadata': {'host': 'bar'},
+                  'system_metadata': {'original_image_ref': 'baz'}}
         db.instance_update(ctxt, instance.id, values)
 
-        # Retrieve the metadata to ensure it was successfully updated
+        # Retrieve the user-provided metadata to ensure it was successfully
+        # updated
         instance_meta = db.instance_metadata_get(ctxt, instance.id)
         self.assertEqual('bar', instance_meta['host'])
+
+        # Retrieve the system metadata to ensure it was successfully updated
+        system_meta = db.instance_system_metadata_get(ctxt, instance.uuid)
+        self.assertEqual('baz', system_meta['original_image_ref'])
 
     def test_instance_update_with_instance_uuid(self):
         """ test instance_update() works when an instance UUID is passed """
         ctxt = context.get_admin_context()
 
         # Create an instance with some metadata
-        metadata = {'host': 'foo'}
-        values = {'metadata': metadata}
+        values = {'metadata': {'host': 'foo'},
+                  'system_metadata': {'original_image_ref': 'blah'}}
         instance = db.instance_create(ctxt, values)
 
         # Update the metadata
-        metadata = {'host': 'bar'}
-        values = {'metadata': metadata}
+        values = {'metadata': {'host': 'bar'},
+                  'system_metadata': {'original_image_ref': 'baz'}}
         db.instance_update(ctxt, instance.uuid, values)
 
-        # Retrieve the metadata to ensure it was successfully updated
+        # Retrieve the user-provided metadata to ensure it was successfully
+        # updated
         instance_meta = db.instance_metadata_get(ctxt, instance.id)
         self.assertEqual('bar', instance_meta['host'])
+
+        # Retrieve the system metadata to ensure it was successfully updated
+        system_meta = db.instance_system_metadata_get(ctxt, instance.uuid)
+        self.assertEqual('baz', system_meta['original_image_ref'])
 
     def test_instance_fault_create(self):
         """Ensure we can create an instance fault"""

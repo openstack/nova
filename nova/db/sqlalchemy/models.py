@@ -831,7 +831,7 @@ class Console(BASE, NovaBase):
 
 
 class InstanceMetadata(BASE, NovaBase):
-    """Represents a metadata key/value pair for an instance"""
+    """Represents a user-provided metadata key/value pair for an instance"""
     __tablename__ = 'instance_metadata'
     id = Column(Integer, primary_key=True)
     key = Column(String(255))
@@ -842,6 +842,23 @@ class InstanceMetadata(BASE, NovaBase):
                             primaryjoin='and_('
                                 'InstanceMetadata.instance_id == Instance.id,'
                                 'InstanceMetadata.deleted == False)')
+
+
+class InstanceSystemMetadata(BASE, NovaBase):
+    """Represents a system-owned metadata key/value pair for an instance"""
+    __tablename__ = 'instance_system_metadata'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    instance_uuid = Column(String(36),
+                           ForeignKey('instances.uuid'),
+                           nullable=False)
+
+    primary_join = ('and_(InstanceSystemMetadata.instance_uuid == '
+                    'Instance.uuid, InstanceSystemMetadata.deleted == False)')
+    instance = relationship(Instance, backref="system_metadata",
+                            foreign_keys=instance_uuid,
+                            primaryjoin=primary_join)
 
 
 class InstanceTypeExtraSpecs(BASE, NovaBase):
