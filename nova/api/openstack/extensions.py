@@ -27,7 +27,6 @@ from nova.api.openstack import xmlutil
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.openstack.common import exception as common_exception
 from nova.openstack.common import importutils
 import nova.policy
 
@@ -358,7 +357,7 @@ def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
                         (package, relpkg, dname))
             try:
                 ext = importutils.import_class(ext_name)
-            except common_exception.NotFound:
+            except ImportError:
                 # extension() doesn't exist on it, so we'll explore
                 # the directory for ourselves
                 subdirs.append(dname)
