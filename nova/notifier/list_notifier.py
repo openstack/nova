@@ -16,7 +16,6 @@
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
-from nova.openstack.common import exception as common_exception
 from nova.openstack.common import importutils
 
 
