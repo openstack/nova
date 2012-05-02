@@ -25,8 +25,15 @@ from nova import flags
 from nova import log as logging
 from nova import test
 from nova.rpc import amqp as rpc_amqp
-from nova.rpc import impl_kombu
 from nova.tests.rpc import common
+
+try:
+    import kombu
+    from nova.rpc import impl_kombu
+except ImportError:
+    kombu = None
+    impl_kombu = None
+
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
@@ -52,14 +59,19 @@ def _raise_exc_stub(stubs, times, obj, method, exc_msg,
 
 class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
     def setUp(self):
-        self.rpc = impl_kombu
-        impl_kombu.register_opts(FLAGS)
+        if kombu:
+            self.rpc = impl_kombu
+            impl_kombu.register_opts(FLAGS)
+        else:
+            self.rpc = None
         super(RpcKombuTestCase, self).setUp()
 
     def tearDown(self):
-        impl_kombu.cleanup()
+        if kombu:
+            impl_kombu.cleanup()
         super(RpcKombuTestCase, self).tearDown()
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_reusing_connection(self):
         """Test that reusing a connection returns same one."""
         conn_context = self.rpc.create_connection(FLAGS, new=False)
@@ -70,6 +82,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         conn_context.close()
         self.assertEqual(conn1, conn2)
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_topic_send_receive(self):
         """Test sending to a topic exchange/queue"""
 
@@ -88,6 +101,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
 
         self.assertEqual(self.received_message, message)
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_direct_send_receive(self):
         """Test sending to a direct exchange/queue"""
         conn = self.rpc.create_connection(FLAGS)
@@ -105,6 +119,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
 
         self.assertEqual(self.received_message, message)
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_cast_interface_uses_default_options(self):
         """Test kombu rpc.cast"""
 
@@ -129,6 +144,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
 
         impl_kombu.cast(FLAGS, ctxt, 'fake_topic', {'msg': 'fake'})
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_cast_to_server_uses_server_params(self):
         """Test kombu rpc.cast"""
 
@@ -187,6 +203,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         conn2.close()
         self.assertEqual(self.received_message, message)
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_declare_consumer_errors_will_reconnect(self):
         # Test that any exception with 'timeout' in it causes a
         # reconnection
@@ -216,6 +233,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         self.assertEqual(info['called'], 2)
         self.assertTrue(isinstance(result, self.rpc.DirectConsumer))
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_declare_consumer_ioerrors_will_reconnect(self):
         """Test that an IOError exception causes a reconnection"""
         info = _raise_exc_stub(self.stubs, 2, self.rpc.DirectConsumer,
@@ -228,6 +246,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         self.assertEqual(info['called'], 3)
         self.assertTrue(isinstance(result, self.rpc.DirectConsumer))
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_publishing_errors_will_reconnect(self):
         # Test that any exception with 'timeout' in it causes a
         # reconnection when declaring the publisher class and when
@@ -275,6 +294,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
 
         self.assertEqual(info['called'], 2)
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_iterconsume_errors_will_reconnect(self):
         conn = self.rpc.Connection(FLAGS)
         message = 'reconnect test message'
@@ -295,6 +315,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
         self.assertEqual(self.received_message, message)
         # Only called once, because our stub goes away during reconnection
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_call_exception(self):
         """Test that exception gets passed back properly.
 
@@ -322,6 +343,7 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
             #Traceback should be included in exception message
             self.assertTrue('raise NotImplementedError(value)' in unicode(exc))
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_call_converted_exception(self):
         """Test that exception gets passed back properly.
 

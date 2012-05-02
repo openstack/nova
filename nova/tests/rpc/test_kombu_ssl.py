@@ -21,7 +21,14 @@ Unit Tests for remote procedure calls using kombu + ssl
 
 from nova import flags
 from nova import test
-from nova.rpc import impl_kombu
+
+try:
+    import kombu
+    from nova.rpc import impl_kombu
+except ImportError:
+    kombu = None
+    impl_kombu = None
+
 
 # Flag settings we will ensure get passed to amqplib
 SSL_VERSION = "SSLv2"
@@ -36,13 +43,15 @@ class RpcKombuSslTestCase(test.TestCase):
 
     def setUp(self):
         super(RpcKombuSslTestCase, self).setUp()
-        impl_kombu.register_opts(FLAGS)
-        self.flags(kombu_ssl_keyfile=SSL_KEYFILE,
-                   kombu_ssl_ca_certs=SSL_CA_CERT,
-                   kombu_ssl_certfile=SSL_CERT,
-                   kombu_ssl_version=SSL_VERSION,
-                   rabbit_use_ssl=True)
+        if kombu:
+            impl_kombu.register_opts(FLAGS)
+            self.flags(kombu_ssl_keyfile=SSL_KEYFILE,
+                       kombu_ssl_ca_certs=SSL_CA_CERT,
+                       kombu_ssl_certfile=SSL_CERT,
+                       kombu_ssl_version=SSL_VERSION,
+                       rabbit_use_ssl=True)
 
+    @test.skip_if(kombu is None, "Test requires kombu")
     def test_ssl_on_extended(self):
         rpc = impl_kombu
         conn = rpc.create_connection(FLAGS, True)

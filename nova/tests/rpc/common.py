@@ -40,24 +40,32 @@ LOG = logging.getLogger(__name__)
 class BaseRpcTestCase(test.TestCase):
     def setUp(self, supports_timeouts=True):
         super(BaseRpcTestCase, self).setUp()
-        self.conn = self.rpc.create_connection(FLAGS, True)
-        self.receiver = TestReceiver()
-        self.conn.create_consumer('test', self.receiver, False)
-        self.conn.consume_in_thread()
-        self.context = context.get_admin_context()
         self.supports_timeouts = supports_timeouts
+        self.context = context.get_admin_context()
+        if self.rpc:
+            self.conn = self.rpc.create_connection(FLAGS, True)
+            self.receiver = TestReceiver()
+            self.conn.create_consumer('test', self.receiver, False)
+            self.conn.consume_in_thread()
 
     def tearDown(self):
-        self.conn.close()
+        if self.rpc:
+            self.conn.close()
         super(BaseRpcTestCase, self).tearDown()
 
     def test_call_succeed(self):
+        if not self.rpc:
+            raise nose.SkipTest('rpc driver not available.')
+
         value = 42
         result = self.rpc.call(FLAGS, self.context, 'test',
                                {"method": "echo", "args": {"value": value}})
         self.assertEqual(value, result)
 
     def test_call_succeed_despite_multiple_returns_yield(self):
+        if not self.rpc:
+            raise nose.SkipTest('rpc driver not available.')
+
         value = 42
         result = self.rpc.call(FLAGS, self.context, 'test',
                           {"method": "echo_three_times_yield",
@@ -65,6 +73,9 @@ class BaseRpcTestCase(test.TestCase):
         self.assertEqual(value + 2, result)
 
     def test_multicall_succeed_once(self):
+        if not self.rpc:
+            raise nose.SkipTest('rpc driver not available.')
+
         value = 42
         result = self.rpc.multicall(FLAGS, self.context,
                               'test',
@@ -76,6 +87,9 @@ class BaseRpcTestCase(test.TestCase):
             self.assertEqual(value + i, x)
 
     def test_multicall_three_nones(self):
+        if not self.rpc:
+            raise nose.SkipTest('rpc driver not available.')
+
         value = 42
         result = self.rpc.multicall(FLAGS, self.context,
                               'test',
@@ -87,6 +101,9 @@ class BaseRpcTestCase(test.TestCase):
         self.assertEqual(i, 2)
 
     def test_multicall_succeed_three_times_yield(self):
+        if not self.rpc:
+            raise nose.SkipTest('rpc driver not available.')
+
         value = 42
         result = self.rpc.multicall(FLAGS, self.context,
                               'test',
@@ -96,6 +113,9 @@ class BaseRpcTestCase(test.TestCase):
             self.assertEqual(value + i, x)
 
     def test_context_passed(self):
+        if not self.rpc:
+            raise nose.SkipTest('rpc driver not available.')
+
         """Makes sure a context is passed through rpc call."""
         value = 42
         result = self.rpc.call(FLAGS, self.context,
@@ -104,6 +124,9 @@ class BaseRpcTestCase(test.TestCase):
         self.assertEqual(self.context.to_dict(), result)
 
     def test_nested_calls(self):
+        if not self.rpc:
+            raise nose.SkipTest('rpc driver not available.')
+
         """Test that we can do an rpc.call inside another call."""
         class Nested(object):
             @staticmethod
@@ -134,6 +157,9 @@ class BaseRpcTestCase(test.TestCase):
         self.assertEqual(value, result)
 
     def test_call_timeout(self):
+        if not self.rpc:
+            raise nose.SkipTest('rpc driver not available.')
+
         """Make sure rpc.call will time out"""
         if not self.supports_timeouts:
             raise nose.SkipTest(_("RPC backend does not support timeouts"))
@@ -160,6 +186,9 @@ class BaseRpcAMQPTestCase(BaseRpcTestCase):
     """Base test class for all AMQP-based RPC tests"""
     def test_proxycallback_handles_exceptions(self):
         """Make sure exceptions unpacking messages don't cause hangs."""
+        if not self.rpc:
+            raise nose.SkipTest('rpc driver not available.')
+
         orig_unpack = rpc_amqp.unpack_context
 
         info = {'unpacked': False}
