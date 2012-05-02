@@ -142,7 +142,8 @@ class LibvirtVolumeTestCase(test.TestCase):
         self.fake_conn = FakeLibvirtConnection()
         self.connr = {
             'ip': '127.0.0.1',
-            'initiator': 'fake_initiator'
+            'initiator': 'fake_initiator',
+            'host': 'fake_host'
         }
 
     def test_libvirt_iscsi_driver(self):
@@ -478,12 +479,15 @@ class LibvirtConnTestCase(test.TestCase):
     def test_get_connector(self):
         initiator = 'fake.initiator.iqn'
         ip = 'fakeip'
+        host = 'fakehost'
         self.flags(my_ip=ip)
+        self.flags(host=host)
 
         conn = connection.LibvirtConnection(True)
         expected = {
             'ip': ip,
-            'initiator': initiator
+            'initiator': initiator,
+            'host': host
         }
         volume = {
             'id': 'fake'

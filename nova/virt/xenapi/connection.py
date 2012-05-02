@@ -156,6 +156,7 @@ class XenAPIConnection(driver.ComputeDriver):
         self._host = host.Host(self._session)
         self._vmops = vmops.VMOps(self._session)
         self._initiator = None
+        self._hypervisor_hostname = None
         self._pool = pool.ResourcePool(self._session)
 
     @property
@@ -336,17 +337,19 @@ class XenAPIConnection(driver.ComputeDriver):
 
     def get_volume_connector(self, instance):
         """Return volume connector information"""
-        if not self._initiator:
+        if not self._initiator or not self._hypervisor_hostname:
             stats = self.get_host_stats(refresh=True)
             try:
                 self._initiator = stats['host_other-config']['iscsi_iqn']
-            except (TypeError, KeyError):
-                LOG.warn(_('Could not determine iscsi initiator name'),
+                self._hypervisor_hostname = stats['host_hostname']
+            except (TypeError, KeyError) as err:
+                LOG.warn(_('Could not determine key: %s') % err,
                          instance=instance)
                 self._initiator = None
         return {
             'ip': self.get_host_ip_addr(),
-            'initiator': self._initiator
+            'initiator': self._initiator,
+            'host': self._hypervisor_hostname
         }
 
     @staticmethod
