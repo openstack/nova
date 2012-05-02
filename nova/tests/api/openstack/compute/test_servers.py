@@ -2263,10 +2263,11 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertTrue('adminPass' not in server)
 
     def test_create_instance_admin_pass_empty(self):
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': 3,
+                'imageRef': image_uuid,
                 'flavorRef': 3,
                 'adminPass': '',
             },
@@ -2277,8 +2278,8 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = json.dumps(body)
         req.headers['content-type'] = "application/json"
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+        # The fact that the action doesn't raise is enough validation
+        self.controller.create(req, body)
 
     def test_create_instance_malformed_entity(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers')
