@@ -230,7 +230,7 @@ class TestMigrations(test.TestCase):
         self._reset_databases()
         self._walk_versions(engine, False, False)
 
-        uri = self._mysql_get_connect_string(database="information_schema")
+        uri = _mysql_get_connect_string(database="information_schema")
         connection = sqlalchemy.create_engine(uri).connect()
 
         # sanity check
