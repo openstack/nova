@@ -259,7 +259,7 @@ class ActionDeserializer(CommonDeserializer):
         return self._deserialize_image_action(node, ('name',))
 
     def _action_change_password(self, node):
-        if not node.getAttribute("adminPass"):
+        if not node.hasAttribute("adminPass"):
             raise AttributeError("No adminPass was specified in request")
         return {"adminPass": node.getAttribute("adminPass")}
 
@@ -941,7 +941,7 @@ class Controller(wsgi.Controller):
             msg = _("No adminPass was specified")
             raise exc.HTTPBadRequest(explanation=msg)
         password = body['changePassword']['adminPass']
-        if not isinstance(password, basestring) or password == '':
+        if not isinstance(password, basestring):
             msg = _("Invalid adminPass")
             raise exc.HTTPBadRequest(explanation=msg)
         server = self._get_server(context, id)
