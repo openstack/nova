@@ -1639,6 +1639,8 @@ class API(BaseAPI):
 
         self.network_api.associate_floating_ip(context,
                 floating_address=address, fixed_address=ips[0]['address'])
+        self.network_api.invalidate_instance_cache(context.elevated(),
+                                                   instance)
 
     @wrap_check_policy
     def get_instance_metadata(self, context, instance):

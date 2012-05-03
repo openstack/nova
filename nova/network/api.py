@@ -148,10 +148,18 @@ class API(base.Base):
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
         """Disassociates a floating ip from fixed ip it is associated with."""
+        floating_ip = self.db.floating_ip_get_by_address(context, address)
+        fixed_ip = self.db.fixed_ip_get(context, floating_ip['fixed_ip_id'])
+        instance = self.db.instance_get(context, fixed_ip['instance_id'])
         rpc.cast(context,
                  FLAGS.network_topic,
                  {'method': 'disassociate_floating_ip',
                   'args': {'address': address}})
+        self.invalidate_instance_cache(context, instance)
+
+    def invalidate_instance_cache(self, context, instance):
+        # NOTE(vish): get_instance_nw_info will recreate the cache for us
+        self.get_instance_nw_info(context, instance)
 
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocates all network structures for an instance.
