@@ -90,6 +90,10 @@ xenapi_opts = [
                  default=5.0,
                  help='The interval used for polling of coalescing vhds. '
                       'Used only if connection_type=xenapi.'),
+    cfg.BoolOpt('xenapi_check_host',
+                default=True,
+                help='Ensure compute service is running on host XenAPI '
+                     'connects to.'),
     cfg.IntOpt('xenapi_vhd_coalesce_max_attempts',
                default=5,
                help='Max number of times to poll for VHD to coalesce. '
@@ -166,6 +170,9 @@ class XenAPIConnection(driver.ComputeDriver):
         return self._host_state
 
     def init_host(self, host):
+        if FLAGS.xenapi_check_host:
+            vm_utils.ensure_correct_host(self._session)
+
         try:
             vm_utils.cleanup_attached_vdis(self._session)
         except Exception:

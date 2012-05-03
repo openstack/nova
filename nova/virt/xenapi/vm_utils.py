@@ -1819,3 +1819,17 @@ def _prepare_injectables(inst, networks_info):
                                 searchList=[{'interfaces': interfaces_info,
                                             'use_ipv6': FLAGS.use_ipv6}]))
     return key, net, metadata
+
+
+def ensure_correct_host(session):
+    """Ensure we're connected to the host we're running on. This is the
+    required configuration for anything that uses vdi_attached_here."""
+    this_vm_uuid = get_this_vm_uuid()
+
+    try:
+        session.call_xenapi('VM.get_by_uuid', this_vm_uuid)
+    except session.XenAPI.Failure as exc:
+        if exc.details[0] != 'UUID_INVALID':
+            raise
+        raise Exception(_('This domU must be running on the host '
+                          'specified by xenapi_connection_url'))
