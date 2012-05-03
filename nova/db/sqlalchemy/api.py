@@ -2171,6 +2171,7 @@ def iscsi_target_count_by_host(context, host):
 @require_admin_context
 def iscsi_target_create_safe(context, values):
     iscsi_target_ref = models.IscsiTarget()
+
     for (key, value) in values.iteritems():
         iscsi_target_ref[key] = value
     try:
@@ -2409,11 +2410,15 @@ def volume_create(context, values):
     values['volume_metadata'] = _metadata_refs(values.get('metadata'),
                                                models.VolumeMetadata)
     volume_ref = models.Volume()
+    if not values.get('id'):
+        values['id'] = str(utils.gen_uuid())
     volume_ref.update(values)
 
     session = get_session()
     with session.begin():
         volume_ref.save(session=session)
+
+    ec2_volume_create(context, volume_ref['id'])
     return volume_ref
 
 
@@ -2468,6 +2473,18 @@ def _volume_get_query(context, session=None, project_only=False):
                      options(joinedload('instance')).\
                      options(joinedload('volume_metadata')).\
                      options(joinedload('volume_type'))
+
+
+@require_context
+def _ec2_volume_get_query(context, session=None, project_only=False):
+    return model_query(context, models.VolumeIdMapping, session=session,
+                       project_only=project_only)
+
+
+@require_context
+def _ec2_snapshot_get_query(context, session=None, project_only=False):
+    return model_query(context, models.SnapshotIdMapping, session=session,
+                       project_only=project_only)
 
 
 @require_context
@@ -2547,6 +2564,88 @@ def volume_update(context, volume_id, values):
         volume_ref = volume_get(context, volume_id, session=session)
         volume_ref.update(values)
         volume_ref.save(session=session)
+
+
+@require_context
+def ec2_volume_create(context, volume_uuid, id=None):
+    """Create ec2 compatable volume by provided uuid"""
+    ec2_volume_ref = models.VolumeIdMapping()
+    ec2_volume_ref.update({'uuid': volume_uuid})
+    if id is not None:
+        ec2_volume_ref.update({'id': id})
+
+    ec2_volume_ref.save()
+
+    return ec2_volume_ref
+
+
+@require_context
+def get_ec2_volume_id_by_uuid(context, volume_id, session=None):
+    result = _ec2_volume_get_query(context,
+                                   session=session,
+                                   project_only=True).\
+                    filter_by(uuid=volume_id).\
+                    first()
+
+    if not result:
+        raise exception.VolumeNotFound(uuid=volume_id)
+
+    return result['id']
+
+
+@require_context
+def get_volume_uuid_by_ec2_id(context, ec2_id, session=None):
+    result = _ec2_volume_get_query(context,
+                                   session=session,
+                                   project_only=True).\
+                    filter_by(id=ec2_id).\
+                    first()
+
+    if not result:
+        raise exception.VolumeNotFound(ec2_id=ec2_id)
+
+    return result['uuid']
+
+
+@require_context
+def ec2_snapshot_create(context, snapshot_uuid, id=None):
+    """Create ec2 compatable snapshot by provided uuid"""
+    ec2_snapshot_ref = models.SnapshotIdMapping()
+    ec2_snapshot_ref.update({'uuid': snapshot_uuid})
+    if id is not None:
+        ec2_snapshot_ref.update({'id': id})
+
+    ec2_snapshot_ref.save()
+
+    return ec2_snapshot_ref
+
+
+@require_context
+def get_ec2_snapshot_id_by_uuid(context, snapshot_id, session=None):
+    result = _ec2_snapshot_get_query(context,
+                                   session=session,
+                                   project_only=True).\
+                    filter_by(uuid=snapshot_id).\
+                    first()
+
+    if not result:
+        raise exception.SnapshotNotFound(uuid=snapshot_id)
+
+    return result['id']
+
+
+@require_context
+def get_snapshot_uuid_by_ec2_id(context, ec2_id, session=None):
+    result = _ec2_snapshot_get_query(context,
+                                   session=session,
+                                   project_only=True).\
+                    filter_by(id=ec2_id).\
+                    first()
+
+    if not result:
+        raise exception.SnapshotNotFound(ec2_id=ec2_id)
+
+    return result['uuid']
 
 
 ####################
@@ -2633,11 +2732,14 @@ def volume_metadata_update(context, volume_id, metadata, delete):
 @require_context
 def snapshot_create(context, values):
     snapshot_ref = models.Snapshot()
+    if not values.get('id'):
+        values['id'] = str(utils.gen_uuid())
     snapshot_ref.update(values)
 
     session = get_session()
     with session.begin():
         snapshot_ref.save(session=session)
+    ec2_snapshot_create(context, snapshot_ref['id'])
     return snapshot_ref
 
 

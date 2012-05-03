@@ -67,6 +67,21 @@ class VolumeTestCase(test.TestCase):
         vol['attach_status'] = "detached"
         return db.volume_create(context.get_admin_context(), vol)
 
+    def test_ec2_uuid_mapping(self):
+        ec2_vol = db.ec2_volume_create(context.get_admin_context(),
+                'aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaaa', 5)
+        self.assertEqual(5, ec2_vol['id'])
+        self.assertEqual('aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaaa',
+                db.get_volume_uuid_by_ec2_id(context.get_admin_context(), 5))
+
+        ec2_vol = db.ec2_volume_create(context.get_admin_context(),
+                'aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaaa', 1)
+        self.assertEqual(1, ec2_vol['id'])
+
+        ec2_vol = db.ec2_volume_create(context.get_admin_context(),
+                'aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaazzz')
+        self.assertEqual(6, ec2_vol['id'])
+
     def test_create_delete_volume(self):
         """Test volume can be created and deleted."""
         volume = self._create_volume()

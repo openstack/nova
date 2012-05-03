@@ -596,7 +596,8 @@ class CloudTestCase(test.TestCase):
                                              volume_id=[volume_id])
         self.assertEqual(len(result['volumeSet']), 1)
         self.assertEqual(
-                ec2utils.ec2_id_to_id(result['volumeSet'][0]['volumeId']),
+                ec2utils.ec2_vol_id_to_uuid(
+                    result['volumeSet'][0]['volumeId']),
                 vol2['id'])
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
@@ -669,7 +670,8 @@ class CloudTestCase(test.TestCase):
                                                snapshot_id=[snapshot_id])
         self.assertEqual(len(result['snapshotSet']), 1)
         self.assertEqual(
-            ec2utils.ec2_id_to_id(result['snapshotSet'][0]['snapshotId']),
+            ec2utils.ec2_snap_id_to_uuid(
+                result['snapshotSet'][0]['snapshotId']),
             snap2['id'])
         db.snapshot_destroy(self.context, snap1['id'])
         db.snapshot_destroy(self.context, snap2['id'])
@@ -998,6 +1000,7 @@ class CloudTestCase(test.TestCase):
         db.instance_destroy(self.context, inst2['id'])
         db.instance_destroy(self.context, inst1['id'])
 
+    # NOTE(jdg) Modified expected volume_id's to string
     _expected_instance_bdm1 = {
         'instanceId': 'i-00000001',
         'rootDeviceName': '/dev/sdb1',
@@ -1007,32 +1010,32 @@ class CloudTestCase(test.TestCase):
         {'deviceName': '/dev/sdb1',
          'ebs': {'status': 'in-use',
                  'deleteOnTermination': False,
-                 'volumeId': 2,
+                 'volumeId': '2',
                  }},
         {'deviceName': '/dev/sdb2',
          'ebs': {'status': 'in-use',
                  'deleteOnTermination': False,
-                 'volumeId': 3,
+                 'volumeId': '3',
                  }},
         {'deviceName': '/dev/sdb3',
          'ebs': {'status': 'in-use',
                  'deleteOnTermination': True,
-                 'volumeId': 5,
+                 'volumeId': '5',
                  }},
         {'deviceName': '/dev/sdb4',
          'ebs': {'status': 'in-use',
                  'deleteOnTermination': False,
-                 'volumeId': 7,
+                 'volumeId': '7',
                  }},
         {'deviceName': '/dev/sdb5',
          'ebs': {'status': 'in-use',
                  'deleteOnTermination': False,
-                 'volumeId': 9,
+                 'volumeId': '9',
                  }},
         {'deviceName': '/dev/sdb6',
          'ebs': {'status': 'in-use',
                  'deleteOnTermination': False,
-                 'volumeId': 11, }}]
+                 'volumeId': '11', }}]
         # NOTE(yamahata): swap/ephemeral device case isn't supported yet.
 
     _expected_instance_bdm2 = {
@@ -2030,9 +2033,9 @@ class CloudTestCase(test.TestCase):
         ec2_volume_id = ec2utils.id_to_ec2_vol_id(vol['id'])
 
         ec2_snapshot1_id = self._create_snapshot(ec2_volume_id)
-        snapshot1_id = ec2utils.ec2_id_to_id(ec2_snapshot1_id)
+        snapshot1_id = ec2utils.ec2_snap_id_to_uuid(ec2_snapshot1_id)
         ec2_snapshot2_id = self._create_snapshot(ec2_volume_id)
-        snapshot2_id = ec2utils.ec2_id_to_id(ec2_snapshot2_id)
+        snapshot2_id = ec2utils.ec2_snap_id_to_uuid(ec2_snapshot2_id)
 
         kwargs = {'image_id': 'ami-1',
                   'instance_type': FLAGS.default_instance_type,

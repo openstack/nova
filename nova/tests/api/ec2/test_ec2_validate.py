@@ -107,23 +107,6 @@ class EC2ValidateTestCase(test.TestCase):
                               context=self.context,
                               instance_id=[ec2_id])
 
-    def test_attach_volume(self):
-        for ec2_id, e in self.ec2_id_exception_map:
-            self.assertRaises(e,
-                              self.cloud.attach_volume,
-                              context=self.context,
-                              volume_id='i-1234',
-                              instance_id=ec2_id,
-                              device='/dev/vdc')
-        #missing instance error gets priority
-        for ec2_id, e in self.ec2_id_exception_map:
-            self.assertRaises(e,
-                              self.cloud.attach_volume,
-                              context=self.context,
-                              volume_id=ec2_id,
-                              instance_id='i-1234',
-                              device='/dev/vdc')
-
     def test_describe_instance_attribute(self):
         for ec2_id, e in self.ec2_id_exception_map:
             self.assertRaises(e,

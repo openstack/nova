@@ -20,23 +20,40 @@ Tests for Block Device Mapping Code.
 """
 
 from nova.api.ec2 import cloud
+from nova.api.ec2 import ec2utils
 from nova import test
 
 
 class BlockDeviceMappingEc2CloudTestCase(test.TestCase):
     """Test Case for Block Device Mapping"""
 
+    def fake_ec2_vol_id_to_uuid(obj, ec2_id):
+        if ec2_id == 'snap-12345678':
+            return '00000000-1111-2222-3333-444444444444'
+        elif ec2_id == 'snap-23456789':
+            return '11111111-2222-3333-4444-555555555555'
+        elif ec2_id == 'vol-87654321':
+            return '22222222-3333-4444-5555-666666666666'
+        elif ec2_id == 'vol-98765432':
+            return '77777777-8888-9999-0000-aaaaaaaaaaaa'
+        else:
+            return 'OhNoooo'
+
     def _assertApply(self, action, bdm_list):
         for bdm, expected_result in bdm_list:
             self.assertDictMatch(action(bdm), expected_result)
 
     def test_parse_block_device_mapping(self):
+        self.stubs.Set(ec2utils,
+                'ec2_vol_id_to_uuid',
+                self.fake_ec2_vol_id_to_uuid)
+
         bdm_list = [
             ({'device_name': '/dev/fake0',
               'ebs': {'snapshot_id': 'snap-12345678',
                       'volume_size': 1}},
             {'device_name': '/dev/fake0',
-             'snapshot_id': 0x12345678,
+             'snapshot_id': '00000000-1111-2222-3333-444444444444',
              'volume_size': 1,
              'delete_on_termination': True}),
 
@@ -44,14 +61,14 @@ class BlockDeviceMappingEc2CloudTestCase(test.TestCase):
               'ebs': {'snapshot_id': 'snap-23456789',
                       'delete_on_termination': False}},
              {'device_name': '/dev/fake1',
-              'snapshot_id': 0x23456789,
+              'snapshot_id': '11111111-2222-3333-4444-555555555555',
               'delete_on_termination': False}),
 
             ({'device_name': '/dev/fake2',
               'ebs': {'snapshot_id': 'vol-87654321',
                       'volume_size': 2}},
             {'device_name': '/dev/fake2',
-             'volume_id': 0x87654321,
+             'volume_id': '22222222-3333-4444-5555-666666666666',
              'volume_size': 2,
              'delete_on_termination': True}),
 
@@ -59,7 +76,7 @@ class BlockDeviceMappingEc2CloudTestCase(test.TestCase):
               'ebs': {'snapshot_id': 'vol-98765432',
                       'delete_on_termination': False}},
              {'device_name': '/dev/fake3',
-              'volume_id': 0x98765432,
+              'volume_id': '77777777-8888-9999-0000-aaaaaaaaaaaa',
               'delete_on_termination': False}),
 
             ({'device_name': '/dev/fake4',

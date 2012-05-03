@@ -60,10 +60,10 @@ db_opts = [
                default='instance-%08x',
                help='Template string to be used to generate instance names'),
     cfg.StrOpt('volume_name_template',
-               default='volume-%08x',
+               default='volume-%s',
                help='Template string to be used to generate instance names'),
     cfg.StrOpt('snapshot_name_template',
-               default='snapshot-%08x',
+               default='snapshot-%s',
                help='Template string to be used to generate snapshot names'),
     ]
 
@@ -1024,6 +1024,25 @@ def volume_update(context, volume_id, values):
     """
     return IMPL.volume_update(context, volume_id, values)
 
+
+def get_ec2_volume_id_by_uuid(context, volume_id):
+    return IMPL.get_ec2_volume_id_by_uuid(context, volume_id)
+
+
+def get_volume_uuid_by_ec2_id(context, ec2_id):
+    return IMPL.get_volume_uuid_by_ec2_id(context, ec2_id)
+
+
+def ec2_volume_create(context, volume_id, forced_id=None):
+    return IMPL.ec2_volume_create(context, volume_id, forced_id)
+
+
+def get_snapshot_uuid_by_ec2_id(context, ec2_id):
+    return IMPL.get_snapshot_uuid_by_ec2_id(context, ec2_id)
+
+
+def get_ec2_snapshot_id_by_uuid(context, snapshot_id):
+    return IMPL.get_ec2_snapshot_id_by_uuid(context, snapshot_id)
 
 ####################
 
