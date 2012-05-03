@@ -1403,7 +1403,6 @@ class LibvirtConnTestCase(test.TestCase):
             shutil.rmtree(os.path.join(FLAGS.instances_path,
                                        FLAGS.base_dir_name))
 
-    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_get_console_output_file(self):
 
         with utils.tempdir() as tmpdir:
@@ -1438,13 +1437,12 @@ class LibvirtConnTestCase(test.TestCase):
 
             self.create_fake_libvirt_mock()
             connection.LibvirtConnection._conn.lookupByName = fake_lookup
-            connection.libvirt_utils = libvirt_utils
+            connection.libvirt_utils = fake_libvirt_utils
 
             conn = connection.LibvirtConnection(False)
             output = conn.get_console_output(instance)
             self.assertEquals("foo", output)
 
-    @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_get_console_output_pty(self):
 
         with utils.tempdir() as tmpdir:
@@ -1477,9 +1475,14 @@ class LibvirtConnTestCase(test.TestCase):
             def fake_lookup(id):
                 return FakeVirtDomain(fake_dom_xml)
 
+            def _fake_flush(self, fake_pty):
+                with open(fake_pty, 'r+') as fp:
+                    return fp.read()
+
             self.create_fake_libvirt_mock()
             connection.LibvirtConnection._conn.lookupByName = fake_lookup
-            connection.libvirt_utils = libvirt_utils
+            connection.LibvirtConnection._flush_libvirt_console = _fake_flush
+            connection.libvirt_utils = fake_libvirt_utils
 
             conn = connection.LibvirtConnection(False)
             output = conn.get_console_output(instance)
