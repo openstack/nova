@@ -58,7 +58,7 @@ class NotifierListTestCase(test.TestCase):
         self.flags(notification_driver='nova.notifier.list_notifier',
                    list_notifier_drivers=['nova.notifier.no_op_notifier',
                                           'nova.notifier.no_op_notifier'])
-        nova.notifier.api.notify('publisher_id', 'event_type',
+        nova.notifier.api.notify('contextarg', 'publisher_id', 'event_type',
                 nova.notifier.api.WARN, dict(a=3))
         self.assertEqual(self.notify_count, 2)
         self.assertEqual(self.exception_count, 0)
@@ -68,7 +68,7 @@ class NotifierListTestCase(test.TestCase):
         self.flags(notification_driver='nova.notifier.list_notifier',
                    list_notifier_drivers=['nova.notifier.no_op_notifier',
                                           'nova.notifier.log_notifier'])
-        nova.notifier.api.notify('publisher_id',
+        nova.notifier.api.notify('contextarg', 'publisher_id',
                 'event_type', nova.notifier.api.WARN, dict(a=3))
         self.assertEqual(self.notify_count, 1)
         self.assertEqual(self.exception_count, 1)
@@ -78,7 +78,7 @@ class NotifierListTestCase(test.TestCase):
                    list_notifier_drivers=['nova.notifier.no_op_notifier',
                                           'nova.notifier.logo_notifier',
                                           'fdsjgsdfhjkhgsfkj'])
-        nova.notifier.api.notify('publisher_id',
+        nova.notifier.api.notify('contextarg', 'publisher_id',
                 'event_type', nova.notifier.api.WARN, dict(a=3))
         self.assertEqual(self.exception_count, 2)
         self.assertEqual(self.notify_count, 1)

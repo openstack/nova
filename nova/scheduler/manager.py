@@ -168,7 +168,7 @@ class SchedulerManager(manager.Manager):
                        method=method,
                        reason=ex)
 
-        notifier.notify(notifier.publisher_id("scheduler"),
+        notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.' + method, notifier.ERROR, payload)
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.

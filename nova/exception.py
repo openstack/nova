@@ -25,6 +25,7 @@ SHOULD include dedicated exception logging.
 """
 
 import functools
+import inspect
 import sys
 
 import webob.exc
@@ -133,8 +134,12 @@ def wrap_exception(notifier=None, publisher_id=None, event_type=None,
                         # propagated.
                         temp_type = f.__name__
 
-                    notifier.notify(publisher_id, temp_type, temp_level,
-                                    payload)
+                    context = get_context_from_function_and_args(f,
+                                                                 args,
+                                                                 kw)
+
+                    notifier.notify(context, publisher_id, temp_type,
+                                    temp_level, payload)
 
                 # re-raise original exception since it may have been clobbered
                 raise exc_info[0], exc_info[1], exc_info[2]
@@ -1060,3 +1065,22 @@ class InvalidInstanceIDMalformed(Invalid):
 
 class CouldNotFetchImage(NovaException):
     message = _("Could not fetch image %(image)s")
+
+
+def get_context_from_function_and_args(function, args, kwargs):
+    """Find an arg named 'context' and return the value.
+
+       This is useful in a couple of decorators where we don't
+       know much about the function we're wrapping.
+    """
+    context = None
+    if 'context' in kwargs.keys():
+        context = kwargs['context']
+    else:
+        (iargs, _iva, _ikw, _idf) = inspect.getargspec(function)
+        if 'context' in iargs:
+            index = iargs.index('context')
+            if len(args) > index:
+                context = args[index]
+
+    return context

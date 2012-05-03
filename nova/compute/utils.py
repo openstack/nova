@@ -239,6 +239,6 @@ def notify_about_instance_usage(context, instance, event_suffix,
     usage_info = _usage_from_instance(
             context, instance, network_info=network_info, **extra_usage_info)
 
-    notifier_api.notify('compute.%s' % host,
+    notifier_api.notify(context, 'compute.%s' % host,
                         'compute.instance.%s' % event_suffix,
                         notifier_api.INFO, usage_info)

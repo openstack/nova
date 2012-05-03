@@ -36,15 +36,15 @@ class NotifierTestCase(test.TestCase):
         self.stubs.Set(nova.notifier.no_op_notifier, 'notify',
                 mock_notify)
 
-        notifier_api.notify('publisher_id', 'event_type',
-                nova.notifier.api.WARN, dict(a=3))
+        notifier_api.notify('contextarg', 'publisher_id', 'event_type',
+                            nova.notifier.api.WARN, dict(a=3))
         self.assertEqual(self.notify_called, True)
 
     def test_verify_message_format(self):
         """A test to ensure changing the message format is prohibitively
         annoying"""
 
-        def message_assert(message):
+        def message_assert(context, message):
             fields = [('publisher_id', 'publisher_id'),
                       ('event_type', 'event_type'),
                       ('priority', 'WARN'),
@@ -53,11 +53,12 @@ class NotifierTestCase(test.TestCase):
                 self.assertEqual(message[k], v)
             self.assertTrue(len(message['message_id']) > 0)
             self.assertTrue(len(message['timestamp']) > 0)
+            self.assertEqual(context, 'contextarg')
 
         self.stubs.Set(nova.notifier.no_op_notifier, 'notify',
                 message_assert)
-        notifier_api.notify('publisher_id', 'event_type',
-                nova.notifier.api.WARN, dict(a=3))
+        notifier_api.notify('contextarg', 'publisher_id', 'event_type',
+                            nova.notifier.api.WARN, dict(a=3))
 
     def test_send_rabbit_notification(self):
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
@@ -68,14 +69,14 @@ class NotifierTestCase(test.TestCase):
             self.mock_notify = True
 
         self.stubs.Set(nova.rpc, 'notify', mock_notify)
-        notifier_api.notify('publisher_id', 'event_type',
-                nova.notifier.api.WARN, dict(a=3))
+        notifier_api.notify('contextarg', 'publisher_id', 'event_type',
+                            nova.notifier.api.WARN, dict(a=3))
 
         self.assertEqual(self.mock_notify, True)
 
     def test_invalid_priority(self):
         self.assertRaises(nova.notifier.api.BadPriorityException,
-                notifier_api.notify, 'publisher_id',
+                notifier_api.notify, 'contextarg', 'publisher_id',
                 'event_type', 'not a priority', dict(a=3))
 
     def test_rabbit_priority_queue(self):
@@ -91,7 +92,8 @@ class NotifierTestCase(test.TestCase):
             self.test_topic = topic
 
         self.stubs.Set(nova.rpc, 'notify', mock_notify)
-        notifier_api.notify('publisher_id', 'event_type', 'DEBUG', dict(a=3))
+        notifier_api.notify('contextarg', 'publisher_id',
+                            'event_type', 'DEBUG', dict(a=3))
         self.assertEqual(self.test_topic, 'testnotify.debug')
 
     def test_error_notification(self):
@@ -131,3 +133,47 @@ class NotifierTestCase(test.TestCase):
 
         self.assertEqual(3, example_api(1, 2))
         self.assertEqual(self.notify_called, True)
+
+    def test_decorator_context(self):
+        """Verify that the notify decorator can extract the 'context' arg."""
+        self.notify_called = False
+        self.context_arg = None
+
+        def example_api(arg1, arg2, context):
+            return arg1 + arg2
+
+        def example_api2(arg1, arg2, **kw):
+            return arg1 + arg2
+
+        example_api = nova.notifier.api.notify_decorator(
+                            'example_api',
+                             example_api)
+
+        example_api2 = nova.notifier.api.notify_decorator(
+                             'example_api2',
+                              example_api2)
+
+        def mock_notify(context, cls, _type, _priority, _payload):
+            self.notify_called = True
+            self.context_arg = context
+
+        self.stubs.Set(nova.notifier.api, 'notify',
+                mock_notify)
+
+        # Test positional context
+        self.assertEqual(3, example_api(1, 2, "contextname"))
+        self.assertEqual(self.notify_called, True)
+        self.assertEqual(self.context_arg, "contextname")
+
+        self.notify_called = False
+        self.context_arg = None
+
+        # Test named context
+        self.assertEqual(3, example_api2(1, 2, context="contextname2"))
+        self.assertEqual(self.notify_called, True)
+        self.assertEqual(self.context_arg, "contextname2")
+
+        # Test missing context
+        self.assertEqual(3, example_api2(1, 2, bananas="delicious"))
+        self.assertEqual(self.notify_called, True)
+        self.assertEqual(self.context_arg, None)

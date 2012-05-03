@@ -37,7 +37,7 @@ class ImportFailureNotifier(object):
     def __init__(self, exception):
         self.exception = exception
 
-    def notify(self, message):
+    def notify(self, context, message):
         raise self.exception
 
 
@@ -54,11 +54,11 @@ def _get_drivers():
     return drivers
 
 
-def notify(message):
+def notify(context, message):
     """Passes notification to multiple notifiers in a list."""
     for driver in _get_drivers():
         try:
-            driver.notify(message)
+            driver.notify(context, message)
         except Exception as e:
             LOG.exception(_("Problem '%(e)s' attempting to send to "
                             "notification driver %(driver)s."), locals())

@@ -13,13 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import inspect
 import uuid
 
+from nova import exception
 from nova import flags
-from nova import utils
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -65,10 +67,13 @@ def notify_decorator(name, fn):
             body['args'].append(arg)
         for key in kwarg:
             body['kwarg'][key] = kwarg[key]
-        notify(FLAGS.default_publisher_id,
-                            name,
-                            FLAGS.default_notification_level,
-                            body)
+
+        context = exception.get_context_from_function_and_args(fn, args, kwarg)
+        notify(context,
+               FLAGS.default_publisher_id,
+               name,
+               FLAGS.default_notification_level,
+               body)
         return fn(*args, **kwarg)
     return wrapped_func
 
@@ -79,7 +84,7 @@ def publisher_id(service, host=None):
     return "%s.%s" % (service, host)
 
 
-def notify(publisher_id, event_type, priority, payload):
+def notify(context, publisher_id, event_type, priority, payload):
     """Sends a notification using the specified driver
 
     :param publisher_id: the source worker_type.host of the message
@@ -126,7 +131,7 @@ def notify(publisher_id, event_type, priority, payload):
                    payload=payload,
                    timestamp=str(utils.utcnow()))
     try:
-        driver.notify(msg)
+        driver.notify(context, msg)
     except Exception, e:
         LOG.exception(_("Problem '%(e)s' attempting to "
                         "send to notification system. Payload=%(payload)s") %

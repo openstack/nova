@@ -21,7 +21,7 @@ from nova import log as logging
 LOG = logging.getLogger(__name__)
 
 
-def notify(message):
+def notify(_context, message):
     """Look for specific compute manager events and interprete them
     so as to keep the Capacity table up to date.
 
