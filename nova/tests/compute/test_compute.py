@@ -2508,10 +2508,14 @@ class ComputeAPITestCase(BaseTestCase):
         try:
             sys_metadata = db.instance_system_metadata_get(self.context,
                     ref[0]['uuid'])
-            self.assertEqual(sys_metadata,
-                    {'image_kernel_id': 'fake_kernel_id',
+
+            image_props = {'image_kernel_id': 'fake_kernel_id',
                      'image_ramdisk_id': 'fake_ramdisk_id',
-                     'image_something_else': 'meow', })
+                     'image_something_else': 'meow', }
+            for key, value in image_props.iteritems():
+                self.assertTrue(key in sys_metadata)
+                self.assertEqual(value, sys_metadata[key])
+
         finally:
             db.instance_destroy(self.context, ref[0]['uuid'])
 

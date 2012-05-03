@@ -688,6 +688,16 @@ class API(base.Base):
             new_value = str(value)[:255]
             instance['system_metadata']['image_%s' % key] = new_value
 
+        # Keep a record of the original base image that this
+        # image's instance is derived from:
+        base_image_ref = image['properties'].get('base_image_ref')
+        if not base_image_ref:
+            # base image ref property not previously set through a snapshot.
+            # default to using the image ref as the base:
+            base_image_ref = base_options['image_ref']
+
+        instance['system_metadata']['image_base_image_ref'] = base_image_ref
+
         # Use 'default' security_group if none specified.
         if security_groups is None:
             security_groups = ['default']
@@ -1172,6 +1182,13 @@ class API(base.Base):
             'user_id': str(context.user_id),
             'image_type': image_type,
         }
+
+        # Persist base image ref as a Glance image property
+        system_meta = self.db.instance_system_metadata_get(
+                context, instance_uuid)
+        base_image_ref = system_meta.get('image_base_image_ref')
+        if base_image_ref:
+            properties['base_image_ref'] = base_image_ref
 
         sent_meta = {'name': name, 'is_public': False}
 
