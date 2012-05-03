@@ -24,8 +24,6 @@ import functools
 import re
 import time
 
-import webob.exc
-
 from nova import block_device
 from nova.compute import aggregate_states
 from nova.compute import instance_types
