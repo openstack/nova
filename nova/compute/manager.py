@@ -213,7 +213,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.0'
+    RPC_API_VERSION = '2.1'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -968,9 +968,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @reverts_task_state
     @wrap_instance_fault
-    def rebuild_instance(self, context, instance,
-                         orig_image_ref, image_ref,
-                         injected_files, new_pass):
+    def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
+                         injected_files, new_pass, orig_sys_metadata=None):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -982,6 +981,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param image_ref: New image_ref for rebuild
         :param injected_files: Files to inject
         :param new_pass: password to set on rebuilt instance
+        :param orig_sys_metadata: instance system metadata from pre-rebuild
         """
         context = context.elevated()
         with self._error_out_instance_on_exception(context, instance['uuid']):
@@ -996,7 +996,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             orig_image_ref_url = utils.generate_image_url(orig_image_ref)
             extra_usage_info = {'image_ref_url': orig_image_ref_url}
             compute_utils.notify_usage_exists(context, instance,
-                    current_period=True, extra_usage_info=extra_usage_info)
+                    current_period=True, system_metadata=orig_sys_metadata,
+                    extra_usage_info=extra_usage_info)
 
             # This message should contain the new image_ref
             extra_usage_info = {'image_name': image_meta['name']}

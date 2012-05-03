@@ -127,9 +127,10 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.44 - Adds reserve_block_device_name()
 
         2.0 - Remove 1.x backwards compat
+        2.1 - Adds orig_sys_metadata to rebuild()
     '''
 
-    BASE_RPC_API_VERSION = '2.0'
+    BASE_RPC_API_VERSION = '2.1'
 
     def __init__(self):
         super(ComputeAPI, self).__init__(
@@ -332,12 +333,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
-            image_ref, orig_image_ref):
+            image_ref, orig_image_ref, orig_sys_metadata):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('rebuild_instance',
                 instance=instance_p, new_pass=new_pass,
                 injected_files=injected_files, image_ref=image_ref,
-                orig_image_ref=orig_image_ref),
+                orig_image_ref=orig_image_ref,
+                orig_sys_metadata=orig_sys_metadata),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def refresh_provider_fw_rules(self, ctxt, host):
