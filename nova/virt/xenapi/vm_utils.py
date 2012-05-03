@@ -374,8 +374,8 @@ class VMHelper(xenapi.HelperBase):
             if vbd_rec['userdevice'] == '0':
                 vdi_rec = session.call_xenapi("VDI.get_record", vbd_rec['VDI'])
                 return vbd_rec['VDI'], vdi_rec
-        raise exception.Error(_("No primary VDI found for %(vm_ref)s") %
-                              locals())
+        raise exception.NovaException(_("No primary VDI found for %(vm_ref)s")
+                                      % locals())
 
     @classmethod
     def create_snapshot(cls, session, instance, vm_ref, label):
@@ -851,7 +851,7 @@ class VMHelper(xenapi.HelperBase):
         elif (image_type in (ImageType.KERNEL, ImageType.RAMDISK) and
               vdi_size > FLAGS.max_kernel_ramdisk_size):
             max_size = FLAGS.max_kernel_ramdisk_size
-            raise exception.Error(
+            raise exception.NovaException(
                 _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
                   "max %(max_size)d bytes") % locals())
 
@@ -972,8 +972,8 @@ class VMHelper(xenapi.HelperBase):
             # 4. ISO
             is_pv = False
         else:
-            raise exception.Error(_("Unknown image format %(disk_image_type)s")
-                                  % locals())
+            msg = _("Unknown image format %(disk_image_type)s") % locals()
+            raise exception.NovaException(msg)
 
         return is_pv
 
@@ -1424,7 +1424,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
 
     msg = (_("VHD coalesce attempts exceeded (%(max_attempts)d)"
              ", giving up...") % locals())
-    raise exception.Error(msg)
+    raise exception.NovaException(msg)
 
 
 def remap_vbd_dev(dev):

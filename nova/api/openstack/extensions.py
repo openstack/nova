@@ -188,7 +188,8 @@ class ExtensionManager(object):
         LOG.audit(_('Loaded extension: %s'), alias)
 
         if alias in self.extensions:
-            raise exception.Error("Found duplicate extension: %s" % alias)
+            raise exception.NovaException("Found duplicate extension: %s"
+                                          % alias)
         self.extensions[alias] = ext
 
     def get_resources(self):

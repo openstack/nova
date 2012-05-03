@@ -208,5 +208,5 @@ class HpSanISCSITestCase(test.TestCase):
     def test_cliq_error(self):
         try:
             self.driver._cliq_run_xml("testError", {})
-        except exception.Error:
+        except exception.NovaException:
             pass

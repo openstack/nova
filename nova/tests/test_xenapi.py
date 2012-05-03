@@ -304,7 +304,7 @@ class XenAPIVMTestCase(test.TestCase):
         instance = self._create_instance()
 
         name = "MySnapshot"
-        self.assertRaises(exception.Error, self.conn.snapshot,
+        self.assertRaises(exception.NovaException, self.conn.snapshot,
                           self.context, instance, name)
 
     def test_instance_snapshot(self):

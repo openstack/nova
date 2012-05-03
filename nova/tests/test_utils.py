@@ -87,7 +87,7 @@ exit 1
             os.unlink(tmpfilename2)
 
     def test_unknown_kwargs_raises_error(self):
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.NovaException,
                           utils.execute,
                           '/usr/bin/env', 'true',
                           this_is_not_a_valid_kwarg=True)
@@ -229,16 +229,16 @@ class GetFromPathTestCase(test.TestCase):
     def test_bad_xpath(self):
         f = utils.get_from_path
 
-        self.assertRaises(exception.Error, f, [], None)
-        self.assertRaises(exception.Error, f, [], "")
-        self.assertRaises(exception.Error, f, [], "/")
-        self.assertRaises(exception.Error, f, [], "/a")
-        self.assertRaises(exception.Error, f, [], "/a/")
-        self.assertRaises(exception.Error, f, [], "//")
-        self.assertRaises(exception.Error, f, [], "//a")
-        self.assertRaises(exception.Error, f, [], "a//a")
-        self.assertRaises(exception.Error, f, [], "a//a/")
-        self.assertRaises(exception.Error, f, [], "a/a/")
+        self.assertRaises(exception.NovaException, f, [], None)
+        self.assertRaises(exception.NovaException, f, [], "")
+        self.assertRaises(exception.NovaException, f, [], "/")
+        self.assertRaises(exception.NovaException, f, [], "/a")
+        self.assertRaises(exception.NovaException, f, [], "/a/")
+        self.assertRaises(exception.NovaException, f, [], "//")
+        self.assertRaises(exception.NovaException, f, [], "//a")
+        self.assertRaises(exception.NovaException, f, [], "a//a")
+        self.assertRaises(exception.NovaException, f, [], "a//a/")
+        self.assertRaises(exception.NovaException, f, [], "a/a/")
 
     def test_real_failure1(self):
         # Real world failure case...

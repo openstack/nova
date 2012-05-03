@@ -59,7 +59,7 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
             except Exception as ex:
                 LOG.debug(_("Failed to create sr %s...continuing") %
                           str(backend_ref['id']))
-                raise exception.Error(_('Create failed'))
+                raise exception.NovaException(_('Create failed'))
 
             LOG.debug(_('SR UUID of new SR is: %s') % sr_uuid)
             try:
@@ -68,7 +68,7 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
                                                dict(sr_uuid=sr_uuid))
             except Exception as ex:
                 LOG.exception(ex)
-                raise exception.Error(_("Failed to update db"))
+                raise exception.NovaException(_("Failed to update db"))
 
         else:
             # sr introduce, if not already done
@@ -88,7 +88,7 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
                 self._create_storage_repo(context, backend)
             except Exception as ex:
                 LOG.exception(ex)
-                raise exception.Error(_('Failed to reach backend %d')
+                raise exception.NovaException(_('Failed to reach backend %d')
                                       % backend['id'])
 
     def __init__(self, *args, **kwargs):
@@ -97,7 +97,8 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
         # This driver leverages Xen storage manager, and hence requires
         # hypervisor to be Xen
         if FLAGS.connection_type != 'xenapi':
-            raise exception.Error(_('XenSMDriver requires xenapi connection'))
+            msg = _('XenSMDriver requires xenapi connection')
+            raise exception.NovaException(msg)
 
         url = FLAGS.xenapi_connection_url
         username = FLAGS.xenapi_connection_username
@@ -107,7 +108,7 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
             self._volumeops = volumeops.VolumeOps(session)
         except Exception as ex:
             LOG.exception(ex)
-            raise exception.Error(_("Failed to initiate session"))
+            raise exception.NovaException(_("Failed to initiate session"))
 
         super(XenSMDriver, self).__init__(execute=utils.execute,
                                           sync_exec=utils.execute,
@@ -151,10 +152,11 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
                 self.db.sm_volume_create(self.ctxt, sm_vol_rec)
             except Exception as ex:
                 LOG.exception(ex)
-                raise exception.Error(_("Failed to update volume in db"))
+                msg = _("Failed to update volume in db")
+                raise exception.NovaException(msg)
 
         else:
-            raise exception.Error(_('Unable to create volume'))
+            raise exception.NovaException(_('Unable to create volume'))
 
     def delete_volume(self, volume):
 
@@ -168,13 +170,13 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
             self._volumeops.delete_volume_for_sm(vol_rec['vdi_uuid'])
         except Exception as ex:
             LOG.exception(ex)
-            raise exception.Error(_("Failed to delete vdi"))
+            raise exception.NovaException(_("Failed to delete vdi"))
 
         try:
             self.db.sm_volume_delete(self.ctxt, volume['id'])
         except Exception as ex:
             LOG.exception(ex)
-            raise exception.Error(_("Failed to delete volume in db"))
+            raise exception.NovaException(_("Failed to delete volume in db"))
 
     def local_path(self, volume):
         return str(volume['id'])
@@ -207,7 +209,7 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
                                                           volume['id']))
         except Exception as ex:
             LOG.exception(ex)
-            raise exception.Error(_("Failed to find volume in db"))
+            raise exception.NovaException(_("Failed to find volume in db"))
 
         # Keep the volume id key consistent with what ISCSI driver calls it
         xensm_properties['volume_id'] = xensm_properties['id']
@@ -218,7 +220,7 @@ class XenSMDriver(nova.volume.driver.VolumeDriver):
                                   xensm_properties['backend_id'])
         except Exception as ex:
             LOG.exception(ex)
-            raise exception.Error(_("Failed to find backend in db"))
+            raise exception.NovaException(_("Failed to find backend in db"))
 
         params = self._convert_config_params(backend_conf['config_params'])
 

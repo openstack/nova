@@ -72,7 +72,7 @@ def db_sync(version=None):
         try:
             version = int(version)
         except ValueError:
-            raise exception.Error(_("version should be an integer"))
+            raise exception.NovaException(_("version should be an integer"))
 
     current_version = db_version()
     repository = _find_migrate_repo()

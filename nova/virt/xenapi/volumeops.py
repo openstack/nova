@@ -58,7 +58,7 @@ class VolumeOps(object):
     def delete_volume_for_sm(self, vdi_uuid):
         vdi_ref = self._session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
         if vdi_ref is None:
-            raise exception.Error(_('Could not find VDI ref'))
+            raise exception.NovaException(_('Could not find VDI ref'))
 
         vm_utils.VMHelper.destroy_vdi(self._session, vdi_ref)
 
@@ -67,10 +67,10 @@ class VolumeOps(object):
         sr_ref = volume_utils.VolumeHelper.create_sr(self._session,
                                                      label, params)
         if sr_ref is None:
-            raise exception.Error(_('Could not create SR'))
+            raise exception.NovaException(_('Could not create SR'))
         sr_rec = self._session.call_xenapi("SR.get_record", sr_ref)
         if sr_rec is None:
-            raise exception.Error(_('Could not retrieve SR record'))
+            raise exception.NovaException(_('Could not retrieve SR record'))
         return sr_rec['uuid']
 
     # Checks if sr has already been introduced to this host
@@ -84,7 +84,7 @@ class VolumeOps(object):
         sr_ref = volume_utils.VolumeHelper.introduce_sr(self._session,
                                                         sr_uuid, label, params)
         if sr_ref is None:
-            raise exception.Error(_('Could not introduce SR'))
+            raise exception.NovaException(_('Could not introduce SR'))
         return sr_ref
 
     def is_sr_on_host(self, sr_uuid):
@@ -106,7 +106,7 @@ class VolumeOps(object):
             volume_utils.VolumeHelper.forget_sr(self._session, sr_uuid)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
-            raise exception.Error(_('Could not forget SR'))
+            raise exception.NovaException(_('Could not forget SR'))
 
     def attach_volume(self, connection_info, instance_name, mountpoint):
         """Attach volume storage to VM instance"""

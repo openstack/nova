@@ -1043,7 +1043,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
             if (err and err != "device %s is already a member of a bridge;"
                      "can't enslave it to bridge %s.\n" % (interface, bridge)):
-                raise exception.Error('Failed to add interface: %s' % err)
+                msg = _('Failed to add interface: %s') % err
+                raise exception.NovaException(msg)
 
         # Don't forward traffic unless we were told to be a gateway
         ipv4_filter = iptables_manager.ipv4['filter']

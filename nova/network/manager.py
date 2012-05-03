@@ -158,7 +158,7 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(network_opts)
 
 
-class AddressAlreadyAllocated(exception.Error):
+class AddressAlreadyAllocated(exception.NovaException):
     """Address was already allocated."""
     pass
 
@@ -1245,8 +1245,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
 
         if fixed_ip['instance_id'] is None:
-            raise exception.Error(_('IP %s leased that is not associated') %
-                                  address)
+            msg = _('IP %s leased that is not associated') % address
+            raise exception.NovaException(msg)
         now = utils.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip['address'],
@@ -1262,8 +1262,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
 
         if fixed_ip['instance_id'] is None:
-            raise exception.Error(_('IP %s released that is not associated') %
-                                  address)
+            msg = _('IP %s released that is not associated') % address
+            raise exception.NovaException(msg)
         if not fixed_ip['leased']:
             LOG.warn(_('IP %s released that was not leased'), address,
                      context=context)

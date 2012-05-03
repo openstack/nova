@@ -990,7 +990,8 @@ class LibvirtConnection(driver.ComputeDriver):
                     continue
                 break
         else:
-            raise exception.Error(_("Guest does not have a console available"))
+            msg = _("Guest does not have a console available")
+            raise exception.NovaException(msg)
 
         self._chown_console_log_for_instance(instance['name'])
         data = self._flush_libvirt_console(pty)
@@ -1708,7 +1709,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
             msg = _("Error from libvirt while looking up %(instance_name)s: "
                     "[Error Code %(error_code)s] %(ex)s") % locals()
-            raise exception.Error(msg)
+            raise exception.NovaException(msg)
 
     def get_info(self, instance):
         """Retrieve information from libvirt for a specific instance name.
@@ -1947,7 +1948,7 @@ class LibvirtConnection(driver.ComputeDriver):
         # But ... we can at least give the user a nice message
         method = getattr(self._conn, 'getVersion', None)
         if method is None:
-            raise exception.Error(_("libvirt version is too old"
+            raise exception.NovaException(_("libvirt version is too old"
                                     " (does not support getVersion)"))
             # NOTE(justinsb): If we wanted to get the version, we could:
             # method = getattr(libvirt, 'getVersion', None)
@@ -2162,7 +2163,7 @@ class LibvirtConnection(driver.ComputeDriver):
             timeout_count.pop()
             if len(timeout_count) == 0:
                 msg = _('Timeout migrating for %s. nwfilter not found.')
-                raise exception.Error(msg % instance_ref.name)
+                raise exception.NovaException(msg % instance_ref.name)
             time.sleep(1)
 
     def live_migration(self, ctxt, instance_ref, dest,

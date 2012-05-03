@@ -111,7 +111,8 @@ class SanISCSIDriver(nova.volume.driver.ISCSIDriver):
                         username=FLAGS.san_login,
                         pkey=privatekey)
         else:
-            raise exception.Error(_("Specify san_password or san_private_key"))
+            msg = _("Specify san_password or san_private_key")
+            raise exception.NovaException(msg)
         return ssh
 
     def _execute(self, *cmd, **kwargs):
@@ -149,12 +150,12 @@ class SanISCSIDriver(nova.volume.driver.ISCSIDriver):
         """Returns an error if prerequisites aren't met."""
         if not self.run_local:
             if not (FLAGS.san_password or FLAGS.san_private_key):
-                raise exception.Error(_('Specify san_password or '
+                raise exception.NovaException(_('Specify san_password or '
                                         'san_private_key'))
 
         # The san_ip must always be set, because we use it for the target
         if not (FLAGS.san_ip):
-            raise exception.Error(_("san_ip must be set"))
+            raise exception.NovaException(_("san_ip must be set"))
 
 
 def _collect_lines(data):
@@ -225,7 +226,8 @@ class SolarisISCSIDriver(SanISCSIDriver):
         if "View Entry:" in out:
             return True
 
-        raise exception.Error("Cannot parse list-view output: %s" % (out))
+        msg = _("Cannot parse list-view output: %s") % (out)
+        raise exception.NovaException()
 
     def _get_target_groups(self):
         """Gets list of target groups from host."""
@@ -459,7 +461,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
                 msg = (_("Malformed response to CLIQ command "
                          "%(verb)s %(cliq_args)s. Result=%(out)s") %
                        locals())
-                raise exception.Error(msg)
+                raise exception.NovaException(msg)
 
             result_code = response_node.attrib.get("result")
 
@@ -467,7 +469,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
                 msg = (_("Error running CLIQ command %(verb)s %(cliq_args)s. "
                          " Result=%(out)s") %
                        locals())
-                raise exception.Error(msg)
+                raise exception.NovaException(msg)
 
         return result_xml
 
@@ -497,7 +499,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
         msg = (_("Unexpected number of virtual ips for cluster "
                  " %(cluster_name)s. Result=%(_xml)s") %
                locals())
-        raise exception.Error(msg)
+        raise exception.NovaException(msg)
 
     def _cliq_get_volume_info(self, volume_name):
         """Gets the volume info, including IQN"""
@@ -600,7 +602,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
 
     def local_path(self, volume):
         # TODO(justinsb): Is this needed here?
-        raise exception.Error(_("local_path not supported"))
+        raise exception.NovaException(_("local_path not supported"))
 
     def initialize_connection(self, volume, connector):
         """Assigns the volume to a server.

@@ -125,7 +125,7 @@ class VMWareVMOps(object):
             if data_store_name is None:
                 msg = _("Couldn't get a local Datastore reference")
                 LOG.error(msg, instance=instance)
-                raise exception.Error(msg)
+                raise exception.NovaException(msg)
 
         data_store_name = _get_datastore_ref()
 

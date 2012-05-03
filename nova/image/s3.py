@@ -376,15 +376,15 @@ class S3ImageService(object):
                             "args": {"project_id": context.project_id,
                                      "text": base64.b64encode(encrypted_key)}})
         except Exception, exc:
-            raise exception.Error(_('Failed to decrypt private key: %s')
-                                  % exc)
+            msg = _('Failed to decrypt private key: %s') % exc
+            raise exception.NovaException(msg)
         try:
             iv = rpc.call(elevated, FLAGS.cert_topic,
                           {"method": "decrypt_text",
                            "args": {"project_id": context.project_id,
                                     "text": base64.b64encode(encrypted_iv)}})
         except Exception, exc:
-            raise exception.Error(_('Failed to decrypt initialization '
+            raise exception.NovaException(_('Failed to decrypt initialization '
                                     'vector: %s') % exc)
 
         try:
@@ -395,7 +395,7 @@ class S3ImageService(object):
                           '-iv', '%s' % (iv,),
                           '-out', '%s' % (decrypted_filename,))
         except exception.ProcessExecutionError, exc:
-            raise exception.Error(_('Failed to decrypt image file '
+            raise exception.NovaException(_('Failed to decrypt image file '
                                     '%(image_file)s: %(err)s') %
                                     {'image_file': encrypted_filename,
                                      'err': exc.stdout})
@@ -407,7 +407,7 @@ class S3ImageService(object):
         for n in tar_file.getnames():
             if not os.path.abspath(os.path.join(path, n)).startswith(path):
                 tar_file.close()
-                raise exception.Error(_('Unsafe filenames in image'))
+                raise exception.NovaException(_('Unsafe filenames in image'))
         tar_file.close()
 
     @staticmethod

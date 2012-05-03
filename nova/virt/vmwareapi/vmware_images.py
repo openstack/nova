@@ -75,7 +75,7 @@ def start_transfer(read_file_handle, data_size, write_file_handle=None,
 
         # Log and raise the exception.
         LOG.exception(exc)
-        raise exception.Error(exc)
+        raise exception.NovaException(exc)
     finally:
         # No matter what, try closing the read and write handles, if it so
         # applies.

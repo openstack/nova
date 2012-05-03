@@ -78,7 +78,7 @@ class Signer(object):
     def s3_authorization(self, headers, verb, path):
         """Generate S3 authorization string."""
         if not boto:
-            raise exception.Error('boto is not installed')
+            raise exception.NovaException('boto is not installed')
         c_string = boto.utils.canonical_string(verb, path, headers)
         hmac_copy = self.hmac.copy()
         hmac_copy.update(c_string)
@@ -97,7 +97,7 @@ class Signer(object):
             return self._calc_signature_1(params)
         if params['SignatureVersion'] == '2':
             return self._calc_signature_2(params, verb, server_string, path)
-        raise exception.Error('Unknown Signature Version: %s' %
+        raise exception.NovaException('Unknown Signature Version: %s' %
                     params['SignatureVersion'])
 
     @staticmethod
@@ -140,16 +140,17 @@ class Signer(object):
         string_to_sign = '%s\n%s\n%s\n' % (verb, server_string, path)
 
         if 'SignatureMethod' not in params:
-            raise exception.Error('No SignatureMethod specified')
+            raise exception.NovaException('No SignatureMethod specified')
 
         if params['SignatureMethod'] == 'HmacSHA256':
             if not self.hmac_256:
-                raise exception.Error('SHA256 not supported on this server')
+                msg = _('SHA256 not supported on this server')
+                raise exception.NovaException(msg)
             current_hmac = self.hmac_256
         elif params['SignatureMethod'] == 'HmacSHA1':
             current_hmac = self.hmac
         else:
-            raise exception.Error('SignatureMethod %s not supported'
+            raise exception.NovaException('SignatureMethod %s not supported'
                                   % params['SignatureMethod'])
 
         keys = params.keys()

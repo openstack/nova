@@ -447,7 +447,7 @@ class AuthManager(object):
         """
         if role == 'projectmanager':
             if not project:
-                raise exception.Error(_("Must specify project"))
+                raise exception.NovaException(_("Must specify project"))
             return self.is_project_manager(user, project)
 
         global_role = self._has_role(User.safe_id(user),

@@ -96,21 +96,21 @@ class GlanceWriteThread(object):
                     # If the state is killed, then raise an exception.
                     elif image_status == "killed":
                         self.stop()
-                        exc_msg = (_("Glance image %s is in killed state") %
-                                   self.image_id)
-                        LOG.error(exc_msg)
-                        self.done.send_exception(exception.Error(exc_msg))
+                        msg = (_("Glance image %s is in killed state") %
+                                 self.image_id)
+                        LOG.error(msg)
+                        self.done.send_exception(exception.NovaException(msg))
                     elif image_status in ["saving", "queued"]:
                         greenthread.sleep(GLANCE_POLL_INTERVAL)
                     else:
                         self.stop()
-                        exc_msg = _("Glance image "
+                        msg = _("Glance image "
                                     "%(image_id)s is in unknown state "
                                     "- %(state)s") % {
                                             "image_id": self.image_id,
                                             "state": image_status}
-                        LOG.error(exc_msg)
-                        self.done.send_exception(exception.Error(exc_msg))
+                        LOG.error(msg)
+                        self.done.send_exception(exception.NovaException(msg))
                 except Exception, exc:
                     self.stop()
                     self.done.send_exception(exc)

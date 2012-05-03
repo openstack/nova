@@ -74,12 +74,12 @@ IMPL = utils.LazyPluggable('db_backend',
                            sqlalchemy='nova.db.sqlalchemy.api')
 
 
-class NoMoreNetworks(exception.Error):
+class NoMoreNetworks(exception.NovaException):
     """No more available networks."""
     pass
 
 
-class NoMoreTargets(exception.Error):
+class NoMoreTargets(exception.NovaException):
     """No more available targets"""
     pass
 

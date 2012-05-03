@@ -195,7 +195,7 @@ class VolumeTestCase(test.TestCase):
         instance_ref = db.volume_get_instance(self.context, volume_id)
         self.assertEqual(instance_ref['id'], instance_id)
 
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.NovaException,
                           self.volume.delete_volume,
                           self.context,
                           volume_id)
