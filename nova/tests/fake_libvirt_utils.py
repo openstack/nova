@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
 import StringIO
 
 files = {}
@@ -89,7 +90,11 @@ def file_open(path, mode=None):
 
 
 def load_file(path):
-    return ''
+    if os.path.exists(path):
+        with open(path, 'r+') as fp:
+            return fp.read()
+    else:
+        return ''
 
 
 def file_delete(path):
