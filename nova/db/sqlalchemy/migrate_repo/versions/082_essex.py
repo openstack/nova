@@ -11,6 +11,9 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
 
+# Note on the autoincrement flag: this is defaulted for primary key columns
+# of integral type, so is no longer set explicitly in such cases.
+
 def _populate_instance_types(instance_types_table):
     if FLAGS.connection_type == "libvirt":
         default_inst_types = {
@@ -98,8 +101,7 @@ def upgrade(migrate_engine):
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, nullable=False,
-               autoincrement=True),
+        Column('id', Integer, primary_key=True, nullable=False),
         Column('name', String(length=255), unique=True),
         Column('operational_state', String(length=255), nullable=False),
         Column('availability_zone', String(length=255), nullable=False),
@@ -127,8 +129,7 @@ def upgrade(migrate_engine):
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, autoincrement=True,
-               nullable=False),
+        Column('id', Integer, primary_key=True, nullable=False),
         Column('instance_id', Integer, ForeignKey('instances.id'),
                nullable=False),
         Column('device_name', String(length=255), nullable=False),
