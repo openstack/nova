@@ -19,7 +19,6 @@
 Tests For Scheduler
 """
 
-import datetime
 import json
 
 from nova.compute import api as compute_api
@@ -29,7 +28,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova.notifier import api as notifier
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova.scheduler import driver
@@ -432,7 +430,6 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
         self.mox.StubOutWithMock(db, 'instance_update')
-        self.mox.StubOutWithMock(db, 'volume_update')
         self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
 
         dest = 'fake_host2'
@@ -449,11 +446,6 @@ class SchedulerTestCase(test.TestCase):
         db.instance_update(self.context, instance['id'],
                 {'vm_state': vm_states.MIGRATING})
 
-        db.volume_update(self.context, instance['volumes'][0]['id'],
-                {'status': 'migrating'})
-        db.volume_update(self.context, instance['volumes'][1]['id'],
-                {'status': 'migrating'})
-
         driver.cast_to_compute_host(self.context, instance['host'],
                 'live_migration', update_db=False,
                 instance_id=instance['id'], dest=dest,
@@ -469,7 +461,6 @@ class SchedulerTestCase(test.TestCase):
         """Test live migration when all checks pass."""
 
         self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
         self.mox.StubOutWithMock(utils, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
         self.mox.StubOutWithMock(self.driver, '_get_compute_info')
@@ -478,7 +469,6 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(rpc, 'call')
         self.mox.StubOutWithMock(rpc, 'cast')
         self.mox.StubOutWithMock(db, 'instance_update')
-        self.mox.StubOutWithMock(db, 'volume_update')
         self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
 
         dest = 'fake_host2'
@@ -488,9 +478,6 @@ class SchedulerTestCase(test.TestCase):
         db.instance_get(self.context, instance['id']).AndReturn(instance)
 
         # Source checks (volume and source compute are up)
-        db.service_get_all_by_topic(self.context, 'volume').AndReturn(
-                ['fake_service'])
-        utils.service_is_up('fake_service').AndReturn(True)
         db.service_get_all_compute_by_host(self.context,
                 instance['host']).AndReturn(['fake_service2'])
         utils.service_is_up('fake_service2').AndReturn(True)
@@ -546,10 +533,6 @@ class SchedulerTestCase(test.TestCase):
 
         db.instance_update(self.context, instance['id'],
                 {'vm_state': vm_states.MIGRATING})
-        db.volume_update(self.context, instance['volumes'][0]['id'],
-                {'status': 'migrating'})
-        db.volume_update(self.context, instance['volumes'][1]['id'],
-                {'status': 'migrating'})
 
         driver.cast_to_compute_host(self.context, instance['host'],
                 'live_migration', update_db=False,
@@ -582,33 +565,10 @@ class SchedulerTestCase(test.TestCase):
                     instance_id=instance['id'], dest=dest,
                     block_migration=block_migration)
 
-    def test_live_migration_volume_node_not_alive(self):
-        """Raise exception when volume node is not alive."""
-
-        self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
-        self.mox.StubOutWithMock(utils, 'service_is_up')
-
-        dest = 'fake_host2'
-        block_migration = False
-        instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
-        # Volume down
-        db.service_get_all_by_topic(self.context, 'volume').AndReturn(
-                ['fake_service'])
-        utils.service_is_up('fake_service').AndReturn(False)
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.VolumeServiceUnavailable,
-                self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
-                block_migration=block_migration)
-
     def test_live_migration_compute_src_not_alive(self):
         """Raise exception when src compute node is not alive."""
 
         self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
         self.mox.StubOutWithMock(utils, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
 
@@ -616,10 +576,6 @@ class SchedulerTestCase(test.TestCase):
         block_migration = False
         instance = self._live_migration_instance()
         db.instance_get(self.context, instance['id']).AndReturn(instance)
-        # Volume up
-        db.service_get_all_by_topic(self.context, 'volume').AndReturn(
-                ['fake_service'])
-        utils.service_is_up('fake_service').AndReturn(True)
 
         # Compute down
         db.service_get_all_compute_by_host(self.context,

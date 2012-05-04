@@ -351,10 +351,6 @@ class ServiceUnavailable(Invalid):
     message = _("Service is unavailable at this time.")
 
 
-class VolumeServiceUnavailable(ServiceUnavailable):
-    message = _("Volume service is unavailable at this time.")
-
-
 class ComputeServiceUnavailable(ServiceUnavailable):
     message = _("Compute service is unavailable at this time.")
 

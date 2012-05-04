@@ -227,12 +227,6 @@ class Scheduler(object):
         values = {"vm_state": vm_states.MIGRATING}
         db.instance_update(context, instance_id, values)
 
-        # Changing volume state
-        for volume_ref in instance_ref['volumes']:
-            db.volume_update(context,
-                             volume_ref['id'],
-                             {'status': 'migrating'})
-
         src = instance_ref['host']
         cast_to_compute_host(context, src, 'live_migration',
                 update_db=False,
@@ -254,13 +248,6 @@ class Scheduler(object):
             instance_ref['power_state'] == power_state.BLOCKED):
             raise exception.InstanceNotRunning(
                     instance_id=instance_ref['uuid'])
-
-        # Checing volume node is running when any volumes are mounted
-        # to the instance.
-        if len(instance_ref['volumes']) != 0:
-            services = db.service_get_all_by_topic(context, 'volume')
-            if len(services) < 1 or not utils.service_is_up(services[0]):
-                raise exception.VolumeServiceUnavailable()
 
         # Checking src host exists and compute node
         src = instance_ref['host']
