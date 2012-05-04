@@ -592,7 +592,7 @@ def stub_volume(id, **kwargs):
         'host': 'fakehost',
         'size': 1,
         'availability_zone': 'fakeaz',
-        'instance': {'uuid': 'fakeuuid'},
+        'instance_uuid': 'fakeuuid',
         'mountpoint': '/',
         'status': 'fakestatus',
         'attach_status': 'attached',
@@ -611,7 +611,7 @@ def stub_volume(id, **kwargs):
 
 def stub_volume_create(self, context, size, name, description, snapshot,
                        **param):
-    vol = stub_volume(1)
+    vol = stub_volume('1')
     vol['size'] = size
     vol['display_name'] = name
     vol['display_description'] = description
@@ -640,4 +640,4 @@ def stub_volume_get_notfound(self, context, volume_id):
 
 
 def stub_volume_get_all(self, context, search_opts=None):
-    return [stub_volume_get(self, context, 1)]
+    return [stub_volume_get(self, context, '1')]

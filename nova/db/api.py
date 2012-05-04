@@ -986,9 +986,9 @@ def volume_get_all_by_host(context, host):
     return IMPL.volume_get_all_by_host(context, host)
 
 
-def volume_get_all_by_instance(context, instance_id):
+def volume_get_all_by_instance_uuid(context, instance_uuid):
     """Get all volumes belonging to a instance."""
-    return IMPL.volume_get_all_by_instance(context, instance_id)
+    return IMPL.volume_get_all_by_instance_uuid(context, instance_uuid)
 
 
 def volume_get_all_by_project(context, project_id):
@@ -999,11 +999,6 @@ def volume_get_all_by_project(context, project_id):
 def volume_get_by_ec2_id(context, ec2_id):
     """Get a volume by ec2 id."""
     return IMPL.volume_get_by_ec2_id(context, ec2_id)
-
-
-def volume_get_instance(context, volume_id):
-    """Get the instance that a volume is attached to."""
-    return IMPL.volume_get_instance(context, volume_id)
 
 
 def volume_get_iscsi_target_num(context, volume_id):

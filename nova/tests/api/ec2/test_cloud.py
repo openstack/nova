@@ -917,7 +917,7 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_instances(self.context)
         self.assertEqual(len(result['reservationSet']), 2)
 
-    def _block_device_mapping_create(self, instance_id, mappings):
+    def _block_device_mapping_create(self, instance_uuid, mappings):
         volumes = []
         for bdm in mappings:
             db.block_device_mapping_create(self.context, bdm)
@@ -931,7 +931,7 @@ class CloudTestCase(test.TestCase):
                         values[vol_key] = bdm[bdm_key]
                 vol = db.volume_create(self.context, values)
                 db.volume_attached(self.context, vol['id'],
-                                   instance_id, bdm['device_name'])
+                                   instance_uuid, bdm['device_name'])
                 volumes.append(vol)
         return volumes
 
@@ -987,7 +987,7 @@ class CloudTestCase(test.TestCase):
              'device_name': '/dev/sdb9',
              'virtual_name': 'ephemeral3'}]
 
-        volumes = self._block_device_mapping_create(instance_id, mappings0)
+        volumes = self._block_device_mapping_create(instance_uuid, mappings0)
         return (inst1, inst2, volumes)
 
     def _tearDownBlockDeviceMapping(self, inst1, inst2, volumes):
@@ -1910,14 +1910,14 @@ class CloudTestCase(test.TestCase):
             kwargs['id'] = volume_id
         return db.volume_create(self.context, kwargs)
 
-    def _assert_volume_attached(self, vol, instance_id, mountpoint):
-        self.assertEqual(vol['instance_id'], instance_id)
+    def _assert_volume_attached(self, vol, instance_uuid, mountpoint):
+        self.assertEqual(vol['instance_uuid'], instance_uuid)
         self.assertEqual(vol['mountpoint'], mountpoint)
         self.assertEqual(vol['status'], "in-use")
         self.assertEqual(vol['attach_status'], "attached")
 
     def _assert_volume_detached(self, vol):
-        self.assertEqual(vol['instance_id'], None)
+        self.assertEqual(vol['instance_uuid'], None)
         self.assertEqual(vol['mountpoint'], None)
         self.assertEqual(vol['status'], "available")
         self.assertEqual(vol['attach_status'], "detached")
@@ -1941,18 +1941,20 @@ class CloudTestCase(test.TestCase):
                                             'delete_on_termination': True},
                                            ]}
         ec2_instance_id = self._run_instance(**kwargs)
+        instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
+                                                         ec2_instance_id)
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
 
-        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
         self.assertEqual(len(vols), 2)
         for vol in vols:
             self.assertTrue(vol['id'] == vol1['id'] or vol['id'] == vol2['id'])
 
         vol = db.volume_get(self.context, vol1['id'])
-        self._assert_volume_attached(vol, instance_id, '/dev/vdb')
+        self._assert_volume_attached(vol, instance_uuid, '/dev/vdb')
 
         vol = db.volume_get(self.context, vol2['id'])
-        self._assert_volume_attached(vol, instance_id, '/dev/vdc')
+        self._assert_volume_attached(vol, instance_uuid, '/dev/vdc')
 
         result = self.cloud.stop_instances(self.context, [ec2_instance_id])
         self.assertTrue(result)
@@ -1963,13 +1965,13 @@ class CloudTestCase(test.TestCase):
         self._assert_volume_detached(vol)
 
         self.cloud.start_instances(self.context, [ec2_instance_id])
-        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
         self.assertEqual(len(vols), 2)
         for vol in vols:
             self.assertTrue(vol['id'] == vol1['id'] or vol['id'] == vol2['id'])
             self.assertTrue(vol['mountpoint'] == '/dev/vdb' or
                             vol['mountpoint'] == '/dev/vdc')
-            self.assertEqual(vol['instance_id'], instance_id)
+            self.assertEqual(vol['instance_uuid'], instance_uuid)
             self.assertEqual(vol['status'], "in-use")
             self.assertEqual(vol['attach_status'], "attached")
 
@@ -2001,12 +2003,14 @@ class CloudTestCase(test.TestCase):
                                             'delete_on_termination': True}]}
         ec2_instance_id = self._run_instance(**kwargs)
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
+        instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
+                                                         ec2_instance_id)
 
-        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
         self.assertEqual(len(vols), 1)
         for vol in vols:
             self.assertEqual(vol['id'], vol1['id'])
-            self._assert_volume_attached(vol, instance_id, '/dev/vdb')
+            self._assert_volume_attached(vol, instance_uuid, '/dev/vdb')
 
         vol = db.volume_get(self.context, vol2['id'])
         self._assert_volume_detached(vol)
@@ -2017,7 +2021,7 @@ class CloudTestCase(test.TestCase):
                                              volume_id=vol2['id'],
                                              device='/dev/vdc')
         vol = db.volume_get(self.context, vol2['id'])
-        self._assert_volume_attached(vol, instance_id, '/dev/vdc')
+        self._assert_volume_attached(vol, instance_uuid, '/dev/vdc')
 
         self.cloud.compute_api.detach_volume(self.context,
                                              volume_id=vol1['id'])
@@ -2032,11 +2036,11 @@ class CloudTestCase(test.TestCase):
             self._assert_volume_detached(vol)
 
         self.cloud.start_instances(self.context, [ec2_instance_id])
-        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
         self.assertEqual(len(vols), 1)
         for vol in vols:
             self.assertEqual(vol['id'], vol2['id'])
-            self._assert_volume_attached(vol, instance_id, '/dev/vdc')
+            self._assert_volume_attached(vol, instance_uuid, '/dev/vdc')
 
         vol = db.volume_get(self.context, vol1['id'])
         self._assert_volume_detached(vol)
@@ -2077,8 +2081,10 @@ class CloudTestCase(test.TestCase):
                                             'delete_on_termination': True}]}
         ec2_instance_id = self._run_instance(**kwargs)
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
+        instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
+                                                         ec2_instance_id)
 
-        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
         self.assertEqual(len(vols), 2)
         vol1_id = None
         vol2_id = None
@@ -2093,7 +2099,7 @@ class CloudTestCase(test.TestCase):
             else:
                 self.fail()
 
-            self._assert_volume_attached(vol, instance_id, mountpoint)
+            self._assert_volume_attached(vol, instance_uuid, mountpoint)
 
         self.assertTrue(vol1_id)
         self.assertTrue(vol2_id)

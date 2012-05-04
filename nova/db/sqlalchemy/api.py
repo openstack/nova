@@ -1374,7 +1374,6 @@ def _build_instance_get(context, session=None):
                         project_only=True).\
             options(joinedload_all('security_groups.rules')).\
             options(joinedload('info_cache')).\
-            options(joinedload('volumes')).\
             options(joinedload('metadata')).\
             options(joinedload('instance_type'))
 
@@ -2402,15 +2401,17 @@ def volume_allocate_iscsi_target(context, volume_id, host):
 
 
 @require_admin_context
-def volume_attached(context, volume_id, instance_id, mountpoint):
+def volume_attached(context, volume_id, instance_uuid, mountpoint):
+    if not utils.is_uuid_like(instance_uuid):
+        raise exception.InvalidUUID(instance_uuid)
+
     session = get_session()
     with session.begin():
         volume_ref = volume_get(context, volume_id, session=session)
         volume_ref['status'] = 'in-use'
         volume_ref['mountpoint'] = mountpoint
         volume_ref['attach_status'] = 'attached'
-        volume_ref.instance = instance_get(context, instance_id,
-                                           session=session)
+        volume_ref['instance_uuid'] = instance_uuid
         volume_ref.save(session=session)
 
 
@@ -2471,7 +2472,7 @@ def volume_detached(context, volume_id):
         volume_ref['status'] = 'available'
         volume_ref['mountpoint'] = None
         volume_ref['attach_status'] = 'detached'
-        volume_ref.instance = None
+        volume_ref['instance_uuid'] = None
         volume_ref.save(session=session)
 
 
@@ -2479,9 +2480,8 @@ def volume_detached(context, volume_id):
 def _volume_get_query(context, session=None, project_only=False):
     return model_query(context, models.Volume, session=session,
                        project_only=project_only).\
-                     options(joinedload('instance')).\
-                     options(joinedload('volume_metadata')).\
-                     options(joinedload('volume_type'))
+                       options(joinedload('volume_metadata')).\
+                       options(joinedload('volume_type'))
 
 
 @require_context
@@ -2519,15 +2519,15 @@ def volume_get_all_by_host(context, host):
 
 
 @require_admin_context
-def volume_get_all_by_instance(context, instance_id):
+def volume_get_all_by_instance_uuid(context, instance_uuid):
     result = model_query(context, models.Volume, read_deleted="no").\
                      options(joinedload('volume_metadata')).\
                      options(joinedload('volume_type')).\
-                     filter_by(instance_id=instance_id).\
+                     filter_by(instance_uuid=instance_uuid).\
                      all()
 
     if not result:
-        raise exception.VolumeNotFoundForInstance(instance_id=instance_id)
+        return []
 
     return result
 
@@ -2536,16 +2536,6 @@ def volume_get_all_by_instance(context, instance_id):
 def volume_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
     return _volume_get_query(context).filter_by(project_id=project_id).all()
-
-
-@require_admin_context
-def volume_get_instance(context, volume_id):
-    result = _volume_get_query(context).filter_by(id=volume_id).first()
-
-    if not result:
-        raise exception.VolumeNotFound(volume_id=volume_id)
-
-    return result.instance
 
 
 @require_admin_context

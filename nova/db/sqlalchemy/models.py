@@ -341,12 +341,7 @@ class Volume(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance,
-                            backref=backref('volumes'),
-                            foreign_keys=instance_id,
-                            primaryjoin='and_(Volume.instance_id==Instance.id,'
-                                             'Volume.deleted==False)')
+    instance_uuid = Column(String(36))
     mountpoint = Column(String(255))
     attach_time = Column(String(255))  # TODO(vish): datetime
     status = Column(String(255))  # TODO(vish): enum?

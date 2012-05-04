@@ -1654,7 +1654,10 @@ class API(BaseAPI):
     # the volume ID via volume API and pass it and the volume object here
     def detach_volume(self, context, volume_id):
         """Detach a volume from an instance."""
-        instance = self.db.volume_get_instance(context.elevated(), volume_id)
+        volume = self.volume_api.get(context, volume_id)
+        instance_uuid = volume['instance_uuid']
+        instance = self.db.instance_get_by_uuid(context.elevated(),
+                                                instance_uuid)
         if not instance:
             raise exception.VolumeUnattached(volume_id=volume_id)
 

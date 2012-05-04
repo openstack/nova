@@ -67,7 +67,6 @@ from nova.openstack.common import importutils
 from nova import rpc
 from nova import utils
 from nova.virt import driver
-from nova import vnc
 from nova import volume
 
 
@@ -261,7 +260,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = nova.context.get_admin_context()
         instances = self.db.instance_get_all_by_host(context, self.host)
         for instance in instances:
-            instance_uuid = instance['uuid']
             db_state = instance['power_state']
             drv_state = self._get_power_state(context, instance)
 
@@ -1725,7 +1723,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         connection_info = self.volume_api.initialize_connection(context,
                                                                 volume,
                                                                 connector)
-        self.volume_api.attach(context, volume, instance_id, mountpoint)
+        self.volume_api.attach(context, volume, instance_uuid, mountpoint)
         return connection_info
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1764,7 +1762,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                      volume,
                                                      connector)
 
-        self.volume_api.attach(context, volume, instance_ref['id'], mountpoint)
+        self.volume_api.attach(context,
+                               volume,
+                               instance_ref['uuid'],
+                               mountpoint)
         values = {
             'instance_uuid': instance_ref['uuid'],
             'connection_info': utils.dumps(connection_info),

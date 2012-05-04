@@ -477,7 +477,6 @@ class SchedulerTestCase(test.TestCase):
         instance = self._live_migration_instance()
         db.instance_get(self.context, instance['id']).AndReturn(instance)
 
-        # Source checks (volume and source compute are up)
         db.service_get_all_compute_by_host(self.context,
                 instance['host']).AndReturn(['fake_service2'])
         utils.service_is_up('fake_service2').AndReturn(True)

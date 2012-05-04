@@ -248,13 +248,13 @@ class API(base.Base):
             self.update(context, volume, {"status": "available"})
 
     @wrap_check_policy
-    def attach(self, context, volume, instance_id, mountpoint):
+    def attach(self, context, volume, instance_uuid, mountpoint):
         host = volume['host']
         queue = self.db.queue_get_for(context, FLAGS.volume_topic, host)
         return rpc.call(context, queue,
                         {"method": "attach_volume",
                          "args": {"volume_id": volume['id'],
-                                  "instance_id": instance_id,
+                                  "instance_uuid": instance_uuid,
                                   "mountpoint": mountpoint}})
 
     @wrap_check_policy

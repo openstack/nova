@@ -26,7 +26,6 @@ SHOULD include dedicated exception logging.
 
 import functools
 import itertools
-import sys
 
 import webob.exc
 
@@ -418,6 +417,10 @@ class InstanceUnacceptable(Invalid):
 
 class InvalidEc2Id(Invalid):
     message = _("Ec2 id %(ec2_id)s is unacceptable.")
+
+
+class InvalidUUID(Invalid):
+    message = _("Expected a uuid but received %(uuid).")
 
 
 class NotFound(NovaException):
