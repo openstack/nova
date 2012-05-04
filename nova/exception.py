@@ -811,6 +811,11 @@ class InstanceMetadataNotFound(NotFound):
                 "key %(metadata_key)s.")
 
 
+class InstanceSystemMetadataNotFound(NotFound):
+    message = _("Instance %(instance_uuid)s has no system metadata with "
+                "key %(metadata_key)s.")
+
+
 class InstanceTypeExtraSpecsNotFound(NotFound):
     message = _("Instance Type %(instance_type_id)s has no extra specs with "
                 "key %(extra_specs_key)s.")

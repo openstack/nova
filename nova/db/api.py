@@ -1488,6 +1488,25 @@ def instance_metadata_update(context, instance_id, metadata, delete):
 ####################
 
 
+def instance_system_metadata_get(context, instance_uuid):
+    """Get all system metadata for an instance."""
+    return IMPL.instance_system_metadata_get(context, instance_uuid)
+
+
+def instance_system_metadata_delete(context, instance_uuid, key):
+    """Delete the given system metadata item."""
+    IMPL.instance_system_metadata_delete(context, instance_uuid, key)
+
+
+def instance_system_metadata_update(context, instance_uuid, metadata, delete):
+    """Update metadata if it exists, otherwise create it."""
+    IMPL.instance_system_metadata_update(
+            context, instance_uuid, metadata, delete)
+
+
+####################
+
+
 def agent_build_create(context, values):
     """Create a new agent build entry."""
     return IMPL.agent_build_create(context, values)
