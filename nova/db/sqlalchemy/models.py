@@ -300,15 +300,6 @@ class InstanceInfoCache(BASE, NovaBase):
                             primaryjoin=instance_id == Instance.uuid)
 
 
-class InstanceActions(BASE, NovaBase):
-    """Represents a guest VM's actions and results"""
-    __tablename__ = "instance_actions"
-    id = Column(Integer, primary_key=True)
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
-    action = Column(String(255))
-    error = Column(Text)
-
-
 class InstanceTypes(BASE, NovaBase):
     """Represent possible instance_types or flavor of VM offered"""
     __tablename__ = "instance_types"
@@ -1051,7 +1042,6 @@ def register_models():
               FixedIp,
               FloatingIp,
               Instance,
-              InstanceActions,
               InstanceFault,
               InstanceMetadata,
               InstanceTypeExtraSpecs,

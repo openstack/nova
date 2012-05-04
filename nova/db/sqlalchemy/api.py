@@ -1682,27 +1682,6 @@ def instance_remove_security_group(context, instance_uuid, security_group_id):
 
 
 @require_context
-def instance_action_create(context, values):
-    """Create an instance action from the values dictionary."""
-    action_ref = models.InstanceActions()
-    action_ref.update(values)
-
-    session = get_session()
-    with session.begin():
-        action_ref.save(session=session)
-    return action_ref
-
-
-@require_admin_context
-def instance_get_actions(context, instance_uuid):
-    """Return the actions associated to the given instance id"""
-    session = get_session()
-    return session.query(models.InstanceActions).\
-                   filter_by(instance_uuid=instance_uuid).\
-                   all()
-
-
-@require_context
 def instance_get_id_to_uuid_mapping(context, ids):
     session = get_session()
     instances = session.query(models.Instance).\

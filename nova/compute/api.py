@@ -1516,11 +1516,6 @@ class API(BaseAPI):
                 instance)
 
     @wrap_check_policy
-    def get_actions(self, context, instance):
-        """Retrieve actions for the given instance."""
-        return self.db.instance_get_actions(context, instance['uuid'])
-
-    @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
                                     vm_states.RESCUED],
                           task_state=[None, task_states.RESIZE_VERIFY])

@@ -3362,27 +3362,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.get_diagnostics(self.context, instance)
         self.compute_api.delete(self.context, instance)
 
-    def test_get_actions(self):
-
-        expected = [{'id': 1,
-                    'instance_id': 5,
-                    'action': 'rebuild',
-                    'error': '',
-                    }]
-
-        def fake_get_actions(context, instance):
-            return expected
-
-        self.stubs.Set(nova.db, 'instance_get_actions',
-                       fake_get_actions)
-
-        instance = self._create_fake_instance()
-        context = self.context.elevated()
-        actual = self.compute_api.get_actions(context, instance)
-        self.assertEqual(expected, actual)
-
-        self.compute_api.delete(self.context, instance)
-
     def test_inject_file(self):
         """Ensure we can write a file to an instance"""
         instance = self._create_fake_instance()

@@ -92,10 +92,6 @@ def stub_out_db_instance_api(stubs):
             'vlan': 100}
         return FakeModel(fields)
 
-    def fake_instance_action_create(context, action):
-        """Stubs out the db.instance_action_create method."""
-        pass
-
     def fake_instance_type_get_all(context, inactive=0, filters=None):
         return INSTANCE_TYPES.values()
 
@@ -104,6 +100,5 @@ def stub_out_db_instance_api(stubs):
 
     stubs.Set(db, 'instance_create', fake_instance_create)
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
-    stubs.Set(db, 'instance_action_create', fake_instance_action_create)
     stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
     stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)

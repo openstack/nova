@@ -180,7 +180,6 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Rescue",
             "SchedulerHints",
             "SecurityGroups",
-            "ServerActionList",
             "ServerDiagnostics",
             "ServerStartStop",
             "SimpleTenantUsage",

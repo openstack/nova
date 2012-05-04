@@ -47,7 +47,6 @@
     "compute_extension:quota_classes": [],
     "compute_extension:rescue": [],
     "compute_extension:security_groups": [],
-    "compute_extension:server_action_list": [["rule:admin_api"]],
     "compute_extension:server_diagnostics": [["rule:admin_api"]],
     "compute_extension:simple_tenant_usage:show": [["rule:admin_or_owner"]],
     "compute_extension:simple_tenant_usage:list": [["rule:admin_api"]],
