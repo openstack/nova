@@ -97,30 +97,11 @@ def weighted_sum(weighted_fns, host_states, weighing_properties):
               candidate.
     """
 
-    # Make a grid of functions results.
-    # One row per host. One column per function.
-    scores = []
-    for weight, fn in weighted_fns:
-        scores.append([fn(host_state, weighing_properties)
-                for host_state in host_states])
+    min_score, best_host = None, None
+    for host_state in host_states:
+        score = sum(weight * fn(host_state, weighing_properties)
+                    for weight, fn in weighted_fns)
+        if min_score is None or score < min_score:
+            min_score, best_host = score, host_state
 
-    # Adjust the weights in the grid by the functions weight adjustment
-    # and sum them up to get a final list of weights.
-    adjusted_scores = []
-    for (weight, fn), row in zip(weighted_fns, scores):
-        adjusted_scores.append([weight * score for score in row])
-
-    # Now, sum down the columns to get the final score. Column per host.
-    final_scores = [0.0] * len(host_states)
-    for row in adjusted_scores:
-        for idx, col in enumerate(row):
-            final_scores[idx] += col
-
-    # Super-impose the host_state into the scores so
-    # we don't lose it when we sort.
-    final_scores = [(final_scores[idx], host_state)
-            for idx, host_state in enumerate(host_states)]
-
-    final_scores = sorted(final_scores)
-    weight, host_state = final_scores[0]  # Lowest score is the winner!
-    return WeightedHost(weight, host_state=host_state)
+    return WeightedHost(min_score, host_state=best_host)
