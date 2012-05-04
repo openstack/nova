@@ -243,7 +243,8 @@ class TestMigrations(test.TestCase):
         noninnodb = connection.execute("SELECT count(*) "
                                        "from information_schema.TABLES "
                                        "where TABLE_SCHEMA='openstack_citest' "
-                                       "and ENGINE!='InnoDB'")
+                                       "and ENGINE!='InnoDB' "
+                                       "and TABLE_NAME!='migrate_version'")
         count = noninnodb.scalar()
         self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
 
