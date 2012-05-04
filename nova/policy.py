@@ -17,6 +17,8 @@
 
 """Policy Engine For Nova"""
 
+import os.path
+
 from nova.common import policy
 from nova import exception
 from nova import flags
@@ -52,7 +54,11 @@ def init():
     global _POLICY_PATH
     global _POLICY_CACHE
     if not _POLICY_PATH:
-        _POLICY_PATH = utils.find_config(FLAGS.policy_file)
+        _POLICY_PATH = FLAGS.policy_file
+        if not os.path.exists(_POLICY_PATH):
+            _POLICY_PATH = FLAGS.find_file(_POLICY_PATH)
+        if not _POLICY_PATH:
+            raise exception.ConfigNotFound(path=FLAGS.policy_file)
     utils.read_cached_file(_POLICY_PATH, _POLICY_CACHE,
                            reload_func=_set_brain)
 
