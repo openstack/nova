@@ -68,6 +68,7 @@ def setup():
     from nova.db import migration
     from nova.network import manager as network_manager
     from nova.tests import fake_flags
+    rpc.register_opts(FLAGS)
 
     if FLAGS.sql_connection == "sqlite://":
         if migration.db_version() > migration.INIT_VERSION:
