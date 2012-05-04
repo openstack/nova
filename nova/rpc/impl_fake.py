@@ -19,10 +19,7 @@ queues.  Casts will block, but this is very useful for tests.
 
 import inspect
 import json
-import signal
-import sys
 import time
-import traceback
 
 import eventlet
 

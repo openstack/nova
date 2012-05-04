@@ -21,8 +21,6 @@ import logging
 import re
 import socket
 
-from nova import exception
-
 LOG = logging.getLogger(__name__)
 
 
