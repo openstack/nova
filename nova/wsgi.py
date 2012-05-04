@@ -19,6 +19,7 @@
 
 """Utility methods for working with WSGI servers."""
 
+import os.path
 import sys
 
 import eventlet
@@ -357,7 +358,12 @@ class Loader(object):
 
         """
         config_path = config_path or FLAGS.api_paste_config
-        self.config_path = utils.find_config(config_path)
+        if os.path.exists(config_path):
+            self.config_path = config_path
+        else:
+            self.config_path = FLAGS.find_file(config_path)
+        if not self.config_path:
+            raise exception.ConfigNotFound(path=config_path)
 
     def load_app(self, name):
         """Return the paste URLMap wrapped WSGI application.
@@ -368,6 +374,8 @@ class Loader(object):
 
         """
         try:
+            LOG.debug(_("Loading app %(name)s from %(path)s") %
+                      {'name': name, 'path': self.config_path})
             return deploy.loadapp("config:%s" % self.config_path, name=name)
         except LookupError as err:
             LOG.error(err)
