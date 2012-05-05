@@ -251,9 +251,10 @@ def floating_ip_create(context, values):
     return IMPL.floating_ip_create(context, values)
 
 
-def floating_ip_count_by_project(context, project_id):
+def floating_ip_count_by_project(context, project_id, session=None):
     """Count floating ips used by project."""
-    return IMPL.floating_ip_count_by_project(context, project_id)
+    return IMPL.floating_ip_count_by_project(context, project_id,
+                                             session=session)
 
 
 def floating_ip_deallocate(context, address):
@@ -520,9 +521,10 @@ def instance_create(context, values):
     return IMPL.instance_create(context, values)
 
 
-def instance_data_get_for_project(context, project_id):
+def instance_data_get_for_project(context, project_id, session=None):
     """Get (instance_count, total_cores, total_ram) for project."""
-    return IMPL.instance_data_get_for_project(context, project_id)
+    return IMPL.instance_data_get_for_project(context, project_id,
+                                              session=session)
 
 
 def instance_destroy(context, instance_id):
@@ -900,11 +902,6 @@ def quota_destroy(context, project_id, resource):
     return IMPL.quota_destroy(context, project_id, resource)
 
 
-def quota_destroy_all_by_project(context, project_id):
-    """Destroy all quotas associated with a given project."""
-    return IMPL.quota_get_all_by_project(context, project_id)
-
-
 ###################
 
 
@@ -941,6 +938,93 @@ def quota_class_destroy_all_by_name(context, class_name):
 ###################
 
 
+def quota_usage_create(context, project_id, resource, in_use, reserved,
+                       until_refresh):
+    """Create a quota usage for the given project and resource."""
+    return IMPL.quota_usage_create(context, project_id, resource,
+                                   in_use, reserved, until_refresh)
+
+
+def quota_usage_get(context, project_id, resource):
+    """Retrieve a quota usage or raise if it does not exist."""
+    return IMPL.quota_usage_get(context, project_id, resource)
+
+
+def quota_usage_get_all_by_project(context, project_id):
+    """Retrieve all usage associated with a given resource."""
+    return IMPL.quota_usage_get_all_by_project(context, project_id)
+
+
+def quota_usage_update(context, class_name, resource, in_use, reserved,
+                       until_refresh):
+    """Update a quota usage or raise if it does not exist."""
+    return IMPL.quota_usage_update(context, project_id, resource,
+                                   in_use, reserved, until_refresh)
+
+
+def quota_usage_destroy(context, project_id, resource):
+    """Destroy the quota usage or raise if it does not exist."""
+    return IMPL.quota_usage_destroy(context, project_id, resource)
+
+
+###################
+
+
+def reservation_create(context, uuid, usage, project_id, resource, delta,
+                       expire):
+    """Create a reservation for the given project and resource."""
+    return IMPL.reservation_create(context, uuid, usage, project_id,
+                                   resource, delta, expire)
+
+
+def reservation_get(context, uuid):
+    """Retrieve a reservation or raise if it does not exist."""
+    return IMPL.reservation_get(context, uuid)
+
+
+def reservation_get_all_by_project(context, project_id):
+    """Retrieve all reservations associated with a given project."""
+    return IMPL.reservation_get_all_by_project(context, project_id)
+
+
+def reservation_destroy(context, uuid):
+    """Destroy the reservation or raise if it does not exist."""
+    return IMPL.reservation_destroy(context, uuid)
+
+
+###################
+
+
+def quota_reserve(context, resources, quotas, deltas, expire,
+                  until_refresh, max_age):
+    """Check quotas and create appropriate reservations."""
+    return IMPL.quota_reserve(context, resources, quotas, deltas, expire,
+                              until_refresh, max_age)
+
+
+def reservation_commit(context, reservations):
+    """Commit quota reservations."""
+    return IMPL.reservation_commit(context, reservations)
+
+
+def reservation_rollback(context, reservations):
+    """Roll back quota reservations."""
+    return IMPL.reservation_rollback(context, reservations)
+
+
+def quota_destroy_all_by_project(context, project_id):
+    """Destroy all quotas associated with a given project."""
+    return IMPL.quota_get_all_by_project(context, project_id)
+
+
+def reservation_expire(context):
+    """Roll back any expired reservations."""
+    return IMPL.reservation_expire(context)
+
+
+###################
+
+
 def volume_allocate_iscsi_target(context, volume_id, host):
     """Atomically allocate a free iscsi_target from the pool."""
     return IMPL.volume_allocate_iscsi_target(context, volume_id, host)
@@ -956,9 +1040,10 @@ def volume_create(context, values):
     return IMPL.volume_create(context, values)
 
 
-def volume_data_get_for_project(context, project_id):
+def volume_data_get_for_project(context, project_id, session=None):
     """Get (volume_count, gigabytes) for project."""
-    return IMPL.volume_data_get_for_project(context, project_id)
+    return IMPL.volume_data_get_for_project(context, project_id,
+                                            session=session)
 
 
 def volume_destroy(context, volume_id):
@@ -1161,9 +1246,10 @@ def security_group_destroy(context, security_group_id):
     return IMPL.security_group_destroy(context, security_group_id)
 
 
-def security_group_count_by_project(context, project_id):
+def security_group_count_by_project(context, project_id, session=None):
     """Count number of security groups in a project."""
-    return IMPL.security_group_count_by_project(context, project_id)
+    return IMPL.security_group_count_by_project(context, project_id,
+                                                session=session)
 
 
 ####################

@@ -33,6 +33,7 @@ from nova.notifier import api as notifier
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
+from nova import quota
 
 
 LOG = logging.getLogger(__name__)
@@ -43,6 +44,8 @@ scheduler_driver_opt = cfg.StrOpt('scheduler_driver',
 
 FLAGS = flags.FLAGS
 FLAGS.register_opt(scheduler_driver_opt)
+
+QUOTAS = quota.QUOTAS
 
 
 class SchedulerManager(manager.Manager):
@@ -228,3 +231,7 @@ class SchedulerManager(manager.Manager):
                                  'ephemeral_gb': sum(ephemeral)}
 
         return {'resource': resource, 'usage': usage}
+
+    @manager.periodic_task
+    def _expire_reservations(self, context):
+        QUOTAS.expire(context)
