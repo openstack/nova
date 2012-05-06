@@ -552,7 +552,7 @@ class VlanNetworkTestCase(test.TestCase):
                                       is_admin=False)
 
         def fake1(*args, **kwargs):
-            return {'address': '10.0.0.1'}
+            return {'address': '10.0.0.1', 'project_id': ctxt.project_id}
 
         def fake2(*args, **kwargs):
             return 25
@@ -584,7 +584,8 @@ class VlanNetworkTestCase(test.TestCase):
             return {'address': '10.0.0.1', 'fixed_ip_id': 1}
 
         def fake3(*args, **kwargs):
-            return {'address': '10.0.0.1', 'fixed_ip_id': None}
+            return {'address': '10.0.0.1', 'fixed_ip_id': None,
+                    'project_id': ctxt.project_id}
 
         self.stubs.Set(self.network.db, 'floating_ip_deallocate', fake1)
         self.stubs.Set(self.network, '_floating_ip_owned_by_project', fake1)
@@ -740,7 +741,8 @@ class VlanNetworkTestCase(test.TestCase):
             return {'address': '10.0.0.1',
                     'pool': 'nova',
                     'interface': 'eth0',
-                    'fixed_ip_id': 1}
+                    'fixed_ip_id': 1,
+                    'project_id': ctxt.project_id}
 
         # fixed ip with remote host
         def fake4(*args, **kwargs):

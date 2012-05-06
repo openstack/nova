@@ -62,6 +62,7 @@ from nova import log as logging
 from nova import manager
 from nova.network import api as network_api
 from nova.network import model as network_model
+from nova.notifier import api as notifier
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 import nova.policy
@@ -402,9 +403,16 @@ class FloatingIP(object):
                      context.project_id)
             raise exception.QuotaError(code='AddressLimitExceeded')
         pool = pool or FLAGS.default_floating_pool
-        return self.db.floating_ip_allocate_address(context,
+
+        floating_ip = self.db.floating_ip_allocate_address(context,
                                                     project_id,
                                                     pool)
+        payload = dict(project_id=project_id, floating_ip=floating_ip)
+        notifier.notify(context,
+                        notifier.publisher_id("network"),
+                        'network.floating_ip.allocate',
+                        notifier.INFO, payload)
+        return floating_ip
 
     @wrap_check_policy
     def deallocate_floating_ip(self, context, address,
@@ -427,6 +435,12 @@ class FloatingIP(object):
         # clean up any associated DNS entries
         self._delete_all_entries_for_ip(context,
                                        floating_ip['address'])
+        payload = dict(project_id=floating_ip['project_id'],
+                       floating_ip=floating_ip['address'])
+        notifier.notify(context,
+                        notifier.publisher_id("network"),
+                        'network.floating_ip.deallocate',
+                        notifier.INFO, payload=payload)
 
         self.db.floating_ip_deallocate(context, address)
 
@@ -494,6 +508,12 @@ class FloatingIP(object):
             if "Cannot find device" in str(e):
                 LOG.error(_('Interface %(interface)s not found'), locals())
                 raise exception.NoFloatingIpInterface(interface=interface)
+        payload = dict(project_id=context.project_id,
+                       floating_ip=floating_address)
+        notifier.notify(context,
+                        notifier.publisher_id("network"),
+                        'network.floating_ip.associate',
+                        notifier.INFO, payload=payload)
 
     @wrap_check_policy
     def disassociate_floating_ip(self, context, address,
@@ -546,6 +566,11 @@ class FloatingIP(object):
 
         # go go driver time
         self.l3driver.remove_floating_ip(address, fixed_address, interface)
+        payload = dict(project_id=context.project_id, floating_ip=address)
+        notifier.notify(context,
+                        notifier.publisher_id("network"),
+                        'network.floating_ip.disassociate',
+                        notifier.INFO, payload=payload)
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):
