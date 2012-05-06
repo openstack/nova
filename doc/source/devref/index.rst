@@ -38,6 +38,7 @@ Background Concepts for Nova
 
    architecture
    threading
+   vmstates
    il8n
    filter_scheduler
    multinic
