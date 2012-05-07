@@ -152,9 +152,10 @@ class VolumeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['attach_status'] == "attached":
-            raise exception.Error(_("Volume is still attached"))
+            raise exception.NovaException(_("Volume is still attached"))
         if volume_ref['host'] != self.host:
-            raise exception.Error(_("Volume is not local to this node"))
+            msg = _("Volume is not local to this node")
+            raise exception.NovaException(msg)
 
         self._reset_stats()
         try:

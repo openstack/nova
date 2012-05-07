@@ -134,9 +134,9 @@ class TestS3ImageService(test.TestCase):
         self.assertEqual(block_device_mapping, expected_bdm)
 
     def test_s3_malicious_tarballs(self):
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.NovaException,
             self.image_service._test_for_malicious_tarball,
             "/unused", os.path.join(os.path.dirname(__file__), 'abs.tar.gz'))
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.NovaException,
             self.image_service._test_for_malicious_tarball,
             "/unused", os.path.join(os.path.dirname(__file__), 'rel.tar.gz'))

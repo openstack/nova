@@ -325,7 +325,7 @@ class BareMetalNodes(object):
             return power_state.RUNNING
         except Exception as ex:
             self.deactivate_node(node_id)
-            raise exception.Error(_("Node is unknown error state."))
+            raise exception.NovaException(_("Node is unknown error state."))
 
     def get_console_output(self, console_log, node_id):
         """

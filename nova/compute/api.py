@@ -128,10 +128,10 @@ class BaseAPI(base.Base):
             params = {}
         if not host:
             if not instance:
-                raise exception.Error(_("No compute host specified"))
+                raise exception.NovaException(_("No compute host specified"))
             host = instance['host']
             if not host:
-                raise exception.Error(_("Unable to find host for "
+                raise exception.NovaException(_("Unable to find host for "
                                         "Instance %s") % instance['uuid'])
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
         if instance:

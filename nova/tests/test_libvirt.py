@@ -1193,8 +1193,8 @@ class LibvirtConnTestCase(test.TestCase):
             conn.ensure_filtering_rules_for_instance(instance_ref,
                                                      network_info,
                                                      time=fake_timer)
-        except exception.Error, e:
-            c1 = (0 <= e.message.find('Timeout migrating for'))
+        except exception.NovaException, e:
+            c1 = (0 <= str(e).find('Timeout migrating for'))
         self.assertTrue(c1)
 
         self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "

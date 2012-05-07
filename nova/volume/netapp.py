@@ -77,7 +77,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             name = request.Name
             reason = response.Reason
             msg = _('API %(name)sfailed: %(reason)s')
-            raise exception.Error(msg % locals())
+            raise exception.NovaException(msg % locals())
 
     def _create_client(self, wsdl_url, login, password, hostname, port):
         """
@@ -106,7 +106,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 'netapp_storage_service']
         for flag in required_flags:
             if not getattr(FLAGS, flag, None):
-                raise exception.Error(_('%s is not set') % flag)
+                raise exception.NovaException(_('%s is not set') % flag)
 
     def do_setup(self, context):
         """
@@ -156,7 +156,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             events = self._get_job_progress(job_id)
             for event in events:
                 if event.EventStatus == 'error':
-                    raise exception.Error(_('Job failed: %s') %
+                    raise exception.NovaException(_('Job failed: %s') %
                         (event.ErrorMessage))
                 if event.EventType == 'job-end':
                     return events
@@ -237,7 +237,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                                            AssumeConfirmation=True)
         except (suds.WebFault, Exception):
             server.DatasetEditRollback(EditLockId=lock_id)
-            raise exception.Error(_('Failed to provision dataset member'))
+            msg = _('Failed to provision dataset member')
+            raise exception.NovaException(msg)
 
         lun_id = None
 
@@ -249,7 +250,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 lun_id = event.ProgressLunInfo.LunPathId
 
         if not lun_id:
-            raise exception.Error(_('No LUN was created by the provision job'))
+            msg = _('No LUN was created by the provision job')
+            raise exception.NovaException(msg)
 
     def _remove_destroy(self, name, project):
         """
@@ -258,8 +260,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         """
         lun_id = self._get_lun_id(name, project)
         if not lun_id:
-            raise exception.Error(_("Failed to find LUN ID for volume %s") %
-                (name))
+            msg = _("Failed to find LUN ID for volume %s") % (name)
+            raise exception.NovaException(msg)
 
         member = self.client.factory.create('DatasetMemberParameter')
         member.ObjectNameOrId = lun_id
@@ -278,7 +280,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         except (suds.WebFault, Exception):
             server.DatasetEditRollback(EditLockId=lock_id)
             msg = _('Failed to remove and delete dataset member')
-            raise exception.Error(msg)
+            raise exception.NovaException(msg)
 
     def create_volume(self, volume):
         """Driver entry point for creating a new volume"""
@@ -431,7 +433,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         lun_id = self._get_lun_id(name, project)
         if not lun_id:
             msg = _("Failed to find LUN ID for volume %s")
-            raise exception.Error(msg % name)
+            raise exception.NovaException(msg % name)
         return {'provider_location': lun_id}
 
     def ensure_export(self, context, volume):
@@ -601,29 +603,29 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         lun_id = volume['provider_location']
         if not lun_id:
             msg = _("No LUN ID for volume %s")
-            raise exception.Error(msg % volume['name'])
+            raise exception.NovaException(msg % volume['name'])
         lun = self._get_lun_details(lun_id)
         if not lun:
             msg = _('Failed to get LUN details for LUN ID %s')
-            raise exception.Error(msg % lun_id)
+            raise exception.NovaException(msg % lun_id)
         lun_num = self._ensure_initiator_mapped(lun.HostId, lun.LunPath,
                                                 initiator_name)
 
         host = self._get_host_details(lun.HostId)
         if not host:
             msg = _('Failed to get host details for host ID %s')
-            raise exception.Error(msg % lun.HostId)
+            raise exception.NovaException(msg % lun.HostId)
 
         portal = self._get_target_portal_for_host(host.HostId,
                                                   host.HostAddress)
         if not portal:
             msg = _('Failed to get target portal for filer: %s')
-            raise exception.Error(msg % host.HostName)
+            raise exception.NovaException(msg % host.HostName)
 
         iqn = self._get_iqn_for_host(host.HostId)
         if not iqn:
             msg = _('Failed to get target IQN for filer: %s')
-            raise exception.Error(msg % host.HostName)
+            raise exception.NovaException(msg % host.HostName)
 
         properties = {}
         properties['target_discovered'] = False
@@ -655,11 +657,11 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         lun_id = volume['provider_location']
         if not lun_id:
             msg = _('No LUN ID for volume %s')
-            raise exception.Error(msg % (volume['name']))
+            raise exception.NovaException(msg % (volume['name']))
         lun = self._get_lun_details(lun_id)
         if not lun:
             msg = _('Failed to get LUN details for LUN ID %s')
-            raise exception.Error(msg % (lun_id))
+            raise exception.NovaException(msg % (lun_id))
         self._ensure_initiator_unmapped(lun.HostId, lun.LunPath,
                                         initiator_name)
 

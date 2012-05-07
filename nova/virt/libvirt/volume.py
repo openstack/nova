@@ -160,8 +160,8 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
         tries = 0
         while not os.path.exists(host_device):
             if tries >= FLAGS.num_iscsi_scan_tries:
-                raise exception.Error(_("iSCSI device not found at %s") %
-                                      (host_device))
+                raise exception.NovaException(_("iSCSI device not found at %s")
+                                              % (host_device))
 
             LOG.warn(_("ISCSI volume not yet found at: %(mount_device)s. "
                        "Will rescan & retry.  Try number: %(tries)s") %

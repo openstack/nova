@@ -65,14 +65,14 @@ class SignerTestCase(test.TestCase):
                                            'GET', 'server', '/foo'))
 
     def test_generate_invalid_signature_method_defined(self):
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.NovaException,
                           self.signer.generate,
                           {'SignatureVersion': '2',
                            'SignatureMethod': 'invalid_method'},
                           'GET', 'server', '/foo')
 
     def test_generate_no_signature_method_defined(self):
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.NovaException,
                           self.signer.generate,
                           {'SignatureVersion': '2'},
                           'GET', 'server', '/foo')
@@ -85,7 +85,7 @@ class SignerTestCase(test.TestCase):
         # Create Signer again now that hashlib.sha256 is None
         self.signer = signer.Signer(
                         'uV3F3YluFJax1cknvbcGwgjvx4QpvB+leU8dUj2o')
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.NovaException,
                           self.signer.generate,
                           {'SignatureVersion': '2',
                            'SignatureMethod': 'HmacSHA256'},
@@ -106,7 +106,7 @@ class SignerTestCase(test.TestCase):
                               'GET', 'server', '/foo'))
 
     def test_generate_unknown_version(self):
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.NovaException,
                 self.signer.generate,
                 {'SignatureMethod': 'HmacSHA256', 'SignatureVersion': '9'},
                 'GET', 'server', '/foo')

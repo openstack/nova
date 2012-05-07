@@ -321,7 +321,7 @@ def get_record(table, ref):
 
 def check_for_session_leaks():
     if len(_db_content['session']) > 0:
-        raise exception.Error('Sessions have leaked: %s' %
+        raise exception.NovaException('Sessions have leaked: %s' %
                               _db_content['session'])
 
 
@@ -583,7 +583,7 @@ class SessionBase(object):
         s = self._session
         self._session = None
         if s not in _db_content['session']:
-            raise exception.Error(
+            raise exception.NovaException(
                 "Logging out a session that is invalid or already logged "
                 "out: %s" % s)
         del _db_content['session'][s]

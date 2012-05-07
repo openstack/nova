@@ -56,10 +56,6 @@ def good_function():
     return 99
 
 
-def bad_function_error():
-    raise exception.Error()
-
-
 def bad_function_exception(blah="a", boo="b", context=None):
     raise test.TestingException()
 
@@ -68,10 +64,6 @@ class WrapExceptionTestCase(test.TestCase):
     def test_wrap_exception_good_return(self):
         wrapped = exception.wrap_exception()
         self.assertEquals(99, wrapped(good_function)())
-
-    def test_wrap_exception_throws_error(self):
-        wrapped = exception.wrap_exception()
-        self.assertRaises(exception.Error, wrapped(bad_function_error))
 
     def test_wrap_exception_throws_exception(self):
         wrapped = exception.wrap_exception()

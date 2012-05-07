@@ -128,10 +128,9 @@ class ManagedObject(object):
         for elem in self.propSet:
             if elem.name == attr:
                 return elem.val
-        raise exception.Error(_("Property %(attr)s not set for the managed "
-                        "object %(objName)s") %
-                        {'attr': attr,
-                         'objName': self.objName})
+        msg = _("Property %(attr)s not set for the managed object %(name)s")
+        raise exception.NovaException(msg % {'attr': attr,
+                                             'name': self.objName})
 
 
 class DataObject(object):
@@ -498,7 +497,7 @@ class FakeVim(object):
         s = self._session
         self._session = None
         if s not in _db_content['session']:
-            raise exception.Error(
+            raise exception.NovaException(
                 _("Logging out a session that is invalid or already logged "
                 "out: %s") % s)
         del _db_content['session'][s]

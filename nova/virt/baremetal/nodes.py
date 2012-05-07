@@ -39,4 +39,4 @@ def get_baremetal_nodes():
     elif d == 'fake':
         return fake.get_baremetal_nodes()
     else:
-        raise exception.Error(_("Unknown baremetal driver %(d)s"))
+        raise exception.NovaException(_("Unknown baremetal driver %(d)s"))
