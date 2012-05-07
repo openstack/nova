@@ -39,7 +39,6 @@ class AccountsTest(test.TestCase):
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
 
         fakemgr = fakes.FakeAuthManager()
         joeuser = auth_manager.User('id1', 'guy1', 'acc1', 'secret1', False)

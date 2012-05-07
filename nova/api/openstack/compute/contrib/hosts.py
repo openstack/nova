@@ -224,8 +224,6 @@ class HostController(object):
         """
         host = id
         context = req.environ['nova.context']
-        # Expected to use AuthMiddleware.
-        # Otherwise, non-admin user can use describe-resource
         if not context.is_admin:
             msg = _("Describe-resource is admin only functionality")
             raise webob.exc.HTTPForbidden(explanation=msg)

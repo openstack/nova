@@ -80,7 +80,6 @@ VERSIONS = {
 class VersionsTest(test.TestCase):
     def setUp(self):
         super(VersionsTest, self).setUp()
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(versions, 'VERSIONS', VERSIONS)
 
     def test_get_version_list(self):
