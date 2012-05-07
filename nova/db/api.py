@@ -1612,6 +1612,13 @@ def volume_type_destroy(context, name):
     return IMPL.volume_type_destroy(context, name)
 
 
+def volume_get_active_by_window(context, begin, end=None, project_id=None):
+    """Get all the volumes inside the window.
+
+    Specifying a project_id will filter for a certain project."""
+    return IMPL.volume_get_active_by_window(context, begin, end, project_id)
+
+
 ####################
 
 

@@ -4109,6 +4109,23 @@ def volume_type_destroy(context, name):
                         'updated_at': literal_column('updated_at')})
 
 
+@require_context
+def volume_get_active_by_window(context, begin, end=None,
+                                         project_id=None):
+    """Return volumes that were active during window."""
+    session = get_session()
+    query = session.query(models.Volume)
+
+    query = query.filter(or_(models.Volume.deleted_at == None,
+                             models.Volume.deleted_at > begin))
+    if end:
+        query = query.filter(models.Volume.created_at < end)
+    if project_id:
+        query = query.filter_by(project_id=project_id)
+
+    return query.all()
+
+
 ####################
 
 

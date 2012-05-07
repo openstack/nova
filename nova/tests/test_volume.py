@@ -29,6 +29,7 @@ from nova import exception
 from nova import db
 from nova import flags
 from nova import log as logging
+from nova.notifier import test_notifier
 from nova.openstack.common import importutils
 import nova.policy
 from nova import rpc
@@ -46,18 +47,21 @@ class VolumeTestCase(test.TestCase):
         super(VolumeTestCase, self).setUp()
         self.compute = importutils.import_object(FLAGS.compute_manager)
         self.flags(connection_type='fake')
+        self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
+                'nova.notifier.test_notifier')
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
         instance = db.instance_create(self.context, {})
         self.instance_id = instance['id']
         self.instance_uuid = instance['uuid']
+        test_notifier.NOTIFICATIONS = []
 
     def tearDown(self):
         db.instance_destroy(self.context, self.instance_id)
         super(VolumeTestCase, self).tearDown()
 
     @staticmethod
-    def _create_volume(size='0', snapshot_id=None):
+    def _create_volume(size=0, snapshot_id=None):
         """Create a volume object."""
         vol = {}
         vol['size'] = size
@@ -88,11 +92,14 @@ class VolumeTestCase(test.TestCase):
         """Test volume can be created and deleted."""
         volume = self._create_volume()
         volume_id = volume['id']
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
         self.volume.create_volume(self.context, volume_id)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         self.assertEqual(volume_id, db.volume_get(context.get_admin_context(),
                          volume_id).id)
 
         self.volume.delete_volume(self.context, volume_id)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 4)
         self.assertRaises(exception.NotFound,
                           db.volume_get,
                           self.context,
@@ -361,6 +368,30 @@ class VolumeTestCase(test.TestCase):
 
         self.mox.UnsetStubs()
         self.volume.delete_snapshot(self.context, snapshot_id)
+        self.volume.delete_volume(self.context, volume_id)
+
+    def test_create_volume_usage_notification(self):
+        """Ensure create volume generates appropriate usage notification"""
+        volume = self._create_volume()
+        volume_id = volume['id']
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
+        self.volume.create_volume(self.context, volume_id)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
+        msg = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals(msg['event_type'], 'volume.create.start')
+        msg = test_notifier.NOTIFICATIONS[1]
+        self.assertEquals(msg['priority'], 'INFO')
+        self.assertEquals(msg['event_type'], 'volume.create.end')
+        payload = msg['payload']
+        self.assertEquals(payload['tenant_id'], volume['project_id'])
+        self.assertEquals(payload['user_id'], volume['user_id'])
+        self.assertEquals(payload['volume_id'], volume['id'])
+        self.assertEquals(payload['status'], 'creating')
+        self.assertEquals(payload['size'], volume['size'])
+        self.assertTrue('display_name' in payload)
+        self.assertTrue('snapshot_id' in payload)
+        self.assertTrue('launched_at' in payload)
+        self.assertTrue('created_at' in payload)
         self.volume.delete_volume(self.context, volume_id)
 
 
