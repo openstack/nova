@@ -150,7 +150,7 @@ So in the end file nova.conf should contain lines like these:
 
 ::
 
-    --scheduler_driver=nova.scheduler.distributed_scheduler.FilterScheduler
+    --scheduler_driver=nova.scheduler.FilterScheduler
     --scheduler_available_filters=nova.scheduler.filters.standard_filters
     --scheduler_available_filters=myfilter.MyFilter
     --scheduler_default_filters=RamFilter,ComputeFilter,MyFilter
