@@ -78,7 +78,8 @@ if __name__ == '__main__':
     for instance_ref in instances:
         try:
             nova.compute.utils.notify_usage_exists(
-                    admin_context, instance_ref, safe=False)
+                    admin_context, instance_ref,
+                    ignore_missing_network_data=False)
         except Exception, e:
             print traceback.format_exc(e)
     print "Instance usage audit completed"

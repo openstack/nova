@@ -22,6 +22,7 @@ import nova.context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log
 from nova import network
 from nova.network import model as network_model
 from nova.notifier import api as notifier_api
@@ -29,14 +30,21 @@ from nova import utils
 
 
 FLAGS = flags.FLAGS
+LOG = log.getLogger(__name__)
 
 
-def notify_usage_exists(context, instance_ref, current_period=False):
-    """ Generates 'exists' notification for an instance for usage auditing
-        purposes.
+def notify_usage_exists(context, instance_ref, current_period=False,
+                        ignore_missing_network_data=True):
+    """Generates 'exists' notification for an instance for usage auditing
+    purposes.
 
-        Generates usage for last completed period, unless 'current_period'
-        is True."""
+    :param current_period: if True, this will generate a usage for the
+        current usage period; if False, this will generate a usage for the
+        previous audit period.
+
+    :param ignore_missing_network_data: if True, log any exceptions generated
+        while getting network info; if False, raise the exception.
+    """
     admin_context = nova.context.get_admin_context(read_deleted='yes')
     begin, end = utils.last_completed_audit_period()
     bw = {}
@@ -53,8 +61,14 @@ def notify_usage_exists(context, instance_ref, current_period=False):
         cached_info = instance_ref['info_cache']['network_info']
         nw_info = network_model.NetworkInfo.hydrate(cached_info)
     else:
-        nw_info = network.API().get_instance_nw_info(admin_context,
+        try:
+            nw_info = network.API().get_instance_nw_info(admin_context,
                                                          instance_ref)
+        except Exception:
+            LOG.exception('Failed to get nw_info', instance=instance_ref)
+            if ignore_missing_network_data:
+                return
+            raise
 
     macs = [vif['address'] for vif in nw_info]
     uuids = [instance_ref.uuid]
