@@ -77,23 +77,20 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app(inner_app_v2=None, fake_auth=True, fake_auth_context=None,
+def wsgi_app(inner_app_v2=None, fake_auth_context=None,
         use_no_auth=False, ext_mgr=None):
     if not inner_app_v2:
         inner_app_v2 = compute.APIRouter(ext_mgr)
 
-    if fake_auth:
+    if use_no_auth:
+        api_v2 = openstack_api.FaultWrapper(auth.NoAuthMiddleware(
+              limits.RateLimitingMiddleware(inner_app_v2)))
+    else:
         if fake_auth_context is not None:
             ctxt = fake_auth_context
         else:
             ctxt = context.RequestContext('fake', 'fake', auth_token=True)
         api_v2 = openstack_api.FaultWrapper(api_auth.InjectContext(ctxt,
-              limits.RateLimitingMiddleware(inner_app_v2)))
-    elif use_no_auth:
-        api_v2 = openstack_api.FaultWrapper(auth.NoAuthMiddleware(
-              limits.RateLimitingMiddleware(inner_app_v2)))
-    else:
-        api_v2 = openstack_api.FaultWrapper(auth.AuthMiddleware(
               limits.RateLimitingMiddleware(inner_app_v2)))
 
     mapper = urlmap.URLMap()
@@ -129,16 +126,6 @@ def stub_out_image_service(stubs):
     stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
     stubs.Set(nova.image, 'get_default_image_service',
         lambda: nova.image.fake.FakeImageService())
-
-
-def stub_out_auth(stubs):
-    def fake_auth_init(self, app):
-        self.application = app
-
-    stubs.Set(auth.AuthMiddleware,
-        '__init__', fake_auth_init)
-    stubs.Set(auth.AuthMiddleware,
-        '__call__', fake_wsgi)
 
 
 def stub_out_rate_limiting(stubs):

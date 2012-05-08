@@ -95,7 +95,6 @@ class SnapshotApiTest(test.TestCase):
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(volume.api.API, "create_snapshot", stub_snapshot_create)
         self.stubs.Set(volume.api.API, "create_snapshot_force",
             stub_snapshot_create)

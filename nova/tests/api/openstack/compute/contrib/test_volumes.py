@@ -104,7 +104,6 @@ class VolumeApiTest(test.TestCase):
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db, 'volume_get', return_volume)
 
         self.stubs.Set(volume.api.API, "delete", fakes.stub_volume_delete)

@@ -56,7 +56,6 @@ class ServerActionsControllerTest(test.TestCase):
     def setUp(self):
         super(ServerActionsControllerTest, self).setUp()
 
-        fakes.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                         host='fake_host'))
