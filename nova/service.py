@@ -434,6 +434,7 @@ def serve(*servers):
 
 def wait():
     LOG.debug(_('Full set of FLAGS:'))
+    rpc.register_opts(FLAGS)
     for flag in FLAGS:
         flag_get = FLAGS.get(flag, None)
         # hide flag contents from log if contains a password
