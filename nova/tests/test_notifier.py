@@ -14,11 +14,16 @@
 #    under the License.
 
 import nova
+from nova import context
 from nova import flags
 from nova import log
 import nova.notifier.no_op_notifier
 from nova.notifier import api as notifier_api
 from nova import test
+
+
+ctxt = context.get_admin_context()
+ctxt2 = context.get_admin_context()
 
 
 class NotifierTestCase(test.TestCase):
@@ -36,7 +41,7 @@ class NotifierTestCase(test.TestCase):
         self.stubs.Set(nova.notifier.no_op_notifier, 'notify',
                 mock_notify)
 
-        notifier_api.notify('contextarg', 'publisher_id', 'event_type',
+        notifier_api.notify(ctxt, 'publisher_id', 'event_type',
                             nova.notifier.api.WARN, dict(a=3))
         self.assertEqual(self.notify_called, True)
 
@@ -53,11 +58,11 @@ class NotifierTestCase(test.TestCase):
                 self.assertEqual(message[k], v)
             self.assertTrue(len(message['message_id']) > 0)
             self.assertTrue(len(message['timestamp']) > 0)
-            self.assertEqual(context, 'contextarg')
+            self.assertEqual(context, ctxt)
 
         self.stubs.Set(nova.notifier.no_op_notifier, 'notify',
                 message_assert)
-        notifier_api.notify('contextarg', 'publisher_id', 'event_type',
+        notifier_api.notify(ctxt, 'publisher_id', 'event_type',
                             nova.notifier.api.WARN, dict(a=3))
 
     def test_send_rabbit_notification(self):
@@ -69,14 +74,14 @@ class NotifierTestCase(test.TestCase):
             self.mock_notify = True
 
         self.stubs.Set(nova.rpc, 'notify', mock_notify)
-        notifier_api.notify('contextarg', 'publisher_id', 'event_type',
+        notifier_api.notify(ctxt, 'publisher_id', 'event_type',
                             nova.notifier.api.WARN, dict(a=3))
 
         self.assertEqual(self.mock_notify, True)
 
     def test_invalid_priority(self):
         self.assertRaises(nova.notifier.api.BadPriorityException,
-                notifier_api.notify, 'contextarg', 'publisher_id',
+                notifier_api.notify, ctxt, 'publisher_id',
                 'event_type', 'not a priority', dict(a=3))
 
     def test_rabbit_priority_queue(self):
@@ -92,7 +97,7 @@ class NotifierTestCase(test.TestCase):
             self.test_topic = topic
 
         self.stubs.Set(nova.rpc, 'notify', mock_notify)
-        notifier_api.notify('contextarg', 'publisher_id',
+        notifier_api.notify(ctxt, 'publisher_id',
                             'event_type', 'DEBUG', dict(a=3))
         self.assertEqual(self.test_topic, 'testnotify.debug')
 
@@ -161,17 +166,17 @@ class NotifierTestCase(test.TestCase):
                 mock_notify)
 
         # Test positional context
-        self.assertEqual(3, example_api(1, 2, "contextname"))
+        self.assertEqual(3, example_api(1, 2, ctxt))
         self.assertEqual(self.notify_called, True)
-        self.assertEqual(self.context_arg, "contextname")
+        self.assertEqual(self.context_arg, ctxt)
 
         self.notify_called = False
         self.context_arg = None
 
         # Test named context
-        self.assertEqual(3, example_api2(1, 2, context="contextname2"))
+        self.assertEqual(3, example_api2(1, 2, context=ctxt2))
         self.assertEqual(self.notify_called, True)
-        self.assertEqual(self.context_arg, "contextname2")
+        self.assertEqual(self.context_arg, ctxt2)
 
         # Test missing context
         self.assertEqual(3, example_api2(1, 2, bananas="delicious"))

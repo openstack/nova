@@ -25,7 +25,7 @@ SHOULD include dedicated exception logging.
 """
 
 import functools
-import inspect
+import itertools
 import sys
 
 import webob.exc
@@ -1066,19 +1066,17 @@ class CouldNotFetchImage(NovaException):
 
 
 def get_context_from_function_and_args(function, args, kwargs):
-    """Find an arg named 'context' and return the value.
+    """Find an arg of type RequestContext and return it.
 
        This is useful in a couple of decorators where we don't
        know much about the function we're wrapping.
     """
-    context = None
-    if 'context' in kwargs.keys():
-        context = kwargs['context']
-    else:
-        (iargs, _iva, _ikw, _idf) = inspect.getargspec(function)
-        if 'context' in iargs:
-            index = iargs.index('context')
-            if len(args) > index:
-                context = args[index]
 
-    return context
+    # import here to avoid circularity:
+    from nova import context
+
+    for arg in itertools.chain(kwargs.values(), args):
+        if isinstance(arg, context.RequestContext):
+            return arg
+
+    return None

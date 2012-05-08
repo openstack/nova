@@ -18,6 +18,7 @@
 
 from nova import test
 from nova import exception
+from nova import context
 
 
 class EC2APIErrorTestCase(test.TestCase):
@@ -74,12 +75,13 @@ class WrapExceptionTestCase(test.TestCase):
         notifier = FakeNotifier()
         wrapped = exception.wrap_exception(notifier, "publisher", "event",
                                            "level")
+        ctxt = context.get_admin_context()
         self.assertRaises(test.TestingException,
-                          wrapped(bad_function_exception), context="context")
+                          wrapped(bad_function_exception), context=ctxt)
         self.assertEquals(notifier.provided_publisher, "publisher")
         self.assertEquals(notifier.provided_event, "event")
         self.assertEquals(notifier.provided_priority, "level")
-        self.assertEquals(notifier.provided_context, "context")
+        self.assertEquals(notifier.provided_context, ctxt)
         for key in ['exception', 'args']:
             self.assertTrue(key in notifier.provided_payload.keys())
 
