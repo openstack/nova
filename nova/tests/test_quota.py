@@ -43,6 +43,7 @@ class GetQuotaTestCase(test.TestCase):
                    quota_floating_ips=10,
                    quota_security_groups=10,
                    quota_security_group_rules=20,
+                   quota_key_pairs=10,
                    quota_metadata_items=128,
                    quota_injected_files=5,
                    quota_injected_file_content_bytes=10 * 1024)
@@ -61,6 +62,7 @@ class GetQuotaTestCase(test.TestCase):
                     floating_ips=5,
                     quota_security_groups=10,
                     quota_security_group_rules=20,
+                    quota_key_pairs=10,
                     metadata_items=64,
                     injected_files=2,
                     injected_file_content_bytes=5 * 1024,
@@ -84,6 +86,7 @@ class GetQuotaTestCase(test.TestCase):
                     floating_ips=2,
                     security_groups=5,
                     security_group_rules=10,
+                    key_pairs=5,
                     metadata_items=32,
                     injected_files=1,
                     injected_file_content_bytes=2 * 1024,
@@ -105,6 +108,7 @@ class GetQuotaTestCase(test.TestCase):
                 floating_ips=10,
                 security_groups=10,
                 security_group_rules=20,
+                key_pairs=10,
                 metadata_items=128,
                 injected_files=5,
                 injected_file_content_bytes=10 * 1024,
@@ -119,6 +123,7 @@ class GetQuotaTestCase(test.TestCase):
                    quota_floating_ips=-1,
                    quota_security_groups=-1,
                    quota_security_group_rules=-1,
+                   quota_key_pairs=-1,
                    quota_metadata_items=-1,
                    quota_injected_files=-1,
                    quota_injected_file_content_bytes=-1)
@@ -132,6 +137,7 @@ class GetQuotaTestCase(test.TestCase):
                 floating_ips=-1,
                 security_groups=-1,
                 security_group_rules=-1,
+                key_pairs=-1,
                 metadata_items=-1,
                 injected_files=-1,
                 injected_file_content_bytes=-1,
@@ -149,6 +155,7 @@ class GetQuotaTestCase(test.TestCase):
                 floating_ips=10,
                 security_groups=10,
                 security_group_rules=20,
+                key_pairs=10,
                 metadata_items=128,
                 injected_files=5,
                 injected_file_content_bytes=10 * 1024,
@@ -166,6 +173,7 @@ class GetQuotaTestCase(test.TestCase):
                 floating_ips=5,
                 security_groups=10,
                 security_group_rules=20,
+                key_pairs=10,
                 metadata_items=64,
                 injected_files=2,
                 injected_file_content_bytes=5 * 1024,
@@ -184,6 +192,7 @@ class GetQuotaTestCase(test.TestCase):
                 floating_ips=10,
                 security_groups=10,
                 security_group_rules=20,
+                key_pairs=10,
                 metadata_items=128,
                 injected_files=5,
                 injected_file_content_bytes=10 * 1024,
@@ -202,6 +211,7 @@ class GetQuotaTestCase(test.TestCase):
                 floating_ips=2,
                 security_groups=5,
                 security_group_rules=10,
+                key_pairs=5,
                 metadata_items=32,
                 injected_files=1,
                 injected_file_content_bytes=2 * 1024,
@@ -221,6 +231,7 @@ class GetQuotaTestCase(test.TestCase):
                 floating_ips=5,
                 security_groups=10,
                 security_group_rules=20,
+                key_pairs=10,
                 metadata_items=64,
                 injected_files=2,
                 injected_file_content_bytes=5 * 1024,
@@ -240,6 +251,7 @@ class GetQuotaTestCase(test.TestCase):
                 floating_ips=2,
                 security_groups=5,
                 security_group_rules=10,
+                key_pairs=5,
                 metadata_items=32,
                 injected_files=1,
                 injected_file_content_bytes=2 * 1024,
@@ -437,6 +449,16 @@ class QuotaTestCase(test.TestCase):
         self.assertEqual(security_groups, 100)
         security_groups = quota.allowed_security_groups(self.context, 101)
         self.assertEqual(security_groups, 101)
+
+    def test_unlimited_key_pairs(self):
+        self.flags(quota_key_pairs=10)
+        key_pairs = quota.allowed_key_pairs(self.context, 100)
+        self.assertEqual(key_pairs, 10)
+        db.quota_create(self.context, self.project_id, 'key_pairs', -1)
+        key_pairs = quota.allowed_key_pairs(self.context, 100)
+        self.assertEqual(key_pairs, 100)
+        key_pairs = quota.allowed_key_pairs(self.context, 101)
+        self.assertEqual(key_pairs, 101)
 
     def test_unlimited_security_group_rules(self):
 

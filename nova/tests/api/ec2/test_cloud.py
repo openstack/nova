@@ -1543,6 +1543,21 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(dummypub, keydata['public_key'])
         self.assertEqual(dummyfprint, keydata['fingerprint'])
 
+    def test_import_key_pair_quota_limit(self):
+        self.flags(quota_key_pairs=0)
+        pubkey_path = os.path.join(os.path.dirname(__file__), 'public_key')
+        f = open(pubkey_path + '/dummy.pub', 'r')
+        dummypub = f.readline().rstrip()
+        f.close
+        f = open(pubkey_path + '/dummy.fingerprint', 'r')
+        dummyfprint = f.readline().rstrip()
+        f.close
+        key_name = 'testimportkey'
+        public_key_material = base64.b64encode(dummypub)
+        self.assertRaises(exception.EC2APIError,
+            self.cloud.import_key_pair, self.context, key_name,
+            public_key_material)
+
     def test_create_key_pair(self):
         good_names = ('a', 'a' * 255, string.ascii_letters + ' -_')
         bad_names = ('', 'a' * 256, '*', '/')
@@ -1557,6 +1572,20 @@ class CloudTestCase(test.TestCase):
                               self.cloud.create_key_pair,
                               self.context,
                               key_name)
+
+    def test_create_key_pair_quota_limit(self):
+        self.flags(quota_key_pairs=10)
+        for i in range(0, 10):
+            key_name = 'key_%i' % i
+            result = self.cloud.create_key_pair(self.context,
+                                                key_name)
+            self.assertEqual(result['keyName'], key_name)
+
+        # 11'th group should fail
+        self.assertRaises(exception.EC2APIError,
+                          self.cloud.create_key_pair,
+                          self.context,
+                          'foo')
 
     def test_delete_key_pair(self):
         self._create_key('test')

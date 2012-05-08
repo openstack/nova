@@ -703,6 +703,11 @@ def key_pair_get_all_by_user(context, user_id):
     return IMPL.key_pair_get_all_by_user(context, user_id)
 
 
+def key_pair_count_by_user(context, user_id):
+    """Count number of key pairs for the given user ID."""
+    return IMPL.key_pair_count_by_user(context, user_id)
+
+
 ####################
 
 
