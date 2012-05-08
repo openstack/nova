@@ -614,7 +614,7 @@
 ###### (StrOpt) HOST for connecting to quantum
 # quantum_connection_host="127.0.0.1"
 ###### (StrOpt) PORT for connecting to quantum
-# quantum_connection_port="9696"
+# quantum_connection_port=9696
 ###### (StrOpt) Default tenant id when creating quantum networks
 # quantum_default_tenant_id="default"
 ###### (StrOpt) Indicates underlying IP address management library
