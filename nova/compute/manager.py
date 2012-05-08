@@ -2065,10 +2065,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                       "args": {'instance_id': instance_ref['id'],
                                'block_migration': block_migration}})
 
-        # Restore volume state
-        for volume_ref in instance_ref['volumes']:
-            self.volume_api.update(ctxt, volume_ref, {'status': 'in-use'})
-
         # No instance booting at source host, but instance dir
         # must be deleted for preparing next block migration
         if block_migration:
