@@ -26,7 +26,6 @@ from nova import compute
 from nova import exception
 from nova import log as logging
 from nova import network
-from nova.rpc import common as rpc_common
 
 
 LOG = logging.getLogger(__name__)

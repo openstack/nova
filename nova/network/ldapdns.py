@@ -13,9 +13,6 @@
 #    under the License.
 
 import ldap
-import os
-import shutil
-import tempfile
 import time
 
 from nova.auth import fakeldap

@@ -24,7 +24,6 @@ an instance with it.
 
 import os
 import string
-import tempfile
 import zipfile
 
 # NOTE(vish): cloud is only for the _gen_key functionality

@@ -18,8 +18,6 @@
 
 """Auth Components for Consoles."""
 
-import os
-import sys
 import time
 
 from nova import flags

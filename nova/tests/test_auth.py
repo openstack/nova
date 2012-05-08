@@ -18,13 +18,11 @@
 
 import unittest
 
-from nova import crypto
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
 from nova.auth import manager
-from nova.api.ec2 import cloud
 from nova.auth import fakeldap
 
 FLAGS = flags.FLAGS
