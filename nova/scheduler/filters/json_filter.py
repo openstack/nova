@@ -128,7 +128,10 @@ class JsonFilter(filters.BaseHostFilter):
         """Return a list of hosts that can fulfill the requirements
         specified in the query.
         """
-        query = filter_properties.get('query', None)
+        try:
+            query = filter_properties['scheduler_hints']['query']
+        except KeyError:
+            query = None
         if not query:
             return True
 
