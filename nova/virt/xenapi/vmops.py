@@ -190,7 +190,7 @@ class VMOps(object):
     def confirm_migration(self, migration, instance, network_info):
         name_label = self._get_orig_vm_name_label(instance)
         vm_ref = VMHelper.lookup(self._session, name_label)
-        return self._destroy(instance, vm_ref, network_info, shutdown=False)
+        return self._destroy(instance, vm_ref, network_info)
 
     def finish_revert_migration(self, instance):
         # NOTE(sirp): the original vm was suffixed with '-orig'; find it using
@@ -630,7 +630,7 @@ class VMOps(object):
         finally:
             if template_vm_ref:
                 self._destroy(instance, template_vm_ref,
-                        shutdown=False, destroy_kernel_ramdisk=False)
+                              destroy_kernel_ramdisk=False)
 
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
@@ -800,7 +800,7 @@ class VMOps(object):
         finally:
             if template_vm_ref:
                 self._destroy(instance, template_vm_ref,
-                        shutdown=False, destroy_kernel_ramdisk=False)
+                              destroy_kernel_ramdisk=False)
 
         return vdis
 
@@ -1119,13 +1119,13 @@ class VMOps(object):
         if rescue_vm_ref:
             self._destroy_rescue_instance(rescue_vm_ref, vm_ref)
 
-        return self._destroy(instance, vm_ref, network_info, shutdown=True)
+        return self._destroy(instance, vm_ref, network_info)
 
-    def _destroy(self, instance, vm_ref, network_info=None, shutdown=True,
+    def _destroy(self, instance, vm_ref, network_info=None,
                  destroy_kernel_ramdisk=True):
         """Destroys VM instance by performing:
 
-            1. A shutdown if requested.
+            1. A shutdown
             2. Destroying associated VDIs.
             3. Destroying kernel and ramdisk files (if necessary).
             4. Destroying that actual VM record.
@@ -1136,8 +1136,7 @@ class VMOps(object):
                         instance=instance)
             return
         is_snapshot = VMHelper.is_snapshot(self._session, vm_ref)
-        if shutdown:
-            self._shutdown(instance, vm_ref)
+        self._shutdown(instance, vm_ref)
 
         # Destroy VDIs
         vdi_refs = VMHelper.lookup_vm_vdis(self._session, vm_ref)
