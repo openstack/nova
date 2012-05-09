@@ -956,8 +956,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(interfaces[0].get('type'), 'bridge')
         self.assertEquals(parameters[0].get('name'), 'IP')
         self.assertTrue(_ipv4_like(parameters[0].get('value'), '192.168'))
-        self.assertEquals(parameters[1].get('name'), 'DHCPSERVER')
-        self.assertTrue(_ipv4_like(parameters[1].get('value'), '192.168.*.1'))
 
     def _check_xml_and_container(self, instance):
         user_context = context.RequestContext(self.user_id,
@@ -1158,9 +1156,6 @@ class LibvirtConnTestCase(test.TestCase):
             (lambda t: t.find(parameter).get('name'), 'IP'),
             (lambda t: _ipv4_like(t.find(parameter).get('value'), '192.168'),
              True),
-            (lambda t: t.findall(parameter)[1].get('name'), 'DHCPSERVER'),
-            (lambda t: _ipv4_like(t.findall(parameter)[1].get('value'),
-                                  '192.168.*.1'), True),
             (lambda t: t.find('./memory').text, '2097152')]
         if rescue:
             common_checks += [
@@ -2180,12 +2175,14 @@ class NWFilterTestCase(test.TestCase):
         inst_id = instance_ref['id']
         inst_uuid = instance_ref['uuid']
 
-        def _ensure_all_called(mac):
+        def _ensure_all_called(mac, allow_dhcp):
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
                                                    mac.translate(None, ':'))
-            for required in ['allow-dhcp-server',
-                             'no-arp-spoofing', 'no-ip-spoofing',
-                             'no-mac-spoofing']:
+            requiredlist = ['no-arp-spoofing', 'no-ip-spoofing',
+                             'no-mac-spoofing']
+            if allow_dhcp:
+                requiredlist.append('allow-dhcp-server')
+            for required in requiredlist:
                 self.assertTrue(required in
                                 self.recursive_depends[instance_filter],
                                 "Instance's filter does not include %s" %
@@ -2204,7 +2201,12 @@ class NWFilterTestCase(test.TestCase):
         mac = network_info[0][1]['mac']
 
         self.fw.setup_basic_filtering(instance, network_info)
-        _ensure_all_called(mac)
+        allow_dhcp = False
+        for (network, mapping) in network_info:
+            if mapping['dhcp_server']:
+                allow_dhcp = True
+                break
+        _ensure_all_called(mac, allow_dhcp)
         db.instance_remove_security_group(self.context, inst_uuid,
                                           self.security_group.id)
         self.teardown_security_group()
