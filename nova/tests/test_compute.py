@@ -60,6 +60,7 @@ flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 flags.DECLARE('additional_compute_capabilities', 'nova.compute.manager')
 
 
+FAKE_IMAGE_REF = 'fake-image-ref'
 orig_rpc_call = rpc.call
 orig_rpc_cast = rpc.cast
 
@@ -134,7 +135,7 @@ class BaseTestCase(test.TestCase):
 
         inst = {}
         inst['vm_state'] = vm_states.ACTIVE
-        inst['image_ref'] = 1
+        inst['image_ref'] = FAKE_IMAGE_REF
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
         inst['user_id'] = self.user_id
@@ -487,8 +488,13 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
 
+        new_image_ref = instance['image_ref'] + '-new-image'
+
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.rebuild_instance(self.context, instance_uuid)
+        self.compute.rebuild_instance(self.context, instance_uuid,
+                new_image_ref)
+        inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(inst_ref['image_ref'], new_image_ref)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_rebuild_launch_time(self):
@@ -501,7 +507,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.run_instance(self.context, instance_uuid)
         utils.set_time_override(cur_time)
-        self.compute.rebuild_instance(self.context, instance_uuid)
+        self.compute.rebuild_instance(self.context, instance_uuid,
+                instance['image_ref'])
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEquals(cur_time, instance['launched_at'])
         self.compute.terminate_instance(self.context, instance_uuid)
@@ -867,7 +874,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
         self.assertTrue(payload['launched_at'])
-        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance_uuid)
 
@@ -907,7 +914,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('launched_at' in payload)
         self.assertTrue('deleted_at' in payload)
         self.assertEqual(payload['deleted_at'], str(cur_time))
-        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
 
     def test_run_instance_existing(self):
@@ -1071,20 +1078,26 @@ class ComputeTestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
 
         image_ref = instance["image_ref"]
+        new_image_ref = image_ref + '-new_image_ref'
         password = "new_password"
+
         self.compute._rebuild_instance(self.context, instance_uuid,
-                                        dict(image_ref=image_ref,
-                                             new_pass=password))
+                new_image_ref, dict(new_pass=password))
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
+
+        image_ref_url = utils.generate_image_url(image_ref)
+        new_image_ref_url = utils.generate_image_url(new_image_ref)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['event_type'],
                           'compute.instance.exists')
+        self.assertEquals(msg['payload']['image_ref_url'], image_ref_url)
         msg = test_notifier.NOTIFICATIONS[1]
         self.assertEquals(msg['event_type'],
                           'compute.instance.rebuild.start')
+        self.assertEquals(msg['payload']['image_ref_url'], new_image_ref_url)
         msg = test_notifier.NOTIFICATIONS[2]
         self.assertEquals(msg['event_type'],
                           'compute.instance.rebuild.end')
@@ -1100,8 +1113,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
         self.assertEqual(payload['launched_at'], str(cur_time))
-        image_ref_url = "%s/images/1" % utils.generate_glance_url()
-        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEquals(payload['image_ref_url'], new_image_ref_url)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_finish_resize_instance_notification(self):
@@ -1150,7 +1162,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
         self.assertEqual(payload['launched_at'], str(cur_time))
-        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(context, instance_uuid)
 
@@ -1195,7 +1207,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('display_name' in payload)
         self.assertTrue('created_at' in payload)
         self.assertTrue('launched_at' in payload)
-        image_ref_url = "%s/images/1" % utils.generate_glance_url()
+        image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(context, instance_uuid)
 
@@ -2205,9 +2217,24 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
 
-        image_ref = instance["image_ref"]
+        # Make sure Compute API doesn't try to update the image_ref.
+        # It should be done on the manager side.  We can't check the DB
+        # at the end of this test method because we've called the
+        # manager by that point..
+        orig_update = self.compute_api.update
+        info = {'image_ref_updated': False}
+
+        def update_wrapper(*args, **kwargs):
+            if 'image_ref' in kwargs:
+                info['image_ref_updated'] = True
+            return orig_update(*args, **kwargs)
+
+        self.stubs.Set(self.compute_api, 'update', update_wrapper)
+
+        image_ref = instance["image_ref"] + '-new_image_ref'
         password = "new_password"
         self.compute_api.rebuild(self.context, instance, image_ref, password)
+        self.assertFalse(info['image_ref_updated'])
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.REBUILDING)

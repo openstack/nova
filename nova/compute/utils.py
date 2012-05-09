@@ -212,8 +212,7 @@ def _usage_from_instance(context, instance_ref, network_info=None, **kw):
     def null_safe_str(s):
         return str(s) if s else ''
 
-    image_ref_url = "%s/images/%s" % (utils.generate_glance_url(),
-                                      instance_ref['image_ref'])
+    image_ref_url = utils.generate_image_url(instance_ref['image_ref'])
 
     usage_info = dict(
           tenant_id=instance_ref['project_id'],

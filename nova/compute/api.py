@@ -1345,7 +1345,6 @@ class API(BaseAPI):
 
         self.update(context,
                     instance,
-                    image_ref=image_href,
                     vm_state=vm_states.REBUILDING,
                     task_state=None,
                     progress=0,
@@ -1354,6 +1353,7 @@ class API(BaseAPI):
         rebuild_params = {
             "new_pass": admin_password,
             "injected_files": files_to_inject,
+            "image_ref": image_href,
         }
 
         self._cast_compute_message('rebuild_instance', context, instance,
