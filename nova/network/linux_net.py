@@ -819,7 +819,7 @@ def _execute(*cmd, **kwargs):
 def _device_exists(device):
     """Check if ethernet device exists."""
     (_out, err) = _execute('ip', 'link', 'show', 'dev', device,
-                           check_exit_code=False)
+                           check_exit_code=False, run_as_root=True)
     return not err
 
 
