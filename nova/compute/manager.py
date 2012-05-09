@@ -793,7 +793,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def rebuild_instance(self, context, instance_uuid, **kwargs):
+    def rebuild_instance(self, context, instance_uuid, image_ref, **kwargs):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -805,7 +805,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param new_pass: password to set on rebuilt instance
         """
         try:
-            self._rebuild_instance(context, instance_uuid, kwargs)
+            self._rebuild_instance(context, instance_uuid, image_ref,
+                    kwargs)
         except exception.ImageNotFound:
             LOG.error(_('Cannot rebuild instance because the given image does '
                         'not exist.'),
@@ -816,7 +817,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                       context=context, instance_uuid=instance_uuid)
             self._set_instance_error_state(context, instance_uuid)
 
-    def _rebuild_instance(self, context, instance_uuid, kwargs):
+    def _rebuild_instance(self, context, instance_uuid, image_ref, kwargs):
         context = context.elevated()
 
         LOG.audit(_("Rebuilding instance"), context=context,
@@ -825,7 +826,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
         compute_utils.notify_usage_exists(
                 context, instance, current_period=True)
-        self._notify_about_instance_usage(context, instance, "rebuild.start")
+
+        # NOTE(comstud): Since we've not updated the DB yet with the new
+        # image_ref, and rebuild.start should have image_ref_url pointing
+        # to the new image ref, we need to override it.
+        # Arguably, image_ref_url should still contain the old image at
+        # this point and we should pass a 'new_image_ref_url', instead.
+        image_ref_url = utils.generate_image_url(image_ref)
+        extra_usage_info = {'image_ref_url': image_ref_url}
+        self._notify_about_instance_usage(context, instance,
+                "rebuild.start", extra_usage_info=extra_usage_info)
+
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
                               instance_uuid,
@@ -836,17 +847,20 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._get_instance_nw_info(context, instance)
         self.driver.destroy(instance, self._legacy_nw_info(network_info))
 
-        self._instance_update(context,
+        # NOTE(comstud): Now that we've shutdown the old instance, we
+        # can update the image_ref in the DB.
+        instance = self._instance_update(context,
                               instance_uuid,
                               vm_state=vm_states.REBUILDING,
-                              task_state=task_states.BLOCK_DEVICE_MAPPING)
+                              task_state=task_states.BLOCK_DEVICE_MAPPING,
+                              image_ref=image_ref)
 
         instance.injected_files = kwargs.get('injected_files', [])
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
         device_info = self._setup_block_device_mapping(context, instance)
 
-        self._instance_update(context,
+        instance = self._instance_update(context,
                               instance_uuid,
                               vm_state=vm_states.REBUILDING,
                               task_state=task_states.SPAWNING)

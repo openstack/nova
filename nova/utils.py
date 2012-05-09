@@ -1259,6 +1259,11 @@ def generate_glance_url():
     return "http://%s:%d" % (FLAGS.glance_host, FLAGS.glance_port)
 
 
+def generate_image_url(image_ref):
+    """Generate a image URL from an image_ref."""
+    return "%s/images/%s" % (generate_glance_url(), image_ref)
+
+
 @contextlib.contextmanager
 def logging_error(message):
     """Catches exception, write message to the log, re-raise.
