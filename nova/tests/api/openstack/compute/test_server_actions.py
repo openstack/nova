@@ -457,6 +457,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url)
         context = req.environ['nova.context']
         update(context, mox.IgnoreArg(),
+                image_ref=self._image_href,
                 vm_state=vm_states.REBUILDING,
                 task_state=None, progress=0, **attributes).AndReturn(None)
         self.mox.ReplayAll()

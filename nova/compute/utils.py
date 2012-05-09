@@ -34,7 +34,8 @@ LOG = log.getLogger(__name__)
 
 
 def notify_usage_exists(context, instance_ref, current_period=False,
-                        ignore_missing_network_data=True):
+                        ignore_missing_network_data=True,
+                        extra_usage_info=None):
     """Generates 'exists' notification for an instance for usage auditing
     purposes.
 
@@ -85,12 +86,15 @@ def notify_usage_exists(context, instance_ref, current_period=False,
 
         bw[label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
 
-    extra_usage_info = dict(audit_period_beginning=str(audit_start),
-                            audit_period_ending=str(audit_end),
-                            bandwidth=bw)
+    extra_info = dict(audit_period_beginning=str(audit_start),
+                      audit_period_ending=str(audit_end),
+                      bandwidth=bw)
+
+    if extra_usage_info:
+        extra_info.update(extra_usage_info)
 
     notify_about_instance_usage(
-            context, instance_ref, 'exists', extra_usage_info=extra_usage_info)
+            context, instance_ref, 'exists', extra_usage_info=extra_info)
 
 
 def legacy_network_info(network_model):

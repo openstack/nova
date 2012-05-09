@@ -1329,6 +1329,7 @@ class API(BaseAPI):
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
         """Rebuild the given instance with the provided attributes."""
 
+        orig_image_ref = instance['image_ref']
         image = self._get_image(context, image_href)
 
         files_to_inject = kwargs.pop('files_to_inject', [])
@@ -1346,6 +1347,9 @@ class API(BaseAPI):
         self.update(context,
                     instance,
                     vm_state=vm_states.REBUILDING,
+                    # Unfortunately we need to set image_ref early,
+                    # so API users can see it.
+                    image_ref=image_href,
                     task_state=None,
                     progress=0,
                     **kwargs)
@@ -1354,6 +1358,7 @@ class API(BaseAPI):
             "new_pass": admin_password,
             "injected_files": files_to_inject,
             "image_ref": image_href,
+            "orig_image_ref": orig_image_ref,
         }
 
         self._cast_compute_message('rebuild_instance', context, instance,
