@@ -2160,7 +2160,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     image_id=instance_ref['image_ref'],
                     user_id=instance_ref['user_id'],
                     project_id=instance_ref['project_id'],
-                    size=info['disk_size'])
+                    size=info['virt_disk_size'])
 
         # if image has kernel and ramdisk, just download
         # following normal way.
