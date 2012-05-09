@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2011 Red Hat, Inc.
+# Copyright 2012 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -90,16 +90,21 @@ the purposes of --help and CLI arg validation)::
     def add_common_opts(conf):
         conf.register_cli_opts(cli_opts)
 
-The config manager has a single CLI option defined by default, --config-file::
+The config manager has two CLI options defined by default, --config-file
+and --config-dir::
 
     class ConfigOpts(object):
 
-        config_file_opt = MultiStrOpt('config-file',
-                                      ...
-
         def __init__(self, ...):
-            ...
-            self.register_cli_opt(self.config_file_opt)
+
+            opts = [
+                MultiStrOpt('config-file',
+                        ...),
+                StrOpt('config-dir',
+                       ...),
+            ]
+
+            self.register_cli_opts(opts)
 
 Option values are parsed from any supplied config files using
 openstack.common.iniparser. If none are specified, a default set is used
@@ -221,6 +226,8 @@ log files:
 
 import collections
 import copy
+import glob
+import functools
 import optparse
 import os
 import string
@@ -318,11 +325,58 @@ class ConfigFileValueError(Error):
     pass
 
 
-def find_config_files(project=None, prog=None):
+def _get_config_dirs(project=None):
+    """Return a list of directors where config files may be located.
+
+    :param project: an optional project name
+
+    If a project is specified, following directories are returned::
+
+      ~/.${project}/
+      ~/
+      /etc/${project}/
+      /etc/
+
+    Otherwise, these directories::
+
+      ~/
+      /etc/
+    """
+    fix_path = lambda p: os.path.abspath(os.path.expanduser(p))
+
+    cfg_dirs = [
+        fix_path(os.path.join('~', '.' + project)) if project else None,
+        fix_path('~'),
+        os.path.join('/etc', project) if project else None,
+        '/etc'
+        ]
+
+    return filter(bool, cfg_dirs)
+
+
+def _search_dirs(dirs, basename, extension=""):
+    """Search a list of directories for a given filename.
+
+    Iterator over the supplied directories, returning the first file
+    found with the supplied name and extension.
+
+    :param dirs: a list of directories
+    :param basename: the filename, e.g. 'glance-api'
+    :param extension: the file extension, e.g. '.conf'
+    :returns: the path to a matching file, or None
+    """
+    for d in dirs:
+        path = os.path.join(d, '%s%s' % (basename, extension))
+        if os.path.exists(path):
+            return path
+
+
+def find_config_files(project=None, prog=None, extension='.conf'):
     """Return a list of default configuration files.
 
     :param project: an optional project name
     :param prog: the program name, defaulting to the basename of sys.argv[0]
+    :param extension: the type of the config file
 
     We default to two config files: [${project}.conf, ${prog}.conf]
 
@@ -345,26 +399,12 @@ def find_config_files(project=None, prog=None):
     if prog is None:
         prog = os.path.basename(sys.argv[0])
 
-    fix_path = lambda p: os.path.abspath(os.path.expanduser(p))
-
-    cfg_dirs = [
-        fix_path(os.path.join('~', '.' + project)) if project else None,
-        fix_path('~'),
-        os.path.join('/etc', project) if project else None,
-        '/etc'
-        ]
-    cfg_dirs = filter(bool, cfg_dirs)
-
-    def search_dirs(dirs, basename):
-        for d in dirs:
-            path = os.path.join(d, basename)
-            if os.path.exists(path):
-                return path
+    cfg_dirs = _get_config_dirs(project)
 
     config_files = []
     if project:
-        config_files.append(search_dirs(cfg_dirs, '%s.conf' % project))
-    config_files.append(search_dirs(cfg_dirs, '%s.conf' % prog))
+        config_files.append(_search_dirs(cfg_dirs, project, extension))
+    config_files.append(_search_dirs(cfg_dirs, prog, extension))
 
     return filter(bool, config_files)
 
@@ -821,14 +861,37 @@ class ConfigOpts(collections.Mapping):
                                               usage=self.usage)
         self._cparser = None
 
-        self.register_cli_opt(
-            MultiStrOpt('config-file',
-                        default=self.default_config_files,
-                        metavar='PATH',
-                        help='Path to a config file to use. Multiple config '
-                             'files can be specified, with values in later '
-                             'files taking precedence. The default files used '
-                             'are: %s' % (self.default_config_files, )))
+        self.__cache = {}
+
+        opts = [
+             MultiStrOpt('config-file',
+                         default=self.default_config_files,
+                         metavar='PATH',
+                         help='Path to a config file to use. Multiple config '
+                              'files can be specified, with values in later '
+                              'files taking precedence. The default files '
+                              ' used are: %s' %
+                              (self.default_config_files, )),
+            StrOpt('config-dir',
+                   metavar='DIR',
+                   help='Path to a config directory to pull *.conf '
+                        'files from. This file set is sorted, so as to '
+                        'provide a predictable parse order if individual '
+                        'options are over-ridden. The set is parsed after '
+                        'the file(s), if any, specified via --config-file, '
+                        'hence over-ridden options in the directory take '
+                        'precedence.'),
+            ]
+        self.register_cli_opts(opts)
+
+    def __clear_cache(f):
+        @functools.wraps(f)
+        def __inner(self, *args, **kwargs):
+            if kwargs.pop('clear_cache', True):
+                self.__cache.clear()
+            return f(self, *args, **kwargs)
+
+        return __inner
 
     def __call__(self, args=None):
         """Parse command line arguments and config files.
@@ -839,6 +902,10 @@ class ConfigOpts(collections.Mapping):
 
         The object may be called multiple times, each time causing the previous
         set of values to be overwritten.
+
+        If the --config-dir option is set, any *.conf files from this
+        directory are pulled in, after all the file(s) specified by the
+        --config-file option.
 
         :params args: command line arguments (defaults to sys.argv[1:])
         :returns: the list of arguments left over after parsing options
@@ -852,8 +919,14 @@ class ConfigOpts(collections.Mapping):
 
         self._cli_values = vars(values)
 
-        if self.config_file:
-            self._parse_config_files(self.config_file)
+        def _list_config_dir():
+            return sorted(glob.glob(os.path.join(self.config_dir, '*.conf')))
+
+        from_file = list(self.config_file)
+
+        from_dir = _list_config_dir() if self.config_dir else []
+
+        self._parse_config_files(from_file + from_dir)
 
         return args
 
@@ -864,7 +937,7 @@ class ConfigOpts(collections.Mapping):
         :returns: the option value (after string subsititution) or a GroupAttr
         :raises: NoSuchOptError,ConfigFileValueError,TemplateSubstitutionError
         """
-        return self._substitute(self._get(name))
+        return self._get(name)
 
     def __getitem__(self, key):
         """Look up an option value and perform string substitution."""
@@ -883,12 +956,14 @@ class ConfigOpts(collections.Mapping):
         """Return the number of options and option groups."""
         return len(self._opts) + len(self._groups)
 
+    @__clear_cache
     def reset(self):
         """Reset the state of the object to before it was called."""
         self._args = None
         self._cli_values = None
         self._cparser = None
 
+    @__clear_cache
     def register_opt(self, opt, group=None):
         """Register an option schema.
 
@@ -911,11 +986,13 @@ class ConfigOpts(collections.Mapping):
 
         return True
 
+    @__clear_cache
     def register_opts(self, opts, group=None):
         """Register multiple option schemas at once."""
         for opt in opts:
-            self.register_opt(opt, group)
+            self.register_opt(opt, group, clear_cache=False)
 
+    @__clear_cache
     def register_cli_opt(self, opt, group=None):
         """Register a CLI option schema.
 
@@ -931,7 +1008,7 @@ class ConfigOpts(collections.Mapping):
         if self._args is not None:
             raise ArgsAlreadyParsedError("cannot register CLI option")
 
-        if not self.register_opt(opt, group):
+        if not self.register_opt(opt, group, clear_cache=False):
             return False
 
         if group is not None:
@@ -941,10 +1018,11 @@ class ConfigOpts(collections.Mapping):
 
         return True
 
+    @__clear_cache
     def register_cli_opts(self, opts, group=None):
         """Register multiple CLI option schemas at once."""
         for opt in opts:
-            self.register_cli_opt(opt, group)
+            self.register_cli_opt(opt, group, clear_cache=False)
 
     def register_group(self, group):
         """Register an option group.
@@ -959,6 +1037,7 @@ class ConfigOpts(collections.Mapping):
 
         self._groups[group.name] = copy.copy(group)
 
+    @__clear_cache
     def set_override(self, name, override, group=None):
         """Override an opt value.
 
@@ -973,6 +1052,7 @@ class ConfigOpts(collections.Mapping):
         opt_info = self._get_opt_info(name, group)
         opt_info['override'] = override
 
+    @__clear_cache
     def set_default(self, name, default, group=None):
         """Override an opt's default value.
 
@@ -1011,6 +1091,34 @@ class ConfigOpts(collections.Mapping):
 
         This it the default behaviour."""
         self._oparser.enable_interspersed_args()
+
+    def find_file(self, name):
+        """Locate a file located alongside the config files.
+
+        Search for a file with the supplied basename in the directories
+        which we have already loaded config files from and other known
+        configuration directories.
+
+        The directory, if any, supplied by the config_dir option is
+        searched first. Then the config_file option is iterated over
+        and each of the base directories of the config_files values
+        are searched. Failing both of these, the standard directories
+        searched by the module level find_config_files() function is
+        used. The first matching file is returned.
+
+        :param basename: the filename, e.g. 'policy.json'
+        :returns: the path to a matching file, or None
+        """
+        dirs = []
+        if self.config_dir:
+            dirs.append(self.config_dir)
+
+        for cf in reversed(self.config_file):
+            dirs.append(os.path.dirname(cf))
+
+        dirs.extend(_get_config_dirs(self.project))
+
+        return _search_dirs(dirs, name)
 
     def log_opt_values(self, logger, lvl):
         """Log the value of all registered opts.
@@ -1056,6 +1164,18 @@ class ConfigOpts(collections.Mapping):
         self._oparser.print_help(file)
 
     def _get(self, name, group=None):
+        if isinstance(group, OptGroup):
+            key = (group.name, name)
+        else:
+            key = (group, name)
+        try:
+            return self.__cache[key]
+        except KeyError:
+            value = self._substitute(self._do_get(name, group))
+            self.__cache[key] = value
+            return value
+
+    def _do_get(self, name, group=None):
         """Look up an option value.
 
         :param name: the opt name (or 'dest', more precisely)
@@ -1196,7 +1316,7 @@ class ConfigOpts(collections.Mapping):
 
         def __getattr__(self, name):
             """Look up an option value and perform template substitution."""
-            return self.conf._substitute(self.conf._get(name, self.group))
+            return self.conf._get(name, self.group)
 
         def __getitem__(self, key):
             """Look up an option value and perform string substitution."""
