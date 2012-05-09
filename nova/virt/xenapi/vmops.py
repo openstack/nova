@@ -991,7 +991,8 @@ class VMOps(object):
 
     def _shutdown(self, instance, vm_ref, hard=True):
         """Shutdown an instance."""
-        state = self.get_info(instance)['state']
+        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
+        state = VMHelper.compile_info(vm_rec)['state']
         if state == power_state.SHUTDOWN:
             LOG.warn(_("VM already halted, skipping shutdown..."),
                      instance=instance)
