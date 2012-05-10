@@ -1338,6 +1338,7 @@ def read_cached_file(filename, cache_info, reload_func=None):
     """
     mtime = os.path.getmtime(filename)
     if not cache_info or mtime != cache_info.get('mtime'):
+        LOG.debug(_("Reloading cached file %s") % filename)
         with open(filename) as fap:
             cache_info['data'] = fap.read()
         cache_info['mtime'] = mtime
