@@ -69,7 +69,7 @@ def create_cow_image(backing_file, path):
     :param path: Desired location of the COW image
     """
     execute('qemu-img', 'create', '-f', 'qcow2', '-o',
-             'cluster_size=2M,backing_file=%s' % backing_file, path)
+             'backing_file=%s' % backing_file, path)
 
 
 def get_disk_size(path):
