@@ -22,6 +22,7 @@ import nova.context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import image
 from nova import log
 from nova import network
 from nova.network import model as network_model
@@ -46,6 +47,7 @@ def notify_usage_exists(context, instance_ref, current_period=False,
     :param ignore_missing_network_data: if True, log any exceptions generated
         while getting network info; if False, raise the exception.
     """
+
     admin_context = nova.context.get_admin_context(read_deleted='yes')
     begin, end = utils.last_completed_audit_period()
     bw = {}
@@ -86,15 +88,24 @@ def notify_usage_exists(context, instance_ref, current_period=False,
 
         bw[label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
 
+    # add image metadata to the notification:
+    image_meta = _get_image_meta(context, instance_ref)
+
     extra_info = dict(audit_period_beginning=str(audit_start),
                       audit_period_ending=str(audit_end),
-                      bandwidth=bw)
+                      bandwidth=bw, image_meta=image_meta)
 
     if extra_usage_info:
         extra_info.update(extra_usage_info)
 
     notify_about_instance_usage(
             context, instance_ref, 'exists', extra_usage_info=extra_info)
+
+
+def _get_image_meta(context, instance_ref):
+    image_service, image_id = image.get_image_service(context,
+            instance_ref["image_ref"])
+    return image_service.show(context, image_id)
 
 
 def legacy_network_info(network_model):
