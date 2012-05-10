@@ -55,7 +55,7 @@ class TimeoutError(StandardError):
 
 def version(self, arg_dict):
     """Get version of agent."""
-    arg_dict["value"] = json.dumps({"name": "version", "value": ""})
+    arg_dict["value"] = json.dumps({"name": "version", "value": "agent"})
     request_id = arg_dict["id"]
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
