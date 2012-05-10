@@ -35,8 +35,6 @@ from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils
 
 
-flags.DECLARE('instances_path', 'nova.compute.manager')
-flags.DECLARE('base_dir_name', 'nova.compute.manager')
 FLAGS = flags.FLAGS
 
 LOG = log.getLogger(__name__)
