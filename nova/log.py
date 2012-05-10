@@ -71,6 +71,7 @@ log_opts = [
                   'sqlalchemy=WARN',
                   'boto=WARN',
                   'suds=INFO',
+                  'keystone=INFO',
                   'eventlet.wsgi.server=WARN'
                   ],
                 help='list of logger=LEVEL pairs'),
@@ -384,6 +385,8 @@ def _setup_logging_from_flags():
         level = logging.getLevelName(level_name)
         logger = logging.getLogger(mod)
         logger.setLevel(level)
+        for handler in nova_root.handlers:
+            logger.addHandler(handler)
 
     # NOTE(jkoelker) Clear the handlers for the root logger that was setup
     #                by basicConfig in nova/__init__.py and install the
