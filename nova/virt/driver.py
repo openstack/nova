@@ -220,9 +220,6 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def snapshot_instance(self, context, instance_id, image_id):
-        raise NotImplementedError()
-
     def get_console_pool_info(self, console_type):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
