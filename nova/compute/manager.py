@@ -77,9 +77,9 @@ compute_opts = [
                help='where instances are stored on disk'),
     cfg.StrOpt('base_dir_name',
                default='_base',
-               help="where cached images are stored under $instances_path"
-                    "This is NOT full path - just a folder name"
-                    "For per-compute-host cached images, Set to _base_$my_ip"),
+               help="Where cached images are stored under $instances_path."
+                    "This is NOT the full path - just a folder name."
+                    "For per-compute-host cached images, set to _base_$my_ip"),
     cfg.StrOpt('compute_driver',
                default='nova.virt.connection.get_connection',
                help='Driver to use for controlling virtualization'),
