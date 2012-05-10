@@ -33,6 +33,7 @@ from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -3490,13 +3491,14 @@ class ComputeAPITestCase(BaseTestCase):
 
         rpc_msg1 = {'method': 'get_vnc_console',
                     'args': {'instance_uuid': fake_instance['uuid'],
-                             'console_type': fake_console_type}}
+                             'console_type': fake_console_type},
+                   'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}
         rpc_msg2 = {'method': 'authorize_console',
                     'args': fake_connect_info,
                     'version': '1.0'}
 
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
-                rpc_msg1).AndReturn(fake_connect_info2)
+                rpc_msg1, None).AndReturn(fake_connect_info2)
         rpc.call(self.context, FLAGS.consoleauth_topic,
                 rpc_msg2, None).AndReturn(None)
 
@@ -3516,9 +3518,10 @@ class ComputeAPITestCase(BaseTestCase):
 
         rpc_msg = {'method': 'get_console_output',
                    'args': {'instance_uuid': fake_instance['uuid'],
-                            'tail_length': fake_tail_length}}
+                            'tail_length': fake_tail_length},
+                   'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
-                rpc_msg).AndReturn(fake_console_output)
+                rpc_msg, None).AndReturn(fake_console_output)
 
         self.mox.ReplayAll()
 
@@ -4018,7 +4021,7 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.host_api = compute_api.HostAPI()
 
     def _rpc_call_stub(self, call_info):
-        def fake_rpc_call(context, topic, msg):
+        def fake_rpc_call(context, topic, msg, timeout=None):
             call_info['context'] = context
             call_info['topic'] = topic
             call_info['msg'] = msg
@@ -4034,7 +4037,8 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.assertEqual(call_info['topic'], 'compute.fake_host')
         self.assertEqual(call_info['msg'],
                 {'method': 'set_host_enabled',
-                 'args': {'enabled': 'fake_enabled'}})
+                 'args': {'enabled': 'fake_enabled'},
+                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
 
     def test_host_power_action(self):
         ctxt = context.RequestContext('fake', 'fake')
@@ -4045,7 +4049,8 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.assertEqual(call_info['topic'], 'compute.fake_host')
         self.assertEqual(call_info['msg'],
                 {'method': 'host_power_action',
-                 'args': {'action': 'fake_action'}})
+                 'args': {'action': 'fake_action'},
+                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
 
     def test_set_host_maintenance(self):
         ctxt = context.RequestContext('fake', 'fake')
@@ -4056,7 +4061,8 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.assertEqual(call_info['topic'], 'compute.fake_host')
         self.assertEqual(call_info['msg'],
                 {'method': 'host_maintenance_mode',
-                 'args': {'host': 'fake_host', 'mode': 'fake_mode'}})
+                 'args': {'host': 'fake_host', 'mode': 'fake_mode'},
+                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
 
 
 class KeypairAPITestCase(BaseTestCase):
