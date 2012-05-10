@@ -793,7 +793,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def rebuild_instance(self, context, instance_uuid, image_ref, **kwargs):
+    def rebuild_instance(self, context, instance_uuid, orig_image_ref,
+            image_ref, **kwargs):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -801,12 +802,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: `nova.RequestContext` object
         :param instance_uuid: Instance Identifier (UUID)
+        :param orig_image_ref: Original image_ref before rebuild
+        :param image_ref: New image_ref for rebuild
         :param injected_files: Files to inject
         :param new_pass: password to set on rebuilt instance
         """
         try:
-            self._rebuild_instance(context, instance_uuid, image_ref,
-                    kwargs)
+            self._rebuild_instance(context, instance_uuid, orig_image_ref,
+                    image_ref, kwargs)
         except exception.ImageNotFound:
             LOG.error(_('Cannot rebuild instance because the given image does '
                         'not exist.'),
@@ -817,25 +820,26 @@ class ComputeManager(manager.SchedulerDependentManager):
                       context=context, instance_uuid=instance_uuid)
             self._set_instance_error_state(context, instance_uuid)
 
-    def _rebuild_instance(self, context, instance_uuid, image_ref, kwargs):
+    def _rebuild_instance(self, context, instance_uuid, orig_image_ref,
+            image_ref, kwargs):
         context = context.elevated()
 
         LOG.audit(_("Rebuilding instance"), context=context,
                   instance_uuid=instance_uuid)
 
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
-        compute_utils.notify_usage_exists(
-                context, instance, current_period=True)
 
-        # NOTE(comstud): Since we've not updated the DB yet with the new
-        # image_ref, and rebuild.start should have image_ref_url pointing
-        # to the new image ref, we need to override it.
-        # Arguably, image_ref_url should still contain the old image at
-        # this point and we should pass a 'new_image_ref_url', instead.
-        image_ref_url = utils.generate_image_url(image_ref)
-        extra_usage_info = {'image_ref_url': image_ref_url}
+        # This instance.exists message should contain the original
+        # image_ref, not the new one.  Since the DB has been updated
+        # to point to the new one... we have to override it.
+        orig_image_ref_url = utils.generate_image_url(orig_image_ref)
+        extra_usage_info = {'image_ref_url': orig_image_ref_url}
+        compute_utils.notify_usage_exists(context, instance,
+                current_period=True, extra_usage_info=extra_usage_info)
+
+        # This message should contain the new image_ref
         self._notify_about_instance_usage(context, instance,
-                "rebuild.start", extra_usage_info=extra_usage_info)
+                "rebuild.start")
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
@@ -847,13 +851,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._get_instance_nw_info(context, instance)
         self.driver.destroy(instance, self._legacy_nw_info(network_info))
 
-        # NOTE(comstud): Now that we've shutdown the old instance, we
-        # can update the image_ref in the DB.
         instance = self._instance_update(context,
                               instance_uuid,
                               vm_state=vm_states.REBUILDING,
-                              task_state=task_states.BLOCK_DEVICE_MAPPING,
-                              image_ref=image_ref)
+                              task_state=task_states.BLOCK_DEVICE_MAPPING)
 
         instance.injected_files = kwargs.get('injected_files', [])
         network_info = self.network_api.get_instance_nw_info(context,
@@ -868,7 +869,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.admin_pass = kwargs.get('new_pass',
                 utils.generate_password(FLAGS.password_length))
 
-        image_meta = _get_image_meta(context, instance['image_ref'])
+        image_meta = _get_image_meta(context, image_ref)
 
         self.driver.spawn(context, instance, image_meta,
                           self._legacy_nw_info(network_info), device_info)

@@ -487,14 +487,11 @@ class ComputeTestCase(BaseTestCase):
         """Ensure instance can be rebuilt"""
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
-
-        new_image_ref = instance['image_ref'] + '-new-image'
+        image_ref = instance['image_ref']
 
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.rebuild_instance(self.context, instance_uuid,
-                new_image_ref)
-        inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(inst_ref['image_ref'], new_image_ref)
+                image_ref, image_ref)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_rebuild_launch_time(self):
@@ -504,11 +501,12 @@ class ComputeTestCase(BaseTestCase):
         utils.set_time_override(old_time)
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
+        image_ref = instance['image_ref']
 
         self.compute.run_instance(self.context, instance_uuid)
         utils.set_time_override(cur_time)
         self.compute.rebuild_instance(self.context, instance_uuid,
-                instance['image_ref'])
+                image_ref, image_ref)
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEquals(cur_time, instance['launched_at'])
         self.compute.terminate_instance(self.context, instance_uuid)
@@ -1079,10 +1077,13 @@ class ComputeTestCase(BaseTestCase):
 
         image_ref = instance["image_ref"]
         new_image_ref = image_ref + '-new_image_ref'
+        db.instance_update(self.context, instance_uuid,
+                {'image_ref': new_image_ref})
+
         password = "new_password"
 
         self.compute._rebuild_instance(self.context, instance_uuid,
-                new_image_ref, dict(new_pass=password))
+                image_ref, new_image_ref, dict(new_pass=password))
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
 
@@ -2217,16 +2218,14 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
 
-        # Make sure Compute API doesn't try to update the image_ref.
-        # It should be done on the manager side.  We can't check the DB
-        # at the end of this test method because we've called the
-        # manager by that point..
+        # Make sure Compute API updates the image_ref before casting to
+        # compute manager.
         orig_update = self.compute_api.update
-        info = {'image_ref_updated': False}
+        info = {'image_ref': None}
 
         def update_wrapper(*args, **kwargs):
             if 'image_ref' in kwargs:
-                info['image_ref_updated'] = True
+                info['image_ref'] = kwargs['image_ref']
             return orig_update(*args, **kwargs)
 
         self.stubs.Set(self.compute_api, 'update', update_wrapper)
@@ -2234,7 +2233,7 @@ class ComputeAPITestCase(BaseTestCase):
         image_ref = instance["image_ref"] + '-new_image_ref'
         password = "new_password"
         self.compute_api.rebuild(self.context, instance, image_ref, password)
-        self.assertFalse(info['image_ref_updated'])
+        self.assertEqual(info['image_ref'], image_ref)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.REBUILDING)
