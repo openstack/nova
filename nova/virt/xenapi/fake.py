@@ -161,10 +161,10 @@ def create_vdi(name_label, sr_ref, **kwargs):
     return _create_object('VDI', vdi_rec)
 
 
-def create_vbd(vm_ref, vdi_ref):
+def create_vbd(vm_ref, vdi_ref, userdevice=0):
     vbd_rec = {'VM': vm_ref,
                'VDI': vdi_ref,
-               'userdevice': '0',
+               'userdevice': str(userdevice),
                'currently_attached': False}
     vbd_ref = _create_object('VBD', vbd_rec)
     after_VBD_create(vbd_ref, vbd_rec)
