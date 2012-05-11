@@ -1333,6 +1333,11 @@ def instance_destroy(context, instance_id):
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
+        session.query(models.InstanceSystemMetadata).\
+                filter_by(instance_uuid=instance_ref['uuid']).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
         session.query(models.BlockDeviceMapping).\
                 filter_by(instance_uuid=instance_ref['uuid']).\
                 update({'deleted': True,
