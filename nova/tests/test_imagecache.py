@@ -71,6 +71,23 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertEquals(csum_input.rstrip(),
                               '{"sha1": "%s"}' % csum_output)
 
+    def test_read_stored_checksum_legacy_essex(self):
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+            self.flags(image_info_filename_pattern=('$instances_path/'
+                                                    '%(image)s.info'))
+
+            fname = os.path.join(tmpdir, 'aaa')
+            old_fname = fname + '.sha1'
+            f = open(old_fname, 'w')
+            f.write('fdghkfhkgjjksfdgjksjkghsdf')
+            f.close()
+
+            csum_output = imagecache.read_stored_checksum(fname)
+            self.assertEquals(csum_output, 'fdghkfhkgjjksfdgjksjkghsdf')
+            self.assertFalse(os.path.exists(old_fname))
+            self.assertTrue(os.path.exists(virtutils.get_info_filename(fname)))
+
     def test_list_base_images(self):
         listing = ['00000001',
                    'ephemeral_0_20_None',
