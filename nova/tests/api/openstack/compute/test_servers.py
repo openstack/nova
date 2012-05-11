@@ -1298,7 +1298,7 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
 
-        def instance_destroy_mock(context, id):
+        def instance_destroy_mock(*args, **kwargs):
             self.server_delete_called = True
         self.stubs.Set(nova.db, 'instance_destroy', instance_destroy_mock)
 
@@ -1313,7 +1313,7 @@ class ServersControllerTest(test.TestCase):
 
         self.server_delete_called = False
 
-        def instance_destroy_mock(context, id):
+        def instance_destroy_mock(*args, **kwargs):
             self.server_delete_called = True
         self.stubs.Set(nova.db, 'instance_destroy', instance_destroy_mock)
 

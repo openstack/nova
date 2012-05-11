@@ -2270,6 +2270,22 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['id'])
 
+    def test_delete_fast_if_host_not_set(self):
+        instance = self._create_fake_instance({'host': None})
+        self.compute_api.delete(self.context, instance)
+        self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
+                          self.context, instance['uuid'])
+
+    def test_delete_handles_host_setting_race_condition(self):
+        instance, instance_uuid = self._run_instance()
+        instance['host'] = None  # make it think host was never set
+        self.compute_api.delete(self.context, instance)
+
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['task_state'], task_states.DELETING)
+
+        db.instance_destroy(self.context, instance['id'])
+
     def test_delete_fail(self):
         instance, instance_uuid = self._run_instance()
 
@@ -3950,12 +3966,7 @@ class ComputePolicyTestCase(BaseTestCase):
         nova.compute.api.check_policy(self.context, 'reboot', {})
 
     def test_wrapped_method(self):
-        instance = self._create_fake_instance()
-        # Reset this to None for this policy check. If it's set, it
-        # tries to do a compute_api.update() and we're not testing for
-        # that here.
-        instance['host'] = None
-        self.compute.run_instance(self.context, instance['uuid'])
+        instance = self._create_fake_instance(params={'host': None})
 
         # force delete to fail
         rules = {"compute:delete": [["false:false"]]}

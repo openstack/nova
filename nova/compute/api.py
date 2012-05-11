@@ -980,9 +980,15 @@ class API(base.Base):
         try:
             if not instance['host']:
                 # Just update database, nothing else we can do
-                result = self.db.instance_destroy(context, instance['id'])
-                QUOTAS.commit(context, reservations)
-                return result
+                constraint = self.db.constraint(host=self.db.equal_any(host))
+                try:
+                    result = self.db.instance_destroy(
+                            context, instance['uuid'], constraint)
+                    QUOTAS.commit(context, reservations)
+                    return result
+                except exception.ConstraintNotMet:
+                    # Refresh to get new host information
+                    instance = self.get(context, instance['uuid'])
 
             self.update(context,
                         instance,

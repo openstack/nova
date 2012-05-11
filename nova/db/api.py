@@ -87,6 +87,32 @@ class NoMoreTargets(exception.NovaException):
 ###################
 
 
+def constraint(**conditions):
+    """Return a constraint object suitable for use with some updates."""
+    return IMPL.constraint(**conditions)
+
+
+def equal_any(*values):
+    """Return an equality condition object suitable for use in a constraint.
+
+    Equal_any conditions require that a model object's attribute equal any
+    one of the given values.
+    """
+    return IMPL.equal_any(*values)
+
+
+def not_equal(*values):
+    """Return an inequality condition object suitable for use in a constraint.
+
+    Not_equal conditions require that a model object's attribute differs from
+    all of the given values.
+    """
+    return IMPL.not_equal(*values)
+
+
+###################
+
+
 def service_destroy(context, instance_id):
     """Destroy the service or raise if it does not exist."""
     return IMPL.service_destroy(context, instance_id)
@@ -527,9 +553,9 @@ def instance_data_get_for_project(context, project_id, session=None):
                                               session=session)
 
 
-def instance_destroy(context, instance_id):
+def instance_destroy(context, instance_id, constraint=None):
     """Destroy the instance or raise if it does not exist."""
-    return IMPL.instance_destroy(context, instance_id)
+    return IMPL.instance_destroy(context, instance_id, constraint)
 
 
 def instance_get_by_uuid(context, uuid):
