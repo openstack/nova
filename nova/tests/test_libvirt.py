@@ -2203,7 +2203,7 @@ class LibvirtUtilsTestCase(test.TestCase):
     def test_create_cow_image(self):
         self.mox.StubOutWithMock(utils, 'execute')
         utils.execute('qemu-img', 'create', '-f', 'qcow2',
-                      '-o', 'cluster_size=2M,backing_file=/some/path',
+                      '-o', 'backing_file=/some/path',
                       '/the/new/cow')
         # Start test
         self.mox.ReplayAll()
