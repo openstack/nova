@@ -610,6 +610,9 @@ class SessionBase(object):
         if self._is_gettersetter(name, True):
             LOG.debug(_('Calling getter %s'), name)
             return lambda *params: self._getter(name, params)
+        elif self._is_gettersetter(name, False):
+            LOG.debug(_('Calling setter %s'), name)
+            return lambda *params: self._setter(name, params)
         elif self._is_create(name):
             return lambda *params: self._create(name, params)
         elif self._is_destroy(name):
@@ -683,6 +686,7 @@ class SessionBase(object):
             if (ref in _db_content[cls] and
                 field in _db_content[cls][ref]):
                 _db_content[cls][ref][field] = val
+                return
 
         LOG.debug(_('Raising NotImplemented'))
         raise NotImplementedError(
