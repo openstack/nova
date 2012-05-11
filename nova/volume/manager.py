@@ -229,12 +229,15 @@ class VolumeManager(manager.SchedulerDependentManager):
         LOG.debug(_("snapshot %s: deleted successfully"), snapshot_ref['name'])
         return True
 
-    def attach_volume(self, context, volume_id, instance_id, mountpoint):
+    def attach_volume(self, context, volume_id, instance_uuid, mountpoint):
         """Updates db to show volume is attached"""
         # TODO(vish): refactor this into a more general "reserve"
+        if not utils.is_uuid_like(instance_uuid):
+            raise exception.InvalidUUID(instance_uuid)
+
         self.db.volume_attached(context,
                                 volume_id,
-                                instance_id,
+                                instance_uuid,
                                 mountpoint)
 
     def detach_volume(self, context, volume_id):
@@ -293,7 +296,10 @@ class VolumeManager(manager.SchedulerDependentManager):
     def check_for_export(self, context, instance_id):
         """Make sure whether volume is exported."""
         instance_ref = self.db.instance_get(context, instance_id)
-        for volume in instance_ref['volumes']:
+        volumes = self.db.volume_get_all_by_instance_uuid(context,
+                                                          instance_ref['uuid'])
+
+        for volume in volumes:
             self.driver.check_for_export(context, volume['id'])
 
     def _volume_stats_changed(self, stat1, stat2):

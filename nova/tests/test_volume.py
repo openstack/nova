@@ -48,7 +48,9 @@ class VolumeTestCase(test.TestCase):
         self.flags(connection_type='fake')
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
-        self.instance_id = db.instance_create(self.context, {})['id']
+        instance = db.instance_create(self.context, {})
+        self.instance_id = instance['id']
+        self.instance_uuid = instance['uuid']
 
     def tearDown(self):
         db.instance_destroy(self.context, self.instance_id)
@@ -175,25 +177,26 @@ class VolumeTestCase(test.TestCase):
         inst['project_id'] = 'fake'
         inst['instance_type_id'] = '2'  # m1.tiny
         inst['ami_launch_index'] = 0
-        instance_id = db.instance_create(self.context, inst)['id']
+        instance = db.instance_create(self.context, {})
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         mountpoint = "/dev/sdf"
         volume = self._create_volume()
         volume_id = volume['id']
         self.volume.create_volume(self.context, volume_id)
         if FLAGS.fake_tests:
-            db.volume_attached(self.context, volume_id, instance_id,
+            db.volume_attached(self.context, volume_id, instance_uuid,
                                mountpoint)
         else:
             self.compute.attach_volume(self.context,
-                                       instance_id,
+                                       instance_uuid,
                                        volume_id,
                                        mountpoint)
         vol = db.volume_get(context.get_admin_context(), volume_id)
         self.assertEqual(vol['status'], "in-use")
         self.assertEqual(vol['attach_status'], "attached")
         self.assertEqual(vol['mountpoint'], mountpoint)
-        instance_ref = db.volume_get_instance(self.context, volume_id)
-        self.assertEqual(instance_ref['id'], instance_id)
+        self.assertEqual(vol['instance_uuid'], instance_uuid)
 
         self.assertRaises(exception.NovaException,
                           self.volume.delete_volume,
@@ -203,7 +206,7 @@ class VolumeTestCase(test.TestCase):
             db.volume_detached(self.context, volume_id)
         else:
             self.compute.detach_volume(self.context,
-                                       instance_id,
+                                       instance_uuid,
                                        volume_id)
         vol = db.volume_get(self.context, volume_id)
         self.assertEqual(vol['status'], "available")
@@ -323,7 +326,7 @@ class VolumeTestCase(test.TestCase):
 
         volume = self._create_volume()
         self.volume.create_volume(self.context, volume['id'])
-        db.volume_attached(self.context, volume['id'], self.instance_id,
+        db.volume_attached(self.context, volume['id'], self.instance_uuid,
                            '/dev/sda1')
 
         volume_api = nova.volume.api.API()
@@ -383,7 +386,9 @@ class DriverTestCase(test.TestCase):
         log.logger.addHandler(logging.logging.StreamHandler(self.stream))
 
         inst = {}
-        self.instance_id = db.instance_create(self.context, inst)['id']
+        instance = db.instance_create(self.context, {})
+        self.instance_id = instance['id']
+        self.instance_uuid = instance['uuid']
 
     def _attach_volume(self):
         """Attach volumes to an instance. This function also sets
@@ -436,7 +441,7 @@ class ISCSITestCase(DriverTestCase):
 
             # each volume has a different mountpoint
             mountpoint = "/dev/sd" + chr((ord('b') + index))
-            db.volume_attached(self.context, vol_ref['id'], self.instance_id,
+            db.volume_attached(self.context, vol_ref['id'], self.instance_uuid,
                                mountpoint)
             volume_id_list.append(vol_ref['id'])
 

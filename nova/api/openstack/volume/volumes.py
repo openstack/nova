@@ -48,15 +48,13 @@ def _translate_attachment_summary_view(_context, vol):
     """Maps keys for attachment summary view."""
     d = {}
 
-    # TODO(bcwaldon): remove str cast once we use uuids
-    volume_id = str(vol['id'])
+    volume_id = vol['id']
 
     # NOTE(justinsb): We use the volume id as the id of the attachment object
     d['id'] = volume_id
 
     d['volume_id'] = volume_id
-    if vol.get('instance'):
-        d['server_id'] = vol['instance']['uuid']
+    d['server_id'] = vol['instance_uuid']
     if vol.get('mountpoint'):
         d['device'] = vol['mountpoint']
 
@@ -77,8 +75,7 @@ def _translate_volume_summary_view(context, vol):
     """Maps keys for volumes summary view."""
     d = {}
 
-    # TODO(bcwaldon): remove str cast once we use uuids
-    d['id'] = str(vol['id'])
+    d['id'] = vol['id']
     d['status'] = vol['status']
     d['size'] = vol['size']
     d['availability_zone'] = vol['availability_zone']
@@ -99,9 +96,6 @@ def _translate_volume_summary_view(context, vol):
         d['volume_type'] = str(vol['volume_type_id'])
 
     d['snapshot_id'] = vol['snapshot_id']
-    # TODO(bcwaldon): remove str cast once we use uuids
-    if d['snapshot_id'] is not None:
-        d['snapshot_id'] = str(d['snapshot_id'])
 
     LOG.audit(_("vol=%s"), vol, context=context)
 

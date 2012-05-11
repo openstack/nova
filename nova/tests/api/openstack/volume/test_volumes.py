@@ -90,6 +90,7 @@ class VolumeApiTest(test.TestCase):
                                  'created_at': datetime.datetime(1, 1, 1,
                                                                 1, 1, 1),
                                  'size': 1}]}
+        self.maxDiff = None
         self.assertEqual(res_dict, expected)
 
     def test_volume_list_detail(self):
@@ -114,7 +115,7 @@ class VolumeApiTest(test.TestCase):
 
     def test_volume_show(self):
         req = fakes.HTTPRequest.blank('/v1/volumes/1')
-        res_dict = self.controller.show(req, 1)
+        res_dict = self.controller.show(req, '1')
         expected = {'volume': {'status': 'fakestatus',
                                'display_description': 'displaydesc',
                                'availability_zone': 'fakeaz',
@@ -139,7 +140,7 @@ class VolumeApiTest(test.TestCase):
         self.stubs.Set(volume_api.API, 'get', stub_volume_get)
 
         req = fakes.HTTPRequest.blank('/v1/volumes/1')
-        res_dict = self.controller.show(req, 1)
+        res_dict = self.controller.show(req, '1')
         expected = {'volume': {'status': 'fakestatus',
                                'display_description': 'displaydesc',
                                'availability_zone': 'fakeaz',

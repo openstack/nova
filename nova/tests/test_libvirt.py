@@ -1215,7 +1215,9 @@ class LibvirtConnTestCase(test.TestCase):
                                           instance_dict)
         vol_dict = {'status': 'migrating', 'size': 1}
         volume_ref = db.volume_create(self.context, vol_dict)
-        db.volume_attached(self.context, volume_ref['id'], instance_ref['id'],
+        db.volume_attached(self.context,
+                           volume_ref['id'],
+                           instance_ref['uuid'],
                            '/dev/fake')
 
         # Preparing mocks

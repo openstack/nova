@@ -371,10 +371,9 @@ class VolumeAttachmentController(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        instance = vol['instance']
-        if instance is None or str(instance['uuid']) != server_id:
-            LOG.debug("Instance not found (server_id=%(server_id)s)",
-                      {'server_id': server_id}, instance=instance)
+        instance_uuid = vol['instance_uuid']
+        if instance_uuid is None or instance_uuid != server_id:
+            LOG.debug(_("Instance %s is not attached."), instance_uuid)
             raise exc.HTTPNotFound()
 
         self.compute_api.detach_volume(context,

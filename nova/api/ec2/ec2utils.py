@@ -197,6 +197,10 @@ def get_snapshot_uuid_from_int_id(context, int_id):
     return db.get_snapshot_uuid_by_ec2_id(context, int_id)
 
 
+def ec2_instance_id_to_uuid(context, ec2_id):
+    int_id = ec2_id_to_id(ec2_id)
+    return db.instance_get(context, int_id)['uuid']
+
 _c2u = re.compile('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
 
 

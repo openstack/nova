@@ -311,7 +311,7 @@
 ###### (StrOpt) Template string to be used to generate snapshot names
 # snapshot_name_template="snapshot-%08x"
 ###### (StrOpt) Template string to be used to generate instance names
-# volume_name_template="volume-%08x"
+# volume_name_template="volume-%s"
 
 ######### defined in nova.crypto #########
 
