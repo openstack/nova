@@ -293,10 +293,10 @@ class FloatingIP(object):
                     LOG.debug(msg)
                     continue
                 fixed_address = fixed_ip_ref['address']
-                interface = floating_ip['interface']
+                interface = FLAGS.public_interface or floating_ip['interface']
                 try:
                     self.l3driver.add_floating_ip(floating_ip['address'],
-                            fixed_address, floating_ip['interface'])
+                            fixed_address, interface)
                 except exception.ProcessExecutionError:
                     LOG.debug(_('Interface %(interface)s not found'), locals())
                     raise exception.NoFloatingIpInterface(interface=interface)
@@ -476,7 +476,7 @@ class FloatingIP(object):
         else:
             host = network['host']
 
-        interface = floating_ip['interface']
+        interface = FLAGS.public_interface or floating_ip['interface']
         if host == self.host:
             # i'm the correct host
             self._associate_floating_ip(context, floating_address,
@@ -547,7 +547,7 @@ class FloatingIP(object):
         else:
             host = network['host']
 
-        interface = floating_ip['interface']
+        interface = FLAGS.public_interface or floating_ip['interface']
         if host == self.host:
             # i'm the correct host
             self._disassociate_floating_ip(context, address, interface)

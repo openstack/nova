@@ -716,11 +716,24 @@ class VlanNetworkTestCase(test.TestCase):
         self.stubs.Set(self.network.db, 'fixed_ip_get', fixed_ip_get)
 
         self.mox.StubOutWithMock(self.network.l3driver, 'add_floating_ip')
+        self.flags(public_interface=False)
         self.network.l3driver.add_floating_ip('fakefloat',
                                               'fakefixed',
                                               'fakeiface')
         self.mox.ReplayAll()
         self.network.init_host_floating_ips()
+        self.mox.UnsetStubs()
+        self.mox.VerifyAll()
+
+        self.mox.StubOutWithMock(self.network.l3driver, 'add_floating_ip')
+        self.flags(public_interface='fooiface')
+        self.network.l3driver.add_floating_ip('fakefloat',
+                                              'fakefixed',
+                                              'fooiface')
+        self.mox.ReplayAll()
+        self.network.init_host_floating_ips()
+        self.mox.UnsetStubs()
+        self.mox.VerifyAll()
 
     def test_disassociate_floating_ip(self):
         ctxt = context.RequestContext('testuser', 'testproject',
