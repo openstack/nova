@@ -231,7 +231,7 @@ class AdminActionsController(wsgi.Controller):
 
         props = {}
         metadata = entity.get('metadata', {})
-        common.check_img_metadata_quota_limit(context, metadata)
+        common.check_img_metadata_properties_quota(context, metadata)
         try:
             props.update(metadata)
         except ValueError:

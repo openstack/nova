@@ -269,7 +269,7 @@ def get_version_from_href(href):
         return '2'
 
 
-def check_img_metadata_quota_limit(context, metadata):
+def check_img_metadata_properties_quota(context, metadata):
     if metadata is None:
         return
     num_metadata = len(metadata)
@@ -278,6 +278,19 @@ def check_img_metadata_quota_limit(context, metadata):
         expl = _("Image metadata limit exceeded")
         raise webob.exc.HTTPRequestEntityTooLarge(explanation=expl,
                                                 headers={'Retry-After': 0})
+
+    #  check the key length.
+    if isinstance(metadata, dict):
+        for key, value in metadata.iteritems():
+            if len(key) == 0:
+                expl = _("Image metadata key cannot be blank")
+                raise webob.exc.HTTPBadRequest(explanation=expl)
+            if len(key) > 255:
+                expl = _("Image metadata key too long")
+                raise webob.exc.HTTPBadRequest(explanation=expl)
+    else:
+        expl = _("Invalid image metadata")
+        raise webob.exc.HTTPBadRequest(explanation=expl)
 
 
 def dict_to_query_str(params):

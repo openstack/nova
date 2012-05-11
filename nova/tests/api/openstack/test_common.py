@@ -28,6 +28,7 @@ from nova import exception
 from nova import test
 from nova.api.openstack import common
 from nova.api.openstack import xmlutil
+from nova.tests import utils as test_utils
 
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -327,6 +328,34 @@ class MiscFunctionsTest(test.TestCase):
                 "Instance is in an invalid state for 'meow'")
         else:
             self.fail("webob.exc.HTTPConflict was not raised")
+
+    def test_check_img_metadata_properties_quota_valid_metadata(self):
+        ctxt = test_utils.get_test_admin_context()
+        metadata1 = {"key": "value"}
+        actual = common.check_img_metadata_properties_quota(ctxt, metadata1)
+        self.assertEqual(actual, None)
+
+        metadata2 = {"key": "v" * 260}
+        actual = common.check_img_metadata_properties_quota(ctxt, metadata2)
+        self.assertEqual(actual, None)
+
+        metadata3 = {"key": ""}
+        actual = common.check_img_metadata_properties_quota(ctxt, metadata3)
+        self.assertEqual(actual, None)
+
+    def test_check_img_metadata_properties_quota_inv_metadata(self):
+        ctxt = test_utils.get_test_admin_context()
+        metadata1 = {"a" * 260: "value"}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                common.check_img_metadata_properties_quota, ctxt, metadata1)
+
+        metadata2 = {"": "value"}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                common.check_img_metadata_properties_quota, ctxt, metadata2)
+
+        metadata3 = "invalid metadata"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                common.check_img_metadata_properties_quota, ctxt, metadata3)
 
 
 class MetadataXMLDeserializationTest(test.TestCase):
