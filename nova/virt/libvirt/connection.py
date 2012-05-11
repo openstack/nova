@@ -1096,7 +1096,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         generating = 'image_id' not in kwargs
         if not os.path.exists(target):
-            base_dir = os.path.join(FLAGS.instances_path, '_base')
+            base_dir = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)
+
             if not os.path.exists(base_dir):
                 libvirt_utils.ensure_tree(base_dir)
             base = os.path.join(base_dir, fname)

@@ -36,6 +36,7 @@ from nova.virt.libvirt import utils as virtutils
 
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
+flags.DECLARE('base_dir_name', 'nova.compute.manager')
 FLAGS = flags.FLAGS
 
 LOG = log.getLogger(__name__)
@@ -155,7 +156,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.stubs.Set(virtutils, 'get_disk_backing_file',
                        lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
-        found = os.path.join(FLAGS.instances_path, '_base',
+        found = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name,
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
         image_cache_manager = imagecache.ImageCacheManager()
@@ -177,7 +178,7 @@ class ImageCacheManagerTestCase(test.TestCase):
                        lambda x: ('e97222e91fc4241f49a7f520d1dcf446751129b3_'
                                   '10737418240'))
 
-        found = os.path.join(FLAGS.instances_path, '_base',
+        found = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name,
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_'
                              '10737418240')
 
@@ -198,7 +199,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.stubs.Set(virtutils, 'get_disk_backing_file',
                        lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
-        found = os.path.join(FLAGS.instances_path, '_base',
+        found = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name,
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
         image_cache_manager = imagecache.ImageCacheManager()
@@ -521,6 +522,7 @@ class ImageCacheManagerTestCase(test.TestCase):
         hashed_42 = '92cfceb39d57d914ed8b14d0e37643de0797ae56'
 
         self.flags(instances_path='/instance_path')
+        self.flags(base_dir_name='_base')
         self.flags(remove_unused_base_images=True)
 
         base_file_list = ['00000001',
