@@ -342,7 +342,19 @@ def read_stored_info(base_path, field=None):
 
     info_file = get_info_filename(base_path)
     if not os.path.exists(info_file):
-        d = {}
+        # Special case to handle essex checksums being converted
+        old_filename = base_path + '.sha1'
+        if field == 'sha1' and os.path.exists(old_filename):
+            hash_file = open(old_filename)
+            hash_value = hash_file.read()
+            hash_file.close()
+
+            write_stored_info(base_path, field=field, value=hash_value)
+            os.remove(old_filename)
+            d = {field: hash_value}
+
+        else:
+            d = {}
 
     else:
         LOG.info(_('Reading image info file: %s'), info_file)
