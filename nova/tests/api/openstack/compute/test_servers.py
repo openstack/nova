@@ -1478,6 +1478,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.db, 'project_get_networks',
                        project_get_networks)
         self.stubs.Set(nova.db, 'instance_create', instance_create)
+        self.stubs.Set(nova.db, 'instance_system_metadata_update',
+                fake_method)
         self.stubs.Set(nova.db, 'instance_get', instance_get)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
         self.stubs.Set(nova.rpc, 'call', rpc_call_wrapper)

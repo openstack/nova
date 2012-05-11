@@ -600,7 +600,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      launched_at=utils.utcnow())
 
     def _notify_about_instance_usage(self, context, instance, event_suffix,
-                                     network_info=None,
+                                     network_info=None, system_metadata=None,
                                      extra_usage_info=None):
         # NOTE(sirp): The only thing this wrapper function does extra is handle
         # the passing in of `self.host`. Ordinarily this will just be
@@ -608,6 +608,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # `__init__`.
         compute_utils.notify_about_instance_usage(
                 context, instance, event_suffix, network_info=network_info,
+                system_metadata=system_metadata,
                 extra_usage_info=extra_usage_info, host=self.host)
 
     def _deallocate_network(self, context, instance):
@@ -712,17 +713,23 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _delete_instance(self, context, instance):
         """Delete an instance on this host."""
-        instance_id = instance['id']
+        instance_uuid = instance['uuid']
         self._notify_about_instance_usage(context, instance, "delete.start")
         self._shutdown_instance(context, instance, 'Terminating')
-        self._cleanup_volumes(context, instance['uuid'])
+        self._cleanup_volumes(context, instance_uuid)
         instance = self._instance_update(context,
-                              instance_id,
+                              instance_uuid,
                               vm_state=vm_states.DELETED,
                               task_state=None,
                               terminated_at=utils.utcnow())
-        self.db.instance_destroy(context, instance_id)
-        self._notify_about_instance_usage(context, instance, "delete.end")
+        # Pull the system_metadata before we delete the instance, so we
+        # can pass it to delete.end notification, as it will not be able
+        # to look it up anymore, if it needs it.
+        system_meta = self.db.instance_system_metadata_get(context,
+                instance_uuid)
+        self.db.instance_destroy(context, instance_uuid)
+        self._notify_about_instance_usage(context, instance, "delete.end",
+                system_metadata=system_meta)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
