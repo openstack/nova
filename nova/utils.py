@@ -71,29 +71,6 @@ FLAGS.register_opt(
                 help='Whether to disable inter-process locks'))
 
 
-def find_config(config_path):
-    """Find a configuration file using the given hint.
-
-    :param config_path: Full or relative path to the config.
-    :returns: Full path of the config, if it exists.
-    :raises: `nova.exception.ConfigNotFound`
-
-    """
-    possible_locations = [
-        config_path,
-        os.path.join(FLAGS.state_path, "etc", "nova", config_path),
-        os.path.join(FLAGS.state_path, "etc", config_path),
-        os.path.join(FLAGS.state_path, config_path),
-        "/etc/nova/%s" % config_path,
-    ]
-
-    for path in possible_locations:
-        if os.path.exists(path):
-            return os.path.abspath(path)
-
-    raise exception.ConfigNotFound(path=os.path.abspath(config_path))
-
-
 def vpn_ping(address, port, timeout=0.05, session_id=None):
     """Sends a vpn negotiation packet and returns the server session.
 
