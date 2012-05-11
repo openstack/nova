@@ -110,18 +110,24 @@ class SchedulerManager(manager.Manager):
         Sets instance vm_state to ERROR on exceptions
         """
         args = (context,) + args
+        reservations = kwargs.get('reservations', None)
         try:
-            return self.driver.schedule_run_instance(*args, **kwargs)
+            result = self.driver.schedule_run_instance(*args, **kwargs)
+            return result
         except exception.NoValidHost as ex:
             # don't reraise
             self._set_vm_state_and_notify('run_instance',
                                          {'vm_state': vm_states.ERROR},
                                           context, ex, *args, **kwargs)
+            if reservations:
+                QUOTAS.rollback(context, reservations)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('run_instance',
                                              {'vm_state': vm_states.ERROR},
                                              context, ex, *args, **kwargs)
+                if reservations:
+                    QUOTAS.rollback(context, reservations)
 
     def prep_resize(self, context, topic, *args, **kwargs):
         """Tries to call schedule_prep_resize on the driver.

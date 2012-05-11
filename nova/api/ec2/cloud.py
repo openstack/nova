@@ -40,6 +40,7 @@ from nova import flags
 from nova.image import s3
 from nova import log as logging
 from nova import network
+from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova import quota
 from nova import utils
@@ -49,6 +50,8 @@ from nova import volume
 FLAGS = flags.FLAGS
 
 LOG = logging.getLogger(__name__)
+
+QUOTAS = quota.QUOTAS
 
 
 def validate_ec2_id(val):
@@ -713,10 +716,11 @@ class CloudController(object):
                     raise exception.EC2APIError(err % values_for_rule)
                 postvalues.append(values_for_rule)
 
-        allowed = quota.allowed_security_group_rules(context,
-                                                   security_group['id'],
-                                                   1)
-        if allowed < 1:
+        count = QUOTAS.count(context, 'security_group_rules',
+                             security_group['id'])
+        try:
+            QUOTAS.limit_check(context, security_group_rules=count + 1)
+        except exception.OverQuota:
             msg = _("Quota exceeded, too many security group rules.")
             raise exception.EC2APIError(msg)
 
@@ -777,17 +781,26 @@ class CloudController(object):
             msg = _('group %s already exists')
             raise exception.EC2APIError(msg % group_name)
 
-        if quota.allowed_security_groups(context, 1) < 1:
+        try:
+            reservations = QUOTAS.reserve(context, security_groups=1)
+        except exception.OverQuota:
             msg = _("Quota exceeded, too many security groups.")
             raise exception.EC2APIError(msg)
 
-        group = {'user_id': context.user_id,
-                 'project_id': context.project_id,
-                 'name': group_name,
-                 'description': group_description}
-        group_ref = db.security_group_create(context, group)
+        try:
+            group = {'user_id': context.user_id,
+                     'project_id': context.project_id,
+                     'name': group_name,
+                     'description': group_description}
+            group_ref = db.security_group_create(context, group)
 
-        self.sgh.trigger_security_group_create_refresh(context, group)
+            self.sgh.trigger_security_group_create_refresh(context, group)
+
+            # Commit the reservation
+            QUOTAS.commit(context, reservations)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                QUOTAS.rollback(context, reservations)
 
         return {'securityGroupSet': [self._format_security_group(context,
                                                                  group_ref)]}
@@ -810,11 +823,25 @@ class CloudController(object):
                 raise notfound(security_group_id=group_id)
         if db.security_group_in_use(context, security_group.id):
             raise exception.InvalidGroup(reason="In Use")
+
+        # Get reservations
+        try:
+            reservations = QUOTAS.reserve(context, security_groups=-1)
+        except Exception:
+            reservations = None
+            LOG.exception(_("Failed to update usages deallocating "
+                            "security group"))
+
         LOG.audit(_("Delete security group %s"), group_name, context=context)
         db.security_group_destroy(context, security_group.id)
 
         self.sgh.trigger_security_group_destroy_refresh(context,
                                                         security_group.id)
+
+        # Commit the reservations
+        if reservations:
+            QUOTAS.commit(context, reservations)
+
         return True
 
     def get_console_output(self, context, instance_id, **kwargs):

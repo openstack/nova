@@ -51,7 +51,8 @@ class FilterScheduler(driver.Scheduler):
         msg = _("No host selection for %s defined.") % topic
         raise exception.NoValidHost(reason=msg)
 
-    def schedule_run_instance(self, context, request_spec, *args, **kwargs):
+    def schedule_run_instance(self, context, request_spec, reservations,
+                              *args, **kwargs):
         """This method is called from nova.compute.api to provision
         an instance.  We first create a build plan (a list of WeightedHosts)
         and then provision.
@@ -86,7 +87,8 @@ class FilterScheduler(driver.Scheduler):
 
             request_spec['instance_properties']['launch_index'] = num
             instance = self._provision_resource(elevated, weighted_host,
-                                                request_spec, kwargs)
+                                                request_spec, reservations,
+                                                kwargs)
 
             if instance:
                 instances.append(instance)
@@ -118,9 +120,10 @@ class FilterScheduler(driver.Scheduler):
                 'prep_resize', **kwargs)
 
     def _provision_resource(self, context, weighted_host, request_spec,
-            kwargs):
+            reservations, kwargs):
         """Create the requested resource in this Zone."""
-        instance = self.create_instance_db_entry(context, request_spec)
+        instance = self.create_instance_db_entry(context, request_spec,
+                                                 reservations)
 
         payload = dict(request_spec=request_spec,
                        weighted_host=weighted_host.to_dict(),

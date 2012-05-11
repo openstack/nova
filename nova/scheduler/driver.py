@@ -159,7 +159,7 @@ class Scheduler(object):
                 for service in services
                 if utils.service_is_up(service)]
 
-    def create_instance_db_entry(self, context, request_spec):
+    def create_instance_db_entry(self, context, request_spec, reservations):
         """Create instance DB entry based on request_spec"""
         base_options = request_spec['instance_properties']
         if base_options.get('uuid'):
@@ -172,7 +172,7 @@ class Scheduler(object):
 
         instance = self.compute_api.create_db_entry_for_new_instance(
                 context, instance_type, image, base_options,
-                security_group, block_device_mapping)
+                security_group, block_device_mapping, reservations)
         # NOTE(comstud): This needs to be set for the generic exception
         # checking in scheduler manager, so that it'll set this instance
         # to ERROR properly.

@@ -551,26 +551,12 @@ class VlanNetworkTestCase(test.TestCase):
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
 
-        def fake1(*args, **kwargs):
+        def fake_allocate_address(*args, **kwargs):
             return {'address': '10.0.0.1', 'project_id': ctxt.project_id}
 
-        def fake2(*args, **kwargs):
-            return 25
+        self.stubs.Set(self.network.db, 'floating_ip_allocate_address',
+                       fake_allocate_address)
 
-        def fake3(*args, **kwargs):
-            return 0
-
-        self.stubs.Set(self.network.db, 'floating_ip_allocate_address', fake1)
-
-        # this time should raise
-        self.stubs.Set(self.network.db, 'floating_ip_count_by_project', fake2)
-        self.assertRaises(exception.QuotaError,
-                          self.network.allocate_floating_ip,
-                          ctxt,
-                          ctxt.project_id)
-
-        # this time should not
-        self.stubs.Set(self.network.db, 'floating_ip_count_by_project', fake3)
         self.network.allocate_floating_ip(ctxt, ctxt.project_id)
 
     def test_deallocate_floating_ip(self):

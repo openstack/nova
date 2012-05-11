@@ -17,12 +17,11 @@
 
 import datetime
 
+from glance import client as glance_client
 import routes
 import webob
 import webob.dec
 import webob.request
-
-from glance import client as glance_client
 
 from nova.api import auth as api_auth
 from nova.api import openstack as openstack_api
@@ -40,10 +39,14 @@ from nova.db.sqlalchemy import models
 from nova import exception as exc
 import nova.image.fake
 from nova.openstack.common import jsonutils
+from nova import quota
 from nova.tests import fake_network
 from nova.tests.glance import stubs as glance_stubs
 from nova import utils
 from nova import wsgi
+
+
+QUOTAS = quota.QUOTAS
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -142,9 +145,19 @@ def stub_out_rate_limiting(stubs):
 
 
 def stub_out_instance_quota(stubs, allowed):
-    def fake_allowed_instances(context, max_count, instance_type):
-        return allowed
-    stubs.Set(nova.quota, 'allowed_instances', fake_allowed_instances)
+    def fake_reserve(context, **deltas):
+        instances = deltas.pop('instances', 0)
+        if instances > allowed:
+            raise exc.OverQuota(overs=['instances'], quotas=dict(
+                    instances=allowed,
+                    cores=10000,
+                    ram=10000 * 1024,
+                    ), usages=dict(
+                    instances=dict(in_use=0, reserved=0),
+                    cores=dict(in_use=0, reserved=0),
+                    ram=dict(in_use=0, reserved=0),
+                    ))
+    stubs.Set(QUOTAS, 'reserve', fake_reserve)
 
 
 def stub_out_networking(stubs):

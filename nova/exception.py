@@ -998,6 +998,10 @@ class VolumeSizeTooLarge(QuotaError):
     message = _("Maximum volume size exceeded")
 
 
+class FloatingIpLimitExceeded(QuotaError):
+    message = _("Maximum number of floating ips exceeded")
+
+
 class MetadataLimitExceeded(QuotaError):
     message = _("Maximum number of metadata items exceeds %(allowed)d")
 

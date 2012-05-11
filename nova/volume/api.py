@@ -38,6 +38,8 @@ flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
 LOG = logging.getLogger(__name__)
 
+QUOTAS = quota.QUOTAS
+
 
 def wrap_check_policy(func):
     """Check policy corresponding to the wrapped methods prior to execution
@@ -80,7 +82,9 @@ class API(base.Base):
         else:
             snapshot_id = None
 
-        if quota.allowed_volumes(context, 1, size) < 1:
+        try:
+            reservations = QUOTAS.reserve(context, volumes=1, gigabytes=size)
+        except exception.OverQuota:
             pid = context.project_id
             LOG.warn(_("Quota exceeded for %(pid)s, tried to create"
                     " %(size)sG volume") % locals())
@@ -114,7 +118,8 @@ class API(base.Base):
                  {"method": "create_volume",
                   "args": {"topic": FLAGS.volume_topic,
                            "volume_id": volume['id'],
-                           "snapshot_id": snapshot_id}})
+                           "snapshot_id": snapshot_id,
+                           "reservations": reservations}})
         return volume
 
     # TODO(yamahata): eliminate dumb polling

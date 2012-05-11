@@ -91,7 +91,8 @@ class SimpleScheduler(chance.ChanceScheduler):
         msg = _("Is the appropriate service running?")
         raise exception.NoValidHost(reason=msg)
 
-    def schedule_run_instance(self, context, request_spec, *_args, **_kwargs):
+    def schedule_run_instance(self, context, request_spec, reservations,
+                              *_args, **_kwargs):
         num_instances = request_spec.get('num_instances', 1)
         instances = []
         for num in xrange(num_instances):
@@ -99,7 +100,7 @@ class SimpleScheduler(chance.ChanceScheduler):
                     request_spec['instance_properties'], *_args, **_kwargs)
             request_spec['instance_properties']['launch_index'] = num
             instance_ref = self.create_instance_db_entry(context,
-                    request_spec)
+                    request_spec, reservations)
             driver.cast_to_compute_host(context, host, 'run_instance',
                     instance_uuid=instance_ref['uuid'], **_kwargs)
             instances.append(driver.encode_instance(instance_ref))
