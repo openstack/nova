@@ -22,7 +22,6 @@ import nova.context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import image
 from nova import log
 from nova import network
 from nova.network import model as network_model
@@ -36,7 +35,7 @@ LOG = log.getLogger(__name__)
 
 def notify_usage_exists(context, instance_ref, current_period=False,
                         ignore_missing_network_data=True,
-                        extra_usage_info=None):
+                        system_metadata=None, extra_usage_info=None):
     """Generates 'exists' notification for an instance for usage auditing
     purposes.
 
@@ -46,6 +45,11 @@ def notify_usage_exists(context, instance_ref, current_period=False,
 
     :param ignore_missing_network_data: if True, log any exceptions generated
         while getting network info; if False, raise the exception.
+    :param system_metadata: system_metadata DB entries for the instance,
+        if not None.  *NOTE*: Currently unused here in trunk, but needed for
+        potential custom modifications.
+    :param extra_usage_info: Dictionary containing extra values to add or
+        override in the notification if not None.
     """
 
     admin_context = nova.context.get_admin_context(read_deleted='yes')
@@ -88,8 +92,18 @@ def notify_usage_exists(context, instance_ref, current_period=False,
 
         bw[label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
 
+    if system_metadata is None:
+        try:
+            system_metadata = db.instance_system_metadata_get(
+                    context, instance_ref.uuid)
+        except exception.NotFound:
+            system_metadata = {}
+
     # add image metadata to the notification:
-    image_meta = _get_image_meta(context, instance_ref)
+    image_meta = {}
+    for md_key, md_value in system_metadata.iteritems():
+        if md_key.startswith('image_'):
+            image_meta[md_key[6:]] = md_value
 
     extra_info = dict(audit_period_beginning=str(audit_start),
                       audit_period_ending=str(audit_end),
@@ -98,14 +112,8 @@ def notify_usage_exists(context, instance_ref, current_period=False,
     if extra_usage_info:
         extra_info.update(extra_usage_info)
 
-    notify_about_instance_usage(
-            context, instance_ref, 'exists', extra_usage_info=extra_info)
-
-
-def _get_image_meta(context, instance_ref):
-    image_service, image_id = image.get_image_service(context,
-            instance_ref["image_ref"])
-    return image_service.show(context, image_id)
+    notify_about_instance_usage(context, instance_ref, 'exists',
+            system_metadata=system_metadata, extra_usage_info=extra_info)
 
 
 def legacy_network_info(network_model):
@@ -223,7 +231,18 @@ def legacy_network_info(network_model):
     return network_info
 
 
-def _usage_from_instance(context, instance_ref, network_info=None, **kw):
+def _usage_from_instance(context, instance_ref, network_info,
+        system_metadata, **kw):
+    """
+    Get usage information for an instance which is common to all
+    notifications.
+
+    :param network_info: network_info provided if not None
+    :param system_metadata: system_metadata DB entries for the instance,
+        if not None.  *NOTE*: Currently unused here in trunk, but needed for
+        potential custom modifications.
+    """
+
     def null_safe_str(s):
         return str(s) if s else ''
 
@@ -256,16 +275,29 @@ def _usage_from_instance(context, instance_ref, network_info=None, **kw):
 
 
 def notify_about_instance_usage(context, instance, event_suffix,
-                                network_info=None, extra_usage_info=None,
-                                host=None):
+                                network_info=None, system_metadata=None,
+                                extra_usage_info=None, host=None):
+    """
+    Send a notification about an instance.
+
+    :param event_suffix: Event type like "delete.start" or "exists"
+    :param network_info: Networking information, if provided.
+    :param system_metadata: system_metadata DB entries for the instance,
+        if provided.
+    :param extra_usage_info: Dictionary containing extra values to add or
+        override in the notification.
+    :param host: Compute host for the instance, if specified.  Default is
+        FLAGS.host
+    """
+
     if not host:
         host = FLAGS.host
 
     if not extra_usage_info:
         extra_usage_info = {}
 
-    usage_info = _usage_from_instance(
-            context, instance, network_info=network_info, **extra_usage_info)
+    usage_info = _usage_from_instance(context, instance, network_info,
+            system_metadata, **extra_usage_info)
 
     notifier_api.notify(context, 'compute.%s' % host,
                         'compute.instance.%s' % event_suffix,

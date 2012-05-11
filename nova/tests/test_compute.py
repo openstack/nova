@@ -116,7 +116,9 @@ class BaseTestCase(test.TestCase):
 
         def fake_show(meh, context, id):
             return {'id': 1, 'min_disk': None, 'min_ram': None,
-                    'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
+                    'properties': {'kernel_id': 'fake_kernel_id',
+                                   'ramdisk_id': 'fake_ramdisk_id',
+                                   'something_else': 'meow'}}
 
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
         self.stubs.Set(rpc, 'call', rpc_call_wrapper)
@@ -1815,7 +1817,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api = compute.API()
         self.fake_image = {
             'id': 1,
-            'properties': {'kernel_id': 1, 'ramdisk_id': 1},
+            'properties': {'kernel_id': 'fake_kernel_id',
+                           'ramdisk_id': 'fake_ramdisk_id'},
         }
 
     def _run_instance(self):
@@ -1912,6 +1915,22 @@ class ComputeAPITestCase(BaseTestCase):
                 self.assertNotEqual(ref[0]['display_name'], None)
             finally:
                 db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_create_instance_sets_system_metadata(self):
+        """Make sure image properties are copied into system metadata."""
+        (ref, resv_id) = self.compute_api.create(
+                self.context,
+                instance_type=instance_types.get_default_instance_type(),
+                image_href=None)
+        try:
+            sys_metadata = db.instance_system_metadata_get(self.context,
+                    ref[0]['uuid'])
+            self.assertEqual(sys_metadata,
+                    {'image_kernel_id': 'fake_kernel_id',
+                     'image_ramdisk_id': 'fake_ramdisk_id',
+                     'image_something_else': 'meow'})
+        finally:
+            db.instance_destroy(self.context, ref[0]['id'])
 
     def test_create_instance_associates_security_groups(self):
         """Make sure create associates security groups"""

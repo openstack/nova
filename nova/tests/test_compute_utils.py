@@ -83,6 +83,12 @@ class UsageInfoTestCase(test.TestCase):
         """Ensure 'exists' notification generates appropriate usage data."""
         instance_id = self._create_instance()
         instance = db.instance_get(self.context, instance_id)
+        # Set some system metadata
+        sys_metadata = {'image_md_key1': 'val1',
+                        'image_md_key2': 'val2',
+                        'other_data': 'meow'}
+        db.instance_system_metadata_update(self.context, instance['uuid'],
+                sys_metadata, False)
         compute_utils.notify_usage_exists(self.context, instance)
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 1)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -101,7 +107,8 @@ class UsageInfoTestCase(test.TestCase):
                      'audit_period_ending', 'image_meta'):
             self.assertTrue(attr in payload,
                             msg="Key %s not in payload" % attr)
-        self.assertEquals(payload['image_meta']['id'], 1)
+        self.assertEquals(payload['image_meta'],
+                {'md_key1': 'val1', 'md_key2': 'val2'})
         image_ref_url = "%s/images/1" % utils.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance['uuid'])

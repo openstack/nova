@@ -576,6 +576,13 @@ class API(BaseAPI):
                     security_group_name)
             security_groups.append(group['id'])
 
+        # Store image properties so we can use them later
+        # (for notifications, etc).  Only store what we can.
+        base_options.setdefault('system_metadata', {})
+        for key, value in image['properties'].iteritems():
+            new_value = str(value)[:255]
+            base_options['system_metadata']['image_%s' % key] = new_value
+
         base_options.setdefault('launch_index', 0)
         instance = self.db.instance_create(context, base_options)
         instance_id = instance['id']
@@ -617,8 +624,7 @@ class API(BaseAPI):
             block_device_mapping):
             updates['shutdown_terminate'] = False
 
-        instance = self.update(context, instance, **updates)
-        return instance
+        return self.update(context, instance, **updates)
 
     def _default_display_name(self, instance_id):
         return "Server %s" % instance_id
