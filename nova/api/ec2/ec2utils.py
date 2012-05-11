@@ -166,6 +166,10 @@ def _try_convert(value):
     *             try conversion to int, float, complex, fallback value
 
     """
+    def _negative_zero(value):
+        epsilon = 1e-7
+        return 0 if abs(value) < epsilon else value
+
     if len(value) == 0:
         return ''
     if value == 'None':
@@ -175,31 +179,14 @@ def _try_convert(value):
         return True
     if lowered_value == 'false':
         return False
-    valueneg = value[1:] if value[0] == '-' else value
-    if valueneg == '0':
-        return 0
-    if valueneg == '':
-        return value
-    if valueneg[0] == '0':
-        if valueneg[1] in 'xX':
-            return int(value, 16)
-        elif valueneg[1] in 'bB':
-            return int(value, 2)
-        else:
-            try:
-                return int(value, 8)
-            except ValueError:
-                pass
+    for prefix, base in [('0x', 16), ('0b', 2), ('0', 8), ('', 10)]:
+        try:
+            if lowered_value.startswith((prefix, "-" + prefix)):
+                return int(lowered_value, base)
+        except ValueError:
+            pass
     try:
-        return int(value)
-    except ValueError:
-        pass
-    try:
-        return float(value)
-    except ValueError:
-        pass
-    try:
-        return complex(value)
+        return _negative_zero(float(value))
     except ValueError:
         return value
 
