@@ -162,12 +162,6 @@ def stubout_create_vm(stubs):
     stubs.Set(vm_utils.VMHelper, 'create_vm', f)
 
 
-def stubout_loopingcall_start(stubs):
-    def fake_start(self, interval):
-        self.f(*self.args, **self.kw)
-    stubs.Set(utils.LoopingCall, 'start', fake_start)
-
-
 def _make_fake_vdi():
     sr_ref = fake.get_all('SR')[0]
     vdi_ref = fake.create_vdi('', sr_ref)

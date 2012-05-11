@@ -453,7 +453,6 @@ class XenAPIVMTestCase(test.TestCase):
                     hostname="test", architecture="x86-64", instance_id=1,
                     check_injection=False,
                     create_record=True, empty_dns=False):
-        stubs.stubout_loopingcall_start(self.stubs)
         if create_record:
             instance_values = {'id': instance_id,
                       'project_id': self.project_id,
@@ -755,7 +754,6 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _create_instance(self, instance_id=1, spawn=True):
         """Creates and spawns a test instance."""
-        stubs.stubout_loopingcall_start(self.stubs)
         instance_values = {
             'id': instance_id,
             'project_id': self.project_id,
@@ -983,7 +981,6 @@ class XenAPIMigrateInstance(test.TestCase):
                        "VDI_resize", fake_vdi_resize)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
                               product_version=(6, 0, 0))
-        stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
         vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
@@ -1034,7 +1031,6 @@ class XenAPIMigrateInstance(test.TestCase):
         self.stubs.Set(vmops.VMOps, 'finish_revert_migration',
                        fake_finish_revert_migration)
 
-        stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
                           {'broadcast': '192.168.0.255',
@@ -1079,7 +1075,6 @@ class XenAPIMigrateInstance(test.TestCase):
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
 
-        stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
                           {'broadcast': '192.168.0.255',
@@ -1114,7 +1109,6 @@ class XenAPIMigrateInstance(test.TestCase):
 
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
-        stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
                           {'broadcast': '192.168.0.255',
@@ -1143,7 +1137,6 @@ class XenAPIMigrateInstance(test.TestCase):
 
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
-        stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
                           {'broadcast': '192.168.0.255',
