@@ -3,6 +3,7 @@
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # Copyright 2011 Piston Cloud Computing, Inc.
+# Copyright 2012 Red Hat, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,6 +24,7 @@ networking and storage of vms, and compute hosts on which they run)."""
 import functools
 import re
 import time
+import string
 
 from nova import block_device
 from nova.compute import aggregate_states
@@ -30,6 +32,7 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import crypto
 from nova.db import base
 from nova import exception
 from nova import flags
@@ -1908,3 +1911,83 @@ class AggregateAPI(base.Base):
         result["metadata"] = metadata
         result["hosts"] = hosts
         return result
+
+
+class KeypairAPI(base.Base):
+    """Sub-set of the Compute Manager API for managing key pairs."""
+    def __init__(self, **kwargs):
+        super(KeypairAPI, self).__init__(**kwargs)
+
+    def _validate_keypair_name(self, context, user_id, key_name):
+        safechars = "_- " + string.digits + string.ascii_letters
+        clean_value = "".join(x for x in key_name if x in safechars)
+        if clean_value != key_name:
+            msg = _("Keypair name contains unsafe characters")
+            raise exception.InvalidKeypair(explanation=msg)
+
+        if not 0 < len(key_name) < 256:
+            msg = _('Keypair name must be between 1 and 255 characters long')
+            raise exception.InvalidKeypair(explanation=msg)
+
+        # NOTE: check for existing keypairs of same name
+        try:
+            self.db.key_pair_get(context, user_id, key_name)
+            msg = _("Key pair '%s' already exists.") % key_name
+            raise exception.KeyPairExists(explanation=msg)
+        except exception.NotFound:
+            pass
+
+    def import_key_pair(self, context, user_id, key_name, public_key):
+        """Import a key pair using an existing public key."""
+        self._validate_keypair_name(context, user_id, key_name)
+
+        if quota.allowed_key_pairs(context, 1) < 1:
+            raise exception.KeypairLimitExceeded()
+
+        try:
+            fingerprint = crypto.generate_fingerprint(public_key)
+        except exception.InvalidKeypair:
+            msg = _("Keypair data is invalid")
+            raise exception.InvalidKeypair(explanation=msg)
+
+        keypair = {'user_id': user_id,
+                   'name': key_name,
+                   'fingerprint': fingerprint,
+                   'public_key': public_key}
+
+        self.db.key_pair_create(context, keypair)
+        return keypair
+
+    def create_key_pair(self, context, user_id, key_name):
+        """Create a new key pair."""
+        self._validate_keypair_name(context, user_id, key_name)
+
+        if quota.allowed_key_pairs(context, 1) < 1:
+            raise exception.KeypairLimitExceeded()
+
+        private_key, public_key, fingerprint = crypto.generate_key_pair()
+
+        keypair = {'user_id': user_id,
+                   'name': key_name,
+                   'fingerprint': fingerprint,
+                   'public_key': public_key,
+                   'private_key': private_key}
+        self.db.key_pair_create(context, keypair)
+
+        return keypair
+
+    def delete_key_pair(self, context, user_id, key_name):
+        """Delete a keypair by name."""
+        self.db.key_pair_destroy(context, user_id, key_name)
+
+    def get_key_pairs(self, context, user_id):
+        """List key pairs."""
+        key_pairs = self.db.key_pair_get_all_by_user(context, user_id)
+        rval = []
+        for key_pair in key_pairs:
+            rval.append({
+                'name': key_pair['name'],
+                'public_key': key_pair['public_key'],
+                'fingerprint': key_pair['fingerprint'],
+            })
+        return rval

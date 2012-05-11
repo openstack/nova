@@ -28,6 +28,7 @@ import tempfile
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
+from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -144,7 +145,9 @@ class CloudTestCase(test.TestCase):
 
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
-        return cloud._gen_key(self.context, self.context.user_id, name)
+        keypair_api = compute_api.KeypairAPI()
+        return keypair_api.create_key_pair(self.context, self.context.user_id,
+                                           name)
 
     def test_describe_regions(self):
         """Makes sure describe regions runs without raising an exception"""

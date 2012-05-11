@@ -3872,3 +3872,105 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.assertEqual(call_info['msg'],
                 {'method': 'host_maintenance_mode',
                  'args': {'host': 'fake_host', 'mode': 'fake_mode'}})
+
+
+class KeypairAPITestCase(BaseTestCase):
+    def setUp(self):
+        super(KeypairAPITestCase, self).setUp()
+        self.keypair_api = compute_api.KeypairAPI()
+        self.ctxt = context.RequestContext('fake', 'fake')
+        self._keypair_db_call_stubs()
+        self.pub_key = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLnVkqJu9WVf' \
+                  '/5StU3JCrBR2r1s1j8K1tux+5XeSvdqaM8lMFNorzbY5iyoBbRS56gy' \
+                  '1jmm43QsMPJsrpfUZKcJpRENSe3OxIIwWXRoiapZe78u/a9xKwj0avF' \
+                  'YMcws9Rk9iAB7W4K1nEJbyCPl5lRBoyqeHBqrnnuXWEgGxJCK0Ah6wc' \
+                  'OzwlEiVjdf4kxzXrwPHyi7Ea1qvnNXTziF8yYmUlH4C8UXfpTQckwSw' \
+                  'pDyxZUc63P8q+vPbs3Q2kw+/7vvkCKHJAXVI+oCiyMMfffoTq16M1xf' \
+                  'V58JstgtTqAXG+ZFpicGajREUE/E3hO5MGgcHmyzIrWHKpe1n3oEGuz'
+        self.fingerprint = '4e:48:c6:a0:4a:f9:dd:b5:4c:85:54:5a:af:43:47:5a'
+
+    def _keypair_db_call_stubs(self):
+
+        def db_key_pair_get_all_by_user(self, user_id):
+            return []
+
+        def db_key_pair_create(self, keypair):
+            pass
+
+        def db_key_pair_destroy(context, user_id, name):
+            pass
+
+        self.stubs.Set(db, "key_pair_get_all_by_user",
+                       db_key_pair_get_all_by_user)
+        self.stubs.Set(db, "key_pair_create",
+                       db_key_pair_create)
+        self.stubs.Set(db, "key_pair_destroy",
+                       db_key_pair_destroy)
+
+    def test_create_keypair(self):
+        keypair = self.keypair_api.create_key_pair(self.ctxt,
+                                                   self.ctxt.user_id, 'foo')
+        self.assertEqual('foo', keypair['name'])
+
+    def test_create_keypair_name_too_long(self):
+        self.assertRaises(exception.InvalidKeypair,
+                          self.keypair_api.create_key_pair,
+                          self.ctxt, self.ctxt.user_id, 'x' * 256)
+
+    def test_create_keypair_invalid_chars(self):
+        self.assertRaises(exception.InvalidKeypair,
+                          self.keypair_api.create_key_pair,
+                          self.ctxt, self.ctxt.user_id, '* BAD CHARACTERS! *')
+
+    def test_create_keypair_already_exists(self):
+        def db_key_pair_get(context, user_id, name):
+            pass
+        self.stubs.Set(db, "key_pair_get",
+                       db_key_pair_get)
+        self.assertRaises(exception.KeyPairExists,
+                          self.keypair_api.create_key_pair,
+                          self.ctxt, self.ctxt.user_id, 'foo')
+
+    def test_create_keypair_quota_limit(self):
+        def db_key_pair_count_by_user_max(self, user_id):
+            return FLAGS.quota_key_pairs
+        self.stubs.Set(db, "key_pair_count_by_user",
+                       db_key_pair_count_by_user_max)
+        self.assertRaises(exception.KeypairLimitExceeded,
+                          self.keypair_api.create_key_pair,
+                          self.ctxt, self.ctxt.user_id, 'foo')
+
+    def test_import_keypair(self):
+        keypair = self.keypair_api.import_key_pair(self.ctxt,
+                                                   self.ctxt.user_id,
+                                                   'foo',
+                                                   self.pub_key)
+        self.assertEqual('foo', keypair['name'])
+        self.assertEqual(self.fingerprint, keypair['fingerprint'])
+        self.assertEqual(self.pub_key, keypair['public_key'])
+
+    def test_import_keypair_bad_public_key(self):
+        self.assertRaises(exception.InvalidKeypair,
+                          self.keypair_api.import_key_pair,
+                          self.ctxt, self.ctxt.user_id, 'foo', 'bad key data')
+
+    def test_import_keypair_name_too_long(self):
+        self.assertRaises(exception.InvalidKeypair,
+                          self.keypair_api.import_key_pair,
+                          self.ctxt, self.ctxt.user_id, 'x' * 256,
+                          self.pub_key)
+
+    def test_import_keypair_invalid_chars(self):
+        self.assertRaises(exception.InvalidKeypair,
+                          self.keypair_api.import_key_pair,
+                          self.ctxt, self.ctxt.user_id,
+                          '* BAD CHARACTERS! *', self.pub_key)
+
+    def test_import_keypair_quota_limit(self):
+        def db_key_pair_count_by_user_max(self, user_id):
+            return FLAGS.quota_key_pairs
+        self.stubs.Set(db, "key_pair_count_by_user",
+                       db_key_pair_count_by_user_max)
+        self.assertRaises(exception.KeypairLimitExceeded,
+                          self.keypair_api.import_key_pair,
+                          self.ctxt, self.ctxt.user_id, 'foo', self.pub_key)

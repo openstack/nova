@@ -17,18 +17,14 @@
 
 """ Keypair management extension"""
 
-import string
-
 import webob
 import webob.exc
 
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.api.openstack import extensions
-from nova import crypto
-from nova import db
+from nova.compute import api as compute_api
 from nova import exception
-from nova import quota
 
 
 authorize = extensions.extension_authorizer('compute', 'keypairs')
@@ -50,26 +46,10 @@ class KeypairsTemplate(xmlutil.TemplateBuilder):
 
 
 class KeypairController(object):
+
     """ Keypair API controller for the OpenStack API """
-
-    # TODO(ja): both this file and nova.api.ec2.cloud.py have similar logic.
-    # move the common keypair logic to nova.compute.API?
-
-    def _gen_key(self):
-        """
-        Generate a key
-        """
-        private_key, public_key, fingerprint = crypto.generate_key_pair()
-        return {'private_key': private_key,
-                'public_key': public_key,
-                'fingerprint': fingerprint}
-
-    def _validate_keypair_name(self, value):
-        safechars = "_-" + string.digits + string.ascii_letters
-        clean_value = "".join(x for x in value if x in safechars)
-        if clean_value != value:
-            msg = _("Keypair name contains unsafe characters")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+    def __init__(self):
+        self.api = compute_api.KeypairAPI()
 
     @wsgi.serializers(xml=KeypairTemplate)
     def create(self, req, body):
@@ -90,45 +70,29 @@ class KeypairController(object):
         authorize(context)
         params = body['keypair']
         name = params['name']
-        self._validate_keypair_name(name)
 
-        if not 0 < len(name) < 256:
-            msg = _('Keypair name must be between 1 and 255 characters long')
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-        # NOTE(ja): generation is slow, so shortcut invalid name exception
         try:
-            db.key_pair_get(context, context.user_id, name)
-            msg = _("Key pair '%s' already exists.") % name
-            raise webob.exc.HTTPConflict(explanation=msg)
-        except exception.NotFound:
-            pass
+            if 'public_key' in params:
+                keypair = self.api.import_key_pair(context,
+                                              context.user_id, name,
+                                              params['public_key'])
+            else:
+                keypair = self.api.create_key_pair(context, context.user_id,
+                                                   name)
 
-        keypair = {'user_id': context.user_id,
-                   'name': name}
+            return {'keypair': keypair}
 
-        if quota.allowed_key_pairs(context, 1) < 1:
+        except exception.KeypairLimitExceeded:
             msg = _("Quota exceeded, too many key pairs.")
             raise webob.exc.HTTPRequestEntityTooLarge(
-                      explanation=msg,
-                      headers={'Retry-After': 0})
-        # import if public_key is sent
-        if 'public_key' in params:
-            try:
-                fingerprint = crypto.generate_fingerprint(params['public_key'])
-            except exception.InvalidKeypair:
-                msg = _("Keypair data is invalid")
-                raise webob.exc.HTTPBadRequest(explanation=msg)
-
-            keypair['public_key'] = params['public_key']
-            keypair['fingerprint'] = fingerprint
-        else:
-            generated_key = self._gen_key()
-            keypair['private_key'] = generated_key['private_key']
-            keypair['public_key'] = generated_key['public_key']
-            keypair['fingerprint'] = generated_key['fingerprint']
-
-        db.key_pair_create(context, keypair)
-        return {'keypair': keypair}
+                        explanation=msg,
+                        headers={'Retry-After': 0})
+        except exception.InvalidKeypair:
+            msg = _("Keypair data is invalid")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        except exception.KeyPairExists:
+            msg = _("Key pair '%s' already exists.") % name
+            raise webob.exc.HTTPConflict(explanation=msg)
 
     def delete(self, req, id):
         """
@@ -137,7 +101,7 @@ class KeypairController(object):
         context = req.environ['nova.context']
         authorize(context)
         try:
-            db.key_pair_destroy(context, context.user_id, id)
+            self.api.delete_key_pair(context, context.user_id, id)
         except exception.KeypairNotFound:
             raise webob.exc.HTTPNotFound()
         return webob.Response(status_int=202)
@@ -149,7 +113,7 @@ class KeypairController(object):
         """
         context = req.environ['nova.context']
         authorize(context)
-        key_pairs = db.key_pair_get_all_by_user(context, context.user_id)
+        key_pairs = self.api.get_key_pairs(context, context.user_id)
         rval = []
         for key_pair in key_pairs:
             rval.append({'keypair': {

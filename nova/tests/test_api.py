@@ -35,8 +35,8 @@ from nova import test
 from nova.api import auth
 from nova.api import ec2
 from nova.api.ec2 import apirequest
-from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
+from nova.compute import api as compute_api
 
 
 class FakeHttplibSocket(object):
@@ -290,13 +290,11 @@ class ApiEc2TestCase(test.TestCase):
     def test_get_all_key_pairs(self):
         """Test that, after creating a user and project and generating
          a key pair, that the API call to list key pairs works properly"""
-        self.expect_http()
-        self.mox.ReplayAll()
         keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                           for x in range(random.randint(4, 8)))
-        # NOTE(vish): create depends on pool, so call helper directly
-        cloud._gen_key(context.get_admin_context(), 'fake', keyname)
-
+        self.expect_http()
+        self.mox.ReplayAll()
+        self.ec2.create_key_pair(keyname)
         rv = self.ec2.get_all_key_pairs()
         results = [k for k in rv if k.name == keyname]
         self.assertEquals(len(results), 1)
@@ -306,9 +304,6 @@ class ApiEc2TestCase(test.TestCase):
         requesting a second keypair with the same name fails sanely"""
         self.expect_http()
         self.mox.ReplayAll()
-        keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
-                          for x in range(random.randint(4, 8)))
-        # NOTE(vish): create depends on pool, so call helper directly
         self.ec2.create_key_pair('test')
 
         try:
