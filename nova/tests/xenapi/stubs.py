@@ -246,12 +246,6 @@ class FakeSessionForVMTests(fake.SessionBase):
     def SR_scan(self, session_ref, sr_ref):
         pass
 
-    def VDI_set_name_label(self, session_ref, vdi_ref, name_label):
-        pass
-
-    def VDI_set_name_description(self, session_ref, vdi_ref, name_description):
-        pass
-
 
 class FakeSessionForFirewallTests(FakeSessionForVMTests):
     """ Stubs out a XenApi Session for doing IPTable Firewall tests """
@@ -355,24 +349,13 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
         pass
 
 
-class FakeSessionForMigrationTests(FakeSessionForVMTests):
-    """Stubs out a XenAPISession for Migration tests"""
-    def __init__(self, uri):
-        super(FakeSessionForMigrationTests, self).__init__(uri)
-
-    def VDI_get_by_uuid(self, *args):
-        return 'hurr'
-
-    def VM_set_name_label(self, *args):
-        pass
-
-    def VDI_set_name_label(self, session_ref, vdi_ref, name_label):
-        pass
-
-
 def stub_out_migration_methods(stubs):
     def fake_create_snapshot(self, instance):
         return 'vm_ref', dict(image='foo', snap='bar')
+
+    def fake_move_disks(self, instance, disk_info):
+        vdi_ref = fake.create_vdi('new', 'fake')
+        return fake.get_record('VDI', vdi_ref)['uuid']
 
     @classmethod
     def fake_get_vdi(cls, session, vm_ref):
@@ -396,6 +379,7 @@ def stub_out_migration_methods(stubs):
         pass
 
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
+    stubs.Set(vmops.VMOps, '_move_disks', fake_move_disks)
     stubs.Set(vm_utils.VMHelper, 'scan_default_sr', fake_sr)
     stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_sr)
     stubs.Set(vmops.VMOps, '_create_snapshot', fake_create_snapshot)

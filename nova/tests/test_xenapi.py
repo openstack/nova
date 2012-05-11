@@ -748,8 +748,6 @@ class XenAPIVMTestCase(test.TestCase):
             def finish_revert_migration(self, instance):
                 self.finish_revert_migration_called = True
 
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
-
         conn = xenapi_conn.get_connection(False)
         conn._vmops = VMOpsMock()
         conn.finish_revert_migration(instance, None)
@@ -846,6 +844,7 @@ class XenAPIMigrateInstance(test.TestCase):
                 xenapi_connection_password='test_pass',
                 firewall_driver='nova.virt.xenapi.firewall.'
                                 'Dom0IptablesFirewallDriver')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
@@ -885,8 +884,6 @@ class XenAPIMigrateInstance(test.TestCase):
         """Test all migrations are checked despite errors when
         autoconfirming resizes.
         """
-        stubs.stubout_session(self.stubs,
-                              stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
 
         self.mox.StubOutWithMock(context, 'get_admin_context')
@@ -982,21 +979,21 @@ class XenAPIMigrateInstance(test.TestCase):
         def fake_vdi_resize(*args, **kwargs):
             called['resize'] = True
 
-        self.stubs.Set(stubs.FakeSessionForMigrationTests,
+        self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize", fake_vdi_resize)
-        stubs.stubout_session(self.stubs,
-                              stubs.FakeSessionForMigrationTests,
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
                               product_version=(6, 0, 0))
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
-        conn._vmops._resize_instance(instance, '')
+        vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
+        vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
+        conn._vmops._resize_instance(instance, vdi_uuid)
         self.assertEqual(called['resize'], True)
 
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance.name, 'Running')
         instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', instance_type, None)
@@ -1005,7 +1002,6 @@ class XenAPIMigrateInstance(test.TestCase):
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance.name, 'Running')
         instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
 
         def fake_raise(*args, **kwargs):
             raise exception.MigrationError(reason='test failure')
@@ -1032,13 +1028,12 @@ class XenAPIMigrateInstance(test.TestCase):
         def fake_finish_revert_migration(*args, **kwargs):
             self.fake_finish_revert_migration_called = True
 
-        self.stubs.Set(stubs.FakeSessionForMigrationTests,
+        self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
         self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
         self.stubs.Set(vmops.VMOps, 'finish_revert_migration',
                        fake_finish_revert_migration)
 
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
@@ -1056,8 +1051,12 @@ class XenAPIMigrateInstance(test.TestCase):
                            'mac': 'DE:AD:BE:EF:00:00',
                            'rxtx_cap': 3})]
         image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
+        base = xenapi_fake.create_vdi('hurr', 'fake')
+        base_uuid = xenapi_fake.get_record('VDI', base)['uuid']
+        cow = xenapi_fake.create_vdi('durr', 'fake')
+        cow_uuid = xenapi_fake.get_record('VDI', cow)['uuid']
         conn.finish_migration(self.context, self.migration, instance,
-                              dict(base_copy='hurr', cow='durr'),
+                              dict(base_copy=base_uuid, cow=cow_uuid),
                               network_info, image_meta, resize_instance=True)
         self.assertEqual(self.called, True)
         self.assertEqual(self.fake_vm_start_called, True)
@@ -1077,10 +1076,9 @@ class XenAPIMigrateInstance(test.TestCase):
             self.called = True
 
         self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
-        self.stubs.Set(stubs.FakeSessionForMigrationTests,
+        self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
 
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
@@ -1114,9 +1112,8 @@ class XenAPIMigrateInstance(test.TestCase):
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
 
-        self.stubs.Set(stubs.FakeSessionForMigrationTests,
+        self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
@@ -1144,9 +1141,8 @@ class XenAPIMigrateInstance(test.TestCase):
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
 
-        self.stubs.Set(stubs.FakeSessionForMigrationTests,
-                "VDI_resize_online", fake_vdi_resize)
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       "VDI_resize_online", fake_vdi_resize)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
