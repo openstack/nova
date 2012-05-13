@@ -1773,30 +1773,15 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         domain = self._lookup_by_name(instance_name)
         xml = domain.XMLDesc(0)
-        doc = None
 
         try:
             doc = etree.fromstring(xml)
         except Exception:
             return []
 
-        disks = []
-
-        ret = doc.findall('./devices/disk')
-
-        for node in ret:
-            devdst = None
-
-            for child in node.children:
-                if child.name == 'target':
-                    devdst = child.prop('dev')
-
-            if devdst is None:
-                continue
-
-            disks.append(devdst)
-
-        return disks
+        return filter(bool,
+                      [target.get("dev") \
+                           for target in doc.findall('devices/disk/target')])
 
     def get_interfaces(self, instance_name):
         """
