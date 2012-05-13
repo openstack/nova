@@ -211,6 +211,18 @@ class DbApiTestCase(test.TestCase):
         system_meta = db.instance_system_metadata_get(ctxt, instance.uuid)
         self.assertEqual('baz', system_meta['original_image_ref'])
 
+    def test_instance_update_with_and_get_original(self):
+        ctxt = context.get_admin_context()
+
+        # Create an instance with some metadata
+        values = {'vm_state': 'building'}
+        instance = db.instance_create(ctxt, values)
+
+        (old_ref, new_ref) = db.instance_update_and_get_original(ctxt,
+                instance['id'], {'vm_state': 'needscoffee'})
+        self.assertEquals("building", old_ref["vm_state"])
+        self.assertEquals("needscoffee", new_ref["vm_state"])
+
     def test_instance_fault_create(self):
         """Ensure we can create an instance fault"""
         ctxt = context.get_admin_context()

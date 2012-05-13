@@ -28,6 +28,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import notifications
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova.scheduler import driver
@@ -232,9 +233,10 @@ class SchedulerManagerTestCase(test.TestCase):
         """
 
         fake_instance_uuid = 'fake-instance-id'
+        inst = {"vm_state": "", "task_state": ""}
 
         self._mox_schedule_method_helper('schedule_run_instance')
-        self.mox.StubOutWithMock(db, 'instance_update')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         request_spec = {'instance_properties':
                 {'uuid': fake_instance_uuid}}
@@ -243,8 +245,8 @@ class SchedulerManagerTestCase(test.TestCase):
         self.manager.driver.schedule_run_instance(self.context,
                 *self.fake_args, **self.fake_kwargs).AndRaise(
                         exception.NoValidHost(reason=""))
-        db.instance_update(self.context, fake_instance_uuid,
-                {'vm_state': vm_states.ERROR})
+        db.instance_update_and_get_original(self.context, fake_instance_uuid,
+                {"vm_state": vm_states.ERROR}).AndReturn((inst, inst))
 
         self.mox.ReplayAll()
         self.manager.run_instance(self.context, self.topic,
@@ -255,10 +257,11 @@ class SchedulerManagerTestCase(test.TestCase):
         the instance in ACTIVE state
         """
         fake_instance_uuid = 'fake-instance-id'
+        inst = {"vm_state": "", "task_state": ""}
 
         self._mox_schedule_method_helper('schedule_prep_resize')
 
-        self.mox.StubOutWithMock(db, 'instance_update')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         request_spec = {'instance_properties':
                 {'uuid': fake_instance_uuid}}
@@ -267,9 +270,9 @@ class SchedulerManagerTestCase(test.TestCase):
         self.manager.driver.schedule_prep_resize(self.context,
                 *self.fake_args, **self.fake_kwargs).AndRaise(
                         exception.NoValidHost(reason=""))
-        db.instance_update(self.context, fake_instance_uuid,
-                {'vm_state': vm_states.ACTIVE,
-                 'task_state': None})
+        db.instance_update_and_get_original(self.context, fake_instance_uuid,
+                {"vm_state": vm_states.ACTIVE, "task_state": None}).AndReturn(
+                        (inst, inst))
 
         self.mox.ReplayAll()
         self.manager.prep_resize(self.context, self.topic,
@@ -283,7 +286,7 @@ class SchedulerManagerTestCase(test.TestCase):
 
         self._mox_schedule_method_helper('schedule_prep_resize')
 
-        self.mox.StubOutWithMock(db, 'instance_update')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         request_spec = {'instance_properties':
                 {'uuid': fake_instance_uuid}}
@@ -292,8 +295,13 @@ class SchedulerManagerTestCase(test.TestCase):
         self.manager.driver.schedule_prep_resize(self.context,
                 *self.fake_args, **self.fake_kwargs).AndRaise(
                 self.AnException('something happened'))
-        db.instance_update(self.context, fake_instance_uuid,
-                {'vm_state': vm_states.ERROR})
+
+        inst = {
+            "vm_state": "",
+            "task_state": "",
+        }
+        db.instance_update_and_get_original(self.context, fake_instance_uuid,
+                {"vm_state": vm_states.ERROR}).AndReturn((inst, inst))
 
         self.mox.ReplayAll()
 
@@ -421,7 +429,9 @@ class SchedulerTestCase(test.TestCase):
                 'power_state': power_state.RUNNING,
                 'memory_mb': 1024,
                 'root_gb': 1024,
-                'ephemeral_gb': 0}
+                'ephemeral_gb': 0,
+                'vm_state': '',
+                'task_state': ''}
 
     def test_live_migration_basic(self):
         """Test basic schedule_live_migration functionality"""
@@ -429,7 +439,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
-        self.mox.StubOutWithMock(db, 'instance_update')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
 
         dest = 'fake_host2'
@@ -443,8 +453,9 @@ class SchedulerTestCase(test.TestCase):
                 dest, block_migration, disk_over_commit)
         self.driver._live_migration_common_check(self.context, instance,
                 dest, block_migration, disk_over_commit)
-        db.instance_update(self.context, instance['id'],
-                {'vm_state': vm_states.MIGRATING})
+        db.instance_update_and_get_original(self.context, instance['id'],
+                {"vm_state": vm_states.MIGRATING}).AndReturn(
+                        (instance, instance))
 
         driver.cast_to_compute_host(self.context, instance['host'],
                 'live_migration', update_db=False,
@@ -468,7 +479,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'queue_get_for')
         self.mox.StubOutWithMock(rpc, 'call')
         self.mox.StubOutWithMock(rpc, 'cast')
-        self.mox.StubOutWithMock(db, 'instance_update')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
 
         dest = 'fake_host2'
@@ -530,8 +541,9 @@ class SchedulerTestCase(test.TestCase):
                 {'method': 'compare_cpu',
                  'args': {'cpu_info': 'fake_cpu_info'}}).AndReturn(True)
 
-        db.instance_update(self.context, instance['id'],
-                {'vm_state': vm_states.MIGRATING})
+        db.instance_update_and_get_original(self.context, instance['id'],
+                {"vm_state": vm_states.MIGRATING}).AndReturn(
+                        (instance, instance))
 
         driver.cast_to_compute_host(self.context, instance['host'],
                 'live_migration', update_db=False,

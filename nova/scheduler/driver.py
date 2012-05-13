@@ -28,6 +28,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -226,7 +227,11 @@ class Scheduler(object):
 
         # Changing instance_state.
         values = {"vm_state": vm_states.MIGRATING}
-        db.instance_update(context, instance_id, values)
+
+        # update instance state and notify
+        (old_ref, new_instance_ref) = db.instance_update_and_get_original(
+                context, instance_id, values)
+        notifications.send_update(context, old_ref, new_instance_ref)
 
         src = instance_ref['host']
         cast_to_compute_host(context, src, 'live_migration',

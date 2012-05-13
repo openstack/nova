@@ -26,6 +26,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova import notifications
 from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger(__name__)
@@ -74,21 +75,34 @@ class Host(object):
                         vm_counter = vm_counter + 1
 
                         dest = _host_find(ctxt, self._session, host, host_ref)
-                        db.instance_update(ctxt, instance.id,
-                                           {'host': dest,
-                                            'vm_state': vm_states.MIGRATING})
+                        (old_ref, new_ref) = \
+                                db.instance_update_and_get_original(ctxt,
+                                        instance.id,
+                                        {'host': dest,
+                                         'vm_state': vm_states.MIGRATING})
+                        notifications.send_update(ctxt, old_ref, new_ref)
+
                         self._session.call_xenapi('VM.pool_migrate',
                                                   vm_ref, host_ref, {})
                         migrations_counter = migrations_counter + 1
-                        db.instance_update(ctxt, instance.id,
-                                           {'vm_state': vm_states.ACTIVE})
+
+                        (old_ref, new_ref) = \
+                            db.instance_update_and_get_original(ctxt,
+                                    instance.id,
+                                    {'vm_state': vm_states.ACTIVE})
+                        notifications.send_update(ctxt, old_ref, new_ref)
+
                         break
                     except self.XenAPI.Failure:
                         LOG.exception('Unable to migrate VM %(vm_ref)s'
                                       'from %(host)s' % locals())
-                        db.instance_update(ctxt, instance.id,
-                                           {'host': host,
-                                            'vm_state': vm_states.ACTIVE})
+                        (old_ref, new_ref) = \
+                            db.instance_update_and_get_original(ctxt,
+                                    instance.id,
+                                    {'hosts': host,
+                                     'vm_state': vm_states.ACTIVE})
+                        notifications.send_update(ctxt, old_ref, new_ref)
+
             if vm_counter == migrations_counter:
                 return 'on_maintenance'
             else:

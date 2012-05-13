@@ -42,6 +42,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import notifications
 from nova.openstack.common import cfg
 from nova import utils
 from nova.virt.baremetal import dom
@@ -253,14 +254,20 @@ class ProxyConnection(driver.ComputeDriver):
             try:
                 LOG.debug(_("Key is injected but instance is not running yet"),
                           instance=instance)
-                db.instance_update(context, instance['id'],
-                    {'vm_state': vm_states.BUILDING})
+                (old_ref, new_ref) = db.instance_update_and_get_original(
+                        context, instance['id'],
+                        {'vm_state': vm_states.BUILDING})
+                notifications.send_update(context, old_ref, new_ref)
+
                 state = self._conn.create_domain(xml_dict, bpath)
                 if state == power_state.RUNNING:
                     LOG.debug(_('instance %s: booted'), instance['name'],
                               instance=instance)
-                    db.instance_update(context, instance['id'],
+                    (old_ref, new_ref) = db.instance_update_and_get_original(
+                            context, instance['id'],
                             {'vm_state': vm_states.ACTIVE})
+                    notifications.send_update(context, old_ref, new_ref)
+
                     LOG.debug(_('~~~~~~ current state = %s ~~~~~~'), state,
                               instance=instance)
                     LOG.debug(_("instance %s spawned successfully"),
@@ -271,9 +278,12 @@ class ProxyConnection(driver.ComputeDriver):
             except Exception as Exn:
                 LOG.debug(_("Bremetal assignment is overcommitted."),
                           instance=instance)
-                db.instance_update(context, instance['id'],
-                           {'vm_state': vm_states.OVERCOMMIT,
-                            'power_state': power_state.SUSPENDED})
+                (old_ref, new_ref) = db.instance_update_and_get_original(
+                        context, instance['id'],
+                        {'vm_state': vm_states.OVERCOMMIT,
+                         'power_state': power_state.SUSPENDED})
+                notifications.send_update(context, old_ref, new_ref)
+
             timer.stop()
         timer.f = _wait_for_boot
 

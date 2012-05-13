@@ -29,6 +29,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova import notifications
 from nova.notifier import api as notifier
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
@@ -173,7 +174,11 @@ class SchedulerManager(manager.Manager):
             state = vm_state.upper()
             LOG.warning(_('Setting instance to %(state)s state.'), locals(),
                         instance_uuid=instance_uuid)
-            db.instance_update(context, instance_uuid, updates)
+
+            # update instance state and notify on the transition
+            (old_ref, new_ref) = db.instance_update_and_get_original(context,
+                    instance_uuid, updates)
+            notifications.send_update(context, old_ref, new_ref)
 
         payload = dict(request_spec=request_spec,
                        instance_properties=properties,
