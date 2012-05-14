@@ -64,7 +64,8 @@ class LibvirtBridgeDriver(vif.VIFDriver):
 
         conf.filtername = "nova-instance-" + instance['name'] + "-" + mac_id
         conf.add_filter_param("IP", mapping['ips'][0]['ip'])
-        conf.add_filter_param("DHCPSERVER", mapping['dhcp_server'])
+        if mapping['dhcp_server']:
+            conf.add_filter_param("DHCPSERVER", mapping['dhcp_server'])
 
         if FLAGS.use_ipv6:
             conf.add_filter_param("RASERVER",

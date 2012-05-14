@@ -186,7 +186,7 @@ def legacy_network_info(network_model):
                                         False)
         should_create_vlan = get_meta(network, 'should_create_vlan', False)
         gateway = get_ip(subnet_v4['gateway'])
-        dhcp_server = get_meta(subnet_v4, 'dhcp_server', gateway)
+        dhcp_server = get_meta(subnet_v4, 'dhcp_server')
         network_dict = dict(bridge=network['bridge'],
                             id=network['id'],
                             cidr=subnet_v4['cidr'],

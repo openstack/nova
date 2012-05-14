@@ -166,7 +166,7 @@ class FlatNetworkTestCase(test.TestCase):
             self.assertDictMatch(nw, check)
 
             check = {'broadcast': '192.168.%d.255' % nid,
-                     'dhcp_server': '192.168.%d.1' % nid,
+                     'dhcp_server': None,
                      'dns': ['192.168.%d.3' % nid, '192.168.%d.4' % nid],
                      'gateway': '192.168.%d.1' % nid,
                      'gateway_v6': 'fe80::def',
