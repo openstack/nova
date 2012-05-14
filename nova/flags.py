@@ -37,6 +37,8 @@ from nova.openstack.common import cfg
 class NovaConfigOpts(cfg.CommonConfigOpts):
 
     def __init__(self, *args, **kwargs):
+        if 'project' not in kwargs:
+            kwargs['project'] = 'nova'
         super(NovaConfigOpts, self).__init__(*args, **kwargs)
         self.disable_interspersed_args()
 
