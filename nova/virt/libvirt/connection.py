@@ -1844,10 +1844,15 @@ class LibvirtConnection(driver.ComputeDriver):
         if sys.platform.upper() not in ['LINUX2', 'LINUX3']:
             return 0
 
-        meminfo = open('/proc/meminfo').read().split()
-        idx = meminfo.index('MemTotal:')
-        # transforming kb to mb.
-        return int(meminfo[idx + 1]) / 1024
+        if FLAGS.libvirt_type == 'xen':
+            meminfo = self._conn.getInfo()[1]
+            # this is in MB
+            return meminfo
+        else:
+            meminfo = open('/proc/meminfo').read().split()
+            idx = meminfo.index('MemTotal:')
+            # transforming KB to MB
+            return int(meminfo[idx + 1]) / 1024
 
     @staticmethod
     def get_local_gb_total():
@@ -1896,8 +1901,26 @@ class LibvirtConnection(driver.ComputeDriver):
         idx1 = m.index('MemFree:')
         idx2 = m.index('Buffers:')
         idx3 = m.index('Cached:')
-        avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1])) / 1024
-        return  self.get_memory_mb_total() - avail
+        if FLAGS.libvirt_type == 'xen':
+            used = 0
+            for domain_id in self._conn.listDomainsID():
+                # skip dom0
+                dom_mem = int(self._conn.lookupByID(domain_id).info()[2])
+                if domain_id != 0:
+                    used += dom_mem
+                else:
+                    # the mem reported by dom0 is be greater of what
+                    # it is being used
+                    used += (dom_mem -
+                             (int(m[idx1 + 1]) +
+                              int(m[idx2 + 1]) +
+                              int(m[idx3 + 1])))
+            # Convert it to MB
+            return used / 1024
+        else:
+            avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
+            # Convert it to MB
+            return  self.get_memory_mb_total() - avail / 1024
 
     def get_local_gb_used(self):
         """Get the free hdd size(GB) of physical computer.
