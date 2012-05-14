@@ -20,9 +20,9 @@
 import webob
 import webob.exc
 
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova import exception
 

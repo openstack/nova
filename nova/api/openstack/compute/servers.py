@@ -19,8 +19,8 @@ import os
 import socket
 from xml.dom import minidom
 
-from webob import exc
 import webob
+from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack.compute import ips

@@ -19,9 +19,9 @@ import webob.exc
 from xml.dom import minidom
 from xml.parsers import expat
 
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception

@@ -16,11 +16,11 @@
 
 import webob
 
+from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova import log as logging
-from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 
 
 LOG = logging.getLogger(__name__)

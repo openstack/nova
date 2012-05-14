@@ -19,8 +19,8 @@ import paste.urlmap
 import re
 import urllib2
 
-from nova import log as logging
 from nova.api.openstack import wsgi
+from nova import log as logging
 
 
 _quoted_string_re = r'"[^"\\]*(?:\\.[^"\\]*)*"'

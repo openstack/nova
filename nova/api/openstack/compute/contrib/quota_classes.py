@@ -15,9 +15,9 @@
 
 import webob
 
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.api.openstack import extensions
 from nova import db
 from nova import exception
 from nova import quota

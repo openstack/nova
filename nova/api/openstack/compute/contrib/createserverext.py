@@ -14,9 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
-from nova.api.openstack import extensions
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
+from nova.api.openstack import extensions
 
 
 authorize = extensions.soft_extension_authorizer('compute', 'createserverext')
