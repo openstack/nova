@@ -17,15 +17,15 @@ Unit Tests for instance types code
 """
 import time
 
+from nova.compute import instance_types
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import models
+from nova.db.sqlalchemy import session as sql_session
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
-from nova.compute import instance_types
-from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy import session as sql_session
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)

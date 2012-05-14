@@ -19,9 +19,9 @@ import json
 from lxml import etree
 import webob
 
-from nova import test
 from nova.api.openstack.compute.contrib import accounts
 from nova.auth import manager as auth_manager
+from nova import test
 from nova.tests.api.openstack import fakes
 
 

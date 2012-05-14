@@ -28,8 +28,8 @@ import mox
 import nova
 import nova.common.policy
 from nova import compute
-from nova.compute import api as compute_api
 from nova.compute import aggregate_states
+from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
 from nova.compute import power_state

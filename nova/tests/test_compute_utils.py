@@ -17,18 +17,18 @@
 
 """Tests For miscellaneous util methods used with compute."""
 
+from nova.compute import instance_types
+from nova.compute import utils as compute_utils
+from nova import context
 from nova import db
 from nova import flags
-from nova import context
-from nova import test
-from nova import log as logging
-from nova import utils
 import nova.image.fake
-from nova.compute import utils as compute_utils
-from nova.compute import instance_types
+from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
+from nova import test
 from nova.tests import fake_network
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)

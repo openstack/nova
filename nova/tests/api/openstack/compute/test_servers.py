@@ -39,8 +39,8 @@ from nova import flags
 import nova.image.fake
 import nova.rpc
 from nova import test
-from nova.tests import fake_network
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_network
 from nova import utils
 
 

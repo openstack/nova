@@ -19,8 +19,8 @@ import datetime
 import hashlib
 import os
 import os.path
-import socket
 import shutil
+import socket
 import StringIO
 import tempfile
 

@@ -13,8 +13,8 @@
 #    under the License.
 from nova import exception
 from nova import log as logging
-from nova.volume import san
 from nova import test
+from nova.volume import san
 
 LOG = logging.getLogger(__name__)
 

@@ -18,9 +18,9 @@
 
 import json
 
-import webob
-from lxml import etree
 import iso8601
+from lxml import etree
+import webob
 
 from nova.api.openstack import volume
 from nova.api.openstack import xmlutil

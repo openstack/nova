@@ -25,8 +25,8 @@ import urllib2
 import nova.flags
 import nova.test
 from nova.volume import nexenta
-from nova.volume.nexenta import volume
 from nova.volume.nexenta import jsonrpc
+from nova.volume.nexenta import volume
 
 FLAGS = nova.flags.FLAGS
 

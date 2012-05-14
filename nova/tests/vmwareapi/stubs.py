@@ -19,11 +19,11 @@
 Stubouts for the test suite
 """
 
-from nova.virt import vmwareapi_conn
 from nova.virt.vmwareapi import fake
-from nova.virt.vmwareapi import vmware_images
-from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import network_utils
+from nova.virt.vmwareapi import vmops
+from nova.virt.vmwareapi import vmware_images
+from nova.virt import vmwareapi_conn
 
 
 def fake_get_vim_object(arg):

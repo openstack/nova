@@ -18,8 +18,8 @@
 
 import base64
 
-from nova import test
 from nova.api import validator
+from nova import test
 
 
 class ValidatorTestCase(test.TestCase):

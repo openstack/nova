@@ -24,10 +24,10 @@ import webob
 import webob.exc
 import xml.dom.minidom as minidom
 
-from nova import exception
-from nova import test
 from nova.api.openstack import common
 from nova.api.openstack import xmlutil
+from nova import exception
+from nova import test
 from nova.tests import utils as test_utils
 
 

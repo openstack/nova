@@ -40,18 +40,18 @@ from nova import log as logging
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova import test
-from nova.tests import fake_network
 from nova.tests import fake_libvirt_utils
+from nova.tests import fake_network
 from nova import utils
-from nova.virt import images
 from nova.virt import driver
 from nova.virt import firewall as base_firewall
+from nova.virt import images
 from nova.virt.libvirt import config
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
+from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
 from nova.volume import driver as volume_driver
-from nova.virt.libvirt import utils as libvirt_utils
 
 
 try:

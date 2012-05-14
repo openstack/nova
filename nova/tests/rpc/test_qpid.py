@@ -29,8 +29,8 @@ from nova.rpc import amqp as rpc_amqp
 from nova import test
 
 try:
-    import qpid
     from nova.rpc import impl_qpid
+    import qpid
 except ImportError:
     qpid = None
     impl_qpid = None

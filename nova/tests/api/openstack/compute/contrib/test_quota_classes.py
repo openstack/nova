@@ -13,11 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
 from lxml import etree
+import webob
 
-from nova.api.openstack import wsgi
 from nova.api.openstack.compute.contrib import quota_classes
+from nova.api.openstack import wsgi
 from nova import test
 from nova.tests.api.openstack import fakes
 

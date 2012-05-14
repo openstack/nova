@@ -22,9 +22,9 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute import consoles
+from nova.compute import vm_states
 from nova import console
 from nova import db
-from nova.compute import vm_states
 from nova import exception
 from nova import flags
 from nova import test

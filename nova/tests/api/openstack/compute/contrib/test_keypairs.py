@@ -15,11 +15,11 @@
 
 import json
 
-import webob
 from lxml import etree
+import webob
 
-from nova.api.openstack import wsgi
 from nova.api.openstack.compute.contrib import keypairs
+from nova.api.openstack import wsgi
 from nova import db
 from nova import exception
 from nova import test

@@ -17,8 +17,8 @@
 #    under the License.
 """Unit Tests for network code."""
 
-from nova import test
 from nova.network import linux_net
+from nova import test
 
 
 class IptablesManagerTestCase(test.TestCase):

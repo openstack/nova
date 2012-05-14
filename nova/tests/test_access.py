@@ -18,11 +18,11 @@
 
 import webob
 
+from nova.api import ec2
+from nova.auth import manager
 from nova import context
 from nova import flags
 from nova import test
-from nova.api import ec2
-from nova.auth import manager
 
 FLAGS = flags.FLAGS
 

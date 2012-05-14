@@ -15,8 +15,8 @@
 
 import json
 
-import webob
 from lxml import etree
+import webob
 
 from nova.api.openstack.compute.contrib import extended_status
 from nova import compute

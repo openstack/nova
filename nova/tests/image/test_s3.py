@@ -20,8 +20,8 @@ import os
 from nova import context
 import nova.db.api
 from nova import exception
-from nova import test
 from nova.image import s3
+from nova import test
 
 
 ami_manifest_xml = """<?xml version="1.0" ?>

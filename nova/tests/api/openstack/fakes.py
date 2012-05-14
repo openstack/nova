@@ -26,11 +26,11 @@ from glance import client as glance_client
 
 from nova.api import auth as api_auth
 from nova.api import openstack as openstack_api
-from nova.api.openstack import compute
 from nova.api.openstack import auth
+from nova.api.openstack import compute
 from nova.api.openstack.compute import limits
-from nova.api.openstack import urlmap
 from nova.api.openstack.compute import versions
+from nova.api.openstack import urlmap
 from nova.api.openstack import wsgi as os_wsgi
 import nova.auth.manager as auth_manager
 from nova.compute import instance_types

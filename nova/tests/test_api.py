@@ -28,15 +28,15 @@ from boto.ec2 import regioninfo
 from boto import exception as boto_exc
 import webob
 
-from nova import block_device
-from nova import context
-from nova import exception
-from nova import test
 from nova.api import auth
 from nova.api import ec2
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
+from nova import block_device
 from nova.compute import api as compute_api
+from nova import context
+from nova import exception
+from nova import test
 
 
 class FakeHttplibSocket(object):

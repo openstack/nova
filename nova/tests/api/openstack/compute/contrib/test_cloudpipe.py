@@ -18,8 +18,8 @@ import datetime
 from lxml import etree
 
 from nova.api.openstack import common
-from nova.api.openstack import wsgi
 from nova.api.openstack.compute.contrib import cloudpipe
+from nova.api.openstack import wsgi
 from nova import db
 from nova import flags
 from nova import test

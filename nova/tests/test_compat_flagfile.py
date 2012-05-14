@@ -18,8 +18,8 @@ import contextlib
 import os
 import shutil
 import StringIO
-import textwrap
 import tempfile
+import textwrap
 import unittest
 import uuid
 

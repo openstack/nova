@@ -22,8 +22,8 @@ import base64
 import webob
 
 from nova.api.metadata import handler
-from nova.db.sqlalchemy import api
 from nova import db
+from nova.db.sqlalchemy import api
 from nova import exception
 from nova import flags
 from nova import network

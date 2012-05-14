@@ -17,8 +17,8 @@
 
 import webob
 
-from nova.api.openstack import wsgi
 from nova.api.openstack.compute.contrib import flavorextraspecs
+from nova.api.openstack import wsgi
 from nova import test
 from nova.tests.api.openstack import fakes
 import nova.wsgi
