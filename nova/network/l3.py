@@ -19,8 +19,8 @@ import random
 
 from nova import flags
 from nova import log as logging
-from nova import utils
 from nova.network import linux_net
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 

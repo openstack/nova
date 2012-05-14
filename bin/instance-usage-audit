@@ -50,6 +50,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 gettext.install('nova', unicode=1)
+import nova.compute.utils
 from nova import context
 from nova import db
 from nova import exception
@@ -57,7 +58,6 @@ from nova import flags
 from nova import log as logging
 from nova import rpc
 from nova import utils
-import nova.compute.utils
 
 
 FLAGS = flags.FLAGS

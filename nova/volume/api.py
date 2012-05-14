@@ -24,6 +24,7 @@ import functools
 
 from eventlet import greenthread
 
+from nova.db import base
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -31,7 +32,6 @@ import nova.policy
 from nova import quota
 from nova import rpc
 from nova import utils
-from nova.db import base
 
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')

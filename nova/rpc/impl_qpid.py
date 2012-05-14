@@ -16,9 +16,9 @@
 #    under the License.
 
 import itertools
+import json
 import time
 import uuid
-import json
 
 import eventlet
 import greenlet

@@ -19,8 +19,8 @@ from nova.auth import fakeldap
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import utils
 from nova.openstack.common import cfg
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)

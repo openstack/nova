@@ -26,8 +26,8 @@ inline callbacks.
 import functools
 import os
 import shutil
-import uuid
 import unittest
+import uuid
 
 import mox
 import nose.plugins.skip
@@ -37,9 +37,9 @@ from nova import flags
 import nova.image.fake
 from nova import log as logging
 from nova.openstack.common import cfg
-from nova import utils
 from nova import service
 from nova import tests
+from nova import utils
 from nova.virt import fake
 
 

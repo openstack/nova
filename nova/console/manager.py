@@ -22,9 +22,9 @@ import socket
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova import manager
 from nova import rpc
 from nova import utils
 

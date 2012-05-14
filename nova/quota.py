@@ -19,8 +19,8 @@
 """Quotas for instances, volumes, and floating ips."""
 
 from nova import db
-from nova.openstack.common import cfg
 from nova import flags
+from nova.openstack.common import cfg
 
 
 quota_opts = [

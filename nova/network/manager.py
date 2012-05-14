@@ -67,8 +67,8 @@ from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 import nova.policy
 from nova import quota
-from nova import utils
 from nova import rpc
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)

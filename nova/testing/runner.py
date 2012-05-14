@@ -59,9 +59,9 @@ To run a single test:
 import gettext
 import heapq
 import os
-import unittest
 import sys
 import time
+import unittest
 
 import eventlet
 from nose import config
