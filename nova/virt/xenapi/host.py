@@ -19,8 +19,8 @@
 Management class for host-related functions (start, reboot, etc).
 """
 
-import logging
 import json
+import logging
 
 from nova.compute import vm_states
 from nova import context

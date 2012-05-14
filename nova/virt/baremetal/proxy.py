@@ -34,21 +34,21 @@ import os
 import shutil
 import time
 
+from nova.compute import instance_types
+from nova.compute import power_state
+from nova.compute import vm_states
 from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import utils
 from nova.openstack.common import cfg
-from nova.compute import instance_types
-from nova.compute import power_state
-from nova.compute import vm_states
+from nova import utils
+from nova.virt.baremetal import dom
+from nova.virt.baremetal import nodes
 from nova.virt import disk
 from nova.virt.disk import api as disk
 from nova.virt import driver
-from nova.virt.baremetal import nodes
-from nova.virt.baremetal import dom
 from nova.virt.libvirt import utils as libvirt_utils
 
 

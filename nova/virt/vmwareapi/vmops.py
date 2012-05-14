@@ -32,10 +32,10 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova.virt.vmwareapi import network_utils
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmware_images
-from nova.virt.vmwareapi import network_utils
 
 
 vmware_vif_driver_opt = cfg.StrOpt('vmware_vif_driver',

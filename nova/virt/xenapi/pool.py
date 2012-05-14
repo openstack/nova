@@ -22,13 +22,13 @@ Management class for Pool-related functions (join, eject, etc).
 import json
 import urlparse
 
+from nova.compute import aggregate_states
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import rpc
-from nova.compute import aggregate_states
 from nova.openstack.common import cfg
+from nova import rpc
 from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger("nova.virt.xenapi.pool")
