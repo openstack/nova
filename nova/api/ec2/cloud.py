@@ -850,11 +850,16 @@ class CloudController(object):
     def _format_volume(self, context, volume):
         instance_ec2_id = None
         instance_data = None
-        if volume.get('instance', None):
-            instance_id = volume['instance']['id']
+
+        if volume.get('instance_uuid', None):
+            instance_uuid = volume['instance_uuid']
+            instance = db.instance_get_by_uuid(context.elevated(),
+                    instance_uuid)
+
+            instance_id = instance['id']
             instance_ec2_id = ec2utils.id_to_ec2_id(instance_id)
             instance_data = '%s[%s]' % (instance_ec2_id,
-                                        volume['instance']['host'])
+                                        instance['host'])
         v = {}
         v['volumeId'] = ec2utils.id_to_ec2_vol_id(volume['id'])
         v['status'] = volume['status']
