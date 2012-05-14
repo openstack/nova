@@ -97,7 +97,7 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(FLAGS.flags_unittest, 'foo')
         self.flags(flags_unittest='bar')
         self.assertEqual(FLAGS.flags_unittest, 'bar')
-        self.reset_flags()
+        FLAGS.reset()
         self.assertEqual(FLAGS.flags_unittest, 'foo')
 
     def test_defaults(self):
