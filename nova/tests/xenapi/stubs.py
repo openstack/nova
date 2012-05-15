@@ -22,10 +22,8 @@ from eventlet import tpool
 
 from nova.virt.xenapi import connection as xenapi_conn
 from nova.virt.xenapi import fake
-from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
-from nova import utils
 
 
 def stubout_firewall_driver(stubs, conn):
@@ -71,14 +69,6 @@ def stubout_session(stubs, cls, product_version=(5, 6, 2), **opt_args):
     # sessions to be called synchronously in the unit tests. (see
     # bug 946687)
     stubs.Set(tpool, 'execute', lambda m, *a, **kw: m(*a, **kw))
-
-
-def stub_out_get_target(stubs):
-    """Stubs out _get_target in volume_utils"""
-    def fake_get_target(volume_id):
-        return (None, None)
-
-    stubs.Set(volume_utils, '_get_target', fake_get_target)
 
 
 def stubout_get_this_vm_uuid(stubs):

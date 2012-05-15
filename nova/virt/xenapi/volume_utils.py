@@ -384,30 +384,3 @@ def _get_iqn(iscsi_string, id):
     elif iscsi_string is None or FLAGS.iqn_prefix:
         volume_id = _get_volume_id(id)
         return '%s:%s' % (FLAGS.iqn_prefix, volume_id)
-
-
-def _get_target(volume_id):
-    """
-    Gets iscsi name and portal from volume name and host.
-    For this method to work the following are needed:
-    1) volume_ref['host'] must resolve to something rather than loopback
-    """
-    volume_ref = db.volume_get(context.get_admin_context(),
-                               volume_id)
-    result = (None, None)
-    try:
-        (r, _e) = utils.execute('iscsiadm',
-                                '-m', 'discovery',
-                                '-t', 'sendtargets',
-                                '-p', volume_ref['host'], run_as_root=True)
-    except exception.ProcessExecutionError, exc:
-        LOG.exception(exc)
-    else:
-        volume_name = "volume-%08x" % volume_id
-        for target in r.splitlines():
-            if FLAGS.iscsi_ip_prefix in target and volume_name in target:
-                (location, _sep, iscsi_name) = target.partition(" ")
-                break
-        iscsi_portal = location.split(",")[0]
-        result = (iscsi_name, iscsi_portal)
-    return result

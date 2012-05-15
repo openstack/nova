@@ -102,7 +102,6 @@ class XenAPIVolumeTestCase(test.TestCase):
                 firewall_driver='nova.virt.xenapi.firewall.'
                                 'Dom0IptablesFirewallDriver')
         db_fakes.stub_out_db_instance_api(self.stubs)
-        stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
         self.instance_values = {'id': 1,
                   'project_id': self.user_id,
@@ -844,7 +843,6 @@ class XenAPIMigrateInstance(test.TestCase):
                                 'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
-        stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         self.user_id = 'fake'
@@ -1792,7 +1790,6 @@ class XenAPISRSelectionTestCase(test.TestCase):
     """Unit tests for testing we find the right SR."""
     def setUp(self):
         super(XenAPISRSelectionTestCase, self).setUp()
-        stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
 
     def test_safe_find_sr_raise_exception(self):
