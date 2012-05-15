@@ -25,24 +25,24 @@ import re
 import warnings
 
 from nova import block_device
-from nova import db
-from nova import exception
-from nova import flags
-from nova import utils
-from nova import log as logging
 from nova.compute import aggregate_states
 from nova.compute import vm_states
+from nova import db
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
+from nova import exception
+from nova import flags
+from nova import log as logging
+from nova import utils
 from sqlalchemy import and_
-from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
+from sqlalchemy.sql import func
 
 FLAGS = flags.FLAGS
 flags.DECLARE('reserved_host_disk_mb', 'nova.scheduler.host_manager')

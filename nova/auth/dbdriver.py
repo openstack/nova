@@ -21,8 +21,8 @@ Auth driver using the DB as its backend.
 """
 
 from nova import context
-from nova import exception
 from nova import db
+from nova import exception
 
 
 class DbDriver(object):

@@ -19,8 +19,8 @@
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.network import <foo>' elsewhere.
 import nova.flags
-import nova.utils
 import nova.openstack.common.importutils
+import nova.utils
 
 API = nova.openstack.common.importutils.import_class(
         nova.flags.FLAGS.network_api_class)

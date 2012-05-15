@@ -46,9 +46,9 @@ from xml.sax import saxutils
 
 from eventlet import corolocal
 from eventlet import event
+from eventlet.green import subprocess
 from eventlet import greenthread
 from eventlet import semaphore
-from eventlet.green import subprocess
 import iso8601
 import lockfile
 import netaddr

@@ -24,9 +24,9 @@ import uuid
 import eventlet
 import greenlet
 import kombu
+import kombu.connection
 import kombu.entity
 import kombu.messaging
-import kombu.connection
 
 from nova.openstack.common import cfg
 from nova.rpc import amqp as rpc_amqp

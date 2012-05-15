@@ -25,8 +25,8 @@
 import json
 import urllib2
 
-from nova.volume import nexenta
 from nova import log as logging
+from nova.volume import nexenta
 
 LOG = logging.getLogger("nova.volume.nexenta.jsonrpc")
 

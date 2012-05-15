@@ -26,9 +26,9 @@ from nova import flags
 from nova import log as logging
 
 
-import sqlalchemy
 import migrate
 from migrate.versioning import util as migrate_util
+import sqlalchemy
 
 
 LOG = logging.getLogger(__name__)
