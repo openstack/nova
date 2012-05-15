@@ -1695,6 +1695,9 @@ class HostStateTestCase(test.TestCase):
         def get_hypervisor_version(self):
             return 13091
 
+        def get_hypervisor_hostname(self):
+            return 'compute1'
+
         def get_disk_available_least(self):
             return 13091
 
@@ -1721,6 +1724,7 @@ class HostStateTestCase(test.TestCase):
         self.assertEquals(stats["host_memory_free"], 409)
         self.assertEquals(stats["hypervisor_type"], 'QEMU')
         self.assertEquals(stats["hypervisor_version"], 13091)
+        self.assertEquals(stats["hypervisor_hostname"], 'compute1')
 
 
 class NWFilterFakes:
