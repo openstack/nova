@@ -723,14 +723,6 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             if not (is_tenant_net or is_provider_net):
                 raise exception.NetworkNotFound(network_id=net_id)
 
-    # NOTE(bgh): deallocate_for_instance will take care of this..  The reason
-    # we're providing this is so that NetworkManager::release_fixed_ip() isn't
-    # called.  It does some database operations that we don't want to happen
-    # and since the majority of the stuff that it does is already taken care
-    # of in our deallocate_for_instance call we don't need to do anything.
-    def release_fixed_ip(self, context, address):
-        pass
-
     def get_dhcp_hosts_text(self, context, subnet_id, project_id=None):
         ips = self.ipam.get_allocated_ips(context, subnet_id, project_id)
         hosts_text = ""
