@@ -24,12 +24,12 @@ import nova.api.openstack
 from nova.api.openstack.compute import consoles
 from nova.api.openstack.compute import extensions
 from nova.api.openstack.compute import flavors
-from nova.api.openstack.compute import images
 from nova.api.openstack.compute import image_metadata
+from nova.api.openstack.compute import images
 from nova.api.openstack.compute import ips
 from nova.api.openstack.compute import limits
-from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import server_metadata
+from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import versions
 from nova import flags
 from nova import log as logging

@@ -16,10 +16,10 @@
 #    under the License.
 
 import inspect
-from xml.dom import minidom
-from xml.parsers import expat
 import math
 import time
+from xml.dom import minidom
+from xml.parsers import expat
 
 from lxml import etree
 import webob

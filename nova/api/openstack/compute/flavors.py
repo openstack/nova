@@ -17,8 +17,8 @@
 
 import webob
 
-from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import common
+from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import instance_types

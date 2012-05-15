@@ -14,9 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License
 
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.api.openstack import extensions
 from nova import log as logging
 from nova import network
 

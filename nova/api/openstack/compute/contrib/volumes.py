@@ -15,12 +15,12 @@
 
 """The volumes extension."""
 
-from webob import exc
 import webob
+from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack import extensions
 from nova.api.openstack.compute import servers
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute

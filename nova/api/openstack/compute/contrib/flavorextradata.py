@@ -24,11 +24,11 @@ attributes.  This extension adds to that list:
 - OS-FLV-EXT-DATA:ephemeral
 """
 
-from nova import exception
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import instance_types
+from nova import exception
 
 
 authorize = extensions.soft_extension_authorizer('compute', 'flavorextradata')

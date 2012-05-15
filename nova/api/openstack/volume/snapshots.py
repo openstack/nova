@@ -15,8 +15,8 @@
 
 """The volumes snapshots api."""
 
-from webob import exc
 import webob
+from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import wsgi

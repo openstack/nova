@@ -17,11 +17,11 @@
 
 import webob
 
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.api.openstack import extensions
-from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import db
+from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova import quota
 
