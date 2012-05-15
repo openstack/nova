@@ -21,6 +21,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova import utils
 
 
@@ -121,7 +122,7 @@ def notify(context, publisher_id, event_type, priority, payload):
                  _('%s not in valid priorities') % priority)
 
     # Ensure everything is JSON serializable.
-    payload = utils.to_primitive(payload, convert_instances=True)
+    payload = jsonutils.to_primitive(payload, convert_instances=True)
 
     driver = importutils.import_module(FLAGS.notification_driver)
     msg = dict(message_id=str(uuid.uuid4()),

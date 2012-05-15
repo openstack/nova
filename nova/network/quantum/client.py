@@ -21,7 +21,7 @@ import json
 import socket
 import urllib
 
-from nova import utils
+from nova.openstack.common import jsonutils
 
 
 # FIXME(danwent): All content in this file should be removed once the
@@ -35,14 +35,11 @@ class JSONSerializer(object):
     the standard serializer from the quantum library.
     """
     def serialize(self, data, content_type):
-        try:
-            return json.dumps(data)
-        except TypeError:
-            pass
-        return json.dumps(utils.to_primitive(data))
+        jsonutils.dumps(data)
 
     def deserialize(self, data, content_type):
-        return json.loads(data)
+        return jsonutils.loads(data)
+
 
 # Quantum API v1.0 uses 420 + 430 for network + port not found
 # Quantum API v1.1 uses 404 for network + port not found

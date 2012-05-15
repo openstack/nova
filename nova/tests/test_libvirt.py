@@ -38,6 +38,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_network
 from nova.tests import fake_libvirt_utils
@@ -1405,7 +1406,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = connection.LibvirtConnection(False)
         info = conn.get_instance_disk_info(instance_ref.name)
-        info = utils.loads(info)
+        info = jsonutils.loads(info)
         self.assertEquals(info[0]['type'], 'raw')
         self.assertEquals(info[0]['path'], '/test/disk')
         self.assertEquals(info[0]['disk_size'], 10737418240)
@@ -2507,7 +2508,7 @@ class LibvirtConnectionTestCase(test.TestCase):
                       'virt_disk_size': '10737418240',
                       'backing_file': '/base/disk.local',
                       'disk_size':'83886080'}]
-        disk_info_text = utils.dumps(disk_info)
+        disk_info_text = jsonutils.dumps(disk_info)
 
         def fake_get_instance_disk_info(instance):
             return disk_info_text
@@ -2578,7 +2579,7 @@ class LibvirtConnectionTestCase(test.TestCase):
                       'local_gb': 10, 'backing_file': '/base/disk'},
                      {'type': 'raw', 'path': '/test/disk.local',
                       'local_gb': 10, 'backing_file': '/base/disk.local'}]
-        disk_info_text = utils.dumps(disk_info)
+        disk_info_text = jsonutils.dumps(disk_info)
 
         def fake_extend(path, size):
             pass
@@ -2668,4 +2669,4 @@ class LibvirtNonblockingTestCase(test.TestCase):
         """Test bug 962840"""
         import nova.virt.libvirt.connection
         connection = nova.virt.libvirt.connection.get_connection('')
-        utils.to_primitive(connection._conn, convert_instances=True)
+        jsonutils.to_primitive(connection._conn, convert_instances=True)

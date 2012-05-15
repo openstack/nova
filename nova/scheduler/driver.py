@@ -30,6 +30,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova import utils
@@ -442,7 +443,7 @@ class Scheduler(object):
         ret = rpc.call(context, topic,
                        {"method": 'get_instance_disk_info',
                         "args": {'instance_name': instance_ref['name']}})
-        disk_infos = utils.loads(ret)
+        disk_infos = jsonutils.loads(ret)
 
         necessary = 0
         if disk_over_commit:

@@ -38,6 +38,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova import utils
 from nova import wsgi
 
@@ -226,7 +227,7 @@ class EC2Token(wsgi.Middleware):
                                         'path': req.path,
                                         'params': auth_params,
                                        }}}
-        creds_json = utils.dumps(creds)
+        creds_json = jsonutils.dumps(creds)
         headers = {'Content-Type': 'application/json'}
 
         # Disable "has no x member" pylint error
@@ -245,7 +246,7 @@ class EC2Token(wsgi.Middleware):
         #             having keystone return token, tenant,
         #             user, and roles from this call.
 
-        result = utils.loads(response)
+        result = jsonutils.loads(response)
         try:
             token_id = result['access']['token']['id']
         except (AttributeError, KeyError), e:
@@ -289,7 +290,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
             creds = {'ec2Credentials': cred_dict}
         else:
             creds = {'auth': {'OS-KSEC2:ec2Credentials': cred_dict}}
-        creds_json = utils.dumps(creds)
+        creds_json = jsonutils.dumps(creds)
         headers = {'Content-Type': 'application/json'}
 
         o = urlparse.urlparse(FLAGS.keystone_ec2_url)
@@ -306,7 +307,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
             else:
                 msg = _("Failure communicating with keystone")
             return ec2_error(req, request_id, "Unauthorized", msg)
-        result = utils.loads(data)
+        result = jsonutils.loads(data)
         conn.close()
 
         try:
@@ -645,7 +646,7 @@ class Executor(wsgi.Application):
                     env.pop(k)
 
             LOG.exception(_('Unexpected error raised: %s'), unicode(ex))
-            LOG.error(_('Environment: %s') % utils.dumps(env))
+            LOG.error(_('Environment: %s') % jsonutils.dumps(env))
             return ec2_error(req, request_id, 'UnknownError',
                              _('An unknown error has occurred. '
                                'Please try your request again.'))
