@@ -34,7 +34,6 @@ from eventlet import pools
 from eventlet import semaphore
 
 from nova import context
-from nova import exception
 from nova import log as logging
 from nova.openstack.common import excutils
 from nova.openstack.common import local
@@ -141,7 +140,7 @@ class ConnectionContext(rpc_common.Connection):
         if self.connection:
             return getattr(self.connection, key)
         else:
-            raise exception.InvalidRPCConnectionReuse()
+            raise rpc_common.InvalidRPCConnectionReuse()
 
 
 def msg_reply(conf, msg_id, connection_pool, reply=None, failure=None,
@@ -250,7 +249,6 @@ class ProxyCallback(object):
             return
         self.pool.spawn_n(self._process_data, ctxt, method, args)
 
-    @exception.wrap_exception()
     def _process_data(self, ctxt, method, args):
         """Thread that magically looks for a method on the proxy
         object and calls it.
