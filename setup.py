@@ -15,15 +15,24 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 import glob
 import os
 
 import setuptools
+from setuptools.command import sdist
 
+from nova.openstack.common import setup as common_setup
 from nova import version
 
-nova_cmdclass = {}
+
+class local_sdist(sdist.sdist):
+    """Customized sdist hook - builds the ChangeLog file from VC first."""
+    def run(self):
+        common_setup.write_git_changelog()
+        # sdist.sdist is an old style class, can't user super()
+        sdist.sdist.run(self)
+
+nova_cmdclass = {'sdist': local_sdist}
 
 try:
     from sphinx import setup_command
