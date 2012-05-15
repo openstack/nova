@@ -40,8 +40,8 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 import errno
 import functools
-import hashlib
 import glob
+import hashlib
 import multiprocessing
 import os
 import shutil
@@ -67,8 +67,8 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova import utils
-from nova.virt import driver
 from nova.virt.disk import api as disk
+from nova.virt import driver
 from nova.virt.libvirt import config
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagecache

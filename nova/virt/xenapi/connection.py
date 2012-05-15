@@ -50,8 +50,8 @@ import xmlrpclib
 
 from eventlet import greenthread
 from eventlet import queue
-from eventlet import tpool
 from eventlet import timeout
+from eventlet import tpool
 
 from nova import context
 from nova import db
@@ -62,8 +62,8 @@ from nova.openstack.common import cfg
 from nova.virt import driver
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
-from nova.virt.xenapi import vmops
 from nova.virt.xenapi import vm_utils
+from nova.virt.xenapi import vmops
 from nova.virt.xenapi import volumeops
 
 
