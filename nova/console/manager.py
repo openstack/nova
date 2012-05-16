@@ -53,6 +53,8 @@ class ConsoleProxyManager(manager.Manager):
 
     """
 
+    RPC_API_VERSION = '1.0'
+
     def __init__(self, console_driver=None, *args, **kwargs):
         if not console_driver:
             console_driver = FLAGS.console_driver

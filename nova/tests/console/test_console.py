@@ -56,7 +56,8 @@ class ConsoleTestCase(test.TestCase):
         return db.instance_create(self.context, inst)['id']
 
     def test_get_pool_for_instance_host(self):
-        pool = self.console.get_pool_for_instance_host(self.context, self.host)
+        pool = self.console.get_pool_for_instance_host(self.context,
+                self.host)
         self.assertEqual(pool['compute_host'], self.host)
 
     def test_get_pool_creates_new_pool_if_needed(self):
@@ -67,7 +68,7 @@ class ConsoleTestCase(test.TestCase):
                           self.console.host,
                           self.console.driver.console_type)
         pool = self.console.get_pool_for_instance_host(self.context,
-                                                       self.host)
+                                                           self.host)
         pool2 = db.console_pool_get_by_host_type(self.context,
                               self.host,
                               self.console.host,
@@ -91,9 +92,8 @@ class ConsoleTestCase(test.TestCase):
         self.console.add_console(self.context, instance_id)
         instance = db.instance_get(self.context, instance_id)
         pool = db.console_pool_get_by_host_type(self.context,
-                                                instance['host'],
-                                                self.console.host,
-                                            self.console.driver.console_type)
+                instance['host'], self.console.host,
+                self.console.driver.console_type)
 
         console_instances = [con['instance_id'] for con in pool.consoles]
         self.assert_(instance_id in console_instances)

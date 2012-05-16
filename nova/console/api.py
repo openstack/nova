@@ -17,6 +17,7 @@
 
 """Handles ConsoleProxy API requests."""
 
+from nova.console import rpcapi as console_rpcapi
 from nova.db import base
 from nova import flags
 from nova import rpc
@@ -42,16 +43,11 @@ class API(base.Base):
 
     def delete_console(self, context, instance_id, console_id):
         instance_id = self._translate_uuid_if_necessary(context, instance_id)
-        console = self.db.console_get(context,
-                                      console_id,
-                                      instance_id)
-        pool = console['pool']
-        rpc.cast(context,
-                 self.db.queue_get_for(context,
-                                       FLAGS.console_topic,
-                                       pool['host']),
-                 {'method': 'remove_console',
-                  'args': {'console_id': console['id']}})
+        console = self.db.console_get(context, console_id, instance_id)
+        topic = self.db.queue_get_for(context, FLAGS.console_topic,
+                                      pool['host'])
+        rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
+        rpcapi.remove_console(context, console['id'])
 
     def create_console(self, context, instance_id):
         #NOTE(mdragon): If we wanted to return this the console info
@@ -60,10 +56,9 @@ class API(base.Base):
         #               console info. I am not sure which is better
         #               here.
         instance = self._get_instance(context, instance_id)
-        rpc.cast(context,
-                 self._get_console_topic(context, instance['host']),
-                 {'method': 'add_console',
-                  'args': {'instance_id': instance['id']}})
+        topic = self._get_console_topic(context, instance['host']),
+        rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
+        rpcapi.add_console(context, instance['id'])
 
     def _get_console_topic(self, context, instance_host):
         topic = self.db.queue_get_for(context,
