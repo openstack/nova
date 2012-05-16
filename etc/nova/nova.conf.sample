@@ -917,6 +917,10 @@
 
 ###### (StrOpt) path to s3 buckets
 # buckets_path="$state_path/buckets"
+###### (StrOpt) IP address for S3 API to listen
+# s3_listen="0.0.0.0"
+###### (IntOpt) port for s3 api to listen
+# s3_listen_port=3333
 
 ######### defined in nova.rpc.common #########
 
