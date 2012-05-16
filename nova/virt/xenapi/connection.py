@@ -18,12 +18,6 @@
 """
 A connection to XenServer or Xen Cloud Platform.
 
-The concurrency model for this class is as follows:
-
-All XenAPI calls are on a green thread (using eventlet's "tpool"
-thread pool). They are remote calls, and so may hang for the usual
-reasons.
-
 **Related Flags**
 
 :xenapi_connection_url:  URL for connection to XenServer/Xen Cloud Platform.
@@ -48,10 +42,8 @@ import time
 import urlparse
 import xmlrpclib
 
-from eventlet import greenthread
 from eventlet import queue
 from eventlet import timeout
-from eventlet import tpool
 
 from nova import context
 from nova import db
@@ -589,8 +581,7 @@ class XenAPISession(object):
     def call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread."""
         with self._get_session() as session:
-            f = session.xenapi_request
-            return tpool.execute(f, method, args)
+            return session.xenapi_request(method, args)
 
     def call_plugin(self, plugin, fn, args):
         """Call host.call_plugin on a background thread."""
@@ -605,7 +596,7 @@ class XenAPISession(object):
         args['host_uuid'] = self.host_uuid
 
         with self._get_session() as session:
-            return tpool.execute(self._unwrap_plugin_exceptions,
+            return self._unwrap_plugin_exceptions(
                                  session.xenapi.host.call_plugin,
                                  host, plugin, fn, args)
 
@@ -624,6 +615,7 @@ class XenAPISession(object):
                 exc.details[2] == 'Failure'):
                 params = None
                 try:
+                    # FIXME(comstud): eval is evil.
                     params = eval(exc.details[3])
                 except Exception:
                     raise exc
