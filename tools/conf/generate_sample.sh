@@ -19,7 +19,7 @@
 pushd $(cd $(dirname "$0") && pwd) >/dev/null
 
 find ../../nova -type f -name "*.py" ! -path "../../nova/tests/*" -exec \
-    grep -l "Opt(" {} \; | sort -u | xargs python create_conf.py > \
+    grep -l "Opt(" {} \; | sort -u | xargs python extract_opts.py > \
     ../../etc/nova/nova.conf.sample
 
 popd >/dev/null
