@@ -115,7 +115,7 @@ class BaseTestCase(test.TestCase):
         test_notifier.NOTIFICATIONS = []
 
         def fake_show(meh, context, id):
-            return {'id': 1, 'min_disk': None, 'min_ram': None,
+            return {'id': id, 'min_disk': None, 'min_ram': None,
                     'properties': {'kernel_id': 'fake_kernel_id',
                                    'ramdisk_id': 'fake_ramdisk_id',
                                    'something_else': 'meow'}}
@@ -2307,6 +2307,15 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
+        # Set some image metadata that should get wiped out and reset
+        # as well as some other metadata that should be preserved.
+        db.instance_system_metadata_update(self.context, instance_uuid,
+                {'image_kernel_id': 'old-data',
+                 'image_ramdisk_id': 'old_data',
+                 'image_something_else': 'old-data',
+                 'image_should_remove': 'bye-bye',
+                 'preserved': 'preserve this!'},
+                True)
 
         # Make sure Compute API updates the image_ref before casting to
         # compute manager.
@@ -2327,7 +2336,13 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.REBUILDING)
-
+        sys_metadata = db.instance_system_metadata_get(self.context,
+                instance_uuid)
+        self.assertEqual(sys_metadata,
+                {'image_kernel_id': 'fake_kernel_id',
+                 'image_ramdisk_id': 'fake_ramdisk_id',
+                 'image_something_else': 'meow',
+                 'preserved': 'preserve this!'})
         db.instance_destroy(self.context, instance['id'])
 
     def test_reboot_soft(self):

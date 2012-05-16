@@ -1349,6 +1349,32 @@ class API(BaseAPI):
         if instance_type['root_gb'] < int(image.get('min_disk') or 0):
             raise exception.InstanceTypeDiskTooSmall()
 
+        def _reset_image_metadata():
+            """
+            Remove old image properties that we're storing as instance
+            system metadata.  These properties start with 'image_'.
+            Then add the properites for the new image.
+            """
+
+            # FIXME(comstud): There's a race condition here in that
+            # if the system_metadata for this instance is updated
+            # after we do the get and before we update.. those other
+            # updates will be lost. Since this problem exists in a lot
+            # of other places, I think it should be addressed in a DB
+            # layer overhaul.
+            sys_metadata = self.db.instance_system_metadata_get(context,
+                    instance['uuid'])
+            # Remove the old keys
+            for key in sys_metadata.keys():
+                if key.startswith('image_'):
+                    del sys_metadata[key]
+            # Add the new ones
+            for key, value in image['properties'].iteritems():
+                new_value = str(value)[:255]
+                sys_metadata['image_%s' % key] = new_value
+            self.db.instance_system_metadata_update(context,
+                    instance['uuid'], sys_metadata, True)
+
         self.update(context,
                     instance,
                     vm_state=vm_states.REBUILDING,
@@ -1358,6 +1384,11 @@ class API(BaseAPI):
                     task_state=None,
                     progress=0,
                     **kwargs)
+
+        # On a rebuild, since we're potentially changing images, we need to
+        # wipe out the old image properties that we're storing as instance
+        # system metadata... and copy in the properties for the new image.
+        _reset_image_metadata()
 
         rebuild_params = {
             "new_pass": admin_password,
