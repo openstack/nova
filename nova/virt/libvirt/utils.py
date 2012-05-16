@@ -92,10 +92,18 @@ def get_disk_backing_file(path):
     :returns: a path to the image's backing store
     """
     out, err = execute('qemu-img', 'info', path)
-    backing_file = [i.split('actual path:')[1].strip()[:-1]
-        for i in out.split('\n') if 0 <= i.find('backing file')]
+    backing_file = None
+
+    for line in out.split('\n'):
+        if line.startswith('backing file: '):
+            if 'actual path: ' in line:
+                backing_file = line.split('actual path: ')[1][:-1]
+            else:
+                backing_file = line.split('backing file: ')[1]
+            break
     if backing_file:
-        backing_file = os.path.basename(backing_file[0])
+        backing_file = os.path.basename(backing_file)
+
     return backing_file
 
 
