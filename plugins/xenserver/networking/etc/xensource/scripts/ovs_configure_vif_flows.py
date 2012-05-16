@@ -95,8 +95,8 @@ def main(command, vif_raw, net_type):
                         apply_ovs_ipv4_flows(ovs, bridge, params)
                 if net_type in ('ipv6', 'all') and 'ip6s' in data:
                     for ip6 in data['ip6s']:
-                        link_local = str(netaddr.EUI(data['mac']).eui64()\
-                                        .ipv6_link_local())
+                        mac_eui64 = netaddr.EUI(data['mac']).eui64()
+                        link_local = str(mac_eui64.ipv6_link_local())
                         ovs.params.update({'IPV6_LINK_LOCAL_ADDR': link_local})
                         ovs.params.update({'IPV6_GLOBAL_ADDR': ip6['ip']})
                         apply_ovs_ipv6_flows(ovs, bridge, params)
@@ -228,8 +228,8 @@ def apply_ovs_ipv6_flows(ovs, bridge, params):
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print "usage: %s [online|offline] vif-domid-idx [ipv4|ipv6|all] " % \
-               os.path.basename(sys.argv[0])
+        print ("usage: %s [online|offline] vif-domid-idx [ipv4|ipv6|all] " %
+               os.path.basename(sys.argv[0]))
         sys.exit(1)
     else:
         command, vif_raw, net_type = sys.argv[1:4]

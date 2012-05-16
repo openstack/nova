@@ -95,9 +95,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
 
         dev.set("type", self.source_type)
         dev.set("device", self.source_device)
-        if self.driver_name is not None or \
-                self.driver_format is not None or \
-                self.driver_cache is not None:
+        if (self.driver_name is not None or
+            self.driver_format is not None or
+            self.driver_cache is not None):
             drv = etree.Element("driver")
             if self.driver_name is not None:
                 drv.set("name", self.driver_name)

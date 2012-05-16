@@ -1760,8 +1760,8 @@ class LibvirtConnection(driver.ComputeDriver):
             return []
 
         return filter(bool,
-                      [target.get("dev") \
-                           for target in doc.findall('devices/disk/target')])
+                      [target.get("dev")
+                       for target in doc.findall('devices/disk/target')])
 
     def get_interfaces(self, instance_name):
         """

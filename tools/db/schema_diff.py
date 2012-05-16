@@ -233,8 +233,8 @@ def main():
     ORIG_DUMP = ORIG_DB + ".dump"
     NEW_DUMP = NEW_DB + ".dump"
 
-    db_type, orig_branch, orig_version, new_branch, new_version =\
-            parse_options()
+    options = parse_options()
+    db_type, orig_branch, orig_version, new_branch, new_version = options
 
     # Since we're going to be switching branches, ensure user doesn't have any
     # uncommited changes

@@ -1433,8 +1433,8 @@ class VMOps(object):
 
         for vif in network_info:
             xs_data = self._vif_xenstore_data(vif)
-            location = \
-                    'vm-data/networking/%s' % vif['address'].replace(':', '')
+            location = ('vm-data/networking/%s' %
+                        vif['address'].replace(':', ''))
             self._add_to_param_xenstore(vm_ref, location, json.dumps(xs_data))
             try:
                 self._write_to_xenstore(instance, location, xs_data,

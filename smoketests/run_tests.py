@@ -133,9 +133,9 @@ class _Win32Colorizer(object):
     See _AnsiColorizer docstring.
     """
     def __init__(self, stream):
-        from win32console import GetStdHandle, STD_OUT_HANDLE, \
-             FOREGROUND_RED, FOREGROUND_BLUE, FOREGROUND_GREEN, \
-             FOREGROUND_INTENSITY
+        from win32console import (GetStdHandle, STD_OUT_HANDLE,
+                                  FOREGROUND_RED, FOREGROUND_GREEN,
+                                  FOREGROUND_BLUE, FOREGROUND_INTENSITY)
         red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
                                   FOREGROUND_BLUE, FOREGROUND_INTENSITY)
         self.stream = stream
@@ -291,8 +291,8 @@ class NovaTestRunner(core.TextTestRunner):
 
 if __name__ == '__main__':
     if not os.getenv('EC2_ACCESS_KEY'):
-        print _('Missing EC2 environment variables. Please ' \
-                'source the appropriate novarc file before ' \
+        print _('Missing EC2 environment variables. Please '
+                'source the appropriate novarc file before '
                 'running this test.')
         sys.exit(1)
 
