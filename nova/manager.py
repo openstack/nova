@@ -106,7 +106,7 @@ class ManagerMeta(type):
         super(ManagerMeta, cls).__init__(names, bases, dict_)
 
         # NOTE(sirp): if the attribute is not present then we must be the base
-        # class, so, go ahead an initialize it. If the attribute is present,
+        # class, so, go ahead and initialize it. If the attribute is present,
         # then we're a subclass so make a copy of it so we don't step on our
         # parent's toes.
         try:
