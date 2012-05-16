@@ -45,7 +45,7 @@ from nova.openstack.common import jsonutils
 import nova.policy
 from nova import quota
 from nova import rpc
-from nova.scheduler import api as scheduler_api
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova import volume
 
@@ -147,11 +147,6 @@ class BaseAPI(base.Base):
         """Generic handler for RPC calls to compute."""
         return self._cast_or_call_compute_message(rpc.call, *args, **kwargs)
 
-    @staticmethod
-    def _cast_scheduler_message(context, args):
-        """Generic handler for RPC calls to the scheduler."""
-        rpc.cast(context, FLAGS.scheduler_topic, args)
-
 
 class API(BaseAPI):
     """API for interacting with the compute manager."""
@@ -164,6 +159,7 @@ class API(BaseAPI):
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or volume.API()
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
+        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         super(API, self).__init__(**kwargs)
 
     def _check_injected_file_quota(self, context, injected_files):
@@ -435,12 +431,12 @@ class API(BaseAPI):
                     security_group, block_device_mapping)
             # Tells scheduler we created the instance already.
             base_options['uuid'] = instance['uuid']
-            rpc_method = rpc.cast
+            use_call = False
         else:
             # We need to wait for the scheduler to create the instance
             # DB entries, because the instance *could* be # created in
             # a child zone.
-            rpc_method = rpc.call
+            use_call = True
 
         filter_properties = dict(scheduler_hints=scheduler_hints)
         if context.is_admin and forced_host:
@@ -452,7 +448,7 @@ class API(BaseAPI):
         # This would require the schedulers' schedule_run_instances
         # methods to return an iterator vs a list.
         instances = self._schedule_run_instance(
-                rpc_method,
+                use_call,
                 context, base_options,
                 instance_type,
                 availability_zone, injected_files,
@@ -631,7 +627,7 @@ class API(BaseAPI):
         return "Server %s" % instance_id
 
     def _schedule_run_instance(self,
-            rpc_method,
+            use_call,
             context, base_options,
             instance_type,
             availability_zone, injected_files,
@@ -658,16 +654,11 @@ class API(BaseAPI):
             'security_group': security_group,
         }
 
-        return rpc_method(context,
-                FLAGS.scheduler_topic,
-                {"method": "run_instance",
-                 "args": {"topic": FLAGS.compute_topic,
-                          "request_spec": request_spec,
-                          "admin_password": admin_password,
-                          "injected_files": injected_files,
-                          "requested_networks": requested_networks,
-                          "is_first_time": True,
-                          "filter_properties": filter_properties}})
+        return self.scheduler_rpcapi.run_instance(context,
+                topic=FLAGS.compute_topic, request_spec=request_spec,
+                admin_password=admin_password, injected_files=injected_files,
+                requested_networks=requested_networks, is_first_time=True,
+                filter_properties=filter_properties, call=use_call)
 
     def _check_create_policies(self, context, availability_zone,
             requested_networks, block_device_mapping):
@@ -1514,9 +1505,7 @@ class API(BaseAPI):
             "request_spec": jsonutils.to_primitive(request_spec),
             "filter_properties": filter_properties,
         }
-        self._cast_scheduler_message(context,
-                    {"method": "prep_resize",
-                     "args": args})
+        self.scheduler_rpcapi.prep_resize(context, **args)
 
     @wrap_check_policy
     def add_fixed_ip(self, context, instance, network_id):

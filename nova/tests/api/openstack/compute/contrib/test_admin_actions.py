@@ -22,7 +22,7 @@ from nova import compute
 from nova import context
 from nova import exception
 from nova import flags
-from nova.scheduler import api as scheduler_api
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
@@ -59,7 +59,7 @@ def fake_compute_api_get(self, context, instance_id):
     return {'id': 1, 'uuid': instance_id}
 
 
-def fake_scheduler_api_live_migration(context, block_migration,
+def fake_scheduler_api_live_migration(self, context, block_migration,
                                       disk_over_commit, instance_id,
                                       dest, topic):
     return None
@@ -87,7 +87,7 @@ class AdminActionsTest(test.TestCase):
         self.UUID = utils.gen_uuid()
         for _method in self._methods:
             self.stubs.Set(compute.API, _method, fake_compute_api)
-        self.stubs.Set(scheduler_api,
+        self.stubs.Set(scheduler_rpcapi.SchedulerAPI,
                        'live_migration',
                        fake_scheduler_api_live_migration)
 

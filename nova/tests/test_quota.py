@@ -290,7 +290,7 @@ class OldQuotaTestCase(test.TestCase):
                                               is_admin=True)
         orig_rpc_call = rpc.call
 
-        def rpc_call_wrapper(context, topic, msg):
+        def rpc_call_wrapper(context, topic, msg, timeout=None):
             """Stub out the scheduler creating the instance entry"""
             if (topic == FLAGS.scheduler_topic and
                 msg['method'] == 'run_instance'):

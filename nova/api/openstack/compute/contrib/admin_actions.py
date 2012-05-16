@@ -25,7 +25,7 @@ from nova import compute
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.scheduler import api as scheduler_api
+from nova.scheduler import rpcapi as scheduler_rpcapi
 
 
 FLAGS = flags.FLAGS
@@ -41,6 +41,7 @@ class AdminActionsController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(AdminActionsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
+        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
 
     # TODO(bcwaldon): These action names should be prefixed with 'os-'
 
@@ -274,7 +275,7 @@ class AdminActionsController(wsgi.Controller):
 
         try:
             instance = self.compute_api.get(context, id)
-            scheduler_api.live_migration(context,
+            self.scheduler_rpcapi.live_migration(context,
                     block_migration,
                     disk_over_commit,
                     instance["id"],

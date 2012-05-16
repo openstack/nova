@@ -27,7 +27,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.scheduler import api as scheduler_api
+from nova.scheduler import rpcapi as scheduler_rpcapi
 
 
 LOG = logging.getLogger(__name__)
@@ -98,7 +98,8 @@ def _list_hosts(req, service=None):
     by service type.
     """
     context = req.environ['nova.context']
-    hosts = scheduler_api.get_host_list(context)
+    rpcapi = scheduler_rpcapi.SchedulerAPI()
+    hosts = rpcapi.get_host_list(context)
     if service:
         hosts = [host for host in hosts
                 if host["service"] == service]

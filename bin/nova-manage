@@ -90,6 +90,7 @@ from nova import log as logging
 from nova.openstack.common import importutils
 from nova import quota
 from nova import rpc
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova import version
 from nova.volume import volume_types
@@ -1021,10 +1022,9 @@ class ServiceCommands(object):
         :param host: hostname.
 
         """
-        result = rpc.call(context.get_admin_context(),
-                     FLAGS.scheduler_topic,
-                     {"method": "show_host_resources",
-                      "args": {"host": host}})
+        rpcapi = scheduler_rpcapi.SchedulerAPI()
+        result = rpcapi.show_host_resources(context.get_admin_context(),
+                                            host=host)
 
         if not isinstance(result, dict):
             print _('An unexpected error has occurred.')

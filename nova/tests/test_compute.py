@@ -2807,15 +2807,14 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_request_spec(self):
-        def _fake_cast(context, args):
-            request_spec = args['args']['request_spec']
-            filter_properties = args['args']['filter_properties']
+        def _fake_cast(context, topic, msg):
+            request_spec = msg['args']['request_spec']
+            filter_properties = msg['args']['filter_properties']
             instance_properties = request_spec['instance_properties']
             self.assertEqual(instance_properties['host'], 'host2')
             self.assertIn('host2', filter_properties['ignore_hosts'])
 
-        self.stubs.Set(self.compute_api, '_cast_scheduler_message',
-                _fake_cast)
+        self.stubs.Set(rpc, 'cast', _fake_cast)
 
         context = self.context.elevated()
         instance = self._create_fake_instance(dict(host='host2'))
@@ -2827,15 +2826,14 @@ class ComputeAPITestCase(BaseTestCase):
             self.compute.terminate_instance(context, instance['uuid'])
 
     def test_resize_request_spec_noavoid(self):
-        def _fake_cast(context, args):
-            request_spec = args['args']['request_spec']
-            filter_properties = args['args']['filter_properties']
+        def _fake_cast(context, topic, msg):
+            request_spec = msg['args']['request_spec']
+            filter_properties = msg['args']['filter_properties']
             instance_properties = request_spec['instance_properties']
             self.assertEqual(instance_properties['host'], 'host2')
             self.assertNotIn('host2', filter_properties['ignore_hosts'])
 
-        self.stubs.Set(self.compute_api, '_cast_scheduler_message',
-                _fake_cast)
+        self.stubs.Set(rpc, 'cast', _fake_cast)
         self.flags(allow_resize_to_same_host=True)
 
         context = self.context.elevated()

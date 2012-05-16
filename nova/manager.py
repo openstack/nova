@@ -57,7 +57,7 @@ from nova.db import base
 from nova import flags
 from nova import log as logging
 from nova.rpc import dispatcher as rpc_dispatcher
-from nova.scheduler import api
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import version
 
 
@@ -202,6 +202,7 @@ class SchedulerDependentManager(Manager):
     def __init__(self, host=None, db_driver=None, service_name='undefined'):
         self.last_capabilities = None
         self.service_name = service_name
+        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         super(SchedulerDependentManager, self).__init__(host, db_driver)
 
     def update_service_capabilities(self, capabilities):
@@ -213,5 +214,5 @@ class SchedulerDependentManager(Manager):
         """Pass data back to the scheduler at a periodic interval."""
         if self.last_capabilities:
             LOG.debug(_('Notifying Schedulers of capabilities ...'))
-            api.update_service_capabilities(context, self.service_name,
-                                self.host, self.last_capabilities)
+            self.scheduler_rpcapi.update_service_capabilities(context,
+                    self.service_name, self.host, self.last_capabilities)

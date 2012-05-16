@@ -24,7 +24,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.scheduler import api as scheduler_api
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 
 
@@ -38,7 +38,7 @@ HOST_LIST = [
         {"host_name": "host_v2", "service": "volume"}]
 
 
-def stub_get_host_list(req):
+def stub_get_host_list(self, req):
     return HOST_LIST
 
 
@@ -104,7 +104,8 @@ class HostTestCase(test.TestCase):
         super(HostTestCase, self).setUp()
         self.controller = os_hosts.HostController()
         self.req = FakeRequest()
-        self.stubs.Set(scheduler_api, 'get_host_list', stub_get_host_list)
+        self.stubs.Set(scheduler_rpcapi.SchedulerAPI, 'get_host_list',
+                       stub_get_host_list)
         self.stubs.Set(self.controller.api, 'set_host_enabled',
                        stub_set_host_enabled)
         self.stubs.Set(self.controller.api, 'set_host_maintenance',
