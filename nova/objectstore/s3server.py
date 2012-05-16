@@ -45,24 +45,32 @@ import routes
 import webob
 
 from nova import flags
-from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
 from nova import wsgi
 
 
-buckets_path_opt = cfg.StrOpt('buckets_path', default='$state_path/buckets',
-                              help='path to s3 buckets')
+s3_opts = [
+    cfg.StrOpt('buckets_path',
+               default='$state_path/buckets',
+               help='path to s3 buckets'),
+    cfg.StrOpt('s3_listen',
+               default="0.0.0.0",
+               help='IP address for S3 API to listen'),
+    cfg.IntOpt('s3_listen_port',
+               default=3333,
+               help='port for s3 api to listen'),
+]
 
 FLAGS = flags.FLAGS
-FLAGS.register_opt(buckets_path_opt)
+FLAGS.register_opts(s3_opts)
 
 
 def get_wsgi_server():
     return wsgi.Server("S3 Objectstore",
                        S3Application(FLAGS.buckets_path),
-                       port=FLAGS.s3_port,
-                       host=FLAGS.s3_host)
+                       port=FLAGS.s3_listen_port,
+                       host=FLAGS.s3_listen)
 
 
 class S3Application(wsgi.Router):
