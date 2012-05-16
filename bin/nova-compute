@@ -40,7 +40,7 @@ from nova import service
 from nova import utils
 
 if __name__ == '__main__':
-    utils.default_flagfile()
+    utils.default_cfgfile()
     flags.FLAGS(sys.argv)
     logging.setup()
     utils.monkey_patch()

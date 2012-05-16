@@ -99,38 +99,6 @@ class FlagsTestCase(test.TestCase):
         self.reset_flags()
         self.assertEqual(FLAGS.flags_unittest, 'foo')
 
-    def test_flagfile(self):
-        opts = [
-            cfg.StrOpt('string', default='default', help='desc'),
-            cfg.IntOpt('int', default=1, help='desc'),
-            cfg.BoolOpt('false', default=False, help='desc'),
-            cfg.BoolOpt('true', default=True, help='desc'),
-            cfg.MultiStrOpt('multi', default=['blaa'], help='desc'),
-            ]
-
-        self.FLAGS.register_opts(opts)
-
-        (fd, path) = tempfile.mkstemp(prefix='nova', suffix='.flags')
-
-        try:
-            os.write(fd, '--string=foo\n--int=2\n--false\n--notrue\n')
-            os.write(fd, '--multi=bar\n')
-            os.close(fd)
-
-            self.FLAGS(['flags_test', '--flagfile=' + path])
-
-            self.assertEqual(self.FLAGS.string, 'foo')
-            self.assertEqual(self.FLAGS.int, 2)
-            self.assertEqual(self.FLAGS.false, True)
-            self.assertEqual(self.FLAGS.true, False)
-            self.assertEqual(self.FLAGS.multi, ['bar'])
-
-            # Re-parse to test multistring isn't append multiple times
-            self.FLAGS(['flags_test', '--flagfile=' + path])
-            self.assertEqual(self.FLAGS.multi, ['bar'])
-        finally:
-            os.remove(path)
-
     def test_defaults(self):
         self.FLAGS.register_opt(cfg.StrOpt('foo', default='bar', help='desc'))
         self.assertEqual(self.FLAGS.foo, 'bar')

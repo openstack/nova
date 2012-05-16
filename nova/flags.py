@@ -30,7 +30,6 @@ import os
 import socket
 import sys
 
-from nova.compat import flagfile
 from nova.openstack.common import cfg
 
 
@@ -43,8 +42,7 @@ class NovaConfigOpts(cfg.CommonConfigOpts):
         self.disable_interspersed_args()
 
     def __call__(self, argv):
-        with flagfile.handle_flagfiles_managed(argv[1:]) as args:
-            return argv[:1] + super(NovaConfigOpts, self).__call__(args)
+        return argv[:1] + super(NovaConfigOpts, self).__call__(argv[1:])
 
 
 FLAGS = NovaConfigOpts()
