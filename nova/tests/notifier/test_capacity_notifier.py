@@ -15,8 +15,8 @@
 
 import nova.db.api
 from nova.notifier import capacity_notifier as cn
+from nova.openstack.common import jsonutils
 from nova import test
-from nova import utils
 
 
 class CapacityNotifierTestCase(test.TestCase):
@@ -24,7 +24,7 @@ class CapacityNotifierTestCase(test.TestCase):
 
     def _make_msg(self, host, event):
         usage_info = dict(memory_mb=123, disk_gb=456)
-        payload = utils.to_primitive(usage_info, convert_instances=True)
+        payload = jsonutils.to_primitive(usage_info, convert_instances=True)
         return dict(
             publisher_id="compute.%s" % host,
             event_type="compute.instance.%s" % event,

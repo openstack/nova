@@ -21,17 +21,38 @@ import copy
 import sys
 import traceback
 
-from nova import exception
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova import utils
+from nova.openstack.common import jsonutils
 
 
 LOG = logging.getLogger(__name__)
 
 
-class RemoteError(exception.NovaException):
+class RPCException(Exception):
+    message = _("An unknown RPC related exception occurred.")
+
+    def __init__(self, message=None, **kwargs):
+        self.kwargs = kwargs
+
+        if not message:
+            try:
+                message = self.message % kwargs
+
+            except Exception as e:
+                # kwargs doesn't match a variable in the message
+                # log the issue and the kwargs
+                LOG.exception(_('Exception in string format operation'))
+                for name, value in kwargs.iteritems():
+                    LOG.error("%s: %s" % (name, value))
+                # at least get the core message out if something happened
+                message = self.message
+
+        super(RPCException, self).__init__(message)
+
+
+class RemoteError(RPCException):
     """Signifies that a remote class has raised an exception.
 
     Contains a string representation of the type of the original exception,
@@ -51,13 +72,17 @@ class RemoteError(exception.NovaException):
                                           traceback=traceback)
 
 
-class Timeout(exception.NovaException):
+class Timeout(RPCException):
     """Signifies that a timeout has occurred.
 
     This exception is raised if the rpc_response_timeout is reached while
     waiting for a response from the remote side.
     """
     message = _("Timeout while waiting on RPC response.")
+
+
+class InvalidRPCConnectionReuse(RPCException):
+    message = _("Invalid reuse of an RPC connection.")
 
 
 class Connection(object):
@@ -174,13 +199,13 @@ def serialize_remote_exception(failure_info):
         'kwargs': kwargs
     }
 
-    json_data = utils.dumps(data)
+    json_data = jsonutils.dumps(data)
 
     return json_data
 
 
 def deserialize_remote_exception(conf, data):
-    failure = utils.loads(str(data))
+    failure = jsonutils.loads(str(data))
 
     trace = failure.get('tb', [])
     message = failure.get('message', "") + "\n" + "\n".join(trace)

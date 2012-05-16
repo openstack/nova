@@ -66,6 +66,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import driver
@@ -1996,7 +1997,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         cpu_info['topology'] = topology
         cpu_info['features'] = features
-        return utils.dumps(cpu_info)
+        return jsonutils.dumps(cpu_info)
 
     def block_stats(self, instance_name, disk):
         """
@@ -2081,7 +2082,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
 
-        info = utils.loads(cpu_info)
+        info = jsonutils.loads(cpu_info)
         LOG.info(_('Instance launched has CPU info:\n%s') % cpu_info)
         cpu = config.LibvirtConfigCPU()
         cpu.arch = info['arch']
@@ -2256,7 +2257,7 @@ class LibvirtConnection(driver.ComputeDriver):
             json strings specified in get_instance_disk_info
 
         """
-        disk_info = utils.loads(disk_info_json)
+        disk_info = jsonutils.loads(disk_info_json)
 
         # make instance directory
         instance_dir = os.path.join(FLAGS.instances_path, instance_ref['name'])
@@ -2393,7 +2394,7 @@ class LibvirtConnection(driver.ComputeDriver):
                               'virt_disk_size': virt_size,
                               'backing_file': backing_file,
                               'disk_size': dk_size})
-        return utils.dumps(disk_info)
+        return jsonutils.dumps(disk_info)
 
     def get_disk_available_least(self):
         """Return disk available least size.
@@ -2413,7 +2414,8 @@ class LibvirtConnection(driver.ComputeDriver):
         instances_sz = 0
         for i_name in instances_name:
             try:
-                disk_infos = utils.loads(self.get_instance_disk_info(i_name))
+                disk_infos = jsonutils.loads(
+                        self.get_instance_disk_info(i_name))
                 for info in disk_infos:
                     i_vt_sz = int(info['virt_disk_size'])
                     i_dk_sz = int(info['disk_size'])
@@ -2474,7 +2476,7 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.debug(_("Starting migrate_disk_and_power_off"),
                    instance=instance)
         disk_info_text = self.get_instance_disk_info(instance['name'])
-        disk_info = utils.loads(disk_info_text)
+        disk_info = jsonutils.loads(disk_info_text)
 
         self._destroy(instance, network_info, cleanup=False)
 
@@ -2540,7 +2542,7 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.debug(_("Starting finish_migration"), instance=instance)
 
         # resize disks. only "disk" and "disk.local" are necessary.
-        disk_info = utils.loads(disk_info)
+        disk_info = jsonutils.loads(disk_info)
         for info in disk_info:
             fname = os.path.basename(info['path'])
             if fname == 'disk':
@@ -2626,7 +2628,7 @@ class HostState(object):
         data = {}
         data["vcpus"] = self.connection.get_vcpu_total()
         data["vcpus_used"] = self.connection.get_vcpu_used()
-        data["cpu_info"] = utils.loads(self.connection.get_cpu_info())
+        data["cpu_info"] = jsonutils.loads(self.connection.get_cpu_info())
         data["disk_total"] = self.connection.get_local_gb_total()
         data["disk_used"] = self.connection.get_local_gb_used()
         data["disk_available"] = data["disk_total"] - data["disk_used"]

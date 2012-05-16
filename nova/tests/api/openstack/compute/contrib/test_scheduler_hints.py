@@ -19,10 +19,10 @@ from nova.api.openstack  import compute
 from nova.api.openstack.compute import extensions
 from nova.api.openstack import wsgi
 import nova.db.api
+from nova.openstack.common import jsonutils
 import nova.rpc
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import utils
 
 
 UUID = fakes.FAKE_UUID
@@ -52,7 +52,7 @@ class SchedulerHintsTestCase(test.TestCase):
                   'flavorRef': '1',
                }}
 
-        req.body = utils.dumps(body)
+        req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(202, res.status_int)
 
@@ -76,7 +76,7 @@ class SchedulerHintsTestCase(test.TestCase):
             'os:scheduler_hints': {'a': 'b'},
         }
 
-        req.body = utils.dumps(body)
+        req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(202, res.status_int)
 
@@ -93,6 +93,6 @@ class SchedulerHintsTestCase(test.TestCase):
             'os:scheduler_hints': 'here',
         }
 
-        req.body = utils.dumps(body)
+        req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(400, res.status_int)

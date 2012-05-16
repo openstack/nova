@@ -40,6 +40,7 @@ import nova.image
 from nova import log as logging
 from nova import network
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 import nova.policy
 from nova import quota
 from nova import rpc
@@ -652,7 +653,7 @@ class API(BaseAPI):
                 locals())
 
         request_spec = {
-            'image': utils.to_primitive(image),
+            'image': jsonutils.to_primitive(image),
             'instance_properties': base_options,
             'instance_type': instance_type,
             'num_instances': num_instances,
@@ -1482,7 +1483,7 @@ class API(BaseAPI):
             "instance_type_id": new_instance_type['id'],
             "image": image,
             "update_db": False,
-            "request_spec": utils.to_primitive(request_spec),
+            "request_spec": jsonutils.to_primitive(request_spec),
             "filter_properties": filter_properties,
         }
         self._cast_scheduler_message(context,

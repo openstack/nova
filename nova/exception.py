@@ -282,10 +282,6 @@ class InvalidCidr(Invalid):
     message = _("Invalid cidr %(cidr)s.")
 
 
-class InvalidRPCConnectionReuse(Invalid):
-    message = _("Invalid reuse of an RPC connection.")
-
-
 class InvalidUnicodeParameter(Invalid):
     message = _("Invalid Parameter: "
                 "Unicode is not supported by the current database.")

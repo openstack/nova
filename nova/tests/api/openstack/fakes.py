@@ -39,6 +39,7 @@ from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
 import nova.image.fake
+from nova.openstack.common import jsonutils
 from nova.tests import fake_network
 from nova.tests.glance import stubs as glance_stubs
 from nova import utils
@@ -464,7 +465,7 @@ def create_info_cache(nw_cache):
         return {"info_cache": {"network_info": nw_cache}}
 
     if not isinstance(nw_cache, basestring):
-        nw_cache = utils.dumps(nw_cache)
+        nw_cache = jsonutils.dumps(nw_cache)
 
     return {"info_cache": {"network_info": nw_cache}}
 

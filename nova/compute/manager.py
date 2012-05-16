@@ -65,6 +65,7 @@ from nova.notifier import api as notifier
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova import rpc
 from nova import utils
 from nova.virt import driver
@@ -399,7 +400,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                  bdm['device_name'])
                 self.db.block_device_mapping_update(
                         context, bdm['id'],
-                        {'connection_info': utils.dumps(cinfo)})
+                        {'connection_info': jsonutils.dumps(cinfo)})
                 block_device_mapping.append({'connection_info': cinfo,
                                              'mount_device':
                                              bdm['device_name']})
@@ -637,7 +638,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         bdms = self._get_instance_volume_bdms(context, instance_uuid)
         block_device_mapping = []
         for bdm in bdms:
-            cinfo = utils.loads(bdm['connection_info'])
+            cinfo = jsonutils.loads(bdm['connection_info'])
             block_device_mapping.append({'connection_info': cinfo,
                                          'mount_device':
                                          bdm['device_name']})
@@ -1777,7 +1778,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                mountpoint)
         values = {
             'instance_uuid': instance_ref['uuid'],
-            'connection_info': utils.dumps(connection_info),
+            'connection_info': jsonutils.dumps(connection_info),
             'device_name': mountpoint,
             'delete_on_termination': False,
             'virtual_name': None,
@@ -1801,7 +1802,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if instance_name not in self.driver.list_instances():
             LOG.warn(_('Detaching volume from unknown instance'),
                      context=context, instance=instance)
-        self.driver.detach_volume(utils.loads(bdm['connection_info']),
+        self.driver.detach_volume(jsonutils.loads(bdm['connection_info']),
                                   instance_name,
                                   mp)
 
