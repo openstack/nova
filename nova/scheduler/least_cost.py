@@ -67,6 +67,11 @@ class WeightedHost(object):
             x['host'] = self.host_state.host
         return x
 
+    def __repr__(self):
+        if self.host_state:
+            return "WeightedHost host: %s" % self.host_state.host
+        return "WeightedHost with no host_state"
+
 
 def noop_cost_fn(host_state, weighing_properties):
     """Return a pre-weight cost of 1 for each host"""
