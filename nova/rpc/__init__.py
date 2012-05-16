@@ -34,7 +34,7 @@ rpc_opts = [
     cfg.IntOpt('rpc_response_timeout',
                default=60,
                help='Seconds to wait for a response from call or multicall'),
-    cfg.IntOpt('allowed_rpc_exception_modules',
+    cfg.ListOpt('allowed_rpc_exception_modules',
                default=['nova.exception'],
                help='Modules of exceptions that are permitted to be recreated'
                     'upon receiving exception data from an rpc call.'),

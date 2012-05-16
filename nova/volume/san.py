@@ -45,7 +45,7 @@ LOG = logging.getLogger(__name__)
 
 san_opts = [
     cfg.BoolOpt('san_thin_provision',
-                default='true',
+                default=True,
                 help='Use thin provisioning for SAN volumes?'),
     cfg.StrOpt('san_ip',
                default='',
@@ -66,7 +66,7 @@ san_opts = [
                default=22,
                help='SSH port to use with SAN'),
     cfg.BoolOpt('san_is_local',
-                default='false',
+                default=False,
                 help='Execute commands locally instead of over SSH; '
                      'use if the volume service is running on the SAN device'),
     cfg.StrOpt('san_zfs_volume_base',

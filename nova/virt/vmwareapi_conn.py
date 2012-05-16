@@ -69,11 +69,11 @@ vmwareapi_opts = [
                  default=5.0,
                  help='The interval used for polling of remote tasks. '
                        'Used only if connection_type is vmwareapi'),
-    cfg.FloatOpt('vmwareapi_api_retry_count',
-                 default=10,
-                 help='The number of times we retry on failures, e.g., '
-                      'socket error, etc. '
-                      'Used only if connection_type is vmwareapi'),
+    cfg.IntOpt('vmwareapi_api_retry_count',
+               default=10,
+               help='The number of times we retry on failures, e.g., '
+                    'socket error, etc. '
+                    'Used only if connection_type is vmwareapi'),
     cfg.StrOpt('vmwareapi_vlan_interface',
                default='vmnic0',
                help='Physical ethernet adapter name for vlan networking'),

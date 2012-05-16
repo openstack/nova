@@ -51,12 +51,7 @@ from nova import volume
 
 LOG = logging.getLogger(__name__)
 
-find_host_timeout_opt = cfg.StrOpt('find_host_timeout',
-        default=30,
-        help='Timeout after NN seconds when looking for a host.')
-
 FLAGS = flags.FLAGS
-FLAGS.register_opt(find_host_timeout_opt)
 flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
 
 
