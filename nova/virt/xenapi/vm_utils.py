@@ -56,10 +56,10 @@ xenapi_vm_utils_opts = [
                help='Default OS type'),
     cfg.IntOpt('block_device_creation_timeout',
                default=10,
-               help='time to wait for a block device to be created'),
+               help='Time to wait for a block device to be created'),
     cfg.IntOpt('max_kernel_ramdisk_size',
                default=16 * 1024 * 1024,
-               help='maximum size in bytes of kernel or ramdisk images'),
+               help='Maximum size in bytes of kernel or ramdisk images'),
     cfg.StrOpt('sr_matching_filter',
                default='other-config:i18n-key=local-storage',
                help='Filter for finding the SR to be used to install guest '
@@ -74,7 +74,10 @@ xenapi_vm_utils_opts = [
                 help='Whether to use sparse_copy for copying data on a '
                      'resize down (False will use standard dd). This speeds '
                      'up resizes down considerably since large runs of zeros '
-                     'won\'t have to be rsynced')
+                     'won\'t have to be rsynced'),
+    cfg.IntOpt('xenapi_num_vbd_unplug_retries',
+               default=10,
+               help='Maximum number of retries to unplug VBD'),
     ]
 
 FLAGS = flags.FLAGS
@@ -247,13 +250,33 @@ class VMHelper(xenapi.HelperBase):
     @classmethod
     def unplug_vbd(cls, session, vbd_ref):
         """Unplug VBD from VM"""
-        try:
-            vbd_ref = session.call_xenapi('VBD.unplug', vbd_ref)
-        except cls.XenAPI.Failure, exc:
-            LOG.exception(exc)
-            if exc.details[0] != 'DEVICE_ALREADY_DETACHED':
-                raise volume_utils.StorageError(
-                        _('Unable to unplug VBD %s') % vbd_ref)
+        # Call VBD.unplug on the given VBD, with a retry if we get
+        # DEVICE_DETACH_REJECTED.  For reasons which we don't understand,
+        # we're seeing the device still in use, even when all processes
+        # using the device should be dead.
+        max_attempts = FLAGS.xenapi_num_vbd_unplug_retries + 1
+        for num_attempt in xrange(1, max_attempts + 1):
+            try:
+                session.call_xenapi('VBD.unplug', vbd_ref)
+                return
+            except cls.XenAPI.Failure, exc:
+                err = len(exc.details) > 0 and exc.details[0]
+                if err == 'DEVICE_ALREADY_DETACHED':
+                    LOG.info(_('VBD %s already detached'), vbd_ref)
+                    return
+                elif err == 'DEVICE_DETACH_REJECTED':
+                    LOG.info(_('VBD %(vbd_ref)s detach rejected, attempt'
+                               ' %(num_attempt)d/%(max_attempts)d'), locals())
+                else:
+                    LOG.exception(exc)
+                    raise volume_utils.StorageError(
+                            _('Unable to unplug VBD %s') % vbd_ref)
+
+            greenthread.sleep(1)
+
+        raise volume_utils.StorageError(
+                _('Reached maximum number of retries trying to unplug VBD %s')
+                % vbd_ref)
 
     @classmethod
     def destroy_vbd(cls, session, vbd_ref):
@@ -1477,7 +1500,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
             yield dev
         finally:
             LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
-            vbd_unplug_with_retry(session, vbd_ref)
+            VMHelper.unplug_vbd(session, vbd_ref)
     finally:
         try:
             VMHelper.destroy_vbd(session, vbd_ref)
@@ -1485,32 +1508,6 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
             # destroy_vbd() will log error
             pass
         LOG.debug(_('Destroying VBD for VDI %s done.'), vdi_ref)
-
-
-def vbd_unplug_with_retry(session, vbd_ref):
-    """Call VBD.unplug on the given VBD, with a retry if we get
-    DEVICE_DETACH_REJECTED.  For reasons which I don't understand, we're
-    seeing the device still in use, even when all processes using the device
-    should be dead."""
-    while True:
-        try:
-            VMHelper.unplug_vbd(session, vbd_ref)
-            LOG.debug(_('VBD.unplug successful first time.'))
-            return
-        except VMHelper.XenAPI.Failure, e:
-            if (len(e.details) > 0 and
-                e.details[0] == 'DEVICE_DETACH_REJECTED'):
-                LOG.debug(_('VBD.unplug rejected: retrying...'))
-                greenthread.sleep(1)
-                LOG.debug(_('Not sleeping anymore!'))
-            elif (len(e.details) > 0 and
-                  e.details[0] == 'DEVICE_ALREADY_DETACHED'):
-                LOG.debug(_('VBD.unplug successful eventually.'))
-                return
-            else:
-                LOG.error(_('Ignoring XenAPI.Failure in VBD.unplug: %s'),
-                              e)
-                return
 
 
 def get_this_vm_uuid():
