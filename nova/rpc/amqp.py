@@ -242,23 +242,26 @@ class ProxyCallback(object):
         ctxt = unpack_context(self.conf, message_data)
         method = message_data.get('method')
         args = message_data.get('args', {})
+        version = message_data.get('version', None)
         if not method:
             LOG.warn(_('no method for message: %s') % message_data)
             ctxt.reply(_('No method for message: %s') % message_data,
                        connection_pool=self.connection_pool)
             return
-        self.pool.spawn_n(self._process_data, ctxt, method, args)
+        self.pool.spawn_n(self._process_data, ctxt, version, method, args)
 
-    def _process_data(self, ctxt, method, args):
-        """Thread that magically looks for a method on the proxy
-        object and calls it.
+    def _process_data(self, ctxt, version, method, args):
+        """Process a message in a new thread.
+
+        If the proxy object we have has a dispatch method
+        (see rpc.dispatcher.RpcDispatcher), pass it the version,
+        method, and args and let it dispatch as appropriate.  If not, use
+        the old behavior of magically calling the specified method on the
+        proxy we have here.
         """
         ctxt.update_store()
         try:
-            node_func = getattr(self.proxy, str(method))
-            node_args = dict((str(k), v) for k, v in args.iteritems())
-            # NOTE(vish): magic is fun!
-            rval = node_func(context=ctxt, **node_args)
+            rval = self.proxy.dispatch(ctxt, version, method, **args)
             # Check if the result was a generator
             if inspect.isgenerator(rval):
                 for x in rval:

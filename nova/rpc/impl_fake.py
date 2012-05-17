@@ -47,15 +47,13 @@ class Consumer(object):
         self.topic = topic
         self.proxy = proxy
 
-    def call(self, context, method, args, timeout):
-        node_func = getattr(self.proxy, method)
-        node_args = dict((str(k), v) for k, v in args.iteritems())
+    def call(self, context, version, method, args, timeout):
         done = eventlet.event.Event()
 
         def _inner():
             ctxt = RpcContext.from_dict(context.to_dict())
             try:
-                rval = node_func(context=ctxt, **node_args)
+                rval = self.proxy.dispatch(context, version, method, **args)
                 res = []
                 # Caller might have called ctxt.reply() manually
                 for (reply, failure) in ctxt._response:
@@ -129,13 +127,14 @@ def multicall(conf, context, topic, msg, timeout=None):
     if not method:
         return
     args = msg.get('args', {})
+    version = msg.get('version', None)
 
     try:
         consumer = CONSUMERS[topic][0]
     except (KeyError, IndexError):
         return iter([None])
     else:
-        return consumer.call(context, method, args, timeout)
+        return consumer.call(context, version, method, args, timeout)
 
 
 def call(conf, context, topic, msg, timeout=None):

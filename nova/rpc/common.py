@@ -85,6 +85,11 @@ class InvalidRPCConnectionReuse(RPCException):
     message = _("Invalid reuse of an RPC connection.")
 
 
+class UnsupportedRpcVersion(RPCException):
+    message = _("Specified RPC version, %(version)s, not supported by "
+                "this endpoint.")
+
+
 class Connection(object):
     """A connection, returned by rpc.create_connection().
 

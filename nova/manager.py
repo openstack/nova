@@ -56,6 +56,7 @@ This module provides Manager, a base class for managers.
 from nova.db import base
 from nova import flags
 from nova import log as logging
+from nova.rpc import dispatcher as rpc_dispatcher
 from nova.scheduler import api
 from nova import version
 
@@ -130,11 +131,22 @@ class ManagerMeta(type):
 class Manager(base.Base):
     __metaclass__ = ManagerMeta
 
+    # Set RPC API version to 1.0 by default.
+    RPC_API_VERSION = '1.0'
+
     def __init__(self, host=None, db_driver=None):
         if not host:
             host = FLAGS.host
         self.host = host
         super(Manager, self).__init__(db_driver)
+
+    def create_rpc_dispatcher(self):
+        '''Get the rpc dispatcher for this manager.
+
+        If a manager would like to set an rpc API version, or support more than
+        one class as the target of rpc messages, override this method.
+        '''
+        return rpc_dispatcher.RpcDispatcher([self])
 
     def periodic_tasks(self, context, raise_on_error=False):
         """Tasks to be run at a periodic interval."""
