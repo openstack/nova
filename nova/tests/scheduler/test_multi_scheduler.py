@@ -28,6 +28,10 @@ from nova.tests.scheduler import test_scheduler
 class FakeComputeScheduler(driver.Scheduler):
     is_fake_compute = True
 
+    def __init__(self):
+        super(FakeComputeScheduler, self).__init__()
+        self.is_update_caps_called = False
+
     def schedule_theoretical(self, *args, **kwargs):
         pass
 
@@ -37,6 +41,10 @@ class FakeComputeScheduler(driver.Scheduler):
 
 class FakeVolumeScheduler(driver.Scheduler):
     is_fake_volume = True
+
+    def __init__(self):
+        super(FakeVolumeScheduler, self).__init__()
+        self.is_update_caps_called = False
 
     def schedule_create_volume(self, *args, **kwargs):
         pass
@@ -103,3 +111,17 @@ class MultiDriverTestCase(test_scheduler.SchedulerTestCase):
         self.mox.ReplayAll()
         mgr.schedule(ctxt, 'compute', method, *fake_args, **fake_kwargs)
         mgr.schedule(ctxt, 'volume', method, *fake_args, **fake_kwargs)
+
+    def test_update_service_capabilities(self):
+        def fake_update_service_capabilities(self, service, host, caps):
+            self.is_update_caps_called = True
+
+        mgr = self._manager
+        self.stubs.Set(driver.Scheduler,
+                       'update_service_capabilities',
+                       fake_update_service_capabilities)
+        self.assertFalse(mgr.drivers['compute'].is_update_caps_called)
+        self.assertFalse(mgr.drivers['volume'].is_update_caps_called)
+        mgr.update_service_capabilities('foo_svc', 'foo_host', 'foo_caps')
+        self.assertTrue(mgr.drivers['compute'].is_update_caps_called)
+        self.assertTrue(mgr.drivers['volume'].is_update_caps_called)
