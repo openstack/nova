@@ -209,8 +209,9 @@ class IptablesFirewallDriver(FirewallDriver):
         dhcp_servers = [info['dhcp_server'] for (_n, info) in network_info]
 
         for dhcp_server in dhcp_servers:
-            ipv4_rules.append('-s %s -p udp --sport 67 --dport 68 '
-                              '-j ACCEPT' % (dhcp_server,))
+            if dhcp_server:
+                ipv4_rules.append('-s %s -p udp --sport 67 --dport 68 '
+                                  '-j ACCEPT' % (dhcp_server,))
 
     def _do_project_network_rules(self, ipv4_rules, ipv6_rules, network_info):
         cidrs = [network['cidr'] for (network, _i) in network_info]
