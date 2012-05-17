@@ -2426,6 +2426,29 @@ disk size: 4.4M''', ''))
         libvirt_utils.fetch_image(context, target, image_id,
                                   user_id, project_id)
 
+    def test_get_disk_backing_file(self):
+        with_actual_path = False
+
+        def fake_execute(*args, **kwargs):
+            if with_actual_path:
+                return ("some\n"
+                        "output\n"
+                        "backing file: /foo/bar/baz (actual path: /a/b/c)\n"
+                        "...\n"), ''
+            else:
+                return ("some\n"
+                        "output\n"
+                        "backing file: /foo/bar/baz\n"
+                        "...\n"), ''
+
+        self.stubs.Set(utils, 'execute', fake_execute)
+
+        out = libvirt_utils.get_disk_backing_file('')
+        self.assertEqual(out, 'baz')
+        with_actual_path = True
+        out = libvirt_utils.get_disk_backing_file('')
+        self.assertEqual(out, 'c')
+
 
 class LibvirtConnectionTestCase(test.TestCase):
     """Test for nova.virt.libvirt.connection.LibvirtConnection."""
