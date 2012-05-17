@@ -1154,10 +1154,10 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             utils.execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
             LOG.debug(_("Done starting bridge %s"), bridge)
 
-        full_ip = '%s/%s' % (network['dhcp_server'],
-                             network['cidr'].rpartition('/')[2])
-        utils.execute('ip', 'address', 'add', full_ip, 'dev', bridge,
-                      run_as_root=True)
+            full_ip = '%s/%s' % (network['dhcp_server'],
+                                 network['cidr'].rpartition('/')[2])
+            utils.execute('ip', 'address', 'add', full_ip, 'dev', bridge,
+                          run_as_root=True)
 
         return dev
 
