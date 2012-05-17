@@ -100,7 +100,7 @@ class Client(object):
 
     def __init__(self, host="127.0.0.1", port=9696, use_ssl=False, tenant=None,
                  format="xml", testing_stub=None, key_file=None,
-                 cert_file=None, logger=None):
+                 cert_file=None, logger=None, timeout=None):
         """Creates a new client to some service.
 
         :param host: The host where service resides
@@ -123,6 +123,7 @@ class Client(object):
         self.key_file = key_file
         self.cert_file = cert_file
         self.logger = logger
+        self.timeout = timeout
 
     def get_connection_type(self):
         """Returns the proper connection type"""
@@ -164,13 +165,17 @@ class Client(object):
                                       "application/%s" % self.format}
 
             # Open connection and send request, handling SSL certs
-            certs = {'key_file': self.key_file, 'cert_file': self.cert_file}
-            certs = dict((x, certs[x]) for x in certs if certs[x] is not None)
+            kwargs = {}
+            if self.use_ssl:
+                if self.key_file:
+                    kwargs['key_file'] = self.key_file
+                if self.cert_file:
+                    kwargs['cert_file'] = self.cert_file
 
-            if self.use_ssl and len(certs):
-                c = connection_type(self.host, self.port, **certs)
-            else:
-                c = connection_type(self.host, self.port)
+            if self.timeout:
+                kwargs['timeout'] = self.timeout
+
+            c = connection_type(self.host, self.port, **kwargs)
 
             if self.logger:
                 self.logger.debug(
