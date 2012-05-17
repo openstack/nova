@@ -81,3 +81,9 @@ class MultiScheduler(driver.Scheduler):
 
     def schedule_prep_resize(self, *args, **kwargs):
         return self.drivers['compute'].schedule_prep_resize(*args, **kwargs)
+
+    def update_service_capabilities(self, service_name, host, capabilities):
+        # Multi scheduler is only a holder of sub-schedulers, so
+        # pass the capabilities to the schedulers that matter
+        for d in self.drivers.values():
+            d.update_service_capabilities(service_name, host, capabilities)
