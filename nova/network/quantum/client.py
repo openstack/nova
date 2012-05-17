@@ -35,7 +35,7 @@ class JSONSerializer(object):
     the standard serializer from the quantum library.
     """
     def serialize(self, data, content_type):
-        jsonutils.dumps(data)
+        return jsonutils.dumps(data)
 
     def deserialize(self, data, content_type):
         return jsonutils.loads(data)
