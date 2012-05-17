@@ -47,9 +47,14 @@ class ComputeFilter(filters.BaseHostFilter):
         service = host_state.service
 
         if not utils.service_is_up(service) or service['disabled']:
+            LOG.debug(_("%(host_state)s is disabled or has not been "
+                    "heard from in a while"), locals())
             return False
         if not capabilities.get("enabled", True):
+            LOG.debug(_("%(host_state)s is disabled via capabs"), locals())
             return False
         if not self._satisfies_extra_specs(capabilities, instance_type):
+            LOG.debug(_("%(host_state)s fails instance_type extra_specs "
+                    "requirements"), locals())
             return False
         return True
