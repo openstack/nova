@@ -72,7 +72,7 @@ def find_orphaned_instances(session, verbose=False):
 
     orphaned_instances = []
 
-    for vm_rec in _get_applicable_vm_recs(session):
+    for vm_ref, vm_rec in _get_applicable_vm_recs(session):
         try:
             uuid = vm_rec['other_config']['nova_uuid']
             instance = db.api.instance_get_by_uuid(ctxt, uuid)
@@ -95,16 +95,18 @@ def find_orphaned_instances(session, verbose=False):
                         FLAGS.zombie_instance_updated_at_window))
 
         if is_active_and_deleting or is_zombie_vm:
-            orphaned_instances.append(instance)
+            orphaned_instances.append((vm_ref, vm_rec, instance))
 
     return orphaned_instances
 
 
-def cleanup_instance(session, instance):
+def cleanup_instance(session, instance, vm_ref, vm_rec):
     """Delete orphaned instances."""
     network_info = None
     connection = xenapi_conn.get_connection(_)
-    connection.destroy(instance, network_info)
+    if vm_rec['power_state'] == 'Running':
+        session.xenapi.VM.hard_shutdown(vm_ref)
+    connection._vmops._destroy(instance, vm_ref, shutdown=False)
 
 
 def _get_applicable_vm_recs(session):
@@ -112,11 +114,16 @@ def _get_applicable_vm_recs(session):
     domain.
     """
     for vm_ref in session.xenapi.VM.get_all():
-        vm_rec = session.xenapi.VM.get_record(vm_ref)
+        try:
+            vm_rec = session.xenapi.VM.get_record(vm_ref)
+        except XenAPI.Failure, e:
+            if e.details[0] != 'HANDLE_INVALID':
+                raise
+            continue
 
         if vm_rec["is_a_template"] or vm_rec["is_control_domain"]:
             continue
-        yield vm_rec
+        yield vm_ref, vm_rec
 
 
 def print_xen_object(obj_type, obj, indent_level=0, spaces_per_indent=4,
@@ -166,19 +173,29 @@ def _find_vdis_connected_to_vm(session, connected_vdi_uuids, verbose=False):
                 indent_level += 1
                 cur_vdi_ref = session.xenapi.VDI.get_by_uuid(
                     parent_vdi_uuid)
-                cur_vdi_rec = session.xenapi.VDI.get_record(
-                    cur_vdi_ref)
+                try:
+                    cur_vdi_rec = session.xenapi.VDI.get_record(
+                            cur_vdi_ref)
+                except XenAPI.Failure, e:
+                    if e.details[0] != 'HANDLE_INVALID':
+                        raise
+                    break
             else:
                 break
 
-    for vm_rec in _get_applicable_vm_recs(session):
+    for vm_ref, vm_rec in _get_applicable_vm_recs(session):
         indent_level = 0
         print_xen_object("VM", vm_rec, indent_level=indent_level,
                          verbose=verbose)
 
         vbd_refs = vm_rec["VBDs"]
         for vbd_ref in vbd_refs:
-            vbd_rec = session.xenapi.VBD.get_record(vbd_ref)
+            try:
+                vbd_rec = session.xenapi.VBD.get_record(vbd_ref)
+            except XenAPI.Failure, e:
+                if e.details[0] != 'HANDLE_INVALID':
+                    raise
+                continue
 
             indent_level = 1
             print_xen_object("VBD", vbd_rec, indent_level=indent_level,
@@ -189,7 +206,12 @@ def _find_vdis_connected_to_vm(session, connected_vdi_uuids, verbose=False):
             if _is_null_ref(vbd_vdi_ref):
                 continue
 
-            vdi_rec = session.xenapi.VDI.get_record(vbd_vdi_ref)
+            try:
+                vdi_rec = session.xenapi.VDI.get_record(vbd_vdi_ref)
+            except XenAPI.Failure, e:
+                if e.details[0] != 'HANDLE_INVALID':
+                    raise
+                continue
 
             _add_vdi_and_parents_to_connected(vdi_rec, indent_level)
 
@@ -204,7 +226,12 @@ def _find_all_vdis_and_system_vdis(session, all_vdi_uuids, connected_vdi_uuids,
                 vdi_rec["type"] == "system")
 
     for vdi_ref in session.xenapi.VDI.get_all():
-        vdi_rec = session.xenapi.VDI.get_record(vdi_ref)
+        try:
+            vdi_rec = session.xenapi.VDI.get_record(vdi_ref)
+        except XenAPI.Failure, e:
+            if e.details[0] != 'HANDLE_INVALID':
+                raise
+            continue
         vdi_uuid = vdi_rec["uuid"]
         all_vdi_uuids.add(vdi_uuid)
 
@@ -258,7 +285,7 @@ def clean_orphaned_vdis(session, vdi_uuids, verbose=False):
 
 def list_orphaned_instances(orphaned_instances, verbose=False):
     """List orphaned instances."""
-    for orphaned_instance in orphaned_instances:
+    for vm_ref, vm_rec, orphaned_instance in orphaned_instances:
         if verbose:
             print "ORPHANED INSTANCE (%s)" % orphaned_instance.name
         else:
@@ -267,11 +294,11 @@ def list_orphaned_instances(orphaned_instances, verbose=False):
 
 def clean_orphaned_instances(session, orphaned_instances, verbose=False):
     """Clean orphaned instances."""
-    for instance in orphaned_instances:
+    for vm_ref, vm_rec, instance in orphaned_instances:
         if verbose:
             print "CLEANING INSTANCE (%s)" % instance.name
 
-        cleanup_instance(session, instance)
+        cleanup_instance(session, instance, vm_ref, vm_rec)
 
 
 def main():
