@@ -1661,7 +1661,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._last_host_check = 0
         self.mox.ReplayAll()
 
-        self.compute._report_driver_status(context)
+        self.compute._report_driver_status(context.get_admin_context())
         caps = self.compute.last_capabilities
         all_caps = dict(test1=1024, test2='foo', test3='xyzzy',
                         test4=True, nothertest='bar')
