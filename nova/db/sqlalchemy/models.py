@@ -531,15 +531,9 @@ class BlockDeviceMapping(BASE, NovaBase):
     # for ephemeral device
     virtual_name = Column(String(255), nullable=True)
 
-    # for snapshot or volume
-    snapshot_id = Column(String(36), ForeignKey('snapshots.id'))
-    # outer join
-    snapshot = relationship(Snapshot,
-                            foreign_keys=snapshot_id)
+    snapshot_id = Column(String(36))
 
-    volume_id = Column(String(36), ForeignKey('volumes.id'), nullable=True)
-    volume = relationship(Volume,
-                          foreign_keys=volume_id)
+    volume_id = Column(String(36), nullable=True)
     volume_size = Column(Integer, nullable=True)
 
     # for no device to suppress devices.

@@ -57,7 +57,9 @@ def _translate_volume_summary_view(context, vol):
     d['createdAt'] = vol['created_at']
 
     if vol['attach_status'] == 'attached':
-        d['attachments'] = [_translate_attachment_detail_view(context, vol)]
+        d['attachments'] = [_translate_attachment_detail_view(vol['id'],
+            vol['instance_uuid'],
+            vol['mountpoint'])]
     else:
         d['attachments'] = [{}]
 
@@ -222,30 +224,29 @@ class VolumeController(object):
         return {'volume': retval}
 
 
-def _translate_attachment_detail_view(_context, vol):
+def _translate_attachment_detail_view(volume_id, instance_uuid, mountpoint):
     """Maps keys for attachment details view."""
 
-    d = _translate_attachment_summary_view(_context, vol)
+    d = _translate_attachment_summary_view(volume_id,
+            instance_uuid,
+            mountpoint)
 
     # No additional data / lookups at the moment
-
     return d
 
 
-def _translate_attachment_summary_view(_context, vol):
+def _translate_attachment_summary_view(volume_id, instance_uuid, mountpoint):
     """Maps keys for attachment summary view."""
     d = {}
-
-    volume_id = vol['id']
 
     # NOTE(justinsb): We use the volume id as the id of the attachment object
     d['id'] = volume_id
 
     d['volumeId'] = volume_id
-    if vol.get('instance'):
-        d['serverId'] = vol['instance']['uuid']
-    if vol.get('mountpoint'):
-        d['device'] = vol['mountpoint']
+
+    d['serverId'] = instance_uuid
+    if mountpoint:
+        d['device'] = mountpoint
 
     return d
 
@@ -284,7 +285,6 @@ class VolumeAttachmentController(object):
 
     def __init__(self):
         self.compute_api = compute.API()
-        self.volume_api = volume.API()
         super(VolumeAttachmentController, self).__init__()
 
     @wsgi.serializers(xml=VolumeAttachmentsTemplate)
@@ -301,19 +301,31 @@ class VolumeAttachmentController(object):
 
         volume_id = id
         try:
-            vol = self.volume_api.get(context, volume_id)
+            instance = self.compute_api.get(context, server_id)
         except exception.NotFound:
+            raise exc.HTTPNotFound()
+
+        bdms = self.compute_api.get_instance_bdms(context, instance)
+
+        if not bdms:
+            LOG.debug(_("Instance %s is not attached."), server_id)
+            raise exc.HTTPNotFound()
+
+        assigned_mountpoint = None
+
+        for bdm in bdms:
+            if bdm['volume_id'] == volume_id:
+                assigned_mountpoint = bdm['device_name']
+                break
+
+        if assigned_mountpoint is None:
             LOG.debug("volume_id not found")
             raise exc.HTTPNotFound()
 
-        instance = vol['instance']
-        if instance is None or str(instance['uuid']) != server_id:
-            LOG.debug("Instance not found (server_id=%(server_id)s)",
-                      {'server_id': server_id}, instance=instance)
-            raise exc.HTTPNotFound()
-
-        return {'volumeAttachment': _translate_attachment_detail_view(context,
-                                                                      vol)}
+        return {'volumeAttachment': _translate_attachment_detail_view(
+            volume_id,
+            instance['uuid'],
+            assigned_mountpoint)}
 
     @wsgi.serializers(xml=VolumeAttachmentTemplate)
     def create(self, req, server_id, body):
@@ -367,19 +379,28 @@ class VolumeAttachmentController(object):
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
 
         try:
-            vol = self.volume_api.get(context, volume_id)
+            instance = self.compute_api.get(context, server_id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        instance_uuid = vol['instance_uuid']
-        if instance_uuid is None or instance_uuid != server_id:
-            LOG.debug(_("Instance %s is not attached."), instance_uuid)
+        bdms = self.compute_api.get_instance_bdms(context, instance)
+
+        if not bdms:
+            LOG.debug(_("Instance %s is not attached."), server_id)
             raise exc.HTTPNotFound()
 
-        self.compute_api.detach_volume(context,
-                                       volume_id=volume_id)
+        found = False
+        for bdm in bdms:
+            if bdm['volume_id'] == volume_id:
+                self.compute_api.detach_volume(context,
+                    volume_id=volume_id)
+                found = True
+                break
 
-        return webob.Response(status_int=202)
+        if not found:
+            raise exc.HTTPNotFound()
+        else:
+            return webob.Response(status_int=202)
 
     def _items(self, req, server_id, entity_maker):
         """Returns a list of attachments, transformed through entity_maker."""
@@ -391,10 +412,17 @@ class VolumeAttachmentController(object):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        volumes = instance['volumes']
-        limited_list = common.limited(volumes, req)
-        res = [entity_maker(context, vol) for vol in limited_list]
-        return {'volumeAttachments': res}
+        bdms = self.compute_api.get_instance_bdms(context, instance)
+        limited_list = common.limited(bdms, req)
+        results = []
+
+        for bdm in limited_list:
+            if bdm['volume_id']:
+                results.append(entity_maker(bdm['volume_id'],
+                        bdm['instance_uuid'],
+                        bdm['device_name']))
+
+        return {'volumeAttachments': results}
 
 
 class BootFromVolumeController(servers.Controller):

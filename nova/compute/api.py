@@ -1786,6 +1786,11 @@ class API(BaseAPI):
         uuids = [instance['uuid'] for instance in instances]
         return self.db.instance_fault_get_by_instance_uuids(context, uuids)
 
+    def get_instance_bdms(self, context, instance):
+        """Get all bdm tables for specified instance."""
+        return self.db.block_device_mapping_get_all_by_instance(context,
+                instance['uuid'])
+
 
 class HostAPI(BaseAPI):
     """Sub-set of the Compute Manager API for managing host operations."""
