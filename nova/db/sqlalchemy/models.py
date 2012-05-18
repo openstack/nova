@@ -344,7 +344,7 @@ class Volume(BASE, NovaBase):
     user_id = Column(String(255))
     project_id = Column(String(255))
 
-    snapshot_id = Column(String(255))
+    snapshot_id = Column(Integer)
 
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
