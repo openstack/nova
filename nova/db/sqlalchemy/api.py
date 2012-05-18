@@ -1548,6 +1548,12 @@ def instance_get_all_by_host(context, host):
     return _instance_get_all_query(context).filter_by(host=host).all()
 
 
+@require_admin_context
+def instance_get_all_by_host_and_not_type(context, host, type_id=None):
+    return _instance_get_all_query(context).filter_by(host=host).\
+                   filter(models.Instance.instance_type_id != type_id).all()
+
+
 @require_context
 def instance_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
