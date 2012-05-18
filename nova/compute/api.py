@@ -33,6 +33,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import crypto
+from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova.db import base
 from nova import exception
 from nova import flags
@@ -162,6 +163,7 @@ class API(BaseAPI):
 
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or volume.API()
+        self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         super(API, self).__init__(**kwargs)
 
     def _check_injected_file_quota(self, context, injected_files):
@@ -1630,14 +1632,9 @@ class API(BaseAPI):
         connect_info = self._call_compute_message('get_vnc_console',
                 context, instance, params={"console_type": console_type})
 
-        rpc.call(context, '%s' % FLAGS.consoleauth_topic,
-                 {'method': 'authorize_console',
-                  'args': {'token': connect_info['token'],
-                           'console_type': console_type,
-                           'host': connect_info['host'],
-                           'port': connect_info['port'],
-                           'internal_access_path':
-                                   connect_info['internal_access_path']}})
+        self.consoleauth_rpcapi.authorize_console(context,
+                connect_info['token'], console_type, connect_info['host'],
+                connect_info['port'], connect_info['internal_access_path'])
 
         return {'url': connect_info['access_url']}
 

@@ -3484,26 +3484,23 @@ class ComputeAPITestCase(BaseTestCase):
                              'console_type': fake_console_type,
                              'host': 'fake_console_host',
                              'port': 'fake_console_port',
-                             'internal_access_path': 'fake_access_path',
-                             'access_url': 'fake_console_url'}
+                             'internal_access_path': 'fake_access_path'}
+        fake_connect_info2 = copy.deepcopy(fake_connect_info)
+        fake_connect_info2['access_url'] = 'fake_console_url'
 
         self.mox.StubOutWithMock(rpc, 'call')
 
         rpc_msg1 = {'method': 'get_vnc_console',
                     'args': {'instance_uuid': fake_instance['uuid'],
                              'console_type': fake_console_type}}
-        # 2nd rpc.call receives almost everything from fake_connect_info
-        # except 'access_url'
-        rpc_msg2_args = dict([(k, v)
-                for k, v in fake_connect_info.items()
-                        if k != 'access_url'])
         rpc_msg2 = {'method': 'authorize_console',
-                    'args': rpc_msg2_args}
+                    'args': fake_connect_info,
+                    'version': '1.0'}
 
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
-                rpc_msg1).AndReturn(fake_connect_info)
+                rpc_msg1).AndReturn(fake_connect_info2)
         rpc.call(self.context, FLAGS.consoleauth_topic,
-                rpc_msg2).AndReturn(None)
+                rpc_msg2, None).AndReturn(None)
 
         self.mox.ReplayAll()
 

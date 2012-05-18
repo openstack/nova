@@ -45,6 +45,8 @@ FLAGS.register_opts(consoleauth_opts)
 class ConsoleAuthManager(manager.Manager):
     """Manages token based authentication."""
 
+    RPC_API_VERSION = '1.0'
+
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(*args, **kwargs)
         self.tokens = {}

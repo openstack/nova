@@ -41,7 +41,7 @@ class ConsoleauthTestCase(test.TestCase):
 
     def setUp(self):
         super(ConsoleauthTestCase, self).setUp()
-        self.manager = importutils.import_object(FLAGS.consoleauth_manager)
+        self.manager = manager.ConsoleAuthManager()
         self.context = context.get_admin_context()
 
     def test_tokens_expire(self):
