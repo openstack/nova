@@ -507,6 +507,9 @@ class Connection(object):
     def getVersion(self):
         return 14000
 
+    def getHostname(self):
+        return 'compute1'
+
     def getCapabilities(self):
         return '''<capabilities>
   <host>
