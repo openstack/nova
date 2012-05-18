@@ -1070,7 +1070,7 @@ def fixed_ip_get_all(context, session=None):
 @require_context
 def fixed_ip_get_by_address(context, address, session=None):
     result = model_query(context, models.FixedIp, session=session,
-                         read_deleted="yes").\
+                         read_deleted=context.read_deleted).\
                      filter_by(address=address).\
                      first()
     if not result:
