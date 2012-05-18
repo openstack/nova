@@ -131,6 +131,25 @@ class Connection(object):
         """
         raise NotImplementedError()
 
+    def create_worker(self, conf, topic, proxy, pool_name):
+        """Create a worker on this connection.
+
+        A worker is like a regular consumer of messages directed to a
+        topic, except that it is part of a set of such consumers (the
+        "pool") which may run in parallel. Every pool of workers will
+        receive a given message, but only one worker in the pool will
+        be asked to process it. Load is distributed across the members
+        of the pool in round-robin fashion.
+
+        :param conf:  An openstack.common.cfg configuration object.
+        :param topic: This is a name associated with what to consume from.
+                      Multiple instances of a service may consume from the same
+                      topic.
+        :param proxy: The object that will handle all incoming messages.
+        :param pool_name: String containing the name of the pool of workers
+        """
+        raise NotImplementedError()
+
     def consume_in_thread(self):
         """Spawn a thread to handle incoming messages.
 

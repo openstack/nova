@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import itertools
 import socket
 import ssl
@@ -156,15 +157,19 @@ class DirectConsumer(ConsumerBase):
 class TopicConsumer(ConsumerBase):
     """Consumer class for 'topic'"""
 
-    def __init__(self, conf, channel, topic, callback, tag, **kwargs):
+    def __init__(self, conf, channel, topic, callback, tag, name=None,
+                 **kwargs):
         """Init a 'topic' queue.
 
-        'channel' is the amqp channel to use
-        'topic' is the topic to listen on
-        'callback' is the callback to call when messages are received
-        'tag' is a unique ID for the consumer on the channel
+        :param channel: the amqp channel to use
+        :param topic: the topic to listen on
+        :paramtype topic: str
+        :param callback: the callback to call when messages are received
+        :param tag: a unique ID for the consumer on the channel
+        :param name: optional queue name, defaults to topic
+        :paramtype name: str
 
-        Other kombu options may be passed
+        Other kombu options may be passed as keyword arguments
         """
         # Default options
         options = {'durable': conf.rabbit_durable_queues,
@@ -180,7 +185,7 @@ class TopicConsumer(ConsumerBase):
                 channel,
                 callback,
                 tag,
-                name=topic,
+                name=name or topic,
                 exchange=exchange,
                 routing_key=topic,
                 **options)
@@ -602,9 +607,12 @@ class Connection(object):
         """
         self.declare_consumer(DirectConsumer, topic, callback)
 
-    def declare_topic_consumer(self, topic, callback=None):
+    def declare_topic_consumer(self, topic, callback=None, queue_name=None):
         """Create a 'topic' consumer."""
-        self.declare_consumer(TopicConsumer, topic, callback)
+        self.declare_consumer(functools.partial(TopicConsumer,
+                                                name=queue_name,
+                                                ),
+                              topic, callback)
 
     def declare_fanout_consumer(self, topic, callback):
         """Create a 'fanout' consumer"""
@@ -655,6 +663,12 @@ class Connection(object):
             self.declare_fanout_consumer(topic, proxy_cb)
         else:
             self.declare_topic_consumer(topic, proxy_cb)
+
+    def create_worker(self, topic, proxy, pool_name):
+        """Create a worker that calls a method in a proxy object"""
+        proxy_cb = rpc_amqp.ProxyCallback(self.conf, proxy,
+                rpc_amqp.get_connection_pool(self, Connection))
+        self.declare_topic_consumer(topic, proxy_cb, pool_name)
 
 
 def create_connection(conf, new=True):

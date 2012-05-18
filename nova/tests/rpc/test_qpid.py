@@ -147,6 +147,35 @@ class RpcQpidTestCase(test.TestCase):
     def test_create_consumer_fanout(self):
         self._test_create_consumer(fanout=True)
 
+    @test.skip_if(qpid is None, "Test requires qpid")
+    def test_create_worker(self):
+        self.mock_connection = self.mox.CreateMock(self.orig_connection)
+        self.mock_session = self.mox.CreateMock(self.orig_session)
+        self.mock_receiver = self.mox.CreateMock(self.orig_receiver)
+
+        self.mock_connection.opened().AndReturn(False)
+        self.mock_connection.open()
+        self.mock_connection.session().AndReturn(self.mock_session)
+        expected_address = (
+            'nova/impl_qpid_test ; {"node": {"x-declare": '
+            '{"auto-delete": true, "durable": true}, "type": "topic"}, '
+            '"create": "always", "link": {"x-declare": {"auto-delete": '
+            'true, "exclusive": false, "durable": false}, "durable": '
+            'true, "name": "impl.qpid.test.workers"}}')
+        self.mock_session.receiver(expected_address).AndReturn(
+                                                        self.mock_receiver)
+        self.mock_receiver.capacity = 1
+        self.mock_connection.close()
+
+        self.mox.ReplayAll()
+
+        connection = impl_qpid.create_connection(FLAGS)
+        connection.create_worker("impl_qpid_test",
+                                 lambda *_x, **_y: None,
+                                 'impl.qpid.test.workers',
+                                 )
+        connection.close()
+
     def _test_cast(self, fanout, server_params=None):
         self.mock_connection = self.mox.CreateMock(self.orig_connection)
         self.mock_session = self.mox.CreateMock(self.orig_session)
