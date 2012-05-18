@@ -30,6 +30,7 @@ import eventlet
 from lxml import etree
 
 from nova.api.ec2 import ec2utils
+import nova.cert.rpcapi
 from nova import exception
 from nova import flags
 from nova import image
@@ -68,6 +69,7 @@ class S3ImageService(object):
     """Wraps an existing image service to support s3 based register."""
 
     def __init__(self, service=None, *args, **kwargs):
+        self.cert_rpcapi = nova.cert.rpcapi.CertAPI()
         self.service = service or image.get_default_image_service()
         self.service.__init__(*args, **kwargs)
 
@@ -366,23 +368,20 @@ class S3ImageService(object):
 
         return image
 
-    @staticmethod
-    def _decrypt_image(context, encrypted_filename, encrypted_key,
+    def _decrypt_image(self, context, encrypted_filename, encrypted_key,
                        encrypted_iv, decrypted_filename):
         elevated = context.elevated()
         try:
-            key = rpc.call(elevated, FLAGS.cert_topic,
-                           {"method": "decrypt_text",
-                            "args": {"project_id": context.project_id,
-                                     "text": base64.b64encode(encrypted_key)}})
+            key = self.cert_rpcapi.decrypt_text(elevated,
+                    project_id=context.project_id,
+                    text=base64.b64encode(encrypted_key))
         except Exception, exc:
             msg = _('Failed to decrypt private key: %s') % exc
             raise exception.NovaException(msg)
         try:
-            iv = rpc.call(elevated, FLAGS.cert_topic,
-                          {"method": "decrypt_text",
-                           "args": {"project_id": context.project_id,
-                                    "text": base64.b64encode(encrypted_iv)}})
+            iv = self.cert_rpcapi.decrypt_text(elevated,
+                    project_id=context.project_id,
+                    text=base64.b64encode(encrypted_iv))
         except Exception, exc:
             raise exception.NovaException(_('Failed to decrypt initialization '
                                     'vector: %s') % exc)

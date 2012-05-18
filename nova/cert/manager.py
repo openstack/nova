@@ -36,6 +36,8 @@ FLAGS = flags.FLAGS
 
 
 class CertManager(manager.Manager):
+    RPC_API_VERSION = '1.0'
+
     def init_host(self):
         crypto.ensure_ca_filesystem()
 
