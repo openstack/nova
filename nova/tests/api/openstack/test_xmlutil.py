@@ -17,8 +17,8 @@
 
 from lxml import etree
 
-from nova import test
 from nova.api.openstack import xmlutil
+from nova import test
 
 
 class SelectorTest(test.TestCase):

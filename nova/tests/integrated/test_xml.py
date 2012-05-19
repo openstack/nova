@@ -17,10 +17,10 @@
 
 from lxml import etree
 
-from nova.log import logging
-from nova.tests.integrated import integrated_helpers
 from nova.api.openstack import common
 from nova.api.openstack import xmlutil
+from nova.log import logging
+from nova.tests.integrated import integrated_helpers
 
 
 LOG = logging.getLogger(__name__)

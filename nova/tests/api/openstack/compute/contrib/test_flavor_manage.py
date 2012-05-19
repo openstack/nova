@@ -18,11 +18,11 @@ import json
 
 import webob
 
+from nova.api.openstack.compute.contrib import flavormanage
+from nova.compute import instance_types
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova.compute import instance_types
-from nova.api.openstack.compute.contrib import flavormanage
 
 
 def fake_get_instance_type_by_flavor_id(flavorid):

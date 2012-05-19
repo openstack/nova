@@ -21,10 +21,10 @@ Stubouts, mocks and fixtures for the test suite
 
 import time
 
-from nova import db
-from nova import utils
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import db
+from nova import utils
 
 
 def stub_out_db_instance_api(stubs):

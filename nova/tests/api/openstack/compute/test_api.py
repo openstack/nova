@@ -19,13 +19,13 @@ import json
 
 from lxml import etree
 import webob
-import webob.exc
 import webob.dec
+import webob.exc
 
-import nova.context
-from nova import test
 from nova.api import openstack as openstack_api
 from nova.api.openstack import wsgi
+import nova.context
+from nova import test
 from nova.tests.api.openstack import fakes
 
 

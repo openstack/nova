@@ -15,13 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
 import time
+import unittest
 
-from nova import service
 from nova.log import logging
-from nova.tests.integrated import integrated_helpers
+from nova import service
 from nova.tests.integrated.api import client
+from nova.tests.integrated import integrated_helpers
 from nova.volume import driver
 
 

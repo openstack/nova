@@ -18,8 +18,8 @@ import webob
 from nova.api.openstack.volume.contrib import types_manage
 from nova import exception
 from nova import test
-from nova.volume import volume_types
 from nova.tests.api.openstack import fakes
+from nova.volume import volume_types
 
 
 def stub_volume_type(id):

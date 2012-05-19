@@ -18,10 +18,10 @@
 import time
 import unittest
 
-import nova.virt.fake
 from nova.log import logging
-from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
+from nova.tests.integrated import integrated_helpers
+import nova.virt.fake
 
 
 LOG = logging.getLogger(__name__)

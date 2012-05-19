@@ -18,16 +18,16 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import floating_ips
+from nova import compute
 from nova import context
 from nova import db
 from nova import exception
 from nova import network
-from nova import compute
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova import test
-from nova.tests import fake_network
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_network
 from nova import utils
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'

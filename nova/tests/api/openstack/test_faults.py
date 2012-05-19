@@ -22,9 +22,9 @@ import webob
 import webob.dec
 import webob.exc
 
-from nova import test
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
+from nova import test
 
 
 class TestFaults(test.TestCase):

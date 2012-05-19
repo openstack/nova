@@ -24,16 +24,16 @@ properly both upgrading and downgrading, and that no data loss occurs
 if possible.
 """
 
-import ConfigParser
 import commands
+import ConfigParser
 import os
 import urlparse
 
 from migrate.versioning import repository
 import sqlalchemy
 
-import nova.db.sqlalchemy.migrate_repo
 import nova.db.migration as migration
+import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy.migration import versioning_api as migration_api
 from nova import log as logging
 from nova import test

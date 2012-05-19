@@ -18,12 +18,12 @@
 
 import unittest
 
+from nova.auth import fakeldap
+from nova.auth import manager
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
-from nova.auth import manager
-from nova.auth import fakeldap
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)

@@ -20,11 +20,11 @@ import datetime
 
 import glance.common.exception as glance_exception
 
-from nova.tests.api.openstack import fakes
 from nova import context
 from nova import exception
 from nova.image import glance
 from nova import test
+from nova.tests.api.openstack import fakes
 from nova.tests.glance import stubs as glance_stubs
 
 

@@ -18,13 +18,13 @@
 
 import json
 
-import webob
-from lxml import etree
 import iso8601
+from lxml import etree
+import webob
 
 from nova.api.openstack import compute
-from nova.api.openstack import extensions as base_extensions
 from nova.api.openstack.compute import extensions as compute_extensions
+from nova.api.openstack import extensions as base_extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import flags

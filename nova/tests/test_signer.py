@@ -18,9 +18,9 @@
 
 """Tests for Signer."""
 
+from nova.auth import signer
 from nova import exception
 from nova import test
-from nova.auth import signer
 
 
 class ClassWithStrRepr(object):

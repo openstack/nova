@@ -22,10 +22,10 @@ import StringIO
 import urllib2
 
 from nova.common import policy as common_policy
+import nova.common.policy
 from nova import context
 from nova import exception
 from nova import flags
-import nova.common.policy
 from nova import policy
 from nova import test
 from nova import utils

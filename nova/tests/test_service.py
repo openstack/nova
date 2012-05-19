@@ -28,10 +28,10 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova.openstack.common import cfg
-from nova import test
-from nova import service
 from nova import manager
+from nova.openstack.common import cfg
+from nova import service
+from nova import test
 from nova import wsgi
 
 

@@ -15,15 +15,15 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import nova.compute.utils
 import nova.context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import utils
-import nova.compute.utils
 from nova.network import manager as network_manager
 from nova.network.quantum import nova_ipam_lib
 from nova.tests import fake_network_cache_model
+from nova import utils
 
 
 HOST = "testhost"

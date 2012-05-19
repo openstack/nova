@@ -436,8 +436,8 @@ class LibvirtConnTestCase(_VirtDriverTestCase):
         else:
             self.saved_libvirt = None
 
-        import fakelibvirt
         import fake_libvirt_utils
+        import fakelibvirt
 
         sys.modules['libvirt'] = fakelibvirt
 

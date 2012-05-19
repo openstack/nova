@@ -18,8 +18,8 @@
 import webob
 
 from nova.api.openstack.compute.contrib import deferred_delete
-import nova.context
 from nova import compute
+import nova.context
 from nova import exception
 from nova import test
 

@@ -16,9 +16,9 @@
 import nova
 from nova import log as logging
 import nova.notifier.api
+from nova.notifier import list_notifier
 import nova.notifier.log_notifier
 import nova.notifier.no_op_notifier
-from nova.notifier import list_notifier
 from nova import test
 
 

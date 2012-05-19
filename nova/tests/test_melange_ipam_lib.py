@@ -18,9 +18,9 @@
 from nova import db
 from nova import exception
 from nova import flags
-from nova import test
 from nova.network.quantum import melange_connection
 from nova.network.quantum import melange_ipam_lib
+from nova import test
 
 FLAGS = flags.FLAGS
 

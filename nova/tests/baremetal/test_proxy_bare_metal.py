@@ -19,15 +19,15 @@ import functools
 import mox
 import StringIO
 
-from nova import flags
-from nova import test
 from nova.compute import power_state
-from nova.openstack.common import jsonutils
-from nova.tests import fake_utils
 from nova import exception
+from nova import flags
+from nova.openstack.common import jsonutils
+from nova import test
+from nova.tests import fake_utils
 
-from nova.virt.baremetal import proxy
 from nova.virt.baremetal import dom
+from nova.virt.baremetal import proxy
 
 FLAGS = flags.FLAGS
 

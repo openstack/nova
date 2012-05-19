@@ -16,9 +16,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import test
-from nova import exception
 from nova import context
+from nova import exception
+from nova import test
 
 
 class EC2APIErrorTestCase(test.TestCase):

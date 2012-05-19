@@ -19,17 +19,17 @@
 Test suite for VMWareAPI.
 """
 
+from nova.compute import power_state
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import test
-from nova.compute import power_state
 from nova.tests.glance import stubs as glance_stubs
 from nova.tests.vmwareapi import db_fakes
 from nova.tests.vmwareapi import stubs
-from nova.virt import vmwareapi_conn
 from nova.virt.vmwareapi import fake as vmwareapi_fake
+from nova.virt import vmwareapi_conn
 
 
 FLAGS = flags.FLAGS

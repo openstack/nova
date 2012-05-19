@@ -39,15 +39,15 @@ from nova import log as logging
 from nova.openstack.common import importutils
 from nova import test
 from nova.tests.db import fakes as db_fakes
-from nova.tests.xenapi import stubs
-from nova.tests.glance import stubs as glance_stubs
 from nova.tests import fake_network
 from nova.tests import fake_utils
+from nova.tests.glance import stubs as glance_stubs
+from nova.tests.xenapi import stubs
 from nova.virt.xenapi import connection as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
-from nova.virt.xenapi import volume_utils
-from nova.virt.xenapi import vmops
 from nova.virt.xenapi import vm_utils
+from nova.virt.xenapi import vmops
+from nova.virt.xenapi import volume_utils
 
 LOG = logging.getLogger(__name__)
 

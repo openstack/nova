@@ -16,16 +16,16 @@
 from lxml import etree
 import webob.exc
 
+from nova.api.openstack.compute.contrib import hosts as os_hosts
+from nova.compute import power_state
+from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import test
-from nova.api.openstack.compute.contrib import hosts as os_hosts
-from nova.compute import power_state
-from nova.compute import vm_states
 from nova.scheduler import api as scheduler_api
+from nova import test
 
 
 FLAGS = flags.FLAGS

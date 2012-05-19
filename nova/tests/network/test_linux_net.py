@@ -23,10 +23,10 @@ from nova import context
 from nova import db
 from nova import flags
 from nova import log as logging
+from nova.network import linux_net
 from nova.openstack.common import importutils
 from nova import test
 from nova import utils
-from nova.network import linux_net
 
 
 FLAGS = flags.FLAGS

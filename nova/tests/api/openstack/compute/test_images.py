@@ -25,14 +25,14 @@ import urlparse
 from lxml import etree
 import webob
 
-from nova import exception
-from nova import flags
 from nova.api.openstack.compute import images
 from nova.api.openstack.compute.views import images as images_view
 from nova.api.openstack import xmlutil
+from nova import exception
+from nova import flags
 from nova import test
-from nova import utils
 from nova.tests.api.openstack import fakes
+from nova import utils
 
 
 FLAGS = flags.FLAGS

@@ -25,8 +25,8 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import test
-from nova import volume
 from nova.tests.api.openstack import fakes
+from nova import volume
 
 FLAGS = flags.FLAGS
 
