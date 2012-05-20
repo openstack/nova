@@ -342,7 +342,7 @@ class Volume(BASE, NovaBase):
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
     instance_uuid = Column(String(36))
     mountpoint = Column(String(255))
-    attach_time = Column(String(255))  # TODO(vish): datetime
+    attach_time = Column(DateTime)
     status = Column(String(255))  # TODO(vish): enum?
     attach_status = Column(String(255))  # TODO(vish): enum
 
