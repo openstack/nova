@@ -99,6 +99,7 @@
     "compute_extension:keypairs": [],
     "compute_extension:multinic": [],
     "compute_extension:networks": [],
+    "compute_extension:networks:view": [],
     "compute_extension:quotas": [],
     "compute_extension:quota_classes": [],
     "compute_extension:rescue": [],

@@ -29,17 +29,23 @@ import nova.network.api
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'networks')
+authorize_view = extensions.extension_authorizer('compute', 'networks:view')
 
 
-def network_dict(network):
+def network_dict(context, network):
+    fields = ('id', 'cidr', 'netmask', 'gateway', 'broadcast', 'dns1', 'dns2',
+              'cidr_v6', 'gateway_v6', 'label', 'netmask_v6')
+    admin_fields = ('created_at', 'updated_at', 'deleted_at', 'deleted',
+                    'injected', 'bridge', 'vlan', 'vpn_public_address',
+                    'vpn_public_port', 'vpn_private_address', 'dhcp_start',
+                    'project_id', 'host', 'bridge_interface', 'multi_host',
+                    'priority', 'rxtx_base')
     if network:
-        fields = ('bridge', 'vpn_public_port', 'dhcp_start',
-                  'bridge_interface', 'updated_at', 'id', 'cidr_v6',
-                  'deleted_at', 'gateway', 'label', 'project_id',
-                  'vpn_private_address', 'deleted', 'vlan', 'broadcast',
-                  'netmask', 'injected', 'cidr', 'vpn_public_address',
-                  'multi_host', 'dns1', 'host', 'gateway_v6', 'netmask_v6',
-                  'created_at')
+        # NOTE(mnaser): We display a limited set of fields so users can know
+        #               what networks are available, extra system-only fields
+        #               are only visible if they are an admin.
+        if context.is_admin:
+            fields += admin_fields
         result = dict((field, network[field]) for field in fields)
         if 'uuid' in network:
             result['id'] = network['uuid']
@@ -79,20 +85,20 @@ class NetworkController(object):
 
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize_view(context)
         networks = self.network_api.get_all(context)
-        result = [network_dict(net_ref) for net_ref in networks]
+        result = [network_dict(context, net_ref) for net_ref in networks]
         return {'networks': result}
 
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize_view(context)
         LOG.debug(_("Showing network with id %s") % id)
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
             raise exc.HTTPNotFound(_("Network not found"))
-        return {'network': network_dict(network)}
+        return {'network': network_dict(context, network)}
 
     def delete(self, req, id):
         context = req.environ['nova.context']

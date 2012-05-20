@@ -1965,7 +1965,7 @@ def network_get(context, network_id, session=None):
     return result
 
 
-@require_admin_context
+@require_context
 def network_get_all(context):
     result = model_query(context, models.Network, read_deleted="no").all()
 
