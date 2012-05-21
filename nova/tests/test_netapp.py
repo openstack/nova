@@ -29,7 +29,7 @@ from nova import log as logging
 from nova import test
 from nova.volume import netapp
 
-LOG = logging.getLogger("nova.volume.driver")
+LOG = logging.getLogger(__name__)
 
 
 WSDL_HEADER = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>

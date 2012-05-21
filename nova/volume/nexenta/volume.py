@@ -30,7 +30,7 @@ from nova.volume import driver
 from nova.volume import nexenta
 from nova.volume.nexenta import jsonrpc
 
-LOG = logging.getLogger("nova.volume.nexenta.volume")
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 nexenta_opts = [

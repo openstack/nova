@@ -28,7 +28,7 @@ import urllib2
 from nova import log as logging
 from nova.volume import nexenta
 
-LOG = logging.getLogger("nova.volume.nexenta.jsonrpc")
+LOG = logging.getLogger(__name__)
 
 
 class NexentaJSONException(nexenta.NexentaException):
