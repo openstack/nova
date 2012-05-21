@@ -149,6 +149,14 @@ Options can be registered as belonging to a group::
         conf.register_opt(rabbit_host_opt, group=rabbit_group)
         conf.register_opt(rabbit_port_opt, group='rabbit')
 
+If it no group attributes are required other than the group name, the group
+need not be explicitly registered e.g.
+
+    def register_rabbit_opts(conf):
+        # The group will automatically be created, equivalent calling::
+        #   conf.register_group(OptGroup(name='rabbit'))
+        conf.register_opt(rabbit_port_opt, group='rabbit')
+
 If no group is specified, options belong to the 'DEFAULT' section of config
 files::
 
@@ -213,6 +221,9 @@ as the leftover arguments, but will instead return::
 
 i.e. argument parsing is stopped at the first non-option argument.
 
+Options may be declared as required so that an error is raised if the user
+does not supply a value for the option.
+
 Options may be declared as secret so that their values are not leaked into
 log files:
 
@@ -226,8 +237,8 @@ log files:
 
 import collections
 import copy
-import glob
 import functools
+import glob
 import optparse
 import os
 import string
@@ -289,6 +300,21 @@ class DuplicateOptError(Error):
 
     def __str__(self):
         return "duplicate option: %s" % self.opt_name
+
+
+class RequiredOptError(Error):
+    """Raised if an option is required but no value is supplied by the user."""
+
+    def __init__(self, opt_name, group=None):
+        self.opt_name = opt_name
+        self.group = group
+
+    def __str__(self):
+        if self.group is None:
+            return "value required for option: %s" % self.opt_name
+        else:
+            return "value required for option: %s.%s" % (self.group.name,
+                                                         self.opt_name)
 
 
 class TemplateSubstitutionError(Error):
@@ -452,7 +478,7 @@ class Opt(object):
     multi = False
 
     def __init__(self, name, dest=None, short=None, default=None,
-                 metavar=None, help=None, secret=False):
+                 metavar=None, help=None, secret=False, required=False):
         """Construct an Opt object.
 
         The only required parameter is the option's name. However, it is
@@ -465,6 +491,7 @@ class Opt(object):
         :param metavar: the option argument to show in --help
         :param help: an explanation of how the option is used
         :param secret: true iff the value should be obfuscated in log output
+        :param required: true iff a value must be supplied for this option
         """
         self.name = name
         if dest is None:
@@ -476,6 +503,7 @@ class Opt(object):
         self.metavar = metavar
         self.help = help
         self.secret = secret
+        self.required = required
 
     def _get_from_config_parser(self, cparser, section):
         """Retrieves the option value from a MultiConfigParser object.
@@ -909,9 +937,10 @@ class ConfigOpts(collections.Mapping):
 
         :params args: command line arguments (defaults to sys.argv[1:])
         :returns: the list of arguments left over after parsing options
-        :raises: SystemExit, ConfigFilesNotFoundError, ConfigFileParseError
+        :raises: SystemExit, ConfigFilesNotFoundError, ConfigFileParseError,
+                 RequiredOptError
         """
-        self.reset()
+        self.clear()
 
         self._args = args
 
@@ -927,6 +956,8 @@ class ConfigOpts(collections.Mapping):
         from_dir = _list_config_dir() if self.config_dir else []
 
         self._parse_config_files(from_file + from_dir)
+
+        self._check_required_opts()
 
         return args
 
@@ -956,11 +987,16 @@ class ConfigOpts(collections.Mapping):
         """Return the number of options and option groups."""
         return len(self._opts) + len(self._groups)
 
-    @__clear_cache
     def reset(self):
-        """Reset the state of the object to before it was called."""
+        """Clear the object state and unset overrides and defaults."""
+        self._unset_defaults_and_overrides()
+        self.clear()
+
+    @__clear_cache
+    def clear(self):
+        """Clear the state of the object to before it was called."""
         self._args = None
-        self._cli_values = None
+        self._cli_values = {}
         self._cparser = None
 
     @__clear_cache
@@ -977,7 +1013,7 @@ class ConfigOpts(collections.Mapping):
         :raises: DuplicateOptError
         """
         if group is not None:
-            return self._get_group(group)._register_opt(opt)
+            return self._get_group(group, autocreate=True)._register_opt(opt)
 
         if _is_opt_registered(self._opts, opt):
             return False
@@ -1012,7 +1048,7 @@ class ConfigOpts(collections.Mapping):
             return False
 
         if group is not None:
-            group = self._get_group(group)
+            group = self._get_group(group, autocreate=True)
 
         opt._add_to_cli(self._oparser, group)
 
@@ -1066,6 +1102,17 @@ class ConfigOpts(collections.Mapping):
         """
         opt_info = self._get_opt_info(name, group)
         opt_info['default'] = default
+
+    def _unset_defaults_and_overrides(self):
+        """Unset any default or override on all options."""
+        def unset(opts):
+            for info in opts.values():
+                info['default'] = None
+                info['override'] = None
+
+        unset(self._opts)
+        for group in self._groups.values():
+            unset(group._opts)
 
     def disable_interspersed_args(self):
         """Set parsing to stop on the first non-option.
@@ -1188,7 +1235,7 @@ class ConfigOpts(collections.Mapping):
             return self.GroupAttr(self, self._get_group(name))
 
         info = self._get_opt_info(name, group)
-        default, opt, override = map(lambda k: info[k], sorted(info.keys()))
+        default, opt, override = [info[k] for k in sorted(info.keys())]
 
         if override is not None:
             return override
@@ -1241,7 +1288,7 @@ class ConfigOpts(collections.Mapping):
         else:
             return value
 
-    def _get_group(self, group_or_name):
+    def _get_group(self, group_or_name, autocreate=False):
         """Looks up a OptGroup object.
 
         Helper function to return an OptGroup given a parameter which can
@@ -1252,15 +1299,17 @@ class ConfigOpts(collections.Mapping):
         the API have access to.
 
         :param group_or_name: the group's name or the OptGroup object itself
+        :param autocreate: whether to auto-create the group if it's not found
         :raises: NoSuchGroupError
         """
-        if isinstance(group_or_name, OptGroup):
-            group_name = group_or_name.name
-        else:
-            group_name = group_or_name
+        group = group_or_name if isinstance(group_or_name, OptGroup) else None
+        group_name = group.name if group else group_or_name
 
         if not group_name in self._groups:
-            raise NoSuchGroupError(group_name)
+            if not group is None or not autocreate:
+                raise NoSuchGroupError(group_name)
+
+            self.register_group(OptGroup(name=group_name))
 
         return self._groups[group_name]
 
@@ -1297,6 +1346,28 @@ class ConfigOpts(collections.Mapping):
         if read_ok != config_files:
             not_read_ok = filter(lambda f: f not in read_ok, config_files)
             raise ConfigFilesNotFoundError(not_read_ok)
+
+    def _do_check_required_opts(self, opts, group=None):
+        for info in opts.values():
+            default, opt, override = [info[k] for k in sorted(info.keys())]
+
+            if opt.required:
+                if (default is not None or
+                    override is not None):
+                    continue
+
+                if self._get(opt.name, group) is None:
+                    raise RequiredOptError(opt.name, group)
+
+    def _check_required_opts(self):
+        """Check that all opts marked as required have values specified.
+
+        :raises: RequiredOptError
+        """
+        self._do_check_required_opts(self._opts)
+
+        for group in self._groups.values():
+            self._do_check_required_opts(group._opts, group)
 
     class GroupAttr(collections.Mapping):
 
