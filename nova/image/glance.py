@@ -20,7 +20,6 @@
 from __future__ import absolute_import
 
 import copy
-import datetime
 import json
 import random
 import sys
@@ -404,7 +403,7 @@ def _parse_glance_iso8601_timestamp(timestamp):
 
     for iso_format in iso_formats:
         try:
-            return datetime.datetime.strptime(timestamp, iso_format)
+            return utils.parse_strtime(timestamp, iso_format)
         except ValueError:
             pass
 
