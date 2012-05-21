@@ -27,8 +27,7 @@ from nova import log as logging
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger("nova.api.openstack.compute.contrib."
-                        "extended_server_attributes")
+LOG = logging.getLogger(__name__)
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'extended_server_attributes')
 

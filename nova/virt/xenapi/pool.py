@@ -31,7 +31,7 @@ from nova.openstack.common import cfg
 from nova import rpc
 from nova.virt.xenapi import vm_utils
 
-LOG = logging.getLogger("nova.virt.xenapi.pool")
+LOG = logging.getLogger(__name__)
 
 xenapi_pool_opts = [
     cfg.BoolOpt('use_join_force',

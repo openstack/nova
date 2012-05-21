@@ -30,7 +30,7 @@ security_group_handler flag.
 from nova import log as logging
 
 
-LOG = logging.getLogger('nova.network.api.quantum.sg')
+LOG = logging.getLogger(__name__)
 
 
 class SecurityGroupHandlerBase(object):

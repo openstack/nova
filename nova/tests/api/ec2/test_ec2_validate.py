@@ -34,7 +34,7 @@ from nova.openstack.common import importutils
 from nova import rpc
 from nova import test
 
-LOG = logging.getLogger('nova.tests.ec2_validate')
+LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 
