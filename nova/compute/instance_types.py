@@ -20,6 +20,8 @@
 
 """Built-in instance properties."""
 
+import re
+
 from nova import context
 from nova import db
 from nova import exception
@@ -28,6 +30,8 @@ from nova import log as logging
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
+
+INVALID_NAME_REGEX = re.compile("[^\w\.\- ]")
 
 
 def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid, swap=None,
@@ -47,6 +51,12 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb, flavorid, swap=None,
         'swap': swap,
         'rxtx_factor': rxtx_factor,
     }
+
+    # ensure name does not contain any special characters
+    invalid_name = INVALID_NAME_REGEX.search(name)
+    if invalid_name:
+        msg = _("names can only contain [a-zA-Z0-9_.- ]")
+        raise exception.InvalidInput(reason=msg)
 
     # ensure some attributes are integers and greater than or equal to 0
     for option in kwargs:

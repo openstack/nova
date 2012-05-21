@@ -88,6 +88,13 @@ class InstanceTypeTestCase(test.TestCase):
         new_list = instance_types.get_all_types()
         self.assertEqual(original_list, new_list)
 
+    def test_instance_type_create_with_special_characters(self):
+        """Ensure instance types raises InvalidInput for invalid characters"""
+        name = "foo.bar!@#$%^-test_name"
+        flavorid = "flavor1"
+        self.assertRaises(exception.InvalidInput, instance_types.create,
+                name, 256, 1, 120, 100, flavorid)
+
     def test_get_all_instance_types(self):
         """Ensures that all instance types can be retrieved"""
         session = sql_session.get_session()
