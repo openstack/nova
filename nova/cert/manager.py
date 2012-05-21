@@ -63,7 +63,7 @@ class CertManager(manager.Manager):
 
     def fetch_crl(self, context, project_id):
         """Get crl for a project"""
-        return crypto.fetch_ca(project_id)
+        return crypto.fetch_crl(project_id)
 
     def decrypt_text(self, context, project_id, text):
         """Decrypt base64 encoded text using the projects private key."""
