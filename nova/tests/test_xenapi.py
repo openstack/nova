@@ -272,14 +272,18 @@ class XenAPIVMTestCase(test.TestCase):
 
         fake_diagnostics = {
             'vbd_xvdb_write': '0.0',
-            'memory_target': '10961792000.0000',
-            'memory_internal_free': '3612860.6020',
-            'memory': '10961792000.0000',
+            'memory_target': '4294967296.0000',
+            'memory_internal_free': '1415564.0000',
+            'memory': '4294967296.0000',
             'vbd_xvda_write': '0.0',
-            'cpu0': '0.0110',
-            'vif_0_tx': '752.4007',
+            'cpu0': '0.0042',
+            'vif_0_tx': '287.4134',
             'vbd_xvda_read': '0.0',
-            'vif_0_rx': '4837.8805'
+            'vif_0_rx': '1816.0144',
+            'vif_2_rx': '0.0',
+            'vif_2_tx': '0.0',
+            'vbd_xvdb_read': '0.0',
+            'last_update': '1328795567',
         }
         instance = self._create_instance()
         expected = self.conn.get_diagnostics(instance)
