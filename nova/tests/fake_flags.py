@@ -33,6 +33,7 @@ flags.DECLARE('volume_driver', 'nova.volume.manager')
 def set_defaults(conf):
     conf.set_default('api_paste_config', '$state_path/etc/nova/api-paste.ini')
     conf.set_default('auth_driver', 'nova.auth.dbdriver.DbDriver')
+    conf.set_default('compute_driver', 'nova.virt.fake.FakeDriver')
     conf.set_default('connection_type', 'fake')
     conf.set_default('fake_network', True)
     conf.set_default('fake_rabbit', True)

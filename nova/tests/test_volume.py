@@ -48,7 +48,7 @@ class VolumeTestCase(test.TestCase):
     def setUp(self):
         super(VolumeTestCase, self).setUp()
         self.compute = importutils.import_object(FLAGS.compute_manager)
-        self.flags(connection_type='fake')
+        self.flags(compute_driver='nova.virt.fake.FakeDriver')
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
                 'nova.notifier.test_notifier')
         self.volume = importutils.import_object(FLAGS.volume_manager)

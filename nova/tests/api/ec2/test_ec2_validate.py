@@ -41,7 +41,7 @@ FLAGS = flags.FLAGS
 class EC2ValidateTestCase(test.TestCase):
     def setUp(self):
         super(EC2ValidateTestCase, self).setUp()
-        self.flags(connection_type='fake',
+        self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True)
 
         def dumb(*args, **kwargs):

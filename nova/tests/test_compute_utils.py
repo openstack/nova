@@ -48,7 +48,7 @@ class UsageInfoTestCase(test.TestCase):
         self.stubs.Set(nova.network.API, 'get_instance_nw_info',
                        fake_get_nw_info)
 
-        self.flags(connection_type='fake',
+        self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True,
                    notification_driver='nova.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager')

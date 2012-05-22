@@ -127,26 +127,22 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(xenapi_opts)
 
 
-def get_connection(_read_only):
-    """Note that XenAPI doesn't have a read-only connection mode, so
-    the read_only parameter is ignored."""
-    url = FLAGS.xenapi_connection_url
-    username = FLAGS.xenapi_connection_username
-    password = FLAGS.xenapi_connection_password
-    if not url or password is None:
-        raise Exception(_('Must specify xenapi_connection_url, '
-                          'xenapi_connection_username (optionally), and '
-                          'xenapi_connection_password to use '
-                          'connection_type=xenapi'))
-    return XenAPIConnection(url, username, password)
-
-
-class XenAPIConnection(driver.ComputeDriver):
+class XenAPIDriver(driver.ComputeDriver):
     """A connection to XenServer or Xen Cloud Platform"""
 
-    def __init__(self, url, user, pw):
-        super(XenAPIConnection, self).__init__()
-        self._session = XenAPISession(url, user, pw)
+    def __init__(self, read_only=False):
+        super(XenAPIDriver, self).__init__()
+
+        url = FLAGS.xenapi_connection_url
+        username = FLAGS.xenapi_connection_username
+        password = FLAGS.xenapi_connection_password
+        if not url or password is None:
+            raise Exception(_('Must specify xenapi_connection_url, '
+                              'xenapi_connection_username (optionally), and '
+                              'xenapi_connection_password to use '
+                              'connection_type=xenapi'))
+
+        self._session = XenAPISession(url, username, password)
         self._volumeops = volumeops.VolumeOps(self._session)
         self._host_state = None
         self._host = host.Host(self._session)

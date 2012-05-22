@@ -23,6 +23,7 @@ from nova import exception
 from nova import flags
 from nova import image
 from nova import log as logging
+from nova.openstack.common import importutils
 from nova import test
 from nova.tests import utils as test_utils
 
@@ -55,7 +56,7 @@ def catch_notimplementederror(f):
 class _VirtDriverTestCase(test.TestCase):
     def setUp(self):
         super(_VirtDriverTestCase, self).setUp()
-        self.connection = self.driver_module.get_connection('')
+        self.connection = importutils.import_object(self.driver_module, '')
         self.ctxt = test_utils.get_test_admin_context()
         self.image_service = image.get_default_image_service()
 
@@ -400,21 +401,23 @@ class _VirtDriverTestCase(test.TestCase):
 
 class AbstractDriverTestCase(_VirtDriverTestCase):
     def setUp(self):
-        import nova.virt.driver
+        from nova.virt.driver import ComputeDriver
 
-        self.driver_module = nova.virt.driver
+        self.driver_module = "nova.virt.driver.ComputeDriver"
 
-        def get_driver_connection(_):
-            return nova.virt.driver.ComputeDriver()
+        # TODO(sdague): the abstract driver doesn't have a constructor,
+        # add one now that the loader loads classes directly
+        def __new_init__(self, read_only=False):
+            super(ComputeDriver, self).__init__()
 
-        self.driver_module.get_connection = get_driver_connection
+        ComputeDriver.__init__ = __new_init__
+
         super(AbstractDriverTestCase, self).setUp()
 
 
 class FakeConnectionTestCase(_VirtDriverTestCase):
     def setUp(self):
-        import nova.virt.fake
-        self.driver_module = nova.virt.fake
+        self.driver_module = 'nova.virt.fake.FakeDriver'
         super(FakeConnectionTestCase, self).setUp()
 
 
@@ -444,7 +447,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase):
         FLAGS.instances_path = ''
 
         # Point _VirtDriverTestCase at the right module
-        self.driver_module = nova.virt.libvirt.connection
+        self.driver_module = 'nova.virt.libvirt.connection.LibvirtDriver'
         super(LibvirtConnTestCase, self).setUp()
         self.flags(firewall_driver=nova.virt.libvirt.firewall.drivers[0],
                    rescue_image_id="2",

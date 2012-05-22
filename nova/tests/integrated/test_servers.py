@@ -56,7 +56,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         def throw_error(*_):
             raise Exception()
 
-        self.stubs.Set(nova.virt.fake.FakeConnection, 'spawn', throw_error)
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'spawn', throw_error)
 
         server = self._build_minimal_create_server_request()
         created_server = self.api.post_server({"server": server})
