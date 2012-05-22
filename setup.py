@@ -91,5 +91,7 @@ setuptools.setup(name='nova',
                'bin/nova-rootwrap',
                'bin/nova-scheduler',
                'bin/nova-volume',
-               'bin/nova-xvpvncproxy'],
+               'bin/nova-xvpvncproxy',
+               'bin/volume-usage-audit',
+              ],
         py_modules=[])
