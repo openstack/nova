@@ -23,8 +23,8 @@ networking and storage of vms, and compute hosts on which they run)."""
 
 import functools
 import re
-import time
 import string
+import time
 
 from nova import block_device
 from nova.compute import aggregate_states
@@ -32,8 +32,8 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import crypto
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
+from nova import crypto
 from nova.db import base
 from nova import exception
 from nova import flags

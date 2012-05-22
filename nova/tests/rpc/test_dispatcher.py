@@ -19,8 +19,8 @@ Unit Tests for rpc.dispatcher
 """
 
 from nova import context
-from nova.rpc import dispatcher
 from nova.rpc import common as rpc_common
+from nova.rpc import dispatcher
 from nova import test
 
 
