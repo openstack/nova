@@ -295,7 +295,7 @@ class CloudTestCase(test.TestCase):
 
     def test_security_group_quota_limit(self):
         self.flags(quota_security_groups=10)
-        for i in range(1, 10):
+        for i in range(1, FLAGS.quota_security_groups + 1):
             name = 'test name %i' % i
             descript = 'test description %i' % i
             create = self.cloud.create_security_group

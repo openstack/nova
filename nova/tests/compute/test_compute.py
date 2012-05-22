@@ -2001,7 +2001,9 @@ class ComputeAPITestCase(BaseTestCase):
         super(ComputeAPITestCase, self).setUp()
         self.stubs.Set(nova.network.API, 'get_instance_nw_info',
                        fake_get_nw_info)
-        self.compute_api = compute.API()
+        self.security_group_api = compute.api.SecurityGroupAPI()
+        self.compute_api = compute.API(
+                                   security_group_api=self.security_group_api)
         self.fake_image = {
             'id': 1,
             'properties': {'kernel_id': 'fake_kernel_id',
@@ -3628,12 +3630,12 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
         instance = self.compute_api.get(self.context, instance['uuid'])
         security_group_name = self._create_group()['name']
-        self.compute_api.add_security_group(self.context,
-                                            instance,
-                                            security_group_name)
-        self.compute_api.remove_security_group(self.context,
-                                               instance,
-                                               security_group_name)
+        self.security_group_api.add_to_instance(self.context,
+                                                instance,
+                                                security_group_name)
+        self.security_group_api.remove_from_instance(self.context,
+                                                     instance,
+                                                     security_group_name)
 
     def test_get_diagnostics(self):
         instance = self._create_fake_instance()

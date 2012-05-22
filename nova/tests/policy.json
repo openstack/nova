@@ -58,8 +58,8 @@
     "compute:snapshot": [],
     "compute:backup": [],
 
-    "compute:add_security_group": [],
-    "compute:remove_security_group": [],
+    "compute:security_groups:add_to_instance": [],
+    "compute:security_groups:remove_from_instance": [],
 
     "compute:delete": [],
     "compute:soft_delete": [],
