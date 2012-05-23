@@ -387,6 +387,9 @@ class API(base.Base):
         if reservation_id is None:
             reservation_id = utils.generate_uid('r')
 
+        # grab the architecture from glance
+        architecture = image['properties'].get('architecture', 'Unknown')
+
         root_device_name = block_device.properties_root_device_name(
             image['properties'])
 
@@ -421,6 +424,7 @@ class API(base.Base):
             'access_ip_v6': access_ip_v6,
             'availability_zone': availability_zone,
             'root_device_name': root_device_name,
+            'architecture': architecture,
             'progress': 0}
 
         options_from_image = self._inherit_properties_from_image(
@@ -635,6 +639,8 @@ class API(base.Base):
         updates['hostname'] = utils.sanitize_hostname(hostname)
         updates['vm_state'] = vm_states.BUILDING
         updates['task_state'] = task_states.SCHEDULING
+
+        updates['architecture'] = image['properties'].get('architecture')
 
         if (image['properties'].get('mappings', []) or
             image['properties'].get('block_device_mapping', []) or
