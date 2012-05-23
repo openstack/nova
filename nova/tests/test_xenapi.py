@@ -18,7 +18,6 @@
 
 import ast
 import contextlib
-import datetime
 import functools
 import os
 import re
@@ -43,6 +42,7 @@ from nova.tests import fake_network
 from nova.tests import fake_utils
 from nova.tests.glance import stubs as glance_stubs
 from nova.tests.xenapi import stubs
+from nova import utils
 from nova.virt.xenapi import connection as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import vm_utils
@@ -1398,8 +1398,7 @@ class XenAPIBWUsageTestCase(test.TestCase):
                 self.name = "instance-0001"
                 self.uuid = "1-2-3-4-5"
 
-        result = self.conn.get_all_bw_usage([testinstance()],
-                datetime.datetime.utcnow())
+        result = self.conn.get_all_bw_usage([testinstance()], utils.utcnow())
         self.assertEqual(result, [])
 
 

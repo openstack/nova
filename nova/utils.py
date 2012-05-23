@@ -488,7 +488,7 @@ def utcnow_ts():
     return time.mktime(utcnow().timetuple())
 
 
-def set_time_override(override_time=datetime.datetime.utcnow()):
+def set_time_override(override_time=utcnow()):
     """Override utils.utcnow to return a constant time."""
     utcnow.override_time = override_time
 
@@ -524,7 +524,7 @@ def parse_strtime(timestr, fmt=PERFECT_TIME_FORMAT):
 def isotime(at=None):
     """Stringify time in ISO 8601 format"""
     if not at:
-        at = datetime.datetime.utcnow()
+        at = utcnow()
     str = at.strftime(ISO_TIME_FORMAT)
     tz = at.tzinfo.tzname(None) if at.tzinfo else 'UTC'
     str += ('Z' if tz == 'UTC' else tz)

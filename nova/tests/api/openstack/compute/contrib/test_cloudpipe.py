@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from lxml import etree
 
 from nova.api.openstack import common
@@ -156,7 +154,7 @@ class CloudpipesXMLSerializerTest(test.TestCase):
                         public_ip='1.2.3.4',
                         public_port='321',
                         instance_id='1234-1234-1234-1234',
-                        created_at=utils.isotime(datetime.datetime.utcnow()),
+                        created_at=utils.isotime(utils.utcnow()),
                         state='running')),
                 dict(cloudpipe=dict(
                         project_id='4321',

@@ -1592,8 +1592,7 @@ def instance_get_floating_address(context, instance_id):
 
 @require_admin_context
 def instance_get_all_hung_in_rebooting(context, reboot_window, session=None):
-    reboot_window = datetime.datetime.utcnow() - datetime.timedelta(
-            seconds=reboot_window)
+    reboot_window = utils.utcnow() - datetime.timedelta(seconds=reboot_window)
 
     if not session:
         session = get_session()
@@ -3775,8 +3774,8 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 
 @require_admin_context
 def migration_get_all_unconfirmed(context, confirm_window, session=None):
-    confirm_window = datetime.datetime.utcnow() - datetime.timedelta(
-            seconds=confirm_window)
+    confirm_window = (utils.utcnow() -
+                      datetime.timedelta(seconds=confirm_window))
 
     return model_query(context, models.Migration, session=session,
                        read_deleted="yes").\

@@ -152,7 +152,7 @@ class SimpleTenantUsageController(object):
             else:
                 info['state'] = instance['vm_state']
 
-            now = datetime.datetime.utcnow()
+            now = utils.utcnow()
 
             if info['state'] == 'terminated':
                 delta = info['ended_at'] - info['started_at']
