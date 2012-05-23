@@ -15,13 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from lxml import etree
 
 from nova.api.openstack.compute.views import versions as views_versions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova import utils
 
 
 LINKS = {
@@ -125,8 +124,8 @@ class AtomSerializer(wsgi.XMLDictSerializer):
     def _get_most_recent_update(self, versions):
         recent = None
         for version in versions:
-            updated = datetime.datetime.strptime(version['updated'],
-                                        '%Y-%m-%dT%H:%M:%SZ')
+            updated = utils.parse_strtime(version['updated'],
+                                          '%Y-%m-%dT%H:%M:%SZ')
             if not recent:
                 recent = updated
             elif updated > recent:
