@@ -297,7 +297,8 @@ class OldQuotaTestCase(test.TestCase):
                 scheduler = scheduler_driver.Scheduler
                 instance = scheduler().create_instance_db_entry(
                         context,
-                        msg['args']['request_spec'])
+                        msg['args']['request_spec'],
+                        None)
                 return [scheduler_driver.encode_instance(instance)]
             else:
                 return orig_rpc_call(context, topic, msg)
@@ -1840,7 +1841,10 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             def sync(context, project_id, session):
                 self.sync_called.add(res_name)
                 if res_name in self.usages:
-                    return {res_name: self.usages[res_name].in_use - 1}
+                    if self.usages[res_name].in_use < 0:
+                        return {res_name: 2}
+                    else:
+                        return {res_name: self.usages[res_name].in_use - 1}
                 return {res_name: 0}
             return sync
 
@@ -2005,6 +2009,57 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                      delta=4),
                 dict(resource='ram',
                      usage_id=self.usages_created['ram'],
+                     delta=2 * 1024),
+                ])
+
+    def test_quota_reserve_negative_in_use(self):
+        self.init_usage('test_project', 'instances', -1, 0, until_refresh=1)
+        self.init_usage('test_project', 'cores', -1, 0, until_refresh=1)
+        self.init_usage('test_project', 'ram', -1, 0, until_refresh=1)
+        context = FakeContext('test_project', 'test_class')
+        quotas = dict(
+            instances=5,
+            cores=10,
+            ram=10 * 1024,
+            )
+        deltas = dict(
+            instances=2,
+            cores=4,
+            ram=2 * 1024,
+            )
+        result = sqa_api.quota_reserve(context, self.resources, quotas,
+                                       deltas, self.expire, 5, 0)
+
+        self.assertEqual(self.sync_called, set(['instances', 'cores', 'ram']))
+        self.compare_usage(self.usages, [
+                dict(resource='instances',
+                     project_id='test_project',
+                     in_use=2,
+                     reserved=2,
+                     until_refresh=5),
+                dict(resource='cores',
+                     project_id='test_project',
+                     in_use=2,
+                     reserved=4,
+                     until_refresh=5),
+                dict(resource='ram',
+                     project_id='test_project',
+                     in_use=2,
+                     reserved=2 * 1024,
+                     until_refresh=5),
+                ])
+        self.assertEqual(self.usages_created, {})
+        self.compare_reservation(result, [
+                dict(resource='instances',
+                     usage_id=self.usages['instances'],
+                     project_id='test_project',
+                     delta=2),
+                dict(resource='cores',
+                     usage_id=self.usages['cores'],
+                     project_id='test_project',
+                     delta=4),
+                dict(resource='ram',
+                     usage_id=self.usages['ram'],
                      delta=2 * 1024),
                 ])
 
@@ -2181,10 +2236,8 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             cores=-4,
             ram=-2 * 1024,
             )
-        self.assertRaises(exception.InvalidQuotaValue,
-                          sqa_api.quota_reserve,
-                          context, self.resources, quotas,
-                          deltas, self.expire, 0, 0)
+        result = sqa_api.quota_reserve(context, self.resources, quotas,
+                                       deltas, self.expire, 0, 0)
 
         self.assertEqual(self.sync_called, set([]))
         self.compare_usage(self.usages, [
@@ -2205,7 +2258,19 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                      until_refresh=None),
                 ])
         self.assertEqual(self.usages_created, {})
-        self.assertEqual(self.reservations_created, {})
+        self.compare_reservation(result, [
+                dict(resource='instances',
+                     usage_id=self.usages['instances'],
+                     project_id='test_project',
+                     delta=-2),
+                dict(resource='cores',
+                     usage_id=self.usages['cores'],
+                     project_id='test_project',
+                     delta=-4),
+                dict(resource='ram',
+                     usage_id=self.usages['ram'],
+                     delta=-2 * 1024),
+                ])
 
     def test_quota_reserve_overs(self):
         self.init_usage('test_project', 'instances', 4, 0)

@@ -2543,6 +2543,10 @@ def quota_reserve(context, resources, quotas, deltas, expire,
                                                       session=session,
                                                       save=False)
                 refresh = True
+            elif usages[resource].in_use < 0:
+                # Negative in_use count indicates a desync, so try to
+                # heal from that...
+                refresh = True
             elif usages[resource].until_refresh is not None:
                 usages[resource].until_refresh -= 1
                 if usages[resource].until_refresh <= 0:
@@ -2607,7 +2611,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
         #            they're not invalidated by being over-quota.
 
         # Create the reservations
-        if not unders and not overs:
+        if not overs:
             reservations = []
             for resource, delta in deltas.items():
                 reservation = reservation_create(elevated,
@@ -2638,7 +2642,8 @@ def quota_reserve(context, resources, quotas, deltas, expire,
             usage_ref.save(session=session)
 
     if unders:
-        raise exception.InvalidQuotaValue(unders=sorted(unders))
+        LOG.warning(_("Change will make usage less than 0 for the following "
+                      "resources: %(unders)s") % locals())
     if overs:
         usages = dict((k, dict(in_use=v['in_use'], reserved=v['reserved']))
                       for k, v in usages.items())

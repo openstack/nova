@@ -30,7 +30,7 @@ def quota_set(id):
             'instances': 10, 'injected_files': 5, 'cores': 20,
             'injected_file_content_bytes': 10240,
             'security_groups': 10, 'security_group_rules': 20,
-            'key_pairs': 100}}
+            'key_pairs': 100, 'injected_file_path_bytes': 255}}
 
 
 class QuotaSetsTest(test.TestCase):
@@ -49,6 +49,7 @@ class QuotaSetsTest(test.TestCase):
             'metadata_items': 128,
             'gigabytes': 1000,
             'injected_files': 5,
+            'injected_file_path_bytes': 255,
             'injected_file_content_bytes': 10240,
             'security_groups': 10,
             'security_group_rules': 20,
@@ -67,6 +68,7 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(qs['floating_ips'], 10)
         self.assertEqual(qs['metadata_items'], 128)
         self.assertEqual(qs['injected_files'], 5)
+        self.assertEqual(qs['injected_file_path_bytes'], 255)
         self.assertEqual(qs['injected_file_content_bytes'], 10240)
         self.assertEqual(qs['security_groups'], 10)
         self.assertEqual(qs['security_group_rules'], 20)
@@ -88,6 +90,7 @@ class QuotaSetsTest(test.TestCase):
                     'floating_ips': 10,
                     'metadata_items': 128,
                     'injected_files': 5,
+                    'injected_file_path_bytes': 255,
                     'injected_file_content_bytes': 10240,
                     'security_groups': 10,
                     'security_group_rules': 20,
@@ -114,6 +117,7 @@ class QuotaSetsTest(test.TestCase):
                               'gigabytes': 1000, 'floating_ips': 10,
                               'metadata_items': 128, 'injected_files': 5,
                               'injected_file_content_bytes': 10240,
+                              'injected_file_path_bytes': 255,
                               'security_groups': 10,
                               'security_group_rules': 20,
                               'key_pairs': 100}}
@@ -161,6 +165,7 @@ class QuotaXMLSerializerTest(test.TestCase):
         exemplar = dict(quota_set=dict(
                 id='project_id',
                 metadata_items=10,
+                injected_file_path_bytes=255,
                 injected_file_content_bytes=20,
                 volumes=30,
                 gigabytes=40,

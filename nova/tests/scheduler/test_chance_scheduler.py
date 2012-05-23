@@ -71,13 +71,14 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         instance2 = {'uuid': 'fake-uuid2'}
         instance1_encoded = {'uuid': 'fake-uuid1', '_is_precooked': False}
         instance2_encoded = {'uuid': 'fake-uuid2', '_is_precooked': False}
+        reservations = ['resv1', 'resv2']
 
         # create_instance_db_entry() usually does this, but we're
         # stubbing it.
-        def _add_uuid1(ctxt, request_spec):
+        def _add_uuid1(ctxt, request_spec, reservations):
             request_spec['instance_properties']['uuid'] = 'fake-uuid1'
 
-        def _add_uuid2(ctxt, request_spec):
+        def _add_uuid2(ctxt, request_spec, reservations):
             request_spec['instance_properties']['uuid'] = 'fake-uuid2'
 
         self.mox.StubOutWithMock(ctxt, 'elevated')
@@ -92,8 +93,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
                 ['host1', 'host2', 'host3', 'host4'])
         random.random().AndReturn(.5)
-        self.driver.create_instance_db_entry(ctxt,
-                request_spec).WithSideEffects(_add_uuid1).AndReturn(
+        self.driver.create_instance_db_entry(ctxt, request_spec,
+                reservations).WithSideEffects(_add_uuid1).AndReturn(
                 instance1)
         driver.cast_to_compute_host(ctxt, 'host3', 'run_instance',
                 instance_uuid=instance1['uuid'], **fake_kwargs)
@@ -103,8 +104,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(
                 ['host1', 'host2', 'host3', 'host4'])
         random.random().AndReturn(.2)
-        self.driver.create_instance_db_entry(ctxt,
-                request_spec).WithSideEffects(_add_uuid2).AndReturn(
+        self.driver.create_instance_db_entry(ctxt, request_spec,
+                reservations).WithSideEffects(_add_uuid2).AndReturn(
                 instance2)
         driver.cast_to_compute_host(ctxt, 'host1', 'run_instance',
                 instance_uuid=instance2['uuid'], **fake_kwargs)
@@ -112,7 +113,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.mox.ReplayAll()
         result = self.driver.schedule_run_instance(ctxt, request_spec,
-                *fake_args, **fake_kwargs)
+                reservations, *fake_args, **fake_kwargs)
         expected = [instance1_encoded, instance2_encoded]
         self.assertEqual(result, expected)
 
@@ -128,7 +129,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # stubbing it.
         def _add_uuid(num):
             """Return a function that adds the provided uuid number."""
-            def _add_uuid_num(_, spec):
+            def _add_uuid_num(_, spec, reservations):
                 spec['instance_properties']['uuid'] = 'fake-uuid%d' % num
             return _add_uuid_num
 
@@ -150,7 +151,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # instance 1
         self.driver._schedule(ctxt, 'compute', request_spec).AndReturn('host')
         self.driver.create_instance_db_entry(
-            ctxt, mox.Func(_has_launch_index(0))
+            ctxt, mox.Func(_has_launch_index(0)), None
             ).WithSideEffects(_add_uuid(1)).AndReturn(instance1)
         driver.cast_to_compute_host(ctxt, 'host', 'run_instance',
                                     instance_uuid=instance1['uuid'])
@@ -158,14 +159,14 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # instance 2
         self.driver._schedule(ctxt, 'compute', request_spec).AndReturn('host')
         self.driver.create_instance_db_entry(
-            ctxt, mox.Func(_has_launch_index(1))
+            ctxt, mox.Func(_has_launch_index(1)), None
             ).WithSideEffects(_add_uuid(2)).AndReturn(instance2)
         driver.cast_to_compute_host(ctxt, 'host', 'run_instance',
                                     instance_uuid=instance2['uuid'])
         driver.encode_instance(instance2).AndReturn(instance2)
         self.mox.ReplayAll()
 
-        self.driver.schedule_run_instance(ctxt, request_spec)
+        self.driver.schedule_run_instance(ctxt, request_spec, None)
 
     def test_basic_schedule_run_instance_no_hosts(self):
         ctxt = context.RequestContext('fake', 'fake', False)

@@ -60,14 +60,16 @@ class ChanceScheduler(driver.Scheduler):
         host = self._schedule(context, topic, None, **kwargs)
         driver.cast_to_host(context, topic, host, method, **kwargs)
 
-    def schedule_run_instance(self, context, request_spec, *_args, **kwargs):
+    def schedule_run_instance(self, context, request_spec, reservations,
+                              *_args, **kwargs):
         """Create and run an instance or instances"""
         num_instances = request_spec.get('num_instances', 1)
         instances = []
         for num in xrange(num_instances):
             host = self._schedule(context, 'compute', request_spec, **kwargs)
             request_spec['instance_properties']['launch_index'] = num
-            instance = self.create_instance_db_entry(context, request_spec)
+            instance = self.create_instance_db_entry(context, request_spec,
+                                                     reservations)
             driver.cast_to_compute_host(context, host,
                     'run_instance', instance_uuid=instance['uuid'], **kwargs)
             instances.append(driver.encode_instance(instance))

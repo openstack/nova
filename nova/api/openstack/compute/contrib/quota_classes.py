@@ -23,6 +23,9 @@ from nova import exception
 from nova import quota
 
 
+QUOTAS = quota.QUOTAS
+
+
 authorize = extensions.extension_authorizer('compute', 'quota_classes')
 
 
@@ -32,7 +35,7 @@ class QuotaClassTemplate(xmlutil.TemplateBuilder):
                                        selector='quota_class_set')
         root.set('id')
 
-        for resource in quota.quota_resources:
+        for resource in QUOTAS.resources:
             elem = xmlutil.SubTemplateElement(root, resource)
             elem.text = resource
 
@@ -46,7 +49,7 @@ class QuotaClassSetsController(object):
 
         result = dict(id=str(quota_class))
 
-        for resource in quota.quota_resources:
+        for resource in QUOTAS.resources:
             result[resource] = quota_set[resource]
 
         return dict(quota_class_set=result)
@@ -58,7 +61,7 @@ class QuotaClassSetsController(object):
         try:
             db.sqlalchemy.api.authorize_quota_class_context(context, id)
             return self._format_quota_set(id,
-                                          quota.get_class_quotas(context, id))
+                                          QUOTAS.get_class_quotas(context, id))
         except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()
 
@@ -68,7 +71,7 @@ class QuotaClassSetsController(object):
         authorize(context)
         quota_class = id
         for key in body['quota_class_set'].keys():
-            if key in quota.quota_resources:
+            if key in QUOTAS:
                 value = int(body['quota_class_set'][key])
                 try:
                     db.quota_class_update(context, quota_class, key, value)
@@ -76,8 +79,8 @@ class QuotaClassSetsController(object):
                     db.quota_class_create(context, quota_class, key, value)
                 except exception.AdminRequired:
                     raise webob.exc.HTTPForbidden()
-        return {'quota_class_set': quota.get_class_quotas(context,
-                                                          quota_class)}
+        return {'quota_class_set': QUOTAS.get_class_quotas(context,
+                                                           quota_class)}
 
 
 class Quota_classes(extensions.ExtensionDescriptor):

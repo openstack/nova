@@ -57,10 +57,11 @@ class BaseLimitTestSuite(test.TestCase):
         self.stubs.Set(limits.Limit, "_get_time", self._get_time)
         self.absolute_limits = {}
 
-        def stub_get_project_quotas(context, project_id):
-            return self.absolute_limits
+        def stub_get_project_quotas(context, project_id, usages=True):
+            return dict((k, dict(limit=v))
+                        for k, v in self.absolute_limits.items())
 
-        self.stubs.Set(nova.quota, "get_project_quotas",
+        self.stubs.Set(nova.quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
 
     def _get_time(self):

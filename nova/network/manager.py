@@ -64,6 +64,7 @@ from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.notifier import api as notifier
 from nova.openstack.common import cfg
+from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 import nova.policy
@@ -73,6 +74,8 @@ from nova import utils
 
 
 LOG = logging.getLogger(__name__)
+
+QUOTAS = quota.QUOTAS
 
 network_opts = [
     cfg.StrOpt('flat_network_bridge',
@@ -398,21 +401,34 @@ class FloatingIP(object):
     def allocate_floating_ip(self, context, project_id, pool=None):
         """Gets a floating ip from the pool."""
         # NOTE(tr3buchet): all network hosts in zone now use the same pool
-        LOG.debug("QUOTA: %s" % quota.allowed_floating_ips(context, 1))
-        if quota.allowed_floating_ips(context, 1) < 1:
-            LOG.warn(_('Quota exceeded for %s, tried to allocate address'),
-                     context.project_id)
-            raise exception.QuotaError(code='AddressLimitExceeded')
         pool = pool or FLAGS.default_floating_pool
 
-        floating_ip = self.db.floating_ip_allocate_address(context,
-                                                    project_id,
-                                                    pool)
-        payload = dict(project_id=project_id, floating_ip=floating_ip)
-        notifier.notify(context,
-                        notifier.publisher_id("network"),
-                        'network.floating_ip.allocate',
-                        notifier.INFO, payload)
+        # Check the quota; can't put this in the API because we get
+        # called into from other places
+        try:
+            reservations = QUOTAS.reserve(context, floating_ips=1)
+        except exception.OverQuota:
+            pid = context.project_id
+            LOG.warn(_("Quota exceeded for %(pid)s, tried to allocate "
+                       "floating IP") % locals())
+            raise exception.FloatingIpLimitExceeded()
+
+        try:
+            floating_ip = self.db.floating_ip_allocate_address(context,
+                                                               project_id,
+                                                               pool)
+            payload = dict(project_id=project_id, floating_ip=floating_ip)
+            notifier.notify(context,
+                            notifier.publisher_id("network"),
+                            'network.floating_ip.allocate',
+                            notifier.INFO, payload)
+
+            # Commit the reservations
+            QUOTAS.commit(context, reservations)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                QUOTAS.rollback(context, reservations)
+
         return floating_ip
 
     @wrap_check_policy
@@ -443,7 +459,19 @@ class FloatingIP(object):
                         'network.floating_ip.deallocate',
                         notifier.INFO, payload=payload)
 
+        # Get reservations...
+        try:
+            reservations = QUOTAS.reserve(context, floating_ips=-1)
+        except Exception:
+            reservations = None
+            LOG.exception(_("Failed to update usages deallocating "
+                            "floating IP"))
+
         self.db.floating_ip_deallocate(context, address)
+
+        # Commit the reservations
+        if reservations:
+            QUOTAS.commit(context, reservations)
 
     @wrap_check_policy
     def associate_floating_ip(self, context, floating_address, fixed_address,

@@ -41,14 +41,15 @@ class SchedulerAPI(nova.rpc.proxy.RpcProxy):
 
     def run_instance(self, ctxt, topic, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
-            filter_properties, call=True):
+            filter_properties, reservations, call=True):
         rpc_method = self.call if call else self.cast
         return rpc_method(ctxt, self.make_msg('run_instance', topic=topic,
                 request_spec=request_spec, admin_password=admin_password,
                 injected_files=injected_files,
                 requested_networks=requested_networks,
                 is_first_time=is_first_time,
-                filter_properties=filter_properties))
+                filter_properties=filter_properties,
+                reservations=reservations))
 
     def prep_resize(self, ctxt, topic, instance_uuid, instance_type_id, image,
             update_db, request_spec, filter_properties):

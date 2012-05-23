@@ -32,10 +32,12 @@ from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
 import nova.policy
+from nova import quota
 from nova import rpc
 from nova import test
 import nova.volume.api
 
+QUOTAS = quota.QUOTAS
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
 
@@ -90,6 +92,20 @@ class VolumeTestCase(test.TestCase):
 
     def test_create_delete_volume(self):
         """Test volume can be created and deleted."""
+        # Need to stub out reserve, commit, and rollback
+        def fake_reserve(context, expire=None, **deltas):
+            return ["RESERVATION"]
+
+        def fake_commit(context, reservations):
+            pass
+
+        def fake_rollback(context, reservations):
+            pass
+
+        self.stubs.Set(QUOTAS, "reserve", fake_reserve)
+        self.stubs.Set(QUOTAS, "commit", fake_commit)
+        self.stubs.Set(QUOTAS, "rollback", fake_rollback)
+
         volume = self._create_volume()
         volume_id = volume['id']
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)

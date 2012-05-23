@@ -68,14 +68,16 @@ class SchedulerRpcAPITestCase(test.TestCase):
                 topic='fake_topic', request_spec='fake_request_spec',
                 admin_password='pw', injected_files='fake_injected_files',
                 requested_networks='fake_requested_networks',
-                is_first_time=True, filter_properties='fake_filter_properties')
+                is_first_time=True, filter_properties='fake_filter_properties',
+                reservations=None)
 
     def test_run_instance_cast(self):
         self._test_scheduler_api('run_instance', rpc_method='cast',
                 topic='fake_topic', request_spec='fake_request_spec',
                 admin_password='pw', injected_files='fake_injected_files',
                 requested_networks='fake_requested_networks',
-                is_first_time=True, filter_properties='fake_filter_properties')
+                is_first_time=True, filter_properties='fake_filter_properties',
+                reservations=None)
 
     def test_prep_resize(self):
         self._test_scheduler_api('prep_resize', rpc_method='cast',

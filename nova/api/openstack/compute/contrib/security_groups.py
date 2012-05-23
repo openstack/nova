@@ -31,6 +31,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova import quota
 from nova import utils
@@ -38,6 +39,7 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
+QUOTAS = quota.QUOTAS
 authorize = extensions.extension_authorizer('compute', 'security_groups')
 
 
@@ -244,10 +246,23 @@ class SecurityGroupController(SecurityGroupControllerBase):
         if db.security_group_in_use(context, security_group.id):
             msg = _("Security group is still in use")
             raise exc.HTTPBadRequest(explanation=msg)
+
+        # Get reservations
+        try:
+            reservations = QUOTAS.reserve(context, security_groups=-1)
+        except Exception:
+            reservations = None
+            LOG.exception(_("Failed to update usages deallocating "
+                            "security group"))
+
         LOG.audit(_("Delete security group %s"), id, context=context)
         db.security_group_destroy(context, security_group.id)
         self.sgh.trigger_security_group_destroy_refresh(
             context, security_group.id)
+
+        # Commit the reservations
+        if reservations:
+            QUOTAS.commit(context, reservations)
 
         return webob.Response(status_int=202)
 
@@ -291,22 +306,33 @@ class SecurityGroupController(SecurityGroupControllerBase):
         group_name = group_name.strip()
         group_description = group_description.strip()
 
-        if quota.allowed_security_groups(context, 1) < 1:
+        try:
+            reservations = QUOTAS.reserve(context, security_groups=1)
+        except exception.OverQuota:
             msg = _("Quota exceeded, too many security groups.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        LOG.audit(_("Create Security Group %s"), group_name, context=context)
-        self.compute_api.ensure_default_security_group(context)
-        if db.security_group_exists(context, context.project_id, group_name):
-            msg = _('Security group %s already exists') % group_name
-            raise exc.HTTPBadRequest(explanation=msg)
+        try:
+            LOG.audit(_("Create Security Group %s"), group_name,
+                      context=context)
+            self.compute_api.ensure_default_security_group(context)
+            if db.security_group_exists(context, context.project_id,
+                                        group_name):
+                msg = _('Security group %s already exists') % group_name
+                raise exc.HTTPBadRequest(explanation=msg)
 
-        group = {'user_id': context.user_id,
-                 'project_id': context.project_id,
-                 'name': group_name,
-                 'description': group_description}
-        group_ref = db.security_group_create(context, group)
-        self.sgh.trigger_security_group_create_refresh(context, group)
+            group = {'user_id': context.user_id,
+                     'project_id': context.project_id,
+                     'name': group_name,
+                     'description': group_description}
+            group_ref = db.security_group_create(context, group)
+            self.sgh.trigger_security_group_create_refresh(context, group)
+
+            # Commit the reservation
+            QUOTAS.commit(context, reservations)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                QUOTAS.rollback(context, reservations)
 
         return {'security_group': self._format_security_group(context,
                                                                  group_ref)}
@@ -382,10 +408,10 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
             msg = _('This rule already exists in group %s') % parent_group_id
             raise exc.HTTPBadRequest(explanation=msg)
 
-        allowed = quota.allowed_security_group_rules(context,
-                                                   parent_group_id,
-                                                   1)
-        if allowed < 1:
+        count = QUOTAS.count(context, 'security_group_rules', parent_group_id)
+        try:
+            QUOTAS.limit_check(context, security_group_rules=count + 1)
+        except exception.OverQuota:
             msg = _("Quota exceeded, too many security group rules.")
             raise exc.HTTPBadRequest(explanation=msg)
 

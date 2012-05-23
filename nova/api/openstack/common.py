@@ -27,6 +27,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.network import model as network_model
@@ -35,6 +36,7 @@ from nova import quota
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
+QUOTAS = quota.QUOTAS
 
 
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
@@ -272,9 +274,9 @@ def get_version_from_href(href):
 def check_img_metadata_properties_quota(context, metadata):
     if metadata is None:
         return
-    num_metadata = len(metadata)
-    quota_metadata = quota.allowed_metadata_items(context, num_metadata)
-    if quota_metadata < num_metadata:
+    try:
+        QUOTAS.limit_check(context, metadata_items=len(metadata))
+    except exception.OverQuota:
         expl = _("Image metadata limit exceeded")
         raise webob.exc.HTTPRequestEntityTooLarge(explanation=expl,
                                                 headers={'Retry-After': 0})

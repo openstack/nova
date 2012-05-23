@@ -42,6 +42,7 @@ import nova.image
 from nova import log as logging
 from nova import network
 from nova.openstack.common import cfg
+from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 import nova.policy
 from nova import quota
@@ -55,6 +56,8 @@ LOG = logging.getLogger(__name__)
 
 FLAGS = flags.FLAGS
 flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
+
+QUOTAS = quota.QUOTAS
 
 
 def check_instance_state(vm_state=None, task_state=None):
@@ -126,49 +129,91 @@ class API(base.Base):
         """
         if injected_files is None:
             return
-        limit = quota.allowed_injected_files(context, len(injected_files))
-        if len(injected_files) > limit:
+
+        # Check number of files first
+        try:
+            QUOTAS.limit_check(context, injected_files=len(injected_files))
+        except exception.OverQuota:
             raise exception.OnsetFileLimitExceeded()
-        path_limit = quota.allowed_injected_file_path_bytes(context)
+
+        # OK, now count path and content lengths; we're looking for
+        # the max...
+        max_path = 0
+        max_content = 0
         for path, content in injected_files:
-            if len(path) > path_limit:
+            max_path = max(max_path, len(path))
+            max_content = max(max_content, len(content))
+
+        try:
+            QUOTAS.limit_check(context, injected_file_path_bytes=max_path,
+                               injected_file_content_bytes=max_content)
+        except exception.OverQuota as exc:
+            # Favor path limit over content limit for reporting
+            # purposes
+            if 'injected_file_path_bytes' in exc.kwargs['overs']:
                 raise exception.OnsetFilePathLimitExceeded()
-            content_limit = quota.allowed_injected_file_content_bytes(
-                                                    context, len(content))
-            if len(content) > content_limit:
+            else:
                 raise exception.OnsetFileContentLimitExceeded()
 
     def _check_num_instances_quota(self, context, instance_type, min_count,
                                    max_count):
         """Enforce quota limits on number of instances created."""
-        num_instances = quota.allowed_instances(context, max_count,
-                                                instance_type)
-        if num_instances < min_count:
+
+        # Determine requested cores and ram
+        req_cores = max_count * instance_type['vcpus']
+        req_ram = max_count * instance_type['memory_mb']
+
+        # Check the quota
+        try:
+            reservations = QUOTAS.reserve(context, instances=max_count,
+                                          cores=req_cores, ram=req_ram)
+        except exception.OverQuota as exc:
+            # OK, we exceeded quota; let's figure out why...
+            quotas = exc.kwargs['quotas']
+            usages = exc.kwargs['usages']
+            headroom = dict((res, quotas[res] -
+                             (usages[res]['in_use'] + usages[res]['reserved']))
+                            for res in quotas.keys())
+            allowed = headroom['instances']
+            if instance_type['vcpus']:
+                allowed = min(allowed,
+                              headroom['cores'] // instance_type['vcpus'])
+            if instance_type['memory_mb']:
+                allowed = min(allowed,
+                              headroom['ram'] // instance_type['memory_mb'])
+
+            # Convert to the appropriate exception message
             pid = context.project_id
-            if num_instances <= 0:
+            if allowed <= 0:
                 msg = _("Cannot run any more instances of this type.")
                 used = max_count
+            elif min_count <= allowed <= max_count:
+                # We're actually OK, but still need reservations
+                return self._check_num_instances_quota(context, instance_type,
+                                                       min_count, allowed)
             else:
                 msg = (_("Can only run %s more instances of this type.") %
-                       num_instances)
-                used = max_count - num_instances
+                       allowed)
+                used = max_count - allowed
             LOG.warn(_("Quota exceeded for %(pid)s,"
                   " tried to run %(min_count)s instances. %(msg)s"), locals())
             raise exception.TooManyInstances(used=used, allowed=max_count)
 
-        return num_instances
+        return max_count, reservations
 
     def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
         if not metadata:
             metadata = {}
         num_metadata = len(metadata)
-        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
-        if quota_metadata < num_metadata:
+        try:
+            QUOTAS.limit_check(context, metadata_items=num_metadata)
+        except exception.OverQuota as exc:
             pid = context.project_id
             msg = _("Quota exceeded for %(pid)s, tried to set "
                     "%(num_metadata)s metadata properties") % locals()
             LOG.warn(msg)
+            quota_metadata = exc.kwargs['quotas']['metadata_items']
             raise exception.MetadataLimitExceeded(allowed=quota_metadata)
 
         # Because metadata is stored in the DB, we hard-code the size limits
@@ -302,7 +347,7 @@ class API(base.Base):
         block_device_mapping = block_device_mapping or []
 
         # Check quotas
-        num_instances = self._check_num_instances_quota(
+        num_instances, quota_reservations = self._check_num_instances_quota(
                 context, instance_type, min_count, max_count)
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
@@ -313,8 +358,10 @@ class API(base.Base):
         image = image_service.show(context, image_id)
 
         if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
+            QUOTAS.rollback(context, quota_reservations)
             raise exception.InstanceTypeMemoryTooSmall()
         if instance_type['root_gb'] < int(image.get('min_disk') or 0):
+            QUOTAS.rollback(context, quota_reservations)
             raise exception.InstanceTypeDiskTooSmall()
 
         # Handle config_drive
@@ -385,7 +432,12 @@ class API(base.Base):
         if create_instance_here:
             instance = self.create_db_entry_for_new_instance(
                     context, instance_type, image, base_options,
-                    security_group, block_device_mapping)
+                    security_group, block_device_mapping,
+                    quota_reservations)
+
+            # Reservations committed; don't double-commit
+            quota_reservations = None
+
             # Tells scheduler we created the instance already.
             base_options['uuid'] = instance['uuid']
             use_call = False
@@ -412,7 +464,7 @@ class API(base.Base):
                 admin_password, image,
                 num_instances, requested_networks,
                 block_device_mapping, security_group,
-                filter_properties)
+                filter_properties, quota_reservations)
 
         if create_instance_here:
             return ([instance], reservation_id)
@@ -509,7 +561,7 @@ class API(base.Base):
     #NOTE(bcwaldon): No policy check since this is only used by scheduler and
     # the compute api. That should probably be cleaned up, though.
     def create_db_entry_for_new_instance(self, context, instance_type, image,
-            base_options, security_group, block_device_mapping):
+            base_options, security_group, block_device_mapping, reservations):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
         etc).
@@ -539,6 +591,11 @@ class API(base.Base):
 
         base_options.setdefault('launch_index', 0)
         instance = self.db.instance_create(context, base_options)
+
+        # Commit the reservations
+        if reservations:
+            QUOTAS.commit(context, reservations)
+
         instance_id = instance['id']
         instance_uuid = instance['uuid']
 
@@ -593,7 +650,8 @@ class API(base.Base):
             requested_networks,
             block_device_mapping,
             security_group,
-            filter_properties):
+            filter_properties,
+            quota_reservations):
         """Send a run_instance request to the schedulers for processing."""
 
         pid = context.project_id
@@ -615,7 +673,8 @@ class API(base.Base):
                 topic=FLAGS.compute_topic, request_spec=request_spec,
                 admin_password=admin_password, injected_files=injected_files,
                 requested_networks=requested_networks, is_first_time=True,
-                filter_properties=filter_properties, call=use_call)
+                filter_properties=filter_properties,
+                reservations=quota_reservations, call=use_call)
 
     def _check_create_policies(self, context, availability_zone,
             requested_networks, block_device_mapping):
@@ -895,10 +954,17 @@ class API(base.Base):
                 pass
 
     def _delete(self, context, instance):
+        host = instance['host']
+        reservations = QUOTAS.reserve(context,
+                                      instances=-1,
+                                      cores=-instance['vcpus'],
+                                      ram=-instance['memory_mb'])
         try:
             if not instance['host']:
                 # Just update database, nothing else we can do
-                return self.db.instance_destroy(context, instance['id'])
+                result = self.db.instance_destroy(context, instance['id'])
+                QUOTAS.commit(context, reservations)
+                return result
 
             self.update(context,
                         instance,
@@ -919,9 +985,13 @@ class API(base.Base):
 
             self.compute_rpcapi.terminate_instance(context, instance)
 
+            QUOTAS.commit(context, reservations)
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
-            pass
+            QUOTAS.rollback(context, reservations)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                QUOTAS.rollback(context, reservations)
 
     # NOTE(jerdfelt): The API implies that only ACTIVE and ERROR are
     # allowed but the EC2 API appears to allow from RESCUED and STOPPED
@@ -1885,7 +1955,10 @@ class KeypairAPI(base.Base):
         """Import a key pair using an existing public key."""
         self._validate_keypair_name(context, user_id, key_name)
 
-        if quota.allowed_key_pairs(context, 1) < 1:
+        count = QUOTAS.count(context, 'key_pairs', user_id)
+        try:
+            QUOTAS.limit_check(context, key_pairs=count + 1)
+        except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
 
         try:
@@ -1906,7 +1979,10 @@ class KeypairAPI(base.Base):
         """Create a new key pair."""
         self._validate_keypair_name(context, user_id, key_name)
 
-        if quota.allowed_key_pairs(context, 1) < 1:
+        count = QUOTAS.count(context, 'key_pairs', user_id)
+        try:
+            QUOTAS.limit_check(context, key_pairs=count + 1)
+        except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
 
         private_key, public_key, fingerprint = crypto.generate_key_pair()

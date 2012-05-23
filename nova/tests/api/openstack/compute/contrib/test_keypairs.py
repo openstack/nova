@@ -22,8 +22,12 @@ from nova.api.openstack.compute.contrib import keypairs
 from nova.api.openstack import wsgi
 from nova import db
 from nova import exception
+from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes
+
+
+QUOTAS = quota.QUOTAS
 
 
 def fake_keypair(name):
@@ -120,11 +124,10 @@ class KeypairsTest(test.TestCase):
 
     def test_keypair_create_quota_limit(self):
 
-        def db_key_pair_count_by_user_max(self, user_id):
+        def fake_quotas_count(self, context, resource, *args, **kwargs):
             return 100
 
-        self.stubs.Set(db, "key_pair_count_by_user",
-                       db_key_pair_count_by_user_max)
+        self.stubs.Set(QUOTAS, "count", fake_quotas_count)
 
         req = webob.Request.blank('/v2/fake/os-keypairs')
         req.method = 'POST'
@@ -163,11 +166,10 @@ class KeypairsTest(test.TestCase):
 
     def test_keypair_import_quota_limit(self):
 
-        def db_key_pair_count_by_user_max(self, user_id):
+        def fake_quotas_count(self, context, resource, *args, **kwargs):
             return 100
 
-        self.stubs.Set(db, "key_pair_count_by_user",
-                       db_key_pair_count_by_user_max)
+        self.stubs.Set(QUOTAS, "count", fake_quotas_count)
 
         body = {
             'keypair': {
@@ -181,6 +183,26 @@ class KeypairsTest(test.TestCase):
                               'GyqoNTE1UEhcM5ZRWgfUZfTjVyDF2kGj3vJLCJtJ8LoGc'
                               'j7YaN4uPg1rBle+izwE/tLonRrds+cev8p6krSSrxWOwB'
                               'bHkXa6OciiJDvkRzJXzf',
+            },
+        }
+
+        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 413)
+
+    def test_keypair_create_quota_limit(self):
+
+        def fake_quotas_count(self, context, resource, *args, **kwargs):
+            return 100
+
+        self.stubs.Set(QUOTAS, "count", fake_quotas_count)
+
+        body = {
+            'keypair': {
+                'name': 'create_test',
             },
         }
 

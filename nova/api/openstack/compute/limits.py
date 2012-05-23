@@ -36,6 +36,9 @@ from nova import quota
 from nova import wsgi as base_wsgi
 
 
+QUOTAS = quota.QUOTAS
+
+
 # Convenience constants for the limits dictionary passed to Limiter().
 PER_SECOND = 1
 PER_MINUTE = 60
@@ -82,7 +85,9 @@ class LimitsController(object):
         Return all global and rate limit information.
         """
         context = req.environ['nova.context']
-        abs_limits = quota.get_project_quotas(context, context.project_id)
+        quotas = QUOTAS.get_project_quotas(context, context.project_id,
+                                           usages=False)
+        abs_limits = dict((k, v['limit']) for k, v in quotas.items())
         rate_limits = req.environ.get("nova.limits", [])
 
         builder = self._get_view_builder(req)

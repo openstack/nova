@@ -45,6 +45,7 @@ from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
 import nova.policy
+from nova import quota
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova.scheduler import driver as scheduler_driver
@@ -54,6 +55,7 @@ from nova import utils
 import nova.volume
 
 
+QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 flags.DECLARE('stub_network', 'nova.compute.manager')
@@ -71,13 +73,14 @@ def rpc_call_wrapper(context, topic, msg, do_cast=True):
     if (topic == FLAGS.scheduler_topic and
         msg['method'] == 'run_instance'):
         request_spec = msg['args']['request_spec']
+        reservations = msg['args'].get('reservations')
         scheduler = scheduler_driver.Scheduler
         num_instances = request_spec.get('num_instances', 1)
         instances = []
         for num in xrange(num_instances):
             request_spec['instance_properties']['launch_index'] = num
             instance = scheduler().create_instance_db_entry(
-                    context, request_spec)
+                    context, request_spec, reservations)
             encoded = scheduler_driver.encode_instance(instance)
             instances.append(encoded)
         return instances
@@ -148,6 +151,7 @@ class BaseTestCase(test.TestCase):
         inst['instance_type_id'] = type_id
         inst['ami_launch_index'] = 0
         inst['memory_mb'] = 0
+        inst['vcpus'] = 0
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0
         inst.update(params)
@@ -4123,10 +4127,9 @@ class KeypairAPITestCase(BaseTestCase):
                           self.ctxt, self.ctxt.user_id, 'foo')
 
     def test_create_keypair_quota_limit(self):
-        def db_key_pair_count_by_user_max(self, user_id):
+        def fake_quotas_count(self, context, resource, *args, **kwargs):
             return FLAGS.quota_key_pairs
-        self.stubs.Set(db, "key_pair_count_by_user",
-                       db_key_pair_count_by_user_max)
+        self.stubs.Set(QUOTAS, "count", fake_quotas_count)
         self.assertRaises(exception.KeypairLimitExceeded,
                           self.keypair_api.create_key_pair,
                           self.ctxt, self.ctxt.user_id, 'foo')
@@ -4158,10 +4161,9 @@ class KeypairAPITestCase(BaseTestCase):
                           '* BAD CHARACTERS! *', self.pub_key)
 
     def test_import_keypair_quota_limit(self):
-        def db_key_pair_count_by_user_max(self, user_id):
+        def fake_quotas_count(self, context, resource, *args, **kwargs):
             return FLAGS.quota_key_pairs
-        self.stubs.Set(db, "key_pair_count_by_user",
-                       db_key_pair_count_by_user_max)
+        self.stubs.Set(QUOTAS, "count", fake_quotas_count)
         self.assertRaises(exception.KeypairLimitExceeded,
                           self.keypair_api.import_key_pair,
                           self.ctxt, self.ctxt.user_id, 'foo', self.pub_key)
