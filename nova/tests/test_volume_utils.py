@@ -17,15 +17,15 @@
 
 """Tests For miscellaneous util methods used with volume."""
 
+from nova import context
 from nova import db
 from nova import flags
-from nova import context
-from nova import test
-from nova import log as logging
 import nova.image.fake
-from nova.volume import utils as volume_utils
+from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
+from nova import test
+from nova.volume import utils as volume_utils
 
 
 LOG = logging.getLogger(__name__)
