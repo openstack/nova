@@ -36,6 +36,7 @@ class FlagsTestCase(test.TestCase):
         super(FlagsTestCase, self).setUp()
         self.FLAGS = flags.NovaConfigOpts()
         self.global_FLAGS = flags.FLAGS
+        self.flags(config_file=[])
 
     def test_declare(self):
         self.assert_('answer' not in self.global_FLAGS)
@@ -64,7 +65,7 @@ class FlagsTestCase(test.TestCase):
         self.assertEqual(self.global_FLAGS.runtime_answer, 54)
 
     def test_long_vs_short_flags(self):
-        self.global_FLAGS.reset()
+        self.global_FLAGS.clear()
         self.global_FLAGS.register_cli_opt(cfg.StrOpt('duplicate_answer_long',
                                                       default='val',
                                                       help='desc'))
@@ -74,7 +75,7 @@ class FlagsTestCase(test.TestCase):
         self.assert_('duplicate_answer' not in self.global_FLAGS)
         self.assert_(self.global_FLAGS.duplicate_answer_long, 60)
 
-        self.global_FLAGS.reset()
+        self.global_FLAGS.clear()
         self.global_FLAGS.register_cli_opt(cfg.IntOpt('duplicate_answer',
                                                       default=60,
                                                       help='desc'))
