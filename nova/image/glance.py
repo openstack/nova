@@ -290,7 +290,7 @@ class GlanceImageService(object):
                   base_image_meta)
         return base_image_meta
 
-    def update(self, context, image_id, image_meta, data=None):
+    def update(self, context, image_id, image_meta, data=None, features=None):
         """Replace the contents of the given image with the new data.
 
         :raises: ImageNotFound if the image does not exist.
@@ -301,7 +301,8 @@ class GlanceImageService(object):
         image_meta = self._translate_to_glance(image_meta)
         client = self._get_client(context)
         try:
-            image_meta = client.update_image(image_id, image_meta, data)
+            image_meta = client.update_image(image_id, image_meta, data,
+                                             features)
         except Exception:
             _reraise_translated_image_exception(image_id)
 

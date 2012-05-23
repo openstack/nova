@@ -288,8 +288,20 @@ class S3ImageService(object):
             context.update_store()
             log_vars = {'image_location': image_location,
                         'image_path': image_path}
-            metadata['properties']['image_state'] = 'downloading'
-            self.service.update(context, image_uuid, metadata)
+
+            def _update_image_state(context, image_uuid, image_state):
+                metadata = {'properties': {'image_state': image_state}}
+                headers = {'x-glance-registry-purge-props': False}
+                self.service.update(context, image_uuid, metadata, None,
+                                    headers)
+
+            def _update_image_data(context, image_uuid, image_data):
+                metadata = {}
+                headers = {'x-glance-registry-purge-props': False}
+                self.service.update(context, image_uuid, metadata, image_data,
+                                    headers)
+
+            _update_image_state(context, image_uuid, 'downloading')
 
             try:
                 parts = []
@@ -310,12 +322,10 @@ class S3ImageService(object):
             except Exception:
                 LOG.exception(_("Failed to download %(image_location)s "
                                 "to %(image_path)s"), log_vars)
-                metadata['properties']['image_state'] = 'failed_download'
-                self.service.update(context, image_uuid, metadata)
+                _update_image_state(context, image_uuid, 'failed_download')
                 return
 
-            metadata['properties']['image_state'] = 'decrypting'
-            self.service.update(context, image_uuid, metadata)
+            _update_image_state(context, image_uuid, 'decrypting')
 
             try:
                 hex_key = manifest.find('image/ec2_encrypted_key').text
@@ -329,38 +339,33 @@ class S3ImageService(object):
             except Exception:
                 LOG.exception(_("Failed to decrypt %(image_location)s "
                                 "to %(image_path)s"), log_vars)
-                metadata['properties']['image_state'] = 'failed_decrypt'
-                self.service.update(context, image_uuid, metadata)
+                _update_image_state(context, image_uuid, 'failed_decrypt')
                 return
 
-            metadata['properties']['image_state'] = 'untarring'
-            self.service.update(context, image_uuid, metadata)
+            _update_image_state(context, image_uuid, 'untarring')
 
             try:
                 unz_filename = self._untarzip_image(image_path, dec_filename)
             except Exception:
                 LOG.exception(_("Failed to untar %(image_location)s "
                                 "to %(image_path)s"), log_vars)
-                metadata['properties']['image_state'] = 'failed_untar'
-                self.service.update(context, image_uuid, metadata)
+                _update_image_state(context, image_uuid, 'failed_untar')
                 return
 
-            metadata['properties']['image_state'] = 'uploading'
-            self.service.update(context, image_uuid, metadata)
+            _update_image_state(context, image_uuid, 'uploading')
             try:
                 with open(unz_filename) as image_file:
-                    self.service.update(context, image_uuid,
-                                        metadata, image_file)
+                    _update_image_data(context, image_uuid, image_file)
             except Exception:
                 LOG.exception(_("Failed to upload %(image_location)s "
                                 "to %(image_path)s"), log_vars)
-                metadata['properties']['image_state'] = 'failed_upload'
-                self.service.update(context, image_uuid, metadata)
+                _update_image_state(context, image_uuid, 'failed_upload')
                 return
 
-            metadata['properties']['image_state'] = 'available'
-            metadata['status'] = 'active'
-            self.service.update(context, image_uuid, metadata)
+            metadata = {'status': 'active',
+                        'properties': {'image_state': 'available'}}
+            headers = {'x-glance-registry-purge-props': False}
+            self.service.update(context, image_uuid, metadata, None, headers)
 
             shutil.rmtree(image_path)
 

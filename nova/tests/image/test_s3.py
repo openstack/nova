@@ -15,7 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import binascii
+import eventlet
+import mox
 import os
+import tempfile
 
 from nova import context
 import nova.db.api
@@ -55,6 +59,21 @@ ami_manifest_xml = """<?xml version="1.0" ?>
                 <kernel_id>aki-00000001</kernel_id>
                 <ramdisk_id>ari-00000001</ramdisk_id>
         </machine_configuration>
+</manifest>
+"""
+
+file_manifest_xml = """<?xml version="1.0" ?>
+<manifest>
+        <image>
+                <ec2_encrypted_key>foo</ec2_encrypted_key>
+                <user_encrypted_key>foo</user_encrypted_key>
+                <ec2_encrypted_iv>foo</ec2_encrypted_iv>
+                <parts count="1">
+                        <part index="0">
+                               <filename>foo</filename>
+                        </part>
+                </parts>
+        </image>
 </manifest>
 """
 
@@ -132,6 +151,46 @@ class TestS3ImageService(test.TestCase):
             {'device_name': '/dev/sdb0',
              'no_device': True}]
         self.assertEqual(block_device_mapping, expected_bdm)
+
+    def test_s3_create_is_public(self):
+        metadata = {'properties': {
+                    'image_location': 'mybucket/my.img.manifest.xml'},
+                    'name': 'mybucket/my.img'}
+        handle, tempf = tempfile.mkstemp(dir='/tmp')
+
+        ignore = mox.IgnoreArg()
+        mockobj = self.mox.CreateMockAnything()
+        self.stubs.Set(self.image_service, '_conn', mockobj)
+        mockobj(ignore).AndReturn(mockobj)
+        self.stubs.Set(mockobj, 'get_bucket', mockobj)
+        mockobj(ignore).AndReturn(mockobj)
+        self.stubs.Set(mockobj, 'get_key', mockobj)
+        mockobj(ignore).AndReturn(mockobj)
+        self.stubs.Set(mockobj, 'get_contents_as_string', mockobj)
+        mockobj().AndReturn(file_manifest_xml)
+        self.stubs.Set(self.image_service, '_download_file', mockobj)
+        mockobj(ignore, ignore, ignore).AndReturn(tempf)
+        self.stubs.Set(binascii, 'a2b_hex', mockobj)
+        mockobj(ignore).AndReturn('foo')
+        mockobj(ignore).AndReturn('foo')
+        self.stubs.Set(self.image_service, '_decrypt_image', mockobj)
+        mockobj(ignore, ignore, ignore, ignore, ignore).AndReturn(mockobj)
+        self.stubs.Set(self.image_service, '_untarzip_image', mockobj)
+        mockobj(ignore, ignore).AndReturn(tempf)
+        self.mox.ReplayAll()
+
+        img = self.image_service._s3_create(self.context, metadata)
+        eventlet.sleep()
+        translated = self.image_service._translate_id_to_uuid(context, img)
+        uuid = translated['id']
+        self.glance_service = nova.image.get_default_image_service()
+        updated_image = self.glance_service.update(self.context, uuid,
+                        {'is_public': True}, None,
+                        {'x-glance-registry-purge-props': False})
+        self.assertTrue(updated_image['is_public'])
+        self.assertEqual(updated_image['status'], 'active')
+        self.assertEqual(updated_image['properties']['image_state'],
+                          'available')
 
     def test_s3_malicious_tarballs(self):
         self.assertRaises(exception.NovaException,
