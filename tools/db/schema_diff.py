@@ -17,34 +17,34 @@
 #    under the License.
 
 """
-Utility for ensuring DB schemas don't change when compacting migrations.
+Utility for diff'ing two versions of the DB schema.
 
 Each release cycle the plan is to compact all of the migrations from that
 release into a single file. This is a manual and, unfortunately, error-prone
 process. To ensure that the schema doesn't change, this tool can be used to
 diff the compacted DB schema to the original, uncompacted form.
 
-Notes:
 
-This utility assumes you start off in the branch containing the compacted
-migration.
-
+The schema versions are specified by providing a git ref (a branch name or
+commit hash) and a SQLAlchemy-Migrate version number:
 Run like:
 
-    ./tools/db/validate_compacted_migration.py mysql 82 master
+    ./tools/db/schema_diff.py mysql master:latest my_branch:82
 """
+import datetime
+import glob
 import os
 import subprocess
 import sys
 
+
 ### Dump
 
 
-def dump_db(db_driver, db_name, compacted_version, dump_filename,
-            latest=False):
+def dump_db(db_driver, db_name, migration_version, dump_filename):
     db_driver.create(db_name)
     try:
-        migrate(db_driver, db_name, compacted_version, latest=latest)
+        migrate(db_driver, db_name, migration_version)
         db_driver.dump(db_name, dump_filename)
     finally:
         db_driver.drop(db_name)
@@ -113,21 +113,25 @@ def _get_db_driver_class(db_type):
 ### Migrate
 
 
-def migrate(db_driver, db_name, compacted_version, latest=False):
+MIGRATE_REPO = os.path.join(os.getcwd(), "nova/db/sqlalchemy/migrate_repo")
+
+
+def migrate(db_driver, db_name, migration_version):
+    earliest_version = _migrate_get_earliest_version()
+
     # NOTE(sirp): sqlalchemy-migrate currently cannot handle the skipping of
-    # migration numbers
+    # migration numbers.
     _migrate_cmd(
-            db_driver, db_name, 'version_control', str(compacted_version - 1))
+            db_driver, db_name, 'version_control', str(earliest_version - 1))
 
     upgrade_cmd = ['upgrade']
-    if not latest:
-        upgrade_cmd.append(str(compacted_version))
+    if migration_version != 'latest':
+        upgrade_cmd.append(str(migration_version))
 
     _migrate_cmd(db_driver, db_name, *upgrade_cmd)
 
 
 def _migrate_cmd(db_driver, db_name, *cmd):
-    MIGRATE_REPO = os.path.join(os.getcwd(), "nova/db/sqlalchemy/migrate_repo")
     manage_py = os.path.join(MIGRATE_REPO, 'manage.py')
 
     args = ['python', manage_py]
@@ -136,6 +140,23 @@ def _migrate_cmd(db_driver, db_name, *cmd):
              '--url=%s' % db_driver.url(db_name)]
 
     subprocess.check_call(args)
+
+
+def _migrate_get_earliest_version():
+    versions_glob = os.path.join(MIGRATE_REPO, 'versions', '???_*.py')
+
+    versions = []
+    for path in glob.iglob(versions_glob):
+        filename = os.path.basename(path)
+        prefix = filename.split('_', 1)[0]
+        try:
+            version = int(prefix)
+        except ValueError:
+            pass
+        versions.append(version)
+
+    versions.sort()
+    return versions[0]
 
 
 ### Git
@@ -176,9 +197,9 @@ def usage(msg=None):
     if msg:
         print >> sys.stderr, "ERROR: %s" % msg
 
-    prog = "validate_compacted_migration.py"
-    args = ["<mysql|postgres>", "<compacted-version>",
-             "<uncompacted-branch-name>"]
+    prog = "schema_diff.py"
+    args = ["<mysql|postgres>", "<orig-branch:orig-version>",
+            "<new-branch:new-version>"]
 
     print >> sys.stderr, "usage: %s %s" % (prog, ' '.join(args))
     sys.exit(1)
@@ -191,28 +212,29 @@ def parse_options():
         usage("must specify DB type")
 
     try:
-        compacted_version = int(sys.argv[2])
+        orig_branch, orig_version = sys.argv[2].split(':')
     except IndexError:
-        usage('must specify compacted migration version')
-    except ValueError:
-        usage('compacted version must be a number')
+        usage('original branch and version required (e.g. master:82)')
 
     try:
-        uncompacted_branch_name = sys.argv[3]
+        new_branch, new_version = sys.argv[3].split(':')
     except IndexError:
-        usage('must specify uncompacted branch name')
+        usage('new branch and version required (e.g. master:82)')
 
-    return db_type, compacted_version, uncompacted_branch_name
+    return db_type, orig_branch, orig_version, new_branch, new_version
 
 
 def main():
-    COMPACTED_DB = 'compacted'
-    UNCOMPACTED_DB = 'uncompacted'
+    timestamp = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
 
-    COMPACTED_FILENAME = COMPACTED_DB + ".dump"
-    UNCOMPACTED_FILENAME = UNCOMPACTED_DB + ".dump"
+    ORIG_DB = 'orig_db_%s' % timestamp
+    NEW_DB = 'new_db_%s' % timestamp
 
-    db_type, compacted_version, uncompacted_branch_name = parse_options()
+    ORIG_DUMP = ORIG_DB + ".dump"
+    NEW_DUMP = NEW_DB + ".dump"
+
+    db_type, orig_branch, orig_version, new_branch, new_version =\
+            parse_options()
 
     # Since we're going to be switching branches, ensure user doesn't have any
     # uncommited changes
@@ -222,19 +244,26 @@ def main():
 
     db_driver = _get_db_driver_class(db_type)()
 
-    # Dump Compacted
-    dump_db(db_driver, COMPACTED_DB, compacted_version, COMPACTED_FILENAME)
+    users_branch = git_current_branch_name()
+    git_checkout(orig_branch)
 
-    # Dump Uncompacted
-    original_branch_name = git_current_branch_name()
-    git_checkout(uncompacted_branch_name)
     try:
-        dump_db(db_driver, UNCOMPACTED_DB, compacted_version,
-                UNCOMPACTED_FILENAME, latest=True)
-    finally:
-        git_checkout(original_branch_name)
+        # Dump Original Schema
+        dump_db(db_driver, ORIG_DB, orig_version, ORIG_DUMP)
 
-    diff_files(UNCOMPACTED_FILENAME, COMPACTED_FILENAME)
+        # Dump New Schema
+        git_checkout(new_branch)
+        dump_db(db_driver, NEW_DB, new_version, NEW_DUMP)
+
+        diff_files(ORIG_DUMP, NEW_DUMP)
+    finally:
+        git_checkout(users_branch)
+
+        if os.path.exists(ORIG_DUMP):
+            os.unlink(ORIG_DUMP)
+
+        if os.path.exists(NEW_DUMP):
+            os.unlink(NEW_DUMP)
 
 
 if __name__ == "__main__":
