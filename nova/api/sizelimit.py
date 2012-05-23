@@ -31,7 +31,8 @@ from nova import wsgi
 #default request size is 112k
 max_request_body_size_opt = cfg.IntOpt('osapi_max_request_body_size',
                                        default=114688,
-                                       help='')
+                                       help='the maximum body size '
+                                            'per each osapi request(bytes)')
 
 FLAGS = flags.FLAGS
 FLAGS.register_opt(max_request_body_size_opt)
