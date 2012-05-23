@@ -319,8 +319,7 @@ class InstanceTypes(BASE, NovaBase):
                            foreign_keys=id,
                            primaryjoin='and_('
                                'Instance.instance_type_id == '
-                               'InstanceTypes.id, '
-                               'InstanceTypes.deleted == False)')
+                               'InstanceTypes.id)')
 
 
 class Volume(BASE, NovaBase):
