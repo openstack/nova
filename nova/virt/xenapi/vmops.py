@@ -1014,17 +1014,12 @@ class VMOps(object):
 
         vbd_refs = self._session.call_xenapi("VM.get_VBDs", vm_ref)
 
-        if len(vbd_refs) == 0:
-            raise Exception(_("Unable to find VBD for VM"))
-        elif len(vbd_refs) == 1:
-            # If we only have one VBD, assume it's the root fs
-            vbd_ref = vbd_refs[0]
-        else:
-            # If we have more than one VBD, swap will be first by convention
-            # with the root fs coming second
-            vbd_ref = vbd_refs[1]
+        for vbd_uuid in vbd_refs:
+            vbd = self._session.call_xenapi("VBD.get_record", vbd_uuid)
+            if vbd["userdevice"] == "0":
+                return vbd["VDI"]
 
-        return self._session.call_xenapi("VBD.get_record", vbd_ref)["VDI"]
+        raise exception.NotFound(_("Unable to find root VBD/VDI for VM"))
 
     def _safe_destroy_vdis(self, vdi_refs):
         """Destroys the requested VDIs, logging any StorageError exceptions."""
