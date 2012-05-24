@@ -82,7 +82,7 @@ class NetworkController(object):
         authorize(context)
         networks = self.network_api.get_all(context)
         result = [network_dict(net_ref) for net_ref in networks]
-        return  {'networks': result}
+        return {'networks': result}
 
     def show(self, req, id):
         context = req.environ['nova.context']

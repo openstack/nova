@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack  import compute
+from nova.api.openstack import compute
 from nova.api.openstack.compute import extensions
 from nova.api.openstack import wsgi
 import nova.db.api

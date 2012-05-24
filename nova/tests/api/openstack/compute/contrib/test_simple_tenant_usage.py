@@ -55,15 +55,15 @@ def fake_instance_type_get(self, context, instance_type_id):
 
 
 def get_fake_db_instance(start, end, instance_id, tenant_id):
-    return  {'id': instance_id,
-             'image_ref': '1',
-             'project_id': tenant_id,
-             'user_id': 'fakeuser',
-             'display_name': 'name',
-             'state_description': 'state',
-             'instance_type_id': 1,
-             'launched_at': start,
-             'terminated_at': end}
+    return {'id': instance_id,
+            'image_ref': '1',
+            'project_id': tenant_id,
+            'user_id': 'fakeuser',
+            'display_name': 'name',
+            'state_description': 'state',
+            'instance_type_id': 1,
+            'launched_at': start,
+            'terminated_at': end}
 
 
 def fake_instance_get_active_by_window(self, context, begin, end, project_id):

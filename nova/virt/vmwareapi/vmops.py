@@ -793,7 +793,7 @@ class VMWareVMOps(object):
             task_info = self._session._call_method(vim_util,
                                        "get_dynamic_property",
                                        search_task, "Task", "info")
-            if task_info.state in  ['queued', 'running']:
+            if task_info.state in ['queued', 'running']:
                 time.sleep(2)
                 continue
             break

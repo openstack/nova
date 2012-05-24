@@ -1900,7 +1900,7 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
             # Convert it to MB
-            return  self.get_memory_mb_total() - avail / 1024
+            return self.get_memory_mb_total() - avail / 1024
 
     def get_local_gb_used(self):
         """Get the free hdd size(GB) of physical computer.
@@ -2021,9 +2021,9 @@ class LibvirtConnection(driver.ComputeDriver):
         #TODO(mdragon): console proxy should be implemented for libvirt,
         #               in case someone wants to use it with kvm or
         #               such. For now return fake data.
-        return  {'address': '127.0.0.1',
-                 'username': 'fakeuser',
-                 'password': 'fakepassword'}
+        return {'address': '127.0.0.1',
+                'username': 'fakeuser',
+                'password': 'fakepassword'}
 
     def refresh_security_group_rules(self, security_group_id):
         self.firewall_driver.refresh_security_group_rules(security_group_id)

@@ -17,7 +17,7 @@ import json
 
 import webob
 
-from nova.api.openstack  import compute as compute_api
+from nova.api.openstack import compute as compute_api
 from nova import compute
 from nova import context
 from nova import exception

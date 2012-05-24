@@ -94,7 +94,7 @@ def main():
 
         stdout = stdout.strip()
 
-        if  stdout.endswith('.vhd'):
+        if stdout.endswith('.vhd'):
             try:
                 descendents[stdout].append(fname)
             except KeyError:

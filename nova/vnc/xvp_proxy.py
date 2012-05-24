@@ -178,8 +178,8 @@ def get_wsgi_server():
     LOG.audit(_("Starting nova-xvpvncproxy node (version %s)"),
               version.version_string_with_vcs())
 
-    return  wsgi.Server("XCP VNC Proxy",
-                         XCPVNCProxy(),
-                         protocol=SafeHttpProtocol,
-                         host=FLAGS.xvpvncproxy_host,
-                         port=FLAGS.xvpvncproxy_port)
+    return wsgi.Server("XCP VNC Proxy",
+                       XCPVNCProxy(),
+                       protocol=SafeHttpProtocol,
+                       host=FLAGS.xvpvncproxy_host,
+                       port=FLAGS.xvpvncproxy_port)

@@ -17,7 +17,7 @@
 
 import datetime
 
-from nova.api.openstack  import compute
+from nova.api.openstack import compute
 from nova.api.openstack.compute import extensions
 from nova.api.openstack import wsgi
 import nova.db.api

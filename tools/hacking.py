@@ -61,7 +61,7 @@ def import_normalize(line):
            split_line[2] == "import" and split_line[3] != "*" and
            split_line[1] != "__future__" and
            (len(split_line) == 4 or
-           (len(split_line) == 6  and split_line[4] == "as"))):
+           (len(split_line) == 6 and split_line[4] == "as"))):
         mod = split_line[3]
         return "import %s.%s" % (split_line[1], split_line[3])
     else:
@@ -214,8 +214,8 @@ def nova_import_alphabetical(physical_line, line_number, lines):
             ).strip().lower().split()
     # with or without "as y"
     length = [2, 4]
-    if (len(split_line) in length  and len(split_previous) in length and
-        split_line[0] == "import" and  split_previous[0] == "import"):
+    if (len(split_line) in length and len(split_previous) in length and
+        split_line[0] == "import" and split_previous[0] == "import"):
         if split_line[1] < split_previous[1]:
             return (0, "NOVA N306: imports not in alphabetical order (%s, %s)"
                 % (split_previous[1], split_line[1]))
@@ -244,7 +244,7 @@ def nova_docstring_one_line(physical_line):
     """
     pos = max([physical_line.find(i) for i in DOCSTRING_TRIPLE])  # start
     end = max([physical_line[-4:-1] == i for i in DOCSTRING_TRIPLE])  # end
-    if (pos != -1  and end and len(physical_line) > pos + 4):
+    if (pos != -1 and end and len(physical_line) > pos + 4):
         if (physical_line[-5] != '.'):
             return pos, "NOVA N402: one line docstring needs a period"
 

@@ -373,7 +373,7 @@ def _get_target_port(iscsi_string):
     """Retrieve target port"""
     if iscsi_string:
         return iscsi_string[iscsi_string.find(':') + 1:]
-    elif  iscsi_string is None or FLAGS.target_port:
+    elif iscsi_string is None or FLAGS.target_port:
         return FLAGS.target_port
 
 

@@ -270,7 +270,7 @@ class HostController(object):
             vcpus = [i['vcpus'] for i in instance_refs
                      if i['project_id'] == project_id]
 
-            mem = [i['memory_mb']  for i in instance_refs
+            mem = [i['memory_mb'] for i in instance_refs
                    if i['project_id'] == project_id]
 
             disk = [i['root_gb'] + i['ephemeral_gb'] for i in instance_refs

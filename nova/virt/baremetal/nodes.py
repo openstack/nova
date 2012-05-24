@@ -34,7 +34,7 @@ FLAGS.register_opts(baremetal_opts)
 
 def get_baremetal_nodes():
     d = FLAGS.baremetal_driver
-    if  d == 'tilera':
+    if d == 'tilera':
         return tilera.get_baremetal_nodes()
     elif d == 'fake':
         return fake.get_baremetal_nodes()

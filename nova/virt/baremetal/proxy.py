@@ -666,9 +666,9 @@ class ProxyConnection(driver.ComputeDriver):
         #TODO(mdragon): console proxy should be implemented for baremetal,
         #               in case someone wants to use it.
         #               For now return fake data.
-        return  {'address': '127.0.0.1',
-                 'username': 'fakeuser',
-                 'password': 'fakepassword'}
+        return {'address': '127.0.0.1',
+                'username': 'fakeuser',
+                'password': 'fakepassword'}
 
     def refresh_security_group_rules(self, security_group_id):
         # Bare metal doesn't currently support security groups
