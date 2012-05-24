@@ -144,7 +144,5 @@ def get_instance_type_by_flavor_id(flavorid):
 
     :raises: FlavorNotFound
     """
-    # NOTE(jk0): Reading deleted is OK here because we're an admin and querying
-    # flavors directly.
-    ctxt = context.get_admin_context(read_deleted="yes")
+    ctxt = context.get_admin_context()
     return db.instance_type_get_by_flavor_id(ctxt, flavorid)
