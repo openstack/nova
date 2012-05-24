@@ -45,7 +45,7 @@ class HostFiltersTestCase(test.TestCase):
                 ['and', ['>=', '$free_ram_mb', 1024],
                         ['>=', '$free_disk_mb', 200 * 1024]])
         # This has a side effect of testing 'get_filter_classes'
-        # when specifing a method (in this case, our standard filters)
+        # when specifying a method (in this case, our standard filters)
         classes = filters.get_filter_classes(
                 ['nova.scheduler.filters.standard_filters'])
         self.class_map = {}
@@ -173,6 +173,33 @@ class HostFiltersTestCase(test.TestCase):
                 {'free_ram_mb': 1024, 'capabilities': capabilities,
                  'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_type_filter(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['TypeAffinityFilter']()
+
+        filter_properties = {'context': self.context,
+                             'instance_type': {'id': 1}}
+        filter2_properties = {'context': self.context,
+                             'instance_type': {'id': 2}}
+
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('fake_host', 'compute',
+                {'capabilities': capabilities,
+                 'service': service})
+        #True since empty
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        fakes.FakeInstance(context=self.context,
+                           params={'host': 'fake_host', 'instance_type_id': 1})
+        #True since same type
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        #False since different type
+        self.assertFalse(filt_cls.host_passes(host, filter2_properties))
+        #False since node not homogeneous
+        fakes.FakeInstance(context=self.context,
+                           params={'host': 'fake_host', 'instance_type_id': 2})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_ram_filter_fails_on_memory(self):
         self._stub_service_is_up(True)

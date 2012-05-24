@@ -571,13 +571,18 @@ def instance_get_active_by_window_joined(context, begin, end=None,
 
 
 def instance_get_all_by_project(context, project_id):
-    """Get all instance belonging to a project."""
+    """Get all instances belonging to a project."""
     return IMPL.instance_get_all_by_project(context, project_id)
 
 
 def instance_get_all_by_host(context, host):
-    """Get all instance belonging to a host."""
+    """Get all instances belonging to a host."""
     return IMPL.instance_get_all_by_host(context, host)
+
+
+def instance_get_all_by_host_and_not_type(context, host, type_id=None):
+    """Get all instances belonging to a host with a different type_id."""
+    return IMPL.instance_get_all_by_host_and_not_type(context, host, type_id)
 
 
 def instance_get_all_by_reservation(context, reservation_id):
