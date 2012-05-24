@@ -27,7 +27,6 @@ import os
 import re
 import sys
 import tokenize
-import traceback
 import warnings
 
 import pep8
@@ -62,7 +61,6 @@ def import_normalize(line):
            split_line[1] != "__future__" and
            (len(split_line) == 4 or
            (len(split_line) == 6 and split_line[4] == "as"))):
-        mod = split_line[3]
         return "import %s.%s" % (split_line[1], split_line[3])
     else:
         return line
