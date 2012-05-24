@@ -78,7 +78,12 @@ class RequestContext(object):
             request_id = generate_request_id()
         self.request_id = request_id
         self.auth_token = auth_token
+
+        # NOTE(markmc): this attribute is currently only used by the
+        # rs_limits turnstile pre-processor.
+        # See https://lists.launchpad.net/openstack/msg12200.html
         self.quota_class = quota_class
+
         if overwrite or not hasattr(local.store, 'context'):
             self.update_store()
 
