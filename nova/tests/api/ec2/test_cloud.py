@@ -623,7 +623,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(result['volumeSet'][0]['availabilityZone'],
                          availabilityZone)
 
-        db.volume_destroy(self.context, ec2utils.ec2_id_to_id(volume_id))
+        db.volume_destroy(self.context, ec2utils.ec2_vol_id_to_uuid(volume_id))
 
     def test_create_volume_from_snapshot(self):
         """Makes sure create_volume works when we specify a snapshot."""
@@ -640,7 +640,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(len(result['volumeSet']), 2)
         self.assertEqual(result['volumeSet'][1]['volumeId'], volume_id)
 
-        db.volume_destroy(self.context, ec2utils.ec2_id_to_id(volume_id))
+        db.volume_destroy(self.context, ec2utils.ec2_vol_id_to_uuid(volume_id))
         db.snapshot_destroy(self.context, snap['id'])
         db.volume_destroy(self.context, vol['id'])
 
@@ -2083,7 +2083,7 @@ class CloudTestCase(test.TestCase):
                                             'snapshot_id': snapshot2_id,
                                             'delete_on_termination': True}]}
         ec2_instance_id = self._run_instance(**kwargs)
-        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
+        instance_id = ec2utils.ec2_vol_id_to_uuid(ec2_instance_id)
         instance_uuid = ec2utils.ec2_instance_id_to_uuid(self.context,
                                                          ec2_instance_id)
 
@@ -2121,8 +2121,6 @@ class CloudTestCase(test.TestCase):
 
         for snapshot_id in (ec2_snapshot1_id, ec2_snapshot2_id):
             self.cloud.delete_snapshot(self.context, snapshot_id)
-
-        db.volume_destroy(self.context, vol['id'])
 
     def test_create_image(self):
         """Make sure that CreateImage works"""

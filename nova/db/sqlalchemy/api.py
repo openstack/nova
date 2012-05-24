@@ -2848,6 +2848,7 @@ def volume_data_get_for_project(context, project_id, session=None):
 def volume_destroy(context, volume_id):
     session = get_session()
     with session.begin():
+        volume_ref = volume_get(context, volume_id, session=session)
         session.query(models.Volume).\
                 filter_by(id=volume_id).\
                 update({'deleted': True,
@@ -2861,6 +2862,7 @@ def volume_destroy(context, volume_id):
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
+    return volume_ref
 
 
 @require_admin_context
@@ -2952,6 +2954,7 @@ def volume_get_iscsi_target_num(context, volume_id):
 @require_context
 def volume_update(context, volume_id, values):
     session = get_session()
+    volume_ref = volume_get(context, volume_id, session=session)
     metadata = values.get('metadata')
     if metadata is not None:
         volume_metadata_update(context,
@@ -2959,9 +2962,10 @@ def volume_update(context, volume_id, values):
                                 values.pop('metadata'),
                                 delete=True)
     with session.begin():
-        volume_ref = volume_get(context, volume_id, session=session)
         volume_ref.update(values)
         volume_ref.save(session=session)
+
+    return volume_ref
 
 
 @require_context

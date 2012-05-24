@@ -152,7 +152,7 @@ class VolumeManager(manager.SchedulerDependentManager):
                                       volume_ref['id'], {'status': 'error'})
 
         now = utils.utcnow()
-        self.db.volume_update(context,
+        volume_ref = self.db.volume_update(context,
                               volume_ref['id'], {'status': 'available',
                                                  'launched_at': now})
         LOG.debug(_("volume %s: created successfully"), volume_ref['name'])
@@ -197,7 +197,7 @@ class VolumeManager(manager.SchedulerDependentManager):
             reservations = None
             LOG.exception(_("Failed to update usages deleting volume"))
 
-        self.db.volume_destroy(context, volume_id)
+        volume_ref = self.db.volume_destroy(context, volume_id)
         LOG.debug(_("volume %s: deleted successfully"), volume_ref['name'])
         self._notify_about_volume_usage(context, volume_ref, "delete.end")
 

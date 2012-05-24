@@ -395,6 +395,8 @@ class VolumeTestCase(test.TestCase):
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['event_type'], 'volume.create.start')
+        payload = msg['payload']
+        self.assertEquals(payload['status'], 'creating')
         msg = test_notifier.NOTIFICATIONS[1]
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'volume.create.end')
@@ -402,7 +404,7 @@ class VolumeTestCase(test.TestCase):
         self.assertEquals(payload['tenant_id'], volume['project_id'])
         self.assertEquals(payload['user_id'], volume['user_id'])
         self.assertEquals(payload['volume_id'], volume['id'])
-        self.assertEquals(payload['status'], 'creating')
+        self.assertEquals(payload['status'], 'available')
         self.assertEquals(payload['size'], volume['size'])
         self.assertTrue('display_name' in payload)
         self.assertTrue('snapshot_id' in payload)
