@@ -38,7 +38,8 @@ def return_server_not_found(context, uuid):
 
 
 def instance_update(context, instance_id, kwargs):
-    return fakes.stub_instance(instance_id)
+    inst = fakes.stub_instance(instance_id)
+    return (inst, inst)
 
 
 class MockSetAdminPassword(object):
@@ -59,7 +60,8 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                         host='fake_host'))
-        self.stubs.Set(nova.db, 'instance_update', instance_update)
+        self.stubs.Set(nova.db, 'instance_update_and_get_original',
+                instance_update)
 
         fakes.stub_out_glance(self.stubs)
         fakes.stub_out_nw_api(self.stubs)

@@ -19,6 +19,7 @@
 
 """Implementation of SQLAlchemy backend."""
 
+import copy
 import datetime
 import functools
 import re
@@ -1640,6 +1641,30 @@ def instance_test_and_set(context, instance_id, attr, ok_states,
 
 @require_context
 def instance_update(context, instance_id, values):
+
+    instance_ref = _instance_update(context, instance_id, values)[1]
+    return instance_ref
+
+
+@require_context
+def instance_update_and_get_original(context, instance_id, values):
+    """Set the given properties on an instance and update it. Return
+    a shallow copy of the original instance reference, as well as the
+    updated one.
+
+    :param context: = request context object
+    :param instance_id: = instance id or uuid
+    :param values: = dict containing column values
+
+    :returns: a tuple of the form (old_instance_ref, new_instance_ref)
+
+    Raises NotFound if instance does not exist.
+    """
+    return _instance_update(context, instance_id, values,
+            copy_old_instance=True)
+
+
+def _instance_update(context, instance_id, values, copy_old_instance=False):
     session = get_session()
 
     if utils.is_uuid_like(instance_id):
@@ -1647,6 +1672,11 @@ def instance_update(context, instance_id, values):
                                             session=session)
     else:
         instance_ref = instance_get(context, instance_id, session=session)
+
+    if copy_old_instance:
+        old_instance_ref = copy.copy(instance_ref)
+    else:
+        old_instance_ref = None
 
     metadata = values.get('metadata')
     if metadata is not None:
@@ -1663,7 +1693,7 @@ def instance_update(context, instance_id, values):
         instance_ref.update(values)
         instance_ref.save(session=session)
 
-    return instance_ref
+    return (old_instance_ref, instance_ref)
 
 
 def instance_add_security_group(context, instance_uuid, security_group_id):

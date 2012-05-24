@@ -72,7 +72,8 @@ def return_security_group(context, instance_id, security_group_id):
 
 
 def instance_update(context, instance_id, values):
-    return fakes.stub_instance(instance_id, name=values.get('display_name'))
+    inst = fakes.stub_instance(instance_id, name=values.get('display_name'))
+    return (inst, inst)
 
 
 def fake_compute_api(cls, req, id):
@@ -106,7 +107,8 @@ class ServersControllerTest(test.TestCase):
                        return_servers)
         self.stubs.Set(nova.db, 'instance_add_security_group',
                        return_security_group)
-        self.stubs.Set(nova.db, 'instance_update', instance_update)
+        self.stubs.Set(nova.db, 'instance_update_and_get_original',
+                instance_update)
 
         self.controller = servers.Controller()
         self.ips_controller = ips.Controller()
@@ -1433,7 +1435,9 @@ class ServersControllerCreateTest(test.TestCase):
                 "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
                 "config_drive": None,
                 "progress": 0,
-                "fixed_ips": []
+                "fixed_ips": [],
+                "task_state": "",
+                "vm_state": "",
             }
             self.instance_cache[instance['id']] = instance
             return instance
@@ -1459,7 +1463,7 @@ class ServersControllerCreateTest(test.TestCase):
         def server_update(context, instance_id, params):
             inst = self.instance_cache[instance_id]
             inst.update(params)
-            return inst
+            return (inst, inst)
 
         def fake_method(*args, **kwargs):
             pass
@@ -1485,7 +1489,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_get', instance_get)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
         self.stubs.Set(nova.rpc, 'call', rpc_call_wrapper)
-        self.stubs.Set(nova.db, 'instance_update', server_update)
+        self.stubs.Set(nova.db, 'instance_update_and_get_original',
+                server_update)
         self.stubs.Set(nova.db, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)

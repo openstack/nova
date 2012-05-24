@@ -41,6 +41,7 @@ from nova import flags
 import nova.image
 from nova import log as logging
 from nova import network
+from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
@@ -599,6 +600,11 @@ class API(base.Base):
         instance_id = instance['id']
         instance_uuid = instance['uuid']
 
+        # send a state update notification for the initial create to
+        # show it going from non-existent to BUILDING
+        notifications.send_update_with_states(context, instance, None,
+                vm_states.BUILDING, None, None)
+
         for security_group_id in security_groups:
             self.db.instance_add_security_group(elevated,
                                                 instance_uuid,
@@ -919,8 +925,14 @@ class API(base.Base):
 
         :returns: None
         """
-        rv = self.db.instance_update(context, instance["id"], kwargs)
-        return dict(rv.iteritems())
+
+        # Update the instance record and send a state update notification
+        # if task or vm state changed
+        old_ref, instance_ref = self.db.instance_update_and_get_original(
+                context, instance["id"], kwargs)
+        notifications.send_update(context, old_ref, instance_ref)
+
+        return dict(instance_ref.iteritems())
 
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
@@ -1260,8 +1272,15 @@ class API(base.Base):
         else:
             raise Exception(_('Image type not recognized %s') % image_type)
 
+        # change instance state and notify
+        old_vm_state = instance["vm_state"]
+        old_task_state = instance["task_state"]
+
         self.db.instance_test_and_set(
                 context, instance_uuid, 'task_state', [None], task_state)
+
+        notifications.send_update_with_states(context, instance, old_vm_state,
+                instance["vm_state"], old_task_state, instance["task_state"])
 
         properties = {
             'instance_uuid': instance_uuid,

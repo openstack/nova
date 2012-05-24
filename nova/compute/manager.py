@@ -61,6 +61,7 @@ from nova import log as logging
 from nova import manager
 from nova import network
 from nova.network import model as network_model
+from nova import notifications
 from nova.notifier import api as notifier
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
@@ -253,7 +254,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _instance_update(self, context, instance_id, **kwargs):
         """Update an instance in the database using kwargs as value."""
-        return self.db.instance_update(context, instance_id, kwargs)
+
+        (old_ref, instance_ref) = self.db.instance_update_and_get_original(
+                context, instance_id, kwargs)
+        notifications.send_update(context, old_ref, instance_ref)
+
+        return instance_ref
 
     def _set_instance_error_state(self, context, instance_uuid):
         try:

@@ -92,13 +92,13 @@ class DiskConfigTestCase(test.TestCase):
             inst['updated_at'] = datetime.datetime(2010, 10, 10, 12, 0, 0)
             inst['progress'] = 0
             inst['name'] = 'instance-1'  # this is a property
+            inst['task_state'] = ''
+            inst['vm_state'] = ''
 
             def fake_instance_get_for_create(context, id_, *args, **kwargs):
-                return inst
+                return (inst, inst)
 
-            self.stubs.Set(nova.db, 'instance_get',
-                          fake_instance_get_for_create)
-            self.stubs.Set(nova.db, 'instance_update',
+            self.stubs.Set(nova.db, 'instance_update_and_get_original',
                           fake_instance_get_for_create)
 
             def fake_instance_get_all_for_create(context, *args, **kwargs):
