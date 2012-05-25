@@ -1177,8 +1177,11 @@ class NetworkManager(manager.SchedulerDependentManager):
     @wrap_check_policy
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id):
         """Adds a fixed ip to an instance from specified network."""
-        networks = [self._get_network_by_id(context, network_id)]
-        self._allocate_fixed_ips(context, instance_id, host, networks)
+        if utils.is_uuid_like(network_id):
+            network = self.get_network(context, network_id)
+        else:
+            network = self._get_network_by_id(context, network_id)
+        self._allocate_fixed_ips(context, instance_id, host, [network])
 
     @wrap_check_policy
     def remove_fixed_ip_from_instance(self, context, instance_id, host,
