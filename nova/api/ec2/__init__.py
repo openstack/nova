@@ -62,6 +62,10 @@ ec2_opts = [
                 default=False,
                 help='Return the IP address as private dns hostname in '
                      'describe instances'),
+    cfg.BoolOpt('ec2_strict_validation',
+                default=True,
+                help='Validate security group names'
+                     ' according to EC2 specification'),
     ]
 
 FLAGS = flags.FLAGS
