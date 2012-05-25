@@ -1068,19 +1068,32 @@ class VMHelper(xenapi.HelperBase):
     def compile_diagnostics(cls, record):
         """Compile VM diagnostics data"""
         try:
+            keys = []
             diags = {}
             vm_uuid = record["uuid"]
             xml = get_rrd(get_rrd_server(), vm_uuid)
             if xml:
                 rrd = minidom.parseString(xml)
                 for i, node in enumerate(rrd.firstChild.childNodes):
-                    # We don't want all of the extra garbage
-                    if i >= 3 and i <= 11:
+                    # Provide the last update of the information
+                    if node.localName == 'lastupdate':
+                        diags['last_update'] = node.firstChild.data
+
+                    # Create a list of the diagnostic keys (in their order)
+                    if node.localName == 'ds':
                         ref = node.childNodes
                         # Name and Value
                         if len(ref) > 6:
-                            _ref_zero = ref[0].firstChild.data
-                            diags[_ref_zero] = ref[6].firstChild.data
+                            keys.append(ref[0].firstChild.data)
+
+                    # Read the last row of the first RRA to get the latest info
+                    if node.localName == 'rra':
+                        rows = node.childNodes[4].childNodes
+                        last_row = rows[rows.length - 1].childNodes
+                        for j, value in enumerate(last_row):
+                            diags[keys[j]] = value.firstChild.data
+                        break
+
             return diags
         except expat.ExpatError as e:
             LOG.exception(_('Unable to parse rrd of %(vm_uuid)s') % locals())
