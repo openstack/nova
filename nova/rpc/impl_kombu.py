@@ -47,6 +47,39 @@ kombu_opts = [
                default='',
                help=('SSL certification authority file '
                     '(valid only if SSL enabled)')),
+    cfg.StrOpt('rabbit_host',
+               default='localhost',
+               help='the RabbitMQ host'),
+    cfg.IntOpt('rabbit_port',
+               default=5672,
+               help='the RabbitMQ port'),
+    cfg.BoolOpt('rabbit_use_ssl',
+                default=False,
+                help='connect over SSL for RabbitMQ'),
+    cfg.StrOpt('rabbit_userid',
+               default='guest',
+               help='the RabbitMQ userid'),
+    cfg.StrOpt('rabbit_password',
+               default='guest',
+               help='the RabbitMQ password'),
+    cfg.StrOpt('rabbit_virtual_host',
+               default='/',
+               help='the RabbitMQ virtual host'),
+    cfg.IntOpt('rabbit_retry_interval',
+               default=1,
+               help='how frequently to retry connecting with RabbitMQ'),
+    cfg.IntOpt('rabbit_retry_backoff',
+               default=2,
+               help='how long to backoff for between retries when connecting '
+                    'to RabbitMQ'),
+    cfg.IntOpt('rabbit_max_retries',
+               default=0,
+               help='maximum retries with trying to connect to RabbitMQ '
+                    '(the default of 0 implies an infinite retry count)'),
+    cfg.BoolOpt('rabbit_durable_queues',
+                default=False,
+                help='use durable queues in RabbitMQ'),
+
     ]
 
 LOG = rpc_common.LOG

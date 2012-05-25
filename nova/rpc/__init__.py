@@ -46,6 +46,12 @@ rpc_opts = [
                default=['nova.exception'],
                help='Modules of exceptions that are permitted to be recreated'
                     'upon receiving exception data from an rpc call.'),
+    cfg.StrOpt('control_exchange',
+               default='nova',
+               help='AMQP exchange to connect to if using RabbitMQ or Qpid'),
+    cfg.BoolOpt('fake_rabbit',
+                default=False,
+                help='If passed, use a fake RabbitMQ provider'),
     ]
 
 _CONF = None
