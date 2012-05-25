@@ -116,11 +116,11 @@ class SimpleTenantUsageTest(test.TestCase):
                              SERVERS * VCPUS * HOURS)
             self.assertFalse(usages[i].get('server_usages'))
 
-    def test_verify_detailed_index(self):
+    def _get_tenant_usages(self, detailed=''):
         req = webob.Request.blank(
                     '/v2/faketenant_0/os-simple-tenant-usage?'
-                    'detailed=1&start=%s&end=%s' %
-                    (START.isoformat(), STOP.isoformat()))
+                    'detailed=%s&start=%s&end=%s' %
+                    (detailed, START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
@@ -128,11 +128,25 @@ class SimpleTenantUsageTest(test.TestCase):
                                fake_auth_context=self.admin_context))
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
-        usages = res_dict['tenant_usages']
+        return res_dict['tenant_usages']
+
+    def test_verify_detailed_index(self):
+        usages = self._get_tenant_usages('1')
         for i in xrange(TENANTS):
             servers = usages[i]['server_usages']
             for j in xrange(SERVERS):
                 self.assertEqual(int(servers[j]['hours']), HOURS)
+
+    def test_verify_simple_index(self):
+        usages = self._get_tenant_usages(detailed='0')
+        for i in xrange(TENANTS):
+            self.assertEqual(usages[i].get('server_usages'), None)
+
+    def test_verify_simple_index_empty_param(self):
+        # NOTE(lzyeval): 'detailed=&start=..&end=..'
+        usages = self._get_tenant_usages()
+        for i in xrange(TENANTS):
+            self.assertEqual(usages[i].get('server_usages'), None)
 
     def test_verify_show(self):
         req = webob.Request.blank(
