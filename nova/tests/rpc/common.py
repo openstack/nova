@@ -212,7 +212,7 @@ class BaseRpcAMQPTestCase(BaseRpcTestCase):
                 break
             greenthread.sleep(0.1)
         else:
-            self.fail("Timeout waiting for message to be consued")
+            self.fail("Timeout waiting for message to be consumed")
 
         # Now see if we get a response even though we raised an
         # exception for the cast above.
