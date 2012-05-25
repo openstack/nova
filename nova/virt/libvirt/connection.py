@@ -46,7 +46,6 @@ import multiprocessing
 import os
 import shutil
 import sys
-import time
 import uuid
 
 from eventlet import greenthread
@@ -190,6 +189,34 @@ def patch_tpool_proxy():
 
 
 patch_tpool_proxy()
+
+VIR_DOMAIN_NOSTATE = 0
+VIR_DOMAIN_RUNNING = 1
+VIR_DOMAIN_BLOCKED = 2
+VIR_DOMAIN_PAUSED = 3
+VIR_DOMAIN_SHUTDOWN = 4
+VIR_DOMAIN_SHUTOFF = 5
+VIR_DOMAIN_CRASHED = 6
+VIR_DOMAIN_PMSUSPENDED = 7
+
+LIBVIRT_POWER_STATE = {
+    VIR_DOMAIN_NOSTATE: power_state.NOSTATE,
+    VIR_DOMAIN_RUNNING: power_state.RUNNING,
+    # NOTE(maoy): The DOMAIN_BLOCKED state is only valid in Xen.
+    # It means that the VM is running and the vCPU is idle. So,
+    # we map it to RUNNING
+    VIR_DOMAIN_BLOCKED: power_state.RUNNING,
+    VIR_DOMAIN_PAUSED: power_state.PAUSED,
+    # NOTE(maoy): The libvirt API doc says that DOMAIN_SHUTDOWN
+    # means the domain is being shut down. So technically the domain
+    # is still running. SHUTOFF is the real powered off state.
+    # But we will map both to SHUTDOWN anyway.
+    # http://libvirt.org/html/libvirt-libvirt.html
+    VIR_DOMAIN_SHUTDOWN: power_state.SHUTDOWN,
+    VIR_DOMAIN_SHUTOFF: power_state.SHUTDOWN,
+    VIR_DOMAIN_CRASHED: power_state.CRASHED,
+    VIR_DOMAIN_PMSUSPENDED: power_state.SUSPENDED,
+}
 
 
 def get_connection(read_only):
@@ -355,6 +382,8 @@ class LibvirtConnection(driver.ComputeDriver):
         #    puTime:      the time used by the domain in nanoseconds
 
         (state, _max_mem, _mem, _num_cpu, _cpu_time) = domain.info()
+        state = LIBVIRT_POWER_STATE[state]
+
         name = domain.name()
 
         return driver.InstanceInfo(name, state)
@@ -397,7 +426,8 @@ class LibvirtConnection(driver.ComputeDriver):
                     # Code=55 Error=Requested operation is not valid:
                     # domain is not running
                     (state, _max_mem, _mem, _cpus, _t) = virt_dom.info()
-                    if state == power_state.SHUTOFF:
+                    state = LIBVIRT_POWER_STATE[state]
+                    if state == power_state.SHUTDOWN:
                         is_okay = True
 
                 if not is_okay:
@@ -676,6 +706,8 @@ class LibvirtConnection(driver.ComputeDriver):
         snapshot_name = uuid.uuid4().hex
 
         (state, _max_mem, _mem, _cpus, _t) = virt_dom.info()
+        state = LIBVIRT_POWER_STATE[state]
+
         if state == power_state.RUNNING:
             virt_dom.managedSave(0)
         # Make the snapshot
@@ -727,6 +759,7 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         dom = self._lookup_by_name(instance.name)
         (state, _max_mem, _mem, _cpus, _t) = dom.info()
+        state = LIBVIRT_POWER_STATE[state]
         # NOTE(vish): This check allows us to reboot an instance that
         #             is already shutdown.
         if state == power_state.RUNNING:
@@ -736,8 +769,9 @@ class LibvirtConnection(driver.ComputeDriver):
         #             call takes to return.
         for x in xrange(FLAGS.libvirt_wait_soft_reboot_seconds):
             (state, _max_mem, _mem, _cpus, _t) = dom.info()
+            state = LIBVIRT_POWER_STATE[state]
+
             if state in [power_state.SHUTDOWN,
-                         power_state.SHUTOFF,
                          power_state.CRASHED]:
                 LOG.info(_("Instance shutdown successfully."),
                          instance=instance)
@@ -1701,7 +1735,7 @@ class LibvirtConnection(driver.ComputeDriver):
         """
         virt_dom = self._lookup_by_name(instance['name'])
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
-        return {'state': state,
+        return {'state': LIBVIRT_POWER_STATE[state],
                 'max_mem': max_mem,
                 'mem': mem,
                 'num_cpu': num_cpu,

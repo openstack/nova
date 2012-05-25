@@ -249,9 +249,7 @@ class Scheduler(object):
         """
 
         # Checking instance is running.
-        if instance_ref['power_state'] != power_state.RUNNING and not (
-            FLAGS.libvirt_type == 'xen' and
-            instance_ref['power_state'] == power_state.BLOCKED):
+        if instance_ref['power_state'] != power_state.RUNNING:
             raise exception.InstanceNotRunning(
                     instance_id=instance_ref['uuid'])
 
