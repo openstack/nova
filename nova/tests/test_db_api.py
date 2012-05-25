@@ -96,7 +96,7 @@ class DbApiTestCase(test.TestCase):
         db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
 
         # Ensure the new migration is not returned.
-        updated_at = datetime.datetime.utcnow()
+        updated_at = utils.utcnow()
         values = {"status": "finished", "updated_at": updated_at}
         migration = db.migration_create(ctxt, values)
         results = db.migration_get_all_unconfirmed(ctxt, 10)
@@ -120,7 +120,7 @@ class DbApiTestCase(test.TestCase):
         db.instance_update(ctxt, instance.id, {"task_state": None})
 
         # Ensure the newly rebooted instance is not returned.
-        updated_at = datetime.datetime.utcnow()
+        updated_at = utils.utcnow()
         values = {"task_state": "rebooting", "updated_at": updated_at}
         instance = db.instance_create(ctxt, values)
         results = db.instance_get_all_hung_in_rebooting(ctxt, 10)

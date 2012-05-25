@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
 import json
 
 from lxml import etree
@@ -26,6 +25,7 @@ from nova import flags
 from nova import log as logging
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova import utils
 from nova import volume
 
 FLAGS = flags.FLAGS
@@ -250,7 +250,7 @@ class SnapshotSerializerTest(test.TestCase):
             id='snap_id',
             status='snap_status',
             size=1024,
-            createdAt=datetime.datetime.now(),
+            createdAt=utils.utcnow(),
             displayName='snap_name',
             displayDescription='snap_desc',
             volumeId='vol_id',
@@ -268,7 +268,7 @@ class SnapshotSerializerTest(test.TestCase):
                 id='snap1_id',
                 status='snap1_status',
                 size=1024,
-                createdAt=datetime.datetime.now(),
+                createdAt=utils.utcnow(),
                 displayName='snap1_name',
                 displayDescription='snap1_desc',
                 volumeId='vol1_id',
@@ -277,7 +277,7 @@ class SnapshotSerializerTest(test.TestCase):
                 id='snap2_id',
                 status='snap2_status',
                 size=1024,
-                createdAt=datetime.datetime.now(),
+                createdAt=utils.utcnow(),
                 displayName='snap2_name',
                 displayDescription='snap2_desc',
                 volumeId='vol2_id',
