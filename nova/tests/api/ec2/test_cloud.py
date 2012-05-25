@@ -1130,7 +1130,7 @@ class CloudTestCase(test.TestCase):
         result3 = describe_images(self.context, ['ami-00000001',
                                                  'ami-00000002'])
         self.assertEqual(2, len(result3['imagesSet']))
-        # provide an non-existing image_id
+        # provide a non-existing image_id
         self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show_none)
         self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show_none)

@@ -35,7 +35,7 @@ attributetype (
 attributetype (
     novaAttrs:4
     NAME 'isNovaAdmin'
-    DESC 'Is user an nova administrator?'
+    DESC 'Is user a nova administrator?'
     EQUALITY booleanMatch
     SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
     SINGLE-VALUE

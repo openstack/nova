@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Implementation of an fake image service"""
+"""Implementation of a fake image service"""
 
 import copy
 import datetime

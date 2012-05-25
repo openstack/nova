@@ -346,7 +346,7 @@ class API(base.Base):
 
     @wrap_check_policy
     def delete_volume_metadata(self, context, volume, key):
-        """Delete the given metadata item from an volume."""
+        """Delete the given metadata item from a volume."""
         self.db.volume_metadata_delete(context, volume['id'], key)
 
     @wrap_check_policy

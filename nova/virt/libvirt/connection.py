@@ -2037,7 +2037,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def update_available_resource(self, ctxt, host):
         """Updates compute manager resource info on ComputeNode table.
 
-        This method is called as an periodic tasks and is used only
+        This method is called as a periodic task and is used only
         in live migration currently.
 
         :param ctxt: security context

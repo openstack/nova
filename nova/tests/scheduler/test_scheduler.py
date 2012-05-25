@@ -228,7 +228,7 @@ class SchedulerManagerTestCase(test.TestCase):
                          *self.fake_args, **self.fake_kwargs)
 
     def test_run_instance_exception_puts_instance_in_error_state(self):
-        """Test that an NoValidHost exception for run_instance puts
+        """Test that a NoValidHost exception for run_instance puts
         the instance in ERROR state and eats the exception.
         """
 

@@ -473,7 +473,7 @@ class Opt(object):
       metavar:
         the name shown as the argument to a CLI option in --help output
       help:
-        an string explaining how the options value is used
+        a string explaining how the options value is used
     """
     multi = False
 

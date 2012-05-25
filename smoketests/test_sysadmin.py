@@ -255,7 +255,7 @@ class VolumeTests(base.UserSmokeTestCase):
     def test_003_can_mount_volume(self):
         ip = self.data['instance'].private_ip_address
         conn = self.connect_ssh(ip, TEST_KEY)
-        # NOTE(vish): this will create an dev for images that don't have
+        # NOTE(vish): this will create a dev for images that don't have
         #             udev rules
         stdin, stdout, stderr = conn.exec_command(
                 'grep %s /proc/partitions | '

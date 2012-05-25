@@ -463,7 +463,7 @@ class ProjectCommands(object):
     @args('--file', dest="filename", metavar='<filename>',
             help='File name(Default: novarc)')
     def environment(self, project_id, user_id, filename='novarc'):
-        """Exports environment variables to an sourcable file"""
+        """Exports environment variables to a sourceable file"""
         try:
             rc = self.manager.get_environment_rc(user_id, project_id)
         except (exception.UserNotFound, exception.ProjectNotFound) as ex:
