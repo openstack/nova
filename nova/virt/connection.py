@@ -45,11 +45,12 @@ if FLAGS.connection_type == 'baremetal':
 def get_connection(read_only=False):
     """
     Returns an object representing the connection to a virtualization
-    platform.
+    platform, or to an on-demand bare-metal provisioning platform.
 
     This could be :mod:`nova.virt.fake.FakeConnection` in test mode,
     a connection to KVM, QEMU, or UML via :mod:`libvirt_conn`, or a connection
-    to XenServer or Xen Cloud Platform via :mod:`xenapi`.
+    to XenServer or Xen Cloud Platform via :mod:`xenapi`. Other platforms are
+    also supported.
 
     Any object returned here must conform to the interface documented by
     :mod:`FakeConnection`.
@@ -64,6 +65,8 @@ def get_connection(read_only=False):
                             * libvirt
                             * xenapi
                             * vmwareapi
+                            * baremetal
+
     """
     # TODO(termie): maybe lazy load after initial check for permissions
     # TODO(termie): check whether we can be disconnected
@@ -82,6 +85,6 @@ def get_connection(read_only=False):
         raise Exception('Unknown connection type "%s"' % t)
 
     if conn is None:
-        LOG.error(_('Failed to open connection to the hypervisor'))
+        LOG.error(_('Failed to open connection to underlying virt platform'))
         sys.exit(1)
     return utils.check_isinstance(conn, driver.ComputeDriver)

@@ -32,7 +32,6 @@ A connection to a hypervisor through baremetal.
 import hashlib
 import os
 import shutil
-import time
 
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -47,7 +46,6 @@ from nova.openstack.common import cfg
 from nova import utils
 from nova.virt.baremetal import dom
 from nova.virt.baremetal import nodes
-from nova.virt import disk
 from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt.libvirt import utils as libvirt_utils
@@ -88,16 +86,17 @@ def _late_load_cheetah():
 class ProxyConnection(driver.ComputeDriver):
 
     def __init__(self, read_only):
+        # Note that baremetal doesn't have a read-only connection
+        # mode, so the read_only parameter is ignored
         super(ProxyConnection, self).__init__()
         self.baremetal_nodes = nodes.get_baremetal_nodes()
         self._wrapped_conn = None
-        self.read_only = read_only
         self._host_state = None
 
     @property
     def HostState(self):
         if not self._host_state:
-            self._host_state = HostState(self.read_only)
+            self._host_state = HostState(self)
         return self._host_state
 
     def init_host(self, host):
@@ -130,8 +129,6 @@ class ProxyConnection(driver.ComputeDriver):
 
     def destroy(self, instance, network_info, block_device_info=None,
                 cleanup=True):
-        timer = utils.LoopingCall(f=None)
-
         while True:
             try:
                 self._conn.destroy_domain(instance['name'])
@@ -160,15 +157,15 @@ class ProxyConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def attach_volume(self, instance_name, device_path, mountpoint):
-        raise exception.APIError("attach_volume not supported for baremetal.")
+        raise exception.Invalid("attach_volume not supported for baremetal.")
 
     @exception.wrap_exception
     def detach_volume(self, instance_name, mountpoint):
-        raise exception.APIError("detach_volume not supported for baremetal.")
+        raise exception.Invalid("detach_volume not supported for baremetal.")
 
     @exception.wrap_exception
     def snapshot(self, instance, image_id):
-        raise exception.APIError("snapshot not supported for baremetal.")
+        raise exception.Invalid("snapshot not supported for baremetal.")
 
     @exception.wrap_exception
     def reboot(self, instance):
@@ -199,7 +196,6 @@ class ProxyConnection(driver.ComputeDriver):
         """
         self.destroy(instance, False)
 
-        xml_dict = self.to_xml_dict(instance, rescue=True)
         rescue_images = {'image_id': FLAGS.baremetal_rescue_image_id,
                          'kernel_id': FLAGS.baremetal_rescue_kernel_id,
                          'ramdisk_id': FLAGS.baremetal_rescue_ramdisk_id}
@@ -218,7 +214,7 @@ class ProxyConnection(driver.ComputeDriver):
             except Exception:
                 LOG.exception(_('_wait_for_rescue failed'), instance=instance)
                 timer.stop()
-        timer.f = _wait_for_reboot
+        timer.f = _wait_for_rescue
         return timer.start(interval=0.5)
 
     @exception.wrap_exception
@@ -275,13 +271,13 @@ class ProxyConnection(driver.ComputeDriver):
                 else:
                     LOG.debug(_('instance %s:not booted'), instance['name'],
                               instance=instance)
-            except Exception as Exn:
-                LOG.debug(_("Bremetal assignment is overcommitted."),
+            except Exception:
+                LOG.exception(_("Baremetal assignment is overcommitted."),
                           instance=instance)
                 (old_ref, new_ref) = db.instance_update_and_get_original(
                         context, instance['id'],
-                        {'vm_state': vm_states.OVERCOMMIT,
-                         'power_state': power_state.SUSPENDED})
+                        {'vm_state': vm_states.ERROR,
+                         'power_state': power_state.FAILED})
                 notifications.send_update(context, old_ref, new_ref)
 
             timer.stop()
@@ -414,8 +410,7 @@ class ProxyConnection(driver.ComputeDriver):
                           cow=False,  # FLAGS.use_cow_images,
                           image_id=disk_images['image_id'],
                           user_id=inst['user_id'],
-                          project_id=inst['project_id'],
-                          size=size)
+                          project_id=inst['project_id'])
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -499,9 +494,9 @@ class ProxyConnection(driver.ComputeDriver):
                           block_device_info=None):
         # block_device_mapping = driver.block_device_info_get_mapping(
         #    block_device_info)
-        map = 0
-        for (network, mapping) in network_info:
-            map += 1
+        _map = 0
+        for (_, mapping) in network_info:
+            _map += 1
 
         nics = []
         # FIXME(vish): stick this in db
@@ -614,11 +609,7 @@ class ProxyConnection(driver.ComputeDriver):
         :returns: The total number of vcpu that currently used.
 
         """
-
-        total = 0
-        for dom_id in self._conn.list_domains():
-            total += 1
-        return total
+        return len(self._conn.list_domains())
 
     def get_memory_mb_used(self):
         """Get the free memory size(MB) of physical computer.
@@ -765,9 +756,9 @@ class HostState(object):
     node is running on.
     """
 
-    def __init__(self, read_only):
+    def __init__(self, connection):
         super(HostState, self).__init__()
-        self.read_only = read_only
+        self.connection = connection
         self._stats = {}
         self.update_status()
 
@@ -784,11 +775,10 @@ class HostState(object):
         We can get host status information.
         """
         LOG.debug(_("Updating host stats"))
-        connection = get_connection(self.read_only)
         data = {}
-        data["vcpus"] = connection.get_vcpu_total()
-        data["vcpus_used"] = connection.get_vcpu_used()
-        data["cpu_info"] = connection.get_cpu_info()
+        data["vcpus"] = self.connection.get_vcpu_total()
+        data["vcpus_used"] = self.connection.get_vcpu_used()
+        data["cpu_info"] = self.connection.get_cpu_info()
         data["cpu_arch"] = FLAGS.cpu_arch
         data["xpus"] = FLAGS.xpus
         data["xpu_arch"] = FLAGS.xpu_arch
@@ -796,12 +786,12 @@ class HostState(object):
         data["net_arch"] = FLAGS.net_arch
         data["net_info"] = FLAGS.net_info
         data["net_mbps"] = FLAGS.net_mbps
-        data["disk_total"] = connection.get_local_gb_total()
-        data["disk_used"] = connection.get_local_gb_used()
+        data["disk_total"] = self.connection.get_local_gb_total()
+        data["disk_used"] = self.connection.get_local_gb_used()
         data["disk_available"] = data["disk_total"] - data["disk_used"]
-        data["host_memory_total"] = connection.get_memory_mb_total()
+        data["host_memory_total"] = self.connection.get_memory_mb_total()
         data["host_memory_free"] = (data["host_memory_total"] -
-                                    connection.get_memory_mb_used())
-        data["hypervisor_type"] = connection.get_hypervisor_type()
-        data["hypervisor_version"] = connection.get_hypervisor_version()
+                                    self.connection.get_memory_mb_used())
+        data["hypervisor_type"] = self.connection.get_hypervisor_type()
+        data["hypervisor_version"] = self.connection.get_hypervisor_version()
         self._stats = data

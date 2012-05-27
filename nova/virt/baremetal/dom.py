@@ -160,8 +160,6 @@ class BareMetalDom(object):
             self.domains.remove(fd)
             msg = _("Domains: %s")
             LOG.debug(msg % (self.domains))
-            msg = _("Nodes: %s")
-            LOG.debug(msg % (self.baremetal_nodes.nodes))
             self.store_domain()
             msg = _("After storing domains: %s")
             LOG.debug(msg % (self.domains))
