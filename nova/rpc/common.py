@@ -18,10 +18,10 @@
 #    under the License.
 
 import copy
+import logging
 import sys
 import traceback
 
-from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
