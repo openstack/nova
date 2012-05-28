@@ -210,7 +210,8 @@ class _FakeImageService(object):
             self._imagedata[image_id] = data.read()
         return self.images[image_id]
 
-    def update(self, context, image_id, metadata, data=None):
+    def update(self, context, image_id, metadata, data=None,
+               headers=None):
         """Replace the contents of the given image with the new data.
 
         :raises: ImageNotFound if the image does not exist.
@@ -218,7 +219,20 @@ class _FakeImageService(object):
         """
         if not self.images.get(image_id):
             raise exception.ImageNotFound(image_id=image_id)
-        self.images[image_id] = copy.deepcopy(metadata)
+        try:
+            purge = headers['x-glance-registry-purge-props']
+        except Exception:
+            purge = True
+        if purge:
+            self.images[image_id] = copy.deepcopy(metadata)
+        else:
+            image = self.images[image_id]
+            try:
+                image['properties'].update(metadata.pop('properties'))
+            except Exception:
+                pass
+            image.update(metadata)
+        return self.images[image_id]
 
     def delete(self, context, image_id):
         """Delete the given image.
