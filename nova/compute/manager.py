@@ -287,7 +287,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.debug(_('Current state is %(drv_state)s, state in DB is '
                         '%(db_state)s.'), locals(), instance=instance)
 
-            net_info = self._get_instance_nw_info(context, instance)
+            net_info = compute_utils.get_nw_info_for_instance(instance)
             if ((expect_running and FLAGS.resume_guests_state_on_host_boot) or
                 FLAGS.start_guests_on_host_boot):
                 LOG.info(_('Rebooting instance after nova-compute restart.'),
