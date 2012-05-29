@@ -2027,12 +2027,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             else:
                 disk = None
 
-            rpc.call(context,
-                     rpc.queue_get_for(context, FLAGS.compute_topic, dest),
-                     {'method': 'pre_live_migration',
-                      'args': {'instance_id': instance_id,
-                               'block_migration': block_migration,
-                               'disk': disk}})
+            self.compute_rpcapi.pre_live_migration(context, instance_ref,
+                    block_migration, disk, dest)
 
         except Exception:
             with excutils.save_and_reraise_exception():
