@@ -138,9 +138,9 @@ class ConsoleVMRCManager(manager.Manager):
                                                          console_type)
         except exception.NotFound:
             pool_info = rpc.call(context,
-                                 self.db.queue_get_for(context,
-                                                       FLAGS.compute_topic,
-                                                       instance_host),
+                                 rpc.queue_get_for(context,
+                                                   FLAGS.compute_topic,
+                                                   instance_host),
                                  {'method': 'get_console_pool_info',
                                   'args': {'console_type': console_type}})
             pool_info['password'] = self.driver.fix_pool_password(

@@ -304,9 +304,6 @@ def stub_out_db_network_api(stubs):
         return [FakeModel(n) for n in networks
                 if n['project_id'] == project_id]
 
-    def fake_queue_get_for(context, topic, node):
-        return "%s.%s" % (topic, node)
-
     funcs = [fake_floating_ip_allocate_address,
              fake_floating_ip_deallocate,
              fake_floating_ip_disassociate,
@@ -335,8 +332,7 @@ def stub_out_db_network_api(stubs):
              fake_network_get_all_by_instance,
              fake_network_set_host,
              fake_network_update,
-             fake_project_get_networks,
-             fake_queue_get_for]
+             fake_project_get_networks]
 
     stub_out(stubs, funcs)
 

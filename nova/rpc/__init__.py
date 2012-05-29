@@ -226,6 +226,11 @@ def fanout_cast_to_server(context, server_params, topic, msg):
                                              topic, msg)
 
 
+def queue_get_for(context, topic, host):
+    """Get a queue name for a given topic + host."""
+    return '%s.%s' % (topic, host)
+
+
 _RPCIMPL = None
 
 

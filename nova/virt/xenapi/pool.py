@@ -195,7 +195,7 @@ def forward_request(context, request_type, master, aggregate_id,
     # because this might be 169.254.0.1, i.e. xenapi
     # NOTE: password in clear is not great, but it'll do for now
     sender_url = swap_xapi_host(FLAGS.xenapi_connection_url, slave_address)
-    rpc.cast(context, db.queue_get_for(context, FLAGS.compute_topic, master),
+    rpc.cast(context, rpc.queue_get_for(context, FLAGS.compute_topic, master),
              {"method": request_type,
               "args": {"aggregate_id": aggregate_id,
                        "host": slave_compute,

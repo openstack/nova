@@ -62,8 +62,8 @@ def cast_to_volume_host(context, host, method, update_db=True, **kwargs):
             db.volume_update(context, volume_id,
                     {'host': host, 'scheduled_at': now})
     rpc.cast(context,
-            db.queue_get_for(context, 'volume', host),
-            {"method": method, "args": kwargs})
+             rpc.queue_get_for(context, 'volume', host),
+             {"method": method, "args": kwargs})
     LOG.debug(_("Casted '%(method)s' to volume '%(host)s'") % locals())
 
 
@@ -79,8 +79,8 @@ def cast_to_compute_host(context, host, method, update_db=True, **kwargs):
             db.instance_update(context, instance_uuid,
                     {'host': host, 'scheduled_at': now})
     rpc.cast(context,
-            db.queue_get_for(context, 'compute', host),
-            {"method": method, "args": kwargs})
+             rpc.queue_get_for(context, 'compute', host),
+             {"method": method, "args": kwargs})
     LOG.debug(_("Casted '%(method)s' to compute '%(host)s'") % locals())
 
 
@@ -88,8 +88,8 @@ def cast_to_network_host(context, host, method, update_db=False, **kwargs):
     """Cast request to a network host queue"""
 
     rpc.cast(context,
-            db.queue_get_for(context, 'network', host),
-            {"method": method, "args": kwargs})
+             rpc.queue_get_for(context, 'network', host),
+             {"method": method, "args": kwargs})
     LOG.debug(_("Casted '%(method)s' to network '%(host)s'") % locals())
 
 
@@ -106,8 +106,8 @@ def cast_to_host(context, topic, host, method, update_db=True, **kwargs):
         func(context, host, method, update_db=update_db, **kwargs)
     else:
         rpc.cast(context,
-            db.queue_get_for(context, topic, host),
-                {"method": method, "args": kwargs})
+                 rpc.queue_get_for(context, topic, host),
+                 {"method": method, "args": kwargs})
         LOG.debug(_("Casted '%(method)s' to %(topic)s '%(host)s'")
                 % locals())
 
@@ -355,7 +355,7 @@ class Scheduler(object):
         # Checking cpuinfo.
         try:
             rpc.call(context,
-                     db.queue_get_for(context, FLAGS.compute_topic, dest),
+                     rpc.queue_get_for(context, FLAGS.compute_topic, dest),
                      {"method": 'compare_cpu',
                       "args": {'cpu_info': oservice_ref['cpu_info']}})
 
@@ -443,7 +443,7 @@ class Scheduler(object):
         available = available_gb * (1024 ** 3)
 
         # Getting necessary disk size
-        topic = db.queue_get_for(context, FLAGS.compute_topic,
+        topic = rpc.queue_get_for(context, FLAGS.compute_topic,
                                           instance_ref['host'])
         ret = rpc.call(context, topic,
                        {"method": 'get_instance_disk_info',
@@ -492,8 +492,8 @@ class Scheduler(object):
         """
 
         src = instance_ref['host']
-        dst_t = db.queue_get_for(context, FLAGS.compute_topic, dest)
-        src_t = db.queue_get_for(context, FLAGS.compute_topic, src)
+        dst_t = rpc.queue_get_for(context, FLAGS.compute_topic, dest)
+        src_t = rpc.queue_get_for(context, FLAGS.compute_topic, src)
 
         filename = rpc.call(context, dst_t,
                             {"method": 'create_shared_storage_test_file'})

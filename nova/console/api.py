@@ -44,8 +44,8 @@ class API(base.Base):
     def delete_console(self, context, instance_id, console_id):
         instance_id = self._translate_uuid_if_necessary(context, instance_id)
         console = self.db.console_get(context, console_id, instance_id)
-        topic = self.db.queue_get_for(context, FLAGS.console_topic,
-                                      pool['host'])
+        topic = rpc.queue_get_for(context, FLAGS.console_topic,
+                                  pool['host'])
         rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
         rpcapi.remove_console(context, console['id'])
 
@@ -61,9 +61,9 @@ class API(base.Base):
         rpcapi.add_console(context, instance['id'])
 
     def _get_console_topic(self, context, instance_host):
-        topic = self.db.queue_get_for(context,
-                                      FLAGS.compute_topic,
-                                      instance_host)
+        topic = rpc.queue_get_for(context,
+                                  FLAGS.compute_topic,
+                                  instance_host)
         return rpc.call(context, topic, {'method': 'get_console_topic',
                                          'args': {'fake': 1}})
 

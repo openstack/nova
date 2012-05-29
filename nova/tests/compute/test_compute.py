@@ -1425,7 +1425,7 @@ class ComputeTestCase(BaseTestCase):
         inst_ref = self._create_fake_instance({'host': 'dummy'})
 
         c = context.get_admin_context()
-        topic = db.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
+        topic = rpc.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
 
         # creating volume testdata
         volume_id = db.volume_create(c, {'size': 1})['id']
@@ -1480,7 +1480,7 @@ class ComputeTestCase(BaseTestCase):
         instance_id = instance['id']
         c = context.get_admin_context()
         inst_ref = db.instance_get(c, instance_id)
-        topic = db.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
+        topic = rpc.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
 
         # create
         self.mox.StubOutWithMock(rpc, 'call')
@@ -1522,7 +1522,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
         self.compute.driver.unfilter_instance(i_ref, [])
         self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
+        rpc.call(c, rpc.queue_get_for(c, FLAGS.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
              "args": {'instance_id': i_ref['id'], 'block_migration': False}})
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')

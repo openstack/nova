@@ -18,16 +18,16 @@
 Client side of the compute RPC API.
 """
 
-from nova.db import base
 from nova import exception
 from nova import flags
+from nova import rpc
 import nova.rpc.proxy
 
 
 FLAGS = flags.FLAGS
 
 
-class ComputeAPI(nova.rpc.proxy.RpcProxy, base.Base):
+class ComputeAPI(nova.rpc.proxy.RpcProxy):
     '''Client side of the compute rpc API.
 
     API version history:
@@ -58,7 +58,7 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy, base.Base):
         if not host:
             raise exception.NovaException(_('Unable to find host for '
                                             'Instance %s') % instance['uuid'])
-        return self.db.queue_get_for(ctxt, self.topic, host)
+        return rpc.queue_get_for(ctxt, self.topic, host)
 
     def add_aggregate_host(self, ctxt, aggregate_id, host_param, host):
         '''Add aggregate host.

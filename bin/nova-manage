@@ -1152,7 +1152,7 @@ class VolumeCommands(object):
             return
 
         rpc.cast(ctxt,
-                 db.queue_get_for(ctxt, FLAGS.volume_topic, host),
+                 rpc.queue_get_for(ctxt, FLAGS.volume_topic, host),
                  {"method": "delete_volume",
                   "args": {"volume_id": volume['id']}})
 
@@ -1170,7 +1170,7 @@ class VolumeCommands(object):
         instance = db.instance_get(ctxt, volume['instance_id'])
         host = instance['host']
         rpc.cast(ctxt,
-                 db.queue_get_for(ctxt, FLAGS.compute_topic, host),
+                 rpc.queue_get_for(ctxt, FLAGS.compute_topic, host),
                  {"method": "attach_volume",
                   "args": {"instance_id": instance['id'],
                            "volume_id": volume['id'],

@@ -1491,7 +1491,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.rpc, 'call', rpc_call_wrapper)
         self.stubs.Set(nova.db, 'instance_update_and_get_original',
                 server_update)
-        self.stubs.Set(nova.db, 'queue_get_for', queue_get_for)
+        self.stubs.Set(nova.rpc, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
 

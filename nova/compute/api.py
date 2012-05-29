@@ -835,7 +835,7 @@ class API(base.Base):
                            in self.db.service_get_all_compute_sorted(context)]
         for host in hosts:
             rpc.cast(context,
-                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     rpc.queue_get_for(context, FLAGS.compute_topic, host),
                      {'method': 'refresh_provider_fw_rules', 'args': {}})
 
     def _is_security_group_associated_with_server(self, security_group,
@@ -1808,7 +1808,6 @@ class HostAPI(base.Base):
         """Reboots, shuts down or powers up the host."""
         # NOTE(comstud): No instance_uuid argument to this compute manager
         # call
-        topic = self.db.queue_get_for(context, FLAGS.compute_topic, host)
         return self.compute_rpcapi.host_power_action(context, action=action,
                 host=host)
 
