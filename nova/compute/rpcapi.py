@@ -222,6 +222,11 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid']),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def resize_instance(self, ctxt, instance, migration_id, image):
+        self.cast(ctxt, self.make_msg('resize_instance',
+                instance_uuid=instance['uuid'], migration_id=migration_id,
+                image=image), topic=self._compute_topic(ctxt, None, instance))
+
     def resume_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('resume_instance',
                 instance_uuid=instance['uuid']),

@@ -1351,13 +1351,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                  'status': 'pre-migrating'})
 
         LOG.audit(_('Migrating'), context=context, instance=instance_ref)
-        topic = rpc.queue_get_for(context, FLAGS.compute_topic,
-                instance_ref['host'])
-        rpc.cast(context, topic,
-                {'method': 'resize_instance',
-                 'args': {'instance_uuid': instance_ref['uuid'],
-                          'migration_id': migration_ref['id'],
-                          'image': image}})
+        self.compute_rpcapi.resize_instance(context, instance_ref,
+                migration_ref['id'], image)
 
         extra_usage_info = dict(new_instance_type=new_instance_type['name'],
                                 new_instance_type_id=new_instance_type['id'])
