@@ -40,8 +40,7 @@ FLAGS = flags.FLAGS
 # flagfile. To isolate this awful practice, we're supplying a dummy
 # argument list.
 dummy = ["fakearg"]
-utils.default_cfgfile(args=dummy)
-FLAGS(dummy)
+flags.parse_args(dummy)
 
 
 class UnrecognizedNameLabel(Exception):

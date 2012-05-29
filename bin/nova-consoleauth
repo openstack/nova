@@ -35,12 +35,10 @@ from nova.consoleauth import manager
 from nova import flags
 from nova import log as logging
 from nova import service
-from nova import utils
 
 
 if __name__ == "__main__":
-    utils.default_cfgfile()
-    flags.FLAGS(sys.argv)
+    flags.parse_args(sys.argv)
     logging.setup()
 
     server = service.Service.create(binary='nova-consoleauth')

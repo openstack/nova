@@ -65,8 +65,7 @@ FLAGS = flags.FLAGS
 if __name__ == '__main__':
     rpc.register_opts(FLAGS)
     admin_context = context.get_admin_context()
-    utils.default_cfgfile()
-    flags.FLAGS(sys.argv)
+    flags.parse_args(sys.argv)
     logging.setup()
     begin, end = utils.last_completed_audit_period()
     print "Starting instance usage audit"

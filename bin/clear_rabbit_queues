@@ -46,7 +46,6 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova import rpc
-from nova import utils
 
 
 delete_exchange_opt = \
@@ -71,8 +70,7 @@ def delete_queues(queues):
         x.queue_delete(q)
 
 if __name__ == '__main__':
-    utils.default_cfgfile()
-    args = flags.FLAGS(sys.argv)
+    args = flags.parse_args(sys.argv)
     logging.setup()
     rpc.register_opts(flags.FLAGS)
     delete_queues(args[1:])

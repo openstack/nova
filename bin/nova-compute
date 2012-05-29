@@ -40,8 +40,7 @@ from nova import service
 from nova import utils
 
 if __name__ == '__main__':
-    utils.default_cfgfile()
-    flags.FLAGS(sys.argv)
+    flags.parse_args(sys.argv)
     logging.setup()
     utils.monkey_patch()
     server = service.Service.create(binary='nova-compute')

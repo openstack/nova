@@ -284,27 +284,6 @@ def novadir():
     return os.path.abspath(nova.__file__).split('nova/__init__.py')[0]
 
 
-def default_cfgfile(filename='nova.conf', args=None):
-    if args is None:
-        args = sys.argv
-    for arg in args:
-        if arg.find('config-file') != -1:
-            return arg[arg.index('config-file') + len('config-file') + 1:]
-    else:
-        if not os.path.isabs(filename):
-            # turn relative filename into an absolute path
-            script_dir = os.path.dirname(inspect.stack()[-1][1])
-            filename = os.path.abspath(os.path.join(script_dir, filename))
-        if not os.path.exists(filename):
-            filename = "./nova.conf"
-            if not os.path.exists(filename):
-                filename = '/etc/nova/nova.conf'
-        if os.path.exists(filename):
-            cfgfile = '--config-file=%s' % filename
-            args.insert(1, cfgfile)
-            return filename
-
-
 def debug(arg):
     LOG.debug(_('debug in callback: %s'), arg)
     return arg
