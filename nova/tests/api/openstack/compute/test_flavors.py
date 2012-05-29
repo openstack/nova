@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 OpenStack LLC.
+# Copyright 2012 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,6 +23,8 @@ import urlparse
 from nova.api.openstack.compute import flavors
 from nova.api.openstack import xmlutil
 import nova.compute.instance_types
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import test
@@ -42,13 +44,15 @@ FAKE_FLAVORS = {
         "flavorid": '1',
         "name": 'flavor 1',
         "memory_mb": '256',
-        "root_gb": '10'
+        "root_gb": '10',
+        "disabled": False,
     },
     'flavor 2': {
         "flavorid": '2',
         "name": 'flavor 2',
         "memory_mb": '512',
-        "root_gb": '20'
+        "root_gb": '20',
+        "disabled": False,
     },
 }
 
@@ -110,6 +114,7 @@ class FlavorsTest(test.TestCase):
         expected = {
             "flavor": {
                 "id": "1",
+                "OS-FLV-DISABLED:disabled": False,
                 "name": "flavor 1",
                 "ram": "256",
                 "disk": "10",
@@ -138,6 +143,7 @@ class FlavorsTest(test.TestCase):
         expected = {
             "flavor": {
                 "id": "1",
+                "OS-FLV-DISABLED:disabled": False,
                 "name": "flavor 1",
                 "ram": "256",
                 "disk": "10",
@@ -308,6 +314,7 @@ class FlavorsTest(test.TestCase):
             "flavors": [
                 {
                     "id": "1",
+                    "OS-FLV-DISABLED:disabled": False,
                     "name": "flavor 1",
                     "ram": "256",
                     "disk": "10",
@@ -327,6 +334,7 @@ class FlavorsTest(test.TestCase):
                 },
                 {
                     "id": "2",
+                    "OS-FLV-DISABLED:disabled": False,
                     "name": "flavor 2",
                     "ram": "512",
                     "disk": "20",
@@ -428,6 +436,7 @@ class FlavorsTest(test.TestCase):
             "flavors": [
                 {
                     "id": "2",
+                    "OS-FLV-DISABLED:disabled": False,
                     "name": "flavor 2",
                     "ram": "512",
                     "disk": "20",
@@ -703,3 +712,98 @@ class FlavorsXMLSerializationTest(test.TestCase):
         xmlutil.validate_schema(root, 'flavors_index')
         flavor_elems = root.findall('{0}flavor'.format(NS))
         self.assertEqual(len(flavor_elems), 0)
+
+
+class DisabledFlavorsWithRealDBTest(test.TestCase):
+    """
+    Tests that disabled flavors should not be shown nor listed.
+    """
+    def setUp(self):
+        super(DisabledFlavorsWithRealDBTest, self).setUp()
+        self.controller = flavors.Controller()
+
+        # Add a new disabled type to the list of instance_types/flavors
+        self.req = fakes.HTTPRequest.blank('/v2/fake/flavors')
+        self.context = self.req.environ['nova.context']
+        self.admin_context = context.get_admin_context()
+
+        self.disabled_type = self._create_disabled_instance_type()
+        self.inst_types = db.api.instance_type_get_all(
+                self.admin_context)
+
+    def tearDown(self):
+        db.api.instance_type_destroy(
+                self.admin_context, self.disabled_type['name'])
+
+        super(DisabledFlavorsWithRealDBTest, self).tearDown()
+
+    def _create_disabled_instance_type(self):
+        inst_types = db.api.instance_type_get_all(
+                self.admin_context)
+
+        inst_type = inst_types[0]
+
+        del inst_type['id']
+        inst_type['name'] += '.disabled'
+        inst_type['flavorid'] = unicode(max(
+                [int(flavor['flavorid']) for flavor in inst_types]) + 1)
+        inst_type['disabled'] = True
+
+        disabled_type = db.api.instance_type_create(
+                self.admin_context, inst_type)
+
+        return disabled_type
+
+    def test_index_should_not_list_disabled_flavors_to_user(self):
+        self.context.is_admin = False
+
+        flavor_list = self.controller.index(self.req)['flavors']
+        api_flavorids = set(f['id'] for f in flavor_list)
+
+        db_flavorids = set(i['flavorid'] for i in self.inst_types)
+        disabled_flavorid = str(self.disabled_type['flavorid'])
+
+        self.assert_(disabled_flavorid in db_flavorids)
+        self.assertEqual(db_flavorids - set([disabled_flavorid]),
+                         api_flavorids)
+
+    def test_index_should_list_disabled_flavors_to_admin(self):
+        self.context.is_admin = True
+
+        flavor_list = self.controller.index(self.req)['flavors']
+        api_flavorids = set(f['id'] for f in flavor_list)
+
+        db_flavorids = set(i['flavorid'] for i in self.inst_types)
+        disabled_flavorid = str(self.disabled_type['flavorid'])
+
+        self.assert_(disabled_flavorid in db_flavorids)
+        self.assertEqual(db_flavorids, api_flavorids)
+
+    def test_show_should_include_disabled_flavor_for_user(self):
+        """
+        Counterintuitively we should show disabled flavors to all users and not
+        just admins. The reason is that, when a user performs a server-show
+        request, we want to be able to display the pretty flavor name ('512 MB
+        Instance') and not just the flavor-id even if the flavor id has been
+        marked disabled.
+        """
+        self.context.is_admin = False
+
+        flavor = self.controller.show(
+                self.req, self.disabled_type['flavorid'])['flavor']
+
+        self.assertEqual(flavor['name'], self.disabled_type['name'])
+
+        # FIXME(sirp): the disabled field is currently namespaced so that we
+        # don't impact the Openstack API. Eventually this should probably be
+        # made a first-class attribute in the next OSAPI version.
+        self.assert_('OS-FLV-DISABLED:disabled' in flavor)
+
+    def test_show_should_include_disabled_flavor_for_admin(self):
+        self.context.is_admin = True
+
+        flavor = self.controller.show(
+                self.req, self.disabled_type['flavorid'])['flavor']
+
+        self.assertEqual(flavor['name'], self.disabled_type['name'])
+        self.assert_('OS-FLV-DISABLED:disabled' in flavor)
