@@ -35,7 +35,7 @@ Controllers and actions
 
 Controllers live in ``nova/api/openstack``, and inherit from nova.wsgi.Controller.
 
-See ``nova/api/openstack/servers.py`` for an example.
+See ``nova/api/openstack/compute/servers.py`` for an example.
 
 Action methods take parameters that are sucked out of the URL by mapper.connect() or .resource().  The first two parameters are self and the WebOb request, from which you can get the req.environ, req.body, req.headers, etc.
 
