@@ -75,13 +75,14 @@ def get_connection_pool(conf, connection_cls):
 
 class ConnectionContext(rpc_common.Connection):
     """The class that is actually returned to the caller of
-    create_connection().  This is a essentially a wrapper around
-    Connection that supports 'with' and can return a new Connection or
-    one from a pool.  It will also catch when an instance of this class
-    is to be deleted so that we can return Connections to the pool on
-    exceptions and so forth without making the caller be responsible for
-    catching all exceptions and making sure to return a connection to
-    the pool.
+    create_connection().  This is essentially a wrapper around
+    Connection that supports 'with'.  It can also return a new
+    Connection, or one from a pool.  The function will also catch
+    when an instance of this class is to be deleted.  With that
+    we can return Connections to the pool on exceptions and so
+    forth without making the caller be responsible for catching
+    them.  If possible the function makes sure to return a
+    connection to the pool.
     """
 
     def __init__(self, conf, connection_pool, pooled=True, server_params=None):

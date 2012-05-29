@@ -247,7 +247,7 @@ class Instance(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
-    # To remember on which host a instance booted.
+    # To remember on which host an instance booted.
     # An instance may have moved to another host by live migraiton.
     launched_on = Column(Text)
     locked = Column(Boolean)
@@ -716,7 +716,7 @@ class FixedIp(BASE, NovaBase):
     virtual_interface_id = Column(Integer, nullable=True)
     instance_id = Column(Integer, nullable=True)
     # associated means that a fixed_ip has its instance_id column set
-    # allocated means that a fixed_ip has a its virtual_interface_id column set
+    # allocated means that a fixed_ip has its virtual_interface_id column set
     allocated = Column(Boolean, default=False)
     # leased means dhcp bridge has leased the ip
     leased = Column(Boolean, default=False)

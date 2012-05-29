@@ -394,7 +394,7 @@ global_opts = [
                      'host rebooted'),
     cfg.StrOpt('default_ephemeral_format',
                default=None,
-               help='The default format a ephemeral_volume will be '
+               help='The default format an ephemeral_volume will be '
                     'formatted with on creation.'),
     cfg.StrOpt('root_helper',
                default='sudo',

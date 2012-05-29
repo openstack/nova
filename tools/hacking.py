@@ -77,7 +77,7 @@ def nova_todo_format(physical_line):
     """
     pos = physical_line.find('TODO')
     pos1 = physical_line.find('TODO(')
-    pos2 = physical_line.find('#')  # make sure its a comment
+    pos2 = physical_line.find('#')  # make sure it's a comment
     if (pos != pos1 and pos2 >= 0 and pos2 < pos):
         return pos, "NOVA N101: Use TODO(NAME)"
 

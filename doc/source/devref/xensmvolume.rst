@@ -10,7 +10,7 @@ The Xen Storage Manager (xensm) driver for Nova-Volume is based on XenAPI Storag
 -   LVHD over FC: SR plugin which represents disks as VHDs on Logical Volumes within a Volume Group created on an HBA LUN, e.g. hardware-based iSCSI or FC support
 -   iSCSI: Base ISCSI SR driver, provides a LUN-per-VDI. Does not support creation of VDIs but accesses existing LUNs on a target.
 -   LVHD over iSCSI: SR plugin which represents disks as Logical Volumes within a Volume Group created on an iSCSI LUN
--   EqualLogic: SR driver for mapping of LUNs to VDIs on a EQUALLOGIC array group, providing use of fast snapshot and clone features on the array 
+-   EqualLogic: SR driver for mapping of LUNs to VDIs on an EQUALLOGIC array group, providing use of fast snapshot and clone features on the array 
 
 Glossary
 =========

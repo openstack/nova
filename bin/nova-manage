@@ -633,7 +633,7 @@ class FloatingIpCommands(object):
     @staticmethod
     def address_to_hosts(addresses):
         """
-        Iterate over hosts within a address range.
+        Iterate over hosts within an address range.
 
         If an explicit range specifier is missing, the parameter is
         interpreted as a specific individual address.
