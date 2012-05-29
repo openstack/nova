@@ -316,3 +316,12 @@ class TestCase(unittest.TestCase):
                 raise AssertionError(exc_msg)
             except Exception:
                 pass  # Any other errors are fine
+
+    def assertIsInstance(self, a, b, *args, **kwargs):
+        """Python < v2.7 compatibility.  Assert 'a' is Instance of 'b'"""
+        try:
+            f = super(TestCase, self).assertIsInstance
+        except AttributeError:
+            self.assertTrue(isinstance(a, b), *args, **kwargs)
+        else:
+            f(a, b, *args, **kwargs)

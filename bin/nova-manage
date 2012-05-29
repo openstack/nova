@@ -1367,7 +1367,7 @@ class StorageManagerCommands(object):
                 sys.exit(2)
 
             try:
-                flavors = db.sm_flavor_get(ctxt, flavor_label)
+                flavors = db.sm_flavor_get_by_label(ctxt, flavor_label)
             except exception.NotFound as ex:
                 print "error: %s" % ex
                 sys.exit(2)

@@ -1784,7 +1784,7 @@ def sm_flavor_create(context, values):
 
 def sm_flavor_update(context, sm_flavor_id, values):
     """Update a SM Flavor entry."""
-    return IMPL.sm_flavor_update(context, values)
+    return IMPL.sm_flavor_update(context, sm_flavor_id, values)
 
 
 def sm_flavor_delete(context, sm_flavor_id):
@@ -1792,14 +1792,19 @@ def sm_flavor_delete(context, sm_flavor_id):
     return IMPL.sm_flavor_delete(context, sm_flavor_id)
 
 
-def sm_flavor_get(context, sm_flavor):
+def sm_flavor_get(context, sm_flavor_id):
     """Get a specific SM Flavor."""
-    return IMPL.sm_flavor_get(context, sm_flavor)
+    return IMPL.sm_flavor_get(context, sm_flavor_id)
 
 
 def sm_flavor_get_all(context):
     """Get all SM Flavors."""
     return IMPL.sm_flavor_get_all(context)
+
+
+def sm_flavor_get_by_label(context, sm_flavor_label):
+    """Get a specific SM Flavor given label."""
+    return IMPL.sm_flavor_get_by_label(context, sm_flavor_label)
 
 
 ####################
