@@ -96,6 +96,13 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid'], volume_id=volume_id),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def finish_resize(self, ctxt, instance, migration_id, image, disk_info,
+            host):
+        self.cast(ctxt, self.make_msg('finish_resize',
+                instance_uuid=instance['uuid'], migration_id=migration_id,
+                image=image, disk_info=disk_info),
+                topic=self._compute_topic(ctxt, host, None))
+
     def finish_revert_resize(self, ctxt, instance, migration_id, host):
         self.cast(ctxt, self.make_msg('finish_revert_resize',
                 instance_uuid=instance['uuid'], migration_id=migration_id),
