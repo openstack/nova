@@ -825,9 +825,9 @@ class VMWareVMOps(object):
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         for (network, mapping) in network_info:
-            self._vif_driver.plug(instance, network, mapping)
+            self._vif_driver.plug(instance, (network, mapping))
 
     def _unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
         for (network, mapping) in network_info:
-            self._vif_driver.unplug(instance, network, mapping)
+            self._vif_driver.unplug(instance, (network, mapping))

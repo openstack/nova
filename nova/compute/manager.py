@@ -361,7 +361,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _legacy_nw_info(self, network_info):
         """Converts the model nw_info object to legacy style"""
         if self.driver.legacy_nwinfo():
-            network_info = compute_utils.legacy_network_info(network_info)
+            network_info = network_info.legacy()
         return network_info
 
     def _setup_block_device_mapping(self, context, instance):

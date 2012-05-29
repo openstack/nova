@@ -83,8 +83,9 @@ class LibvirtBridgeDriver(vif.VIFDriver):
 
         return conf
 
-    def plug(self, instance, network, mapping):
+    def plug(self, instance, vif):
         """Ensure that the bridge exists, and add VIF to it."""
+        network, mapping = vif
         if (not network.get('multi_host') and
             mapping.get('should_create_bridge')):
             if mapping.get('should_create_vlan'):
@@ -107,7 +108,7 @@ class LibvirtBridgeDriver(vif.VIFDriver):
 
         return self._get_configurations(instance, network, mapping)
 
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, vif):
         """No manual unplugging required."""
         pass
 
@@ -120,7 +121,8 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
     def get_dev_name(_self, iface_id):
         return "tap" + iface_id[0:11]
 
-    def plug(self, instance, network, mapping):
+    def plug(self, instance, vif):
+        network, mapping = vif
         iface_id = mapping['vif_uuid']
         dev = self.get_dev_name(iface_id)
         if not linux_net._device_exists(dev):
@@ -157,9 +159,10 @@ class LibvirtOpenVswitchDriver(vif.VIFDriver):
 
         return conf
 
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, vif):
         """Unplug the VIF from the network by deleting the port from
         the bridge."""
+        network, mapping = vif
         dev = self.get_dev_name(mapping['vif_uuid'])
         try:
             utils.execute('ovs-vsctl', 'del-port',
@@ -173,8 +176,9 @@ class LibvirtOpenVswitchVirtualPortDriver(vif.VIFDriver):
     """VIF driver for Open vSwitch that uses integrated libvirt
        OVS virtual port XML (introduced in libvirt 0.9.11)."""
 
-    def plug(self, instance, network, mapping):
+    def plug(self, instance, vif):
         """ Pass data required to create OVS virtual port element"""
+        network, mapping = vif
 
         conf = config.LibvirtConfigGuestInterface()
 
@@ -188,7 +192,7 @@ class LibvirtOpenVswitchVirtualPortDriver(vif.VIFDriver):
 
         return conf
 
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, vif):
         """No action needed.  Libvirt takes care of cleanup"""
         pass
 
@@ -199,7 +203,8 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
     def get_dev_name(self, iface_id):
         return "tap" + iface_id[0:11]
 
-    def plug(self, instance, network, mapping):
+    def plug(self, instance, vif):
+        network, mapping = vif
         iface_id = mapping['vif_uuid']
         dev = self.get_dev_name(iface_id)
 
@@ -215,9 +220,10 @@ class QuantumLinuxBridgeVIFDriver(vif.VIFDriver):
 
         return conf
 
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, vif):
         """Unplug the VIF from the network by deleting the port from
         the bridge."""
+        network, mapping = vif
         dev = self.get_dev_name(mapping['vif_uuid'])
         try:
             utils.execute('ip', 'link', 'delete', dev, run_as_root=True)

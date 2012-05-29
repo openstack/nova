@@ -25,10 +25,10 @@ class VIFDriver(object):
         #                advantage of any kwargs should they need to
         pass
 
-    def plug(self, instance, network, mapping, **kwargs):
+    def plug(self, instance, vif, **kwargs):
         """Plug VIF into network."""
         raise NotImplementedError()
 
-    def unplug(self, instance, network, mapping, **kwargs):
+    def unplug(self, instance, vif, **kwargs):
         """Unplug VIF from network."""
         raise NotImplementedError()

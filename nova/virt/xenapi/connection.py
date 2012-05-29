@@ -492,6 +492,13 @@ class XenAPIConnection(driver.ComputeDriver):
         return self._pool.remove_from_aggregate(context,
                                                 aggregate, host, **kwargs)
 
+    def legacy_nwinfo(self):
+        """
+        Indicate if the driver requires the legacy network_info format.
+        """
+        # TODO(tr3buchet): remove this function once all virts return false
+        return False
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""

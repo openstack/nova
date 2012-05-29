@@ -33,7 +33,7 @@ FLAGS.set_default('vmwareapi_vlan_interface', 'vmnic0')
 class VMWareVlanBridgeDriver(vif.VIFDriver):
     """VIF Driver to setup bridge/VLAN networking using VMWare API."""
 
-    def plug(self, instance, network, mapping):
+    def plug(self, instance, vif):
         """Plug the VIF to specified instance using information passed.
         Currently we are plugging the VIF(s) during instance creation itself.
         We can use this method when we add support to add additional NIC to
@@ -83,7 +83,7 @@ class VMWareVlanBridgeDriver(vif.VIFDriver):
                 raise exception.InvalidVLANTag(bridge=bridge, tag=vlan_num,
                                                pgroup=pg_vlanid)
 
-    def unplug(self, instance, network, mapping):
+    def unplug(self, instance, vif):
         """Cleanup operations like deleting port group if no instance
         is associated with it."""
         pass

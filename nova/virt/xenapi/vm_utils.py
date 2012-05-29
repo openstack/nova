@@ -1782,7 +1782,7 @@ def _mounted_processing(device, key, net, metadata):
                        'non-linux instances): %s') % err)
 
 
-def _prepare_injectables(inst, networks_info):
+def _prepare_injectables(inst, network_info):
     """
     prepares the ssh key and the network configuration file to be
     injected into the disk image
@@ -1796,38 +1796,84 @@ def _prepare_injectables(inst, networks_info):
     metadata = inst['metadata']
     key = str(inst['key_data'])
     net = None
-    if networks_info:
+    if network_info:
         ifc_num = -1
         interfaces_info = []
-        have_injected_networks = False
-        for (network_ref, info) in networks_info:
+        for vif in network_info:
             ifc_num += 1
-            if not network_ref['injected']:
+            try:
+                if not vif['network'].get_meta('injected'):
+                    # network is not specified injected
+                    continue
+            except KeyError:
+                # vif network is None
                 continue
 
-            have_injected_networks = True
-            ip_v4 = ip_v6 = None
-            if 'ips' in info and len(info['ips']) > 0:
-                ip_v4 = info['ips'][0]
-            if 'ip6s' in info and len(info['ip6s']) > 0:
-                ip_v6 = info['ip6s'][0]
-            if len(info['dns']) > 0:
-                dns = info['dns'][0]
-            else:
-                dns = ''
+            # NOTE(tr3buchet): using all subnets in case dns is stored in a
+            #                  subnet that isn't chosen as first v4 or v6
+            #                  subnet in the case where there is more than one
+            # dns = list of address of each dns entry from each vif subnet
+            dns = [ip['address'] for subnet in vif['network']['subnets']
+                                 for ip in subnet['dns']]
+            dns = ' '.join(dns).strip()
+
             interface_info = {'name': 'eth%d' % ifc_num,
-                              'address': ip_v4 and ip_v4['ip'] or '',
-                              'netmask': ip_v4 and ip_v4['netmask'] or '',
-                              'gateway': info['gateway'],
-                              'broadcast': info['broadcast'],
-                              'dns': dns,
-                              'address_v6': ip_v6 and ip_v6['ip'] or '',
-                              'netmask_v6': ip_v6 and ip_v6['netmask'] or '',
-                              'gateway_v6': ip_v6 and info['gateway_v6'] or '',
+                              'address': '',
+                              'netmask': '',
+                              'gateway': '',
+                              'broadcast': '',
+                              'dns': dns or '',
+                              'address_v6': '',
+                              'netmask_v6': '',
+                              'gateway_v6': '',
                               'use_ipv6': FLAGS.use_ipv6}
+
+            # NOTE(tr3buchet): the original code used the old network_info
+            #                  which only supported a single ipv4 subnet
+            #                  (and optionally, a single ipv6 subnet).
+            #                  I modified it to use the new network info model,
+            #                  which adds support for multiple v4 or v6
+            #                  subnets. I chose to ignore any additional
+            #                  subnets, just as the original code ignored
+            #                  additional IP information
+
+            # populate v4 info if v4 subnet and ip exist
+            try:
+                # grab the first v4 subnet (or it raises)
+                subnet = [s for s in vif['network']['subnets']
+                            if s['version'] == 4][0]
+                # get the subnet's first ip (or it raises)
+                ip = subnet['ips'][0]
+
+                # populate interface_info
+                subnet_netaddr = subnet.as_netaddr()
+                interface_info['address'] = ip['address']
+                interface_info['netmask'] = subnet_netaddr.netmask
+                interface_info['gateway'] = subnet['gateway']['address']
+                interface_info['broadcast'] = subnet_netaddr.broadcast
+            except IndexError:
+                # there isn't a v4 subnet or there are no ips
+                pass
+
+            # populate v6 info if v6 subnet and ip exist
+            try:
+                # grab the first v6 subnet (or it raises)
+                subnet = [s for s in vif['network']['subnets']
+                            if s['version'] == 6][0]
+                # get the subnet's first ip (or it raises)
+                ip = subnet['ips'][0]
+
+                # populate interface_info
+                interface_info['address_v6'] = ip['address']
+                interface_info['netmask_v6'] = subnet.as_netaddr().netmask
+                interface_info['gateway_v6'] = subnet['gateway']['address']
+            except IndexError:
+                # there isn't a v6 subnet or there are no ips
+                pass
+
             interfaces_info.append(interface_info)
 
-        if have_injected_networks:
+        if interfaces_info:
             net = str(template(template_data,
                                 searchList=[{'interfaces': interfaces_info,
                                             'use_ipv6': FLAGS.use_ipv6}]))

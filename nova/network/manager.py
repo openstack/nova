@@ -1013,7 +1013,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         nw_info = self.build_network_info_model(context, vifs, networks,
                                                          rxtx_factor, host)
         self.db.instance_info_cache_update(context, instance_uuid,
-                                          {'network_info': nw_info.as_cache()})
+                                          {'network_info': nw_info.json()})
         return nw_info
 
     def build_network_info_model(self, context, vifs, networks,
