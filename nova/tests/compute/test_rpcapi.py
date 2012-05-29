@@ -104,6 +104,10 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('detach_volume', 'cast',
                 instance=self.fake_instance, volume_id='id')
 
+    def test_finish_revert_resize(self):
+        self._test_compute_api('finish_revert_resize', 'cast',
+                instance=self.fake_instance, migration_id='id', host='host')
+
     def test_get_console_output(self):
         self._test_compute_api('get_console_output', 'call',
                 instance=self.fake_instance, tail_length='tl')

@@ -96,6 +96,11 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid'], volume_id=volume_id),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def finish_revert_resize(self, ctxt, instance, migration_id, host):
+        self.cast(ctxt, self.make_msg('finish_revert_resize',
+                instance_uuid=instance['uuid'], migration_id=migration_id),
+                topic=self._compute_topic(ctxt, host, None))
+
     def get_console_output(self, ctxt, instance, tail_length):
         return self.call(ctxt, self.make_msg('get_console_output',
                 instance_uuid=instance['uuid'], tail_length=tail_length),
