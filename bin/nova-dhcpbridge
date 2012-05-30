@@ -96,8 +96,7 @@ def init_leases(network_id):
 def main():
     """Parse environment and arguments and call the approproate action."""
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
-    utils.default_cfgfile(flagfile)
-    argv = FLAGS(sys.argv)
+    argv = flags.parse_args(sys.argv)
     logging.setup()
 
     rpc.register_opts(FLAGS)

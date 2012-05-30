@@ -87,6 +87,7 @@ from nova.db import migration
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova import quota
 from nova import rpc
@@ -1668,26 +1669,24 @@ def methods_of(obj):
 
 def main():
     """Parse options and call the appropriate class/method."""
-    cfgfile = utils.default_cfgfile()
-
-    if cfgfile and not os.access(cfgfile, os.R_OK):
-        st = os.stat(cfgfile)
-        print "Could not read %s. Re-running with sudo" % cfgfile
-        try:
-            os.execvp('sudo', ['sudo', '-u', '#%s' % st.st_uid] + sys.argv)
-        except Exception:
-            print 'sudo failed, continuing as if nothing happened'
-
     rpc.register_opts(FLAGS)
 
     try:
-        argv = FLAGS(sys.argv)
+        argv = flags.parse_args(sys.argv)
         logging.setup()
-    except IOError, e:
-        if e.errno == errno.EACCES:
-            print _('Please re-run nova-manage as root.')
-            sys.exit(2)
-        raise
+    except cfg.ConfigFilesNotFoundError:
+        cfgfile = FLAGS.config_file[-1] if FLAGS.config_file else None
+        if cfgfile and not os.access(cfgfile, os.R_OK):
+            st = os.stat(cfgfile)
+            print _("Could not read %s. Re-running with sudo") % cfgfile
+            try:
+                os.execvp('sudo', ['sudo', '-u', '#%s' % st.st_uid] + sys.argv)
+            except Exception:
+                print _('sudo failed, continuing as if nothing happened')
+
+        print _('Please re-run nova-manage as root.')
+        sys.exit(2)
+
     script_name = argv.pop(0)
     if len(argv) < 1:
         print _("\nOpenStack Nova version: %(version)s (%(vcs)s)\n") % \
