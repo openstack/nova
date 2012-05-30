@@ -1,6 +1,7 @@
 *.pyc
 *.DS_Store
 local_settings.py
+ChangeLog
 CA/
 keeper
 instances
@@ -19,3 +20,4 @@ cover/*
 dist/*
 .coverage
 covhtml
+nova/tests/coverage.xml
