@@ -17,6 +17,7 @@
 
 """Handles ConsoleProxy API requests."""
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova.console import rpcapi as console_rpcapi
 from nova.db import base
 from nova import flags
@@ -61,11 +62,8 @@ class API(base.Base):
         rpcapi.add_console(context, instance['id'])
 
     def _get_console_topic(self, context, instance_host):
-        topic = rpc.queue_get_for(context,
-                                  FLAGS.compute_topic,
-                                  instance_host)
-        return rpc.call(context, topic, {'method': 'get_console_topic',
-                                         'args': {'fake': 1}})
+        rpcapi = compute_rpcapi.ComputeAPI()
+        return rpcapi.get_console_topic(context, instance_host)
 
     def _translate_uuid_if_necessary(self, context, instance_id):
         if utils.is_uuid_like(instance_id):
