@@ -54,7 +54,8 @@ class NotificationsTestCase(test.TestCase):
                    stub_network=True,
                    notification_driver='nova.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager',
-                   notify_on_state_change="vm_and_task_state")
+                   notify_on_state_change="vm_and_task_state",
+                   host='testhost')
 
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -167,3 +168,33 @@ class NotificationsTestCase(test.TestCase):
         self.assertEquals(vm_states.BUILDING, payload["state"])
         self.assertEquals(task_states.SPAWNING, payload["old_task_state"])
         self.assertEquals(None, payload["new_task_state"])
+
+    def test_update_no_service_name(self):
+        notifications.send_update_with_states(self.context, self.instance,
+                vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
+                None)
+        self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
+
+        # service name should default to 'compute'
+        notif = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals('compute.testhost', notif['publisher_id'])
+
+    def test_update_with_service_name(self):
+        notifications.send_update_with_states(self.context, self.instance,
+                vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
+                None, service="testservice")
+        self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
+
+        # service name should default to 'compute'
+        notif = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals('testservice.testhost', notif['publisher_id'])
+
+    def test_update_with_host_name(self):
+        notifications.send_update_with_states(self.context, self.instance,
+                vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
+                None, host="someotherhost")
+        self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
+
+        # service name should default to 'compute'
+        notif = test_notifier.NOTIFICATIONS[0]
+        self.assertEquals('compute.someotherhost', notif['publisher_id'])

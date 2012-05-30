@@ -231,7 +231,8 @@ class Scheduler(object):
         # update instance state and notify
         (old_ref, new_instance_ref) = db.instance_update_and_get_original(
                 context, instance_id, values)
-        notifications.send_update(context, old_ref, new_instance_ref)
+        notifications.send_update(context, old_ref, new_instance_ref,
+                service="scheduler")
 
         src = instance_ref['host']
         cast_to_compute_host(context, src, 'live_migration',

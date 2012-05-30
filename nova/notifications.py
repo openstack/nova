@@ -43,18 +43,18 @@ FLAGS = flags.FLAGS
 FLAGS.register_opt(notify_state_opt)
 
 
-def send_update(context, old_instance, new_instance, host=None):
+def send_update(context, old_instance, new_instance, service=None, host=None):
     """Send compute.instance.update notification to report changes
     in vm state and (optionally) task state
     """
 
     send_update_with_states(context, new_instance, old_instance["vm_state"],
             new_instance["vm_state"], old_instance["task_state"],
-            new_instance["task_state"], host)
+            new_instance["task_state"], service, host)
 
 
 def send_update_with_states(context, instance, old_vm_state, new_vm_state,
-        old_task_state, new_task_state, host=None):
+        old_task_state, new_task_state, service=None, host=None):
     """Send compute.instance.update notification to report changes
     in vm state and (optionally) task state
     """
@@ -76,14 +76,15 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
     if fire_update:
         try:
             _send_instance_update_notification(context, instance, old_vm_state,
-                    old_task_state, new_vm_state, new_task_state, host)
+                    old_task_state, new_vm_state, new_task_state, service,
+                    host)
         except Exception:
             LOG.exception(_("Failed to send state update notification"),
                     instance=instance)
 
 
 def _send_instance_update_notification(context, instance, old_vm_state,
-        old_task_state, new_vm_state, new_task_state, host=None):
+        old_task_state, new_vm_state, new_task_state, service=None, host=None):
     """Send 'compute.instance.exists' notification to inform observers
     about instance state changes"""
 
@@ -117,10 +118,14 @@ def _send_instance_update_notification(context, instance, old_vm_state,
     image_meta_props = image_meta(system_metadata)
     payload["image_meta"] = image_meta_props
 
-    if not host:
-        host = FLAGS.host
+    # if the service name (e.g. api/scheduler/compute) is not provided, default
+    # to "compute"
+    if not service:
+        service = "compute"
 
-    notifier_api.notify(context, host, 'compute.instance.update',
+    publisher_id = notifier_api.publisher_id(service, host)
+
+    notifier_api.notify(context, publisher_id, 'compute.instance.update',
             notifier_api.INFO, payload)
 
 
