@@ -32,7 +32,6 @@ from nova.api import ec2
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova import block_device
-from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova import test
@@ -214,9 +213,9 @@ class ApiEc2TestCase(test.TestCase):
         # NOTE(vish): skipping the Authorizer
         roles = ['sysadmin', 'netadmin']
         ctxt = context.RequestContext('fake', 'fake', roles=roles)
-        self.app = auth.InjectContext(ctxt,
-                ec2.Requestify(ec2.Authorizer(ec2.Executor()),
-                               'nova.api.ec2.cloud.CloudController'))
+        self.app = auth.InjectContext(ctxt, ec2.FaultWrapper(
+                ec2.RequestLogging(ec2.Requestify(ec2.Authorizer(ec2.Executor()
+                               ), 'nova.api.ec2.cloud.CloudController'))))
 
     def expect_http(self, host=None, is_secure=False, api_version=None):
         """Returns a new EC2 connection"""
