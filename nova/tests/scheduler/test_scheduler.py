@@ -23,6 +23,7 @@ import json
 
 from nova.compute import api as compute_api
 from nova.compute import power_state
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -539,7 +540,9 @@ class SchedulerTestCase(test.TestCase):
                 dest).AndReturn('dest_queue')
         rpc.call(self.context, 'dest_queue',
                 {'method': 'compare_cpu',
-                 'args': {'cpu_info': 'fake_cpu_info'}}).AndReturn(True)
+                 'args': {'cpu_info': 'fake_cpu_info'},
+                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None
+                ).AndReturn(True)
 
         db.instance_update_and_get_original(self.context, instance['id'],
                 {"vm_state": vm_states.MIGRATING}).AndReturn(
@@ -957,8 +960,9 @@ class SchedulerTestCase(test.TestCase):
                 dest).AndReturn('dest_queue')
         rpc.call(self.context, 'dest_queue',
                 {'method': 'compare_cpu',
-                 'args': {'cpu_info': 'fake_cpu_info'}}).AndRaise(
-                         rpc_common.RemoteError())
+                 'args': {'cpu_info': 'fake_cpu_info'},
+                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None
+                ).AndRaise(rpc_common.RemoteError())
 
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.RemoteError,

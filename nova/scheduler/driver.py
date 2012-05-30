@@ -23,6 +23,7 @@ Scheduler base class that all Schedulers should inherit from
 
 from nova.compute import api as compute_api
 from nova.compute import power_state
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 from nova import db
 from nova import exception
@@ -137,6 +138,7 @@ class Scheduler(object):
         self.host_manager = importutils.import_object(
                 FLAGS.scheduler_host_manager)
         self.compute_api = compute_api.API()
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def get_host_list(self):
         """Get a list of hosts from the HostManager."""
@@ -354,10 +356,8 @@ class Scheduler(object):
 
         # Checking cpuinfo.
         try:
-            rpc.call(context,
-                     rpc.queue_get_for(context, FLAGS.compute_topic, dest),
-                     {"method": 'compare_cpu',
-                      "args": {'cpu_info': oservice_ref['cpu_info']}})
+            self.compute_rpcapi.compare_cpu(context, oservice_ref['cpu_info'],
+                                            dest)
 
         except exception.InvalidCPUInfo:
             src = instance_ref['host']

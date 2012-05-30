@@ -84,6 +84,10 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 mountpoint=mountpoint),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def compare_cpu(self, ctxt, cpu_info, host):
+        return self.call(ctxt, self.make_msg('compare_cpu', cpu_info=cpu_info),
+                topic=self._compute_topic(ctxt, host, None))
+
     def confirm_resize(self, ctxt, instance, migration_id, host,
             cast=True):
         rpc_method = self.cast if cast else self.call
