@@ -57,15 +57,14 @@ from nova import flags
 from nova import log as logging
 from nova import rpc
 from nova import utils
-import nova.volume.utils
-
+from nova.volume import utils as volume_utils
 
 FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
     rpc.register_opts(FLAGS)
     admin_context = context.get_admin_context()
-    utils.default_flagfile()
+    utils.default_cfgfile()
     flags.FLAGS(sys.argv)
     logging.setup()
     begin, end = utils.last_completed_audit_period()
@@ -77,7 +76,7 @@ if __name__ == '__main__':
     print "Found %d volumes" % len(volumes)
     for volume_ref in volumes:
         try:
-            nova.volume.utils.notify_usage_exists(
+            volume_utils.notify_usage_exists(
                     admin_context, volume_ref)
         except Exception, e:
             print traceback.format_exc(e)
