@@ -168,10 +168,11 @@ def fanout_cast(conf, context, topic, msg):
     if not method:
         return
     args = msg.get('args', {})
+    version = msg.get('version', None)
 
     for consumer in CONSUMERS.get(topic, []):
         try:
-            consumer.call(context, method, args, None)
+            consumer.call(context, version, method, args, None)
         except Exception:
             pass
 
