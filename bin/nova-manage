@@ -80,6 +80,7 @@ from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.compat import flagfile
 from nova.compute import instance_types
+from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import crypto
 from nova import db
@@ -1169,13 +1170,9 @@ class VolumeCommands(object):
             print "volume is not attached to an instance"
             return
         instance = db.instance_get(ctxt, volume['instance_id'])
-        host = instance['host']
-        rpc.cast(ctxt,
-                 rpc.queue_get_for(ctxt, FLAGS.compute_topic, host),
-                 {"method": "attach_volume",
-                  "args": {"instance_id": instance['id'],
-                           "volume_id": volume['id'],
-                           "mountpoint": volume['mountpoint']}})
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.attach_volume(ctxt, instance, volume['id'],
+                             volume['mountpoint'])
 
 
 class InstanceTypeCommands(object):
