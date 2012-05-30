@@ -489,21 +489,17 @@ class Scheduler(object):
         """
 
         src = instance_ref['host']
-        dst_t = rpc.queue_get_for(context, FLAGS.compute_topic, dest)
-        src_t = rpc.queue_get_for(context, FLAGS.compute_topic, src)
 
-        filename = rpc.call(context, dst_t,
-                            {"method": 'create_shared_storage_test_file'})
+        filename = self.compute_rpcapi.create_shared_storage_test_file(context,
+                dest)
 
         try:
             # make sure existence at src host.
-            ret = rpc.call(context, src_t,
-                        {"method": 'check_shared_storage_test_file',
-                        "args": {'filename': filename}})
+            ret = self.compute_rpcapi.check_shared_storage_test_file(context,
+                    filename, src)
 
         finally:
-            rpc.cast(context, dst_t,
-                    {"method": 'cleanup_shared_storage_test_file',
-                    "args": {'filename': filename}})
+            self.compute_rpcapi.cleanup_shared_storage_test_file(context,
+                    filename, dest)
 
         return ret

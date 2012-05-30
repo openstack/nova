@@ -84,6 +84,16 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 mountpoint=mountpoint),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def check_shared_storage_test_file(self, ctxt, filename, host):
+        return self.call(ctxt, self.make_msg('check_shared_storage_test_file',
+                filename=filename),
+                topic=self._compute_topic(ctxt, host, None))
+
+    def cleanup_shared_storage_test_file(self, ctxt, filename, host):
+        self.cast(ctxt, self.make_msg('cleanup_shared_storage_test_file',
+                filename=filename),
+                topic=self._compute_topic(ctxt, host, None))
+
     def compare_cpu(self, ctxt, cpu_info, host):
         return self.call(ctxt, self.make_msg('compare_cpu', cpu_info=cpu_info),
                 topic=self._compute_topic(ctxt, host, None))
@@ -94,6 +104,11 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
         return rpc_method(ctxt, self.make_msg('confirm_resize',
                 instance_uuid=instance['uuid'], migration_id=migration_id),
                 topic=self._compute_topic(ctxt, host, instance))
+
+    def create_shared_storage_test_file(self, ctxt, host):
+        return self.call(ctxt,
+                self.make_msg('create_shared_storage_test_file'),
+                topic=self._compute_topic(ctxt, host, None))
 
     def detach_volume(self, ctxt, instance, volume_id):
         self.cast(ctxt, self.make_msg('detach_volume',
