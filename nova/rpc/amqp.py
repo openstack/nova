@@ -26,6 +26,7 @@ AMQP, but is deprecated and predates this code.
 """
 
 import inspect
+import logging
 import sys
 import uuid
 
@@ -33,8 +34,6 @@ from eventlet import greenpool
 from eventlet import pools
 from eventlet import semaphore
 
-from nova import context
-from nova import log as logging
 from nova.openstack.common import excutils
 from nova.openstack.common import local
 import nova.rpc.common as rpc_common
@@ -169,12 +168,12 @@ def msg_reply(conf, msg_id, connection_pool, reply=None, failure=None,
         conn.direct_send(msg_id, msg)
 
 
-class RpcContext(context.RequestContext):
+class RpcContext(rpc_common.CommonRpcContext):
     """Context that supports replying to a rpc.call"""
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.msg_id = kwargs.pop('msg_id', None)
         self.conf = kwargs.pop('conf')
-        super(RpcContext, self).__init__(*args, **kwargs)
+        super(RpcContext, self).__init__(**kwargs)
 
     def reply(self, reply=None, failure=None, ending=False,
               connection_pool=None):
