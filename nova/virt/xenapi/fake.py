@@ -475,19 +475,14 @@ class SessionBase(object):
         name_label = db_ref['name_label']
         read_only = db_ref['read_only']
         sharable = db_ref['sharable']
-        vdi_ref = create_vdi(name_label, sr_ref, sharable=sharable,
-                             read_only=read_only)
-        return vdi_ref
+        other_config = db_ref['other_config'].copy()
+        return create_vdi(name_label, sr_ref, sharable=sharable,
+                          read_only=read_only, other_config=other_config)
 
     def VDI_clone(self, _1, vdi_to_clone_ref):
         db_ref = _db_content['VDI'][vdi_to_clone_ref]
-        name_label = db_ref['name_label']
-        read_only = db_ref['read_only']
         sr_ref = db_ref['SR']
-        sharable = db_ref['sharable']
-        vdi_ref = create_vdi(name_label, sr_ref, sharable=sharable,
-                             read_only=read_only)
-        return vdi_ref
+        return self.VDI_copy(_1, vdi_to_clone_ref, sr_ref)
 
     def host_compute_free_memory(self, _1, ref):
         #Always return 12GB available

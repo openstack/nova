@@ -39,7 +39,9 @@ def stubout_firewall_driver(stubs, conn):
 def stubout_instance_snapshot(stubs):
     @classmethod
     def fake_fetch_image(cls, context, session, instance, image, type):
-        return [dict(vdi_type='root', vdi_uuid=_make_fake_vdi())]
+        return {'root': dict(uuid=_make_fake_vdi(), file=None),
+                'kernel': dict(uuid=_make_fake_vdi(), file=None),
+                'ramdisk': dict(uuid=_make_fake_vdi(), file=None)}
 
     stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
 
@@ -134,9 +136,8 @@ def stubout_fetch_image_glance_disk(stubs, raise_failure=False):
         else:
             filename = "unknown"
 
-        return [dict(vdi_type=vm_utils.ImageType.to_string(image_type),
-                     vdi_uuid=None,
-                     file=filename)]
+        vdi_type = vm_utils.ImageType.to_string(image_type)
+        return {vdi_type: dict(uuid=None, file=filename)}
 
     stubs.Set(vm_utils.VMHelper, '_fetch_image_glance_disk',
               _fake_fetch_image_glance_disk)
@@ -338,8 +339,10 @@ def stub_out_migration_methods(stubs):
         return 'vm_ref', dict(image='foo', snap='bar')
 
     def fake_move_disks(self, instance, disk_info):
-        vdi_ref = fake.create_vdi('new', 'fake')
-        return fake.get_record('VDI', vdi_ref)['uuid']
+        vdi_ref = fake.create_vdi(instance['name'], 'fake')
+        vdi_rec = fake.get_record('VDI', vdi_ref)
+        vdi_rec['other_config']['nova_disk_type'] = 'root'
+        return {'uuid': vdi_rec['uuid'], 'ref': vdi_ref}
 
     @classmethod
     def fake_get_vdi(cls, session, vm_ref):
