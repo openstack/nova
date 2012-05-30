@@ -444,11 +444,7 @@ class Scheduler(object):
         available = available_gb * (1024 ** 3)
 
         # Getting necessary disk size
-        topic = rpc.queue_get_for(context, FLAGS.compute_topic,
-                                          instance_ref['host'])
-        ret = rpc.call(context, topic,
-                       {"method": 'get_instance_disk_info',
-                        "args": {'instance_name': instance_ref['name']}})
+        ret = self.compute_rpcapi.get_instance_disk_info(context, instance_ref)
         disk_infos = jsonutils.loads(ret)
 
         necessary = 0

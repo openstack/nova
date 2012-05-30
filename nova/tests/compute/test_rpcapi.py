@@ -61,9 +61,10 @@ class ComputeRpcAPITestCase(test.TestCase):
                           'pre_live_migration', 'remove_volume_connection',
                           'post_live_migration_at_destination']:
                 expected_msg['args']['instance_id'] = instance['id']
+            elif method == 'get_instance_disk_info':
+                expected_msg['args']['instance_name'] = instance['name']
             else:
                 expected_msg['args']['instance_uuid'] = instance['uuid']
-
         expected_msg['version'] = rpcapi.RPC_API_VERSION
 
         cast_and_call = ['confirm_resize', 'stop_instance']
@@ -143,6 +144,10 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_get_diagnostics(self):
         self._test_compute_api('get_diagnostics', 'call',
+                instance=self.fake_instance)
+
+    def test_get_instance_disk_info(self):
+        self._test_compute_api('get_instance_disk_info', 'call',
                 instance=self.fake_instance)
 
     def test_get_vnc_console(self):
