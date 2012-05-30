@@ -2810,6 +2810,7 @@ def volume_attached(context, volume_id, instance_uuid, mountpoint):
         volume_ref['mountpoint'] = mountpoint
         volume_ref['attach_status'] = 'attached'
         volume_ref['instance_uuid'] = instance_uuid
+        volume_ref['attach_time'] = utils.utcnow()
         volume_ref.save(session=session)
 
 
