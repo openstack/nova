@@ -243,6 +243,11 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid'], address=address),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def remove_volume_connection(self, ctxt, instance, volume_id, host):
+        return self.call(ctxt, self.make_msg('remove_volume_connection',
+                instance_id=instance['id'], volume_id=volume_id),
+                topic=self._compute_topic(ctxt, host, None))
+
     def rescue_instance(self, ctxt, instance, rescue_password):
         self.cast(ctxt, self.make_msg('rescue_instance',
                 instance_uuid=instance['uuid'],

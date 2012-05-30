@@ -58,7 +58,7 @@ class ComputeRpcAPITestCase(test.TestCase):
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
             if method in ['rollback_live_migration_at_destination',
-                          'pre_live_migration',
+                          'pre_live_migration', 'remove_volume_connection',
                           'post_live_migration_at_destination']:
                 expected_msg['args']['instance_id'] = instance['id']
             else:
@@ -220,6 +220,10 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_remove_fixed_ip_from_instance(self):
         self._test_compute_api('remove_fixed_ip_from_instance', 'cast',
                 instance=self.fake_instance, address='addr')
+
+    def test_remove_volume_connection(self):
+        self._test_compute_api('remove_volume_connection', 'call',
+                instance=self.fake_instance, volume_id='id', host='host')
 
     def test_rescue_instance(self):
         self._test_compute_api('rescue_instance', 'cast',
