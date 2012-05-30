@@ -151,7 +151,7 @@ def create_vdi(name_label, sr_ref, **kwargs):
         'sharable': False,
         'other_config': {},
         'location': '',
-        'xenstore_data': '',
+        'xenstore_data': {},
         'sm_config': {},
         'physical_utilisation': '123',
         'managed': True,
@@ -442,13 +442,14 @@ class SessionBase(object):
         return _db_content['PIF']
 
     def VM_get_xenstore_data(self, _1, vm_ref):
-        return _db_content['VM'][vm_ref].get('xenstore_data', '')
+        return _db_content['VM'][vm_ref].get('xenstore_data', {})
 
     def VM_remove_from_xenstore_data(self, _1, vm_ref, key):
         db_ref = _db_content['VM'][vm_ref]
         if not 'xenstore_data' in db_ref:
             return
-        db_ref['xenstore_data'][key] = None
+        if key in db_ref['xenstore_data']:
+            del db_ref['xenstore_data'][key]
 
     def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
         db_ref = _db_content['VM'][vm_ref]
@@ -460,7 +461,8 @@ class SessionBase(object):
         db_ref = _db_content['VDI'][vdi_ref]
         if not 'other_config' in db_ref:
             return
-        db_ref['other_config'][key] = None
+        if key in db_ref['other_config']:
+            del db_ref['other_config'][key]
 
     def VDI_add_to_other_config(self, _1, vdi_ref, key, value):
         db_ref = _db_content['VDI'][vdi_ref]
