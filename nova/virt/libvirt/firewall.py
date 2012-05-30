@@ -160,7 +160,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             # in the thread pool no matter what.
             tpool.execute(self._conn.nwfilterDefineXML, xml)
         else:
-            # NOTE(maoy): self._conn is a eventlet.tpool.Proxy object
+            # NOTE(maoy): self._conn is an eventlet.tpool.Proxy object
             self._conn.nwfilterDefineXML(xml)
 
     def unfilter_instance(self, instance, network_info):

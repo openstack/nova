@@ -57,7 +57,7 @@ def get_connection(read_only=False):
 
     **Related flags**
 
-    :connection_type:  A string literal that falls through a if/elif structure
+    :connection_type:  A string literal that falls through an if/elif structure
                        to determine what virtualization mechanism to use.
                        Values may be
 

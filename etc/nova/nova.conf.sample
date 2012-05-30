@@ -49,7 +49,7 @@
 # debug=false
 ###### (StrOpt) Name of network to use to set access ips for instances
 # default_access_ip_network_name=<None>
-###### (StrOpt) The default format a ephemeral_volume will be formatted with on creation.
+###### (StrOpt) The default format an ephemeral_volume will be formatted with on creation.
 # default_ephemeral_format=<None>
 ###### (StrOpt) default image to use, testing only
 # default_image="ami-11111"

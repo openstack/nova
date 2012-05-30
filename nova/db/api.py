@@ -1093,7 +1093,7 @@ def volume_get_all_by_host(context, host):
 
 
 def volume_get_all_by_instance_uuid(context, instance_uuid):
-    """Get all volumes belonging to a instance."""
+    """Get all volumes belonging to an instance."""
     return IMPL.volume_get_all_by_instance_uuid(context, instance_uuid)
 
 
@@ -1202,7 +1202,7 @@ def block_device_mapping_update_or_create(context, values):
 
 
 def block_device_mapping_get_all_by_instance(context, instance_uuid):
-    """Get all block device mapping belonging to a instance"""
+    """Get all block device mapping belonging to an instance"""
     return IMPL.block_device_mapping_get_all_by_instance(context,
                                                          instance_uuid)
 
@@ -1532,7 +1532,7 @@ def instance_type_get_by_flavor_id(context, id):
 
 
 def instance_type_destroy(context, name):
-    """Delete a instance type."""
+    """Delete an instance type."""
     return IMPL.instance_type_destroy(context, name)
 
 

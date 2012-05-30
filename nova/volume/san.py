@@ -361,7 +361,7 @@ class SolarisISCSIDriver(SanISCSIDriver):
         iscsi_name = self._build_iscsi_target_name(volume)
         target_group_name = 'tg-%s' % volume['name']
 
-        # Create a iSCSI target, mapped to just this volume
+        # Create an iSCSI target, mapped to just this volume
         if force_create or not self._target_group_exists(target_group_name):
             self._execute('/usr/sbin/stmfadm', 'create-tg', target_group_name)
 

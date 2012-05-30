@@ -50,7 +50,7 @@ class QuantumMelangeIPAMLib(object):
         """Contact Melange and create a subnet for any non-NULL
            IPv4 or IPv6 subnets.
 
-           Also create a entry in the Nova networks DB, but only
+           Also create an entry in the Nova networks DB, but only
            to store values not represented in Melange or to
            temporarily provide compatibility with Nova code that
            accesses IPAM data directly via the DB (e.g., nova-api)

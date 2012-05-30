@@ -655,7 +655,7 @@ class IntOpt(Opt):
     """Int opt values are converted to integers using the int() builtin."""
 
     def _get_from_config_parser(self, cparser, section):
-        """Retrieve the opt value as a integer from ConfigParser."""
+        """Retrieve the opt value as an integer from ConfigParser."""
         return [int(v) for v in cparser.get(section, self.dest)]
 
     def _get_optparse_kwargs(self, group, **kwargs):
@@ -1289,7 +1289,7 @@ class ConfigOpts(collections.Mapping):
             return value
 
     def _get_group(self, group_or_name, autocreate=False):
-        """Looks up a OptGroup object.
+        """Looks up an OptGroup object.
 
         Helper function to return an OptGroup given a parameter which can
         either be the group's name or an OptGroup object.
