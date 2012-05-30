@@ -1378,7 +1378,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             network_info = self._get_instance_nw_info(context, instance_ref)
         except Exception, error:
-            with utils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception():
                 msg = _('%s. Setting instance vm_state to ERROR')
                 LOG.error(msg % error)
                 self._set_instance_error_state(context, instance_uuid)
