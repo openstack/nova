@@ -31,7 +31,6 @@ from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import faults
 from nova.api import validator
-from nova.auth import manager
 from nova import context
 from nova import exception
 from nova import flags
@@ -188,76 +187,6 @@ class Lockout(wsgi.Middleware):
         return res
 
 
-class EC2Token(wsgi.Middleware):
-    """Deprecated, only here to make merging easier."""
-
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        # Read request signature and access id.
-        try:
-            signature = req.params['Signature']
-            access = req.params['AWSAccessKeyId']
-        except KeyError, e:
-            LOG.exception(e)
-            raise webob.exc.HTTPBadRequest()
-
-        # Make a copy of args for authentication and signature verification.
-        auth_params = dict(req.params)
-        # Not part of authentication args
-        auth_params.pop('Signature')
-
-        if "ec2" in FLAGS.keystone_ec2_url:
-            LOG.warning("Configuration setting for keystone_ec2_url needs "
-                        "to be updated to /tokens only. The /ec2 prefix is "
-                        "being deprecated")
-            # Authenticate the request.
-            creds = {'ec2Credentials': {'access': access,
-                                        'signature': signature,
-                                        'host': req.host,
-                                        'verb': req.method,
-                                        'path': req.path,
-                                        'params': auth_params,
-                                       }}
-        else:
-            # Authenticate the request.
-            creds = {'auth': {'OS-KSEC2:ec2Credentials': {'access': access,
-                                        'signature': signature,
-                                        'host': req.host,
-                                        'verb': req.method,
-                                        'path': req.path,
-                                        'params': auth_params,
-                                       }}}
-        creds_json = jsonutils.dumps(creds)
-        headers = {'Content-Type': 'application/json'}
-
-        # Disable "has no x member" pylint error
-        # for httplib and urlparse
-        # pylint: disable-msg=E1101
-        o = urlparse.urlparse(FLAGS.keystone_ec2_url)
-        if o.scheme == "http":
-            conn = httplib.HTTPConnection(o.netloc)
-        else:
-            conn = httplib.HTTPSConnection(o.netloc)
-        conn.request('POST', o.path, body=creds_json, headers=headers)
-        response = conn.getresponse().read()
-        conn.close()
-
-        # NOTE(vish): We could save a call to keystone by
-        #             having keystone return token, tenant,
-        #             user, and roles from this call.
-
-        result = jsonutils.loads(response)
-        try:
-            token_id = result['access']['token']['id']
-        except (AttributeError, KeyError), e:
-            LOG.exception(e)
-            raise webob.exc.HTTPBadRequest()
-
-        # Authenticated!
-        req.headers['X-Auth-Token'] = token_id
-        return self.application
-
-
 class EC2KeystoneAuth(wsgi.Middleware):
     """Authenticate an EC2 request with keystone and convert to context."""
 
@@ -354,57 +283,6 @@ class NoAuth(wsgi.Middleware):
                                      remote_address=remote_address)
 
         req.environ['nova.context'] = ctx
-        return self.application
-
-
-class Authenticate(wsgi.Middleware):
-    """Authenticate an EC2 request and add 'nova.context' to WSGI environ."""
-
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        # Read request signature and access id.
-        try:
-            signature = req.params['Signature']
-            access = req.params['AWSAccessKeyId']
-        except KeyError:
-            raise webob.exc.HTTPBadRequest()
-
-        # Make a copy of args for authentication and signature verification.
-        auth_params = dict(req.params)
-        # Not part of authentication args
-        auth_params.pop('Signature')
-
-        # Authenticate the request.
-        authman = manager.AuthManager()
-        try:
-            (user, project) = authman.authenticate(
-                    access,
-                    signature,
-                    auth_params,
-                    req.method,
-                    req.host,
-                    req.path)
-        # Be explicit for what exceptions are 403, the rest bubble as 500
-        except (exception.NotFound, exception.NotAuthorized,
-                exception.InvalidSignature) as ex:
-            LOG.audit(_("Authentication Failure: %s"), unicode(ex))
-            raise webob.exc.HTTPForbidden()
-
-        # Authenticated!
-        remote_address = req.remote_addr
-        if FLAGS.use_forwarded_for:
-            remote_address = req.headers.get('X-Forwarded-For', remote_address)
-        roles = authman.get_active_roles(user, project)
-        ctxt = context.RequestContext(user_id=user.id,
-                                      project_id=project.id,
-                                      is_admin=user.is_admin(),
-                                      roles=roles,
-                                      remote_address=remote_address)
-        req.environ['nova.context'] = ctxt
-        uname = user.name
-        pname = project.name
-        msg = _('Authenticated Request For %(uname)s:%(pname)s)') % locals()
-        LOG.audit(msg, context=req.environ['nova.context'])
         return self.application
 
 
