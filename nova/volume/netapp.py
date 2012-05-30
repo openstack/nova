@@ -35,6 +35,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.volume import driver
+from nova.volume import volume_types
 
 LOG = logging.getLogger("nova.volume.driver")
 
@@ -76,7 +77,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         if 'failed' == response.Status:
             name = request.Name
             reason = response.Reason
-            msg = _('API %(name)sfailed: %(reason)s')
+            msg = _('API %(name)s failed: %(reason)s')
             raise exception.Error(msg % locals())
 
     def _create_client(self, wsdl_url, login, password, hostname, port):
@@ -288,6 +289,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         project = volume['project_id']
         display_name = volume['display_name']
         display_description = volume['display_description']
+        description = None
         if display_name:
             if display_description:
                 description = display_name + "\n" + display_description
@@ -299,6 +301,15 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             size = default_size
         else:
             size = str(int(volume['size']) * gigabytes)
+        """
+        LOG.debug('volume=%s' % dict(volume))
+        LOG.debug('volume_type_id=%s' % volume['volume_type_id'])
+        volume_type = volume_types.get_volume_type(None,
+                                            volume['volume_type_id'])
+        if volume_type is not None:
+            pass
+        LOG.debug('volume_type=%s' % volume_type)
+        """
         self._provision(name, description, project, size)
 
     def delete_volume(self, volume):
@@ -663,14 +674,234 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self._ensure_initiator_unmapped(lun.HostId, lun.LunPath,
                                         initiator_name)
 
-    def create_volume_from_snapshot(self, volume, snapshot):
-        raise NotImplementedError()
+    def _create_volume_snapshot(self, host_id, vol_name, snapshot_name):
+        """
+        XXX Obsolete - remove this method
+        Take a snapshot of a NetApp volume (not an OpenStack volume --
+        although OpenStack volumes have a 1-to-1 mapping with NetApp volumes
+        without any cloning). The snapshot will have the specified name.
+        """
+        supports_lun_clone = False
+        request = self.client.factory.create('Request')
+        request.Name = 'snapshot-create'
+        snapshot_create_xml = '<volume>%s</volume><snapshot>%s</snapshot>'
+        if supports_lun_clone:
+            snapshot_create_xml += ('<is-valid-lun-clone-snapshot>true'
+                                    '</is-valid-lun-clone-snapshot>')
+        request.Args = text.Raw(snapshot_create_xml %
+                                (vol_name, snapshot_name))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+
+    def _delete_volume_snapshot(self, host_id, vol_name, snapshot_name):
+        """
+        XXX Obsolete - remove this method
+        Take a snapshot of a NetApp volume.
+        """
+        request = self.client.factory.create('Request')
+        request.Name = 'snapshot-delete'
+        snapshot_delete_xml = '<volume>%s</volume><snapshot>%s</snapshot>'
+        request.Args = text.Raw(snapshot_delete_xml %
+                                (vol_name, snapshot_name))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+        
+    def _clone_lun_old(self, host_id, vol_name, snapshot_name, qtree_name,
+                   lun_name, clone_name):
+        """
+        XXX Obsolete - remove this method
+        Create a clone of a NetApp LUN. The clone initially consumes no space
+        and is not space reserved.
+        """
+        request = self.client.factory.create('Request')
+        request.Name = 'lun-create-from-snapshot'
+        lun_clone_xml = (
+            '<path>%s</path><snapshot-lun-path>%s</snapshot-lun-path>'
+            '<space-reservation-enabled>false</space-reservation-enabled>'
+            '<type>linux</type>')
+        path = '/vol/%s/%s/%s' % (vol_name, qtree_name, clone_name)
+        snapshot_path = '/vol/%s/.snapshot/%s/%s/%s' % (vol_name,
+                        snapshot_name, qtree_name, lun_name)
+        request.Args = text.Raw(lun_clone_xml % (path, snapshot_path))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+
+    def _is_clone_done(self, host_id, clone_op_id, volume_uuid):
+        """
+        Check the status of a clone operation. Return True if done, False
+        otherwise.
+        """
+        request = self.client.factory.create('Request')
+        request.Name = 'clone-list-status'
+        clone_list_status_xml = (
+            '<clone-id><clone-id-info>'
+            '<clone-op-id>%s</clone-op-id>'
+            '<volume-uuid>%s</volume-uuid>'
+            '</clone-id-info></clone-id>')
+        request.Args = text.Raw(clone_list_status_xml % (clone_op_id,
+                                                          volume_uuid))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+        status = response.Results['status']
+        if self._api_elem_is_empty(status):
+            return False
+        ops_info = status[0]['ops-info'][0]
+        state = ops_info['clone-state'][0]
+        return 'completed' == state
+
+    def _clone_lun(self, host_id, src_path, dest_path, snap):
+        """
+        Create a clone of a NetApp LUN. The clone initially consumes no space
+        and is not space reserved.
+        """
+        request = self.client.factory.create('Request')
+        request.Name = 'clone-start'
+        clone_start_xml = (
+            '<source-path>%s</source-path><no-snap>%s</no-snap>'
+            '<destination-path>%s</destination-path>')
+        if snap:
+            no_snap = 'false'
+        else:
+            no_snap = 'true'
+        request.Args = text.Raw(clone_start_xml % (src_path, no_snap,
+                                                    dest_path))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+        clone_id = response.Results['clone-id'][0]
+        clone_id_info = clone_id['clone-id-info'][0]
+        clone_op_id = clone_id_info['clone-op-id'][0]
+        volume_uuid = clone_id_info['volume-uuid'][0]
+        while not self._is_clone_done(host_id, clone_op_id, volume_uuid):
+            time.sleep(5)
+
+    def _refresh_dfm_luns(self, host_id):
+        """
+        Refresh the LUN list for one filer in DFM.
+        """
+        server = self.client.service
+        server.DfmObjectRefresh(ObjectNameOrId=host_id, ChildType='lun_path')
+        while True:
+            time.sleep(15)
+            res = server.DfmMonitorTimestampList(HostNameOrId=host_id)
+            for timestamp in res.DfmMonitoringTimestamp:
+                if 'lun' != timestamp.MonitorName:
+                    continue
+                if timestamp.LastMonitoringTimestamp:
+                    return
+
+    def _destroy_lun(self, host_id, lun_path):
+        """
+        Destroy a LUN on the filer
+        """
+        request = self.client.factory.create('Request')
+        request.Name = 'lun-offline'
+        path_xml = '<path>%s</path>'
+        request.Args = text.Raw(path_xml % lun_path)
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+        request = self.client.factory.create('Request')
+        request.Name = 'lun-destroy'
+        request.Args = text.Raw(path_xml % lun_path)
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+
+    def _resize_volume(self, host_id, vol_name, new_size):
+        """
+        Resize the volume by the amount requested.
+        """
+        request = self.client.factory.create('Request')
+        request.Name = 'volume-size'
+        volume_size_xml = (
+            '<volume>%s</volume><new_size>%s</new_size>')
+        request.Args = text.Raw(qtree_create_xml % (vol_name, new_size))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+   
+    def _create_qtree(self, host_id, vol_name, qtree_name):
+        """
+        Create a qtree the filer.
+        """
+        request = self.client.factory.create('Request')
+        request.Name = 'qtree-create'
+        qtree_create_xml = (
+            '<mode>0755</mode><volume>%s</volume><qtree>%s</qtree>')
+        request.Args = text.Raw(qtree_create_xml % (vol_name, qtree_name))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
 
     def create_snapshot(self, snapshot):
-        raise NotImplementedError()
+        vol_name = snapshot['volume_name']
+        snapshot_name = snapshot['name']
+        project = snapshot['project_id']
+        lun_id = self._get_lun_id(vol_name, project)
+        if not lun_id:
+            msg = _("Failed to find LUN ID for volume %s")
+            raise exception.Error(msg % vol_name)
+        lun = self._get_lun_details(lun_id)
+        if not lun:
+            msg = _('Failed to get LUN details for LUN ID %s')
+            raise exception.Error(msg % lun_id)
+        extra_gb = snapshot['volume_size']
+        new_size = '+%dg' % extra_gb
+        self._resize_volume(lun.HostId, lun.VolumeName, new_size)
+        lun_path = str(lun.LunPath)
+        lun_name = lun_path[lun_path.rfind('/') + 1:]
+        qtree_path = '/vol/%s/%s' % (lun.VolumeName, lun.QtreeName)
+        src_path = '%s/%s' % (qtree_path, lun_name)
+        dest_path = '%s/%s' % (qtree_path, snapshot_name)
+        self._clone_lun(lun.HostId, src_path, dest_path, True)
 
     def delete_snapshot(self, snapshot):
-        raise NotImplementedError()
+        vol_name = snapshot['volume_name']
+        snapshot_name = snapshot['name']
+        project = snapshot['project_id']
+        lun_id = self._get_lun_id(vol_name, project)
+        if not lun_id:
+            msg = _("Failed to find LUN ID for volume %s")
+            raise exception.Error(msg % vol_name)
+        lun = self._get_lun_details(lun_id)
+        if not lun:
+            msg = _('Failed to get LUN details for LUN ID %s')
+            raise exception.Error(msg % lun_id)
+        lun_path = '/vol/%s/%s/%s' % (lun.VolumeName, lun.QtreeName,
+                                      snapshot_name)
+        self._destroy_lun(lun.HostId, lun_path)
+        extra_gb = snapshot['volume_size']
+        new_size = '-%dg' % extra_gb
+        self._resize_volume(lun.HostId, lun.VolumeName, new_size)
+
+    def create_volume_from_snapshot(self, volume, snapshot):
+        vol_name = snapshot['volume_name']
+        snapshot_name = snapshot['name']
+        project = snapshot['project_id']
+        lun_id = self._get_lun_id(vol_name, project)
+        if not lun_id:
+            msg = _("Failed to find LUN ID for volume %s")
+            raise exception.Error(msg % vol_name)
+        lun = self._get_lun_details(lun_id)
+        if not lun:
+            msg = _('Failed to get LUN details for LUN ID %s')
+            raise exception.Error(msg % lun_id)
+
+        extra_gb = volume['volume_size']
+        new_size = '+%dg' % extra_gb
+        self._resize_volume(lun.HostId, lun.VolumeName, new_size)
+        clone_name = volume['name']
+        self._create_qtree(lun.HostId, lun.VolumeName, clone_name)
+        src_path = '/vol/%s/%s/%s' % (lun.VolumeName, lun.QtreeName,
+                                      snapshot_name)
+        dest_path = '/vol/%s/%s/%s' % (lun.VolumeName, clone_name, clone_name)
+        self._clone_lun(lun.HostId, src_path, dest_path, False)
+        self._refresh_dfm_luns(lun.HostId)
 
     def check_for_export(self, context, volume_id):
         raise NotImplementedError()
