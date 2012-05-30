@@ -202,6 +202,10 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 orig_image_ref=orig_image_ref),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def refresh_provider_fw_rules(self, ctxt, host):
+        self.cast(ctxt, self.make_msg('refresh_provider_fw_rules'),
+                self._compute_topic(ctxt, host, None))
+
     def refresh_security_group_rules(self, ctxt, security_group_id, host):
         self.cast(ctxt, self.make_msg('refresh_security_group_rules',
                 security_group_id=security_group_id),

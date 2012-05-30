@@ -840,9 +840,7 @@ class API(base.Base):
         hosts = [x['host'] for (x, idx)
                            in self.db.service_get_all_compute_sorted(context)]
         for host in hosts:
-            rpc.cast(context,
-                     rpc.queue_get_for(context, FLAGS.compute_topic, host),
-                     {'method': 'refresh_provider_fw_rules', 'args': {}})
+            self.compute_rpcapi.refresh_provider_fw_rules(context, host)
 
     def _is_security_group_associated_with_server(self, security_group,
                                                   instance_uuid):

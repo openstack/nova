@@ -194,6 +194,10 @@ class ComputeRpcAPITestCase(test.TestCase):
                 injected_files='files', image_ref='ref',
                 orig_image_ref='orig_ref')
 
+    def refresh_provider_fw_rules(self):
+        self._test_compute_api('refresh_provider_fw_rules', 'cast',
+                host='host')
+
     def test_refresh_security_group_rules(self):
         self._test_compute_api('refresh_security_group_rules', 'cast',
                 security_group_id='id', host='host')
