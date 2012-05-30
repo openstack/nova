@@ -449,7 +449,7 @@ class XenAPIVMTestCase(test.TestCase):
                 # If the cache is turned on then the base disk will be
                 # there even after the cleanup
                 if 'other_config' in vdi_rec:
-                    if vdi_rec['other_config']['image-id'] is None:
+                    if 'image-id' not in vdi_rec['other_config']:
                         self.fail('Found unexpected VDI:%s' % vdi_ref)
                 else:
                     self.fail('Found unexpected VDI:%s' % vdi_ref)
