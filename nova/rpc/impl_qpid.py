@@ -501,7 +501,7 @@ class Connection(object):
     def create_consumer(self, topic, proxy, fanout=False):
         """Create a consumer that calls a method in a proxy object"""
         proxy_cb = rpc_amqp.ProxyCallback(self.conf, proxy,
-                rpc_amqp.get_connection_pool(self, Connection))
+                rpc_amqp.get_connection_pool(self.conf, Connection))
 
         if fanout:
             consumer = FanoutConsumer(self.conf, self.session, topic, proxy_cb)
@@ -515,7 +515,7 @@ class Connection(object):
     def create_worker(self, topic, proxy, pool_name):
         """Create a worker that calls a method in a proxy object"""
         proxy_cb = rpc_amqp.ProxyCallback(self.conf, proxy,
-                rpc_amqp.get_connection_pool(self, Connection))
+                rpc_amqp.get_connection_pool(self.conf, Connection))
 
         consumer = TopicConsumer(self.conf, self.session, topic, proxy_cb,
                                  name=pool_name)
