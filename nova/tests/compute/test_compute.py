@@ -1528,7 +1528,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, rpc.queue_get_for(c, FLAGS.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
-             "args": {'instance_id': i_ref['id'], 'block_migration': False}})
+             "args": {'instance_id': i_ref['id'], 'block_migration': False},
+             "version": compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None)
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
         self.compute.driver.unplug_vifs(i_ref, [])
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',

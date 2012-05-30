@@ -58,7 +58,8 @@ class ComputeRpcAPITestCase(test.TestCase):
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
             if method in ['rollback_live_migration_at_destination',
-                          'pre_live_migration']:
+                          'pre_live_migration',
+                          'post_live_migration_at_destination']:
                 expected_msg['args']['instance_id'] = instance['id']
             else:
                 expected_msg['args']['instance_uuid'] = instance['uuid']
@@ -160,6 +161,11 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_lock_instance(self):
         self._test_compute_api('lock_instance', 'cast',
                 instance=self.fake_instance)
+
+    def test_post_live_migration_at_destination(self):
+        self._test_compute_api('post_live_migration_at_destination', 'call',
+                instance=self.fake_instance, block_migration='block_migration',
+                host='host')
 
     def test_pause_instance(self):
         self._test_compute_api('pause_instance', 'cast',
