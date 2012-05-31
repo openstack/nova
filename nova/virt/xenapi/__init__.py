@@ -18,9 +18,3 @@
 :mod:`xenapi` -- Nova support for XenServer and XCP through XenAPI
 ==================================================================
 """
-
-
-class HelperBase(object):
-    """
-    The base for helper classes.
-    """
