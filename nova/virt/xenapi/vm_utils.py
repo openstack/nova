@@ -986,7 +986,7 @@ class VMHelper(xenapi.HelperBase):
 
     @classmethod
     def list_vms(cls, session):
-        for vm_ref, vm_rec in cls.get_all_refs_and_recs(session, 'VM'):
+        for vm_ref, vm_rec in session.get_all_refs_and_recs('VM'):
             if (vm_rec["resident_on"] != session.get_xenapi_host() or
                 vm_rec["is_a_template"] or vm_rec["is_control_domain"]):
                 continue
@@ -1153,12 +1153,12 @@ class VMHelper(xenapi.HelperBase):
 
         if filter_criteria == 'other-config':
             key, value = filter_pattern.split('=', 1)
-            for sr_ref, sr_rec in cls.get_all_refs_and_recs(session, 'SR'):
+            for sr_ref, sr_rec in session.get_all_refs_and_recs('SR'):
                 if not (key in sr_rec['other_config'] and
                         sr_rec['other_config'][key] == value):
                     continue
                 for pbd_ref in sr_rec['PBDs']:
-                    pbd_rec = cls.get_rec(session, 'PBD', pbd_ref)
+                    pbd_rec = session.get_rec('PBD', pbd_ref)
                     if pbd_rec and pbd_rec['host'] == host:
                         return sr_ref
         elif filter_criteria == 'default-sr' and filter_pattern == 'true':
@@ -1185,7 +1185,7 @@ class VMHelper(xenapi.HelperBase):
     def find_iso_sr(cls, session):
         """Return the storage repository to hold ISO images"""
         host = session.get_xenapi_host()
-        for sr_ref, sr_rec in cls.get_all_refs_and_recs(session, 'SR'):
+        for sr_ref, sr_rec in session.get_all_refs_and_recs('SR'):
             LOG.debug(_("ISO: looking at SR %(sr_rec)s") % locals())
             if not sr_rec['content_type'] == 'iso':
                 LOG.debug(_("ISO: not iso content"))
@@ -1201,7 +1201,7 @@ class VMHelper(xenapi.HelperBase):
             LOG.debug(_("ISO: SR MATCHing our criteria"))
             for pbd_ref in sr_rec['PBDs']:
                 LOG.debug(_("ISO: ISO, looking to see if it is host local"))
-                pbd_rec = cls.get_rec(session, 'PBD', pbd_ref)
+                pbd_rec = session.get_rec('PBD', pbd_ref)
                 if not pbd_rec:
                     LOG.debug(_("ISO: PBD %(pbd_ref)s disappeared") % locals())
                     continue

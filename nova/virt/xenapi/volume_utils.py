@@ -141,7 +141,7 @@ class VolumeHelper(xenapi.HelperBase):
         """
         Return the storage repository given a uuid.
         """
-        for sr_ref, sr_rec in cls.get_all_refs_and_recs(session, 'SR'):
+        for sr_ref, sr_rec in session.get_all_refs_and_recs('SR'):
             if sr_rec['uuid'] == sr_uuid:
                 return sr_ref
         return None
