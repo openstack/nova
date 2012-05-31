@@ -50,66 +50,65 @@ class Host(object):
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation."""
-        if mode:
-            host_list = [host_ref for host_ref in
-                         self._session.call_xenapi('host.get_all') \
-                         if host_ref != self._session.get_xenapi_host()]
-            migrations_counter = vm_counter = 0
-            ctxt = context.get_admin_context()
-            for vm_ref, vm_rec in vm_utils.VMHelper.list_vms(self._session):
-                for host_ref in host_list:
-                    try:
-                        # Ensure only guest instances are migrated
-                        uuid = vm_rec['other_config'].get('nova_uuid')
-                        if not uuid:
-                            name = vm_rec['name_label']
-                            uuid = _uuid_find(ctxt, host, name)
-                            if not uuid:
-                                msg = _('Instance %(name)s running on %(host)s'
-                                        ' could not be found in the database:'
-                                        ' assuming it is a worker VM and skip'
-                                        'ping migration to a new host')
-                                LOG.info(msg % locals())
-                                continue
-                        instance = db.instance_get_by_uuid(ctxt, uuid)
-                        vm_counter = vm_counter + 1
-
-                        dest = _host_find(ctxt, self._session, host, host_ref)
-                        (old_ref, new_ref) = \
-                                db.instance_update_and_get_original(ctxt,
-                                        instance.id,
-                                        {'host': dest,
-                                         'vm_state': vm_states.MIGRATING})
-                        notifications.send_update(ctxt, old_ref, new_ref)
-
-                        self._session.call_xenapi('VM.pool_migrate',
-                                                  vm_ref, host_ref, {})
-                        migrations_counter = migrations_counter + 1
-
-                        (old_ref, new_ref) = \
-                            db.instance_update_and_get_original(ctxt,
-                                    instance.id,
-                                    {'vm_state': vm_states.ACTIVE})
-                        notifications.send_update(ctxt, old_ref, new_ref)
-
-                        break
-                    except self.XenAPI.Failure:
-                        LOG.exception('Unable to migrate VM %(vm_ref)s'
-                                      'from %(host)s' % locals())
-                        (old_ref, new_ref) = \
-                            db.instance_update_and_get_original(ctxt,
-                                    instance.id,
-                                    {'hosts': host,
-                                     'vm_state': vm_states.ACTIVE})
-                        notifications.send_update(ctxt, old_ref, new_ref)
-
-            if vm_counter == migrations_counter:
-                return 'on_maintenance'
-            else:
-                raise exception.NoValidHost(reason='Unable to find suitable '
-                                                   'host for VMs evacuation')
-        else:
+        if not mode:
             return 'off_maintenance'
+        host_list = [host_ref for host_ref in
+                     self._session.call_xenapi('host.get_all')
+                     if host_ref != self._session.get_xenapi_host()]
+        migrations_counter = vm_counter = 0
+        ctxt = context.get_admin_context()
+        for vm_ref, vm_rec in vm_utils.VMHelper.list_vms(self._session):
+            for host_ref in host_list:
+                try:
+                    # Ensure only guest instances are migrated
+                    uuid = vm_rec['other_config'].get('nova_uuid')
+                    if not uuid:
+                        name = vm_rec['name_label']
+                        uuid = _uuid_find(ctxt, host, name)
+                        if not uuid:
+                            msg = _('Instance %(name)s running on %(host)s'
+                                    ' could not be found in the database:'
+                                    ' assuming it is a worker VM and skip'
+                                    ' ping migration to a new host')
+                            LOG.info(msg % locals())
+                            continue
+                    instance = db.instance_get_by_uuid(ctxt, uuid)
+                    vm_counter = vm_counter + 1
+
+                    dest = _host_find(ctxt, self._session, host, host_ref)
+                    (old_ref, new_ref) = db.instance_update_and_get_original(
+                                    ctxt,
+                                    instance.id,
+                                    {'host': dest,
+                                     'vm_state': vm_states.MIGRATING})
+                    notifications.send_update(ctxt, old_ref, new_ref)
+
+                    self._session.call_xenapi('VM.pool_migrate',
+                                              vm_ref, host_ref, {})
+                    migrations_counter = migrations_counter + 1
+
+                    (old_ref, new_ref) = db.instance_update_and_get_original(
+                                ctxt,
+                                instance.id,
+                                {'vm_state': vm_states.ACTIVE})
+                    notifications.send_update(ctxt, old_ref, new_ref)
+
+                    break
+                except self.XenAPI.Failure:
+                    LOG.exception('Unable to migrate VM %(vm_ref)s'
+                                  'from %(host)s' % locals())
+                    (old_ref, new_ref) = db.instance_update_and_get_original(
+                                ctxt,
+                                instance.id,
+                                {'hosts': host,
+                                 'vm_state': vm_states.ACTIVE})
+                    notifications.send_update(ctxt, old_ref, new_ref)
+
+        if vm_counter == migrations_counter:
+            return 'on_maintenance'
+        else:
+            raise exception.NoValidHost(reason='Unable to find suitable '
+                                                   'host for VMs evacuation')
 
     def set_host_enabled(self, _host, enabled):
         """Sets the specified host's ability to accept new instances."""

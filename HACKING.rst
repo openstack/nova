@@ -10,6 +10,8 @@ General
 -------
 - Put two newlines between top-level code (funcs, classes, etc)
 - Put one newline between methods in classes and anywhere else
+- Long lines should be wrapped in parentheses
+  in preference to using a backslash for line continuation.
 - Do not write "except:", use "except Exception:" at the very least
 - Include your name with TODOs as in "#TODO(termie)"
 - Do not shadow a built-in or reserved word. Example::

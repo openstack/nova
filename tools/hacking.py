@@ -48,8 +48,8 @@ VERBOSE_MISSING_IMPORT = False
 
 
 def is_import_exception(mod):
-    return mod in IMPORT_EXCEPTIONS or \
-        any(mod.startswith(m + '.') for m in IMPORT_EXCEPTIONS)
+    return (mod in IMPORT_EXCEPTIONS or
+            any(mod.startswith(m + '.') for m in IMPORT_EXCEPTIONS))
 
 
 def import_normalize(line):
@@ -114,9 +114,9 @@ def nova_one_import_per_line(logical_line):
     """
     pos = logical_line.find(',')
     parts = logical_line.split()
-    if pos > -1 and (parts[0] == "import" or
-       parts[0] == "from" and parts[2] == "import") and \
-       not is_import_exception(parts[1]):
+    if (pos > -1 and (parts[0] == "import" or
+                      parts[0] == "from" and parts[2] == "import") and
+        not is_import_exception(parts[1])):
         return pos, "NOVA N301: one import per line"
 
 _missingImport = set([])

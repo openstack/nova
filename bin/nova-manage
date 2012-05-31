@@ -593,8 +593,8 @@ class FixedIpCommands(object):
                     hostname = instance['hostname']
                     host = instance['host']
                 else:
-                    print 'WARNING: fixed ip %s allocated to missing' \
-                    ' instance' % str(fixed_ip['address'])
+                    print ('WARNING: fixed ip %s allocated to missing'
+                           ' instance' % str(fixed_ip['address']))
             print "%-18s\t%-15s\t%-15s\t%s" % (
                     network['cidr'],
                     fixed_ip['address'],
@@ -760,8 +760,8 @@ class NetworkCommands(object):
             if FLAGS.network_manager in bridge_required:
                 raise exception.NetworkNotCreated(req='--bridge')
 
-        bridge_interface = bridge_interface or FLAGS.flat_interface or \
-                           FLAGS.vlan_interface
+        bridge_interface = (bridge_interface or FLAGS.flat_interface or
+                            FLAGS.vlan_interface)
         if not bridge_interface:
             interface_required = ['nova.network.manager.VlanManager']
             if FLAGS.network_manager in interface_required:
@@ -873,8 +873,8 @@ class NetworkCommands(object):
             if uuid is None:
                 raise Exception("UUID is required to delete Quantum Networks")
             if fixed_range:
-                raise Exception("Deleting by fixed_range is not supported " \
-                    "with the QuantumManager")
+                raise Exception("Deleting by fixed_range is not supported "
+                                "with the QuantumManager")
         # delete the network
         net_manager.delete_network(context.get_admin_context(),
             fixed_range, uuid)
@@ -920,20 +920,19 @@ class VmCommands(object):
     def list(self, host=None):
         """Show a list of all instances"""
 
-        print "%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s" \
-              "  %-10s %-10s %-10s %-5s" % (
-            _('instance'),
-            _('node'),
-            _('type'),
-            _('state'),
-            _('launched'),
-            _('image'),
-            _('kernel'),
-            _('ramdisk'),
-            _('project'),
-            _('user'),
-            _('zone'),
-            _('index'))
+        print ("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
+               "  %-10s %-10s %-10s %-5s" % (_('instance'),
+                                             _('node'),
+                                             _('type'),
+                                             _('state'),
+                                             _('launched'),
+                                             _('image'),
+                                             _('kernel'),
+                                             _('ramdisk'),
+                                             _('project'),
+                                             _('user'),
+                                             _('zone'),
+                                             _('index')))
 
         if host is None:
             instances = db.instance_get_all(context.get_admin_context())
@@ -942,20 +941,19 @@ class VmCommands(object):
                            context.get_admin_context(), host)
 
         for instance in instances:
-            print "%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s" \
-                  "  %-10s %-10s %-10s %-5d" % (
-                instance['display_name'],
-                instance['host'],
-                instance['instance_type'].name,
-                instance['vm_state'],
-                instance['launched_at'],
-                instance['image_ref'],
-                instance['kernel_id'],
-                instance['ramdisk_id'],
-                instance['project_id'],
-                instance['user_id'],
-                instance['availability_zone'],
-                instance['launch_index'])
+            print ("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
+                   " %-10s %-10s %-10s %-5d" % (instance['display_name'],
+                                                instance['host'],
+                                                instance['instance_type'].name,
+                                                instance['vm_state'],
+                                                instance['launched_at'],
+                                                instance['image_ref'],
+                                                instance['kernel_id'],
+                                                instance['ramdisk_id'],
+                                                instance['project_id'],
+                                                instance['user_id'],
+                                                instance['availability_zone'],
+                                                instance['launch_index']))
 
 
 class ServiceCommands(object):
@@ -1040,17 +1038,17 @@ class ServiceCommands(object):
                                                          "c": _('cpu'),
                                                          "d": _('mem(mb)'),
                                                          "e": _('hdd')}
-            print '%(a)-16s(total)%(b)26s%(c)8s%(d)8s' %\
-                              {"a": host,
-                               "b": result['resource']['vcpus'],
-                               "c": result['resource']['memory_mb'],
-                               "d": result['resource']['local_gb']}
+            print ('%(a)-16s(total)%(b)26s%(c)8s%(d)8s' %
+                   {"a": host,
+                    "b": result['resource']['vcpus'],
+                    "c": result['resource']['memory_mb'],
+                    "d": result['resource']['local_gb']})
 
-            print '%(a)-16s(used_now)%(b)23s%(c)8s%(d)8s' %\
-                              {"a": host,
-                               "b": result['resource']['vcpus_used'],
-                               "c": result['resource']['memory_mb_used'],
-                               "d": result['resource']['local_gb_used']}
+            print ('%(a)-16s(used_now)%(b)23s%(c)8s%(d)8s' %
+                   {"a": host,
+                    "b": result['resource']['vcpus_used'],
+                    "c": result['resource']['memory_mb_used'],
+                    "d": result['resource']['local_gb_used']})
 
             # Printing a used_max
             cpu_sum = 0
@@ -1121,9 +1119,9 @@ class VersionCommands(object):
         pass
 
     def list(self):
-        print _("%(version)s (%(vcs)s)") % \
-                {'version': version.version_string(),
-                 'vcs': version.version_string_with_vcs()}
+        print (_("%(version)s (%(vcs)s)") %
+               {'version': version.version_string(),
+                'vcs': version.version_string_with_vcs()})
 
     def __call__(self):
         self.list()
@@ -1689,9 +1687,9 @@ def main():
 
     script_name = argv.pop(0)
     if len(argv) < 1:
-        print _("\nOpenStack Nova version: %(version)s (%(vcs)s)\n") % \
-                {'version': version.version_string(),
-                 'vcs': version.version_string_with_vcs()}
+        print (_("\nOpenStack Nova version: %(version)s (%(vcs)s)\n") %
+               {'version': version.version_string(),
+                'vcs': version.version_string_with_vcs()})
         print script_name + " category action [<args>]"
         print _("Available categories:")
         for k, _v in CATEGORIES:

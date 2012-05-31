@@ -119,21 +119,20 @@ def _get_windows_network_adapters():
     wbem_service = wbem_locator.ConnectServer('.', 'root\cimv2')
     wbem_network_adapters = wbem_service.InstancesOf('Win32_NetworkAdapter')
     network_adapters = []
-    for wbem_network_adapter in wbem_network_adapters:
-        if wbem_network_adapter.NetConnectionStatus == 2 or \
-                                wbem_network_adapter.NetConnectionStatus == 7:
-            adapter_name = wbem_network_adapter.NetConnectionID
-            mac_address = wbem_network_adapter.MacAddress.lower()
-            wbem_network_adapter_config = \
-                wbem_network_adapter.associators_(
+    for adapter in wbem_network_adapters:
+        if (adapter.NetConnectionStatus == 2 or
+            adapter.NetConnectionStatus == 7):
+            adapter_name = adapter.NetConnectionID
+            mac_address = adapter.MacAddress.lower()
+            config = adapter.associators_(
                           'Win32_NetworkAdapterSetting',
                           'Win32_NetworkAdapterConfiguration')[0]
             ip_address = ''
             subnet_mask = ''
-            if wbem_network_adapter_config.IPEnabled:
-                ip_address = wbem_network_adapter_config.IPAddress[0]
-                subnet_mask = wbem_network_adapter_config.IPSubnet[0]
-                #wbem_network_adapter_config.DefaultIPGateway[0]
+            if config.IPEnabled:
+                ip_address = config.IPAddress[0]
+                subnet_mask = config.IPSubnet[0]
+                #config.DefaultIPGateway[0]
             network_adapters.append({'name': adapter_name,
                                     'mac-address': mac_address,
                                     'ip-address': ip_address,
@@ -160,9 +159,8 @@ def _get_linux_network_adapters():
         sock.fileno(),
         0x8912,
         struct.pack('iL', max_bytes, names.buffer_info()[0])))[0]
-    adapter_names = \
-        [names.tostring()[n_counter:n_counter + offset1].split('\0', 1)[0]
-        for n_counter in xrange(0, outbytes, offset2)]
+    adapter_names = [names.tostring()[n_cnt:n_cnt + offset1].split('\0', 1)[0]
+                     for n_cnt in xrange(0, outbytes, offset2)]
     network_adapters = []
     for adapter_name in adapter_names:
         ip_address = socket.inet_ntoa(fcntl.ioctl(
@@ -257,10 +255,10 @@ def _windows_set_networking():
         cmd = ['"' + vmware_tools_bin + '"', '--cmd', 'machine.id.get']
         for network_detail in _parse_network_details(_execute(cmd,
                                               check_exit_code=False)):
-            mac_address, ip_address, subnet_mask, gateway, broadcast,\
-                dns_servers = network_detail
-            adapter_name, current_ip_address = \
-                    _get_win_adapter_name_and_ip_address(mac_address)
+            (mac_address, ip_address, subnet_mask, gateway, broadcast,
+             dns_servers) = network_detail
+            name_and_ip = _get_win_adapter_name_and_ip_address(mac_address)
+            adapter_name, current_ip_address = name_and_ip
             if adapter_name and not ip_address == current_ip_address:
                 cmd = ['netsh', 'interface', 'ip', 'set', 'address',
                        'name="%s"' % adapter_name, 'source=static', ip_address,
@@ -289,14 +287,14 @@ def _set_rhel_networking(network_details=None):
     network_details = network_details or []
     all_dns_servers = []
     for network_detail in network_details:
-        mac_address, ip_address, subnet_mask, gateway, broadcast,\
-            dns_servers = network_detail
+        (mac_address, ip_address, subnet_mask, gateway, broadcast,
+         dns_servers) = network_detail
         all_dns_servers.extend(dns_servers)
-        adapter_name, current_ip_address = \
-                _get_linux_adapter_name_and_ip_address(mac_address)
+        name_and_ip = _get_linux_adapter_name_and_ip_address(mac_address)
+        adapter_name, current_ip_address = name_and_ip
         if adapter_name and not ip_address == current_ip_address:
-            interface_file_name = \
-                '/etc/sysconfig/network-scripts/ifcfg-%s' % adapter_name
+            interface_file_name = ('/etc/sysconfig/network-scripts/ifcfg-%s' %
+                                   adapter_name)
             # Remove file
             os.remove(interface_file_name)
             # Touch file
@@ -337,11 +335,11 @@ def _set_ubuntu_networking(network_details=None):
     _execute(['touch', interface_file_name])
     interface_file = open(interface_file_name, 'w')
     for device, network_detail in enumerate(network_details):
-        mac_address, ip_address, subnet_mask, gateway, broadcast,\
-            dns_servers = network_detail
+        (mac_address, ip_address, subnet_mask, gateway, broadcast,
+         dns_servers) = network_detail
         all_dns_servers.extend(dns_servers)
-        adapter_name, current_ip_address = \
-                _get_linux_adapter_name_and_ip_address(mac_address)
+        name_and_ip = _get_linux_adapter_name_and_ip_address(mac_address)
+        adapter_name, current_ip_address = name_and_ip
 
         if adapter_name:
             interface_file.write('\nauto %s' % adapter_name)

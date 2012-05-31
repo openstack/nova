@@ -129,9 +129,8 @@ def bind(src, target, instance_name):
         s = os.stat(src)
         cgroup_info = "b %s:%s rwm\n" % (os.major(s.st_rdev),
                                          os.minor(s.st_rdev))
-        cgroups_path = \
-            "/sys/fs/cgroup/devices/libvirt/lxc/%s/devices.allow" \
-            % instance_name
+        cgroups_path = ("/sys/fs/cgroup/devices/libvirt/lxc/"
+                        "%s/devices.allow" % instance_name)
         utils.execute('tee', cgroups_path,
                       process_input=cgroup_info, run_as_root=True)
 

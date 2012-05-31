@@ -146,8 +146,8 @@ def _download_tarball(sr_path, image_id, glance_host, glance_port, auth_token):
     if auth_token:
         headers['x-auth-token'] = auth_token
 
-    url = "http://%(glance_host)s:%(glance_port)d/v1/images/"\
-          "%(image_id)s" % locals()
+    url = ("http://%(glance_host)s:%(glance_port)d/v1/images/"
+           "%(image_id)s" % locals())
     logging.info("Downloading %s" % url)
 
     request = urllib2.Request(url, headers=headers)

@@ -76,8 +76,8 @@ class XenAPIBridgeDriver(XenVIFDriver):
 
         vlan_num = network.get_meta('vlan')
         bridge = network['bridge']
-        bridge_interface = FLAGS.vlan_interface or \
-                           network.get_meta('bridge_interface')
+        bridge_interface = (FLAGS.vlan_interface or
+                            network.get_meta('bridge_interface'))
         # Check whether bridge already exists
         # Retrieve network whose name_label is "bridge"
         network_ref = network_utils.NetworkHelper.find_network_with_name_label(

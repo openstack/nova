@@ -48,10 +48,9 @@ from nova.openstack.common import cfg
 from nova import rpc
 
 
-delete_exchange_opt = \
-    cfg.BoolOpt('delete_exchange',
-                default=False,
-                help='delete nova exchange too.')
+delete_exchange_opt = cfg.BoolOpt('delete_exchange',
+                                  default=False,
+                                  help='delete nova exchange too.')
 
 FLAGS = flags.FLAGS
 FLAGS.register_cli_opt(delete_exchange_opt)

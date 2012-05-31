@@ -283,8 +283,8 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
 
         # Now we can delete the network
         self.q_conn.delete_network(q_tenant_id, net_uuid)
-        LOG.debug("Deleting network %s for tenant: %s" % \
-                                    (net_uuid, q_tenant_id))
+        LOG.debug("Deleting network %s for tenant: %s" %
+                  (net_uuid, q_tenant_id))
         self.ipam.delete_subnets_by_net_id(context, net_uuid, project_id)
         # Get rid of dnsmasq
         if FLAGS.quantum_use_dhcp:

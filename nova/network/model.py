@@ -344,15 +344,16 @@ class NetworkInfo(list):
             gateway = get_ip(subnet_v4['gateway'])
             dhcp_server = subnet_v4.get_meta('dhcp_server', gateway)
 
-            network_dict = \
-                    {'bridge': network['bridge'],
-                     'id': network['id'],
-                     'cidr': subnet_v4['cidr'],
-                     'cidr_v6': subnet_v6['cidr'] if subnet_v6 else None,
-                     'vlan': network.get_meta('vlan'),
-                     'injected': network.get_meta('injected', False),
-                     'multi_host': network.get_meta('multi_host', False),
-                     'bridge_interface': network.get_meta('bridge_interface')}
+            network_dict = {
+                'bridge': network['bridge'],
+                'id': network['id'],
+                'cidr': subnet_v4['cidr'],
+                'cidr_v6': subnet_v6['cidr'] if subnet_v6 else None,
+                'vlan': network.get_meta('vlan'),
+                'injected': network.get_meta('injected', False),
+                'multi_host': network.get_meta('multi_host', False),
+                'bridge_interface': network.get_meta('bridge_interface')
+            }
             # NOTE(tr3buchet): 'ips' bit here is tricky, we support a single
             #                  subnet but we want all the IPs to be there
             #                  so use the v4_subnets[0] and its IPs are first
