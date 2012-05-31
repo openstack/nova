@@ -120,11 +120,6 @@ class _VirtDriverTestCase(test.TestCase):
         self.assertEquals(ip.version, 4)
 
     @catch_notimplementederror
-    def test_resize_running(self):
-        instance_ref, network_info = self._get_running_instance()
-        self.connection.resize(instance_ref, 7)
-
-    @catch_notimplementederror
     def test_set_admin_password(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.set_admin_password(instance_ref, 'p4ssw0rd')
