@@ -15,15 +15,43 @@
 Tests For Scheduler Host Filters.
 """
 
+import httplib
 import json
+import stubout
 
 from nova import context
 from nova import exception
 from nova import flags
 from nova.scheduler import filters
+from nova.scheduler.filters.trusted_filter import AttestationService
 from nova import test
 from nova.tests.scheduler import fakes
 from nova import utils
+
+
+DATA = ''
+
+
+def stub_out_https_backend(stubs):
+    """
+    Stubs out the httplib.HTTPRequest.getresponse to return
+    faked-out data instead of grabbing actual contents of a resource
+
+    The stubbed getresponse() returns an iterator over
+    the data "I am a teapot, short and stout\n"
+
+    :param stubs: Set of stubout stubs
+    """
+
+    class FakeHTTPResponse(object):
+
+        def read(self):
+            return DATA
+
+    def fake_do_request(self, *args, **kwargs):
+        return httplib.OK, FakeHTTPResponse()
+
+    stubs.Set(AttestationService, '_do_request', fake_do_request)
 
 
 class TestFilter(filters.BaseHostFilter):
@@ -40,6 +68,8 @@ class HostFiltersTestCase(test.TestCase):
 
     def setUp(self):
         super(HostFiltersTestCase, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        stub_out_https_backend(self.stubs)
         self.context = context.RequestContext('fake', 'fake')
         self.json_query = json.dumps(
                 ['and', ['>=', '$free_ram_mb', 1024],
@@ -584,6 +614,57 @@ class HostFiltersTestCase(test.TestCase):
 
         raw = ['=', '$foo', 2, 2]
         filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_trusted_filter_default_passes(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['TrustedFilter']()
+        filter_properties = {'instance_type': {'memory_mb': 1024}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_trusted_filter_trusted_and_trusted_passes(self):
+        global DATA
+        DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"trusted"}]}'
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['TrustedFilter']()
+        extra_specs = {'trusted_host': 'trusted'}
+        filter_properties = {'instance_type': {'memory_mb': 1024,
+                                               'extra_specs': extra_specs}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_trusted_filter_trusted_and_untrusted_fails(self):
+        global DATA
+        DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"untrusted"}]}'
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['TrustedFilter']()
+        extra_specs = {'trusted_host': 'trusted'}
+        filter_properties = {'instance_type': {'memory_mb': 1024,
+                                               'extra_specs': extra_specs}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_trusted_filter_untrusted_and_trusted_fails(self):
+        global DATA
+        DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"trusted"}]}'
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['TrustedFilter']()
+        extra_specs = {'trusted_host': 'untrusted'}
+        filter_properties = {'instance_type': {'memory_mb': 1024,
+                                               'extra_specs': extra_specs}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_trusted_filter_untrusted_and_untrusted_passes(self):
+        global DATA
+        DATA = '{"hosts":[{"host_name":"host1","trust_lvl":"untrusted"}]}'
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['TrustedFilter']()
+        extra_specs = {'trusted_host': 'untrusted'}
+        filter_properties = {'instance_type': {'memory_mb': 1024,
+                                               'extra_specs': extra_specs}}
+        host = fakes.FakeHostState('host1', 'compute', {})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_core_filter_passes(self):
