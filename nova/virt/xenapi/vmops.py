@@ -49,7 +49,6 @@ from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 
 
-NetworkHelper = network_utils.NetworkHelper
 LOG = logging.getLogger(__name__)
 
 xenapi_vmops_opts = [
