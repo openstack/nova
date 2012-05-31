@@ -119,9 +119,6 @@ class FakeConnection(driver.ComputeDriver):
     def get_host_ip_addr():
         return '192.168.0.1'
 
-    def resize(self, instance, flavor):
-        pass
-
     def set_admin_password(self, instance, new_pass):
         pass
 

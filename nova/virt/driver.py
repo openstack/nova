@@ -561,15 +561,6 @@ class ComputeDriver(object):
         """Return currently known host stats"""
         raise NotImplementedError()
 
-    def resize(self, instance, flavor):
-        """
-        Resizes/Migrates the specified instance.
-
-        The flavor parameter determines whether or not the instance RAM and
-        disk space are modified, and if so, to what size.
-        """
-        raise NotImplementedError()
-
     def block_stats(self, instance_name, disk_id):
         """
         Return performance counters associated with the given disk_id on the
