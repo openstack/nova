@@ -157,8 +157,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         }
 
         for (input, expected) in cases.iteritems():
-            func = volume_utils.VolumeHelper.mountpoint_to_number
-            actual = func(input)
+            actual = volume_utils.mountpoint_to_number(input)
             self.assertEqual(actual, expected,
                     '%s yielded %s, not %s' % (input, actual, expected))
 
@@ -169,7 +168,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         vol = self._create_volume()
         # oops, wrong mount point!
         self.assertRaises(volume_utils.StorageError,
-                          volume_utils.VolumeHelper.parse_volume_info,
+                          volume_utils.parse_volume_info,
                           self._make_info(),
                           'dev/sd'
                           )
