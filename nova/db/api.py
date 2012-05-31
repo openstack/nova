@@ -1274,7 +1274,7 @@ def security_group_rule_create(context, values):
 
 
 def security_group_rule_get_by_security_group(context, security_group_id):
-    """Get all rules for a a given security group."""
+    """Get all rules for a given security group."""
     return IMPL.security_group_rule_get_by_security_group(context,
                                                           security_group_id)
 
