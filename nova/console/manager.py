@@ -122,7 +122,7 @@ class ConsoleProxyManager(manager.Manager):
                              'password': '1234pass'}
             else:
                 pool_info = rpc.call(context,
-                                 self.db.queue_get_for(context,
+                                 rpc.queue_get_for(context,
                                                    FLAGS.compute_topic,
                                                    instance_host),
                        {'method': 'get_console_pool_info',

@@ -201,9 +201,7 @@ class RPCAllocateFixedIP(object):
                                  jsonutils.to_primitive(network)}})
             if host != self.host:
                 # need to call allocate_fixed_ip to correct network host
-                topic = self.db.queue_get_for(context,
-                                              FLAGS.network_topic,
-                                              host)
+                topic = rpc.queue_get_for(context, FLAGS.network_topic, host)
                 args = {}
                 args['instance_id'] = instance_id
                 args['network_id'] = network['id']
@@ -241,7 +239,7 @@ class RPCAllocateFixedIP(object):
             host = network['host']
         if host != self.host:
             # need to call deallocate_fixed_ip on correct network host
-            topic = self.db.queue_get_for(context, FLAGS.network_topic, host)
+            topic = rpc.queue_get_for(context, FLAGS.network_topic, host)
             args = {'address': address,
                     'host': host}
             rpc.cast(context, topic,
@@ -513,7 +511,7 @@ class FloatingIP(object):
         else:
             # send to correct host
             rpc.cast(context,
-                     self.db.queue_get_for(context, FLAGS.network_topic, host),
+                     rpc.queue_get_for(context, FLAGS.network_topic, host),
                      {'method': '_associate_floating_ip',
                       'args': {'floating_address': floating_address,
                                'fixed_address': fixed_address,
@@ -583,7 +581,7 @@ class FloatingIP(object):
         else:
             # send to correct host
             rpc.cast(context,
-                     self.db.queue_get_for(context, FLAGS.network_topic, host),
+                     rpc.queue_get_for(context, FLAGS.network_topic, host),
                      {'method': '_disassociate_floating_ip',
                       'args': {'address': address,
                                'interface': interface}})
@@ -1545,8 +1543,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 call_func(context, network)
             else:
                 # i'm not the right host, run call on correct host
-                topic = self.db.queue_get_for(context, FLAGS.network_topic,
-                                              host)
+                topic = rpc.queue_get_for(context, FLAGS.network_topic, host)
                 args = {'network_id': network['id'], 'teardown': teardown}
                 # NOTE(tr3buchet): the call is just to wait for completion
                 green_pool.spawn_n(rpc.call, context, topic,

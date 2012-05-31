@@ -848,14 +848,6 @@ def network_update(context, network_id, values):
 ###################
 
 
-def queue_get_for(context, topic, physical_node_id):
-    """Return a channel to send a message to a node with a topic."""
-    return IMPL.queue_get_for(context, topic, physical_node_id)
-
-
-###################
-
-
 def iscsi_target_count_by_host(context, host):
     """Return count of export devices."""
     return IMPL.iscsi_target_count_by_host(context, host)

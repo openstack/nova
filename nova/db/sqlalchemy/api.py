@@ -2203,14 +2203,6 @@ def network_update(context, network_id, values):
 ###################
 
 
-def queue_get_for(context, topic, physical_node_id):
-    # FIXME(ja): this should be servername?
-    return "%s.%s" % (topic, physical_node_id)
-
-
-###################
-
-
 @require_admin_context
 def iscsi_target_count_by_host(context, host):
     return model_query(context, models.IscsiTarget).\

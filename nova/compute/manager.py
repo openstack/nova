@@ -315,9 +315,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         #TODO(mdragon): perhaps make this variable by console_type?
-        return self.db.queue_get_for(context,
-                                     FLAGS.console_topic,
-                                     FLAGS.console_host)
+        return rpc.queue_get_for(context,
+                                 FLAGS.console_topic,
+                                 FLAGS.console_host)
 
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
@@ -1257,7 +1257,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.destroy(instance_ref, self._legacy_nw_info(network_info))
-        topic = self.db.queue_get_for(context, FLAGS.compute_topic,
+        topic = rpc.queue_get_for(context, FLAGS.compute_topic,
                 migration_ref['source_compute'])
         rpc.cast(context, topic,
                 {'method': 'finish_revert_resize',
@@ -1349,7 +1349,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                  'status': 'pre-migrating'})
 
         LOG.audit(_('Migrating'), context=context, instance=instance_ref)
-        topic = self.db.queue_get_for(context, FLAGS.compute_topic,
+        topic = rpc.queue_get_for(context, FLAGS.compute_topic,
                 instance_ref['host'])
         rpc.cast(context, topic,
                 {'method': 'resize_instance',
@@ -1412,9 +1412,9 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         service = self.db.service_get_by_host_and_topic(
                 context, migration_ref['dest_compute'], FLAGS.compute_topic)
-        topic = self.db.queue_get_for(context,
-                                      FLAGS.compute_topic,
-                                      migration_ref['dest_compute'])
+        topic = rpc.queue_get_for(context,
+                                  FLAGS.compute_topic,
+                                  migration_ref['dest_compute'])
         params = {'migration_id': migration_id,
                   'disk_info': disk_info,
                   'instance_uuid': instance_ref['uuid'],
@@ -2040,7 +2040,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 disk = None
 
             rpc.call(context,
-                     self.db.queue_get_for(context, FLAGS.compute_topic, dest),
+                     rpc.queue_get_for(context, FLAGS.compute_topic, dest),
                      {'method': 'pre_live_migration',
                       'args': {'instance_id': instance_id,
                                'block_migration': block_migration,
@@ -2122,7 +2122,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
         rpc.call(ctxt,
-                 self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
+                 rpc.queue_get_for(ctxt, FLAGS.compute_topic, dest),
                      {"method": "post_live_migration_at_destination",
                       "args": {'instance_id': instance_ref['id'],
                                'block_migration': block_migration}})
@@ -2227,7 +2227,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # any empty images has to be deleted.
         if block_migration:
             rpc.cast(context,
-                     self.db.queue_get_for(context, FLAGS.compute_topic, dest),
+                     rpc.queue_get_for(context, FLAGS.compute_topic, dest),
                      {"method": "rollback_live_migration_at_destination",
                       "args": {'instance_id': instance_ref['id']}})
 

@@ -291,7 +291,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             if net_ref['host'] == self.host:
                 self.kill_dhcp(net_ref)
             else:
-                topic = self.db.queue_get_for(context,
+                topic = rpc.queue_get_for(context,
                         FLAGS.network_topic,
                         net_ref['host'])
 
@@ -389,7 +389,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                     self.enable_dhcp(context, network['quantum_net_id'],
                             network, vif_rec, network['net_tenant_id'])
                 else:
-                    topic = self.db.queue_get_for(context,
+                    topic = rpc.queue_get_for(context,
                                 FLAGS.network_topic, network['host'])
                     rpc.call(context, topic, {'method': 'enable_dhcp',
                         'args': {'quantum_net_id': network['quantum_net_id'],
@@ -608,7 +608,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
                     self.update_dhcp(context, ipam_tenant_id, network,
                                  vif, project_id)
                 else:
-                    topic = self.db.queue_get_for(context,
+                    topic = rpc.queue_get_for(context,
                                 FLAGS.network_topic, network['host'])
                     rpc.call(context, topic, {'method': 'update_dhcp',
                         'args': {'ipam_tenant_id': ipam_tenant_id,
