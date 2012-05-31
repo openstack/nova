@@ -128,7 +128,7 @@ def _print_opt(opt):
             print '# %s=<None>' % opt_name
         elif opt_type == STROPT:
             assert(isinstance(opt_default, basestring))
-            print '# %s="%s"' % (opt_name, _convert_abspath(opt_default))
+            print '# %s=%s' % (opt_name, _convert_abspath(opt_default))
         elif opt_type == BOOLOPT:
             assert(isinstance(opt_default, bool))
             print '# %s=%s' % (opt_name, str(opt_default).lower())
@@ -141,11 +141,11 @@ def _print_opt(opt):
             print '# %s=%s' % (opt_name, opt_default)
         elif opt_type == LISTOPT:
             assert(isinstance(opt_default, list))
-            print '# %s="%s"' % (opt_name, ','.join(opt_default))
+            print '# %s=%s' % (opt_name, ','.join(opt_default))
         elif opt_type == MULTISTROPT:
             assert(isinstance(opt_default, list))
             for default in opt_default:
-                print '# %s="%s"' % (opt_name, default)
+                print '# %s=%s' % (opt_name, default)
     except Exception:
         sys.stderr.write('Error in option "%s"\n' % opt_name)
         sys.exit(1)
