@@ -57,7 +57,7 @@ class Host(object):
                      if host_ref != self._session.get_xenapi_host()]
         migrations_counter = vm_counter = 0
         ctxt = context.get_admin_context()
-        for vm_ref, vm_rec in vm_utils.VMHelper.list_vms(self._session):
+        for vm_ref, vm_rec in vm_utils.list_vms(self._session):
             for host_ref in host_list:
                 try:
                     # Ensure only guest instances are migrated
@@ -144,7 +144,7 @@ class HostState(object):
         if data:
             try:
                 # Get the SR usage
-                sr_ref = vm_utils.VMHelper.safe_find_sr(self._session)
+                sr_ref = vm_utils.safe_find_sr(self._session)
             except exception.NotFound as e:
                 # No SR configured
                 LOG.error(_("Unable to get SR for this host: %s") % e)

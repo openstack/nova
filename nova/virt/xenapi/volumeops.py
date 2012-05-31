@@ -49,8 +49,8 @@ class VolumeOps(object):
         label = 'vol-' + hex(volume['id'])[:-1]
         # size presented to xenapi is in bytes, while euca api is in GB
         vdi_size = volume['size'] * 1024 * 1024 * 1024
-        vdi_ref = vm_utils.VMHelper.create_vdi(self._session,
-                                               sr_ref, label, vdi_size, False)
+        vdi_ref = vm_utils.create_vdi(self._session, sr_ref, label,
+                                      vdi_size, False)
         vdi_rec = self._session.call_xenapi("VDI.get_record", vdi_ref)
         sm_vol_rec['vdi_uuid'] = vdi_rec['uuid']
         return sm_vol_rec
@@ -60,7 +60,7 @@ class VolumeOps(object):
         if vdi_ref is None:
             raise exception.NovaException(_('Could not find VDI ref'))
 
-        vm_utils.VMHelper.destroy_vdi(self._session, vdi_ref)
+        vm_utils.destroy_vdi(self._session, vdi_ref)
 
     def create_sr(self, label, params):
         LOG.debug(_("Creating SR %s") % label)
@@ -111,7 +111,7 @@ class VolumeOps(object):
     def attach_volume(self, connection_info, instance_name, mountpoint):
         """Attach volume storage to VM instance"""
         # Before we start, check that the VM exists
-        vm_ref = vm_utils.VMHelper.lookup(self._session, instance_name)
+        vm_ref = vm_utils.lookup(self._session, instance_name)
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance_name)
         # NOTE: No Resource Pool concept so far
@@ -177,9 +177,8 @@ class VolumeOps(object):
 
         dev_number = volume_utils.VolumeHelper.mountpoint_to_number(mountpoint)
         try:
-            vbd_ref = vm_utils.VMHelper.create_vbd(self._session, vm_ref,
-                                                   vdi_ref, dev_number,
-                                                   bootable=False)
+            vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
+                                          dev_number, bootable=False)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
             self.forget_sr(uuid)
@@ -200,7 +199,7 @@ class VolumeOps(object):
     def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance"""
         # Before we start, check that the VM exists
-        vm_ref = vm_utils.VMHelper.lookup(self._session, instance_name)
+        vm_ref = vm_utils.lookup(self._session, instance_name)
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance_name)
         # Detach VBD from VM
@@ -209,8 +208,8 @@ class VolumeOps(object):
         device_number = volume_utils.VolumeHelper.mountpoint_to_number(
                                                                     mountpoint)
         try:
-            vbd_ref = vm_utils.VMHelper.find_vbd_by_number(self._session,
-                                                        vm_ref, device_number)
+            vbd_ref = vm_utils.find_vbd_by_number(self._session, vm_ref,
+                                                  device_number)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
             raise Exception(_('Unable to locate volume %s') % mountpoint)
@@ -218,12 +217,12 @@ class VolumeOps(object):
         try:
             sr_ref = volume_utils.VolumeHelper.find_sr_from_vbd(self._session,
                                                                 vbd_ref)
-            vm_utils.VMHelper.unplug_vbd(self._session, vbd_ref)
+            vm_utils.unplug_vbd(self._session, vbd_ref)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
             raise Exception(_('Unable to detach volume %s') % mountpoint)
         try:
-            vm_utils.VMHelper.destroy_vbd(self._session, vbd_ref)
+            vm_utils.destroy_vbd(self._session, vbd_ref)
         except volume_utils.StorageError, exc:
             LOG.exception(exc)
             raise Exception(_('Unable to destroy vbd %s') % mountpoint)

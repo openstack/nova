@@ -37,13 +37,12 @@ def stubout_firewall_driver(stubs, conn):
 
 
 def stubout_instance_snapshot(stubs):
-    @classmethod
-    def fake_fetch_image(cls, context, session, instance, image, type):
+    def fake_fetch_image(context, session, instance, image, type):
         return {'root': dict(uuid=_make_fake_vdi(), file=None),
                 'kernel': dict(uuid=_make_fake_vdi(), file=None),
                 'ramdisk': dict(uuid=_make_fake_vdi(), file=None)}
 
-    stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
+    stubs.Set(vm_utils, 'fetch_image', fake_fetch_image)
 
     def fake_wait_for_vhd_coalesce(*args):
         #TODO(sirp): Should we actually fake out the data here
@@ -97,20 +96,18 @@ def stubout_is_vdi_pv(stubs):
 def stubout_determine_is_pv_objectstore(stubs):
     """Assumes VMs stu have PV kernels"""
 
-    @classmethod
-    def f(cls, *args):
+    def f(*args):
         return False
-    stubs.Set(vm_utils.VMHelper, '_determine_is_pv_objectstore', f)
+    stubs.Set(vm_utils, '_determine_is_pv_objectstore', f)
 
 
 def stubout_is_snapshot(stubs):
     """ Always returns true
         xenapi fake driver does not create vmrefs for snapshots """
 
-    @classmethod
-    def f(cls, *args):
+    def f(*args):
         return True
-    stubs.Set(vm_utils.VMHelper, 'is_snapshot', f)
+    stubs.Set(vm_utils, 'is_snapshot', f)
 
 
 def stubout_lookup_image(stubs):
@@ -123,8 +120,7 @@ def stubout_lookup_image(stubs):
 def stubout_fetch_image_glance_disk(stubs, raise_failure=False):
     """Simulates a failure in fetch image_glance_disk."""
 
-    @classmethod
-    def _fake_fetch_image_glance_disk(cls, context, session, instance, image,
+    def _fake_fetch_image_glance_disk(context, session, instance, image,
                                       image_type):
         if raise_failure:
             raise fake.Failure("Test Exception raised by "
@@ -139,18 +135,17 @@ def stubout_fetch_image_glance_disk(stubs, raise_failure=False):
         vdi_type = vm_utils.ImageType.to_string(image_type)
         return {vdi_type: dict(uuid=None, file=filename)}
 
-    stubs.Set(vm_utils.VMHelper, '_fetch_image_glance_disk',
+    stubs.Set(vm_utils, '_fetch_image_glance_disk',
               _fake_fetch_image_glance_disk)
 
 
 def stubout_create_vm(stubs):
     """Simulates a failure in create_vm."""
 
-    @classmethod
-    def f(cls, *args):
+    def f(*args):
         raise fake.Failure("Test Exception raised by " +
                            "fake create_vm")
-    stubs.Set(vm_utils.VMHelper, 'create_vm', f)
+    stubs.Set(vm_utils, 'create_vm', f)
 
 
 def _make_fake_vdi():
@@ -286,8 +281,7 @@ def stub_out_vm_methods(stubs):
     def fake_release_bootlock(self, vm):
         pass
 
-    @classmethod
-    def fake_generate_ephemeral(cls, *args):
+    def fake_generate_ephemeral(*args):
         pass
 
     def fake_wait_for_device(dev):
@@ -295,7 +289,7 @@ def stub_out_vm_methods(stubs):
 
     stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
     stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
-    stubs.Set(vm_utils.VMHelper, 'generate_ephemeral', fake_generate_ephemeral)
+    stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
     stubs.Set(vm_utils, '_wait_for_device', fake_wait_for_device)
 
 
@@ -344,32 +338,28 @@ def stub_out_migration_methods(stubs):
         vdi_rec['other_config']['nova_disk_type'] = 'root'
         return {'uuid': vdi_rec['uuid'], 'ref': vdi_ref}
 
-    @classmethod
-    def fake_get_vdi(cls, session, vm_ref):
+    def fake_get_vdi(session, vm_ref):
         vdi_ref = fake.create_vdi('derp', 'herp')
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         return vdi_ref, {'uuid': vdi_rec['uuid'], }
 
-    @classmethod
-    def fake_sr(cls, session, *args):
+    def fake_sr(session, *args):
         pass
 
-    @classmethod
-    def fake_get_sr_path(cls, *args):
+    def fake_get_sr_path(*args):
         return "fake"
 
     def fake_destroy(*args, **kwargs):
         pass
 
-    @classmethod
-    def fake_generate_ephemeral(cls, *args):
+    def fake_generate_ephemeral(*args):
         pass
 
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
     stubs.Set(vmops.VMOps, '_move_disks', fake_move_disks)
-    stubs.Set(vm_utils.VMHelper, 'scan_default_sr', fake_sr)
-    stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_sr)
+    stubs.Set(vm_utils, 'scan_default_sr', fake_sr)
+    stubs.Set(vm_utils, 'scan_sr', fake_sr)
     stubs.Set(vmops.VMOps, '_create_snapshot', fake_create_snapshot)
-    stubs.Set(vm_utils.VMHelper, 'get_vdi_for_vm_safely', fake_get_vdi)
-    stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)
-    stubs.Set(vm_utils.VMHelper, 'generate_ephemeral', fake_generate_ephemeral)
+    stubs.Set(vm_utils, 'get_vdi_for_vm_safely', fake_get_vdi)
+    stubs.Set(vm_utils, 'get_sr_path', fake_get_sr_path)
+    stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
