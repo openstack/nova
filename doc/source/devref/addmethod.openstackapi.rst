@@ -35,7 +35,7 @@ Controllers and actions
 
 Controllers live in ``nova/api/openstack``, and inherit from nova.wsgi.Controller.
 
-See ``nova/api/openstack/servers.py`` for an example.
+See ``nova/api/openstack/compute/servers.py`` for an example.
 
 Action methods take parameters that are sucked out of the URL by mapper.connect() or .resource().  The first two parameters are self and the WebOb request, from which you can get the req.environ, req.body, req.headers, etc.
 
@@ -46,7 +46,7 @@ Actions return a dictionary, and wsgi.Controller serializes that to JSON or XML 
 
 If you define a new controller, you'll need to define a ``_serialization_metadata`` attribute on the class, to tell wsgi.Controller how to convert your dictionary to XML.  It needs to know the singular form of any list tag (e.g. ``<servers>`` list contains ``<server>`` tags) and which dictionary keys are to be XML attributes as opposed to subtags (e.g. ``<server id="4"/>`` instead of ``<server><id>4</id></server>``).
 
-See `nova/api/openstack/servers.py` for an example.
+See `nova/api/openstack/compute/servers.py` for an example.
 
 Faults
 ------
