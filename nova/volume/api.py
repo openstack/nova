@@ -22,8 +22,6 @@ Handles all requests relating to volumes.
 
 import functools
 
-from eventlet import greenthread
-
 from nova.db import base
 from nova import exception
 from nova import flags
@@ -122,15 +120,6 @@ class API(base.Base):
                            "reservations": reservations}})
         return volume
 
-    # TODO(yamahata): eliminate dumb polling
-    def wait_creation(self, context, volume):
-        volume_id = volume['id']
-        while True:
-            volume = self.get(context, volume_id)
-            if volume['status'] != 'creating':
-                return
-            greenthread.sleep(1)
-
     @wrap_check_policy
     def delete(self, context, volume):
         volume_id = volume['id']
@@ -155,10 +144,6 @@ class API(base.Base):
                  rpc.queue_get_for(context, FLAGS.volume_topic, host),
                  {"method": "delete_volume",
                   "args": {"volume_id": volume_id}})
-
-    @wrap_check_policy
-    def update(self, context, volume, fields):
-        self.db.volume_update(context, volume['id'], fields)
 
     def get(self, context, volume_id):
         rv = self.db.volume_get(context, volume_id)
@@ -235,22 +220,16 @@ class API(base.Base):
             msg = _("already detached")
             raise exception.InvalidVolume(reason=msg)
 
-    def remove_from_compute(self, context, volume, instance_id, host):
-        """Remove volume from specified compute host."""
-        rpc.call(context,
-                 rpc.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "remove_volume_connection",
-                  "args": {'instance_id': instance_id,
-                           'volume_id': volume['id']}})
-
     @wrap_check_policy
     def reserve_volume(self, context, volume):
-        self.update(context, volume, {"status": "attaching"})
+        self.db.volume_update(context, volume['id'], {"status": "attaching"})
 
     @wrap_check_policy
     def unreserve_volume(self, context, volume):
         if volume['status'] == "attaching":
-            self.update(context, volume, {"status": "available"})
+            self.db.volume_update(context,
+                                  volume['id'],
+                                  {"status": "available"})
 
     @wrap_check_policy
     def attach(self, context, volume, instance_uuid, mountpoint):
