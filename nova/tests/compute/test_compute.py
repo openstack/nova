@@ -154,6 +154,7 @@ class BaseTestCase(test.TestCase):
         inst['vcpus'] = 0
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0
+        inst['architecture'] = 'x86_64'
         inst.update(params)
         return db.instance_create(self.context, inst)
 
@@ -3438,6 +3439,24 @@ class ComputeAPITestCase(BaseTestCase):
                 self.assertEqual(instance['reservation_id'], resv_id)
 
         db.instance_destroy(self.context, refs[0]['id'])
+
+    def test_instance_architecture(self):
+        """Test the instance architecture"""
+        i_ref = self._create_fake_instance()
+        self.assertEqual(i_ref['architecture'], 'x86_64')
+        db.instance_destroy(self.context, i_ref['id'])
+
+    def test_instance_unknown_architecture(self):
+        """Test if the architecture is unknown."""
+        instance = self._create_fake_instance(
+                        params={'architecture': ''})
+        try:
+            self.compute.run_instance(self.context, instance['uuid'])
+            instances = db.instance_get_all(context.get_admin_context())
+            instance = instances[0]
+            self.assertNotEqual(instance['architecture'], 'Unknown')
+        finally:
+            db.instance_destroy(self.context, instance['id'])
 
     def test_instance_name_template(self):
         """Test the instance_name template"""
