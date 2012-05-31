@@ -1653,7 +1653,7 @@ class API(base.Base):
 
     @wrap_check_policy
     def get_console_output(self, context, instance, tail_length=None):
-        """Get console output for an an instance."""
+        """Get console output for an instance."""
         return self.compute_rpcapi.get_console_output(context,
                 instance=instance, tail_length=tail_length)
 
