@@ -424,10 +424,6 @@ class NotFound(NovaException):
     code = 404
 
 
-class FlagNotSet(NotFound):
-    message = _("Required flag %(flag)s not set.")
-
-
 class VolumeNotFound(NotFound):
     message = _("Volume %(volume_id)s could not be found.")
 
@@ -941,11 +937,13 @@ class MalformedRequestBody(NovaException):
     message = _("Malformed message body: %(reason)s")
 
 
-class ConfigNotFound(NotFound):
+# NOTE(johannes): NotFound should only be used when a 404 error is
+# appropriate to be returned
+class ConfigNotFound(NovaException):
     message = _("Could not find config at %(path)s")
 
 
-class PasteAppNotFound(NotFound):
+class PasteAppNotFound(NovaException):
     message = _("Could not load paste app '%(name)s' from %(path)s")
 
 
