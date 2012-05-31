@@ -1050,7 +1050,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
                                     vm_states.RESCUED],
-                          task_state=[None, task_states.RESIZE_VERIFY])
+                          task_state=[None])
     def stop(self, context, instance, do_cast=True):
         """Stop an instance."""
         instance_uuid = instance["uuid"]
@@ -1338,7 +1338,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
                                     vm_states.RESCUED],
-                          task_state=[None, task_states.RESIZE_VERIFY])
+                          task_state=[None])
     def reboot(self, context, instance, reboot_type):
         """Reboot the given instance."""
         state = {'SOFT': task_states.REBOOTING,
@@ -1358,7 +1358,7 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
-                          task_state=[None, task_states.RESIZE_VERIFY])
+                          task_state=[None])
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
         """Rebuild the given instance with the provided attributes."""
 
@@ -1551,7 +1551,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
                                     vm_states.RESCUED],
-                          task_state=[None, task_states.RESIZE_VERIFY])
+                          task_state=[None])
     def pause(self, context, instance):
         """Pause the given instance."""
         self.update(context,
@@ -1578,7 +1578,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
                                     vm_states.RESCUED],
-                          task_state=[None, task_states.RESIZE_VERIFY])
+                          task_state=[None])
     def suspend(self, context, instance):
         """Suspend the given instance."""
         self.update(context,
@@ -1600,7 +1600,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
                                     vm_states.STOPPED],
-                          task_state=[None, task_states.RESIZE_VERIFY])
+                          task_state=[None])
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
         self.update(context,
@@ -1622,7 +1622,8 @@ class API(base.Base):
         self.compute_rpcapi.unrescue_instance(context, instance=instance)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE])
+    @check_instance_state(vm_state=[vm_states.ACTIVE],
+                          task_state=[None])
     def set_admin_password(self, context, instance, password=None):
         """Set the root/admin password for the given instance."""
         self.update(context,
