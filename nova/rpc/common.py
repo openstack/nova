@@ -287,6 +287,9 @@ class CommonRpcContext(object):
     def from_dict(cls, values):
         return cls(**values)
 
+    def deepcopy(self):
+        return self.from_dict(self.to_dict())
+
     def update_store(self):
         local.store.context = self
 
@@ -299,7 +302,7 @@ class CommonRpcContext(object):
         # convert the RpcContext back to its native RequestContext doing
         # something like nova.context.RequestContext.from_dict(ctxt.to_dict())
 
-        context = copy.deepcopy(self)
+        context = self.deepcopy()
         context.values['is_admin'] = True
 
         context.values.setdefault('roles', [])

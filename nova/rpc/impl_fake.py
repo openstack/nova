@@ -34,6 +34,13 @@ class RpcContext(rpc_common.CommonRpcContext):
         self._response = []
         self._done = False
 
+    def deepcopy(self):
+        values = self.to_dict()
+        new_inst = self.__class__(**values)
+        new_inst._response = self._response
+        new_inst._done = self._done
+        return new_inst
+
     def reply(self, reply=None, failure=None, ending=False):
         if ending:
             self._done = True

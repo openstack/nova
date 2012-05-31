@@ -175,6 +175,12 @@ class RpcContext(rpc_common.CommonRpcContext):
         self.conf = kwargs.pop('conf')
         super(RpcContext, self).__init__(**kwargs)
 
+    def deepcopy(self):
+        values = self.to_dict()
+        values['conf'] = self.conf
+        values['msg_id'] = self.msg_id
+        return self.__class__(**values)
+
     def reply(self, reply=None, failure=None, ending=False,
               connection_pool=None):
         if self.msg_id:
