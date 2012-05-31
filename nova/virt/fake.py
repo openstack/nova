@@ -204,12 +204,6 @@ class FakeConnection(driver.ComputeDriver):
         bwusage = []
         return bwusage
 
-    def list_disks(self, instance_name):
-        return ['A_DISK']
-
-    def list_interfaces(self, instance_name):
-        return ['A_VIF']
-
     def block_stats(self, instance_name, disk_id):
         return [0L, 0L, 0L, 0L, None]
 

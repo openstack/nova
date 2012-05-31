@@ -261,16 +261,6 @@ class _VirtDriverTestCase(test.TestCase):
         self.connection.get_diagnostics(instance_ref['name'])
 
     @catch_notimplementederror
-    def test_list_disks(self):
-        instance_ref, network_info = self._get_running_instance()
-        self.connection.list_disks(instance_ref['name'])
-
-    @catch_notimplementederror
-    def test_list_interfaces(self):
-        instance_ref, network_info = self._get_running_instance()
-        self.connection.list_interfaces(instance_ref['name'])
-
-    @catch_notimplementederror
     def test_block_stats(self):
         instance_ref, network_info = self._get_running_instance()
         stats = self.connection.block_stats(instance_ref['name'], 'someid')
