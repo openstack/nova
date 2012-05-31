@@ -166,12 +166,10 @@ class XenAPIVolumeTestCase(test.TestCase):
         """This shows how to test helper classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
-        helper = volume_utils.VolumeHelper
-        helper.XenAPI = session.get_imported_xenapi()
         vol = self._create_volume()
         # oops, wrong mount point!
         self.assertRaises(volume_utils.StorageError,
-                          helper.parse_volume_info,
+                          volume_utils.VolumeHelper.parse_volume_info,
                           self._make_info(),
                           'dev/sd'
                           )
@@ -1643,18 +1641,14 @@ class XenAPISRSelectionTestCase(test.TestCase):
         self.flags(sr_matching_filter='yadayadayada')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
-        helper = vm_utils.VMHelper
-        helper.XenAPI = session.get_imported_xenapi()
         self.assertRaises(exception.StorageRepositoryNotFound,
-                          helper.safe_find_sr, session)
+                          vm_utils.VMHelper.safe_find_sr, session)
 
     def test_safe_find_sr_local_storage(self):
         """Ensure the default local-storage is found."""
         self.flags(sr_matching_filter='other-config:i18n-key=local-storage')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
-        helper = vm_utils.VMHelper
-        helper.XenAPI = session.get_imported_xenapi()
         host_ref = xenapi_fake.get_all('host')[0]
         local_sr = xenapi_fake.create_sr(
                               name_label='Fake Storage',
@@ -1663,7 +1657,7 @@ class XenAPISRSelectionTestCase(test.TestCase):
                                             'Local storage',
                                             'i18n-key': 'local-storage'},
                               host_ref=host_ref)
-        expected = helper.safe_find_sr(session)
+        expected = vm_utils.VMHelper.safe_find_sr(session)
         self.assertEqual(local_sr, expected)
 
     def test_safe_find_sr_by_other_criteria(self):
@@ -1671,14 +1665,12 @@ class XenAPISRSelectionTestCase(test.TestCase):
         self.flags(sr_matching_filter='other-config:my_fake_sr=true')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
-        helper = vm_utils.VMHelper
-        helper.XenAPI = session.get_imported_xenapi()
         host_ref = xenapi_fake.get_all('host')[0]
         local_sr = xenapi_fake.create_sr(name_label='Fake Storage',
                                          type='lvm',
                                          other_config={'my_fake_sr': 'true'},
                                          host_ref=host_ref)
-        expected = helper.safe_find_sr(session)
+        expected = vm_utils.VMHelper.safe_find_sr(session)
         self.assertEqual(local_sr, expected)
 
     def test_safe_find_sr_default(self):
@@ -1686,10 +1678,8 @@ class XenAPISRSelectionTestCase(test.TestCase):
         self.flags(sr_matching_filter='default-sr:true')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
-        helper = vm_utils.VMHelper
         pool_ref = xenapi_fake.create_pool('')
-        helper.XenAPI = session.get_imported_xenapi()
-        expected = helper.safe_find_sr(session)
+        expected = vm_utils.VMHelper.safe_find_sr(session)
         self.assertEqual(session.call_xenapi('pool.get_default_SR', pool_ref),
                          expected)
 
