@@ -57,7 +57,12 @@ netapp_opts = [
                help='Port number for the DFM server'),
     cfg.StrOpt('netapp_storage_service',
                default=None,
-               help='Storage service to use for provisioning'),
+               help=('Storage service to use for provisioning '
+                    '(when volume_type=None)')),
+    cfg.StrOpt('netapp_storage_service_prefix',
+               default=None,
+               help=('Prefix of storage service name to use for '
+                    'provisioning (volume_type name will be appended)')),
     cfg.StrOpt('netapp_vfiler',
                default=None,
                help='Vfiler to use for provisioning'),
@@ -86,18 +91,27 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         DFM server. Note that the WSDL file is quite large and may take
         a few seconds to parse.
         """
+        LOG.debug('Using WSDL: %s' % wsdl_url)
         self.client = client.Client(wsdl_url,
                                     username=login,
                                     password=password)
         soap_url = 'http://%s:%s/apis/soap/v1' % (hostname, port)
+        LOG.debug('Using DFM server: %s' % soap_url)
         self.client.set_options(location=soap_url)
 
     def _set_storage_service(self, storage_service):
         """Set the storage service to use for provisioning"""
+        LOG.debug('Using storage service: %s' % storage_service)
         self.storage_service = storage_service
+
+    def _set_storage_service_prefix(self, storage_service_prefix):
+        """Set the storage service prefix to use for provisioning"""
+        LOG.debug('Using storage service prefix: %s' % storage_service_prefix)
+        self.storage_service_prefix = storage_service_prefix
 
     def _set_vfiler(self, vfiler):
         """Set the vfiler to use for provisioning"""
+        LOG.debug('Using vfiler: %s' % vfiler)
         self.vfiler = vfiler
 
     def _check_flags(self):
@@ -120,8 +134,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             FLAGS.netapp_password, FLAGS.netapp_server_hostname,
             FLAGS.netapp_server_port)
         self._set_storage_service(FLAGS.netapp_storage_service)
-        if FLAGS.netapp_vfiler:
-            self._set_vfiler(FLAGS.netapp_vfiler)
+        self._set_vfiler(FLAGS.netapp_vfiler)
+        self._set_storage_service_prefix(FLAGS.netapp_storage_service_prefix)
 
     def check_for_setup_error(self):
         """Invoke a web services API to make sure we can talk to the server."""
@@ -163,10 +177,14 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                     return events
             time.sleep(5)
 
-    def _dataset_name(self, project):
-        """Return the dataset name for a given project """
+    def _dataset_name(self, project, ss_type):
+        """Return the dataset name for a given project and volume type"""
         _project = string.replace(string.replace(project, ' ', '_'), '-', '_')
-        return 'OpenStack_' + _project
+        dataset_name = 'OpenStack_' + _project
+        if not ss_type:
+            return dataset_name
+        _type = string.replace(string.replace(ss_type, ' ', '_'), '-', '_')
+        return dataset_name + '_' + _type
 
     def _does_dataset_exist(self, dataset_name):
         """Check if a dataset already exists"""
@@ -184,7 +202,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             server.DatasetListInfoIterEnd(Tag=tag)
         return False
 
-    def _create_dataset(self, dataset_name):
+    def _create_dataset(self, dataset_name, storage_service):
         """
         Create a new dataset using the storage service. The export settings are
         set to create iSCSI LUNs aligned for Linux.
@@ -205,12 +223,12 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         details.StorageSetInfo = [detail]
 
         server.StorageServiceDatasetProvision(
-                StorageServiceNameOrId=self.storage_service,
+                StorageServiceNameOrId=storage_service,
                 DatasetName=dataset_name,
                 AssumeConfirmation=True,
                 StorageSetDetails=details)
 
-    def _provision(self, name, description, project, size):
+    def _provision(self, name, description, project, ss_type, size):
         """
         Provision a LUN through provisioning manager. The LUN will be created
         inside a dataset associated with the project. If the dataset doesn't
@@ -218,9 +236,17 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         nova conf.
         """
 
-        dataset_name = self._dataset_name(project)
+        if ss_type and not self.storage_service_prefix:
+            raise exception.Error(_("Attempt to use volume_type without "
+                "specifying netapp_storage_service_prefix option"))
+
+        storage_service = self.storage_service
+        if ss_type:
+            storage_service = self.storage_service_prefix + ss_type
+
+        dataset_name = self._dataset_name(project, ss_type)
         if not self._does_dataset_exist(dataset_name):
-            self._create_dataset(dataset_name)
+            self._create_dataset(dataset_name, storage_service)
 
         info = self.client.factory.create('ProvisionMemberRequestInfo')
         info.Name = name
@@ -251,13 +277,27 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
 
         if not lun_id:
             raise exception.Error(_('No LUN was created by the provision job'))
+        volume_type_name = None
 
-    def _remove_destroy(self, name, project):
+    def _get_ss_type(self, volume):
+        """
+        Get the storage service type for a volume
+        """
+        id = volume['volume_type_id']
+        if not id:
+            return None
+        volume_type = volume_types.get_volume_type(None, id)
+        LOG.debug('volume_type=%s' % volume_type)
+        if not volume_type:
+            return None
+        return volume_type['name']
+
+    def _remove_destroy(self, name, project, ss_type):
         """
         Remove the LUN from the dataset and destroy the actual LUN on the
         storage system.
         """
-        lun_id = self._get_lun_id(name, project)
+        lun_id = self._get_lun_id(name, project, ss_type)
         if not lun_id:
             raise exception.Error(_("Failed to find LUN ID for volume %s") %
                 (name))
@@ -267,7 +307,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         members = self.client.factory.create('ArrayOfDatasetMemberParameter')
         members.DatasetMemberParameter = [member]
 
-        dataset_name = self._dataset_name(project)
+        dataset_name = self._dataset_name(project, ss_type)
 
         server = self.client.service
         lock_id = server.DatasetEditBegin(DatasetNameOrId=dataset_name)
@@ -301,24 +341,17 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             size = default_size
         else:
             size = str(int(volume['size']) * gigabytes)
-        """
-        LOG.debug('volume=%s' % dict(volume))
-        LOG.debug('volume_type_id=%s' % volume['volume_type_id'])
-        volume_type = volume_types.get_volume_type(None,
-                                            volume['volume_type_id'])
-        if volume_type is not None:
-            pass
-        LOG.debug('volume_type=%s' % volume_type)
-        """
-        self._provision(name, description, project, size)
+        ss_type = self._get_ss_type(volume)
+        self._provision(name, description, project, ss_type, size)
 
     def delete_volume(self, volume):
         """Driver entry point for destroying existing volumes"""
         name = volume['name']
         project = volume['project_id']
-        self._remove_destroy(name, project)
+        ss_type = self._get_ss_type(volume)
+        self._remove_destroy(name, project, ss_type)
 
-    def _get_lun_id(self, name, project):
+    def _get_lun_id(self, name, project, ss_type):
         """
         Given the name of a volume, find the DFM (OnCommand) ID of the LUN
         corresponding to that volume. Currently we do this by enumerating
@@ -331,7 +364,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         2) Cache the list of LUNs in the dataset in driver memory
         3) Store the volume to LUN ID mappings in a local file
         """
-        dataset_name = self._dataset_name(project)
+        dataset_name = self._dataset_name(project, ss_type)
 
         server = self.client.service
         res = server.DatasetMemberListInfoIterStart(
@@ -439,7 +472,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         """
         name = volume['name']
         project = volume['project_id']
-        lun_id = self._get_lun_id(name, project)
+        ss_type = self._get_ss_type(volume)
+        lun_id = self._get_lun_id(name, project, ss_type)
         if not lun_id:
             msg = _("Failed to find LUN ID for volume %s")
             raise exception.Error(msg % name)
@@ -674,61 +708,6 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self._ensure_initiator_unmapped(lun.HostId, lun.LunPath,
                                         initiator_name)
 
-    def _create_volume_snapshot(self, host_id, vol_name, snapshot_name):
-        """
-        XXX Obsolete - remove this method
-        Take a snapshot of a NetApp volume (not an OpenStack volume --
-        although OpenStack volumes have a 1-to-1 mapping with NetApp volumes
-        without any cloning). The snapshot will have the specified name.
-        """
-        supports_lun_clone = False
-        request = self.client.factory.create('Request')
-        request.Name = 'snapshot-create'
-        snapshot_create_xml = '<volume>%s</volume><snapshot>%s</snapshot>'
-        if supports_lun_clone:
-            snapshot_create_xml += ('<is-valid-lun-clone-snapshot>true'
-                                    '</is-valid-lun-clone-snapshot>')
-        request.Args = text.Raw(snapshot_create_xml %
-                                (vol_name, snapshot_name))
-        response = self.client.service.ApiProxy(Target=host_id,
-                                                Request=request)
-        self._check_fail(request, response)
-
-    def _delete_volume_snapshot(self, host_id, vol_name, snapshot_name):
-        """
-        XXX Obsolete - remove this method
-        Take a snapshot of a NetApp volume.
-        """
-        request = self.client.factory.create('Request')
-        request.Name = 'snapshot-delete'
-        snapshot_delete_xml = '<volume>%s</volume><snapshot>%s</snapshot>'
-        request.Args = text.Raw(snapshot_delete_xml %
-                                (vol_name, snapshot_name))
-        response = self.client.service.ApiProxy(Target=host_id,
-                                                Request=request)
-        self._check_fail(request, response)
-        
-    def _clone_lun_old(self, host_id, vol_name, snapshot_name, qtree_name,
-                   lun_name, clone_name):
-        """
-        XXX Obsolete - remove this method
-        Create a clone of a NetApp LUN. The clone initially consumes no space
-        and is not space reserved.
-        """
-        request = self.client.factory.create('Request')
-        request.Name = 'lun-create-from-snapshot'
-        lun_clone_xml = (
-            '<path>%s</path><snapshot-lun-path>%s</snapshot-lun-path>'
-            '<space-reservation-enabled>false</space-reservation-enabled>'
-            '<type>linux</type>')
-        path = '/vol/%s/%s/%s' % (vol_name, qtree_name, clone_name)
-        snapshot_path = '/vol/%s/.snapshot/%s/%s/%s' % (vol_name,
-                        snapshot_name, qtree_name, lun_name)
-        request.Args = text.Raw(lun_clone_xml % (path, snapshot_path))
-        response = self.client.service.ApiProxy(Target=host_id,
-                                                Request=request)
-        self._check_fail(request, response)
-
     def _is_clone_done(self, host_id, clone_op_id, volume_uuid):
         """
         Check the status of a clone operation. Return True if done, False
@@ -824,7 +803,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         response = self.client.service.ApiProxy(Target=host_id,
                                                 Request=request)
         self._check_fail(request, response)
-   
+
     def _create_qtree(self, host_id, vol_name, qtree_name):
         """
         Create a qtree the filer.
@@ -842,7 +821,10 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
-        lun_id = self._get_lun_id(vol_name, project)
+        LOG.debug('create_snapshot %s' % dict(snapshot))
+        # XXX how do we get volume_type for a snapshot volume?
+        ss_type = None
+        lun_id = self._get_lun_id(vol_name, project, ss_type)
         if not lun_id:
             msg = _("Failed to find LUN ID for volume %s")
             raise exception.Error(msg % vol_name)
@@ -864,7 +846,9 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
-        lun_id = self._get_lun_id(vol_name, project)
+        # XXX how do we get volume_type for a snapshot volume?
+        ss_type = None
+        lun_id = self._get_lun_id(vol_name, project, ss_type)
         if not lun_id:
             msg = _("Failed to find LUN ID for volume %s")
             raise exception.Error(msg % vol_name)
@@ -883,7 +867,14 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
-        lun_id = self._get_lun_id(vol_name, project)
+        # XXX how do we get ss_type for a snapshot
+        ss_type = None
+        vol_ss_type = self.get_ss_type(volume)
+        if ss_type != vol_ss_type:
+            msg = _('Cannot create volume of type %s from '
+                'snapshot of type %s')
+            raise exception.Error(msg % (vol_ss_type, ss_type))
+        lun_id = self._get_lun_id(vol_name, project, ss_type)
         if not lun_id:
             msg = _("Failed to find LUN ID for volume %s")
             raise exception.Error(msg % vol_name)
