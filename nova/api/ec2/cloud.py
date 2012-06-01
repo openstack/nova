@@ -759,18 +759,36 @@ class CloudController(object):
         return source_project_id
 
     def create_security_group(self, context, group_name, group_description):
-        if not re.match('^[a-zA-Z0-9_\- ]+$', str(group_name)):
-            # Some validation to ensure that values match API spec.
-            # - Alphanumeric characters, spaces, dashes, and underscores.
-            # TODO(Daviey): LP: #813685 extend beyond group_name checking, and
-            #  probably create a param validator that can be used elsewhere.
-            err = _("Value (%s) for parameter GroupName is invalid."
-                    " Content limited to Alphanumeric characters, "
-                    "spaces, dashes, and underscores.") % group_name
-            # err not that of master ec2 implementation, as they fail to raise.
-            raise exception.InvalidParameterValue(err=err)
+        if isinstance(group_name, unicode):
+            group_name = group_name.encode('utf-8')
+        # TODO(Daviey): LP: #813685 extend beyond group_name checking, and
+        # probably create a param validator that can be used elsewhere.
+        if FLAGS.ec2_strict_validation:
+            # EC2 specification gives constraints for name and description:
+            # Accepts alphanumeric characters, spaces, dashes, and underscores
+            err = _("Value (%(value)s) for parameter %(param)s is invalid."
+                    " Content limited to Alphanumeric characters,"
+                    " spaces, dashes, and underscores.")
+            if not re.match('^[a-zA-Z0-9_\- ]+$', group_name):
+                raise exception.InvalidParameterValue(
+                    err=err % {"value": group_name,
+                               "param": "GroupName"})
+            if not re.match('^[a-zA-Z0-9_\- ]+$', group_description):
+                raise exception.InvalidParameterValue(
+                    err=err % {"value": group_description,
+                               "param": "GroupDescription"})
+        else:
+            # Amazon accepts more symbols.
+            # So, allow POSIX [:print:] characters.
+            if not re.match(r'^[\x20-\x7E]+$', group_name):
+                err = _("Value (%(value)s) for parameter %(param)s is invalid."
+                        " Content is limited to characters"
+                        " from the [:print:] class.")
+                raise exception.InvalidParameterValue(
+                    err=err % {"value": group_name,
+                               "param": "GroupName"})
 
-        if len(str(group_name)) > 255:
+        if len(group_name) > 255:
             err = _("Value (%s) for parameter GroupName is invalid."
                     " Length exceeds maximum of 255.") % group_name
             raise exception.InvalidParameterValue(err=err)
