@@ -445,7 +445,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_power_on(self, instance):
             called['power_on'] = True
 
-        self.stubs.Set(nova.virt.driver.ComputeDriver, 'power_on',
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'power_on',
                        fake_driver_power_on)
 
         instance = self._create_fake_instance()
@@ -463,7 +463,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_power_off(self, instance):
             called['power_off'] = True
 
-        self.stubs.Set(nova.virt.driver.ComputeDriver, 'power_off',
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'power_off',
                        fake_driver_power_off)
 
         instance = self._create_fake_instance()
@@ -1700,8 +1700,8 @@ class ComputeTestCase(BaseTestCase):
                                                 ).AndReturn([instance])
 
         self.mox.StubOutWithMock(self.compute, "_shutdown_instance")
-        self.compute._shutdown_instance(admin_context, instance,
-                                        'Terminating').AndReturn(None)
+        self.compute._shutdown_instance(admin_context,
+                                        instance).AndReturn(None)
 
         self.mox.StubOutWithMock(self.compute, "_cleanup_volumes")
         self.compute._cleanup_volumes(admin_context,
@@ -2256,13 +2256,8 @@ class ComputeAPITestCase(BaseTestCase):
         check_state(instance_uuid, power_state.NOSTATE, vm_states.SHUTOFF,
                     None)
 
-        start_check_state(instance_uuid,
-                          power_state.NOSTATE, vm_states.SHUTOFF, None)
-
-        db.instance_update(self.context, instance_uuid,
-                           {'shutdown_terminate': False})
         start_check_state(instance_uuid, power_state.NOSTATE,
-                          vm_states.STOPPED, task_states.STARTING)
+                          vm_states.SHUTOFF, task_states.STARTING)
 
         db.instance_destroy(self.context, instance['id'])
 
@@ -2338,6 +2333,10 @@ class ComputeAPITestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
 
+        # set the state that the instance gets when soft_delete finishes
+        instance = db.instance_update(self.context, instance['uuid'],
+                                      {'vm_state': vm_states.SOFT_DELETE})
+
         self.compute_api.force_delete(self.context, instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
@@ -2402,9 +2401,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute.pause_instance(self.context, instance_uuid)
         # set the state that the instance gets when pause finishes
-        db.instance_update(self.context, instance['uuid'],
+        instance = db.instance_update(self.context, instance['uuid'],
                            {'vm_state': vm_states.PAUSED})
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
 
         self.compute_api.unpause(self.context, instance)
 
@@ -2424,6 +2422,10 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], task_states.POWERING_OFF)
+
+        # set the state that the instance gets when soft_delete finishes
+        instance = db.instance_update(self.context, instance['uuid'],
+                           {'vm_state': vm_states.SOFT_DELETE})
 
         self.compute_api.restore(self.context, instance)
 
@@ -2766,10 +2768,9 @@ class ComputeAPITestCase(BaseTestCase):
                 {'instance_uuid': instance['uuid'],
                  'status': 'finished'})
         # set the state that the instance gets when resize finishes
-        db.instance_update(self.context, instance['uuid'],
-                           {'task_state': task_states.RESIZE_VERIFY,
-                            'vm_state': vm_states.ACTIVE})
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_update(self.context, instance['uuid'],
+                                      {'task_state': task_states.RESIZE_VERIFY,
+                                       'vm_state': vm_states.ACTIVE})
 
         self.compute_api.confirm_resize(context, instance)
         self.compute.terminate_instance(context, instance['uuid'])
@@ -2787,10 +2788,9 @@ class ComputeAPITestCase(BaseTestCase):
                 {'instance_uuid': instance['uuid'],
                  'status': 'finished'})
         # set the state that the instance gets when resize finishes
-        db.instance_update(self.context, instance['uuid'],
-                           {'task_state': task_states.RESIZE_VERIFY,
-                            'vm_state': vm_states.ACTIVE})
-        instance = db.instance_get_by_uuid(context, instance['uuid'])
+        instance = db.instance_update(self.context, instance['uuid'],
+                                      {'task_state': task_states.RESIZE_VERIFY,
+                                       'vm_state': vm_states.ACTIVE})
 
         self.compute_api.revert_resize(context, instance)
 

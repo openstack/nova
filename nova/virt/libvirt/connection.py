@@ -718,7 +718,7 @@ class LibvirtDriver(driver.ComputeDriver):
             finally:
                 libvirt_utils.delete_snapshot(disk_path, snapshot_name)
                 if state == power_state.RUNNING:
-                    virt_dom.create()
+                    self._create_domain(domain=virt_dom)
 
             # Upload that image to the image service
             with libvirt_utils.file_open(out_path) as image_file:
@@ -770,7 +770,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          power_state.CRASHED]:
                 LOG.info(_("Instance shutdown successfully."),
                          instance=instance)
-                dom.create()
+                self._create_domain(domain=dom)
                 timer = utils.LoopingCall(self._wait_for_running, instance)
                 return timer.start(interval=0.5)
             greenthread.sleep(1)
@@ -808,26 +808,39 @@ class LibvirtDriver(driver.ComputeDriver):
     @exception.wrap_exception()
     def pause(self, instance):
         """Pause VM instance"""
-        dom = self._lookup_by_name(instance.name)
+        dom = self._lookup_by_name(instance['name'])
         dom.suspend()
 
     @exception.wrap_exception()
     def unpause(self, instance):
         """Unpause paused VM instance"""
-        dom = self._lookup_by_name(instance.name)
+        dom = self._lookup_by_name(instance['name'])
         dom.resume()
+
+    @exception.wrap_exception()
+    def power_off(self, instance):
+        """Power off the specified instance"""
+        self._destroy(instance)
+
+    @exception.wrap_exception()
+    def power_on(self, instance):
+        """Power on the specified instance"""
+        dom = self._lookup_by_name(instance['name'])
+        self._create_domain(domain=dom)
+        timer = utils.LoopingCall(self._wait_for_running, instance)
+        return timer.start(interval=0.5)
 
     @exception.wrap_exception()
     def suspend(self, instance):
         """Suspend the specified instance"""
-        dom = self._lookup_by_name(instance.name)
+        dom = self._lookup_by_name(instance['name'])
         dom.managedSave(0)
 
     @exception.wrap_exception()
     def resume(self, instance):
         """resume the specified instance"""
-        dom = self._lookup_by_name(instance.name)
-        dom.create()
+        dom = self._lookup_by_name(instance['name'])
+        self._create_domain(domain=dom)
 
     @exception.wrap_exception()
     def resume_state_on_host_boot(self, context, instance, network_info):
@@ -2253,7 +2266,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 post_method(ctxt, instance_ref, dest, block_migration)
 
         timer.f = wait_for_live_migration
-        timer.start(interval=0.5)
+        return timer.start(interval=0.5)
 
     def pre_live_migration(self, block_device_info):
         """Preparation live migration.
@@ -2505,7 +2518,7 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info_text = self.get_instance_disk_info(instance['name'])
         disk_info = jsonutils.loads(disk_info_text)
 
-        self._destroy(instance)
+        self.power_off(instance)
 
         # copy disks to destination
         # if disk type is qcow2, convert to raw then send to dest.

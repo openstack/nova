@@ -967,7 +967,6 @@ class API(base.Base):
         if instance['host']:
             self.update(context,
                         instance,
-                        vm_state=vm_states.SOFT_DELETE,
                         task_state=task_states.POWERING_OFF,
                         deleted_at=utils.utcnow())
 
@@ -1047,15 +1046,18 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.SOFT_DELETE])
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
-        self.update(context,
-                    instance,
-                    vm_state=vm_states.ACTIVE,
-                    task_state=None,
-                    deleted_at=None)
-
         if instance['host']:
-            self.update(context, instance, task_state=task_states.POWERING_ON)
+            self.update(context,
+                        instance,
+                        task_state=task_states.POWERING_ON,
+                        deleted_at=None)
             self.compute_rpcapi.power_on_instance(context, instance)
+        else:
+            self.update(context,
+                        instance,
+                        vm_state=vm_states.ACTIVE,
+                        task_state=None,
+                        deleted_at=None)
 
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.SOFT_DELETE])
@@ -1074,9 +1076,7 @@ class API(base.Base):
 
         self.update(context,
                     instance,
-                    vm_state=vm_states.ACTIVE,
                     task_state=task_states.STOPPING,
-                    terminated_at=utils.utcnow(),
                     progress=0)
 
         self.compute_rpcapi.stop_instance(context, instance, cast=do_cast)
@@ -1085,23 +1085,10 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.STOPPED, vm_states.SHUTOFF])
     def start(self, context, instance):
         """Start an instance."""
-        vm_state = instance["vm_state"]
-        instance_uuid = instance["uuid"]
         LOG.debug(_("Going to try to start instance"), instance=instance)
-
-        if vm_state == vm_states.SHUTOFF:
-            if instance['shutdown_terminate']:
-                LOG.warning(_("Instance %(instance_uuid)s is not "
-                              "stopped. (%(vm_state)s") % locals())
-                return
-
-            # NOTE(yamahata): nova compute doesn't reap instances
-            # which initiated shutdown itself. So reap it here.
-            self.stop(context, instance, do_cast=False)
 
         self.update(context,
                     instance,
-                    vm_state=vm_states.STOPPED,
                     task_state=task_states.STARTING)
 
         # TODO(yamahata): injected_files isn't supported right now.
