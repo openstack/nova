@@ -2496,7 +2496,7 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_get_instance_disk_info(instance):
             return '[]'
 
-        def fake_destroy(instance, network_info, cleanup=True):
+        def fake_destroy(instance):
             pass
 
         def fake_get_host_ip_addr():
@@ -2541,7 +2541,7 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_get_instance_disk_info(instance):
             return disk_info_text
 
-        def fake_destroy(instance, network_info, cleanup=True):
+        def fake_destroy(instance):
             pass
 
         def fake_get_host_ip_addr():
@@ -2623,8 +2623,11 @@ class LibvirtDriverTestCase(test.TestCase):
                       block_device_info=None):
             pass
 
-        def fake_create_new_domain(xml):
+        def fake_create_domain(xml):
             return None
+
+        def fake_enable_hairpin(instance):
+            pass
 
         def fake_execute(*args, **kwargs):
             pass
@@ -2635,8 +2638,10 @@ class LibvirtDriverTestCase(test.TestCase):
         self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(self.libvirtconnection, '_create_image',
                        fake_create_image)
-        self.stubs.Set(self.libvirtconnection, '_create_new_domain',
-                       fake_create_new_domain)
+        self.stubs.Set(self.libvirtconnection, '_create_domain',
+                       fake_create_domain)
+        self.stubs.Set(self.libvirtconnection, '_enable_hairpin',
+                       fake_enable_hairpin)
         self.stubs.Set(utils, 'execute', fake_execute)
         fw = base_firewall.NoopFirewallDriver()
         self.stubs.Set(self.libvirtconnection, 'firewall_driver', fw)
@@ -2658,15 +2663,20 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_plug_vifs(instance, network_info):
             pass
 
-        def fake_create_new_domain(xml):
+        def fake_create_domain(xml):
             return None
+
+        def fake_enable_hairpin(instance):
+            pass
 
         self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(utils, 'execute', fake_execute)
         fw = base_firewall.NoopFirewallDriver()
         self.stubs.Set(self.libvirtconnection, 'firewall_driver', fw)
-        self.stubs.Set(self.libvirtconnection, '_create_new_domain',
-                       fake_create_new_domain)
+        self.stubs.Set(self.libvirtconnection, '_create_domain',
+                       fake_create_domain)
+        self.stubs.Set(self.libvirtconnection, '_enable_hairpin',
+                       fake_enable_hairpin)
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)

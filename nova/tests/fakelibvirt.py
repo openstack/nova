@@ -288,6 +288,11 @@ class Domain(object):
         self._state = VIR_DOMAIN_SHUTDOWN
         self._connection._mark_not_running(self)
 
+    def reset(self, flags):
+        # FIXME: Not handling flags at the moment
+        self._state = VIR_DOMAIN_RUNNING
+        self._connection._mark_running(self)
+
     def info(self):
         return [self._state,
                 long(self._def['memory']),

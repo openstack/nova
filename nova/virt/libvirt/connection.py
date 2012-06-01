@@ -400,8 +400,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for (network, mapping) in network_info:
             self.vif_driver.unplug(instance, (network, mapping))
 
-    def _destroy(self, instance, network_info, block_device_info=None,
-                 cleanup=True):
+    def _destroy(self, instance):
         try:
             virt_dom = self._lookup_by_name(instance['name'])
         except exception.NotFound:
@@ -430,6 +429,33 @@ class LibvirtDriver(driver.ComputeDriver):
                                 locals(), instance=instance)
                     raise
 
+        def _wait_for_destroy():
+            """Called at an interval until the VM is gone."""
+            try:
+                state = self.get_info(instance)['state']
+            except exception.NotFound:
+                LOG.error(_("During wait destroy, instance disappeared."),
+                          instance=instance)
+                raise utils.LoopingCallDone(False)
+
+            if state == power_state.SHUTOFF:
+                LOG.info(_("Instance destroyed successfully."),
+                         instance=instance)
+                raise utils.LoopingCallDone(True)
+
+        timer = utils.LoopingCall(_wait_for_destroy)
+        return timer.start(interval=0.5)
+
+    def destroy(self, instance, network_info, block_device_info=None):
+        self._destroy(instance)
+        self._cleanup(instance, network_info, block_device_info)
+
+    def _cleanup(self, instance, network_info, block_device_info):
+        try:
+            virt_dom = self._lookup_by_name(instance['name'])
+        except exception.NotFound:
+            virt_dom = None
+        if virt_dom:
             try:
                 # NOTE(derekh): we can switch to undefineFlags and
                 # VIR_DOMAIN_UNDEFINE_MANAGED_SAVE once we require 0.9.4
@@ -440,11 +466,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.error(_("Error from libvirt during saved instance "
                               "removal. Code=%(errcode)s Error=%(e)s") %
                             locals(), instance=instance)
-
             try:
-                # NOTE(justinsb): We remove the domain definition. We probably
-                # would do better to keep it if cleanup=False (e.g. volumes?)
-                # (e.g. #2 - not losing machines on failure)
+                # NOTE(justinsb): We remove the domain definition.
                 virt_dom.undefine()
             except libvirt.libvirtError as e:
                 errcode = e.get_error_code()
@@ -454,19 +477,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise
 
         self.unplug_vifs(instance, network_info)
-
-        def _wait_for_destroy():
-            """Called at an interval until the VM is gone."""
-            try:
-                self.get_info(instance)
-            except exception.NotFound:
-                LOG.info(_("Instance destroyed successfully."),
-                         instance=instance)
-                raise utils.LoopingCallDone
-
-        timer = utils.LoopingCall(_wait_for_destroy)
-        timer.start(interval=0.5)
-
         try:
             self.firewall_driver.unfilter_instance(instance,
                                                    network_info=network_info)
@@ -487,16 +497,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self.volume_driver_method('disconnect_volume',
                                       connection_info,
                                       mountpoint)
-        if cleanup:
-            self._cleanup(instance)
 
-        return True
-
-    def destroy(self, instance, network_info, block_device_info=None):
-        return self._destroy(instance, network_info, block_device_info,
-                             cleanup=True)
-
-    def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
         LOG.info(_('Deleting instance files %(target)s') % locals(),
                  instance=instance)
@@ -785,18 +786,7 @@ class LibvirtDriver(driver.ComputeDriver):
         existing domain.
         """
         virt_dom = self._conn.lookupByName(instance['name'])
-        # NOTE(itoumsn): Use XML delived from the running instance
-        # instead of using to_xml(instance, network_info). This is almost
-        # the ultimate stupid workaround.
-        if not xml:
-            xml = virt_dom.XMLDesc(0)
-
-        self._destroy(instance, network_info, cleanup=False)
-        self.plug_vifs(instance, network_info)
-        self.firewall_driver.setup_basic_filtering(instance, network_info)
-        self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self._create_new_domain(xml)
-        self.firewall_driver.apply_instance_filter(instance, network_info)
+        virt_dom.reset(0)
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
@@ -842,9 +832,9 @@ class LibvirtDriver(driver.ComputeDriver):
     @exception.wrap_exception()
     def resume_state_on_host_boot(self, context, instance, network_info):
         """resume guest state when a host is booted"""
-        # NOTE(dprince): use hard reboot to ensure network and firewall
-        # rules are configured
-        self._hard_reboot(instance, network_info)
+        virt_dom = self._conn.lookupByName(instance['name'])
+        xml = virt_dom.XMLDesc(0)
+        self._create_domain_and_network(xml, instance, network_info)
 
     @exception.wrap_exception()
     def rescue(self, context, instance, network_info, image_meta):
@@ -872,22 +862,21 @@ class LibvirtDriver(driver.ComputeDriver):
         }
         self._create_image(context, instance, xml, '.rescue', rescue_images,
                            network_info=network_info)
-        self._hard_reboot(instance, network_info, xml=xml)
+        self._destroy(instance)
+        self._create_domain(xml, virt_dom)
 
     @exception.wrap_exception()
     def unrescue(self, instance, network_info):
         """Reboot the VM which is being rescued back into primary images.
-
-        Because reboot destroys and re-creates instances, unresue should
-        simply call reboot.
-
         """
         unrescue_xml_path = os.path.join(FLAGS.instances_path,
                                          instance['name'],
                                          'unrescue.xml')
         xml = libvirt_utils.load_file(unrescue_xml_path)
+        virt_dom = self._conn.lookupByName(instance['name'])
+        self._destroy(instance)
+        self._create_domain(xml, virt_dom)
         libvirt_utils.file_delete(unrescue_xml_path)
-        self._hard_reboot(instance, network_info, xml=xml)
         rescue_files = os.path.join(FLAGS.instances_path, instance['name'],
                                     "*.rescue")
         for rescue_file in glob.iglob(rescue_files):
@@ -917,15 +906,10 @@ class LibvirtDriver(driver.ComputeDriver):
               block_device_info=None):
         xml = self.to_xml(instance, network_info, image_meta, False,
                           block_device_info=block_device_info)
-        self.firewall_driver.setup_basic_filtering(instance, network_info)
-        self.firewall_driver.prepare_instance_filter(instance, network_info)
         self._create_image(context, instance, xml, network_info=network_info,
                            block_device_info=block_device_info)
-
-        self._create_new_domain(xml)
+        self._create_domain_and_network(xml, instance, network_info)
         LOG.debug(_("Instance is running"), instance=instance)
-        self._enable_hairpin(instance)
-        self.firewall_driver.apply_instance_filter(instance, network_info)
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
@@ -1699,7 +1683,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return guest
 
-    def to_xml(self, instance, network_info, image_meta=None, rescue=False,
+    def to_xml(self, instance, network_info, image_meta=None, rescue=None,
                block_device_info=None):
         LOG.debug(_('Starting toXML method'), instance=instance)
         conf = self.get_guest_config(instance, network_info, image_meta,
@@ -1742,22 +1726,25 @@ class LibvirtDriver(driver.ComputeDriver):
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
 
-    def _create_new_domain(self, xml, persistent=True, launch_flags=0):
-        # NOTE(justinsb): libvirt has two types of domain:
-        # * a transient domain disappears when the guest is shutdown
-        # or the host is rebooted.
-        # * a permanent domain is not automatically deleted
-        # NOTE(justinsb): Even for ephemeral instances, transient seems risky
+    def _create_domain(self, xml=None, domain=None, launch_flags=0):
+        """Create a domain.
 
-        if persistent:
-            # To create a persistent domain, first define it, then launch it.
+        Either domain or xml must be passed in. If both are passed, then
+        the domain definition is overwritten from the xml.
+        """
+        if xml:
             domain = self._conn.defineXML(xml)
+        domain.createWithFlags(launch_flags)
+        return domain
 
-            domain.createWithFlags(launch_flags)
-        else:
-            # createXML call creates a transient domain
-            domain = self._conn.createXML(xml, launch_flags)
-
+    def _create_domain_and_network(self, xml, instance, network_info):
+        """Do required network setup and create domain."""
+        self.plug_vifs(instance, network_info)
+        self.firewall_driver.setup_basic_filtering(instance, network_info)
+        self.firewall_driver.prepare_instance_filter(instance, network_info)
+        domain = self._create_domain(xml)
+        self._enable_hairpin(instance)
+        self.firewall_driver.apply_instance_filter(instance, network_info)
         return domain
 
     def get_all_block_devices(self):
@@ -2518,7 +2505,7 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info_text = self.get_instance_disk_info(instance['name'])
         disk_info = jsonutils.loads(disk_info_text)
 
-        self._destroy(instance, network_info, cleanup=False)
+        self._destroy(instance)
 
         # copy disks to destination
         # if disk type is qcow2, convert to raw then send to dest.
@@ -2600,19 +2587,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 utils.execute('mv', path_qcow, info['path'])
 
         xml = self.to_xml(instance, network_info)
-
-        self.plug_vifs(instance, network_info)
-        self.firewall_driver.setup_basic_filtering(instance, network_info)
-        self.firewall_driver.prepare_instance_filter(instance, network_info)
         # assume _create_image do nothing if a target file exists.
         # TODO(oda): injecting files is not necessary
         self._create_image(context, instance, xml,
                                     network_info=network_info,
                                     block_device_info=None)
-
-        self._create_new_domain(xml)
-        self.firewall_driver.apply_instance_filter(instance, network_info)
-
+        self._create_domain_and_network(xml, instance, network_info)
         timer = utils.LoopingCall(self._wait_for_running, instance)
         return timer.start(interval=0.5)
 
@@ -2627,13 +2607,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         xml_path = os.path.join(inst_base, 'libvirt.xml')
         xml = open(xml_path).read()
-
-        self.plug_vifs(instance, network_info)
-        self.firewall_driver.setup_basic_filtering(instance, network_info)
-        self.firewall_driver.prepare_instance_filter(instance, network_info)
-        # images already exist
-        self._create_new_domain(xml)
-        self.firewall_driver.apply_instance_filter(instance, network_info)
+        self._create_domain_and_network(xml, instance, network_info)
 
         timer = utils.LoopingCall(self._wait_for_running, instance)
         return timer.start(interval=0.5)
