@@ -138,6 +138,12 @@ class _VirtDriverTestCase(test.TestCase):
                                      'd41d8cd98f00b204e9800998ecf8427e')
 
     @catch_notimplementederror
+    def test_resume_state_on_host_boot(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.resume_state_on_host_boot(self.ctxt, instance_ref,
+                                                  network_info)
+
+    @catch_notimplementederror
     def test_rescue(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.rescue(self.ctxt, instance_ref, network_info, None)
