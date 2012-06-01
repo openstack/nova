@@ -163,13 +163,16 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self._set_vfiler(FLAGS.netapp_vfiler)
 
     def check_for_setup_error(self):
-        """Invoke a web services API to make sure we can talk to the server."""
+        """
+        Invoke a web services API to make sure we can talk to the server.
+        Also perform the discovery of datasets and LUNs from DFM.
+        """
         self.client.service.DfmAbout()
         LOG.debug(_("Connected to DFM server"))
         self._discover_luns()
 
     def _get_datasets(self):
-        """Get the list of datasets from DFM"""
+        """Get the list of datasets from DFM."""
         server = self.client.service
         res = server.DatasetListInfoIterStart(IncludeMetadata=True)
         tag = res.Tag
@@ -207,7 +210,10 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             server.DatasetMemberListInfoIterEnd(Tag=tag)
 
     def _discover_luns(self):
-        """Discover all of the OpenStack-created LUNs in the DFM database."""
+        """
+        Discover all of the OpenStack-created datasets and LUNs in the DFM
+        database.
+        """
         datasets = self._get_datasets()
         self.discovered_datasets = []
         self.discovered_luns = []
@@ -224,6 +230,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                     project = field.FieldValue
                 elif field.FieldName == self.DATASET_METADATA_VOL_TYPE_KEY:
                     type = field.FieldValue
+            if not project:
+                continue
             ds = DfmDataset(dataset.DatasetId, dataset.DatasetName,
                             project, type)
             self.discovered_datasets.append(ds)
@@ -268,7 +276,9 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             time.sleep(5)
 
     def _dataset_name(self, project, ss_type):
-        """Return the dataset name for a given project and volume type"""
+        """
+        Return the dataset name for a given project and volume type.
+        """
         _project = string.replace(string.replace(project, ' ', '_'), '-', '_')
         dataset_name = self.DATASET_PREFIX + _project
         if not ss_type:
@@ -278,7 +288,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
 
     def _get_dataset(self, dataset_name):
         """
-        Lookup a dataset by name in the list of discovered datasets
+        Lookup a dataset by name in the list of discovered datasets.
         """
         for dataset in self.discovered_datasets:
             if dataset.name == dataset_name:
@@ -384,9 +394,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self.lun_table[name] = lun
 
     def _get_ss_type(self, volume):
-        """
-        Get the storage service type for a volume
-        """
+        """Get the storage service type for a volume."""
         id = volume['volume_type_id']
         if not id:
             return None
@@ -419,7 +427,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             raise exception.Error(msg)
 
     def create_volume(self, volume):
-        """Driver entry point for creating a new volume"""
+        """Driver entry point for creating a new volume."""
         default_size = '104857600'  # 100 MB
         gigabytes = 1073741824L  # 2^30
         name = volume['name']
@@ -441,18 +449,17 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         ss_type = self._get_ss_type(volume)
         self._provision(name, description, project, ss_type, size)
 
-    def _find_discovered_lun_for_volume(self, name, project):
+    def _lookup_lun_for_volume(self, name, project):
         """
-        Look through the list of discovered LUNs and if one matches the given
-        volume, return that LUN after inserting that LUN into the table so
-        future lookups will be instantaneous.
+        Lookup the LUN that corresponds to the give volume.
+        Initial lookups involve a table scan of all of the discovered LUNs,
+        but later lookups are done instantly from the hashtable.
         """
         if name in self.lun_table:
             return self.lun_table[name]
-        dataset_prefix = self.DATASET_PREFIX + project
         lunpath_suffix = '/' + name
         for lun in self.discovered_luns:
-            if not lun.dataset.name.startswith(dataset_prefix):
+            if lun.dataset.project != project:
                 continue
             if lun.lunpath.endswith(lunpath_suffix):
                 self.lun_table[name] = lun
@@ -461,14 +468,14 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             (name))
 
     def delete_volume(self, volume):
-        """Driver entry point for destroying existing volumes"""
+        """Driver entry point for destroying existing volumes."""
         name = volume['name']
         project = volume['project_id']
-        lun = self._find_discovered_lun_for_volume(name, project)
+        lun = self._lookup_lun_for_volume(name, project)
         self._remove_destroy(lun)
 
     def _get_lun_details(self, lun_id):
-        """Given the ID of a LUN, get the details about that LUN"""
+        """Given the ID of a LUN, get the details about that LUN."""
         server = self.client.service
         res = server.LunListInfoIterStart(ObjectNameOrId=lun_id)
         tag = res.Tag
@@ -478,6 +485,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 return res.Luns.LunInfo[0]
         finally:
             server.LunListInfoIterEnd(Tag=tag)
+        msg = _('Failed to get LUN details for LUN ID %s')
+        raise exception.Error(msg % lun_id)
 
     def _get_host_details(self, host_id):
         """
@@ -493,6 +502,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 return res.Hosts.HostInfo[0]
         finally:
             server.HostListInfoIterEnd(Tag=tag)
+        msg = _('Failed to get host details for host ID %s')
+        raise exception.Error(msg % host_id)
 
     def _get_iqn_for_host(self, host_id):
         """Get the iSCSI Target Name for a storage system"""
@@ -552,18 +563,18 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         """
         name = volume['name']
         project = volume['project_id']
-        lun = self._find_discovered_lun_for_volume(name, project)
+        lun = self._lookup_lun_for_volume(name, project)
         return {'provider_location': lun.id}
 
     def ensure_export(self, context, volume):
         """
-        Driver entry point to get the iSCSI details about an existing volume
+        Driver entry point to get the iSCSI details about an existing volume.
         """
         return self._get_export(volume)
 
     def create_export(self, context, volume):
         """
-        Driver entry point to get the iSCSI details about a new volume
+        Driver entry point to get the iSCSI details about a new volume.
         """
         return self._get_export(volume)
 
@@ -724,16 +735,10 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             msg = _("No LUN ID for volume %s")
             raise exception.Error(msg % volume['name'])
         lun = self._get_lun_details(lun_id)
-        if not lun:
-            msg = _('Failed to get LUN details for LUN ID %s')
-            raise exception.Error(msg % lun_id)
         lun_num = self._ensure_initiator_mapped(lun.HostId, lun.LunPath,
                                                 initiator_name)
 
         host = self._get_host_details(lun.HostId)
-        if not host:
-            msg = _('Failed to get host details for host ID %s')
-            raise exception.Error(msg % lun.HostId)
 
         portal = self._get_target_portal_for_host(host.HostId,
                                                   host.HostAddress)
@@ -778,9 +783,6 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             msg = _('No LUN ID for volume %s')
             raise exception.Error(msg % (volume['name']))
         lun = self._get_lun_details(lun_id)
-        if not lun:
-            msg = _('Failed to get LUN details for LUN ID %s')
-            raise exception.Error(msg % (lun_id))
         self._ensure_initiator_unmapped(lun.HostId, lun.LunPath,
                                         initiator_name)
 
@@ -897,12 +899,9 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
-        lun = self._find_discovered_lun_for_volume(vol_name, project)
+        lun = self._lookup_lun_for_volume(vol_name, project)
         lun_id = lun.id
         lun = self._get_lun_details(lun_id)
-        if not lun:
-            msg = _('Failed to get LUN details for LUN ID %s')
-            raise exception.Error(msg % lun_id)
         extra_gb = snapshot['volume_size']
         new_size = '+%dg' % extra_gb
         self._resize_volume(lun.HostId, lun.VolumeName, new_size)
@@ -917,12 +916,9 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
-        lun = self._find_discovered_lun_for_volume(vol_name, project)
+        lun = self._lookup_lun_for_volume(vol_name, project)
         lun_id = lun.id
         lun = self._get_lun_details(lun_id)
-        if not lun:
-            msg = _('Failed to get LUN details for LUN ID %s')
-            raise exception.Error(msg % lun_id)
         lun_path = '/vol/%s/%s/%s' % (lun.VolumeName, lun.QtreeName,
                                       snapshot_name)
         self._destroy_lun(lun.HostId, lun_path)
@@ -934,7 +930,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
-        lun = self._find_discovered_lun_for_volume(vol_name, project)
+        lun = self._lookup_lun_for_volume(vol_name, project)
         lun_id = lun.id
         ss_type = self.get_ss_type(volume)
         if ss_type != lun.dataset.type:
@@ -942,10 +938,6 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 'snapshot of type %s')
             raise exception.Error(msg % (ss_type, lun.dataset.type))
         lun = self._get_lun_details(lun_id)
-        if not lun:
-            msg = _('Failed to get LUN details for LUN ID %s')
-            raise exception.Error(msg % lun_id)
-
         extra_gb = volume['volume_size']
         new_size = '+%dg' % extra_gb
         self._resize_volume(lun.HostId, lun.VolumeName, new_size)
