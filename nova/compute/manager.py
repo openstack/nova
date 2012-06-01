@@ -50,6 +50,7 @@ from nova import compute
 from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -248,6 +249,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._last_bw_usage_poll = 0
         self._last_info_cache_heal = 0
         self.compute_api = compute.API()
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -1262,13 +1264,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._get_instance_nw_info(context, instance_ref)
         self.driver.destroy(instance_ref, self._legacy_nw_info(network_info))
-        topic = rpc.queue_get_for(context, FLAGS.compute_topic,
-                migration_ref['source_compute'])
-        rpc.cast(context, topic,
-                {'method': 'finish_revert_resize',
-                 'args': {'instance_uuid': instance_ref['uuid'],
-                          'migration_id': migration_ref['id']},
-                })
+        self.compute_rpcapi.finish_revert_resize(context, instance_ref,
+                migration_ref['id'], migration_ref['source_compute'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
