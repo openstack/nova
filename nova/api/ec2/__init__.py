@@ -247,6 +247,8 @@ class EC2KeystoneAuth(wsgi.Middleware):
             token_id = result['access']['token']['id']
             user_id = result['access']['user']['id']
             project_id = result['access']['token']['tenant']['id']
+            user_name = result['access']['user'].get('name')
+            project_name = result['access']['token']['tenant'].get('name')
             roles = [role['name'] for role
                      in result['access']['user']['roles']]
         except (AttributeError, KeyError), e:
@@ -260,6 +262,8 @@ class EC2KeystoneAuth(wsgi.Middleware):
                                              remote_address)
         ctxt = context.RequestContext(user_id,
                                       project_id,
+                                      user_name=user_name,
+                                      project_name=project_name,
                                       roles=roles,
                                       auth_token=token_id,
                                       remote_address=remote_address)
