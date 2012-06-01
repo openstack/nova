@@ -104,6 +104,11 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('detach_volume', 'cast',
                 instance=self.fake_instance, volume_id='id')
 
+    def test_finish_resize(self):
+        self._test_compute_api('finish_resize', 'cast',
+                instance=self.fake_instance, migration_id='id',
+                image='image', disk_info='disk_info', host='host')
+
     def test_finish_revert_resize(self):
         self._test_compute_api('finish_revert_resize', 'cast',
                 instance=self.fake_instance, migration_id='id', host='host')

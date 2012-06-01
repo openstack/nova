@@ -1407,17 +1407,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context, instance_uuid,
                               task_state=task_states.RESIZE_MIGRATED)
 
-        service = self.db.service_get_by_host_and_topic(
-                context, migration_ref['dest_compute'], FLAGS.compute_topic)
-        topic = rpc.queue_get_for(context,
-                                  FLAGS.compute_topic,
-                                  migration_ref['dest_compute'])
-        params = {'migration_id': migration_id,
-                  'disk_info': disk_info,
-                  'instance_uuid': instance_ref['uuid'],
-                  'image': image}
-        rpc.cast(context, topic, {'method': 'finish_resize',
-                                  'args': params})
+        self.compute_rpcapi.finish_resize(context, instance_ref, migration_id,
+                image, disk_info, migration_ref['dest_compute'])
 
         self._notify_about_instance_usage(context, instance_ref, "resize.end",
                                           network_info=network_info)
