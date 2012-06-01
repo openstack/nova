@@ -21,6 +21,7 @@
 
 import sys
 
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import importutils
@@ -72,8 +73,7 @@ def get_connection(read_only=False):
     driver_name = known_drivers.get(FLAGS.connection_type)
 
     if driver_name is None:
-        raise Exception('Unknown virt connection type "%s"' %
-                        FLAGS.connection_type)
+        raise exception.VirtDriverNotFound(name=FLAGS.connection_type)
 
     conn = importutils.import_object(driver_name, read_only=read_only)
 

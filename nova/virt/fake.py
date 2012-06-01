@@ -46,7 +46,7 @@ class FakeInstance(object):
 class FakeDriver(driver.ComputeDriver):
     """Fake hypervisor driver"""
 
-    def __init__(self, readonly=False):
+    def __init__(self, read_only=False):
         self.instances = {}
         self.host_status = {
           'host_name-description': 'Fake Host',

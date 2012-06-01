@@ -233,7 +233,7 @@ def _get_eph_disk(ephemeral):
 
 class LibvirtDriver(driver.ComputeDriver):
 
-    def __init__(self, read_only):
+    def __init__(self, read_only=False):
         super(LibvirtDriver, self).__init__()
 
         global libvirt
