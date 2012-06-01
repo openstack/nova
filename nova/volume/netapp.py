@@ -90,6 +90,7 @@ class DfmLun:
 class NetAppISCSIDriver(driver.ISCSIDriver):
     """NetApp iSCSI volume driver."""
 
+    IGROUP_PREFIX = 'openstack-'
     DATASET_PREFIX = 'OpenStack_'
     DATASET_METADATA_PROJECT_KEY = 'OpenStackProject'
     DATASET_METADATA_VOL_TYPE_KEY = 'OpenStackVolType'
@@ -101,6 +102,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self.lun_table = {}
 
     def _check_fail(self, request, response):
+        """Utility routine to handle checking ZAPI failures."""
         if 'failed' == response.Status:
             name = request.Name
             reason = response.Reason
@@ -122,17 +124,17 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self.client.set_options(location=soap_url)
 
     def _set_storage_service(self, storage_service):
-        """Set the storage service to use for provisioning"""
+        """Set the storage service to use for provisioning."""
         LOG.debug('Using storage service: %s' % storage_service)
         self.storage_service = storage_service
 
     def _set_storage_service_prefix(self, storage_service_prefix):
-        """Set the storage service prefix to use for provisioning"""
+        """Set the storage service prefix to use for provisioning."""
         LOG.debug('Using storage service prefix: %s' % storage_service_prefix)
         self.storage_service_prefix = storage_service_prefix
 
     def _set_vfiler(self, vfiler):
-        """Set the vfiler to use for provisioning"""
+        """Set the vfiler to use for provisioning."""
         LOG.debug('Using vfiler: %s' % vfiler)
         self.vfiler = vfiler
 
@@ -187,7 +189,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             server.DatasetListInfoIterEnd(Tag=tag)
         return datasets
 
-    def _discover_dataset_luns(self, dataset):
+    def _discover_dataset_luns(self, dataset, volume):
         """Discover all of the LUNs in a dataset."""
         server = self.client.service
         res = server.DatasetMemberListInfoIterStart(
@@ -196,6 +198,9 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 IncludeIndirect=True,
                 MemberType='lun_path')
         tag = res.Tag
+        suffix = None
+        if volume:
+            suffix = '/' + volume
         try:
             while True:
                 res = server.DatasetMemberListInfoIterNext(Tag=tag,
@@ -204,6 +209,10 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                             not res.DatasetMembers):
                     break
                 for member in res.DatasetMembers.DatasetMemberInfo:
+                    if suffix and not member.MemberName.endswith(suffix):
+                        continue
+                    # MemberName is the full LUN path in this format:
+                    # host:/volume/qtree/lun
                     lun = DfmLun(dataset, member.MemberName, member.MemberId)
                     self.discovered_luns.append(lun)
         finally:
@@ -235,7 +244,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             ds = DfmDataset(dataset.DatasetId, dataset.DatasetName,
                             project, type)
             self.discovered_datasets.append(ds)
-            self._discover_dataset_luns(ds)
+            self._discover_dataset_luns(ds, None)
         LOG.debug(_("Discovered %s datasets and %s LUNs") %
             (len(self.discovered_datasets), len(self.discovered_luns)))
         self.lun_table = {}
@@ -399,7 +408,6 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         if not id:
             return None
         volume_type = volume_types.get_volume_type(None, id)
-        LOG.debug('volume_type=%s' % volume_type)
         if not volume_type:
             return None
         return volume_type['name']
@@ -506,7 +514,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         raise exception.Error(msg % host_id)
 
     def _get_iqn_for_host(self, host_id):
-        """Get the iSCSI Target Name for a storage system"""
+        """Get the iSCSI Target Name for a storage system."""
         request = self.client.factory.create('Request')
         request.Name = 'iscsi-node-get-name'
         response = self.client.service.ApiProxy(Target=host_id,
@@ -604,7 +612,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 'linux' != igroup_info['initiator-group-os-type'][0]):
                 continue
             igroup_name = igroup_info['initiator-group-name'][0]
-            if not igroup_name.startswith('openstack-'):
+            if not igroup_name.startswith(IGROUP_PREFIX):
                 continue
             initiators = igroup_info['initiators'][0]['initiator-info']
             for initiator in initiators:
@@ -618,7 +626,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         the given iSCSI initiator. The group will only have 1 member and will
         be named "openstack-${initiator_name}".
         """
-        igroup_name = 'openstack-' + initiator_name
+        igroup_name = IGROUP_PREFIX + initiator_name
         request = self.client.factory.create('Request')
         request.Name = 'igroup-create'
         igroup_create_xml = (
@@ -737,9 +745,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         lun = self._get_lun_details(lun_id)
         lun_num = self._ensure_initiator_mapped(lun.HostId, lun.LunPath,
                                                 initiator_name)
-
         host = self._get_host_details(lun.HostId)
-
         portal = self._get_target_portal_for_host(host.HostId,
                                                   host.HostAddress)
         if not portal:
@@ -853,7 +859,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
 
     def _destroy_lun(self, host_id, lun_path):
         """
-        Destroy a LUN on the filer
+        Destroy a LUN on the filer.
         """
         request = self.client.factory.create('Request')
         request.Name = 'lun-offline'
@@ -876,8 +882,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         request = self.client.factory.create('Request')
         request.Name = 'volume-size'
         volume_size_xml = (
-            '<volume>%s</volume><new_size>%s</new_size>')
-        request.Args = text.Raw(qtree_create_xml % (vol_name, new_size))
+            '<volume>%s</volume><new-size>%s</new-size>')
+        request.Args = text.Raw(volume_size_xml % (vol_name, new_size))
         response = self.client.service.ApiProxy(Target=host_id,
                                                 Request=request)
         self._check_fail(request, response)
@@ -896,6 +902,10 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self._check_fail(request, response)
 
     def create_snapshot(self, snapshot):
+        """
+        Driver entry point for creating a snapshot. This driver implements
+        snapshots by using efficient single-file (LUN) cloning.
+        """
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
@@ -905,6 +915,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         extra_gb = snapshot['volume_size']
         new_size = '+%dg' % extra_gb
         self._resize_volume(lun.HostId, lun.VolumeName, new_size)
+        # LunPath is the partial LUN path in this format: volume/qtree/lun
         lun_path = str(lun.LunPath)
         lun_name = lun_path[lun_path.rfind('/') + 1:]
         qtree_path = '/vol/%s/%s' % (lun.VolumeName, lun.QtreeName)
@@ -913,6 +924,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self._clone_lun(lun.HostId, src_path, dest_path, True)
 
     def delete_snapshot(self, snapshot):
+        """Driver entry point for deleting a snapshot."""
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
@@ -927,18 +939,28 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self._resize_volume(lun.HostId, lun.VolumeName, new_size)
 
     def create_volume_from_snapshot(self, volume, snapshot):
+        """
+        Driver entry point for creating a new volume from a snapshot. Many
+        would call this "cloning" and in fact we use cloning to implement
+        this feature.
+        """
+        vol_size = volume['size']
+        snap_size = snapshot['volume_size']
+        if vol_size != snap_size:
+            msg = _('Cannot create volume of size %s from snapshot of size %s')
+            raise exception.Error(msg % (vol_size, snap_size))
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
         lun = self._lookup_lun_for_volume(vol_name, project)
         lun_id = lun.id
-        ss_type = self.get_ss_type(volume)
+        dataset = lun.dataset
+        ss_type = self._get_ss_type(volume)
         if ss_type != lun.dataset.type:
-            msg = _('Cannot create volume of type %s from '
-                'snapshot of type %s')
+            msg = _('Cannot create volume of type %s from snapshot of type %s')
             raise exception.Error(msg % (ss_type, lun.dataset.type))
         lun = self._get_lun_details(lun_id)
-        extra_gb = volume['volume_size']
+        extra_gb = vol_size
         new_size = '+%dg' % extra_gb
         self._resize_volume(lun.HostId, lun.VolumeName, new_size)
         clone_name = volume['name']
@@ -948,6 +970,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         dest_path = '/vol/%s/%s/%s' % (lun.VolumeName, clone_name, clone_name)
         self._clone_lun(lun.HostId, src_path, dest_path, False)
         self._refresh_dfm_luns(lun.HostId)
+        self._discover_dataset_luns(dataset, clone_name)
 
     def check_for_export(self, context, volume_id):
         raise NotImplementedError()
