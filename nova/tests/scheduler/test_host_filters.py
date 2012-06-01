@@ -137,6 +137,18 @@ class HostFiltersTestCase(test.TestCase):
 
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
+    def test_affinity_different_filter_handles_none(self):
+        filt_cls = self.class_map['DifferentHostFilter']()
+        host = fakes.FakeHostState('host1', 'compute', {})
+        instance = fakes.FakeInstance(context=self.context,
+                                         params={'host': 'host2'})
+        instance_uuid = instance.uuid
+
+        filter_properties = {'context': self.context.elevated(),
+                             'scheduler_hints': None}
+
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
     def test_affinity_same_filter_passes(self):
         filt_cls = self.class_map['SameHostFilter']()
         host = fakes.FakeHostState('host1', 'compute', {})
@@ -162,6 +174,18 @@ class HostFiltersTestCase(test.TestCase):
                                 'same_host': [instance_uuid], }}
 
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_affinity_same_filter_handles_none(self):
+        filt_cls = self.class_map['SameHostFilter']()
+        host = fakes.FakeHostState('host1', 'compute', {})
+        instance = fakes.FakeInstance(context=self.context,
+                                         params={'host': 'host2'})
+        instance_uuid = instance.uuid
+
+        filter_properties = {'context': self.context.elevated(),
+                             'scheduler_hints': None}
+
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_affinity_simple_cidr_filter_passes(self):
         filt_cls = self.class_map['SimpleCIDRAffinityFilter']()
@@ -192,6 +216,19 @@ class HostFiltersTestCase(test.TestCase):
                                  'build_near_host_ip': affinity_ip}}
 
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_affinity_simple_cidr_filter_handles_none(self):
+        filt_cls = self.class_map['SimpleCIDRAffinityFilter']()
+        host = fakes.FakeHostState('host1', 'compute', {})
+
+        affinity_ip = flags.FLAGS.my_ip.split('.')[0:3]
+        affinity_ip.append('100')
+        affinity_ip = str.join('.', affinity_ip)
+
+        filter_properties = {'context': self.context.elevated(),
+                             'scheduler_hints': None}
+
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_compute_filter_passes(self):
         self._stub_service_is_up(True)

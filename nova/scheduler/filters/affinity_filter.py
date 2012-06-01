@@ -35,7 +35,7 @@ class DifferentHostFilter(AffinityFilter):
 
     def host_passes(self, host_state, filter_properties):
         context = filter_properties['context']
-        scheduler_hints = filter_properties['scheduler_hints']
+        scheduler_hints = filter_properties.get('scheduler_hints') or {}
         me = host_state.host
 
         affinity_uuids = scheduler_hints.get('different_host', [])
@@ -54,7 +54,7 @@ class SameHostFilter(AffinityFilter):
 
     def host_passes(self, host_state, filter_properties):
         context = filter_properties['context']
-        scheduler_hints = filter_properties['scheduler_hints']
+        scheduler_hints = filter_properties.get('scheduler_hints') or {}
         me = host_state.host
 
         affinity_uuids = scheduler_hints.get('same_host', [])
@@ -68,7 +68,7 @@ class SameHostFilter(AffinityFilter):
 
 class SimpleCIDRAffinityFilter(AffinityFilter):
     def host_passes(self, host_state, filter_properties):
-        scheduler_hints = filter_properties['scheduler_hints']
+        scheduler_hints = filter_properties.get('scheduler_hints') or {}
 
         affinity_cidr = scheduler_hints.get('cidr', '/24')
         affinity_host_addr = scheduler_hints.get('build_near_host_ip')
