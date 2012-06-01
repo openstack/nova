@@ -244,6 +244,11 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid'], migration_id=migration_id),
                 topic=self._compute_topic(ctxt, host, instance))
 
+    def rollback_live_migration_at_destination(self, ctxt, instance, host):
+        self.cast(ctxt, self.make_msg('rollback_live_migration_at_destination',
+            instance_id=instance['id']),
+            topic=self._compute_topic(ctxt, host, None))
+
     def set_admin_password(self, ctxt, instance, new_pass):
         self.cast(ctxt, self.make_msg('set_admin_password',
                 instance_uuid=instance['uuid'], new_pass=new_pass),

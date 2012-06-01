@@ -2214,10 +2214,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # before migration starts, so if any failure occurs,
         # any empty images has to be deleted.
         if block_migration:
-            rpc.cast(context,
-                     rpc.queue_get_for(context, FLAGS.compute_topic, dest),
-                     {"method": "rollback_live_migration_at_destination",
-                      "args": {'instance_id': instance_ref['id']}})
+            self.compute_rpcapi.rollback_live_migration_at_destination(context,
+                    instance_ref, dest)
 
     def rollback_live_migration_at_destination(self, context, instance_id):
         """ Cleaning up image directory that is created pre_live_migration.

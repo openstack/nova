@@ -31,7 +31,12 @@ FLAGS = flags.FLAGS
 class ComputeRpcAPITestCase(test.TestCase):
 
     def setUp(self):
-        self.fake_instance = {'uuid': 'fake_uuid', 'host': 'fake_host'}
+        self.fake_instance = {
+            'uuid': 'fake_uuid',
+            'host': 'fake_host',
+            'name': 'fake_name',
+            'id': 'fake_id',
+        }
         super(ComputeRpcAPITestCase, self).setUp()
 
     def tearDown(self):
@@ -41,6 +46,7 @@ class ComputeRpcAPITestCase(test.TestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = compute_rpcapi.ComputeAPI()
         expected_retval = 'foo' if method == 'call' else None
+
         expected_msg = rpcapi.make_msg(method, **kwargs)
         if 'host_param' in expected_msg['args']:
             host_param = expected_msg['args']['host_param']
@@ -51,8 +57,13 @@ class ComputeRpcAPITestCase(test.TestCase):
         if 'instance' in expected_msg['args']:
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
-            expected_msg['args']['instance_uuid'] = instance['uuid']
+            if method in ['rollback_live_migration_at_destination']:
+                expected_msg['args']['instance_id'] = instance['id']
+            else:
+                expected_msg['args']['instance_uuid'] = instance['uuid']
+
         expected_msg['version'] = rpcapi.RPC_API_VERSION
+
         cast_and_call = ['confirm_resize', 'stop_instance']
         if rpc_method == 'call' and method in cast_and_call:
             kwargs['cast'] = False
@@ -206,6 +217,10 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_revert_resize(self):
         self._test_compute_api('revert_resize', 'cast',
                 instance=self.fake_instance, migration_id='id', host='host')
+
+    def test_rollback_live_migration_at_destination(self):
+        self._test_compute_api('rollback_live_migration_at_destination',
+                'cast', instance=self.fake_instance, host='host')
 
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'cast',
