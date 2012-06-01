@@ -19,8 +19,12 @@
 """Tests for metadata service."""
 
 import base64
+from copy import copy
+
+import stubout
 import webob
 
+from nova.api.metadata import base
 from nova.api.metadata import handler
 from nova import db
 from nova.db.sqlalchemy import api
@@ -30,119 +34,110 @@ from nova import network
 from nova import test
 from nova.tests import fake_network
 
-
 FLAGS = flags.FLAGS
 
 USER_DATA_STRING = ("This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
+
+INSTANCES = (
+    {'id': 1,
+     'uuid': 'b65cee2f-8c69-4aeb-be2f-f79742548fc2',
+     'name': 'fake',
+     'project_id': 'test',
+     'key_name': "mykey",
+     'key_data': "ssh-rsa AAAAB3Nzai....N3NtHw== someuser@somehost",
+     'host': 'test',
+     'launch_index': 1,
+     'instance_type': {'name': 'm1.tiny'},
+     'reservation_id': 'r-xxxxxxxx',
+     'user_data': ENCODE_USER_DATA_STRING,
+     'image_ref': 7,
+     'vcpus': 1,
+     'fixed_ips': [],
+     'root_device_name': '/dev/sda1',
+     'info_cache': {'network_info': []},
+     'hostname': 'test'},
+)
 
 
 def return_non_existing_address(*args, **kwarg):
     raise exception.NotFound()
 
 
-class MetadataTestCase(test.TestCase):
-    """Test that metadata is returning proper values."""
+def fake_InstanceMetadata(stubs, inst_data, address=None, sgroups=None):
 
+    if sgroups == None:
+        sgroups = [{'name': 'default'}]
+
+    def sg_get(*args, **kwargs):
+        return sgroups
+
+    stubs.Set(api, 'security_group_get_by_instance', sg_get)
+    return base.InstanceMetadata(inst_data, address=address)
+
+
+def fake_request(stubs, mdinst, relpath, address="127.0.0.1",
+                 fake_get_metadata=None, headers=None):
+
+    def get_metadata(address):
+        return mdinst
+
+    app = handler.MetadataRequestHandler()
+
+    if fake_get_metadata == None:
+        fake_get_metadata = get_metadata
+
+    if stubs:
+        stubs.Set(app, 'get_metadata', fake_get_metadata)
+
+    request = webob.Request.blank(relpath)
+    request.remote_addr = address
+
+    if headers != None:
+        request.headers.update(headers)
+
+    response = request.get_response(app)
+    return response
+
+
+class MetadataTestCase(test.TestCase):
     def setUp(self):
         super(MetadataTestCase, self).setUp()
-        self.instance = ({'id': 1,
-                          'uuid': 'b65cee2f-8c69-4aeb-be2f-f79742548fc2',
-                          'name': 'fake',
-                          'project_id': 'test',
-                          'key_name': None,
-                          'host': 'test',
-                          'launch_index': 1,
-                          'instance_type': {'name': 'm1.tiny'},
-                          'reservation_id': 'r-xxxxxxxx',
-                          'user_data': '',
-                          'image_ref': 7,
-                          'vcpus': 1,
-                          'fixed_ips': [],
-                          'root_device_name': '/dev/sda1',
-                          'info_cache': {'network_info': []},
-                          'hostname': 'test'})
-
-        def fake_get_floating_ips_by_fixed_address(self, context, fixed_ip):
-            return ['1.2.3.4', '5.6.7.8']
-
-        def instance_get(*args, **kwargs):
-            return self.instance
-
-        def instance_get_list(*args, **kwargs):
-            return [self.instance]
-
-        def get_fixed_ip_by_address(*args, **kwargs):
-            return {'instance_id': self.instance['id']}
-
-        fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
-                                                          spectacular=True)
-        self.stubs.Set(network.API, 'get_floating_ips_by_fixed_address',
-                fake_get_floating_ips_by_fixed_address)
-        self.stubs.Set(network.API, 'get_fixed_ip_by_address',
-                       get_fixed_ip_by_address)
-        self.stubs.Set(api, 'instance_get', instance_get)
-        self.stubs.Set(api, 'instance_get_all_by_filters', instance_get_list)
-        self.app = handler.MetadataRequestHandler()
-        network_manager = fake_network.FakeNetworkManager()
-        self.stubs.Set(self.app.compute_api.network_api,
-                       'get_instance_uuids_by_ip_filter',
-                       network_manager.get_instance_uuids_by_ip_filter)
-
-    def request(self, relative_url):
-        request = webob.Request.blank(relative_url)
-        request.remote_addr = "127.0.0.1"
-        return request.get_response(self.app).body
-
-    def test_base(self):
-        self.assertEqual(self.request('/'), 'meta-data/\nuser-data')
+        self.instance = INSTANCES[0]
 
     def test_user_data(self):
-        self.instance['user_data'] = base64.b64encode('happy')
-        self.assertEqual(self.request('/user-data'), 'happy')
+        inst = copy(self.instance)
+        inst['user_data'] = base64.b64encode("happy")
+        md = fake_InstanceMetadata(self.stubs, inst)
+        self.assertEqual(
+            md.get_ec2_metadata(version='2009-04-04')['user-data'], "happy")
+
+    def test_no_user_data(self):
+        inst = copy(self.instance)
+        del inst['user_data']
+        md = fake_InstanceMetadata(self.stubs, inst)
+        obj = object()
+        self.assertEqual(
+            md.get_ec2_metadata(version='2009-04-04').get('user-data', obj),
+            obj)
 
     def test_security_groups(self):
-        def sg_get(*args, **kwargs):
-            return [{'name': 'default'}, {'name': 'other'}]
-        self.stubs.Set(api, 'security_group_get_by_instance', sg_get)
-        self.assertEqual(self.request('/meta-data/security-groups'),
-                         'default\nother')
+        inst = copy(self.instance)
+        sgroups = [{'name': 'default'}, {'name': 'other'}]
+        expected = ['default', 'other']
 
-    def test_user_data_non_existing_fixed_address(self):
-        self.stubs.Set(network.API, 'get_fixed_ip_by_address',
-                       return_non_existing_address)
-        request = webob.Request.blank('/user-data')
-        request.remote_addr = "127.1.1.1"
-        response = request.get_response(self.app)
-        self.assertEqual(response.status_int, 404)
-
-    def test_user_data_none_fixed_address(self):
-        request = webob.Request.blank('/user-data')
-        request.remote_addr = None
-        response = request.get_response(self.app)
-        self.assertEqual(response.status_int, 500)
-
-    def test_user_data_invalid_url(self):
-        request = webob.Request.blank('/user-data-invalid')
-        request.remote_addr = "127.0.0.1"
-        response = request.get_response(self.app)
-        self.assertEqual(response.status_int, 404)
-
-    def test_user_data_with_use_forwarded_header(self):
-        self.instance['user_data'] = ENCODE_USER_DATA_STRING
-        self.flags(use_forwarded_for=True)
-        request = webob.Request.blank('/user-data')
-        request.remote_addr = "127.0.0.1"
-        response = request.get_response(self.app)
-        self.assertEqual(response.status_int, 200)
-        self.assertEqual(response.body, USER_DATA_STRING)
+        md = fake_InstanceMetadata(self.stubs, inst, sgroups=sgroups)
+        data = md.get_ec2_metadata(version='2009-04-04')
+        self.assertEqual(data['meta-data']['security-groups'], expected)
 
     def test_local_hostname_fqdn(self):
-        self.assertEqual(self.request('/meta-data/local-hostname'),
+        md = fake_InstanceMetadata(self.stubs, copy(self.instance))
+        data = md.get_ec2_metadata(version='2009-04-04')
+        self.assertEqual(data['meta-data']['local-hostname'],
             "%s.%s" % (self.instance['hostname'], FLAGS.dhcp_domain))
 
-    def test_get_instance_mapping(self):
-        """Make sure that _get_instance_mapping works"""
+    def test_format_instance_mapping(self):
+        """Make sure that _format_instance_mappings works"""
         ctxt = None
         instance_ref0 = {'id': 0,
                          'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',
@@ -180,9 +175,78 @@ class MetadataTestCase(test.TestCase):
                     'swap': '/dev/sdc',
                     'ebs0': '/dev/sdh'}
 
-        self.assertEqual(self.app._format_instance_mapping(ctxt,
-                                                           instance_ref0),
-                         handler._DEFAULT_MAPPINGS)
-        self.assertEqual(self.app._format_instance_mapping(ctxt,
-                                                           instance_ref1),
+        self.assertEqual(base._format_instance_mapping(ctxt, instance_ref0),
+                         base._DEFAULT_MAPPINGS)
+        self.assertEqual(base._format_instance_mapping(ctxt, instance_ref1),
                          expected)
+
+
+class MetadataHandlerTestCase(test.TestCase):
+    """Test that metadata is returning proper values."""
+
+    def setUp(self):
+        super(MetadataHandlerTestCase, self).setUp()
+
+        self.instance = INSTANCES[0]
+        self.mdinst = fake_InstanceMetadata(self.stubs, self.instance,
+            address=None, sgroups=None)
+
+    def test_root(self):
+        expected = "\n".join(base.VERSIONS) + "\nlatest"
+        response = fake_request(self.stubs, self.mdinst, "/")
+        self.assertEqual(response.body, expected)
+
+        response = fake_request(self.stubs, self.mdinst, "/foo/../")
+        self.assertEqual(response.body, expected)
+
+    def test_version_root(self):
+        response = fake_request(self.stubs, self.mdinst, "/2009-04-04")
+        self.assertEqual(response.body, 'meta-data/\nuser-data')
+
+        response = fake_request(self.stubs, self.mdinst, "/9999-99-99")
+        self.assertEqual(response.status_int, 404)
+
+    def test_user_data_non_existing_fixed_address(self):
+        self.stubs.Set(network.API, 'get_fixed_ip_by_address',
+                       return_non_existing_address)
+        response = fake_request(None, self.mdinst, "/2009-04-04/user-data",
+                                "127.1.1.1")
+        self.assertEqual(response.status_int, 404)
+
+    def test_fixed_address_none(self):
+        response = fake_request(None, self.mdinst,
+                                relpath="/2009-04-04/user-data", address=None)
+        self.assertEqual(response.status_int, 500)
+
+    def test_invalid_path_is_404(self):
+        response = fake_request(self.stubs, self.mdinst,
+                                relpath="/2009-04-04/user-data-invalid")
+        self.assertEqual(response.status_int, 404)
+
+    def test_user_data_with_use_forwarded_header(self):
+        expected_addr = "192.192.192.2"
+
+        def fake_get_metadata(address):
+            if address == expected_addr:
+                return self.mdinst
+            else:
+                raise Exception("Expected addr of %s, got %s" %
+                                (expected_addr, address))
+
+        self.flags(use_forwarded_for=True)
+        response = fake_request(self.stubs, self.mdinst,
+                                relpath="/2009-04-04/user-data",
+                                address="168.168.168.1",
+                                fake_get_metadata=fake_get_metadata,
+                                headers={'X-Forwarded-For': expected_addr})
+
+        self.assertEqual(response.status_int, 200)
+        self.assertEqual(response.body,
+                         base64.b64decode(self.instance['user_data']))
+
+        response = fake_request(self.stubs, self.mdinst,
+                                relpath="/2009-04-04/user-data",
+                                address="168.168.168.1",
+                                fake_get_metadata=fake_get_metadata,
+                                headers=None)
+        self.assertEqual(response.status_int, 500)
