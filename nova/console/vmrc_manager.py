@@ -17,13 +17,13 @@
 
 """VMRC Console Manager."""
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova import rpc
 from nova.virt import vmwareapi_conn
 
 
@@ -47,6 +47,7 @@ class ConsoleVMRCManager(manager.Manager):
 
     def __init__(self, console_driver=None, *args, **kwargs):
         self.driver = importutils.import_object(FLAGS.console_driver)
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         super(ConsoleVMRCManager, self).__init__(*args, **kwargs)
 
     def init_host(self):
@@ -137,12 +138,8 @@ class ConsoleVMRCManager(manager.Manager):
                                                          self.host,
                                                          console_type)
         except exception.NotFound:
-            pool_info = rpc.call(context,
-                                 rpc.queue_get_for(context,
-                                                   FLAGS.compute_topic,
-                                                   instance_host),
-                                 {'method': 'get_console_pool_info',
-                                  'args': {'console_type': console_type}})
+            pool_info = self.compute_rpcapi.get_console_pool_info(context,
+                    console_type, instance_host)
             pool_info['password'] = self.driver.fix_pool_password(
                                                     pool_info['password'])
             pool_info['host'] = self.host

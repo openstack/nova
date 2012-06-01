@@ -19,13 +19,13 @@
 
 import socket
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova import rpc
 from nova import utils
 
 
@@ -61,6 +61,7 @@ class ConsoleProxyManager(manager.Manager):
         self.driver = importutils.import_object(console_driver)
         super(ConsoleProxyManager, self).__init__(*args, **kwargs)
         self.driver.host = self.host
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def init_host(self):
         self.driver.init_host()
@@ -121,12 +122,8 @@ class ConsoleProxyManager(manager.Manager):
                              'username': 'test',
                              'password': '1234pass'}
             else:
-                pool_info = rpc.call(context,
-                                 rpc.queue_get_for(context,
-                                                   FLAGS.compute_topic,
-                                                   instance_host),
-                       {'method': 'get_console_pool_info',
-                        'args': {'console_type': console_type}})
+                pool_info = compute_rpcapi.get_console_pool_info(context,
+                        console_type, instance_host)
             pool_info['password'] = self.driver.fix_pool_password(
                                                     pool_info['password'])
             pool_info['host'] = self.host

@@ -101,6 +101,11 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid'], tail_length=tail_length),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def get_console_pool_info(self, ctxt, console_type, host):
+        return self.call(ctxt, self.make_msg('get_console_pool_info',
+                console_type=console_type),
+                topic=self._compute_topic(ctxt, host, None))
+
     def get_diagnostics(self, ctxt, instance):
         return self.call(ctxt, self.make_msg('get_diagnostics',
                 instance_uuid=instance['uuid']),
