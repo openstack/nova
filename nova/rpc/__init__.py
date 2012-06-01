@@ -227,7 +227,20 @@ def fanout_cast_to_server(context, server_params, topic, msg):
 
 
 def queue_get_for(context, topic, host):
-    """Get a queue name for a given topic + host."""
+    """Get a queue name for a given topic + host.
+
+    This function only works if this naming convention is followed on the
+    consumer side, as well.  For example, in nova, every instance of the
+    nova-foo service calls create_consumer() for two topics:
+
+        foo
+        foo.<host>
+
+    Messages sent to the 'foo' topic are distributed to exactly one instance of
+    the nova-foo service.  The services are chosen in a round-robin fashion.
+    Messages sent to the 'foo.<host>' topic are sent to the nova-foo service on
+    <host>.
+    """
     return '%s.%s' % (topic, host)
 
 
