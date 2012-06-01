@@ -161,6 +161,13 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid']),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def post_live_migration_at_destination(self, ctxt, instance,
+            block_migration, host):
+        return self.call(ctxt,
+                self.make_msg('post_live_migration_at_destination',
+                instance_id=instance['id'], block_migration=block_migration),
+                self._compute_topic(ctxt, host, None))
+
     def pause_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('pause_instance',
                 instance_uuid=instance['uuid']),
