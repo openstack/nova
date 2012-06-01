@@ -607,7 +607,7 @@ class API(base.Base):
         # send a state update notification for the initial create to
         # show it going from non-existent to BUILDING
         notifications.send_update_with_states(context, instance, None,
-                vm_states.BUILDING, None, None)
+                vm_states.BUILDING, None, None, service="api")
 
         for security_group_id in security_groups:
             self.db.instance_add_security_group(elevated,
@@ -934,7 +934,8 @@ class API(base.Base):
         # if task or vm state changed
         old_ref, instance_ref = self.db.instance_update_and_get_original(
                 context, instance["id"], kwargs)
-        notifications.send_update(context, old_ref, instance_ref)
+        notifications.send_update(context, old_ref, instance_ref,
+                service="api")
 
         return dict(instance_ref.iteritems())
 
@@ -1284,7 +1285,8 @@ class API(base.Base):
                 context, instance_uuid, 'task_state', [None], task_state)
 
         notifications.send_update_with_states(context, instance, old_vm_state,
-                instance["vm_state"], old_task_state, instance["task_state"])
+                instance["vm_state"], old_task_state, instance["task_state"],
+                service="api")
 
         properties = {
             'instance_uuid': instance_uuid,

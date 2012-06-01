@@ -178,7 +178,8 @@ class SchedulerManager(manager.Manager):
             # update instance state and notify on the transition
             (old_ref, new_ref) = db.instance_update_and_get_original(context,
                     instance_uuid, updates)
-            notifications.send_update(context, old_ref, new_ref)
+            notifications.send_update(context, old_ref, new_ref,
+                    service="scheduler")
 
         payload = dict(request_spec=request_spec,
                        instance_properties=properties,
