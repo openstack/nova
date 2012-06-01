@@ -134,6 +134,9 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('get_console_pool_info', 'call',
                 console_type='type', host='host')
 
+    def test_get_console_topic(self):
+        self._test_compute_api('get_console_topic', 'call', host='host')
+
     def test_get_diagnostics(self):
         self._test_compute_api('get_diagnostics', 'call',
                 instance=self.fake_instance)

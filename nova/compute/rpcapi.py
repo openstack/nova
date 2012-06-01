@@ -118,6 +118,10 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 console_type=console_type),
                 topic=self._compute_topic(ctxt, host, None))
 
+    def get_console_topic(self, ctxt, host):
+        return self.call(ctxt, self.make_msg('get_console_topic'),
+                topic=self._compute_topic(ctxt, host, None))
+
     def get_diagnostics(self, ctxt, instance):
         return self.call(ctxt, self.make_msg('get_diagnostics',
                 instance_uuid=instance['uuid']),
