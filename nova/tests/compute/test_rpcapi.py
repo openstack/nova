@@ -105,6 +105,10 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('attach_volume', 'cast',
                 instance=self.fake_instance, volume_id='id', mountpoint='mp')
 
+    def test_compare_cpu(self):
+        self._test_compute_api('compare_cpu', 'call', cpu_info='info',
+                host='host')
+
     def test_confirm_resize_cast(self):
         self._test_compute_api('confirm_resize', 'cast',
                 instance=self.fake_instance, migration_id='id', host='host')
