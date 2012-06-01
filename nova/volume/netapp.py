@@ -72,11 +72,33 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(netapp_opts)
 
 
+class DfmDataset:
+    def __init__(self, id, name, project, type):
+        self.id = id
+        self.name = name
+        self.project = project
+        self.type = type
+
+
+class DfmLun:
+    def __init__(self, dataset, lunpath, id):
+        self.dataset = dataset
+        self.lunpath = lunpath
+        self.id = id
+
+
 class NetAppISCSIDriver(driver.ISCSIDriver):
     """NetApp iSCSI volume driver."""
 
+    DATASET_PREFIX = 'OpenStack_'
+    DATASET_METADATA_PROJECT_KEY = 'OpenStackProject'
+    DATASET_METADATA_VOL_TYPE_KEY = 'OpenStackVolType'
+
     def __init__(self, *args, **kwargs):
         super(NetAppISCSIDriver, self).__init__(*args, **kwargs)
+        self.discovered_luns = []
+        self.discovered_datasets = []
+        self.lun_table = {}
 
     def _check_fail(self, request, response):
         if 'failed' == response.Status:
@@ -117,11 +139,14 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
     def _check_flags(self):
         """Ensure that the flags we care about are set."""
         required_flags = ['netapp_wsdl_url', 'netapp_login', 'netapp_password',
-                'netapp_server_hostname', 'netapp_server_port',
-                'netapp_storage_service']
+                'netapp_server_hostname', 'netapp_server_port']
         for flag in required_flags:
             if not getattr(FLAGS, flag, None):
                 raise exception.Error(_('%s is not set') % flag)
+        if not (FLAGS.netapp_storage_service or
+                FLAGS.netapp_storage_service_prefix):
+            raise exception.Error(_('Either netapp_storage_service or '
+                'netapp_storage_service_prefix must be set'))
 
     def do_setup(self, context):
         """
@@ -134,13 +159,78 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             FLAGS.netapp_password, FLAGS.netapp_server_hostname,
             FLAGS.netapp_server_port)
         self._set_storage_service(FLAGS.netapp_storage_service)
-        self._set_vfiler(FLAGS.netapp_vfiler)
         self._set_storage_service_prefix(FLAGS.netapp_storage_service_prefix)
+        self._set_vfiler(FLAGS.netapp_vfiler)
 
     def check_for_setup_error(self):
         """Invoke a web services API to make sure we can talk to the server."""
-        res = self.client.service.DfmAbout()
+        self.client.service.DfmAbout()
         LOG.debug(_("Connected to DFM server"))
+        self._discover_luns()
+
+    def _get_datasets(self):
+        """Get the list of datasets from DFM"""
+        server = self.client.service
+        res = server.DatasetListInfoIterStart()
+        tag = res.Tag
+        datasets = []
+        try:
+            while True:
+                res = server.DatasetListInfoIterNext(Tag=tag, Maximum=100)
+                if not res.Datasets:
+                    break
+                datasets.extend(res.Datasets.DatasetInfo)
+        finally:
+            server.DatasetListInfoIterEnd(Tag=tag)
+        return datasets
+
+    def _discover_dataset_luns(self, dataset):
+        """Discover all of the LUNs in a dataset."""
+        server = self.client.service
+        res = server.DatasetMemberListInfoIterStart(
+                DatasetNameOrId=dataset_id,
+                IncludeExportsInfo=True,
+                IncludeIndirect=True,
+                MemberType='lun_path')
+        tag = res.Tag
+        try:
+            while True:
+                res = server.DatasetMemberListInfoIterNext(Tag=tag,
+                                                           Maximum=100)
+                if (not hasattr(res, 'DatasetMembers') or
+                            not res.DatasetMembers):
+                    break
+                for member in res.DatasetMembers.DatasetMemberInfo:
+                    lun = DfmLun(dataset, member.MemberName, member.MemberId)
+                    self.discovered_luns.append(lun)
+        finally:
+            server.DatasetMemberListInfoIterEnd(Tag=tag)
+
+    def _discover_luns(self):
+        """Discover all of the OpenStack-created LUNs in the DFM database."""
+        datasets = self._get_datasets()
+        self.discovered_datasets = []
+        self.discovered_luns = []
+        for dataset in datasets:
+            if not dataset.DatasetName.startswith(self.DATASET_PREFIX):
+                continue
+            if (not hasattr(dataset, 'DatasetMetadata') or
+                    not dataset.DatasetMetadata):
+                continue
+            project = None
+            type = None
+            for field in dataset.DatasetMetadata:
+                if field.FieldName == self.DATASET_METADATA_PROJECT_KEY:
+                    project = field.FieldValue
+                elif field.FieldName == self.DATASET_METADATA_VOL_TYPE_KEY:
+                    type = field.FieldValue
+            ds = DfmDataset(dataset.DatasetId, dataset.DatasetName,
+                            project, type)
+            self.discovered_datasets.append(ds)
+            self._discover_dataset_luns(ds)
+        LOG.debug(_("Discovered %s datasets and %s LUNs") %
+            (len(self.discovered_datasets), len(self.discovered_luns)))
+        self.lun_table = {}
 
     def _get_job_progress(self, job_id):
         """
@@ -157,7 +247,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                                                             Maximum=100)
                 if not hasattr(res, 'ProgressEvents'):
                     break
-                event_list += res.ProgressEvents.DpJobProgressEventInfo
+                event_list.extend(res.ProgressEvents.DpJobProgressEventInfo)
         finally:
             server.DpJobProgressEventListIterEnd(Tag=tag)
         return event_list
@@ -180,53 +270,70 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
     def _dataset_name(self, project, ss_type):
         """Return the dataset name for a given project and volume type"""
         _project = string.replace(string.replace(project, ' ', '_'), '-', '_')
-        dataset_name = 'OpenStack_' + _project
+        dataset_name = self.DATASET_PREFIX + _project
         if not ss_type:
             return dataset_name
         _type = string.replace(string.replace(ss_type, ' ', '_'), '-', '_')
         return dataset_name + '_' + _type
 
-    def _does_dataset_exist(self, dataset_name):
-        """Check if a dataset already exists"""
-        server = self.client.service
-        try:
-            res = server.DatasetListInfoIterStart(ObjectNameOrId=dataset_name)
-            tag = res.Tag
-        except suds.WebFault:
-            return False
-        try:
-            res = server.DatasetListInfoIterNext(Tag=tag, Maximum=1)
-            if hasattr(res, 'Datasets') and res.Datasets.DatasetInfo:
-                return True
-        finally:
-            server.DatasetListInfoIterEnd(Tag=tag)
-        return False
+    def _get_dataset(self, dataset_name):
+        """
+        Lookup a dataset by name in the list of discovered datasets
+        """
+        for dataset in self.discovered_datasets:
+            if dataset.name == dataset_name:
+                return dataset
+        return None
 
-    def _create_dataset(self, dataset_name, storage_service):
+    def _create_dataset(self, dataset_name, project, ss_type):
         """
         Create a new dataset using the storage service. The export settings are
-        set to create iSCSI LUNs aligned for Linux.
+        set to create iSCSI LUNs aligned for Linux. Returns the ID of the new
+        dataset.
         """
-        server = self.client.service
+        if ss_type and not self.storage_service_prefix:
+            raise exception.Error(_("Attempt to use volume_type without "
+                "specifying netapp_storage_service_prefix flag."))
+        if not (ss_type or self.storage_service):
+            raise exception.Error(_("You must set the netapp_storage_service "
+                "flag in order to create volumes with no volume_type."))
+        storage_service = self.storage_service
+        if ss_type:
+            storage_service = self.storage_service_prefix + ss_type
+            
+        factory = self.client.factory
 
-        lunmap = self.client.factory.create('DatasetLunMappingInfo')
+        lunmap = factory.create('DatasetLunMappingInfo')
         lunmap.IgroupOsType = 'linux'
-        export = self.client.factory.create('DatasetExportInfo')
+        export = factory.create('DatasetExportInfo')
         export.DatasetExportProtocol = 'iscsi'
         export.DatasetLunMappingInfo = lunmap
-        detail = self.client.factory.create('StorageSetInfo')
+        detail = factory.create('StorageSetInfo')
         detail.DpNodeName = 'Primary data'
         detail.DatasetExportInfo = export
-        if hasattr(self, 'vfiler'):
+        if hasattr(self, 'vfiler') and self.vfiler:
             detail.ServerNameOrId = self.vfiler
-        details = self.client.factory.create('ArrayOfStorageSetInfo')
+        details = factory.create('ArrayOfStorageSetInfo')
         details.StorageSetInfo = [detail]
+        field1 = factory.create('DfmMetadataField')
+        field1.FieldName = self.DATASET_METADATA_PROJECT_KEY
+        field1.FieldValue = project
+        field2 = factory.create('DfmMetadataField')
+        field2.FieldName = self.DATASET_METADATA_VOL_TYPE_KEY
+        field2.FieldValue = ss_type
+        metadata = factory.create('ArrayOfDfmMetadataField')
+        metadata.DfmMetadataField = [field1, field2]
 
-        server.StorageServiceDatasetProvision(
+        res = self.client.service.StorageServiceDatasetProvision(
                 StorageServiceNameOrId=storage_service,
                 DatasetName=dataset_name,
                 AssumeConfirmation=True,
-                StorageSetDetails=details)
+                StorageSetDetails=details,
+                DatasetMetadata=metadata)
+
+        ds = DfmDataset(res.DatasetId, dataset_name, project, ss_type)
+        self.discovered_datasets.append(ds)
+        return ds
 
     def _provision(self, name, description, project, ss_type, size):
         """
@@ -235,18 +342,10 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         already exist, we create it using the storage service specified in the
         nova conf.
         """
-
-        if ss_type and not self.storage_service_prefix:
-            raise exception.Error(_("Attempt to use volume_type without "
-                "specifying netapp_storage_service_prefix option"))
-
-        storage_service = self.storage_service
-        if ss_type:
-            storage_service = self.storage_service_prefix + ss_type
-
         dataset_name = self._dataset_name(project, ss_type)
-        if not self._does_dataset_exist(dataset_name):
-            self._create_dataset(dataset_name, storage_service)
+        dataset = self._get_dataset(dataset_name)
+        if not dataset:
+            dataset = self._create_dataset(dataset_name, project, ss_type)
 
         info = self.client.factory.create('ProvisionMemberRequestInfo')
         info.Name = name
@@ -256,7 +355,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         info.MaximumSnapshotSpace = 2 * long(size)
 
         server = self.client.service
-        lock_id = server.DatasetEditBegin(DatasetNameOrId=dataset_name)
+        lock_id = server.DatasetEditBegin(DatasetNameOrId=dataset.id)
         try:
             server.DatasetProvisionMember(EditLockId=lock_id,
                                           ProvisionMemberRequestInfo=info)
@@ -267,17 +366,22 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             raise exception.Error(_('Failed to provision dataset member'))
 
         lun_id = None
+        lunpath = None
 
         for info in res.JobIds.JobInfo:
             events = self._wait_for_job(info.JobId)
             for event in events:
                 if event.EventType != 'lun-create':
                     continue
+                lunpath = event.ProgressLunInfo.LunName
                 lun_id = event.ProgressLunInfo.LunPathId
 
         if not lun_id:
             raise exception.Error(_('No LUN was created by the provision job'))
-        volume_type_name = None
+            
+        lun = DfmLun(dataset, lunpath, lun_id)
+        self.discovered_luns.append(lun)
+        self.lun_table[name] = lun
 
     def _get_ss_type(self, volume):
         """
@@ -292,25 +396,18 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             return None
         return volume_type['name']
 
-    def _remove_destroy(self, name, project, ss_type):
+    def _remove_destroy(self, lun):
         """
         Remove the LUN from the dataset and destroy the actual LUN on the
         storage system.
         """
-        lun_id = self._get_lun_id(name, project, ss_type)
-        if not lun_id:
-            raise exception.Error(_("Failed to find LUN ID for volume %s") %
-                (name))
-
         member = self.client.factory.create('DatasetMemberParameter')
-        member.ObjectNameOrId = lun_id
+        member.ObjectNameOrId = lun.id
         members = self.client.factory.create('ArrayOfDatasetMemberParameter')
         members.DatasetMemberParameter = [member]
 
-        dataset_name = self._dataset_name(project, ss_type)
-
         server = self.client.service
-        lock_id = server.DatasetEditBegin(DatasetNameOrId=dataset_name)
+        lock_id = server.DatasetEditBegin(DatasetNameOrId=lun.dataset.id)
         try:
             server.DatasetRemoveMember(EditLockId=lock_id, Destroy=True,
                                        DatasetMemberParameters=members)
@@ -344,48 +441,31 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         ss_type = self._get_ss_type(volume)
         self._provision(name, description, project, ss_type, size)
 
+    def _find_discovered_lun_for_volume(self, name, project):
+        """
+        Look through the list of discovered LUNs and if one matches the given
+        volume, return that LUN after inserting that LUN into the table so
+        future lookups will be instantaneous.
+        """
+        if name in self.lun_table:
+            return self.lun_table[name]
+        dataset_prefix = self.DATASET_PREFIX + project
+        lunpath_suffix = '/' + name
+        for lun in self.discovered_luns:
+            if not lun.dataset.name.startswith(dataset_prefix):
+                continue
+            if lun.lunpath.endswith(lunpath_suffix):
+                self.lun_table[name] = lun
+                return lun
+        raise exception.Error(_("No entry in LUN table for volume %s") %
+            (name))
+
     def delete_volume(self, volume):
         """Driver entry point for destroying existing volumes"""
         name = volume['name']
         project = volume['project_id']
-        ss_type = self._get_ss_type(volume)
-        self._remove_destroy(name, project, ss_type)
-
-    def _get_lun_id(self, name, project, ss_type):
-        """
-        Given the name of a volume, find the DFM (OnCommand) ID of the LUN
-        corresponding to that volume. Currently we do this by enumerating
-        all of the LUNs in the dataset and matching the names against the
-        OpenStack volume name.
-
-        This could become a performance bottleneck in very large installations
-        in which case possible options for mitigating the problem are:
-        1) Store the LUN ID alongside the volume in the nova DB (if possible)
-        2) Cache the list of LUNs in the dataset in driver memory
-        3) Store the volume to LUN ID mappings in a local file
-        """
-        dataset_name = self._dataset_name(project, ss_type)
-
-        server = self.client.service
-        res = server.DatasetMemberListInfoIterStart(
-                DatasetNameOrId=dataset_name,
-                IncludeExportsInfo=True,
-                IncludeIndirect=True,
-                MemberType='lun_path')
-        tag = res.Tag
-        suffix = '/' + name
-        try:
-            while True:
-                res = server.DatasetMemberListInfoIterNext(Tag=tag,
-                                                           Maximum=100)
-                if (not hasattr(res, 'DatasetMembers') or
-                            not res.DatasetMembers):
-                    break
-                for member in res.DatasetMembers.DatasetMemberInfo:
-                    if member.MemberName.endswith(suffix):
-                        return member.MemberId
-        finally:
-            server.DatasetMemberListInfoIterEnd(Tag=tag)
+        lun = self._find_discovered_lun_for_volume(name, project)
+        self._remove_destroy(lun)
 
     def _get_lun_details(self, lun_id):
         """Given the ID of a LUN, get the details about that LUN"""
@@ -472,12 +552,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         """
         name = volume['name']
         project = volume['project_id']
-        ss_type = self._get_ss_type(volume)
-        lun_id = self._get_lun_id(name, project, ss_type)
-        if not lun_id:
-            msg = _("Failed to find LUN ID for volume %s")
-            raise exception.Error(msg % name)
-        return {'provider_location': lun_id}
+        lun = self._find_discovered_lun_for_volume(name, project)
+        return {'provider_location': lun.lun_id}
 
     def ensure_export(self, context, volume):
         """
@@ -821,13 +897,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
-        LOG.debug('create_snapshot %s' % dict(snapshot))
-        # XXX how do we get volume_type for a snapshot volume?
-        ss_type = None
-        lun_id = self._get_lun_id(vol_name, project, ss_type)
-        if not lun_id:
-            msg = _("Failed to find LUN ID for volume %s")
-            raise exception.Error(msg % vol_name)
+        lun = self._find_discovered_lun_for_volume(vol_name, project)
+        lun_id = lun.id
         lun = self._get_lun_details(lun_id)
         if not lun:
             msg = _('Failed to get LUN details for LUN ID %s')
@@ -846,12 +917,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
-        # XXX how do we get volume_type for a snapshot volume?
-        ss_type = None
-        lun_id = self._get_lun_id(vol_name, project, ss_type)
-        if not lun_id:
-            msg = _("Failed to find LUN ID for volume %s")
-            raise exception.Error(msg % vol_name)
+        lun = self._find_discovered_lun_for_volume(vol_name, project)
+        lun_id = lun.id
         lun = self._get_lun_details(lun_id)
         if not lun:
             msg = _('Failed to get LUN details for LUN ID %s')
@@ -867,17 +934,13 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         vol_name = snapshot['volume_name']
         snapshot_name = snapshot['name']
         project = snapshot['project_id']
-        # XXX how do we get ss_type for a snapshot
-        ss_type = None
-        vol_ss_type = self.get_ss_type(volume)
-        if ss_type != vol_ss_type:
+        lun = self._find_discovered_lun_for_volume(vol_name, project)
+        lun_id = lun.id
+        ss_type = self.get_ss_type(volume)
+        if ss_type != lun.dataset.type:
             msg = _('Cannot create volume of type %s from '
                 'snapshot of type %s')
-            raise exception.Error(msg % (vol_ss_type, ss_type))
-        lun_id = self._get_lun_id(vol_name, project, ss_type)
-        if not lun_id:
-            msg = _("Failed to find LUN ID for volume %s")
-            raise exception.Error(msg % vol_name)
+            raise exception.Error(msg % (ss_type, lun.dataset.type))
         lun = self._get_lun_details(lun_id)
         if not lun:
             msg = _('Failed to get LUN details for LUN ID %s')
