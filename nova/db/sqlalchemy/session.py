@@ -124,6 +124,12 @@ def get_engine():
 
         _ENGINE = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
 
+        if (FLAGS.sql_connection_trace and
+                _ENGINE.dialect.dbapi.__name__ == 'MySQLdb'):
+            import MySQLdb.cursors
+            _do_query = debug_mysql_do_query()
+            setattr(MySQLdb.cursors.BaseCursor, '_do_query', _do_query)
+
         try:
             _ENGINE.connect()
         except OperationalError, e:
@@ -154,3 +160,44 @@ def get_maker(engine, autocommit=True, expire_on_commit=False):
     return sqlalchemy.orm.sessionmaker(bind=engine,
                                        autocommit=autocommit,
                                        expire_on_commit=expire_on_commit)
+
+
+def debug_mysql_do_query():
+    """Return a debug version of MySQLdb.cursors._do_query"""
+    import MySQLdb.cursors
+    import traceback
+
+    old_mysql_do_query = MySQLdb.cursors.BaseCursor._do_query
+
+    def _do_query(self, q):
+        stack = ''
+        for file, line, method, function in traceback.extract_stack():
+            # exclude various common things from trace
+            if file.endswith('session.py') and method == '_do_query':
+                continue
+            if file.endswith('api.py') and method == 'wrapper':
+                continue
+            if file.endswith('utils.py') and method == '_inner':
+                continue
+            if file.endswith('exception.py') and method == '_wrap':
+                continue
+            # nova/db/api is just a wrapper around nova/db/sqlalchemy/api
+            if file.endswith('nova/db/api.py'):
+                continue
+            # only trace inside nova
+            index = file.rfind('nova')
+            if index == -1:
+                continue
+            stack += "File:%s:%s Method:%s() Line:%s | " \
+                    % (file[index:], line, method, function)
+
+        # strip trailing " | " from stack
+        if stack:
+            stack = stack[:-3]
+            qq = "%s /* %s */" % (q, stack)
+        else:
+            qq = q
+        old_mysql_do_query(self, qq)
+
+    # return the new _do_query method
+    return _do_query
