@@ -1447,8 +1447,9 @@ class ComputeTestCase(BaseTestCase):
                  {"method": "pre_live_migration",
                   "args": {'instance_id': inst_ref['id'],
                            'block_migration': True,
-                           'disk': None}
-                 }).AndRaise(rpc.common.RemoteError('', '', ''))
+                           'disk': None},
+                  "version": compute_rpcapi.ComputeAPI.RPC_API_VERSION
+                 }, None).AndRaise(rpc.common.RemoteError('', '', ''))
 
         # mocks for rollback
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
@@ -1485,10 +1486,12 @@ class ComputeTestCase(BaseTestCase):
 
         # create
         self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': instance_id,
-                                     'block_migration': False,
-                                     'disk': None}})
+        rpc.call(c, topic,
+                {"method": "pre_live_migration",
+                 "args": {'instance_id': instance_id,
+                          'block_migration': False,
+                          'disk': None},
+                 "version": compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None)
 
         # start test
         self.mox.ReplayAll()
