@@ -44,7 +44,6 @@ class RpcKombuSslTestCase(test.TestCase):
     def setUp(self):
         super(RpcKombuSslTestCase, self).setUp()
         if kombu:
-            impl_kombu.register_opts(FLAGS)
             self.flags(kombu_ssl_keyfile=SSL_KEYFILE,
                        kombu_ssl_ca_certs=SSL_CA_CERT,
                        kombu_ssl_certfile=SSL_CERT,

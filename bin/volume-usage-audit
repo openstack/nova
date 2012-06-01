@@ -62,7 +62,6 @@ from nova.volume import utils as volume_utils
 FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
-    rpc.register_opts(FLAGS)
     admin_context = context.get_admin_context()
     utils.default_cfgfile()
     flags.FLAGS(sys.argv)

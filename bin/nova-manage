@@ -1664,7 +1664,6 @@ def methods_of(obj):
 
 def main():
     """Parse options and call the appropriate class/method."""
-    rpc.register_opts(FLAGS)
 
     try:
         argv = flags.parse_args(sys.argv)

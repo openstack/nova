@@ -66,7 +66,6 @@ class RpcQpidTestCase(test.TestCase):
         self.mock_receiver = None
 
         if qpid:
-            impl_qpid.register_opts(FLAGS)
             self.orig_connection = qpid.messaging.Connection
             self.orig_session = qpid.messaging.Session
             self.orig_sender = qpid.messaging.Sender

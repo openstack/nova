@@ -63,7 +63,6 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
-    rpc.register_opts(FLAGS)
     admin_context = context.get_admin_context()
     flags.parse_args(sys.argv)
     logging.setup()
