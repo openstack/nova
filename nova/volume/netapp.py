@@ -171,7 +171,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
     def _get_datasets(self):
         """Get the list of datasets from DFM"""
         server = self.client.service
-        res = server.DatasetListInfoIterStart()
+        res = server.DatasetListInfoIterStart(IncludeMetadata=True)
         tag = res.Tag
         datasets = []
         try:
@@ -188,7 +188,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         """Discover all of the LUNs in a dataset."""
         server = self.client.service
         res = server.DatasetMemberListInfoIterStart(
-                DatasetNameOrId=dataset_id,
+                DatasetNameOrId=dataset.id,
                 IncludeExportsInfo=True,
                 IncludeIndirect=True,
                 MemberType='lun_path')
@@ -219,7 +219,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 continue
             project = None
             type = None
-            for field in dataset.DatasetMetadata:
+            for field in dataset.DatasetMetadata.DfmMetadataField:
                 if field.FieldName == self.DATASET_METADATA_PROJECT_KEY:
                     project = field.FieldValue
                 elif field.FieldName == self.DATASET_METADATA_VOL_TYPE_KEY:
@@ -300,7 +300,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         storage_service = self.storage_service
         if ss_type:
             storage_service = self.storage_service_prefix + ss_type
-            
+
         factory = self.client.factory
 
         lunmap = factory.create('DatasetLunMappingInfo')
@@ -553,7 +553,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         name = volume['name']
         project = volume['project_id']
         lun = self._find_discovered_lun_for_volume(name, project)
-        return {'provider_location': lun.lun_id}
+        return {'provider_location': lun.id}
 
     def ensure_export(self, context, volume):
         """
