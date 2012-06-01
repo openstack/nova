@@ -674,10 +674,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         bdms = self._get_instance_volume_bdms(context, instance_uuid)
         block_device_mapping = []
         for bdm in bdms:
-            cinfo = jsonutils.loads(bdm['connection_info'])
-            block_device_mapping.append({'connection_info': cinfo,
-                                         'mount_device':
-                                         bdm['device_name']})
+            try:
+                cinfo = jsonutils.loads(bdm['connection_info'])
+                block_device_mapping.append({'connection_info': cinfo,
+                                             'mount_device':
+                                             bdm['device_name']})
+            except TypeError:
+                # if the block_device_mapping has no value in connection_info
+                # (returned as None), don't include in the mapping
+                pass
         # NOTE(vish): The mapping is passed in so the driver can disconnect
         #             from remote volumes if necessary
         return {'block_device_mapping': block_device_mapping}
