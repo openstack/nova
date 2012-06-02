@@ -228,10 +228,31 @@ class QuantumNovaIPAMLib(object):
         # - otherwise, _disassociate_stale_fixed_ips is called periodically
         #   to disassociate all fixed ips that are unallocated
         #   but still associated with an instance-id.
+
+        read_deleted_context = admin_context.elevated(read_deleted='yes')
         for fixed_ip in fixed_ips:
             db.fixed_ip_update(admin_context, fixed_ip['address'],
                                {'allocated': False,
                                 'virtual_interface_id': None})
+            fixed_id = fixed_ip['id']
+            floating_ips = self.net_manager.db.floating_ip_get_by_fixed_ip_id(
+                                admin_context,
+                                fixed_id)
+            # disassociate floating ips related to fixed_ip
+            for floating_ip in floating_ips:
+                address = floating_ip['address']
+                manager.FloatingIP.disassociate_floating_ip(
+                    self.net_manager,
+                    read_deleted_context,
+                    address,
+                    affect_auto_assigned=True)
+                # deallocate if auto_assigned
+                if floating_ip['auto_assigned']:
+                    manager.FloatingIP.deallocate_floating_ip(
+                        read_deleted_context,
+                        address,
+                        affect_auto_assigned=True)
+
         if len(fixed_ips) == 0:
             LOG.error(_('No fixed IPs to deallocate for vif %s') %
                       vif_ref['id'])
