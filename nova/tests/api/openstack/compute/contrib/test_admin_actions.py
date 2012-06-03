@@ -13,7 +13,6 @@
 #   under the License.
 
 import datetime
-import json
 
 import webob
 
@@ -23,6 +22,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -98,7 +98,7 @@ class AdminActionsTest(test.TestCase):
             req = webob.Request.blank('/v2/fake/servers/%s/action' %
                     self.UUID)
             req.method = 'POST'
-            req.body = json.dumps({_action: None})
+            req.body = jsonutils.dumps({_action: None})
             req.content_type = 'application/json'
             res = req.get_response(app)
             self.assertEqual(res.status_int, 202)
@@ -113,7 +113,7 @@ class AdminActionsTest(test.TestCase):
             req = webob.Request.blank('/v2/fake/servers/%s/action' %
                     self.UUID)
             req.method = 'POST'
-            req.body = json.dumps({_action: None})
+            req.body = jsonutils.dumps({_action: None})
             req.content_type = 'application/json'
             res = req.get_response(app)
             self.assertEqual(res.status_int, 409)
@@ -128,9 +128,13 @@ class AdminActionsTest(test.TestCase):
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
         req.method = 'POST'
-        req.body = json.dumps({'os-migrateLive': {'host': 'hostname',
-                                               'block_migration': False,
-                                               'disk_over_commit': False}})
+        req.body = jsonutils.dumps({
+            'os-migrateLive': {
+                'host': 'hostname',
+                'block_migration': False,
+                'disk_over_commit': False,
+            }
+        })
         req.content_type = 'application/json'
         res = req.get_response(app)
         self.assertEqual(res.status_int, 202)
@@ -143,9 +147,13 @@ class AdminActionsTest(test.TestCase):
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
         req.method = 'POST'
-        req.body = json.dumps({'os-migrateLive': {'dummy': 'hostname',
-                                               'block_migration': False,
-                                               'disk_over_commit': False}})
+        req.body = jsonutils.dumps({
+            'os-migrateLive': {
+                'dummy': 'hostname',
+                'block_migration': False,
+                'disk_over_commit': False,
+            }
+        })
         req.content_type = 'application/json'
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
@@ -166,7 +174,7 @@ class CreateBackupTests(test.TestCase):
         req = fakes.HTTPRequest.blank(url)
         req.method = 'POST'
         req.content_type = 'application/json'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         return req
 
     def test_create_backup_with_metadata(self):

@@ -17,13 +17,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
-
 from nova import context
 from nova.db import api as db
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import jsonutils
 from nova.virt import firewall
 from nova.virt import netutils
 
@@ -49,9 +47,9 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         # Prepare arguments for plugin call
         args = {}
         args.update(map(lambda x: (x, str(kwargs[x])), kwargs))
-        args['cmd_args'] = json.dumps(cmd)
+        args['cmd_args'] = jsonutils.dumps(cmd)
         ret = self._session.call_plugin('xenhost', 'iptables_config', args)
-        json_ret = json.loads(ret)
+        json_ret = jsonutils.loads(ret)
         return (json_ret['out'], json_ret['err'])
 
     def __init__(self, xenapi_session=None, **kwargs):

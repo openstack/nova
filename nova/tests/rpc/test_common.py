@@ -17,12 +17,12 @@
 Unit Tests for 'common' functons used through rpc code.
 """
 
-import json
 import sys
 
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import jsonutils
 from nova.rpc import common as rpc_common
 from nova import test
 
@@ -52,7 +52,7 @@ class RpcCommonTestCase(test.TestCase):
         except Exception as exc:
             failure = rpc_common.serialize_remote_exception(sys.exc_info())
 
-        failure = json.loads(failure)
+        failure = jsonutils.loads(failure)
         #assure the traceback was added
         self.assertEqual(expected['class'], failure['class'])
         self.assertEqual(expected['module'], failure['module'])
@@ -74,7 +74,7 @@ class RpcCommonTestCase(test.TestCase):
         except Exception as exc:
             failure = rpc_common.serialize_remote_exception(sys.exc_info())
 
-        failure = json.loads(failure)
+        failure = jsonutils.loads(failure)
         #assure the traceback was added
         self.assertEqual(expected['class'], failure['class'])
         self.assertEqual(expected['module'], failure['module'])
@@ -88,7 +88,7 @@ class RpcCommonTestCase(test.TestCase):
             'message': 'test message',
             'tb': ['raise NovaException'],
         }
-        serialized = json.dumps(failure)
+        serialized = jsonutils.dumps(failure)
 
         after_exc = rpc_common.deserialize_remote_exception(FLAGS, serialized)
         self.assertTrue(isinstance(after_exc, exception.NovaException))
@@ -103,7 +103,7 @@ class RpcCommonTestCase(test.TestCase):
             'kwargs': {'cmd': '/bin/echo failed'},
             'message': 'foo',
         }
-        serialized = json.dumps(failure)
+        serialized = jsonutils.dumps(failure)
 
         after_exc = rpc_common.deserialize_remote_exception(FLAGS, serialized)
         self.assertTrue(isinstance(after_exc, rpc_common.RemoteError))
@@ -116,7 +116,7 @@ class RpcCommonTestCase(test.TestCase):
             'module': self.__class__.__module__,
             'tb': ['raise FakeUserDefinedException'],
         }
-        serialized = json.dumps(failure)
+        serialized = jsonutils.dumps(failure)
 
         after_exc = rpc_common.deserialize_remote_exception(FLAGS, serialized)
         self.assertTrue(isinstance(after_exc, FakeUserDefinedException))
@@ -136,7 +136,7 @@ class RpcCommonTestCase(test.TestCase):
             'module': self.__class__.__module__,
             'tb': ['raise FakeIDontExistException'],
         }
-        serialized = json.dumps(failure)
+        serialized = jsonutils.dumps(failure)
 
         after_exc = rpc_common.deserialize_remote_exception(FLAGS, serialized)
         self.assertTrue(isinstance(after_exc, rpc_common.RemoteError))

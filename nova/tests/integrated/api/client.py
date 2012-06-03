@@ -15,11 +15,11 @@
 #    under the License.
 
 import httplib
-import json
 import urllib
 import urlparse
 
 from nova import log as logging
+from nova.openstack.common import jsonutils
 
 
 LOG = logging.getLogger(__name__)
@@ -167,7 +167,7 @@ class TestOpenStackClient(object):
         body = response.read()
         LOG.debug(_("Decoding JSON: %s") % (body))
         if body:
-            return json.loads(body)
+            return jsonutils.loads(body)
         else:
             return ""
 
@@ -181,7 +181,7 @@ class TestOpenStackClient(object):
         if body:
             headers = kwargs.setdefault('headers', {})
             headers['Content-Type'] = 'application/json'
-            kwargs['body'] = json.dumps(body)
+            kwargs['body'] = jsonutils.dumps(body)
 
         kwargs.setdefault('check_response_status', [200, 202])
         response = self.api_request(relative_uri, **kwargs)
@@ -192,7 +192,7 @@ class TestOpenStackClient(object):
         if body:
             headers = kwargs.setdefault('headers', {})
             headers['Content-Type'] = 'application/json'
-            kwargs['body'] = json.dumps(body)
+            kwargs['body'] = jsonutils.dumps(body)
 
         kwargs.setdefault('check_response_status', [200, 202, 204])
         response = self.api_request(relative_uri, **kwargs)

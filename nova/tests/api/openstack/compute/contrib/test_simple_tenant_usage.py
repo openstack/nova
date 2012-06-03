@@ -16,7 +16,6 @@
 #    under the License.
 
 import datetime
-import json
 
 from lxml import etree
 import webob
@@ -25,6 +24,7 @@ from nova.api.openstack.compute.contrib import simple_tenant_usage
 from nova.compute import api
 from nova import context
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
@@ -103,7 +103,7 @@ class SimpleTenantUsageTest(test.TestCase):
                                fake_auth_context=self.admin_context))
 
         self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
+        res_dict = jsonutils.loads(res.body)
         usages = res_dict['tenant_usages']
         for i in xrange(TENANTS):
             self.assertEqual(int(usages[i]['total_hours']),
@@ -127,7 +127,7 @@ class SimpleTenantUsageTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app(
                                fake_auth_context=self.admin_context))
         self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
+        res_dict = jsonutils.loads(res.body)
         return res_dict['tenant_usages']
 
     def test_verify_detailed_index(self):
@@ -159,7 +159,7 @@ class SimpleTenantUsageTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app(
                                fake_auth_context=self.user_context))
         self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
+        res_dict = jsonutils.loads(res.body)
 
         usage = res_dict['tenant_usage']
         servers = usage['server_usages']

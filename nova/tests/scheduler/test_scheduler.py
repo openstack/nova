@@ -19,8 +19,6 @@
 Tests For Scheduler
 """
 
-import json
-
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -29,6 +27,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova.scheduler import driver
@@ -529,12 +528,18 @@ class SchedulerTestCase(test.TestCase):
                 'disk_available_least').AndReturn(1025)
         rpc.queue_get_for(self.context, FLAGS.compute_topic,
                 instance['host']).AndReturn('src_queue1')
-        rpc.call(self.context, 'src_queue1',
-                {'method': 'get_instance_disk_info',
-                 'args': {'instance_name': instance['name']},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION},
-                 None).AndReturn(
-                        json.dumps([{'disk_size': 1024 * (1024 ** 3)}]))
+        instance_disk_info_msg = {
+            'method': 'get_instance_disk_info',
+            'args': {
+                'instance_name': instance['name'],
+            },
+            'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION,
+        }
+        instance_disk_info = [{'disk_size': 1024 * (1024 ** 3)}]
+        rpc.call(self.context,
+                 'src_queue1',
+                 instance_disk_info_msg,
+                 None).AndReturn(jsonutils.dumps(instance_disk_info))
 
         # Common checks (shared storage ok, same hypervisor, etc)
         self._check_shared_storage(dest, instance, False)
@@ -734,12 +739,18 @@ class SchedulerTestCase(test.TestCase):
                 'disk_available_least').AndReturn(1023)
         rpc.queue_get_for(self.context, FLAGS.compute_topic,
                 instance['host']).AndReturn('src_queue')
-        rpc.call(self.context, 'src_queue',
-                {'method': 'get_instance_disk_info',
-                 'args': {'instance_name': instance['name']},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION},
-                 None).AndReturn(
-                        json.dumps([{'disk_size': 1024 * (1024 ** 3)}]))
+        instance_disk_info_msg = {
+            'method': 'get_instance_disk_info',
+            'args': {
+                'instance_name': instance['name'],
+            },
+            'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION,
+        }
+        instance_disk_info = [{'disk_size': 1024 * (1024 ** 3)}]
+        rpc.call(self.context,
+                 'src_queue',
+                 instance_disk_info_msg,
+                 None).AndReturn(jsonutils.dumps(instance_disk_info))
 
         self.mox.ReplayAll()
         self.assertRaises(exception.MigrationError,

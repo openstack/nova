@@ -14,9 +14,9 @@
 #    under the License.
 
 
-import json
 import operator
 
+from nova.openstack.common import jsonutils
 from nova.scheduler import filters
 
 
@@ -138,7 +138,7 @@ class JsonFilter(filters.BaseHostFilter):
         # NOTE(comstud): Not checking capabilities or service for
         # enabled/disabled so that a provided json filter can decide
 
-        result = self._process_filter(json.loads(query), host_state)
+        result = self._process_filter(jsonutils.loads(query), host_state)
         if isinstance(result, list):
             # If any succeeded, include the host
             result = any(result)

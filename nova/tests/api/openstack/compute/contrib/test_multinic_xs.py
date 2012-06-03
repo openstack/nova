@@ -13,11 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import webob
 
 from nova import compute
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -61,7 +60,7 @@ class FixedIpTest(test.TestCase):
         body = dict(addFixedIp=dict(networkId='test_net'))
         req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
         req.method = 'POST'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -75,7 +74,7 @@ class FixedIpTest(test.TestCase):
         body = dict(addFixedIp=dict())
         req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
         req.method = 'POST'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -89,7 +88,7 @@ class FixedIpTest(test.TestCase):
         body = dict(removeFixedIp=dict(address='10.10.10.1'))
         req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
         req.method = 'POST'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -103,7 +102,7 @@ class FixedIpTest(test.TestCase):
         body = dict(removeFixedIp=dict())
         req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
         req.method = 'POST'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())

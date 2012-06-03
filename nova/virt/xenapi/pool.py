@@ -19,7 +19,6 @@
 Management class for Pool-related functions (join, eject, etc).
 """
 
-import json
 import urlparse
 
 from nova.compute import aggregate_states
@@ -28,6 +27,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 from nova import rpc
 from nova.virt.xenapi import vm_utils
 
@@ -134,7 +134,7 @@ class ResourcePool(object):
                     'url': url,
                     'user': user,
                     'password': passwd,
-                    'force': json.dumps(FLAGS.use_join_force),
+                    'force': jsonutils.dumps(FLAGS.use_join_force),
                     'master_addr': self._host_addr,
                     'master_user': FLAGS.xenapi_connection_username,
                     'master_pass': FLAGS.xenapi_connection_password, }

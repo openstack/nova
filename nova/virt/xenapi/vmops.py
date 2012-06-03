@@ -23,7 +23,6 @@ import base64
 import binascii
 import cPickle as pickle
 import functools
-import json
 import os
 import time
 import uuid
@@ -39,6 +38,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi import firewall
@@ -517,7 +517,7 @@ class VMOps(object):
             # Check if this is a JSON-encoded string and convert if needed.
             if isinstance(injected_files, basestring):
                 try:
-                    injected_files = json.loads(injected_files)
+                    injected_files = jsonutils.loads(injected_files)
                 except ValueError:
                     LOG.exception(_("Invalid value for injected_files: %r"),
                                   injected_files, instance=instance)
@@ -1409,7 +1409,9 @@ class VMOps(object):
             xs_data = self._vif_xenstore_data(vif)
             location = ('vm-data/networking/%s' %
                         vif['address'].replace(':', ''))
-            self._add_to_param_xenstore(vm_ref, location, json.dumps(xs_data))
+            self._add_to_param_xenstore(vm_ref,
+                                        location,
+                                        jsonutils.dumps(xs_data))
             try:
                 self._write_to_xenstore(instance, location, xs_data,
                                         vm_ref=vm_ref)
@@ -1466,7 +1468,7 @@ class VMOps(object):
         """
         return self._make_plugin_call('xenstore.py', 'write_record', instance,
                                       vm_ref=vm_ref, path=path,
-                                      value=json.dumps(value))
+                                      value=jsonutils.dumps(value))
 
     def _make_agent_call(self, method, instance, args=None, vm_ref=None):
         """Abstracts out the interaction with the agent xenapi plugin."""
@@ -1478,7 +1480,7 @@ class VMOps(object):
         if isinstance(ret, dict):
             return ret
         try:
-            return json.loads(ret)
+            return jsonutils.loads(ret)
         except TypeError:
             LOG.error(_('The agent call to %(method)s returned an invalid'
                         ' response: %(ret)r. path=%(path)s; args=%(args)r'),

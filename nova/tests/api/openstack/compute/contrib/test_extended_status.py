@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from lxml import etree
 import webob
 
@@ -22,6 +20,7 @@ from nova.api.openstack.compute.contrib import extended_status
 from nova import compute
 from nova import exception
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -65,10 +64,10 @@ class ExtendedStatusTest(test.TestCase):
         return res
 
     def _get_server(self, body):
-        return json.loads(body).get('server')
+        return jsonutils.loads(body).get('server')
 
     def _get_servers(self, body):
-        return json.loads(body).get('servers')
+        return jsonutils.loads(body).get('servers')
 
     def assertServerStates(self, server, vm_state, power_state, task_state):
         self.assertEqual(server.get('%svm_state' % self.prefix), vm_state)

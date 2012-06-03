@@ -57,7 +57,6 @@
 import ast
 import errno
 import gettext
-import json
 import math
 import netaddr
 import optparse
@@ -90,6 +89,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova import quota
 from nova import rpc
 from nova.scheduler import rpcapi as scheduler_rpcapi
@@ -1536,7 +1536,7 @@ class ExportCommands(object):
 
     def auth(self):
         """Export Nova auth data in format that can be consumed by Keystone"""
-        print json.dumps(self._get_auth_data())
+        print jsonutils.dumps(self._get_auth_data())
 
     def _get_auth_data(self):
         output = {

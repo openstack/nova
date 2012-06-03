@@ -16,8 +16,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import iso8601
 from lxml import etree
 import webob
@@ -28,6 +26,7 @@ from nova.api.openstack import extensions as base_extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -197,7 +196,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         self.assertEqual(200, response.status_int)
 
         # Make sure we have all the extensions, extra extensions being OK.
-        data = json.loads(response.body)
+        data = jsonutils.loads(response.body)
         names = [str(x['name']) for x in data['extensions']
                  if str(x['name']) in self.ext_list]
         names.sort()
@@ -224,7 +223,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             url = '/fake/extensions/%s' % ext['alias']
             request = webob.Request.blank(url)
             response = request.get_response(app)
-            output = json.loads(response.body)
+            output = jsonutils.loads(response.body)
             self.assertEqual(output['extension']['alias'], ext['alias'])
 
     def test_get_extension_json(self):
@@ -233,7 +232,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
 
-        data = json.loads(response.body)
+        data = jsonutils.loads(response.body)
         self.assertEqual(data['extension'], {
                 "namespace": "http://www.fox.in.socks/api/ext/pie/v1.0",
                 "name": "Fox In Socks",
@@ -333,7 +332,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         response = request.get_response(app)
         self.assertEqual(400, response.status_int)
         self.assertEqual('application/json', response.content_type)
-        body = json.loads(response.body)
+        body = jsonutils.loads(response.body)
         expected = {
             "badRequest": {
                 "message": "All aboard the fail train!",
@@ -351,7 +350,7 @@ class ResourceExtensionTest(ExtensionTestCase):
         response = request.get_response(app)
         self.assertEqual(404, response.status_int)
         self.assertEqual('application/json', response.content_type)
-        body = json.loads(response.body)
+        body = jsonutils.loads(response.body)
         expected = {
             "itemNotFound": {
                 "message": "The resource could not be found.",
@@ -394,7 +393,7 @@ class ActionExtensionTest(ExtensionTestCase):
         request = webob.Request.blank(url)
         request.method = 'POST'
         request.content_type = 'application/json'
-        request.body = json.dumps(body)
+        request.body = jsonutils.dumps(body)
         response = request.get_response(app)
         return response
 
@@ -416,7 +415,7 @@ class ActionExtensionTest(ExtensionTestCase):
         response = self._send_server_action_request(url, body)
         self.assertEqual(400, response.status_int)
         self.assertEqual('application/json', response.content_type)
-        body = json.loads(response.body)
+        body = jsonutils.loads(response.body)
         expected = {
             "badRequest": {
                 "message": "There is no such action: blah",
@@ -437,7 +436,7 @@ class ActionExtensionTest(ExtensionTestCase):
         response = self._send_server_action_request(url, body)
         self.assertEqual(400, response.status_int)
         self.assertEqual('application/json', response.content_type)
-        body = json.loads(response.body)
+        body = jsonutils.loads(response.body)
         expected = {
             "badRequest": {
                 "message": "Tweedle fail",
@@ -465,7 +464,7 @@ class RequestExtensionTest(ExtensionTestCase):
         request.environ['api.version'] = '2'
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
-        response_data = json.loads(response.body)
+        response_data = jsonutils.loads(response.body)
         self.assertEqual('bluegoo', response_data['flavor']['googoose'])
 
     def test_get_resources_with_mgr(self):
@@ -475,7 +474,7 @@ class RequestExtensionTest(ExtensionTestCase):
         request.environ['api.version'] = '2'
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
-        response_data = json.loads(response.body)
+        response_data = jsonutils.loads(response.body)
         self.assertEqual('newblue', response_data['flavor']['googoose'])
         self.assertEqual("Pig Bands!", response_data['big_bands'])
 
@@ -529,7 +528,7 @@ class ControllerExtensionTest(ExtensionTestCase):
         request = webob.Request.blank("/fake/tweedles/foo/action")
         request.method = 'POST'
         request.headers['Content-Type'] = 'application/json'
-        request.body = json.dumps(dict(fooAction=True))
+        request.body = jsonutils.dumps(dict(fooAction=True))
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         self.assertEqual(extension_body, response.body)
@@ -552,7 +551,7 @@ class ControllerExtensionTest(ExtensionTestCase):
         request = webob.Request.blank("/fake/tweedles/foo/action")
         request.method = 'POST'
         request.headers['Content-Type'] = 'application/json'
-        request.body = json.dumps(dict(fooAction=True))
+        request.body = jsonutils.dumps(dict(fooAction=True))
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         self.assertEqual(extension_body, response.body)

@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from lxml import etree
 import webob
 
@@ -22,6 +20,7 @@ from nova.api.openstack.compute.contrib import virtual_interfaces
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import network
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -54,7 +53,7 @@ class ServerVirtualInterfaceTest(test.TestCase):
         req = webob.Request.blank(url)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
-        res_dict = json.loads(res.body)
+        res_dict = jsonutils.loads(res.body)
         response = {'virtual_interfaces': [
                         {'id': '00000000-0000-0000-0000-00000000000000000',
                          'mac_address': '00-00-00-00-00-00'},

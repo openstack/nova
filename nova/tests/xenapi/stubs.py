@@ -15,11 +15,11 @@
 
 """Stubouts, mocks and fixtures for the test suite"""
 
-import json
 import random
 
 from eventlet import tpool
 
+from nova.openstack.common import jsonutils
 from nova.virt.xenapi import connection as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
@@ -248,7 +248,7 @@ class FakeSessionForFirewallTests(FakeSessionForVMTests):
         if plugin == "xenhost" and method == "iptables_config":
             # The command to execute is a json-encoded list
             cmd_args = args.get('cmd_args', None)
-            cmd = json.loads(cmd_args)
+            cmd = jsonutils.loads(cmd_args)
             if not cmd:
                 ret_str = ''
             else:

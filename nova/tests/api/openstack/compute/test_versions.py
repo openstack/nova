@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import feedparser
 from lxml import etree
 import webob
@@ -24,6 +22,7 @@ import webob
 from nova.api.openstack.compute import versions
 from nova.api.openstack.compute import views
 from nova.api.openstack import xmlutil
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
@@ -88,7 +87,7 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
-        versions = json.loads(res.body)["versions"]
+        versions = jsonutils.loads(res.body)["versions"]
         expected = [
             {
                 "id": "v2.0",
@@ -117,7 +116,7 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
-        version = json.loads(res.body)
+        version = jsonutils.loads(res.body)
         expected = {
             "version": {
                 "id": "v2.0",
@@ -161,7 +160,7 @@ class VersionsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
-        version = json.loads(res.body)
+        version = jsonutils.loads(res.body)
         expected = {
             "version": {
                 "id": "v2.0",
@@ -347,7 +346,7 @@ class VersionsTest(test.TestCase):
             },
         ], }
 
-        self.assertDictMatch(expected, json.loads(res.body))
+        self.assertDictMatch(expected, jsonutils.loads(res.body))
 
     def test_multi_choice_image_xml(self):
         req = webob.Request.blank('/images/1')
@@ -417,7 +416,7 @@ class VersionsTest(test.TestCase):
             },
         ], }
 
-        self.assertDictMatch(expected, json.loads(res.body))
+        self.assertDictMatch(expected, jsonutils.loads(res.body))
 
 
 class VersionsViewBuilderTests(test.TestCase):

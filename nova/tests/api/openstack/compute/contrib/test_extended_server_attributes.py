@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from lxml import etree
 import webob
 
@@ -22,6 +20,7 @@ from nova.api.openstack.compute.contrib import extended_server_attributes
 from nova import compute
 from nova import exception
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -62,10 +61,10 @@ class ExtendedServerAttributesTest(test.TestCase):
         return res
 
     def _get_server(self, body):
-        return json.loads(body).get('server')
+        return jsonutils.loads(body).get('server')
 
     def _get_servers(self, body):
-        return json.loads(body).get('servers')
+        return jsonutils.loads(body).get('servers')
 
     def assertServerAttributes(self, server, host, instance_name):
         self.assertEqual(server.get('%shost' % self.prefix), host)

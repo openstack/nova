@@ -23,7 +23,6 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 import contextlib
 import cPickle as pickle
 import decimal
-import json
 import os
 import re
 import time
@@ -43,6 +42,7 @@ from nova.image import glance
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
+from nova.openstack.common import jsonutils
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import xenapi
@@ -711,7 +711,7 @@ def _retry_glance_download_vhd(context, session, image):
 
         try:
             result = session.call_plugin('glance', 'download_vhd', kwargs)
-            return json.loads(result)
+            return jsonutils.loads(result)
         except session.XenAPI.Failure as exc:
             _type, _method, error = exc.details[:3]
             if error == 'RetryableError':

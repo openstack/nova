@@ -16,8 +16,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import iso8601
 from lxml import etree
 import webob
@@ -25,6 +23,7 @@ import webob
 from nova.api.openstack import volume
 from nova.api.openstack import xmlutil
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova import test
 
 FLAGS = flags.FLAGS
@@ -59,7 +58,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         self.assertEqual(200, response.status_int)
 
         # Make sure we have all the extensions, extra extensions being OK.
-        data = json.loads(response.body)
+        data = jsonutils.loads(response.body)
         names = [str(x['name']) for x in data['extensions']
                  if str(x['name']) in self.ext_list]
         names.sort()
@@ -86,7 +85,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             url = '/fake/extensions/%s' % ext['alias']
             request = webob.Request.blank(url)
             response = request.get_response(app)
-            output = json.loads(response.body)
+            output = jsonutils.loads(response.body)
             self.assertEqual(output['extension']['alias'], ext['alias'])
 
     def test_get_extension_json(self):
@@ -95,7 +94,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
 
-        data = json.loads(response.body)
+        data = jsonutils.loads(response.body)
         self.assertEqual(data['extension'], {
                 "namespace": "http://www.fox.in.socks/api/ext/pie/v1.0",
                 "name": "Fox In Socks",

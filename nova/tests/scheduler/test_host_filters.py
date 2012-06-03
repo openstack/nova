@@ -16,12 +16,12 @@ Tests For Scheduler Host Filters.
 """
 
 import httplib
-import json
 import stubout
 
 from nova import context
 from nova import exception
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova.scheduler import filters
 from nova.scheduler.filters.trusted_filter import AttestationService
 from nova import test
@@ -71,7 +71,7 @@ class HostFiltersTestCase(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         stub_out_https_backend(self.stubs)
         self.context = context.RequestContext('fake', 'fake')
-        self.json_query = json.dumps(
+        self.json_query = jsonutils.dumps(
                 ['and', ['>=', '$free_ram_mb', 1024],
                         ['>=', '$free_disk_mb', 200 * 1024]])
         # This has a side effect of testing 'get_filter_classes'
@@ -411,7 +411,7 @@ class HostFiltersTestCase(test.TestCase):
 
     def test_json_filter_fails_on_caps_disabled(self):
         filt_cls = self.class_map['JsonFilter']()
-        json_query = json.dumps(
+        json_query = jsonutils.dumps(
                 ['and', ['>=', '$free_ram_mb', 1024],
                         ['>=', '$free_disk_mb', 200 * 1024],
                         '$capabilities.enabled'])
@@ -428,7 +428,7 @@ class HostFiltersTestCase(test.TestCase):
 
     def test_json_filter_fails_on_service_disabled(self):
         filt_cls = self.class_map['JsonFilter']()
-        json_query = json.dumps(
+        json_query = jsonutils.dumps(
                 ['and', ['>=', '$free_ram_mb', 1024],
                         ['>=', '$free_disk_mb', 200 * 1024],
                         ['not', '$service.disabled']])
@@ -456,7 +456,11 @@ class HostFiltersTestCase(test.TestCase):
                       ['and',
                           ['>', '$free_ram_mb', 30],
                           ['>', '$free_disk_mb', 300]]]]
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
 
         # Passes
         capabilities = {'enabled': True, 'opt1': 'match'}
@@ -553,26 +557,42 @@ class HostFiltersTestCase(test.TestCase):
 
         for (op, args, expected) in ops_to_test:
             raw = [op] + args
-            filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+            filter_properties = {
+                'scheduler_hints': {
+                    'query': jsonutils.dumps(raw),
+                },
+            }
             self.assertEqual(expected,
                     filt_cls.host_passes(host, filter_properties))
 
         # This results in [False, True, False, True] and if any are True
         # then it passes...
         raw = ['not', True, False, True, False]
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
         # This results in [False, False, False] and if any are True
         # then it passes...which this doesn't
         raw = ['not', True, True, True]
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_json_filter_unknown_operator_raises(self):
         filt_cls = self.class_map['JsonFilter']()
         raw = ['!=', 1, 2]
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
         host = fakes.FakeHostState('host1', 'compute',
                 {'capabilities': {'enabled': True}})
         self.assertRaises(KeyError,
@@ -584,10 +604,18 @@ class HostFiltersTestCase(test.TestCase):
                 {'capabilities': {'enabled': True}})
 
         raw = []
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
         raw = {}
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_json_filter_invalid_num_arguments_fails(self):
@@ -596,11 +624,19 @@ class HostFiltersTestCase(test.TestCase):
                 {'capabilities': {'enabled': True}})
 
         raw = ['>', ['and', ['or', ['not', ['<', ['>=', ['<=', ['in', ]]]]]]]]
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
         raw = ['>', 1]
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_json_filter_unknown_variable_ignored(self):
@@ -609,11 +645,19 @@ class HostFiltersTestCase(test.TestCase):
                 {'capabilities': {'enabled': True}})
 
         raw = ['=', '$........', 1, 1]
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
         raw = ['=', '$foo', 2, 2]
-        filter_properties = {'scheduler_hints': {'query': json.dumps(raw)}}
+        filter_properties = {
+            'scheduler_hints': {
+                'query': jsonutils.dumps(raw),
+            },
+        }
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_trusted_filter_default_passes(self):
