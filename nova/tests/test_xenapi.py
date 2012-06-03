@@ -22,13 +22,9 @@ import functools
 import os
 import re
 
-import mox
-
 from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
-from nova.compute import task_states
-from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception

@@ -22,7 +22,6 @@ is provided here as an example of how to implement a backend.
 """
 
 import base64
-import os
 import subprocess
 import time
 

@@ -21,7 +21,6 @@ from nova import exception
 from nova import flags
 from nova.network import manager as network_manager
 from nova.network.quantum import nova_ipam_lib
-from nova.tests import fake_network_cache_model
 from nova import utils
 
 

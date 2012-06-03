@@ -20,14 +20,9 @@
 
 from eventlet import tpool
 
-from nova import context
-from nova import db
 from nova import flags
 from nova import log as logging
-from nova import utils
-
 import nova.virt.firewall as base_firewall
-from nova.virt import netutils
 
 
 LOG = logging.getLogger(__name__)

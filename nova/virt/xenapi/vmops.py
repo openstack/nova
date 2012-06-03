@@ -32,8 +32,6 @@ from eventlet import greenthread
 
 from nova.compute import api as compute
 from nova.compute import power_state
-from nova.compute import task_states
-from nova.compute import vm_states
 from nova import context as nova_context
 from nova import db
 from nova import exception

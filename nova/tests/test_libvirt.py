@@ -21,7 +21,6 @@ import mox
 import os
 import re
 import shutil
-import sys
 import tempfile
 
 from lxml import etree

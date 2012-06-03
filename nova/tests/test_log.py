@@ -1,7 +1,6 @@
 import cStringIO
 import json
 import logging
-import sys
 
 from nova import context
 from nova import flags

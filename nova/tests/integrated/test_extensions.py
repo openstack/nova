@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute import extensions
 from nova import flags
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers

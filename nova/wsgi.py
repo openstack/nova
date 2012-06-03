@@ -33,7 +33,6 @@ import webob.exc
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import utils
 
 
 FLAGS = flags.FLAGS

@@ -20,14 +20,11 @@ Unit Tests for 'common' functons used through rpc code.
 import json
 import sys
 
-from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.rpc import amqp as rpc_amqp
 from nova.rpc import common as rpc_common
 from nova import test
-from nova.tests.rpc import common
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)

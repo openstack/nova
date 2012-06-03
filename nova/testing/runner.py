@@ -73,9 +73,7 @@ reldir = os.path.join(os.path.dirname(__file__), '..', '..')
 absdir = os.path.abspath(reldir)
 sys.path.insert(0, absdir)
 
-from nova import flags
 from nova import log as logging
-from nova.openstack.common import cfg
 
 
 class _AnsiColorizer(object):

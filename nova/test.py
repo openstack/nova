@@ -24,8 +24,6 @@ inline callbacks.
 """
 
 import functools
-import os
-import shutil
 import unittest
 import uuid
 

@@ -16,7 +16,6 @@
 #    under the License.
 
 import imp
-import json
 import os
 import StringIO
 import sys

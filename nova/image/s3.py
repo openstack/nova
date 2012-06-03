@@ -36,7 +36,6 @@ from nova import flags
 from nova import image
 from nova import log as logging
 from nova.openstack.common import cfg
-from nova import rpc
 from nova import utils
 
 

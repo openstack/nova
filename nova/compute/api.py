@@ -42,12 +42,10 @@ import nova.image
 from nova import log as logging
 from nova import network
 from nova import notifications
-from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 import nova.policy
 from nova import quota
-from nova import rpc
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova import volume

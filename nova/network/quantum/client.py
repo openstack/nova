@@ -17,7 +17,6 @@
 #    @author: Tyler Smith, Cisco Systems
 
 import httplib
-import json
 import socket
 import urllib
 

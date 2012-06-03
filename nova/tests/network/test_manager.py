@@ -23,7 +23,6 @@ import tempfile
 from nova import context
 from nova import db
 from nova import exception
-from nova import flags
 from nova import log as logging
 from nova.network import linux_net
 from nova.network import manager as network_manager
