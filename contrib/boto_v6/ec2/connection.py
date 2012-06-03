@@ -6,7 +6,7 @@ Created on 2010/12/20
 import boto
 import base64
 import boto.ec2
-from boto_v6.ec2.instance import  ReservationV6
+from boto_v6.ec2.instance import ReservationV6
 from boto.ec2.securitygroup import SecurityGroup
 
 

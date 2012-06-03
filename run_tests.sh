@@ -60,6 +60,13 @@ coverage=0
 recreate_db=1
 patch_migrate=1
 
+export NOSE_WITH_OPENSTACK=1
+export NOSE_OPENSTACK_COLOR=1
+export NOSE_OPENSTACK_RED=0.05
+export NOSE_OPENSTACK_YELLOW=0.025
+export NOSE_OPENSTACK_SHOW_ELAPSED=1
+export NOSE_OPENSTACK_STDOUT=1
+
 for arg in "$@"; do
   process_option $arg
 done
@@ -77,7 +84,7 @@ function run_tests {
   # Cleanup *pyc
   ${wrapper} find . -type f -name "*.pyc" -delete
   # Just run the test suites in current environment
-  ${wrapper} $NOSETESTS 2> run_tests.log
+  ${wrapper} $NOSETESTS
   # If we get some short import error right away, print the error log directly
   RESULT=$?
   if [ "$RESULT" -ne "0" ];
@@ -115,7 +122,7 @@ function run_pep8 {
 }
 
 
-NOSETESTS="python nova/testing/runner.py $noseopts $noseargs"
+NOSETESTS="nosetests $noseopts $noseargs"
 
 if [ $never_venv -eq 0 ]
 then

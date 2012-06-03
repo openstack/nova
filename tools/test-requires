@@ -4,8 +4,7 @@ distribute>=0.6.24
 coverage
 mox==0.5.3
 nose
-nosexcover
-openstack.nose_plugin
+openstack.nose_plugin>=0.7
 pep8==1.1
 sphinx>=1.1.2
 MySQL-python

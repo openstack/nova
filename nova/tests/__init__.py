@@ -39,8 +39,16 @@ import shutil
 
 from nova.db.sqlalchemy.session import get_engine
 from nova import flags
+from nova import log as logging
+
+import eventlet
+
+eventlet.monkey_patch()
 
 FLAGS = flags.FLAGS
+FLAGS.use_stderr = False
+
+logging.setup()
 
 _DB = None
 
