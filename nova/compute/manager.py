@@ -1860,7 +1860,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             instance_ref = self.db.instance_get(context, instance_id)
             bdm = self._get_instance_volume_bdm(context,
-                                                instance_id,
+                                                instance_ref['uuid'],
                                                 volume_id)
             self._detach_volume(context, instance_ref, bdm)
             volume = self.volume_api.get(context, volume_id)
