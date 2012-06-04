@@ -721,6 +721,11 @@ class QuotaResourceUnknown(QuotaNotFound):
     message = _("Unknown quota resources %(unknown)s.")
 
 
+class UserQuotaNotFound(QuotaNotFound):
+    message = _("Quota for user %(user_id)s in project %(project_id)s "
+                "could not be found.")
+
+
 class ProjectQuotaNotFound(QuotaNotFound):
     message = _("Quota for project %(project_id)s could not be found.")
 

@@ -1,5 +1,6 @@
 {
     "admin_or_owner":  [["role:admin"], ["project_id:%(project_id)s"]],
+    "admin_or_projectadmin": [["role:projectadmin"], ["role:admin"]],
     "default": [["rule:admin_or_owner"]],
 
 
@@ -48,7 +49,8 @@
     "compute_extension:networks": [["rule:admin_api"]],
     "compute_extension:networks:view": [],
     "compute_extension:quotas:show": [],
-    "compute_extension:quotas:update": [["rule:admin_api"]],
+    "compute_extension:quotas:update_for_project": [["rule:admin_api"]],
+    "compute_extension:quotas:update_for_user": [["rule:admin_or_projectadmin"]],
     "compute_extension:quota_classes": [],
     "compute_extension:rescue": [],
     "compute_extension:security_groups": [],

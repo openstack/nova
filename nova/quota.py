@@ -101,6 +101,11 @@ class DbQuotaDriver(object):
 
         return db.quota_get(context, project_id, resource)
 
+    def get_by_user(self, context, user_id, project_id, resource):
+        """Get a specific quota by user."""
+
+        return db.quota_get_for_user(context, user_id, project_id, resource)
+
     def get_by_class(self, context, quota_class, resource):
         """Get a specific quota by quota class."""
 
@@ -143,6 +148,63 @@ class DbQuotaDriver(object):
 
         return quotas
 
+    def _process_quotas(self, context, resources, project_id, quotas,
+                        quota_class=None, defaults=True, usages=None):
+        """
+        Given a list of resources, process the quotas for the given
+        quotas and usages.
+
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        :param project_id: The ID of the project to return quotas for.
+        :param quotas: The quotas dictionary need to be processed.
+        :param quota_class: If project_id != context.project_id, the
+                            quota class cannot be determined.  This
+                            parameter allows it to be specified.  It
+                            will be ignored if project_id ==
+                            context.project_id.
+        :param defaults: If True, the quota class value (or the
+                         default value, if there is no value from the
+                         quota class) will be reported if there is no
+                         specific value for the resource.
+        :param usages: If not None, the current in_use and reserved counts
+                       will also be returned.
+        """
+
+        modified_quotas = {}
+        # Get the quotas for the appropriate class.  If the project ID
+        # matches the one in the context, we use the quota_class from
+        # the context, otherwise, we use the provided quota_class (if
+        # any)
+        if project_id == context.project_id:
+            quota_class = context.quota_class
+        if quota_class:
+            class_quotas = db.quota_class_get_all_by_name(context, quota_class)
+        else:
+            class_quotas = {}
+
+        for resource in resources.values():
+            # Omit default/quota class values
+            if not defaults and resource.name not in quotas:
+                continue
+
+            modified_quotas[resource.name] = dict(
+                limit=quotas.get(resource.name, class_quotas.get(
+                        resource.name, resource.default)),
+                )
+
+            # Include usages if desired.  This is optional because one
+            # internal consumer of this interface wants to access the
+            # usages directly from inside a transaction.
+            if usages:
+                usage = usages.get(resource.name, {})
+                modified_quotas[resource.name].update(
+                    in_use=usage.get('in_use', 0),
+                    reserved=usage.get('reserved', 0),
+                    )
+
+        return modified_quotas
+
     def get_project_quotas(self, context, resources, project_id,
                            quota_class=None, defaults=True,
                            usages=True):
@@ -166,44 +228,65 @@ class DbQuotaDriver(object):
                        will also be returned.
         """
 
-        quotas = {}
         project_quotas = db.quota_get_all_by_project(context, project_id)
+
+        project_usages = None
         if usages:
             project_usages = db.quota_usage_get_all_by_project(context,
                                                                project_id)
 
-        # Get the quotas for the appropriate class.  If the project ID
-        # matches the one in the context, we use the quota_class from
-        # the context, otherwise, we use the provided quota_class (if
-        # any)
-        if project_id == context.project_id:
-            quota_class = context.quota_class
-        if quota_class:
-            class_quotas = db.quota_class_get_all_by_name(context, quota_class)
-        else:
-            class_quotas = {}
+        return self._process_quotas(context, resources,
+                                    project_id, project_quotas,
+                                    quota_class=quota_class,
+                                    defaults=defaults,
+                                    usages=project_usages)
 
-        for resource in resources.values():
-            # Omit default/quota class values
-            if not defaults and resource.name not in project_quotas:
-                continue
+    def get_user_quotas(self, context, resources, user_id, project_id,
+                        quota_class=None, defaults=True,
+                        usages=True):
+        """
+        Given a list of resources, retrieve the quotas for the given
+        user.
 
-            quotas[resource.name] = dict(
-                limit=project_quotas.get(resource.name, class_quotas.get(
-                        resource.name, resource.default)),
-                )
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        :param project_id: The ID of the project to return quotas for.
+        :param user_id: The ID of the user to return quotas for.
+        :param quota_class: If project_id != context.project_id, the
+                            quota class cannot be determined.  This
+                            parameter allows it to be specified.  It
+                            will be ignored if project_id ==
+                            context.project_id.
+        :param defaults: If True, the quota class value (or the
+                         default value, if there is no value from the
+                         quota class) will be reported if there is no
+                         specific value for the resource.
+        :param usages: If True, the current in_use and reserved counts
+                       will also be returned.
+        """
 
-            # Include usages if desired.  This is optional because one
-            # internal consumer of this interface wants to access the
-            # usages directly from inside a transaction.
-            if usages:
-                usage = project_usages.get(resource.name, {})
-                quotas[resource.name].update(
-                    in_use=usage.get('in_use', 0),
-                    reserved=usage.get('reserved', 0),
-                    )
+        user_quotas = db.quota_get_all_by_user(context, user_id, project_id)
 
-        return quotas
+        user_usages = None
+        if usages:
+            user_usages = db.quota_usage_get_all_by_user(context,
+                                                         user_id,
+                                                         project_id)
+
+        return self._process_quotas(context, resources,
+                                    project_id, user_quotas,
+                                    quota_class=quota_class,
+                                    defaults=defaults,
+                                    usages=user_usages)
+
+    def get_remaining_quotas(self, context, project_id, resources):
+        """Get the remaining quotas for the given project."""
+        defaults = self.get_defaults(context, resources)
+        quotas = db.quota_get_remaining(context, project_id)
+        for key in defaults.keys():
+            if key in quotas:
+                defaults[key] = quotas[key]
+        return defaults
 
     def _get_quotas(self, context, resources, keys, has_sync):
         """
@@ -235,9 +318,10 @@ class DbQuotaDriver(object):
             raise exception.QuotaResourceUnknown(unknown=sorted(unknown))
 
         # Grab and return the quotas (without usages)
-        quotas = self.get_project_quotas(context, sub_resources,
-                                         context.project_id,
-                                         context.quota_class, usages=False)
+        quotas = self.get_user_quotas(context, sub_resources,
+                                      context.user_id,
+                                      context.project_id,
+                                      context.quota_class, usages=False)
 
         return dict((k, v['limit']) for k, v in quotas.items())
 
@@ -367,6 +451,18 @@ class DbQuotaDriver(object):
         """
 
         db.quota_destroy_all_by_project(context, project_id)
+
+    def destroy_all_by_user(self, context, user_id, project_id):
+        """
+        Destroy all quotas, usages, and reservations associated with a
+        user.
+
+        :param context: The request context, for access checks.
+        :param user_id: The ID of the user being deleted.
+        :param project_id: The ID of the project being deleted.
+        """
+
+        db.quota_destroy_all_by_user(context, user_id, project_id)
 
     def expire(self, context):
         """Expire reservations.
@@ -566,6 +662,11 @@ class QuotaEngine(object):
 
         return self._driver.get_by_project(context, project_id, resource)
 
+    def get_by_user(self, context, user_id, project_id, resource):
+        """Get a specific quota by user."""
+
+        return self._driver.get_by_user(context, user_id, project_id, resource)
+
     def get_by_class(self, context, quota_class, resource):
         """Get a specific quota by quota class."""
 
@@ -611,10 +712,46 @@ class QuotaEngine(object):
         """
 
         return self._driver.get_project_quotas(context, self._resources,
-                                              project_id,
-                                              quota_class=quota_class,
-                                              defaults=defaults,
-                                              usages=usages)
+                                               project_id,
+                                               quota_class=quota_class,
+                                               defaults=defaults,
+                                               usages=usages)
+
+    def get_user_quotas(self, context, user_id, project_id,
+                        quota_class=None, defaults=True,
+                        usages=True):
+        """Retrieve the quotas for the given user.
+
+        :param context: The request context, for access checks.
+        :param user_id: The ID of the user to return quotas for.
+        :param project_id: The ID of the project to return quotas for.
+        :param quota_class: If project_id != context.project_id, the
+                            quota class cannot be determined.  This
+                            parameter allows it to be specified.
+        :param defaults: If True, the quota class value (or the
+                         default value, if there is no value from the
+                         quota class) will be reported if there is no
+                         specific value for the resource.
+        :param usages: If True, the current in_use and reserved counts
+                       will also be returned.
+        """
+
+        return self._driver.get_user_quotas(context, self._resources,
+                                            user_id,
+                                            project_id,
+                                            quota_class=quota_class,
+                                            defaults=defaults,
+                                            usages=usages)
+
+    def get_remaining_quotas(self, context, project_id):
+        """Retrieve the remaining quotas for the given project.
+
+        :param context: The request context, for access checks.
+        :param project_id: The ID of the project to return quotas for.
+        """
+
+        return self._driver.get_remaining_quotas(context, project_id,
+                                                 self._resources)
 
     def count(self, context, resource, *args, **kwargs):
         """Count a resource.
@@ -745,6 +882,18 @@ class QuotaEngine(object):
 
         self._driver.destroy_all_by_project(context, project_id)
 
+    def destroy_all_by_user(self, context, user_id, project_id):
+        """
+        Destroy all quotas, usages, and reservations associated with a
+        user.
+
+        :param context: The request context, for access checks.
+        :param user_id: The ID of the user being deleted.
+        :param project_id: The ID of the project being deleted.
+        """
+
+        self._driver.destroy_all_by_user(context, user_id, project_id)
+
     def expire(self, context):
         """Expire reservations.
 
@@ -761,26 +910,26 @@ class QuotaEngine(object):
         return sorted(self._resources.keys())
 
 
-def _sync_instances(context, project_id, session):
+def _sync_instances(context, user_id, project_id, session):
     return dict(zip(('instances', 'cores', 'ram'),
-                    db.instance_data_get_for_project(
-                context, project_id, session=session)))
+                    db.instance_data_get_for_user(
+                context, user_id, project_id, session=session)))
 
 
-def _sync_volumes(context, project_id, session):
+def _sync_volumes(context, user_id, project_id, session):
     return dict(zip(('volumes', 'gigabytes'),
-                    db.volume_data_get_for_project(
-                context, project_id, session=session)))
+                    db.volume_data_get_for_user(
+                context, user_id, project_id, session=session)))
 
 
-def _sync_floating_ips(context, project_id, session):
+def _sync_floating_ips(context, user_id, project_id, session):
     return dict(floating_ips=db.floating_ip_count_by_project(
             context, project_id, session=session))
 
 
-def _sync_security_groups(context, project_id, session):
-    return dict(security_groups=db.security_group_count_by_project(
-            context, project_id, session=session))
+def _sync_security_groups(context, user_id, project_id, session):
+    return dict(security_groups=db.security_group_count_by_user(
+            context, user_id, project_id, session=session))
 
 
 QUOTAS = QuotaEngine()
