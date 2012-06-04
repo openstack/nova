@@ -152,10 +152,6 @@ class TestCase(unittest.TestCase):
             self.mox.VerifyAll()
             super(TestCase, self).tearDown()
         finally:
-            if FLAGS.connection_type == 'fake':
-                if hasattr(fake.FakeConnection, '_instance'):
-                    del fake.FakeConnection._instance
-
             if FLAGS.image_service == 'nova.image.fake.FakeImageService':
                 nova.image.fake.FakeImageService_reset()
 

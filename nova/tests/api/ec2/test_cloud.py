@@ -90,7 +90,7 @@ def get_instances_with_cached_ips(orig_func, *args, **kwargs):
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(connection_type='fake',
+        self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True)
 
         def dumb(*args, **kwargs):

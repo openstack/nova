@@ -51,7 +51,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
-        self.conn = vmwareapi_conn.get_connection(False)
+        self.conn = vmwareapi_conn.VMWareESXDriver(False)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
         self.network_info = [({'bridge': 'fa0',

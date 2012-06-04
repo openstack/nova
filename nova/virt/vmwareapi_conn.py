@@ -95,27 +95,22 @@ class Failure(Exception):
         return str(self.details)
 
 
-def get_connection(_read_only):
-    """Sets up the ESX host connection."""
-    host_ip = FLAGS.vmwareapi_host_ip
-    host_username = FLAGS.vmwareapi_host_username
-    host_password = FLAGS.vmwareapi_host_password
-    api_retry_count = FLAGS.vmwareapi_api_retry_count
-    if not host_ip or host_username is None or host_password is None:
-        raise Exception(_("Must specify vmwareapi_host_ip,"
-                        "vmwareapi_host_username "
-                        "and vmwareapi_host_password to use"
-                        "connection_type=vmwareapi"))
-    return VMWareESXConnection(host_ip, host_username, host_password,
-                               api_retry_count)
-
-
-class VMWareESXConnection(driver.ComputeDriver):
+class VMWareESXDriver(driver.ComputeDriver):
     """The ESX host connection object."""
 
-    def __init__(self, host_ip, host_username, host_password,
-                 api_retry_count, scheme="https"):
-        super(VMWareESXConnection, self).__init__()
+    def __init__(self, read_only=False, scheme="https"):
+        super(VMWareESXDriver, self).__init__()
+
+        host_ip = FLAGS.vmwareapi_host_ip
+        host_username = FLAGS.vmwareapi_host_username
+        host_password = FLAGS.vmwareapi_host_password
+        api_retry_count = FLAGS.vmwareapi_api_retry_count
+        if not host_ip or host_username is None or host_password is None:
+            raise Exception(_("Must specify vmwareapi_host_ip,"
+                              "vmwareapi_host_username "
+                              "and vmwareapi_host_password to use"
+                              "connection_type=vmwareapi"))
+
         session = VMWareAPISession(host_ip, host_username, host_password,
                                    api_retry_count, scheme=scheme)
         self._vmops = vmops.VMWareVMOps(session)

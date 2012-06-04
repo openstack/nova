@@ -46,7 +46,7 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def setUp(self):
         super(QuotaIntegrationTestCase, self).setUp()
-        self.flags(connection_type='fake',
+        self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    quota_instances=2,
                    quota_cores=4,
                    quota_volumes=2,

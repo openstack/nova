@@ -106,7 +106,7 @@ class BaseTestCase(test.TestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
-        self.flags(connection_type='fake',
+        self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True,
                    notification_driver='nova.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager')
@@ -420,12 +420,12 @@ class ComputeTestCase(BaseTestCase):
         def fake_rescue(self, context, instance_ref, network_info, image_meta):
             called['rescued'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeConnection, 'rescue', fake_rescue)
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'rescue', fake_rescue)
 
         def fake_unrescue(self, instance_ref, network_info):
             called['unrescued'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeConnection, 'unrescue',
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'unrescue',
                        fake_unrescue)
 
         instance = self._create_fake_instance()
@@ -593,7 +593,7 @@ class ComputeTestCase(BaseTestCase):
                     'num_cpu': 2,
                     'cpu_time': 0}
 
-        self.stubs.Set(nova.virt.fake.FakeConnection, 'get_info',
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'get_info',
                        fake_driver_get_info)
 
         self.assertRaises(exception.Invalid,
@@ -613,7 +613,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_set_pass(self2, _instance, _pwd):
             raise exception.NotAuthorized(_('Internal error'))
 
-        self.stubs.Set(nova.virt.fake.FakeConnection, 'set_admin_password',
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'set_admin_password',
                        fake_driver_set_pass)
 
         instance = self._create_fake_instance()
@@ -647,7 +647,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(contents, "File Contents")
             called['inject'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeConnection, 'inject_file',
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'inject_file',
                        fake_driver_inject_file)
 
         instance = self._create_fake_instance()
@@ -664,7 +664,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_inject_network(self, instance, network_info):
             called['inject'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeConnection, 'inject_network_info',
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'inject_network_info',
                        fake_driver_inject_network)
 
         instance = self._create_fake_instance()
@@ -681,7 +681,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_reset_network(self, instance):
             called['reset'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeConnection, 'reset_network',
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'reset_network',
                        fake_driver_reset_network)
 
         instance = self._create_fake_instance()
@@ -700,7 +700,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(url, 'http://fake/url/')
             self.assertEqual(md5hash, 'fakehash')
 
-        self.stubs.Set(nova.virt.fake.FakeConnection, 'agent_update',
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'agent_update',
                        fake_driver_agent_update)
 
         instance = self._create_fake_instance()

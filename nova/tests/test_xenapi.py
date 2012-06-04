@@ -178,7 +178,7 @@ class XenAPIVolumeTestCase(test.TestCase):
     def test_attach_volume(self):
         """This shows how to test Ops classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         volume = self._create_volume()
         instance = db.instance_create(self.context, self.instance_values)
         vm = xenapi_fake.create_vm(instance.name, 'Running')
@@ -196,7 +196,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         """This shows how to test when exceptions are raised."""
         stubs.stubout_session(self.stubs,
                               stubs.FakeSessionForVolumeFailedTests)
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         volume = self._create_volume()
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance.name, 'Running')
@@ -232,7 +232,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        self.conn = xenapi_conn.get_connection(False)
+        self.conn = xenapi_conn.XenAPIDriver(False)
 
     def test_init_host(self):
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
@@ -708,7 +708,7 @@ class XenAPIVMTestCase(test.TestCase):
         xenapi_fake.create_vbd(vm_ref, "swap", userdevice=1)
         xenapi_fake.create_vbd(vm_ref, "rootfs", userdevice=0)
 
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         image_meta = {'id': glance_stubs.FakeGlance.IMAGE_VHD,
                       'disk_format': 'vhd'}
         conn.rescue(self.context, instance, [], image_meta)
@@ -725,7 +725,7 @@ class XenAPIVMTestCase(test.TestCase):
 
     def test_unrescue(self):
         instance = self._create_instance()
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         # Unrescue expects the original instance to be powered off
         conn.power_off(instance)
         rescue_vm = xenapi_fake.create_vm(instance.name + '-rescue', 'Running')
@@ -733,7 +733,7 @@ class XenAPIVMTestCase(test.TestCase):
 
     def test_unrescue_not_in_rescue(self):
         instance = self._create_instance()
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         # Ensure that it will not unrescue a non-rescued instance.
         self.assertRaises(exception.InstanceNotInRescueMode, conn.unrescue,
                           instance, None)
@@ -749,7 +749,7 @@ class XenAPIVMTestCase(test.TestCase):
             def finish_revert_migration(self, instance):
                 self.finish_revert_migration_called = True
 
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         conn._vmops = VMOpsMock()
         conn.finish_revert_migration(instance, None)
         self.assertTrue(conn._vmops.finish_revert_migration_called)
@@ -873,7 +873,7 @@ class XenAPIMigrateInstance(test.TestCase):
                        "VDI_resize", fake_vdi_resize)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
                               product_version=(6, 0, 0))
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
         vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
         conn._vmops._resize_instance(instance, vdi_uuid)
@@ -883,7 +883,7 @@ class XenAPIMigrateInstance(test.TestCase):
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance.name, 'Running')
         instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', instance_type, None)
 
@@ -896,7 +896,7 @@ class XenAPIMigrateInstance(test.TestCase):
             raise exception.MigrationError(reason='test failure')
         self.stubs.Set(vmops.VMOps, "_migrate_vhd", fake_raise)
 
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         self.assertRaises(exception.MigrationError,
                           conn.migrate_disk_and_power_off,
                           self.context, instance,
@@ -923,7 +923,7 @@ class XenAPIMigrateInstance(test.TestCase):
         self.stubs.Set(vmops.VMOps, 'finish_revert_migration',
                        fake_finish_revert_migration)
 
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
         image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
@@ -955,7 +955,7 @@ class XenAPIMigrateInstance(test.TestCase):
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
 
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
         image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
@@ -977,7 +977,7 @@ class XenAPIMigrateInstance(test.TestCase):
 
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
         image_meta = {'id': instance.image_ref, 'disk_format': 'vhd'}
@@ -993,7 +993,7 @@ class XenAPIMigrateInstance(test.TestCase):
 
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
-        conn = xenapi_conn.get_connection(False)
+        conn = xenapi_conn.XenAPIDriver(False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
                                                               spectacular=True)
         # Resize instance would be determined by the compute call
@@ -1083,7 +1083,7 @@ class XenAPIHostTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         xenapi_fake.reset()
         xenapi_fake.create_local_srs()
-        self.conn = xenapi_conn.get_connection(False)
+        self.conn = xenapi_conn.XenAPIDriver(False)
 
     def test_host_state(self):
         stats = self.conn.get_host_stats()
@@ -1135,7 +1135,7 @@ class XenAPIAutoDiskConfigTestCase(test.TestCase):
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         xenapi_fake.reset()
-        self.conn = xenapi_conn.get_connection(False)
+        self.conn = xenapi_conn.XenAPIDriver(False)
 
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -1228,7 +1228,7 @@ class XenAPIGenerateLocal(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.reset()
-        self.conn = xenapi_conn.get_connection(False)
+        self.conn = xenapi_conn.XenAPIDriver(False)
 
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -1307,7 +1307,7 @@ class XenAPIBWUsageTestCase(test.TestCase):
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         xenapi_fake.reset()
-        self.conn = xenapi_conn.get_connection(False)
+        self.conn = xenapi_conn.XenAPIDriver(False)
 
     @classmethod
     def _fake_compile_metrics(cls, start_time, stop_time=None):
@@ -1384,7 +1384,7 @@ class XenAPIDom0IptablesFirewallTestCase(test.TestCase):
                               test_case=self)
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.network = importutils.import_object(FLAGS.network_manager)
-        self.conn = xenapi_conn.get_connection(False)
+        self.conn = xenapi_conn.XenAPIDriver(False)
         self.fw = self.conn._vmops.firewall_driver
 
     def _create_instance_ref(self):
@@ -1699,7 +1699,7 @@ class XenAPIAggregateTestCase(test.TestCase):
         host_ref = xenapi_fake.get_all('host')[0]
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()
-        self.conn = xenapi_conn.get_connection(False)
+        self.conn = xenapi_conn.XenAPIDriver(False)
         self.fake_metadata = {'master_compute': 'host',
                               'host': xenapi_fake.get_record('host',
                                                              host_ref)['uuid']}

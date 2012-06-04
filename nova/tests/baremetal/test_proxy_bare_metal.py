@@ -260,7 +260,7 @@ class ProxyBareMetalTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         # Code under test
-        conn = proxy.get_connection(True)
+        conn = proxy.ProxyConnection(True)
         # TODO(mikalstill): this is not a very good fake instance
         info = conn.get_info({'name': 'instance-00000001'})
 

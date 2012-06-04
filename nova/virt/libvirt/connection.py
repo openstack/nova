@@ -75,10 +75,8 @@ from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
 
-
 libvirt = None
 Template = None
-
 
 LOG = logging.getLogger(__name__)
 
@@ -192,18 +190,6 @@ def patch_tpool_proxy():
 patch_tpool_proxy()
 
 
-def get_connection(read_only):
-    # These are loaded late so that there's no need to install these
-    # libraries when not using libvirt.
-    # Cheetah is separate because the unit tests want to load Cheetah,
-    # but not libvirt.
-    global libvirt
-    if libvirt is None:
-        libvirt = __import__('libvirt')
-    _late_load_cheetah()
-    return LibvirtConnection(read_only)
-
-
 def _late_load_cheetah():
     global Template
     if Template is None:
@@ -216,10 +202,16 @@ def _get_eph_disk(ephemeral):
     return 'disk.eph' + str(ephemeral['num'])
 
 
-class LibvirtConnection(driver.ComputeDriver):
+class LibvirtDriver(driver.ComputeDriver):
 
     def __init__(self, read_only):
-        super(LibvirtConnection, self).__init__()
+        super(LibvirtDriver, self).__init__()
+
+        global libvirt
+        if libvirt is None:
+            libvirt = __import__('libvirt')
+
+        _late_load_cheetah()
 
         self._host_state = None
         self._initiator = None
@@ -2629,7 +2621,7 @@ class HostState(object):
         """Retrieve status info from libvirt."""
         LOG.debug(_("Updating host stats"))
         if self.connection is None:
-            self.connection = get_connection(self.read_only)
+            self.connection = LibvirtDriver(self.read_only)
         data = {}
         data["vcpus"] = self.connection.get_vcpu_total()
         data["vcpus_used"] = self.connection.get_vcpu_used()

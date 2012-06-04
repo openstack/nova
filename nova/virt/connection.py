@@ -23,23 +23,20 @@ import sys
 
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import importutils
 from nova import utils
 from nova.virt import driver
-from nova.virt import fake
-from nova.virt.libvirt import connection as libvirt_conn
-from nova.virt import vmwareapi_conn
-from nova.virt.xenapi import connection as xenapi_conn
-
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
-"""
-In case of baremetal (FLAGS.connection_type),
-specific driver is set by FLAGS.baremetal_driver
-"""
-if FLAGS.connection_type == 'baremetal':
-    from nova.virt.baremetal import proxy
+known_drivers = {
+    'baremetal': 'nova.virt.baremetal.proxy.ProxyConnection',
+    'fake': 'nova.virt.fake.FakeDriver',
+    'libvirt': 'nova.virt.libvirt.connection.LibvirtDriver',
+    'vmwareapi': 'nova.virt.vmwareapi_conn.VMWareESXDriver',
+    'xenapi': 'nova.virt.xenapi.connection.XenAPIDriver'
+    }
 
 
 def get_connection(read_only=False):
@@ -68,21 +65,17 @@ def get_connection(read_only=False):
                             * baremetal
 
     """
-    # TODO(termie): maybe lazy load after initial check for permissions
     # TODO(termie): check whether we can be disconnected
-    t = FLAGS.connection_type
-    if t == 'fake':
-        conn = fake.get_connection(read_only)
-    elif t == 'libvirt':
-        conn = libvirt_conn.get_connection(read_only)
-    elif t == 'xenapi':
-        conn = xenapi_conn.get_connection(read_only)
-    elif t == 'vmwareapi':
-        conn = vmwareapi_conn.get_connection(read_only)
-    elif t == 'baremetal':
-        conn = proxy.get_connection(read_only)
-    else:
-        raise Exception('Unknown connection type "%s"' % t)
+    # TODO(sdague): is there a better way to mark things deprecated
+    LOG.error(_('Specifying virt driver via connection_type is deprecated'))
+
+    driver_name = known_drivers.get(FLAGS.connection_type)
+
+    if driver_name is None:
+        raise Exception('Unknown virt connection type "%s"' %
+                        FLAGS.connection_type)
+
+    conn = importutils.import_object(driver_name, read_only=read_only)
 
     if conn is None:
         LOG.error(_('Failed to open connection to underlying virt platform'))

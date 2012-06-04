@@ -91,7 +91,7 @@ class _AuthManagerBaseTestCase(test.TestCase):
     def setUp(self):
         super(_AuthManagerBaseTestCase, self).setUp()
         self.flags(auth_driver=self.auth_driver,
-                connection_type='fake')
+                compute_driver='nova.virt.fake.FakeDriver')
         self.manager = manager.AuthManager(new=True)
         self.manager.mc.cache = {}
 
