@@ -72,3 +72,12 @@ _dev = re.compile('^/dev/')
 def strip_dev(device_name):
     """remove leading '/dev/'"""
     return _dev.sub('', device_name)
+
+
+_pref = re.compile('^((x?v|s)d)')
+
+
+def strip_prefix(device_name):
+    """ remove both leading /dev/ and xvd or sd or vd """
+    device_name = strip_dev(device_name)
+    return _pref.sub('', device_name)

@@ -176,7 +176,8 @@ class XenAPIDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta,
               network_info=None, block_device_info=None):
         """Create VM instance"""
-        self._vmops.spawn(context, instance, image_meta, network_info)
+        self._vmops.spawn(context, instance, image_meta, network_info,
+                          block_device_info)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM"""
@@ -214,7 +215,7 @@ class XenAPIDriver(driver.ComputeDriver):
 
     def destroy(self, instance, network_info, block_device_info=None):
         """Destroy VM instance"""
-        self._vmops.destroy(instance, network_info)
+        self._vmops.destroy(instance, network_info, block_device_info)
 
     def pause(self, instance):
         """Pause VM instance"""
