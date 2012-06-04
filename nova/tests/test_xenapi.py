@@ -40,6 +40,7 @@ from nova.tests import fake_network
 from nova.tests import fake_utils
 import nova.tests.image.fake as fake_image
 from nova.tests.xenapi import stubs
+from nova.virt.xenapi import agent
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import vm_utils
@@ -862,8 +863,8 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
     """Unit tests for Diffie-Hellman code."""
     def setUp(self):
         super(XenAPIDiffieHellmanTestCase, self).setUp()
-        self.alice = vmops.SimpleDH()
-        self.bob = vmops.SimpleDH()
+        self.alice = agent.SimpleDH()
+        self.bob = agent.SimpleDH()
 
     def test_shared(self):
         alice_pub = self.alice.get_public()

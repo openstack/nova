@@ -19,8 +19,6 @@
 Management class for VM-related functions (spawn, reboot, etc).
 """
 
-import base64
-import binascii
 import cPickle as pickle
 import functools
 import os
@@ -43,6 +41,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
 from nova.virt import driver
+from nova.virt.xenapi import agent
 from nova.virt.xenapi import firewall
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
@@ -52,10 +51,6 @@ from nova.virt.xenapi import volume_utils
 LOG = logging.getLogger(__name__)
 
 xenapi_vmops_opts = [
-    cfg.IntOpt('agent_version_timeout',
-               default=300,
-               help='number of seconds to wait for agent '
-                    'to be fully operational'),
     cfg.IntOpt('xenapi_running_timeout',
                default=60,
                help='number of seconds to wait for instance '
@@ -508,7 +503,7 @@ class VMOps(object):
         # Update agent, if necessary
         # This also waits until the agent starts
         LOG.debug(_("Querying agent version"), instance=instance)
-        version = self._get_agent_version(instance)
+        version = agent.get_agent_version(self._session, instance, vm_ref)
         if version:
             LOG.info(_('Instance agent version: %s'), version,
                      instance=instance)
@@ -517,8 +512,8 @@ class VMOps(object):
             cmp_version(version, agent_build['version']) < 0):
             LOG.info(_('Updating Agent to %s'), agent_build['version'],
                      instance=instance)
-            self._agent_update(instance, agent_build['url'],
-                               agent_build['md5hash'])
+            agent.agent_update(self._session, instance, vm_ref,
+                               agent_build['url'], agent_build['md5hash'])
 
         # if the guest agent is not available, configure the
         # instance, but skip the admin password configuration
@@ -539,17 +534,19 @@ class VMOps(object):
             for path, contents in instance.injected_files:
                 LOG.debug(_("Injecting file path: '%s'") % path,
                           instance=instance)
-                self.inject_file(instance, path, contents)
+                agent.inject_file(self._session, instance, vm_ref,
+                                  path, contents)
 
         admin_password = instance.admin_pass
         # Set admin password, if necessary
         if admin_password and not no_agent:
             LOG.debug(_("Setting admin password"), instance=instance)
-            self.set_admin_password(instance, admin_password)
+            agent.set_admin_password(self._session, instance, vm_ref,
+                                     admin_password)
 
         # Reset network config
         LOG.debug(_("Resetting network"), instance=instance)
-        self.reset_network(instance, vm_ref)
+        agent.resetnetwork(self._session, instance, vm_ref)
 
         # Set VCPU weight
         inst_type = db.instance_type_get(ctx, instance.instance_type_id)
@@ -871,118 +868,15 @@ class VMOps(object):
                 return
             raise
 
-    def _get_agent_version(self, instance):
-        """Get the version of the agent running on the VM instance."""
-
-        # The agent can be slow to start for a variety of reasons. On Windows,
-        # it will generally perform a setup process on first boot that can
-        # take a couple of minutes and then reboot. On Linux, the system can
-        # also take a while to boot. So we need to be more patient than
-        # normal as well as watch for domid changes
-
-        def _call():
-            # Send the encrypted password
-            resp = self._make_agent_call('version', instance)
-            if resp['returncode'] != '0':
-                LOG.error(_('Failed to query agent version: %(resp)r'),
-                          locals(), instance=instance)
-                return None
-            # Some old versions of the Windows agent have a trailing \\r\\n
-            # (ie CRLF escaped) for some reason. Strip that off.
-            return resp['message'].replace('\\r\\n', '')
-
-        vm_ref = self._get_vm_opaque_ref(instance)
-        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-
-        domid = vm_rec['domid']
-
-        expiration = time.time() + FLAGS.agent_version_timeout
-        while time.time() < expiration:
-            ret = _call()
-            if ret:
-                return ret
-
-            vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-            if vm_rec['domid'] != domid:
-                newdomid = vm_rec['domid']
-                LOG.info(_('domid changed from %(domid)s to %(newdomid)s'),
-                         locals(), instance=instance)
-                domid = vm_rec['domid']
-
-        return None
-
-    def _agent_update(self, instance, url, md5sum):
-        """Update agent on the VM instance."""
-
-        # Send the encrypted password
-        args = {'url': url, 'md5sum': md5sum}
-        resp = self._make_agent_call('agentupdate', instance, args)
-        if resp['returncode'] != '0':
-            LOG.error(_('Failed to update agent: %(resp)r'), locals(),
-                      instance=instance)
-            return None
-        return resp['message']
-
     def set_admin_password(self, instance, new_pass):
-        """Set the root/admin password on the VM instance.
-
-        This is done via an agent running on the VM. Communication between nova
-        and the agent is done via writing xenstore records. Since communication
-        is done over the XenAPI RPC calls, we need to encrypt the password.
-        We're using a simple Diffie-Hellman class instead of the more advanced
-        one in M2Crypto for compatibility with the agent code.
-
-        """
-        # The simple Diffie-Hellman class is used to manage key exchange.
-        dh = SimpleDH()
-        key_init_args = {'pub': str(dh.get_public())}
-        resp = self._make_agent_call('key_init', instance, key_init_args)
-        # Successful return code from key_init is 'D0'
-        if resp['returncode'] != 'D0':
-            msg = _('Failed to exchange keys: %(resp)r') % locals()
-            LOG.error(msg, instance=instance)
-            raise Exception(msg)
-        # Some old versions of the Windows agent have a trailing \\r\\n
-        # (ie CRLF escaped) for some reason. Strip that off.
-        agent_pub = int(resp['message'].replace('\\r\\n', ''))
-        dh.compute_shared(agent_pub)
-        # Some old versions of Linux and Windows agent expect trailing \n
-        # on password to work correctly.
-        enc_pass = dh.encrypt(new_pass + '\n')
-        # Send the encrypted password
-        password_args = {'enc_pass': enc_pass}
-        resp = self._make_agent_call('password', instance, password_args)
-        # Successful return code from password is '0'
-        if resp['returncode'] != '0':
-            msg = _('Failed to update password: %(resp)r') % locals()
-            LOG.error(msg, instance=instance)
-            raise Exception(msg)
-        return resp['message']
+        """Set the root/admin password on the VM instance."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        agent.set_admin_password(self._session, instance, vm_ref, new_pass)
 
     def inject_file(self, instance, path, contents):
-        """Write a file to the VM instance.
-
-        The path to which it is to be written and the contents of the file
-        need to be supplied; both will be base64-encoded to prevent errors
-        with non-ASCII characters being transmitted. If the agent does not
-        support file injection, or the user has disabled it, a
-        NotImplementedError will be raised.
-
-        """
-        # Files/paths must be base64-encoded for transmission to agent
-        b64_path = base64.b64encode(path)
-        b64_contents = base64.b64encode(contents)
-
-        # Need to uniquely identify this request.
-        args = {'b64_path': b64_path, 'b64_contents': b64_contents}
-        # If the agent doesn't support file injection, a NotImplementedError
-        # will be raised with the appropriate message.
-        resp = self._make_agent_call('inject_file', instance, args)
-        if resp['returncode'] != '0':
-            LOG.error(_('Failed to inject file: %(resp)r'), locals(),
-                      instance=instance)
-            return None
-        return resp['message']
+        """Write a file to the VM instance."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        agent.inject_file(self._session, instance, vm_ref, path, contents)
 
     def _shutdown(self, instance, vm_ref, hard=True):
         """Shutdown an instance."""
@@ -1484,9 +1378,10 @@ class VMOps(object):
             for vif in network_info:
                 self.vif_driver.unplug(instance, vif)
 
-    def reset_network(self, instance, vm_ref=None):
+    def reset_network(self, instance):
         """Calls resetnetwork method in agent."""
-        self._make_agent_call('resetnetwork', instance, vm_ref=vm_ref)
+        vm_ref = self._get_vm_opaque_ref(instance)
+        agent.resetnetwork(self._session, instance, vm_ref)
 
     def inject_hostname(self, instance, vm_ref, hostname):
         """Inject the hostname of the instance into the xenstore."""
@@ -1506,24 +1401,6 @@ class VMOps(object):
         return self._make_plugin_call('xenstore.py', 'write_record', instance,
                                       vm_ref=vm_ref, path=path,
                                       value=jsonutils.dumps(value))
-
-    def _make_agent_call(self, method, instance, args=None, vm_ref=None):
-        """Abstracts out the interaction with the agent xenapi plugin."""
-        if args is None:
-            args = {}
-        args['id'] = str(uuid.uuid4())
-        ret = self._make_plugin_call('agent', method, instance, vm_ref=vm_ref,
-                                     **args)
-        if isinstance(ret, dict):
-            return ret
-        try:
-            return jsonutils.loads(ret)
-        except TypeError:
-            LOG.error(_('The agent call to %(method)s returned an invalid'
-                        ' response: %(ret)r. path=%(path)s; args=%(args)r'),
-                      locals(), instance=instance)
-            return {'returncode': 'error',
-                    'message': 'unable to deserialize response'}
 
     def _make_plugin_call(self, plugin, method, instance, vm_ref=None,
                           **addl_args):
@@ -1586,60 +1463,3 @@ class VMOps(object):
         """Removes filters for each VIF of the specified instance."""
         self.firewall_driver.unfilter_instance(instance_ref,
                                                network_info=network_info)
-
-
-class SimpleDH(object):
-    """
-    This class wraps all the functionality needed to implement
-    basic Diffie-Hellman-Merkle key exchange in Python. It features
-    intelligent defaults for the prime and base numbers needed for the
-    calculation, while allowing you to supply your own. It requires that
-    the openssl binary be installed on the system on which this is run,
-    as it uses that to handle the encryption and decryption. If openssl
-    is not available, a RuntimeError will be raised.
-    """
-    def __init__(self):
-        self._prime = 162259276829213363391578010288127
-        self._base = 5
-        self._public = None
-        self._shared = None
-        self.generate_private()
-
-    def generate_private(self):
-        self._private = int(binascii.hexlify(os.urandom(10)), 16)
-        return self._private
-
-    def get_public(self):
-        self._public = self.mod_exp(self._base, self._private, self._prime)
-        return self._public
-
-    def compute_shared(self, other):
-        self._shared = self.mod_exp(other, self._private, self._prime)
-        return self._shared
-
-    @staticmethod
-    def mod_exp(num, exp, mod):
-        """Efficient implementation of (num ** exp) % mod"""
-        result = 1
-        while exp > 0:
-            if (exp & 1) == 1:
-                result = (result * num) % mod
-            exp = exp >> 1
-            num = (num * num) % mod
-        return result
-
-    def _run_ssl(self, text, decrypt=False):
-        cmd = ['openssl', 'aes-128-cbc', '-A', '-a', '-pass',
-              'pass:%s' % self._shared, '-nosalt']
-        if decrypt:
-            cmd.append('-d')
-        out, err = utils.execute(*cmd, process_input=text)
-        if err:
-            raise RuntimeError(_('OpenSSL error: %s') % err)
-        return out
-
-    def encrypt(self, text):
-        return self._run_ssl(text).strip('\n')
-
-    def decrypt(self, text):
-        return self._run_ssl(text, decrypt=True)
