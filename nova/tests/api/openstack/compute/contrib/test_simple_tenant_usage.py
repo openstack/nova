@@ -22,10 +22,10 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import simple_tenant_usage
-from nova.common import policy as common_policy
 from nova.compute import api
 from nova import context
 from nova import flags
+from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes

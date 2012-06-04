@@ -18,12 +18,12 @@
 """Common Policy Engine Implementation"""
 
 import json
+import logging
 import urllib
 import urllib2
 
 
-class NotAuthorized(Exception):
-    pass
+LOG = logging.getLogger(__name__)
 
 
 _BRAIN = None
@@ -45,7 +45,8 @@ def reset():
     _BRAIN = None
 
 
-def enforce(match_list, target_dict, credentials_dict):
+def enforce(match_list, target_dict, credentials_dict, exc=None,
+            *args, **kwargs):
     """Enforces authorization of some rules against credentials.
 
     :param match_list: nested tuples of data to match against
@@ -106,14 +107,24 @@ def enforce(match_list, target_dict, credentials_dict):
       Credentials dicts contain as much information as we can about the user
       performing the action.
 
-    :raises NotAuthorized: if the check fails
+    :param exc: exception to raise
 
+      Class of the exception to raise if the check fails.  Any remaining
+      arguments passed to enforce() (both positional and keyword arguments)
+      will be passed to the exception class.  If exc is not provided, returns
+      False.
+
+    :return: True if the policy allows the action
+    :return: False if the policy does not allow the action and exc is not set
     """
     global _BRAIN
     if not _BRAIN:
         _BRAIN = Brain()
     if not _BRAIN.check(match_list, target_dict, credentials_dict):
-        raise NotAuthorized()
+        if exc:
+            raise exc(*args, **kwargs)
+        return False
+    return True
 
 
 class Brain(object):
@@ -132,7 +143,12 @@ class Brain(object):
         self.rules[key] = match
 
     def _check(self, match, target_dict, cred_dict):
-        match_kind, match_value = match.split(':', 1)
+        try:
+            match_kind, match_value = match.split(':', 1)
+        except Exception:
+            LOG.exception(_("Failed to understand rule %(match)r") % locals())
+            # If the rule is invalid, fail closed
+            return False
         try:
             f = getattr(self, '_check_%s' % match_kind)
         except AttributeError:
