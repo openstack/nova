@@ -21,11 +21,10 @@ import os.path
 import StringIO
 import urllib2
 
-from nova.common import policy as common_policy
-import nova.common.policy
 from nova import context
 from nova import exception
 from nova import flags
+from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova import utils
@@ -169,8 +168,8 @@ class DefaultPolicyTestCase(test.TestCase):
         self.context = context.RequestContext('fake', 'fake')
 
     def _set_brain(self, default_rule):
-        brain = nova.common.policy.HttpBrain(self.rules, default_rule)
-        nova.common.policy.set_brain(brain)
+        brain = common_policy.HttpBrain(self.rules, default_rule)
+        common_policy.set_brain(brain)
 
     def tearDown(self):
         super(DefaultPolicyTestCase, self).tearDown()

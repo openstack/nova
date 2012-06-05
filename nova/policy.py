@@ -19,10 +19,10 @@
 
 import os.path
 
-from nova.common import policy
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import policy
 from nova import utils
 
 
@@ -90,7 +90,5 @@ def enforce(context, action, target):
     match_list = ('rule:%s' % action,)
     credentials = context.to_dict()
 
-    try:
-        policy.enforce(match_list, target, credentials)
-    except policy.NotAuthorized:
-        raise exception.PolicyNotAuthorized(action=action)
+    policy.enforce(match_list, target, credentials,
+                   exception.PolicyNotAuthorized, action=action)

@@ -26,7 +26,6 @@ import time
 import mox
 
 import nova
-import nova.common.policy
 from nova import compute
 from nova.compute import aggregate_states
 from nova.compute import api as compute_api
@@ -44,6 +43,7 @@ from nova.image import fake as fake_image
 from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
+from nova.openstack.common import policy as common_policy
 import nova.policy
 from nova import quota
 from nova import rpc
@@ -3961,7 +3961,7 @@ class ComputePolicyTestCase(BaseTestCase):
         nova.policy.reset()
 
     def _set_rules(self, rules):
-        nova.common.policy.set_brain(nova.common.policy.HttpBrain(rules))
+        common_policy.set_brain(common_policy.HttpBrain(rules))
 
     def test_actions_are_prefixed(self):
         self.mox.StubOutWithMock(nova.policy, 'enforce')
