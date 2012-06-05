@@ -2311,7 +2311,7 @@ disk size: 4.4M''', ''))
 
     def test_mkfs(self):
         self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext4', '/my/block/dev')
+        utils.execute('mkfs', '-t', 'ext4', '-F', '/my/block/dev')
         utils.execute('mkswap', '/my/swap/block/dev')
         self.mox.ReplayAll()
 

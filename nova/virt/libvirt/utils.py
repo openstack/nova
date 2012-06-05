@@ -150,6 +150,9 @@ def mkfs(fs, path, label=None):
         execute('mkswap', path)
     else:
         args = ['mkfs', '-t', fs]
+        #add -F to force no interactive excute on non-block device.
+        if fs in ['ext3', 'ext4']:
+            args.extend(['-F'])
         if label:
             args.extend(['-n', label])
         args.append(path)
