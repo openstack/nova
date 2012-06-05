@@ -137,9 +137,10 @@ class ConsumerBase(object):
             message = self.channel.message_to_python(raw_message)
             try:
                 callback(message.payload)
-                message.ack()
             except Exception:
                 LOG.exception(_("Failed to process message... skipping it."))
+            finally:
+                message.ack()
 
         self.queue.consume(*args, callback=_callback, **options)
 
