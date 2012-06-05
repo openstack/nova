@@ -2579,7 +2579,7 @@ class LibvirtDriverTestCase(test.TestCase):
             elif instance['name'] == "running":
                 return {'state': power_state.RUNNING}
             else:
-                return {'state': power_state.SHUTOFF}
+                return {'state': power_state.SHUTDOWN}
 
         self.stubs.Set(self.libvirtconnection, 'get_info',
                        fake_get_info)

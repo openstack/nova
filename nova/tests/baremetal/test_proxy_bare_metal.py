@@ -174,18 +174,14 @@ class BareMetalDomTestCase(test.TestCase):
         """Check to see that all entries in the domain list are removed
         except for the one that is in the running state"""
 
-        fake_file = StringIO.StringIO()
-
         domains = [dict(node_id=1, name='i-00000001',
                         status=power_state.NOSTATE),
               dict(node_id=2, name='i-00000002', status=power_state.RUNNING),
-              dict(node_id=3, name='i-00000003', status=power_state.BLOCKED),
-              dict(node_id=4, name='i-00000004', status=power_state.PAUSED),
-              dict(node_id=5, name='i-00000005', status=power_state.SHUTDOWN),
-              dict(node_id=6, name='i-00000006', status=power_state.SHUTOFF),
-              dict(node_id=7, name='i-00000007', status=power_state.CRASHED),
-              dict(node_id=8, name='i-00000008', status=power_state.SUSPENDED),
-              dict(node_id=9, name='i-00000009', status=power_state.FAILED)]
+              dict(node_id=3, name='i-00000003', status=power_state.PAUSED),
+              dict(node_id=5, name='i-00000004', status=power_state.SHUTDOWN),
+              dict(node_id=7, name='i-00000005', status=power_state.CRASHED),
+              dict(node_id=8, name='i-00000006', status=power_state.SUSPENDED),
+              dict(node_id=9, name='i-00000007', status=power_state.NOSTATE)]
 
         # Create the mock objects
         self.mox.StubOutWithMock(dom, 'read_domains')

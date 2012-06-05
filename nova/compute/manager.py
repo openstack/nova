@@ -308,7 +308,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             return self.driver.get_info(instance)["state"]
         except exception.NotFound:
-            return power_state.FAILED
+            return power_state.NOSTATE
 
     def get_console_topic(self, context, **kwargs):
         """Retrieves the console host for a project on this host.
@@ -2472,7 +2472,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 continue
 
             if (vm_power_state in (power_state.NOSTATE,
-                                   power_state.SHUTOFF,
                                    power_state.SHUTDOWN,
                                    power_state.CRASHED)
                 and db_instance['vm_state'] == vm_states.ACTIVE):
