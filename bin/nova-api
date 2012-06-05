@@ -24,7 +24,7 @@ Starts both the EC2 and OpenStack APIs in separate greenthreads.
 """
 
 import eventlet
-eventlet.monkey_patch(os=False)
+eventlet.monkey_patch()
 
 import os
 import sys

@@ -63,7 +63,6 @@ LOG = logging.getLogger(__name__)
 ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 PERFECT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 FLAGS = flags.FLAGS
-RESEED = True
 
 FLAGS.register_opt(
     cfg.BoolOpt('disable_process_locking', default=False,
@@ -291,13 +290,6 @@ def debug(arg):
 
 
 def generate_uid(topic, size=8):
-    global RESEED
-    if RESEED:
-        random.seed("%d%s%s" % (os.getpid(),
-                            socket.gethostname(),
-                            time.time()))
-        RESEED = False
-
     characters = '01234567890abcdefghijklmnopqrstuvwxyz'
     choices = [random.choice(characters) for _x in xrange(size)]
     return '%s-%s' % (topic, ''.join(choices))
