@@ -2348,7 +2348,8 @@ class ServersControllerCreateTest(test.TestCase):
             self.fail('expected quota to be exceeded')
         except webob.exc.HTTPRequestEntityTooLarge as e:
             self.assertEquals(e.explanation,
-                      _('Quota exceeded: already used 1 of 1 instances'))
+                      _('Quota exceeded for instances: Requested 1, but'
+                        ' already used 0 of 0 instances'))
 
 
 class TestServerCreateRequestXMLDeserializer(test.TestCase):

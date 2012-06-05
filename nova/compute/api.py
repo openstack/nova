@@ -172,9 +172,13 @@ class API(base.Base):
             # OK, we exceeded quota; let's figure out why...
             quotas = exc.kwargs['quotas']
             usages = exc.kwargs['usages']
+            overs = exc.kwargs['overs']
+
             headroom = dict((res, quotas[res] -
                              (usages[res]['in_use'] + usages[res]['reserved']))
                             for res in quotas.keys())
+
+            # Reduce 'allowed' to the minimum supported
             allowed = headroom['instances']
             if instance_type['vcpus']:
                 allowed = min(allowed,
@@ -187,7 +191,7 @@ class API(base.Base):
             pid = context.project_id
             if allowed <= 0:
                 msg = _("Cannot run any more instances of this type.")
-                used = max_count
+                allowed = 0
             elif min_count <= allowed <= max_count:
                 # We're actually OK, but still need reservations
                 return self._check_num_instances_quota(context, instance_type,
@@ -195,10 +199,15 @@ class API(base.Base):
             else:
                 msg = (_("Can only run %s more instances of this type.") %
                        allowed)
-                used = max_count - allowed
-            LOG.warn(_("Quota exceeded for %(pid)s,"
+
+            used = quotas['instances'] - headroom['instances']
+            total_allowed = used + allowed
+            overs = ','.join(overs)
+
+            LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
                   " tried to run %(min_count)s instances. %(msg)s"), locals())
-            raise exception.TooManyInstances(used=used, allowed=max_count)
+            raise exception.TooManyInstances(overs=overs, req=min_count,
+                                             used=used, allowed=total_allowed)
 
         return max_count, reservations
 
