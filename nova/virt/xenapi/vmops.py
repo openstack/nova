@@ -80,6 +80,12 @@ flags.DECLARE('vncserver_proxyclient_address', 'nova.vnc')
 
 RESIZE_TOTAL_STEPS = 5
 
+DEVICE_ROOT = '0'
+DEVICE_RESCUE = '1'
+DEVICE_SWAP = '2'
+DEVICE_EPHEMERAL = '3'
+DEVICE_CD = '4'
+
 
 def cmp_version(a, b):
     """Compare two version strings (eg 0.0.1.10 > 0.0.1.9)"""
@@ -207,13 +213,13 @@ class VMOps(object):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance):
-        vdi_uuid = self._move_disks(instance, disk_info)
+        root_vdi = self._move_disks(instance, disk_info)
 
         if resize_instance:
-            self._resize_instance(instance, vdi_uuid)
+            self._resize_instance(instance, root_vdi)
 
         vm_ref = self._create_vm(context, instance,
-                                 [dict(vdi_type='root', vdi_uuid=vdi_uuid)],
+                                 {'root': root_vdi},
                                  network_info, image_meta)
 
         # 5. Start VM
@@ -236,9 +242,14 @@ class VMOps(object):
                                      instance, instance.image_ref,
                                      disk_image_type)
 
-        for vdi in vdis:
-            if vdi["vdi_type"] == "root":
-                self._resize_instance(instance, vdi["vdi_uuid"])
+        # Just get the VDI ref once
+        for vdi in vdis.itervalues():
+            vdi['ref'] = self._session.call_xenapi('VDI.get_by_uuid',
+                                                   vdi['uuid'])
+
+        root_vdi = vdis.get('root')
+        if root_vdi:
+            self._resize_instance(instance, root_vdi)
 
         return vdis
 
@@ -260,17 +271,7 @@ class VMOps(object):
             vdis = self._create_disks(context, instance, image_meta)
 
             def undo_create_disks():
-                vdi_refs = []
-                for vdi in vdis:
-                    try:
-                        vdi_ref = self._session.call_xenapi(
-                                'VDI.get_by_uuid', vdi['vdi_uuid'])
-                    except self.XenAPI.Failure:
-                        continue
-
-                    vdi_refs.append(vdi_ref)
-
-                self._safe_destroy_vdis(vdi_refs)
+                self._safe_destroy_vdis([vdi['ref'] for vdi in vdis.values()])
 
             undo_mgr.undo_with(undo_create_disks)
             return vdis
@@ -281,16 +282,16 @@ class VMOps(object):
             ramdisk_file = None
 
             if instance.kernel_id:
-                kernel = VMHelper.create_kernel_image(context, self._session,
+                vdis = VMHelper.create_kernel_image(context, self._session,
                         instance, instance.kernel_id, instance.user_id,
-                        instance.project_id, vm_utils.ImageType.KERNEL)[0]
-                kernel_file = kernel.get('file')
+                        instance.project_id, vm_utils.ImageType.KERNEL)
+                kernel_file = vdis['kernel'].get('file')
 
             if instance.ramdisk_id:
-                ramdisk = VMHelper.create_kernel_image(context, self._session,
+                vdis = VMHelper.create_kernel_image(context, self._session,
                         instance, instance.ramdisk_id, instance.user_id,
-                        instance.project_id, vm_utils.ImageType.RAMDISK)[0]
-                ramdisk_file = ramdisk.get('file')
+                        instance.project_id, vm_utils.ImageType.RAMDISK)
+                ramdisk_file = vdis['ramdisk'].get('file')
 
             def undo_create_kernel_ramdisk():
                 if kernel_file or ramdisk_file:
@@ -374,16 +375,6 @@ class VMOps(object):
 
         disk_image_type = VMHelper.determine_disk_image_type(image_meta)
 
-        # NOTE(jk0): Since vdi_type may contain either 'root' or 'swap', we
-        # need to ensure that the 'swap' VDI is not chosen as the mount
-        # point for file injection.
-        first_vdi_ref = None
-        for vdi in vdis:
-            if vdi.get('vdi_type') != 'swap':
-                # Create the VM ref and attach the first disk
-                first_vdi_ref = self._session.call_xenapi(
-                        'VDI.get_by_uuid', vdi['vdi_uuid'])
-
         vm_mode = instance.vm_mode and instance.vm_mode.lower()
         if vm_mode == 'pv':
             use_pv_kernel = True
@@ -392,7 +383,7 @@ class VMOps(object):
             vm_mode = 'hvm'  # Normalize
         else:
             use_pv_kernel = VMHelper.determine_is_pv(self._session,
-                    first_vdi_ref, disk_image_type, instance.os_type)
+                    vdis['root']['ref'], disk_image_type, instance.os_type)
             vm_mode = use_pv_kernel and 'pv' or 'hvm'
 
         if instance.vm_mode != vm_mode:
@@ -405,13 +396,12 @@ class VMOps(object):
             use_pv_kernel)
 
         # Add disks to VM
-        self._attach_disks(instance, disk_image_type, vm_ref, first_vdi_ref,
-            vdis)
+        self._attach_disks(instance, disk_image_type, vm_ref, vdis)
 
         # Alter the image before VM start for network injection.
         if FLAGS.flat_injected:
             VMHelper.preconfigure_instance(self._session, instance,
-                                           first_vdi_ref, network_info)
+                                           vdis['root']['ref'], network_info)
 
         self._create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
@@ -421,76 +411,62 @@ class VMOps(object):
 
         return vm_ref
 
-    def _attach_disks(self, instance, disk_image_type, vm_ref, first_vdi_ref,
-            vdis):
+    def _attach_disks(self, instance, disk_image_type, vm_ref, vdis):
         ctx = nova_context.get_admin_context()
-
-        # device 0 reserved for RW disk
-        userdevice = 0
 
         # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
         if disk_image_type == vm_utils.ImageType.DISK_ISO:
             LOG.debug(_("Detected ISO image type, creating blank VM "
                         "for install"), instance=instance)
 
-            cd_vdi_ref = first_vdi_ref
-            first_vdi_ref = VMHelper.fetch_blank_disk(self._session,
-                            instance.instance_type_id)
+            cd_vdi = vdis.pop('root')
+            root_vdi = VMHelper.fetch_blank_disk(self._session,
+                                                 instance.instance_type_id)
+            vdis['root'] = root_vdi
 
-            VMHelper.create_vbd(self._session, vm_ref, first_vdi_ref,
-                                userdevice, bootable=False)
+            VMHelper.create_vbd(self._session, vm_ref, root_vdi['ref'],
+                                DEVICE_ROOT, bootable=False)
 
-            # device 1 reserved for rescue disk and we've used '0'
-            userdevice = 2
-            VMHelper.create_vbd(self._session, vm_ref, cd_vdi_ref,
-                                userdevice, vbd_type='CD', bootable=True)
-
-            # set user device to next free value
-            userdevice += 1
+            VMHelper.create_vbd(self._session, vm_ref, cd_vdi['ref'],
+                                DEVICE_CD, vbd_type='CD', bootable=True)
         else:
+            root_vdi = vdis['root']
+
             if instance.auto_disk_config:
                 LOG.debug(_("Auto configuring disk, attempting to "
                             "resize partition..."), instance=instance)
                 instance_type = db.instance_type_get(ctx,
                         instance.instance_type_id)
                 VMHelper.auto_configure_disk(self._session,
-                                             first_vdi_ref,
+                                             root_vdi['ref'],
                                              instance_type['root_gb'])
 
-            VMHelper.create_vbd(self._session, vm_ref, first_vdi_ref,
-                                userdevice, bootable=True)
+            VMHelper.create_vbd(self._session, vm_ref, root_vdi['ref'],
+                                DEVICE_ROOT, bootable=True)
 
-            # set user device to next free value
-            # userdevice 1 is reserved for rescue and we've used '0'
-            userdevice = 2
+        # Attach (optional) swap disk
+        swap_vdi = vdis.get('swap')
 
         instance_type = db.instance_type_get(ctx, instance.instance_type_id)
         swap_mb = instance_type['swap']
         generate_swap = swap_mb and FLAGS.xenapi_generate_swap
         if generate_swap:
-            VMHelper.generate_swap(self._session, instance,
-                                   vm_ref, userdevice, swap_mb)
-            userdevice += 1
+            VMHelper.generate_swap(self._session, instance, vm_ref,
+                                   DEVICE_SWAP, swap_mb)
 
+            if swap_vdi:
+                # We won't be using packaged swap VDI, so destroy it
+                VMHelper.destroy_vdi(self._session, swap_vdi['ref'])
+        elif swap_vdi:
+            # Attach packaged swap VDI to VM
+            VMHelper.create_vbd(self._session, vm_ref, swap_vdi['ref'],
+                                DEVICE_SWAP, bootable=False)
+
+        # Attach (optional) ephemeral disk
         ephemeral_gb = instance_type['ephemeral_gb']
         if ephemeral_gb:
-            VMHelper.generate_ephemeral(self._session, instance,
-                                        vm_ref, userdevice, ephemeral_gb)
-            userdevice += 1
-
-        # Attach any other disks
-        for vdi in vdis[1:]:
-            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                    vdi['vdi_uuid'])
-
-            if generate_swap and vdi['vdi_type'] == 'swap':
-                # We won't be using it, so don't let it leak
-                VMHelper.destroy_vdi(self._session, vdi_ref)
-                continue
-
-            VMHelper.create_vbd(self._session, vm_ref, vdi_ref,
-                                userdevice, bootable=False)
-            userdevice += 1
+            VMHelper.generate_ephemeral(self._session, instance, vm_ref,
+                                        DEVICE_EPHEMERAL, ephemeral_gb)
 
     def _boot_new_instance(self, instance, vm_ref):
         """Boot a new instance and configure it."""
@@ -834,9 +810,11 @@ class VMOps(object):
         # migration
         VMHelper.set_vdi_name(self._session, new_uuid, instance.name, 'root')
 
-        return new_uuid
+        new_ref = self._session.call_xenapi('VDI.get_by_uuid', new_uuid)
 
-    def _resize_instance(self, instance, vdi_uuid):
+        return {'uuid': new_uuid, 'ref': new_ref}
+
+    def _resize_instance(self, instance, root_vdi):
         """Resize an instances root disk."""
 
         new_disk_size = instance.root_gb * 1024 * 1024 * 1024
@@ -844,9 +822,8 @@ class VMOps(object):
             return
 
         # Get current size of VDI
-        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
         virtual_size = self._session.call_xenapi('VDI.get_virtual_size',
-                                                 vdi_ref)
+                                                 root_vdi['ref'])
         virtual_size = int(virtual_size)
 
         old_gb = virtual_size / (1024 * 1024 * 1024)
@@ -854,13 +831,14 @@ class VMOps(object):
 
         if virtual_size < new_disk_size:
             # Resize up. Simple VDI resize will do the trick
+            vdi_uuid = root_vdi['uuid']
             LOG.debug(_("Resizing up VDI %(vdi_uuid)s from %(old_gb)dGB to "
                         "%(new_gb)dGB"), locals(), instance=instance)
             if self._session.product_version[0] > 5:
                 resize_func_name = 'VDI.resize'
             else:
                 resize_func_name = 'VDI.resize_online'
-            self._session.call_xenapi(resize_func_name, vdi_ref,
+            self._session.call_xenapi(resize_func_name, root_vdi['ref'],
                     str(new_disk_size))
             LOG.debug(_("Resize complete"), instance=instance)
 
@@ -1016,7 +994,7 @@ class VMOps(object):
 
         for vbd_uuid in vbd_refs:
             vbd = self._session.call_xenapi("VBD.get_record", vbd_uuid)
-            if vbd["userdevice"] == "0":
+            if vbd["userdevice"] == DEVICE_ROOT:
                 return vbd["VDI"]
 
         raise exception.NotFound(_("Unable to find root VBD/VDI for VM"))
@@ -1193,7 +1171,8 @@ class VMOps(object):
         vdi_ref = self._find_root_vdi_ref(vm_ref)
 
         rescue_vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref,
-                                             vdi_ref, 1, bootable=False)
+                                             vdi_ref, DEVICE_RESCUE,
+                                             bootable=False)
         self._session.call_xenapi('VBD.plug', rescue_vbd_ref)
 
     def unrescue(self, instance):

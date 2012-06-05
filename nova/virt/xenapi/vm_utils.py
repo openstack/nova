@@ -320,20 +320,21 @@ class VMHelper(xenapi.HelperBase):
                     _('Unable to destroy VDI %s') % vdi_ref)
 
     @classmethod
-    def create_vdi(cls, session, sr_ref, instance, name_description,
+    def create_vdi(cls, session, sr_ref, instance, disk_type,
                    virtual_size, read_only=False):
         """Create a VDI record and returns its reference."""
         name_label = instance['name']
         vdi_ref = session.call_xenapi("VDI.create",
              {'name_label': name_label,
-              'name_description': name_description,
+              'name_description': disk_type,
               'SR': sr_ref,
               'virtual_size': str(virtual_size),
               'type': 'User',
               'sharable': False,
               'read_only': read_only,
               'xenstore_data': {},
-              'other_config': {'nova_instance_uuid': instance['uuid']},
+              'other_config': {'nova_instance_uuid': instance['uuid'],
+                               'nova_disk_type': disk_type},
               'sm_config': {},
               'tags': []})
         LOG.debug(_('Created VDI %(vdi_ref)s (%(name_label)s,'
@@ -599,16 +600,15 @@ class VMHelper(xenapi.HelperBase):
             return cls.fetch_image(context, session, instance, image,
                                    image_type)
         else:
-            return [dict(vdi_type=ImageType.to_string(image_type),
-                         vdi_uuid=None,
-                         file=filename)]
+            vdi_type = ImageType.to_string(image_type)
+            return {vdi_type: dict(uuid=None, file=filename)}
 
     @classmethod
     def _create_cached_image(cls, context, session, instance, image,
                              image_type):
         sr_ref = cls.safe_find_sr(session)
         sr_type = session.call_xenapi('SR.get_record', sr_ref)["type"]
-        vdi_return_list = []
+        vdis = {}
 
         if FLAGS.use_cow_images and sr_type != "ext":
             LOG.warning(_("Fast cloning is only supported on default local SR "
@@ -616,42 +616,48 @@ class VMHelper(xenapi.HelperBase):
                           "type %(sr_type)s. Ignoring the cow flag.")
                           % locals())
 
-        vdi_ref = cls.find_cached_image(session, image, sr_ref)
-        if vdi_ref is None:
-            vdis = cls.fetch_image(context, session, instance, image,
-                                   image_type)
-            vdi_ref = session.call_xenapi('VDI.get_by_uuid',
-                                          vdis[0]['vdi_uuid'])
-            cls.set_vdi_name(session, vdis[0]['vdi_uuid'],
+        root_vdi_ref = cls.find_cached_image(session, image, sr_ref)
+        if root_vdi_ref is None:
+            fetched_vdis = cls.fetch_image(context, session, instance, image,
+                                           image_type)
+            root_vdi = fetched_vdis['root']
+            root_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
+                                               root_vdi['uuid'])
+            cls.set_vdi_name(session, root_vdi['uuid'],
                              'Glance Image %s' % image, 'root',
-                             vdi_ref=vdi_ref)
+                             vdi_ref=root_vdi_ref)
             session.call_xenapi('VDI.add_to_other_config',
-                                vdi_ref, 'image-id', str(image))
+                                root_vdi_ref, 'image-id', str(image))
 
-            for vdi in vdis:
-                if vdi["vdi_type"] == "swap":
+            for vdi_type, vdi in fetched_vdis.iteritems():
+                vdi_ref = session.call_xenapi('VDI.get_by_uuid',
+                                              vdi['uuid'])
+                session.call_xenapi('VDI.add_to_other_config',
+                                    vdi_ref, 'nova_disk_type',
+                                    vdi_type)
+
+                if vdi_type == 'swap':
                     session.call_xenapi('VDI.add_to_other_config',
-                                        vdi_ref, "swap-disk",
-                                        str(vdi['vdi_uuid']))
+                                        root_vdi_ref, 'swap-disk',
+                                        str(vdi['uuid']))
 
         if FLAGS.use_cow_images and sr_type == 'ext':
-            new_vdi_ref = cls.clone_vdi(session, vdi_ref)
+            new_vdi_ref = cls.clone_vdi(session, root_vdi_ref)
         else:
-            new_vdi_ref = cls.copy_vdi(session, sr_ref, vdi_ref)
+            new_vdi_ref = cls.copy_vdi(session, sr_ref, root_vdi_ref)
 
         # Set the name label for the image we just created and remove image id
         # field from other-config.
         session.call_xenapi('VDI.remove_from_other_config',
                             new_vdi_ref, 'image-id')
 
-        vdi_return_list.append(dict(
-                vdi_type=("root" if image_type == ImageType.DISK_VHD
-                          else ImageType.to_string(image_type)),
-                vdi_uuid=session.call_xenapi('VDI.get_uuid', new_vdi_ref),
-                file=None))
+        vdi_type = ("root" if image_type == ImageType.DISK_VHD
+                    else ImageType.to_string(image_type))
+        vdi_uuid = session.call_xenapi('VDI.get_uuid', new_vdi_ref)
+        vdis[vdi_type] = dict(uuid=vdi_uuid, file=None)
 
         # Create a swap disk if the glance image had one associated with it.
-        vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+        vdi_rec = session.call_xenapi('VDI.get_record', root_vdi_ref)
         if 'swap-disk' in vdi_rec['other_config']:
             swap_disk_uuid = vdi_rec['other_config']['swap-disk']
             swap_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
@@ -659,11 +665,9 @@ class VMHelper(xenapi.HelperBase):
             new_swap_vdi_ref = cls.copy_vdi(session, sr_ref, swap_vdi_ref)
             new_swap_vdi_uuid = session.call_xenapi('VDI.get_uuid',
                                                     new_swap_vdi_ref)
-            vdi_return_list.append(dict(vdi_type="swap",
-                                        vdi_uuid=new_swap_vdi_uuid,
-                                        file=None))
+            vdis['swap'] = dict(uuid=new_swap_vdi_uuid, file=None)
 
-        return vdi_return_list
+        return vdis
 
     @classmethod
     def create_image(cls, context, session, instance, image, image_type):
@@ -673,22 +677,20 @@ class VMHelper(xenapi.HelperBase):
         Returns: A list of dictionaries that describe VDIs
         """
         if FLAGS.cache_images is True and image_type != ImageType.DISK_ISO:
-            vdi_return_list = cls._create_cached_image(context, session,
-                                                       instance, image,
-                                                       image_type)
+            vdis = cls._create_cached_image(context, session, instance,
+                                            image, image_type)
         else:
             # If caching is disabled, we do not have to keep a copy of the
             # image. Fetch the image from glance.
-            vdi_return_list = cls.fetch_image(context, session, instance,
-                                              instance.image_ref, image_type)
+            vdis = cls.fetch_image(context, session, instance,
+                                   instance.image_ref, image_type)
 
         # Set the name label and description to easily identify what
         # instance and disk it's for
-        for vdi in vdi_return_list:
-            cls.set_vdi_name(session, vdi['vdi_uuid'], instance.name,
-                             vdi['vdi_type'])
+        for vdi_type, vdi in vdis.iteritems():
+            cls.set_vdi_name(session, vdi['uuid'], instance.name, vdi_type)
 
-        return vdi_return_list
+        return vdis
 
     @classmethod
     def fetch_image(cls, context, session, instance, image, image_type):
@@ -754,26 +756,29 @@ class VMHelper(xenapi.HelperBase):
                   instance=instance)
         sr_ref = cls.safe_find_sr(session)
 
-        vdis = cls._retry_glance_download_vhd(context, session, image)
+        fetched_vdis = cls._retry_glance_download_vhd(context, session, image)
 
         # 'download_vhd' will return a list of dictionaries describing VDIs.
         # The dictionary will contain 'vdi_type' and 'vdi_uuid' keys.
         # 'vdi_type' can be 'root' or 'swap' right now.
-        for vdi in vdis:
+        for vdi in fetched_vdis:
             LOG.debug(_("xapi 'download_vhd' returned VDI of "
                         "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'"),
                       vdi, instance=instance)
 
         cls.scan_sr(session, sr_ref)
 
-        # Pull out the UUID of the first VDI (which is the os VDI)
-        os_vdi_uuid = vdis[0]['vdi_uuid']
+        vdis = {}
+        for vdi in fetched_vdis:
+            vdis[vdi['vdi_type']] = dict(uuid=vdi['vdi_uuid'], file=None)
+
+        # Pull out the UUID of the root VDI
+        root_vdi_uuid = vdis['root']['uuid']
 
         # Set the name-label to ease debugging
-        cls.set_vdi_name(session, os_vdi_uuid, instance.name,
-                         vdis[0]['vdi_type'])
+        cls.set_vdi_name(session, root_vdi_uuid, instance.name, 'root')
 
-        cls._check_vdi_size(context, session, instance, os_vdi_uuid)
+        cls._check_vdi_size(context, session, instance, root_vdi_uuid)
         return vdis
 
     @classmethod
@@ -885,13 +890,11 @@ class VMHelper(xenapi.HelperBase):
                 cls.destroy_vdi(session, vdi_ref)
                 LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref,
                           instance=instance)
-                return [dict(vdi_type=ImageType.to_string(image_type),
-                             vdi_uuid=None,
-                             file=filename)]
+                vdi_type = ImageType.to_string(image_type)
+                return {vdi_type: dict(uuid=None, file=filename)}
             else:
-                return [dict(vdi_type=ImageType.to_string(image_type),
-                             vdi_uuid=vdi_uuid,
-                             file=None)]
+                vdi_type = ImageType.to_string(image_type)
+                return {vdi_type: dict(uuid=vdi_uuid, file=None)}
         except (session.XenAPI.Failure, IOError, OSError) as e:
             # We look for XenAPI and OS failures.
             LOG.exception(_("Failed to fetch glance image"),

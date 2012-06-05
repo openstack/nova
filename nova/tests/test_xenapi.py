@@ -876,7 +876,8 @@ class XenAPIMigrateInstance(test.TestCase):
         conn = xenapi_conn.XenAPIDriver(False)
         vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
         vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
-        conn._vmops._resize_instance(instance, vdi_uuid)
+        conn._vmops._resize_instance(instance,
+                                     {'uuid': vdi_uuid, 'ref': vdi_ref})
         self.assertEqual(called['resize'], True)
 
     def test_migrate_disk_and_power_off(self):
@@ -1170,14 +1171,18 @@ class XenAPIAutoDiskConfigTestCase(test.TestCase):
         self.stubs.Set(vm_utils, "_resize_part_and_fs",
                        fake_resize_part_and_fs)
 
-        instance = db.instance_create(self.context, self.instance_values)
-        disk_image_type = vm_utils.ImageType.DISK_VHD
-        vm_ref = "blah"
-        first_vdi_ref = "blah"
-        vdis = ["blah"]
+        ctx = context.RequestContext(self.user_id, self.project_id)
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
 
-        self.conn._vmops._attach_disks(
-            instance, disk_image_type, vm_ref, first_vdi_ref, vdis)
+        disk_image_type = vm_utils.ImageType.DISK_VHD
+        instance = db.instance_create(self.context, self.instance_values)
+        vm_ref = xenapi_fake.create_vm(instance['name'], 'Halted')
+        vdi_ref = xenapi_fake.create_vdi(instance['name'], 'fake')
+
+        vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
+        vdis = {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}}
+
+        self.conn._vmops._attach_disks(instance, disk_image_type, vm_ref, vdis)
 
         self.assertEqual(marker["partition_called"], called)
 
@@ -1256,14 +1261,18 @@ class XenAPIGenerateLocal(test.TestCase):
                        fake_create_vbd)
 
     def assertCalled(self, instance):
+        ctx = context.RequestContext(self.user_id, self.project_id)
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
+
         disk_image_type = vm_utils.ImageType.DISK_VHD
-        vm_ref = "blah"
-        first_vdi_ref = "blah"
-        vdis = ["blah"]
+        vm_ref = xenapi_fake.create_vm(instance['name'], 'Halted')
+        vdi_ref = xenapi_fake.create_vdi(instance['name'], 'fake')
+
+        vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
+        vdis = {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}}
 
         self.called = False
-        self.conn._vmops._attach_disks(instance, disk_image_type,
-                                       vm_ref, first_vdi_ref, vdis)
+        self.conn._vmops._attach_disks(instance, disk_image_type, vm_ref, vdis)
         self.assertTrue(self.called)
 
     def test_generate_swap(self):
