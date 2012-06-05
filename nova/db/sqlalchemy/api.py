@@ -1382,7 +1382,7 @@ def instance_destroy(context, instance_id, constraint=None):
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.InstanceMetadata).\
-                filter_by(instance_id=instance_id).\
+                filter_by(instance_uuid=instance_ref['uuid']).\
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
@@ -1730,7 +1730,7 @@ def _instance_update(context, instance_id, values, copy_old_instance=False):
     metadata = values.get('metadata')
     if metadata is not None:
         instance_metadata_update(
-            context, instance_ref['id'], values.pop('metadata'), delete=True)
+            context, instance_ref['uuid'], values.pop('metadata'), delete=True)
 
     system_metadata = values.get('system_metadata')
     if system_metadata is not None:
@@ -4142,16 +4142,16 @@ def cell_get_all(context):
 ########################
 # User-provided metadata
 
-def _instance_metadata_get_query(context, instance_id, session=None):
+def _instance_metadata_get_query(context, instance_uuid, session=None):
     return model_query(context, models.InstanceMetadata, session=session,
                        read_deleted="no").\
-                    filter_by(instance_id=instance_id)
+                    filter_by(instance_uuid=instance_uuid)
 
 
 @require_context
-@require_instance_exists
-def instance_metadata_get(context, instance_id):
-    rows = _instance_metadata_get_query(context, instance_id).all()
+@require_instance_exists_using_uuid
+def instance_metadata_get(context, instance_uuid):
+    rows = _instance_metadata_get_query(context, instance_uuid).all()
 
     result = {}
     for row in rows:
@@ -4161,9 +4161,9 @@ def instance_metadata_get(context, instance_id):
 
 
 @require_context
-@require_instance_exists
-def instance_metadata_delete(context, instance_id, key):
-    _instance_metadata_get_query(context, instance_id).\
+@require_instance_exists_using_uuid
+def instance_metadata_delete(context, instance_uuid, key):
+    _instance_metadata_get_query(context, instance_uuid).\
         filter_by(key=key).\
         update({'deleted': True,
                 'deleted_at': utils.utcnow(),
@@ -4171,31 +4171,31 @@ def instance_metadata_delete(context, instance_id, key):
 
 
 @require_context
-@require_instance_exists
-def instance_metadata_get_item(context, instance_id, key, session=None):
+@require_instance_exists_using_uuid
+def instance_metadata_get_item(context, instance_uuid, key, session=None):
     result = _instance_metadata_get_query(
-                            context, instance_id, session=session).\
+                            context, instance_uuid, session=session).\
                     filter_by(key=key).\
                     first()
 
     if not result:
         raise exception.InstanceMetadataNotFound(metadata_key=key,
-                                                 instance_id=instance_id)
+                                                 instance_uuid=instance_uuid)
 
     return result
 
 
 @require_context
-@require_instance_exists
-def instance_metadata_update(context, instance_id, metadata, delete):
+@require_instance_exists_using_uuid
+def instance_metadata_update(context, instance_uuid, metadata, delete):
     session = get_session()
 
     # Set existing metadata to deleted if delete argument is True
     if delete:
-        original_metadata = instance_metadata_get(context, instance_id)
+        original_metadata = instance_metadata_get(context, instance_uuid)
         for meta_key, meta_value in original_metadata.iteritems():
             if meta_key not in metadata:
-                meta_ref = instance_metadata_get_item(context, instance_id,
+                meta_ref = instance_metadata_get_item(context, instance_uuid,
                                                       meta_key, session)
                 meta_ref.update({'deleted': True})
                 meta_ref.save(session=session)
@@ -4209,11 +4209,11 @@ def instance_metadata_update(context, instance_id, metadata, delete):
         item = {"value": meta_value}
 
         try:
-            meta_ref = instance_metadata_get_item(context, instance_id,
+            meta_ref = instance_metadata_get_item(context, instance_uuid,
                                                   meta_key, session)
         except exception.InstanceMetadataNotFound, e:
             meta_ref = models.InstanceMetadata()
-            item.update({"key": meta_key, "instance_id": instance_id})
+            item.update({"key": meta_key, "instance_uuid": instance_uuid})
 
         meta_ref.update(item)
         meta_ref.save(session=session)

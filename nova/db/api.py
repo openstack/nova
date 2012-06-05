@@ -1585,19 +1585,19 @@ def cell_get_all(context):
 ####################
 
 
-def instance_metadata_get(context, instance_id):
+def instance_metadata_get(context, instance_uuid):
     """Get all metadata for an instance."""
-    return IMPL.instance_metadata_get(context, instance_id)
+    return IMPL.instance_metadata_get(context, instance_uuid)
 
 
-def instance_metadata_delete(context, instance_id, key):
+def instance_metadata_delete(context, instance_uuid, key):
     """Delete the given metadata item."""
-    IMPL.instance_metadata_delete(context, instance_id, key)
+    IMPL.instance_metadata_delete(context, instance_uuid, key)
 
 
-def instance_metadata_update(context, instance_id, metadata, delete):
+def instance_metadata_update(context, instance_uuid, metadata, delete):
     """Update metadata if it exists, otherwise create it."""
-    IMPL.instance_metadata_update(context, instance_id, metadata, delete)
+    IMPL.instance_metadata_update(context, instance_uuid, metadata, delete)
 
 
 ####################

@@ -181,7 +181,7 @@ class DbApiTestCase(test.TestCase):
 
         # Retrieve the user-provided metadata to ensure it was successfully
         # updated
-        instance_meta = db.instance_metadata_get(ctxt, instance.id)
+        instance_meta = db.instance_metadata_get(ctxt, instance.uuid)
         self.assertEqual('bar', instance_meta['host'])
 
         # Retrieve the system metadata to ensure it was successfully updated
@@ -204,7 +204,7 @@ class DbApiTestCase(test.TestCase):
 
         # Retrieve the user-provided metadata to ensure it was successfully
         # updated
-        instance_meta = db.instance_metadata_get(ctxt, instance.id)
+        instance_meta = db.instance_metadata_get(ctxt, instance.uuid)
         self.assertEqual('bar', instance_meta['host'])
 
         # Retrieve the system metadata to ensure it was successfully updated

@@ -1781,13 +1781,13 @@ class API(base.Base):
     @wrap_check_policy
     def get_instance_metadata(self, context, instance):
         """Get all metadata associated with an instance."""
-        rv = self.db.instance_metadata_get(context, instance['id'])
+        rv = self.db.instance_metadata_get(context, instance['uuid'])
         return dict(rv.iteritems())
 
     @wrap_check_policy
     def delete_instance_metadata(self, context, instance, key):
         """Delete the given metadata item from an instance."""
-        self.db.instance_metadata_delete(context, instance['id'], key)
+        self.db.instance_metadata_delete(context, instance['uuid'], key)
 
     @wrap_check_policy
     def update_instance_metadata(self, context, instance,
@@ -1805,7 +1805,7 @@ class API(base.Base):
             _metadata.update(metadata)
 
         self._check_metadata_properties_quota(context, _metadata)
-        self.db.instance_metadata_update(context, instance['id'],
+        self.db.instance_metadata_update(context, instance['uuid'],
                                          _metadata, True)
         return _metadata
 

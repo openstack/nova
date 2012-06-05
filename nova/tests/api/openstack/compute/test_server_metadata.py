@@ -39,8 +39,8 @@ def return_create_instance_metadata(context, server_id, metadata, delete):
 
 
 def return_server_metadata(context, server_id):
-    if not isinstance(server_id, int):
-        msg = 'id %s must be int in return server metadata' % server_id
+    if not isinstance(server_id, str) or not len(server_id) == 36:
+        msg = 'id %s must be a uuid in return server metadata' % server_id
         raise Exception(msg)
     return stub_server_metadata()
 
@@ -70,11 +70,15 @@ def stub_max_server_metadata():
 
 
 def return_server(context, server_id):
-    return {'id': server_id, 'name': 'fake'}
+    return {'id': server_id,
+            'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
+            'name': 'fake'}
 
 
 def return_server_by_uuid(context, server_uuid):
-    return {'id': 1, 'name': 'fake'}
+    return {'id': 1,
+            'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
+            'name': 'fake'}
 
 
 def return_server_nonexistant(context, server_id):
@@ -157,7 +161,8 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(None, res)
 
     def test_delete_nonexistant_server(self):
-        self.stubs.Set(nova.db, 'instance_get', return_server_nonexistant)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_nonexistant)
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -226,7 +231,8 @@ class ServerMetaDataTest(test.TestCase):
                           req, self.uuid, body)
 
     def test_create_nonexistant_server(self):
-        self.stubs.Set(nova.db, 'instance_get', return_server_nonexistant)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_nonexistant)
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'POST'
         body = {"metadata": {"key1": "value1"}}
@@ -313,7 +319,8 @@ class ServerMetaDataTest(test.TestCase):
         self.assertEqual(expected, res_dict)
 
     def test_update_item_nonexistant_server(self):
-        self.stubs.Set(nova.db, 'instance_get', return_server_nonexistant)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_nonexistant)
         req = fakes.HTTPRequest.blank('/v1.1/fake/servers/asdf/metadata/key1')
         req.method = 'PUT'
         body = {"meta": {"key1": "value1"}}

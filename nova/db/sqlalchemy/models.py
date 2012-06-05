@@ -859,11 +859,13 @@ class InstanceMetadata(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     key = Column(String(255))
     value = Column(String(255))
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
+                           nullable=False)
     instance = relationship(Instance, backref="metadata",
-                            foreign_keys=instance_id,
+                            foreign_keys=instance_uuid,
                             primaryjoin='and_('
-                                'InstanceMetadata.instance_id == Instance.id,'
+                                'InstanceMetadata.instance_uuid == '
+                                     'Instance.uuid,'
                                 'InstanceMetadata.deleted == False)')
 
 

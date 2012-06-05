@@ -821,7 +821,7 @@ class SchedulerWeightFlagNotFound(NotFound):
 
 
 class InstanceMetadataNotFound(NotFound):
-    message = _("Instance %(instance_id)s has no metadata with "
+    message = _("Instance %(instance_uuid)s has no metadata with "
                 "key %(metadata_key)s.")
 
 
