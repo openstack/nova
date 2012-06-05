@@ -71,26 +71,22 @@ _STATE_DESCRIPTION_MAP = {
     None: inst_state.PENDING,
     vm_states.ACTIVE: inst_state.RUNNING,
     vm_states.BUILDING: inst_state.PENDING,
-    vm_states.REBUILDING: inst_state.PENDING,
     vm_states.DELETED: inst_state.TERMINATED,
-    vm_states.SOFT_DELETE: inst_state.TERMINATED,
+    vm_states.SOFT_DELETED: inst_state.TERMINATED,
     vm_states.STOPPED: inst_state.STOPPED,
-    vm_states.SHUTOFF: inst_state.SHUTOFF,
-    vm_states.MIGRATING: inst_state.MIGRATE,
-    vm_states.RESIZING: inst_state.RESIZE,
     vm_states.PAUSED: inst_state.PAUSE,
     vm_states.SUSPENDED: inst_state.SUSPEND,
     vm_states.RESCUED: inst_state.RESCUE,
+    vm_states.RESIZED: inst_state.RESIZE,
 }
 
 
-def _state_description(vm_state, shutdown_terminate):
+def _state_description(vm_state, _shutdown_terminate):
     """Map the vm state to the server status string"""
-    if (vm_state == vm_states.SHUTOFF and
-        not shutdown_terminate):
-            name = inst_state.STOPPED
-    else:
-        name = _STATE_DESCRIPTION_MAP.get(vm_state, vm_state)
+    # Note(maoy): We do not provide EC2 compatibility
+    # in shutdown_terminate flag behavior. So we ignore
+    # it here.
+    name = _STATE_DESCRIPTION_MAP.get(vm_state, vm_state)
 
     return {'code': inst_state.name_to_code(name),
             'name': name}
@@ -1138,7 +1134,7 @@ class CloudController(object):
         except exception.NoFloatingIpInterface:
             msg = _('l3driver call to add floating ip failed.')
             raise exception.EC2APIError(msg)
-        except:
+        except Exception:
             msg = _('Error, unable to associate floating ip.')
             raise exception.EC2APIError(msg)
 
@@ -1453,11 +1449,10 @@ class CloudController(object):
             vm_state = instance['vm_state']
 
             # if the instance is in subtle state, refuse to proceed.
-            if vm_state not in (vm_states.ACTIVE, vm_states.SHUTOFF,
-                                vm_states.STOPPED):
+            if vm_state not in (vm_states.ACTIVE, vm_states.STOPPED):
                 raise exception.InstanceNotRunning(instance_id=ec2_instance_id)
 
-            if vm_state in (vm_states.ACTIVE, vm_states.SHUTOFF):
+            if vm_state == vm_states.ACTIVE:
                 restart_instance = True
                 self.compute_api.stop(context, instance)
 

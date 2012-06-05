@@ -854,7 +854,7 @@ class CloudTestCase(test.TestCase):
         test_instance_state(inst_state.RUNNING_CODE, inst_state.RUNNING,
                             power_state.RUNNING, vm_states.ACTIVE)
         test_instance_state(inst_state.STOPPED_CODE, inst_state.STOPPED,
-                            power_state.NOSTATE, vm_states.SHUTOFF,
+                            power_state.NOSTATE, vm_states.STOPPED,
                             {'shutdown_terminate': False})
 
     def test_describe_instances_no_ipv6(self):

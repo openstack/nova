@@ -21,6 +21,7 @@ Management class for host-related functions (start, reboot, etc).
 
 import logging
 
+from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -80,7 +81,7 @@ class Host(object):
                                     ctxt,
                                     instance.id,
                                     {'host': dest,
-                                     'vm_state': vm_states.MIGRATING})
+                                     'task_state': task_states.MIGRATING})
                     notifications.send_update(ctxt, old_ref, new_ref)
 
                     self._session.call_xenapi('VM.pool_migrate',

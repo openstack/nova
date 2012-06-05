@@ -62,7 +62,7 @@ flags.DECLARE('consoleauth_topic', 'nova.consoleauth')
 QUOTAS = quota.QUOTAS
 
 
-def check_instance_state(vm_state=None, task_state=None):
+def check_instance_state(vm_state=None, task_state=(None,)):
     """Decorator to check VM and/or task state before entry to API functions.
 
     If the instance is in the wrong state, the wrapper will raise an exception.
@@ -811,7 +811,7 @@ class API(base.Base):
         return dict(instance_ref.iteritems())
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
     def soft_delete(self, context, instance):
         """Terminate an instance."""
@@ -865,7 +865,7 @@ class API(base.Base):
                         task_state=task_states.DELETING,
                         progress=0)
 
-            if instance['task_state'] == task_states.RESIZE_VERIFY:
+            if instance['vm_state'] == vm_states.RESIZED:
                 # If in the middle of a resize, use confirm_resize to
                 # ensure the original instance is cleaned up too
                 migration_ref = self.db.migration_get_by_instance_and_status(
@@ -887,13 +887,9 @@ class API(base.Base):
             with excutils.save_and_reraise_exception():
                 QUOTAS.rollback(context, reservations)
 
-    # NOTE(jerdfelt): The API implies that only ACTIVE and ERROR are
-    # allowed but the EC2 API appears to allow from RESCUED and STOPPED
-    # too
+    # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.BUILDING,
-                                    vm_states.ERROR, vm_states.RESCUED,
-                                    vm_states.SHUTOFF, vm_states.STOPPED])
+    @check_instance_state(vm_state=None, task_state=None)
     def delete(self, context, instance):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate instance"), instance=instance)
@@ -904,7 +900,7 @@ class API(base.Base):
         self._delete(context, instance)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.SOFT_DELETE])
+    @check_instance_state(vm_state=[vm_states.SOFT_DELETED])
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
         if instance['host']:
@@ -921,14 +917,14 @@ class API(base.Base):
                         deleted_at=None)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.SOFT_DELETE])
+    @check_instance_state(vm_state=[vm_states.SOFT_DELETED])
     def force_delete(self, context, instance):
         """Force delete a previously deleted (but not reclaimed) instance."""
         self._delete(context, instance)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
-                                    vm_states.RESCUED],
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED,
+                                    vm_states.ERROR, vm_states.STOPPED],
                           task_state=[None])
     def stop(self, context, instance, do_cast=True):
         """Stop an instance."""
@@ -943,7 +939,7 @@ class API(base.Base):
         self.compute_rpcapi.stop_instance(context, instance, cast=do_cast)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.STOPPED, vm_states.SHUTOFF])
+    @check_instance_state(vm_state=[vm_states.STOPPED])
     def start(self, context, instance):
         """Start an instance."""
         LOG.debug(_("Going to try to start instance"), instance=instance)
@@ -1088,7 +1084,7 @@ class API(base.Base):
                                                    sort_dir)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def backup(self, context, instance, name, backup_type, rotation,
                extra_properties=None):
         """Backup the given instance
@@ -1106,7 +1102,7 @@ class API(base.Base):
         return recv_meta
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def snapshot(self, context, instance, name, extra_properties=None):
         """Snapshot the given instance.
 
@@ -1201,7 +1197,7 @@ class API(base.Base):
         return min_ram, min_disk
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.RESCUED],
                           task_state=[None])
     def reboot(self, context, instance, reboot_type):
@@ -1222,7 +1218,7 @@ class API(base.Base):
         return image_service.show(context, image_id)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
                           task_state=[None])
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
         """Rebuild the given instance with the provided attributes."""
@@ -1270,11 +1266,10 @@ class API(base.Base):
 
         self.update(context,
                     instance,
-                    vm_state=vm_states.REBUILDING,
+                    task_state=task_states.REBUILDING,
                     # Unfortunately we need to set image_ref early,
                     # so API users can see it.
                     image_ref=image_href,
-                    task_state=None,
                     progress=0,
                     **kwargs)
 
@@ -1288,8 +1283,7 @@ class API(base.Base):
                 image_ref=image_href, orig_image_ref=orig_image_ref)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
-                          task_state=[task_states.RESIZE_VERIFY])
+    @check_instance_state(vm_state=[vm_states.RESIZED])
     def revert_resize(self, context, instance):
         """Reverts a resize, deleting the 'new' instance in the process."""
         context = context.elevated()
@@ -1301,7 +1295,6 @@ class API(base.Base):
 
         self.update(context,
                     instance,
-                    vm_state=vm_states.RESIZING,
                     task_state=task_states.RESIZE_REVERTING)
 
         self.compute_rpcapi.revert_resize(context,
@@ -1312,8 +1305,7 @@ class API(base.Base):
                                  {'status': 'reverted'})
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
-                          task_state=[task_states.RESIZE_VERIFY])
+    @check_instance_state(vm_state=[vm_states.RESIZED])
     def confirm_resize(self, context, instance):
         """Confirms a migration/resize and deletes the 'old' instance."""
         context = context.elevated()
@@ -1338,7 +1330,7 @@ class API(base.Base):
                 {'host': migration_ref['dest_compute'], })
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF],
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
                           task_state=[None])
     def resize(self, context, instance, flavor_id=None, **kwargs):
         """Resize (ie, migrate) a running instance.
@@ -1385,7 +1377,6 @@ class API(base.Base):
 
         self.update(context,
                     instance,
-                    vm_state=vm_states.RESIZING,
                     task_state=task_states.RESIZE_PREP,
                     progress=0,
                     **kwargs)
@@ -1424,9 +1415,7 @@ class API(base.Base):
                 instance=instance, address=address)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
-                                    vm_states.RESCUED],
-                          task_state=[None])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED])
     def pause(self, context, instance):
         """Pause the given instance."""
         self.update(context,
@@ -1451,9 +1440,7 @@ class API(base.Base):
         return self.compute_rpcapi.get_diagnostics(context, instance=instance)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
-                                    vm_states.RESCUED],
-                          task_state=[None])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED])
     def suspend(self, context, instance):
         """Suspend the given instance."""
         self.update(context,
@@ -1473,9 +1460,7 @@ class API(base.Base):
         self.compute_rpcapi.resume_instance(context, instance=instance)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.SHUTOFF,
-                                    vm_states.STOPPED],
-                          task_state=[None])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
         self.update(context,
@@ -1497,8 +1482,7 @@ class API(base.Base):
         self.compute_rpcapi.unrescue_instance(context, instance=instance)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE],
-                          task_state=[None])
+    @check_instance_state(vm_state=[vm_states.ACTIVE])
     def set_admin_password(self, context, instance, password=None):
         """Set the root/admin password for the given instance."""
         self.update(context,

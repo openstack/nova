@@ -30,7 +30,6 @@ STOPPING = 'stopping'
 STOPPED = 'stopped'
 
 # non-ec2 value
-SHUTOFF = 'shutoff'
 MIGRATE = 'migrate'
 RESIZE = 'resize'
 PAUSE = 'pause'
@@ -47,7 +46,6 @@ _NAME_TO_CODE = {
     STOPPED: STOPPED_CODE,
 
     # approximation
-    SHUTOFF: TERMINATED_CODE,
     MIGRATE: RUNNING_CODE,
     RESIZE: RUNNING_CODE,
     PAUSE: STOPPED_CODE,

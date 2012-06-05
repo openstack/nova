@@ -19,6 +19,7 @@ import mox
 import webob
 
 from nova.api.openstack.compute import servers
+from nova.compute import task_states
 from nova.compute import vm_states
 import nova.db
 from nova import exception
@@ -461,8 +462,8 @@ class ServerActionsControllerTest(test.TestCase):
         context = req.environ['nova.context']
         update(context, mox.IgnoreArg(),
                 image_ref=self._image_href,
-                vm_state=vm_states.REBUILDING,
-                task_state=None, progress=0, **attributes).AndReturn(None)
+                task_state=task_states.REBUILDING,
+                progress=0, **attributes).AndReturn(None)
         self.mox.ReplayAll()
 
         self.controller._action_rebuild(req, FAKE_UUID, body)

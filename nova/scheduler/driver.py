@@ -24,7 +24,7 @@ Scheduler base class that all Schedulers should inherit from
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
-from nova.compute import vm_states
+from nova.compute import task_states
 from nova import db
 from nova import exception
 from nova import flags
@@ -228,7 +228,7 @@ class Scheduler(object):
                                           disk_over_commit)
 
         # Changing instance_state.
-        values = {"vm_state": vm_states.MIGRATING}
+        values = {"task_state": task_states.MIGRATING}
 
         # update instance state and notify
         (old_ref, new_instance_ref) = db.instance_update_and_get_original(
