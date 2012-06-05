@@ -114,17 +114,19 @@ libvirt_opts = [
                 help='Sync virtual and real mouse cursors in Windows VMs'),
     cfg.StrOpt('live_migration_uri',
                default="qemu+tcp://%s/system",
-               help='Define protocol used by live_migration feature'),
+               help='Migration target URI '
+                    '(any included "%s" is replaced with '
+                    'the migration target hostname)'),
     cfg.StrOpt('live_migration_flag',
                default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER',
-               help='Define live migration behavior.'),
+               help='Migration flags to be set for live migration'),
     cfg.StrOpt('block_migration_flag',
                default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, '
                        'VIR_MIGRATE_NON_SHARED_INC',
-               help='Define block migration behavior.'),
+               help='Migration flags to be set for block migration'),
     cfg.IntOpt('live_migration_bandwidth',
                default=0,
-               help='Define live migration behavior'),
+               help='Maximum bandwidth to be used during migration, in Mbps'),
     cfg.StrOpt('snapshot_image_format',
                default=None,
                help='Snapshot image format (valid options are : '
