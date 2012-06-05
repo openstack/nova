@@ -157,8 +157,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         }
 
         for (input, expected) in cases.iteritems():
-            func = volume_utils.VolumeHelper.mountpoint_to_number
-            actual = func(input)
+            actual = volume_utils.mountpoint_to_number(input)
             self.assertEqual(actual, expected,
                     '%s yielded %s, not %s' % (input, actual, expected))
 
@@ -169,7 +168,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         vol = self._create_volume()
         # oops, wrong mount point!
         self.assertRaises(volume_utils.StorageError,
-                          volume_utils.VolumeHelper.parse_volume_info,
+                          volume_utils.parse_volume_info,
                           self._make_info(),
                           'dev/sd'
                           )
@@ -703,7 +702,7 @@ class XenAPIVMTestCase(test.TestCase):
     def test_rescue(self):
         instance = self._create_instance()
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
-        vm_ref = vm_utils.VMHelper.lookup(session, instance.name)
+        vm_ref = vm_utils.lookup(session, instance.name)
 
         xenapi_fake.create_vbd(vm_ref, "swap", userdevice=1)
         xenapi_fake.create_vbd(vm_ref, "rootfs", userdevice=0)
@@ -715,7 +714,7 @@ class XenAPIVMTestCase(test.TestCase):
 
         vm = xenapi_fake.get_record('VM', vm_ref)
         rescue_name = "%s-rescue" % vm["name_label"]
-        rescue_ref = vm_utils.VMHelper.lookup(session, rescue_name)
+        rescue_ref = vm_utils.lookup(session, rescue_name)
         rescue_vm = xenapi_fake.get_record('VM', rescue_ref)
 
         vdi_uuids = []
@@ -1035,7 +1034,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.fake_instance.architecture = 'x86-64'
 
     def assert_disk_type(self, image_meta, expected_disk_type):
-        actual = vm_utils.VMHelper.determine_disk_image_type(image_meta)
+        actual = vm_utils.determine_disk_image_type(image_meta)
         self.assertEqual(expected_disk_type, actual)
 
     def test_machine(self):
@@ -1154,14 +1153,11 @@ class XenAPIAutoDiskConfigTestCase(test.TestCase):
 
         self.context = context.RequestContext(self.user_id, self.project_id)
 
-        @classmethod
-        def fake_create_vbd(cls, session, vm_ref, vdi_ref, userdevice,
+        def fake_create_vbd(session, vm_ref, vdi_ref, userdevice,
                             vbd_type='disk', read_only=False, bootable=True):
             pass
 
-        self.stubs.Set(vm_utils.VMHelper,
-                       "create_vbd",
-                       fake_create_vbd)
+        self.stubs.Set(vm_utils, 'create_vbd', fake_create_vbd)
 
     def assertIsPartitionCalled(self, called):
         marker = {"partition_called": False}
@@ -1251,14 +1247,11 @@ class XenAPIGenerateLocal(test.TestCase):
 
         self.context = context.RequestContext(self.user_id, self.project_id)
 
-        @classmethod
-        def fake_create_vbd(cls, session, vm_ref, vdi_ref, userdevice,
+        def fake_create_vbd(session, vm_ref, vdi_ref, userdevice,
                             vbd_type='disk', read_only=False, bootable=True):
             pass
 
-        self.stubs.Set(vm_utils.VMHelper,
-                       "create_vbd",
-                       fake_create_vbd)
+        self.stubs.Set(vm_utils, 'create_vbd', fake_create_vbd)
 
     def assertCalled(self, instance):
         ctx = context.RequestContext(self.user_id, self.project_id)
@@ -1281,11 +1274,9 @@ class XenAPIGenerateLocal(test.TestCase):
         instance = db.instance_update(self.context, instance['id'],
                                       {'instance_type_id': 5})
 
-        @classmethod
-        def fake_generate_swap(cls, *args, **kwargs):
+        def fake_generate_swap(*args, **kwargs):
             self.called = True
-        self.stubs.Set(vm_utils.VMHelper, 'generate_swap',
-                       fake_generate_swap)
+        self.stubs.Set(vm_utils, 'generate_swap', fake_generate_swap)
 
         self.assertCalled(instance)
 
@@ -1295,11 +1286,9 @@ class XenAPIGenerateLocal(test.TestCase):
         instance = db.instance_update(self.context, instance['id'],
                                       {'instance_type_id': 4})
 
-        @classmethod
-        def fake_generate_ephemeral(cls, *args):
+        def fake_generate_ephemeral(*args):
             self.called = True
-        self.stubs.Set(vm_utils.VMHelper, 'generate_ephemeral',
-                       fake_generate_ephemeral)
+        self.stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
 
         self.assertCalled(instance)
 
@@ -1307,7 +1296,7 @@ class XenAPIGenerateLocal(test.TestCase):
 class XenAPIBWUsageTestCase(test.TestCase):
     def setUp(self):
         super(XenAPIBWUsageTestCase, self).setUp()
-        self.stubs.Set(vm_utils.VMHelper, "compile_metrics",
+        self.stubs.Set(vm_utils, 'compile_metrics',
                        XenAPIBWUsageTestCase._fake_compile_metrics)
         self.flags(target_host='127.0.0.1',
                    xenapi_connection_url='test_url',
@@ -1651,7 +1640,7 @@ class XenAPISRSelectionTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         self.assertRaises(exception.StorageRepositoryNotFound,
-                          vm_utils.VMHelper.safe_find_sr, session)
+                          vm_utils.safe_find_sr, session)
 
     def test_safe_find_sr_local_storage(self):
         """Ensure the default local-storage is found."""
@@ -1666,7 +1655,7 @@ class XenAPISRSelectionTestCase(test.TestCase):
                                             'Local storage',
                                             'i18n-key': 'local-storage'},
                               host_ref=host_ref)
-        expected = vm_utils.VMHelper.safe_find_sr(session)
+        expected = vm_utils.safe_find_sr(session)
         self.assertEqual(local_sr, expected)
 
     def test_safe_find_sr_by_other_criteria(self):
@@ -1679,7 +1668,7 @@ class XenAPISRSelectionTestCase(test.TestCase):
                                          type='lvm',
                                          other_config={'my_fake_sr': 'true'},
                                          host_ref=host_ref)
-        expected = vm_utils.VMHelper.safe_find_sr(session)
+        expected = vm_utils.safe_find_sr(session)
         self.assertEqual(local_sr, expected)
 
     def test_safe_find_sr_default(self):
@@ -1688,7 +1677,7 @@ class XenAPISRSelectionTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         pool_ref = xenapi_fake.create_pool('')
-        expected = vm_utils.VMHelper.safe_find_sr(session)
+        expected = vm_utils.safe_find_sr(session)
         self.assertEqual(session.call_xenapi('pool.get_default_SR', pool_ref),
                          expected)
 
