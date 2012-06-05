@@ -61,7 +61,6 @@ class RpcKombuTestCase(common.BaseRpcAMQPTestCase):
     def setUp(self):
         if kombu:
             self.rpc = impl_kombu
-            impl_kombu.register_opts(FLAGS)
         else:
             self.rpc = None
         super(RpcKombuTestCase, self).setUp()

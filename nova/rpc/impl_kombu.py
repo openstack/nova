@@ -82,6 +82,8 @@ kombu_opts = [
 
     ]
 
+cfg.CONF.register_opts(kombu_opts)
+
 LOG = rpc_common.LOG
 
 
@@ -754,7 +756,3 @@ def notify(conf, context, topic, msg):
 
 def cleanup():
     return rpc_amqp.cleanup(Connection.pool)
-
-
-def register_opts(conf):
-    conf.register_opts(kombu_opts)
