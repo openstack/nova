@@ -419,6 +419,11 @@ class InvalidUUID(Invalid):
     message = _("Expected a uuid but received %(uuid).")
 
 
+class ConstraintNotMet(NovaException):
+    message = _("Constraint not met.")
+    code = 412
+
+
 class NotFound(NovaException):
     message = _("Resource could not be found.")
     code = 404

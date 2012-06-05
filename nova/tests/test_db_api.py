@@ -840,3 +840,40 @@ class TestIpAllocation(test.TestCase):
         fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
         self.assertEqual(fixed_ip.instance_id, self.instance.id)
         self.assertEqual(fixed_ip.network_id, self.network.id)
+
+
+class InstanceDestroyConstraints(test.TestCase):
+
+    def test_destroy_with_equal_any_constraint_met(self):
+        ctx = context.get_admin_context()
+        instance = db.instance_create(ctx, {'task_state': 'deleting'})
+        constraint = db.constraint(task_state=db.equal_any('deleting'))
+        db.instance_destroy(ctx, instance['uuid'], constraint)
+        self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
+                          ctx, instance['uuid'])
+
+    def test_destroy_with_equal_any_constraint_not_met(self):
+        ctx = context.get_admin_context()
+        instance = db.instance_create(ctx, {'vm_state': 'resize'})
+        constraint = db.constraint(vm_state=db.equal_any('active', 'error'))
+        self.assertRaises(exception.ConstraintNotMet, db.instance_destroy,
+                          ctx, instance['uuid'], constraint)
+        instance = db.instance_get_by_uuid(ctx, instance['uuid'])
+        self.assertFalse(instance['deleted'])
+
+    def test_destroy_with_not_equal_constraint_met(self):
+        ctx = context.get_admin_context()
+        instance = db.instance_create(ctx, {'task_state': 'deleting'})
+        constraint = db.constraint(task_state=db.not_equal('error', 'resize'))
+        db.instance_destroy(ctx, instance['uuid'], constraint)
+        self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
+                          ctx, instance['uuid'])
+
+    def test_destroy_with_not_equal_constraint_not_met(self):
+        ctx = context.get_admin_context()
+        instance = db.instance_create(ctx, {'vm_state': 'active'})
+        constraint = db.constraint(vm_state=db.not_equal('active', 'error'))
+        self.assertRaises(exception.ConstraintNotMet, db.instance_destroy,
+                          ctx, instance['uuid'], constraint)
+        instance = db.instance_get_by_uuid(ctx, instance['uuid'])
+        self.assertFalse(instance['deleted'])
