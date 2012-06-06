@@ -16,15 +16,11 @@
 
 """Compute-related Utilities and helpers."""
 
-import nova.context
 from nova import db
 from nova import flags
 from nova import log
-from nova import network
-from nova.network import model as network_model
 from nova import notifications
 from nova.notifier import api as notifier_api
-from nova import utils
 
 
 FLAGS = flags.FLAGS

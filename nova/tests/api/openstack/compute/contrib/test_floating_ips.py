@@ -24,7 +24,6 @@ from nova import db
 from nova import exception
 from nova import network
 from nova import rpc
-from nova.rpc import common as rpc_common
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network

@@ -34,7 +34,6 @@ from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova import rpc
-from nova.rpc import common as rpc_common
 from nova import utils
 
 

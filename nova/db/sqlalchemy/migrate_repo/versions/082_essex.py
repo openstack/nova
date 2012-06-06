@@ -20,8 +20,6 @@ from migrate import ForeignKeyConstraint
 from nova import flags
 from nova import log as logging
 
-from sets import Set
-
 FLAGS = flags.FLAGS
 
 LOG = logging.getLogger(__name__)

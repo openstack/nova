@@ -29,7 +29,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import notifications
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova.scheduler import driver

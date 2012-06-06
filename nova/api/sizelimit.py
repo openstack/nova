@@ -21,7 +21,6 @@ Request Body limiting middleware.
 import webob.dec
 import webob.exc
 
-from nova import context
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg

@@ -28,7 +28,6 @@ from nova import test
 
 from nova import db
 from nova import flags
-from nova import image
 from nova import log
 from nova import utils
 from nova.virt.libvirt import imagecache

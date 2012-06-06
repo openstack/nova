@@ -16,8 +16,6 @@
 #    under the License.
 #    @author: Dan Wendlandt Nicira Networks
 
-import copy
-
 from nova.network.quantum import client
 from nova import utils
 

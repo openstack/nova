@@ -19,7 +19,6 @@ import StringIO
 
 from glance.common import exception as glance_exception
 
-from nova import exception
 from nova.image import glance
 
 

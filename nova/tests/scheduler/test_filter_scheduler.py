@@ -23,7 +23,6 @@ from nova import exception
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import least_cost
-from nova import test
 from nova.tests.scheduler import fakes
 from nova.tests.scheduler import test_scheduler
 

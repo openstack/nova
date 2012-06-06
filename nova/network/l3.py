@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import random
-
 from nova import flags
 from nova import log as logging
 from nova.network import linux_net

@@ -27,7 +27,6 @@ import tempfile
 import eventlet
 from eventlet import greenpool
 import iso8601
-import lockfile
 import mox
 
 import nova

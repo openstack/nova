@@ -28,8 +28,6 @@ import os
 import re
 import time
 
-from nova import compute
-from nova import context as db_context
 from nova import db
 from nova import flags
 from nova import log as logging

@@ -18,12 +18,10 @@
 #    under the License.
 
 from nova.db import base
-from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.network import model as network_model
 from nova import rpc
-from nova.rpc import common as rpc_common
 
 
 FLAGS = flags.FLAGS

@@ -53,7 +53,6 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.scheduler import filters
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)

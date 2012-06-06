@@ -21,7 +21,6 @@
 Handling of VM disk images.
 """
 
-import errno
 import os
 
 from nova import exception

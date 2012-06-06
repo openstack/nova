@@ -30,7 +30,7 @@ from nova.api.openstack import xmlutil
 from nova import flags
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import utils
+
 
 FLAGS = flags.FLAGS
 

@@ -19,9 +19,7 @@ from lxml import etree
 from nova import flags
 from nova import test
 from nova import utils
-from nova.virt import firewall
 from nova.virt.libvirt import config
-from nova.virt.libvirt import connection
 from nova.virt.libvirt import vif
 
 FLAGS = flags.FLAGS

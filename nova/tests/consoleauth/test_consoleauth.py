@@ -24,12 +24,9 @@ import time
 
 from nova.consoleauth import manager
 from nova import context
-from nova import db
 from nova import flags
 from nova import log as logging
-from nova.openstack.common import importutils
 from nova import test
-from nova import utils
 
 
 FLAGS = flags.FLAGS
