@@ -19,6 +19,7 @@ import webob
 
 from nova.api.openstack import compute as compute_api
 from nova import compute
+from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova import flags
@@ -56,7 +57,7 @@ def fake_compute_api_raises_invalid_state(*args, **kwargs):
 
 
 def fake_compute_api_get(self, context, instance_id):
-    return {'id': 1, 'uuid': instance_id}
+    return {'id': 1, 'uuid': instance_id, 'vm_state': vm_states.ACTIVE}
 
 
 def fake_scheduler_api_live_migration(self, context, block_migration,
