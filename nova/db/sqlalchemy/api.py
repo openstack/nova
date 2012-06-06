@@ -1377,7 +1377,7 @@ def instance_destroy(context, instance_id, constraint=None):
         if count == 0:
             raise exception.ConstraintNotMet()
         session.query(models.SecurityGroupInstanceAssociation).\
-                filter_by(instance_id=instance_id).\
+                filter_by(instance_uuid=instance_ref['uuid']).\
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
@@ -1765,7 +1765,7 @@ def instance_remove_security_group(context, instance_uuid, security_group_id):
     instance_ref = instance_get_by_uuid(context, instance_uuid,
                                         session=session)
     session.query(models.SecurityGroupInstanceAssociation).\
-                filter_by(instance_id=instance_ref['id']).\
+                filter_by(instance_uuid=instance_ref['uuid']).\
                 filter_by(security_group_id=security_group_id).\
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
@@ -3410,7 +3410,7 @@ def security_group_in_use(context, group_id):
         for ia in inst_assoc:
             num_instances = session.query(models.Instance).\
                         filter_by(deleted=False).\
-                        filter_by(id=ia.instance_id).\
+                        filter_by(uuid=ia.instance_uuid).\
                         count()
             if num_instances:
                 return True
