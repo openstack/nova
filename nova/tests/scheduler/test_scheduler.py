@@ -509,7 +509,9 @@ class SchedulerTestCase(test.TestCase):
                 instance['host']).AndReturn('src_queue1')
         rpc.call(self.context, 'src_queue1',
                 {'method': 'get_instance_disk_info',
-                 'args': {'instance_name': instance['name']}}).AndReturn(
+                 'args': {'instance_name': instance['name']},
+                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION},
+                 None).AndReturn(
                         json.dumps([{'disk_size': 1024 * (1024 ** 3)}]))
 
         # Common checks (shared storage ok, same hypervisor,e tc)
@@ -724,7 +726,9 @@ class SchedulerTestCase(test.TestCase):
                 instance['host']).AndReturn('src_queue')
         rpc.call(self.context, 'src_queue',
                 {'method': 'get_instance_disk_info',
-                 'args': {'instance_name': instance['name']}}).AndReturn(
+                 'args': {'instance_name': instance['name']},
+                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION},
+                 None).AndReturn(
                         json.dumps([{'disk_size': 1024 * (1024 ** 3)}]))
 
         self.mox.ReplayAll()

@@ -131,6 +131,11 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid']),
                 topic=self._compute_topic(ctxt, None, instance))
 
+    def get_instance_disk_info(self, ctxt, instance):
+        return self.call(ctxt, self.make_msg('get_instance_disk_info',
+                instance_name=instance['name']),
+                topic=self._compute_topic(ctxt, None, instance))
+
     def get_vnc_console(self, ctxt, instance, console_type):
         return self.call(ctxt, self.make_msg('get_vnc_console',
                 instance_uuid=instance['uuid'], console_type=console_type),
