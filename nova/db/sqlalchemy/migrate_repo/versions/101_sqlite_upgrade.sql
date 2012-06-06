@@ -11,13 +11,13 @@ BEGIN TRANSACTION;
         PRIMARY KEY (id)
     );
 
-    INSERT INTO security_group_instance_association_backup 
+    INSERT INTO security_group_instance_association_backup
         SELECT created_at,
                updated_at,
                deleted_at,
                deleted,
                id,
-	       security_group_id,
+               security_group_id,
                instance_id,
                NULL
         FROM security_group_instance_association;
@@ -52,7 +52,7 @@ BEGIN TRANSACTION;
                deleted_at,
                deleted,
                id,
-	       security_group_id,
+               security_group_id,
                instance_uuid
         FROM security_group_instance_association_backup;
 
