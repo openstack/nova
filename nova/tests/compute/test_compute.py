@@ -1456,9 +1456,11 @@ class ComputeTestCase(BaseTestCase):
                                 'args': {'instance_id': inst_ref['id'],
                                          'host': self.compute.host,
                                          'teardown': False}})
-        rpc.call(c, topic, {"method": "remove_volume_connection",
-                            "args": {'instance_id': inst_ref['id'],
-                                     'volume_id': volume_id}})
+        rpc.call(c, topic,
+                {"method": "remove_volume_connection",
+                 "args": {'instance_id': inst_ref['id'],
+                          'volume_id': volume_id},
+                 "version": compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None)
         rpc.cast(c, topic, {"method": "rollback_live_migration_at_destination",
                             "args": {'instance_id': inst_ref['id']}})
 

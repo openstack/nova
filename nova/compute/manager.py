@@ -2202,11 +2202,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                   instance_ref['uuid']):
             volume_id = bdm['volume_id']
             volume = self.volume_api.get(context, volume_id)
-            rpc.call(context,
-                     rpc.queue_get_for(context, FLAGS.compute_topic, dest),
-                     {"method": "remove_volume_connection",
-                      "args": {'instance_id': instance_ref['id'],
-                               'volume_id': volume['id']}})
+            self.compute_rpcapi.remove_volume_connection(context, instance_ref,
+                    volume['id'], dest)
 
         # Block migration needs empty image at destination host
         # before migration starts, so if any failure occurs,
