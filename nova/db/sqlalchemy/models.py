@@ -822,7 +822,7 @@ class AggregateHost(BASE, NovaBase):
     """Represents a host that is member of an aggregate."""
     __tablename__ = 'aggregate_hosts'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    host = Column(String(255), unique=True)
+    host = Column(String(255), unique=False)
     aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
 
 
@@ -840,9 +840,9 @@ class Aggregate(BASE, NovaBase):
     __tablename__ = 'aggregates'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), unique=True)
-    operational_state = Column(String(255), nullable=False)
     availability_zone = Column(String(255), nullable=False)
     _hosts = relationship(AggregateHost,
+                          lazy="joined",
                           secondary="aggregate_hosts",
                           primaryjoin='and_('
                                  'Aggregate.id == AggregateHost.aggregate_id,'
@@ -907,14 +907,14 @@ class S3Image(BASE, NovaBase):
 
 
 class VolumeIdMapping(BASE, NovaBase):
-    """Compatability layer for the EC2 volume service"""
+    """Compatibility layer for the EC2 volume service"""
     __tablename__ = 'volume_id_mappings'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
 
 
 class SnapshotIdMapping(BASE, NovaBase):
-    """Compatability layer for the EC2 snapshot service"""
+    """Compatibility layer for the EC2 snapshot service"""
     __tablename__ = 'snapshot_id_mappings'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)

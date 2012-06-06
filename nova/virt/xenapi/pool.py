@@ -21,7 +21,6 @@ Management class for Pool-related functions (join, eject, etc).
 
 import urlparse
 
-from nova.compute import aggregate_states
 from nova import db
 from nova import exception
 from nova import flags
@@ -29,6 +28,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
+from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger(__name__)
@@ -55,22 +55,58 @@ class ResourcePool(object):
         self._host_uuid = host_rec['uuid']
         self._session = session
 
+    def undo_aggregate_operation(self, context, op, aggregate_id,
+                                  host, set_error):
+        """Undo aggregate operation when pool error raised"""
+        try:
+            if set_error:
+                metadata = {pool_states.KEY: pool_states.ERROR}
+                db.aggregate_metadata_add(context, aggregate_id, metadata)
+            op(context, aggregate_id, host)
+        except Exception:
+            LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable state '
+                            'during operation on %(host)s') % locals())
+
+    def _is_hv_pool(self, context, aggregate_id):
+        """Checks if aggregate is a hypervisor_pool"""
+        metadata = db.aggregate_metadata_get(context, aggregate_id)
+        return pool_states.POOL_FLAG in metadata.keys()
+
     def add_to_aggregate(self, context, aggregate, host, **kwargs):
         """Add a compute host to an aggregate."""
+        if not self._is_hv_pool(context, aggregate.id):
+            return
+
+        invalid = {pool_states.CHANGING: 'setup in progress',
+                   pool_states.DISMISSED: 'aggregate deleted',
+                   pool_states.ERROR: 'aggregate in error'}
+
+        if (db.aggregate_metadata_get(context, aggregate.id)[pool_states.KEY]
+                in invalid.keys()):
+            raise exception.InvalidAggregateAction(
+                    action='add host',
+                    aggregate_id=aggregate.id,
+                    reason=invalid[db.aggregate_metadata_get(context,
+                            aggregate.id)
+                    [pool_states.KEY]])
+
+        if (db.aggregate_metadata_get(context, aggregate.id)[pool_states.KEY]
+                == pool_states.CREATED):
+            db.aggregate_metadata_add(context, aggregate.id,
+                    {pool_states.KEY: pool_states.CHANGING})
         if len(aggregate.hosts) == 1:
             # this is the first host of the pool -> make it master
             self._init_pool(aggregate.id, aggregate.name)
             # save metadata so that we can find the master again
-            values = {
-                'operational_state': aggregate_states.ACTIVE,
-                'metadata': {'master_compute': host,
-                             host: self._host_uuid},
-                }
-            db.aggregate_update(context, aggregate.id, values)
+            metadata = {'master_compute': host,
+                        host: self._host_uuid,
+                        pool_states.KEY: pool_states.ACTIVE}
+            db.aggregate_metadata_add(context, aggregate.id, metadata)
         else:
             # the pool is already up and running, we need to figure out
             # whether we can serve the request from this host or not.
-            master_compute = aggregate.metadetails['master_compute']
+            master_compute = db.aggregate_metadata_get(context,
+                    aggregate.id)['master_compute']
             if master_compute == FLAGS.host and master_compute != host:
                 # this is the master ->  do a pool-join
                 # To this aim, nova compute on the slave has to go down.
@@ -90,7 +126,22 @@ class ResourcePool(object):
 
     def remove_from_aggregate(self, context, aggregate, host, **kwargs):
         """Remove a compute host from an aggregate."""
-        master_compute = aggregate.metadetails.get('master_compute')
+        if not self._is_hv_pool(context, aggregate.id):
+            return
+
+        invalid = {pool_states.CREATED: 'no hosts to remove',
+                   pool_states.CHANGING: 'setup in progress',
+                   pool_states.DISMISSED: 'aggregate deleted', }
+        if (db.aggregate_metadata_get(context, aggregate.id)[pool_states.KEY]
+                in invalid.keys()):
+            raise exception.InvalidAggregateAction(
+                    action='remove host',
+                    aggregate_id=aggregate.id,
+                    reason=invalid[db.aggregate_metadata_get(context,
+                            aggregate.id)[pool_states.KEY]])
+
+        master_compute = db.aggregate_metadata_get(context,
+                aggregate.id)['master_compute']
         if master_compute == FLAGS.host and master_compute != host:
             # this is the master -> instruct it to eject a host from the pool
             host_uuid = db.aggregate_metadata_get(context, aggregate.id)[host]

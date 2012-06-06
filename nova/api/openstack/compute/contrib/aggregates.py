@@ -54,7 +54,7 @@ class AggregateController(object):
         return {'aggregates': aggregates}
 
     def create(self, req, body):
-        """Creates an aggregate, given its name and availablity_zone."""
+        """Creates an aggregate, given its name and availability_zone."""
         context = _get_context(req)
         authorize(context)
 
@@ -90,7 +90,7 @@ class AggregateController(object):
         return self._marshall_aggregate(aggregate)
 
     def update(self, req, id, body):
-        """Updates the name and/or availbility_zone of given aggregate."""
+        """Updates the name and/or availability_zone of given aggregate."""
         context = _get_context(req)
         authorize(context)
 
@@ -152,8 +152,7 @@ class AggregateController(object):
             LOG.exception(_("Cannot add host %(host)s in aggregate "
                             "%(id)s") % locals())
             raise exc.HTTPNotFound
-        except (exception.AggregateHostConflict,
-                exception.AggregateHostExists,
+        except (exception.AggregateHostExists,
                 exception.InvalidAggregateAction):
             LOG.exception(_("Cannot add host %(host)s in aggregate "
                             "%(id)s") % locals())

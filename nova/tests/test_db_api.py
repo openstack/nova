@@ -453,7 +453,7 @@ class AggregateDBApiTestCase(test.TestCase):
     def test_aggregate_create(self):
         """Ensure aggregate can be created with no metadata."""
         result = _create_aggregate(metadata=None)
-        self.assertEqual(result['operational_state'], 'created')
+        self.assertEquals(result.name, 'fake_aggregate')
 
     def test_aggregate_create_avoid_name_conflict(self):
         """Test we can avoid conflict on deleted aggregates."""
@@ -463,7 +463,6 @@ class AggregateDBApiTestCase(test.TestCase):
         r2 = _create_aggregate(values=values)
         self.assertEqual(r2.name, values['name'])
         self.assertEqual(r2.availability_zone, values['availability_zone'])
-        self.assertEqual(r2.operational_state, "created")
 
     def test_aggregate_create_raise_exist_exc(self):
         """Ensure aggregate names are distinct."""
@@ -542,7 +541,7 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(0, len(expected))
         aggregate = db.aggregate_get(ctxt.elevated(read_deleted='yes'),
                                      result['id'])
-        self.assertEqual(aggregate["operational_state"], "dismissed")
+        self.assertEqual(aggregate.deleted, True)
 
     def test_aggregate_update(self):
         """Ensure an aggregate can be updated."""
@@ -670,15 +669,17 @@ class AggregateDBApiTestCase(test.TestCase):
         expected = db.aggregate_host_get_all(ctxt, result.id)
         self.assertEqual(len(expected), 1)
 
-    def test_aggregate_host_add_duplicate_raise_conflict(self):
-        """Ensure we cannot add host to distinct aggregates."""
+    def test_aggregate_host_add_duplicate_works(self):
+        """Ensure we can add host to distinct aggregates."""
         ctxt = context.get_admin_context()
-        _create_aggregate_with_hosts(context=ctxt, metadata=None)
-        self.assertRaises(exception.AggregateHostConflict,
-                          _create_aggregate_with_hosts, ctxt,
+        r1 = _create_aggregate_with_hosts(context=ctxt, metadata=None)
+        r2 = _create_aggregate_with_hosts(ctxt,
                           values={'name': 'fake_aggregate2',
                                   'availability_zone': 'fake_avail_zone2', },
                           metadata=None)
+        h1 = db.aggregate_host_get_all(ctxt, r1.id)
+        h2 = db.aggregate_host_get_all(ctxt, r2.id)
+        self.assertEqual(h1, h2)
 
     def test_aggregate_host_add_duplicate_raise_exist_exc(self):
         """Ensure we cannot add host to the same aggregate."""

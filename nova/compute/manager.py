@@ -47,7 +47,6 @@ from eventlet import greenthread
 
 from nova import block_device
 from nova import compute
-from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -2730,13 +2729,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def add_aggregate_host(self, context, aggregate_id, host, **kwargs):
-        """Adds a host to a physical hypervisor pool."""
+        """Notify hypervisor of change (for hypervisor pools)."""
         aggregate = self.db.aggregate_get(context, aggregate_id)
         try:
             self.driver.add_to_aggregate(context, aggregate, host, **kwargs)
         except exception.AggregateError:
             with excutils.save_and_reraise_exception():
-                self._undo_aggregate_operation(context,
+                self.driver.undo_aggregate_operation(context,
                                                self.db.aggregate_host_delete,
                                                aggregate.id, host)
 
@@ -2750,21 +2749,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         except (exception.AggregateError,
                 exception.InvalidAggregateAction) as e:
             with excutils.save_and_reraise_exception():
-                self._undo_aggregate_operation(
+                self.driver.undo_aggregate_operation(
                                     context, self.db.aggregate_host_add,
                                     aggregate.id, host,
                                     isinstance(e, exception.AggregateError))
-
-    def _undo_aggregate_operation(self, context, op, aggregate_id,
-                                  host, set_error=True):
-        try:
-            if set_error:
-                status = {'operational_state': aggregate_states.ERROR}
-                self.db.aggregate_update(context, aggregate_id, status)
-            op(context, aggregate_id, host)
-        except Exception:
-            LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable state '
-                            'during operation on %(host)s') % locals())
 
     @manager.periodic_task(
         ticks_between_runs=FLAGS.image_cache_manager_interval)
