@@ -5,7 +5,7 @@ BEGIN TRANSACTION;
         deleted_at DATETIME,
         deleted BOOLEAN,
         id INTEGER NOT NULL,
-	security_group_id INTEGER NOT NULL,
+        security_group_id INTEGER NOT NULL,
         instance_id INTEGER NOT NULL,
         instance_uuid VARCHAR(36),
         PRIMARY KEY (id)
@@ -17,7 +17,7 @@ BEGIN TRANSACTION;
                deleted_at,
                deleted,
                id,
-	       security_group_id,
+               security_group_id,
                NULL,
                instance_uuid
         FROM security_group_instance_association;
@@ -37,7 +37,7 @@ BEGIN TRANSACTION;
         deleted_at DATETIME,
         deleted BOOLEAN,
         id INTEGER NOT NULL,
-	security_group_id INTEGER NOT NULL,
+        security_group_id INTEGER NOT NULL,
         instance_id INTEGER NOT NULL,
         PRIMARY KEY (id),
         FOREIGN KEY(instance_id) REFERENCES instances (id)
