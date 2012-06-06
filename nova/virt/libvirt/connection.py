@@ -840,6 +840,13 @@ class LibvirtDriver(driver.ComputeDriver):
         dom.create()
 
     @exception.wrap_exception()
+    def resume_state_on_host_boot(self, context, instance, network_info):
+        """resume guest state when a host is booted"""
+        # NOTE(dprince): use hard reboot to ensure network and firewall
+        # rules are configured
+        self._hard_reboot(instance, network_info)
+
+    @exception.wrap_exception()
     def rescue(self, context, instance, network_info, image_meta):
         """Loads a VM using rescue images.
 
