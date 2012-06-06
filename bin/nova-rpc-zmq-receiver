@@ -1,0 +1,77 @@
+#!/usr/bin/env python -d
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#    Copyright 2011 OpenStack LLC
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import eventlet
+eventlet.monkey_patch()
+
+import contextlib
+import logging
+import os
+import sys
+
+import zmq
+
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
+    sys.path.insert(0, POSSIBLE_TOPDIR)
+
+from nova import exception
+from nova.openstack.common import cfg
+from nova import rpc
+from nova.rpc import impl_zmq
+from nova import utils
+
+CONF = cfg.CONF
+
+
+def main():
+    CONF.register_opts(rpc.rpc_opts)
+    impl_zmq.register_opts(CONF)
+    logging.setup()
+    utils.monkey_patch()
+
+    ipc_dir = CONF.rpc_zmq_ipc_dir
+
+    # Create the necessary directories/files for this service.
+    if not os.path.isdir(ipc_dir):
+        try:
+            utils.execute('mkdir', '-p', ipc_dir, run_as_root=True)
+            utils.execute('chown', "%s:%s" % (os.getuid(), os.getgid()),
+                          ipc_dir, run_as_root=True)
+            utils.execute('chmod', '750', ipc_dir, run_as_root=True)
+        except exception.ProcessExecutionError:
+            logging.error(_("Could not create IPC socket directory."))
+            return
+
+    with contextlib.closing(impl_zmq.ZmqProxy(CONF)) as reactor:
+        consume_in = "tcp://%s:%s" % \
+            (CONF.rpc_zmq_bind_address,
+             CONF.rpc_zmq_port)
+        consumption_proxy = impl_zmq.InternalContext(None)
+
+        reactor.register(consumption_proxy,
+                         consume_in, zmq.PULL, out_bind=True)
+
+        reactor.consume_in_thread()
+        reactor.wait()
+
+if __name__ == '__main__':
+    main()

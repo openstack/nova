@@ -48,3 +48,6 @@ def set_defaults(conf):
     conf.set_default('use_ipv6', True)
     conf.set_default('verbose', True)
     conf.set_default('volume_driver', 'nova.volume.driver.FakeISCSIDriver')
+    conf.set_default('api_paste_config', '$state_path/etc/nova/api-paste.ini')
+    conf.set_default('rpc_response_timeout', 5)
+    conf.set_default('rpc_cast_timeout', 5)
