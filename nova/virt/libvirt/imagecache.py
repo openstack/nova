@@ -28,6 +28,7 @@ import os
 import re
 import time
 
+from nova.compute import task_states
 from nova import db
 from nova import flags
 from nova import log as logging
@@ -130,11 +131,21 @@ class ImageCacheManager(object):
         """List running instances (on all compute nodes)."""
         self.used_images = {}
         self.image_popularity = {}
-        self.instance_names = {}
+        self.instance_names = set()
 
         instances = db.instance_get_all(context)
         for instance in instances:
-            self.instance_names[instance['name']] = instance['uuid']
+            self.instance_names.add(instance['name'])
+
+            resize_states = [task_states.RESIZE_PREP,
+                             task_states.RESIZE_MIGRATING,
+                             task_states.RESIZE_MIGRATED,
+                             task_states.RESIZE_FINISH,
+                             task_states.RESIZE_REVERTING,
+                             task_states.RESIZE_CONFIRMING,
+                             task_states.RESIZE_VERIFY]
+            if instance['task_state'] in resize_states:
+                self.instance_names.add(instance['name'] + '_resize')
 
             image_ref_str = str(instance['image_ref'])
             local, remote, insts = self.used_images.get(image_ref_str,
@@ -164,19 +175,21 @@ class ImageCacheManager(object):
                               {'instance': ent,
                                'backing': backing_file})
 
-                    backing_path = os.path.join(FLAGS.instances_path,
-                                                FLAGS.base_dir_name,
-                                                backing_file)
-                    if not backing_path in inuse_images:
-                        inuse_images.append(backing_path)
+                    if backing_file:
+                        backing_path = os.path.join(FLAGS.instances_path,
+                                                    FLAGS.base_dir_name,
+                                                    backing_file)
+                        if not backing_path in inuse_images:
+                            inuse_images.append(backing_path)
 
-                    if backing_path in self.unexplained_images:
-                        LOG.warning(_('Instance %(instance)s is using a '
-                                      'backing file %(backing)s which does '
-                                      'not appear in the image service'),
-                                    {'instance': ent,
-                                     'backing': backing_file})
-                        self.unexplained_images.remove(backing_path)
+                        if backing_path in self.unexplained_images:
+                            LOG.warning(_('Instance %(instance)s is using a '
+                                          'backing file %(backing)s which '
+                                          'does not appear in the image '
+                                          'service'),
+                                        {'instance': ent,
+                                         'backing': backing_file})
+                            self.unexplained_images.remove(backing_path)
 
         return inuse_images
 

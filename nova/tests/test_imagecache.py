@@ -26,6 +26,7 @@ import time
 
 from nova import test
 
+from nova.compute import task_states
 from nova import db
 from nova import flags
 from nova import log
@@ -148,15 +149,18 @@ class ImageCacheManagerTestCase(test.TestCase):
                        lambda x: [{'image_ref': '1',
                                    'host': FLAGS.host,
                                    'name': 'inst-1',
-                                   'uuid': '123'},
+                                   'uuid': '123',
+                                   'task_state': ''},
                                   {'image_ref': '2',
                                    'host': FLAGS.host,
                                    'name': 'inst-2',
-                                   'uuid': '456'},
+                                   'uuid': '456',
+                                   'task_state': ''},
                                   {'image_ref': '2',
                                    'host': 'remotehost',
                                    'name': 'inst-3',
-                                   'uuid': '789'}])
+                                   'uuid': '789',
+                                   'task_state': ''}])
 
         image_cache_manager = imagecache.ImageCacheManager()
 
@@ -172,6 +176,26 @@ class ImageCacheManagerTestCase(test.TestCase):
         self.assertEqual(len(image_cache_manager.image_popularity), 2)
         self.assertEqual(image_cache_manager.image_popularity['1'], 1)
         self.assertEqual(image_cache_manager.image_popularity['2'], 2)
+
+    def test_list_resizing_instances(self):
+        self.stubs.Set(db, 'instance_get_all',
+                       lambda x: [{'image_ref': '1',
+                                   'host': FLAGS.host,
+                                   'name': 'inst-1',
+                                   'uuid': '123',
+                                   'task_state': task_states.RESIZE_VERIFY}])
+
+        image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager._list_running_instances(None)
+
+        self.assertEqual(len(image_cache_manager.used_images), 1)
+        self.assertTrue(image_cache_manager.used_images['1'] ==
+                        (1, 0, ['inst-1']))
+        self.assertTrue(image_cache_manager.instance_names ==
+                        set(['inst-1', 'inst-1_resize']))
+
+        self.assertEqual(len(image_cache_manager.image_popularity), 1)
+        self.assertEqual(image_cache_manager.image_popularity['1'], 1)
 
     def test_list_backing_images_small(self):
         self.stubs.Set(os, 'listdir',
@@ -741,11 +765,13 @@ class ImageCacheManagerTestCase(test.TestCase):
                        lambda x: [{'image_ref': '1',
                                    'host': FLAGS.host,
                                    'name': 'instance-1',
-                                   'uuid': '123'},
+                                   'uuid': '123',
+                                   'task_state': ''},
                                   {'image_ref': '1',
                                    'host': FLAGS.host,
                                    'name': 'instance-2',
-                                   'uuid': '456'}])
+                                   'uuid': '456',
+                                   'task_state': ''}])
 
         image_cache_manager = imagecache.ImageCacheManager()
 
@@ -838,11 +864,13 @@ class ImageCacheManagerTestCase(test.TestCase):
                            lambda x: [{'image_ref': '1',
                                        'host': FLAGS.host,
                                        'name': 'instance-1',
-                                       'uuid': '123'},
+                                       'uuid': '123',
+                                       'task_state': ''},
                                       {'image_ref': '1',
                                        'host': FLAGS.host,
                                        'name': 'instance-2',
-                                       'uuid': '456'}])
+                                       'uuid': '456',
+                                       'task_state': ''}])
 
             def touch(filename):
                 f = open(filename, 'w')
