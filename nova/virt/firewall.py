@@ -300,8 +300,8 @@ class IptablesFirewallDriver(FirewallDriver):
                 else:
                     fw_rules = ipv6_rules
 
-                protocol = rule.protocol
-                if version == 6 and rule.protocol == 'icmp':
+                protocol = rule.protocol.lower()
+                if version == 6 and protocol == 'icmp':
                     protocol = 'icmpv6'
 
                 args = ['-j ACCEPT']
