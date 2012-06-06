@@ -106,6 +106,14 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('attach_volume', 'cast',
                 instance=self.fake_instance, volume_id='id', mountpoint='mp')
 
+    def test_check_shared_storage_test_file(self):
+        self._test_compute_api('check_shared_storage_test_file', 'call',
+                filename='fn', host='host')
+
+    def test_cleanup_shared_storage_test_file(self):
+        self._test_compute_api('cleanup_shared_storage_test_file', 'cast',
+                filename='fn', host='host')
+
     def test_compare_cpu(self):
         self._test_compute_api('compare_cpu', 'call', cpu_info='info',
                 host='host')
@@ -117,6 +125,10 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_confirm_resize_call(self):
         self._test_compute_api('confirm_resize', 'call',
                 instance=self.fake_instance, migration_id='id', host='host')
+
+    def test_create_shared_storage_test_file(self):
+        self._test_compute_api('create_shared_storage_test_file', 'call',
+                host='host')
 
     def test_detach_volume(self):
         self._test_compute_api('detach_volume', 'cast',
