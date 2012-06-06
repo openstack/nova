@@ -24,7 +24,7 @@ from nova.api.openstack import xmlutil
 from nova.compute import api
 from nova import exception
 from nova import flags
-from nova import utils
+from nova.openstack.common import timeutils
 
 
 FLAGS = flags.FLAGS
@@ -73,13 +73,13 @@ class SimpleTenantUsageController(object):
         terminated_at = instance['terminated_at']
         if terminated_at is not None:
             if not isinstance(terminated_at, datetime.datetime):
-                terminated_at = utils.parse_strtime(terminated_at,
-                                                    "%Y-%m-%d %H:%M:%S.%f")
+                terminated_at = timeutils.parse_strtime(terminated_at,
+                                                        "%Y-%m-%d %H:%M:%S.%f")
 
         if launched_at is not None:
             if not isinstance(launched_at, datetime.datetime):
-                launched_at = utils.parse_strtime(launched_at,
-                                                  "%Y-%m-%d %H:%M:%S.%f")
+                launched_at = timeutils.parse_strtime(launched_at,
+                                                      "%Y-%m-%d %H:%M:%S.%f")
 
         if terminated_at and terminated_at < period_start:
             return 0
@@ -152,7 +152,7 @@ class SimpleTenantUsageController(object):
             else:
                 info['state'] = instance['vm_state']
 
-            now = utils.utcnow()
+            now = timeutils.utcnow()
 
             if info['state'] == 'terminated':
                 delta = info['ended_at'] - info['started_at']
@@ -188,16 +188,16 @@ class SimpleTenantUsageController(object):
 
     def _parse_datetime(self, dtstr):
         if not dtstr:
-            return utils.utcnow()
+            return timeutils.utcnow()
         elif isinstance(dtstr, datetime.datetime):
             return dtstr
         try:
-            return utils.parse_strtime(dtstr, "%Y-%m-%dT%H:%M:%S")
+            return timeutils.parse_strtime(dtstr, "%Y-%m-%dT%H:%M:%S")
         except Exception:
             try:
-                return utils.parse_strtime(dtstr, "%Y-%m-%dT%H:%M:%S.%f")
+                return timeutils.parse_strtime(dtstr, "%Y-%m-%dT%H:%M:%S.%f")
             except Exception:
-                return utils.parse_strtime(dtstr, "%Y-%m-%d %H:%M:%S.%f")
+                return timeutils.parse_strtime(dtstr, "%Y-%m-%d %H:%M:%S.%f")
 
     def _get_datetime_range(self, req):
         qs = req.environ.get('QUERY_STRING', '')

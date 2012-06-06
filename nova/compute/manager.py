@@ -68,6 +68,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import rpc
 from nova import utils
 from nova.virt import driver
@@ -480,15 +481,15 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _check_instance_build_time(self, context):
         """Ensure that instances are not stuck in build."""
-        if FLAGS.instance_build_timeout == 0:
+        timeout = FLAGS.instance_build_timeout
+        if timeout == 0:
             return
 
         filters = {'vm_state': vm_states.BUILDING}
         building_insts = self.db.instance_get_all_by_filters(context, filters)
 
         for instance in building_insts:
-            if utils.is_older_than(instance['created_at'],
-                                   FLAGS.instance_build_timeout):
+            if timeutils.is_older_than(instance['created_at'], timeout):
                 self._set_instance_error_state(context, instance['uuid'])
                 LOG.warn(_("Instance build timed out. Set to error state."),
                          instance=instance)
@@ -643,7 +644,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      power_state=current_power_state,
                                      vm_state=vm_states.ACTIVE,
                                      task_state=None,
-                                     launched_at=utils.utcnow())
+                                     launched_at=timeutils.utcnow())
 
     def _notify_about_instance_usage(self, context, instance, event_suffix,
                                      network_info=None, system_metadata=None,
@@ -758,7 +759,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          instance_uuid,
                                          vm_state=vm_states.DELETED,
                                          task_state=None,
-                                         terminated_at=utils.utcnow())
+                                         terminated_at=timeutils.utcnow())
         # Pull the system_metadata before we delete the instance, so we
         # can pass it to delete.end notification, as it will not be able
         # to look it up anymore, if it needs it.
@@ -929,7 +930,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          power_state=current_power_state,
                                          vm_state=vm_states.ACTIVE,
                                          task_state=None,
-                                         launched_at=utils.utcnow())
+                                         launched_at=timeutils.utcnow())
 
         self._notify_about_instance_usage(context, instance, "rebuild.end",
                                           network_info=network_info)
@@ -1308,7 +1309,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               root_gb=instance_type['root_gb'],
                               ephemeral_gb=instance_type['ephemeral_gb'],
                               instance_type_id=instance_type['id'],
-                              launched_at=utils.utcnow(),
+                              launched_at=timeutils.utcnow(),
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
 
@@ -1460,7 +1461,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                           instance_ref.uuid,
                                           vm_state=vm_states.ACTIVE,
                                           host=migration_ref['dest_compute'],
-                                          launched_at=utils.utcnow(),
+                                          launched_at=timeutils.utcnow(),
                                           task_state=task_states.RESIZE_VERIFY)
 
         self.db.migration_update(context, migration_ref.id,
@@ -2487,15 +2488,16 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _reclaim_queued_deletes(self, context):
         """Reclaim instances that are queued for deletion."""
-        if FLAGS.reclaim_instance_interval <= 0:
+        interval = FLAGS.reclaim_instance_interval
+        if interval <= 0:
             LOG.debug(_("FLAGS.reclaim_instance_interval <= 0, skipping..."))
             return
 
         instances = self.db.instance_get_all_by_host(context, self.host)
         for instance in instances:
-            old_enough = (not instance.deleted_at or utils.is_older_than(
-                    instance.deleted_at,
-                    FLAGS.reclaim_instance_interval))
+            old_enough = (not instance.deleted_at or
+                          timeutils.is_older_than(instance.deleted_at,
+                                                  interval))
             soft_deleted = instance.vm_state == vm_states.SOFT_DELETE
 
             if soft_deleted and old_enough:
@@ -2590,11 +2592,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         should be pushed down to the virt layer for efficiency.
         """
         def deleted_instance(instance):
+            timeout = FLAGS.running_deleted_instance_timeout
             present = instance.name in present_name_labels
             erroneously_running = instance.deleted and present
-            old_enough = (not instance.deleted_at or utils.is_older_than(
-                instance.deleted_at,
-                FLAGS.running_deleted_instance_timeout))
+            old_enough = (not instance.deleted_at or
+                          timeutils.is_older_than(instance.deleted_at,
+                                                  timeout))
             if erroneously_running and old_enough:
                 return True
             return False

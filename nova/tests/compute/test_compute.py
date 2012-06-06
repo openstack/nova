@@ -44,6 +44,7 @@ from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
 from nova.openstack.common import policy as common_policy
+from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota
 from nova import rpc
@@ -203,7 +204,7 @@ class ComputeTestCase(BaseTestCase):
 
     def tearDown(self):
         super(ComputeTestCase, self).tearDown()
-        utils.clear_time_override()
+        timeutils.clear_time_override()
 
     def test_wrap_instance_fault(self):
         inst_uuid = "fake_uuid"
@@ -382,12 +383,12 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
         self.assertEqual(instance['launched_at'], None)
         self.assertEqual(instance['deleted_at'], None)
-        launch = utils.utcnow()
+        launch = timeutils.utcnow()
         self.compute.run_instance(self.context, instance['uuid'])
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assert_(instance['launched_at'] > launch)
         self.assertEqual(instance['deleted_at'], None)
-        terminate = utils.utcnow()
+        terminate = timeutils.utcnow()
         self.compute.terminate_instance(self.context, instance['uuid'])
         context = self.context.elevated(read_deleted="only")
         instance = db.instance_get_by_uuid(context, instance['uuid'])
@@ -506,13 +507,13 @@ class ComputeTestCase(BaseTestCase):
         """Ensure instance can be rebuilt"""
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
-        utils.set_time_override(old_time)
+        timeutils.set_time_override(old_time)
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
         image_ref = instance['image_ref']
 
         self.compute.run_instance(self.context, instance_uuid)
-        utils.set_time_override(cur_time)
+        timeutils.set_time_override(cur_time)
         self.compute.rebuild_instance(self.context, instance_uuid,
                 image_ref, image_ref)
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
@@ -884,12 +885,12 @@ class ComputeTestCase(BaseTestCase):
         """Ensure terminate_instance generates apropriate usage notification"""
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
-        utils.set_time_override(old_time)
+        timeutils.set_time_override(old_time)
 
         inst_ref = self._create_fake_instance()
         self.compute.run_instance(self.context, inst_ref['uuid'])
         test_notifier.NOTIFICATIONS = []
-        utils.set_time_override(cur_time)
+        timeutils.set_time_override(cur_time)
         self.compute.terminate_instance(self.context, inst_ref['uuid'])
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 4)
@@ -1069,10 +1070,10 @@ class ComputeTestCase(BaseTestCase):
         """Ensure notifications on instance migrate/resize"""
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
-        utils.set_time_override(old_time)
+        timeutils.set_time_override(old_time)
         inst_ref = self._create_fake_instance()
         self.compute.run_instance(self.context, inst_ref['uuid'])
-        utils.set_time_override(cur_time)
+        timeutils.set_time_override(cur_time)
 
         test_notifier.NOTIFICATIONS = []
         instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
@@ -1123,7 +1124,7 @@ class ComputeTestCase(BaseTestCase):
         """Ensure notifications on instance migrate/resize"""
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
-        utils.set_time_override(old_time)
+        timeutils.set_time_override(old_time)
         instance = self._create_fake_instance()
         context = self.context.elevated()
         old_type_id = instance_types.get_instance_type_by_name(
@@ -1140,7 +1141,7 @@ class ComputeTestCase(BaseTestCase):
                                                 'pre-migrating')
         self.compute.resize_instance(context, instance['uuid'],
                                      migration_ref['id'], {})
-        utils.set_time_override(cur_time)
+        timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
         self.compute.finish_resize(context, instance['uuid'],
@@ -1172,12 +1173,12 @@ class ComputeTestCase(BaseTestCase):
         """Ensure notifications on instance migrate/resize"""
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
-        utils.set_time_override(old_time)
+        timeutils.set_time_override(old_time)
         instance = self._create_fake_instance()
         context = self.context.elevated()
 
         self.compute.run_instance(self.context, instance['uuid'])
-        utils.set_time_override(cur_time)
+        timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
@@ -1673,7 +1674,8 @@ class ComputeTestCase(BaseTestCase):
 
     def test_cleanup_running_deleted_instances(self):
         admin_context = context.get_admin_context()
-        deleted_at = utils.utcnow() - datetime.timedelta(hours=1, minutes=5)
+        deleted_at = (timeutils.utcnow() -
+                      datetime.timedelta(hours=1, minutes=5))
         instance = self._create_fake_instance({"deleted_at": deleted_at,
                                           "deleted": True})
 
@@ -1715,8 +1717,8 @@ class ComputeTestCase(BaseTestCase):
         instance2.deleted = False
         instance2.deleted_at = None
 
-        self.mox.StubOutWithMock(utils, 'is_older_than')
-        utils.is_older_than('sometimeago',
+        self.mox.StubOutWithMock(timeutils, 'is_older_than')
+        timeutils.is_older_than('sometimeago',
                     FLAGS.running_deleted_instance_timeout).AndReturn(True)
 
         self.mox.StubOutWithMock(self.compute.db, "instance_get_all_by_host")
@@ -1879,7 +1881,7 @@ class ComputeTestCase(BaseTestCase):
         self.flags(instance_build_timeout=0)
         ctxt = context.get_admin_context()
         called = {'get_all': False, 'set_error_state': 0}
-        created_at = utils.utcnow() + datetime.timedelta(seconds=-60)
+        created_at = timeutils.utcnow() + datetime.timedelta(seconds=-60)
 
         def fake_instance_get_all_by_filters(*args, **kwargs):
             called['get_all'] = True
@@ -1911,7 +1913,7 @@ class ComputeTestCase(BaseTestCase):
         self.flags(instance_build_timeout=30)
         ctxt = context.get_admin_context()
         called = {'get_all': False, 'set_error_state': 0}
-        created_at = utils.utcnow() + datetime.timedelta(seconds=-60)
+        created_at = timeutils.utcnow() + datetime.timedelta(seconds=-60)
 
         def fake_instance_get_all_by_filters(*args, **kwargs):
             called['get_all'] = True
@@ -1943,7 +1945,7 @@ class ComputeTestCase(BaseTestCase):
         self.flags(instance_build_timeout=30)
         ctxt = context.get_admin_context()
         called = {'get_all': False, 'set_error_state': 0}
-        created_at = utils.utcnow() + datetime.timedelta(seconds=-60)
+        created_at = timeutils.utcnow() + datetime.timedelta(seconds=-60)
 
         def fake_instance_get_all_by_filters(*args, **kwargs):
             called['get_all'] = True
@@ -1970,9 +1972,12 @@ class ComputeTestCase(BaseTestCase):
 
         #not expired
         uuid = 'fake-uuid-5'
-        instance_map[uuid] = {'uuid': uuid, 'host': FLAGS.host,
-                'vm_state': vm_states.BUILDING,
-                'created_at': utils.utcnow()}
+        instance_map[uuid] = {
+            'uuid': uuid,
+            'host': FLAGS.host,
+            'vm_state': vm_states.BUILDING,
+            'created_at': timeutils.utcnow(),
+        }
         instances.append(instance_map[uuid])
 
         self.compute._check_instance_build_time(ctxt)

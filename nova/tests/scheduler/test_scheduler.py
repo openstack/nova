@@ -28,6 +28,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import rpc
 from nova.rpc import common as rpc_common
 from nova.scheduler import driver
@@ -983,12 +984,12 @@ class SchedulerDriverModuleTestCase(test.TestCase):
                        'extra_arg': 'meow'}
         queue = 'fake_queue'
 
-        self.mox.StubOutWithMock(utils, 'utcnow')
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
         self.mox.StubOutWithMock(db, 'volume_update')
         self.mox.StubOutWithMock(rpc, 'queue_get_for')
         self.mox.StubOutWithMock(rpc, 'cast')
 
-        utils.utcnow().AndReturn('fake-now')
+        timeutils.utcnow().AndReturn('fake-now')
         db.volume_update(self.context, 31337,
                 {'host': host, 'scheduled_at': 'fake-now'})
         rpc.queue_get_for(self.context, 'volume', host).AndReturn(queue)
@@ -1043,12 +1044,12 @@ class SchedulerDriverModuleTestCase(test.TestCase):
                        'extra_arg': 'meow'}
         queue = 'fake_queue'
 
-        self.mox.StubOutWithMock(utils, 'utcnow')
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
         self.mox.StubOutWithMock(db, 'instance_update')
         self.mox.StubOutWithMock(rpc, 'queue_get_for')
         self.mox.StubOutWithMock(rpc, 'cast')
 
-        utils.utcnow().AndReturn('fake-now')
+        timeutils.utcnow().AndReturn('fake-now')
         db.instance_update(self.context, 31337,
                 {'host': host, 'scheduled_at': 'fake-now'})
         rpc.queue_get_for(self.context, 'compute', host).AndReturn(queue)

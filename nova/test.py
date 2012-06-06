@@ -35,10 +35,10 @@ from nova import flags
 import nova.image.fake
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import timeutils
 from nova import service
 from nova import tests
 from nova.tests import fake_flags
-from nova import utils
 from nova.virt import fake
 
 
@@ -131,7 +131,7 @@ class TestCase(unittest.TestCase):
         # NOTE(vish): We need a better method for creating fixtures for tests
         #             now that we have some required db setup for the system
         #             to work properly.
-        self.start = utils.utcnow()
+        self.start = timeutils.utcnow()
         tests.reset_db()
 
         # emulate some of the mox stuff, we can't use the metaclass

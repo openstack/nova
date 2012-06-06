@@ -90,6 +90,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import quota
 from nova import rpc
 from nova.scheduler import rpcapi as scheduler_rpcapi
@@ -968,7 +969,7 @@ class ServiceCommands(object):
         Show a list of all running services. Filter by host & service name.
         """
         ctxt = context.get_admin_context()
-        now = utils.utcnow()
+        now = timeutils.utcnow()
         services = db.service_get_all(ctxt)
         if host:
             services = [s for s in services if s['host'] == host]
@@ -1083,7 +1084,7 @@ class HostCommands(object):
         print "%-25s\t%-15s" % (_('host'),
                                 _('zone'))
         ctxt = context.get_admin_context()
-        now = utils.utcnow()
+        now = timeutils.utcnow()
         services = db.service_get_all(ctxt)
         if zone:
             services = [s for s in services if s['availability_zone'] == zone]

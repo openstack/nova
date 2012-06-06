@@ -35,8 +35,8 @@ from nova import block_device
 from nova import context
 from nova import exception
 from nova import flags
+from nova.openstack.common import timeutils
 from nova import test
-from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -252,12 +252,12 @@ class ApiEc2TestCase(test.TestCase):
         """
         conv = apirequest._database_to_isoformat
         # sqlite database representation with microseconds
-        time_to_convert = utils.parse_strtime("2011-02-21 20:14:10.634276",
-                                              "%Y-%m-%d %H:%M:%S.%f")
+        time_to_convert = timeutils.parse_strtime("2011-02-21 20:14:10.634276",
+                                                  "%Y-%m-%d %H:%M:%S.%f")
         self.assertEqual(conv(time_to_convert), '2011-02-21T20:14:10.634Z')
         # mysqlite database representation
-        time_to_convert = utils.parse_strtime("2011-02-21 19:56:18",
-                                              "%Y-%m-%d %H:%M:%S")
+        time_to_convert = timeutils.parse_strtime("2011-02-21 19:56:18",
+                                                  "%Y-%m-%d %H:%M:%S")
         self.assertEqual(conv(time_to_convert), '2011-02-21T19:56:18.000Z')
 
     def test_xmlns_version_matches_request_version(self):

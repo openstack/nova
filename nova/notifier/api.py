@@ -21,7 +21,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
-from nova import utils
+from nova.openstack.common import timeutils
 
 
 LOG = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ def notify(context, publisher_id, event_type, priority, payload):
 
         {'message_id': str(uuid.uuid4()),
          'publisher_id': 'compute.host1',
-         'timestamp': utils.utcnow(),
+         'timestamp': timeutils.utcnow(),
          'priority': 'WARN',
          'event_type': 'compute.create_instance',
          'payload': {'instance_id': 12, ... }}
@@ -129,7 +129,7 @@ def notify(context, publisher_id, event_type, priority, payload):
                    event_type=event_type,
                    priority=priority,
                    payload=payload,
-                   timestamp=str(utils.utcnow()))
+                   timestamp=str(timeutils.utcnow()))
     try:
         driver.notify(context, msg)
     except Exception, e:

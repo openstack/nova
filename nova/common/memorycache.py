@@ -18,7 +18,7 @@
 
 """Super simple fake memcache client."""
 
-from nova import utils
+from nova.openstack.common import timeutils
 
 
 class Client(object):
@@ -35,7 +35,7 @@ class Client(object):
 
         for k in self.cache.keys():
             (timeout, _value) = self.cache[k]
-            if timeout and utils.utcnow_ts() >= timeout:
+            if timeout and timeutils.utcnow_ts() >= timeout:
                 del self.cache[k]
 
         return self.cache.get(key, (0, None))[1]
@@ -44,7 +44,7 @@ class Client(object):
         """Sets the value for a key."""
         timeout = 0
         if time != 0:
-            timeout = utils.utcnow_ts() + time
+            timeout = timeutils.utcnow_ts() + time
         self.cache[key] = (timeout, value)
         return True
 

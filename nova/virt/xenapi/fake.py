@@ -60,7 +60,7 @@ import pprint
 from nova import exception
 from nova import log as logging
 from nova.openstack.common import jsonutils
-from nova import utils
+from nova.openstack.common import timeutils
 
 
 _CLASSES = ['host', 'network', 'session', 'pool', 'SR', 'VBD',
@@ -739,7 +739,7 @@ class SessionBase(object):
         except Failure, exc:
             task['error_info'] = exc.details
             task['status'] = 'failed'
-        task['finished'] = utils.utcnow()
+        task['finished'] = timeutils.utcnow()
         return task_ref
 
     def _check_session(self, params):

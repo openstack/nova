@@ -19,6 +19,7 @@
 from nova import flags
 from nova import log as logging
 from nova.notifier import api as notifier_api
+from nova.openstack.common import timeutils
 from nova import utils
 
 
@@ -35,7 +36,7 @@ def notify_usage_exists(context, volume_ref, current_period=False):
     begin, end = utils.last_completed_audit_period()
     if current_period:
         audit_start = end
-        audit_end = utils.utcnow()
+        audit_end = timeutils.utcnow()
     else:
         audit_start = begin
         audit_end = end

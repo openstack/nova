@@ -32,7 +32,7 @@ from nova.db.sqlalchemy.session import get_session
 
 from nova import exception
 from nova import flags
-from nova import utils
+from nova.openstack.common import timeutils
 
 
 FLAGS = flags.FLAGS
@@ -43,8 +43,8 @@ class NovaBase(object):
     """Base class for Nova Models."""
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
-    created_at = Column(DateTime, default=utils.utcnow)
-    updated_at = Column(DateTime, onupdate=utils.utcnow)
+    created_at = Column(DateTime, default=timeutils.utcnow)
+    updated_at = Column(DateTime, onupdate=timeutils.utcnow)
     deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
     metadata = None
@@ -65,7 +65,7 @@ class NovaBase(object):
     def delete(self, session=None):
         """Delete this object."""
         self.deleted = True
-        self.deleted_at = utils.utcnow()
+        self.deleted_at = timeutils.utcnow()
         self.save(session=session)
 
     def __setitem__(self, key, value):

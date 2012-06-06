@@ -20,6 +20,7 @@ from nova.api.openstack import wsgi
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import flags
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
@@ -30,9 +31,11 @@ FLAGS = flags.FLAGS
 
 
 def fake_vpn_instance():
-    return {'id': 7, 'image_ref': FLAGS.vpn_image_id, 'vm_state': 'active',
-            'created_at': utils.parse_strtime('1981-10-20T00:00:00.000000'),
-            'uuid': 7777, 'project_id': 'other'}
+    return {
+        'id': 7, 'image_ref': FLAGS.vpn_image_id, 'vm_state': 'active',
+        'created_at': timeutils.parse_strtime('1981-10-20T00:00:00.000000'),
+        'uuid': 7777, 'project_id': 'other',
+    }
 
 
 def compute_api_get_all_empty(context):
@@ -154,7 +157,7 @@ class CloudpipesXMLSerializerTest(test.TestCase):
                         public_ip='1.2.3.4',
                         public_port='321',
                         instance_id='1234-1234-1234-1234',
-                        created_at=utils.isotime(utils.utcnow()),
+                        created_at=timeutils.isotime(),
                         state='running')),
                 dict(cloudpipe=dict(
                         project_id='4321',

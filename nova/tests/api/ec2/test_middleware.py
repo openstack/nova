@@ -25,8 +25,8 @@ from nova.api import ec2
 from nova import context
 from nova import exception
 from nova import flags
+from nova.openstack.common import timeutils
 from nova import test
-from nova import utils
 
 FLAGS = flags.FLAGS
 
@@ -43,11 +43,11 @@ class LockoutTestCase(test.TestCase):
     """Test case for the Lockout middleware."""
     def setUp(self):  # pylint: disable=C0103
         super(LockoutTestCase, self).setUp()
-        utils.set_time_override()
+        timeutils.set_time_override()
         self.lockout = ec2.Lockout(conditional_forbid)
 
     def tearDown(self):  # pylint: disable=C0103
-        utils.clear_time_override()
+        timeutils.clear_time_override()
         super(LockoutTestCase, self).tearDown()
 
     def _send_bad_attempts(self, access_key, num_attempts=1):
@@ -68,21 +68,21 @@ class LockoutTestCase(test.TestCase):
     def test_timeout(self):
         self._send_bad_attempts('test', FLAGS.lockout_attempts)
         self.assertTrue(self._is_locked_out('test'))
-        utils.advance_time_seconds(FLAGS.lockout_minutes * 60)
+        timeutils.advance_time_seconds(FLAGS.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test'))
 
     def test_multiple_keys(self):
         self._send_bad_attempts('test1', FLAGS.lockout_attempts)
         self.assertTrue(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
-        utils.advance_time_seconds(FLAGS.lockout_minutes * 60)
+        timeutils.advance_time_seconds(FLAGS.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
 
     def test_window_timeout(self):
         self._send_bad_attempts('test', FLAGS.lockout_attempts - 1)
         self.assertFalse(self._is_locked_out('test'))
-        utils.advance_time_seconds(FLAGS.lockout_window * 60)
+        timeutils.advance_time_seconds(FLAGS.lockout_window * 60)
         self._send_bad_attempts('test', FLAGS.lockout_attempts - 1)
         self.assertFalse(self._is_locked_out('test'))
 

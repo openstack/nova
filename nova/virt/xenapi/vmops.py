@@ -39,6 +39,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi import firewall
@@ -1202,10 +1203,10 @@ class VMOps(object):
         task_refs = self._session.call_xenapi("task.get_by_name_label", task)
         for task_ref in task_refs:
             task_rec = self._session.call_xenapi("task.get_record", task_ref)
-            task_created = utils.parse_strtime(task_rec["created"].value,
-                    "%Y%m%dT%H:%M:%SZ")
+            task_created = timeutils.parse_strtime(task_rec["created"].value,
+                                                   "%Y%m%dT%H:%M:%SZ")
 
-            if utils.is_older_than(task_created, timeout):
+            if timeutils.is_older_than(task_created, timeout):
                 self._session.call_xenapi("task.cancel", task_ref)
 
     def poll_rebooting_instances(self, timeout):
@@ -1242,15 +1243,15 @@ class VMOps(object):
         last_ran = self.poll_rescue_last_ran
         if not last_ran:
             # We need a base time to start tracking.
-            self.poll_rescue_last_ran = utils.utcnow()
+            self.poll_rescue_last_ran = timeutils.utcnow()
             return
 
-        if not utils.is_older_than(last_ran, timeout):
+        if not timeutils.is_older_than(last_ran, timeout):
             # Do not run. Let's bail.
             return
 
         # Update the time tracker and proceed.
-        self.poll_rescue_last_ran = utils.utcnow()
+        self.poll_rescue_last_ran = timeutils.utcnow()
 
         rescue_vms = []
         for instance in self.list_instances():

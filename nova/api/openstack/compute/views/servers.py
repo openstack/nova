@@ -23,7 +23,7 @@ from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
 from nova import log as logging
-from nova import utils
+from nova.openstack.common import timeutils
 
 
 LOG = logging.getLogger(__name__)
@@ -99,8 +99,8 @@ class ViewBuilder(common.ViewBuilder):
                 "hostId": self._get_host_id(instance) or "",
                 "image": self._get_image(request, instance),
                 "flavor": self._get_flavor(request, instance),
-                "created": utils.isotime(instance["created_at"]),
-                "updated": utils.isotime(instance["updated_at"]),
+                "created": timeutils.isotime(instance["created_at"]),
+                "updated": timeutils.isotime(instance["updated_at"]),
                 "addresses": self._get_addresses(request, instance),
                 "accessIPv4": instance.get("access_ip_v4") or "",
                 "accessIPv6": instance.get("access_ip_v6") or "",
@@ -199,7 +199,7 @@ class ViewBuilder(common.ViewBuilder):
 
         fault_dict = {
             "code": fault["code"],
-            "created": utils.isotime(fault["created_at"]),
+            "created": timeutils.isotime(fault["created_at"]),
             "message": fault["message"],
         }
 

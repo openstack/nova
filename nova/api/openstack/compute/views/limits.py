@@ -17,7 +17,7 @@
 
 import datetime
 
-from nova import utils
+from nova.openstack.common import timeutils
 
 
 class ViewBuilder(object):
@@ -92,5 +92,5 @@ class ViewBuilder(object):
             "value": rate_limit["value"],
             "remaining": int(rate_limit["remaining"]),
             "unit": rate_limit["unit"],
-            "next-available": utils.isotime(at=next_avail),
+            "next-available": timeutils.isotime(at=next_avail),
         }
