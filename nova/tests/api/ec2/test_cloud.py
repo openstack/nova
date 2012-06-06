@@ -1525,6 +1525,11 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(filter(lambda k: k['keyName'] == 'test1', keys))
         self.assertTrue(filter(lambda k: k['keyName'] == 'test2', keys))
 
+    def test_describe_bad_key_pairs(self):
+        self.assertRaises(exception.EC2APIError,
+            self.cloud.describe_key_pairs, self.context,
+            key_name=['DoesNotExist'])
+
     def test_import_key_pair(self):
         pubkey_path = os.path.join(os.path.dirname(__file__), 'public_key')
         f = open(pubkey_path + '/dummy.pub', 'r')
