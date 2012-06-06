@@ -4007,15 +4007,26 @@ def instance_type_get_all(context, inactive=False, filters=None):
     Returns all instance types.
     """
     filters = filters or {}
+
+    # FIXME(sirp): now that we have the `disabled` field for instance-types, we
+    # should probably remove the use of `deleted` to mark inactive. `deleted`
+    # should mean truly deleted, e.g. we can safely purge the record out of the
+    # database.
     read_deleted = "yes" if inactive else "no"
+
     query = _instance_type_get_query(context, read_deleted=read_deleted)
 
     if 'min_memory_mb' in filters:
         query = query.filter(
                 models.InstanceTypes.memory_mb >= filters['min_memory_mb'])
+
     if 'min_root_gb' in filters:
         query = query.filter(
                 models.InstanceTypes.root_gb >= filters['min_root_gb'])
+
+    if 'disabled' in filters:
+        query = query.filter(
+                models.InstanceTypes.disabled == filters['disabled'])
 
     inst_types = query.order_by("name").all()
 

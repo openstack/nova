@@ -94,6 +94,11 @@ class Controller(wsgi.Controller):
     def _get_flavors(self, req):
         """Helper function that returns a list of flavor dicts."""
         filters = {}
+
+        context = req.environ['nova.context']
+        if not context.is_admin:
+            filters['disabled'] = False
+
         if 'minRam' in req.params:
             try:
                 filters['min_memory_mb'] = int(req.params['minRam'])

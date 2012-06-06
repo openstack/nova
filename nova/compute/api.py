@@ -356,6 +356,10 @@ class API(base.Base):
 
         block_device_mapping = block_device_mapping or []
 
+        if instance_type['disabled']:
+            raise exception.InstanceTypeNotFound(
+                    instance_type_id=instance_type['id'])
+
         # Check quotas
         num_instances, quota_reservations = self._check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -1511,7 +1515,17 @@ class API(base.Base):
         new_instance_type_name = new_instance_type['name']
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
                 " new instance type %(new_instance_type_name)s") % locals())
+
+        # FIXME(sirp): both of these should raise InstanceTypeNotFound instead
         if not new_instance_type:
+            raise exception.FlavorNotFound(flavor_id=flavor_id)
+
+        same_instance_type = (current_instance_type['id'] ==
+                              new_instance_type['id'])
+
+        # NOTE(sirp): We don't want to force a customer to change their flavor
+        # when Ops is migrating off of a failed host.
+        if new_instance_type['disabled'] and not same_instance_type:
             raise exception.FlavorNotFound(flavor_id=flavor_id)
 
         # NOTE(markwash): look up the image early to avoid auth problems later

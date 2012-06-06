@@ -4202,3 +4202,130 @@ class KeypairAPITestCase(BaseTestCase):
         self.assertRaises(exception.KeypairLimitExceeded,
                           self.keypair_api.import_key_pair,
                           self.ctxt, self.ctxt.user_id, 'foo', self.pub_key)
+
+
+class DisabledInstanceTypesTestCase(BaseTestCase):
+    """
+    Some instance-types are marked 'disabled' which means that they will not
+    show up in customer-facing listings. We do, however, want those
+    instance-types to be availble for emergency migrations and for rebuilding
+    of existing instances.
+
+    One legitimate use of the 'disabled' field would be when phasing out a
+    particular instance-type. We still want customers to be able to use an
+    instance that of the old type, and we want Ops to be able perform
+    migrations against it, but we *don't* want customers building new slices
+    with ths phased-out instance-type.
+    """
+    def setUp(self):
+        super(DisabledInstanceTypesTestCase, self).setUp()
+        self.compute_api = compute.API()
+        self.inst_type = instance_types.get_default_instance_type()
+
+    def test_can_build_instance_from_visible_instance_type(self):
+        self.inst_type['disabled'] = False
+
+        self.assertNotRaises(exception.InstanceTypeNotFound,
+            self.compute_api.create, self.context, self.inst_type, None,
+            exc_msg="Visible instance-types can be built from")
+
+    def test_cannot_build_instance_from_disabled_instance_type(self):
+        self.inst_type['disabled'] = True
+        self.assertRaises(exception.InstanceTypeNotFound,
+            self.compute_api.create, self.context, self.inst_type, None)
+
+    def test_can_rebuild_instance_from_visible_instance_type(self):
+        instance = self._create_fake_instance()
+        image_href = None
+        admin_password = 'blah'
+
+        instance['instance_type']['disabled'] = True
+
+        # Assert no errors were raised
+        self.assertNotRaises(None,
+            self.compute_api.rebuild, self.context, instance, image_href,
+            admin_password,
+            exc_msg="Visible instance-types can be rebuilt from")
+
+    def test_can_rebuild_instance_from_disabled_instance_type(self):
+        """
+        A rebuild or a restore should only change the 'image',
+        not the 'instance_type'. Therefore, should be allowed even
+        when the slice is on disabled type already.
+        """
+        instance = self._create_fake_instance()
+        image_href = None
+        admin_password = 'blah'
+
+        instance['instance_type']['disabled'] = True
+
+        # Assert no errors were raised
+        self.assertNotRaises(None,
+            self.compute_api.rebuild, self.context, instance, image_href,
+            admin_password,
+            exc_msg="Disabled instance-types can be rebuilt from")
+
+    def test_can_resize_to_visible_instance_type(self):
+        instance = self._create_fake_instance()
+        orig_get_instance_type_by_flavor_id =\
+                instance_types.get_instance_type_by_flavor_id
+
+        def fake_get_instance_type_by_flavor_id(flavor_id):
+            instance_type = orig_get_instance_type_by_flavor_id(flavor_id)
+            instance_type['disabled'] = False
+            return instance_type
+
+        self.stubs.Set(instance_types, 'get_instance_type_by_flavor_id',
+                       fake_get_instance_type_by_flavor_id)
+
+        # FIXME(sirp): for legacy this raises FlavorNotFound instead of
+        # InstanceTypeNot; we should eventually make it raise
+        # InstanceTypeNotFound for consistency.
+        self.assertNotRaises(exception.FlavorNotFound,
+            self.compute_api.resize, self.context, instance, '4',
+            exc_msg="Visible flavors can be resized to")
+
+    def test_cannot_resize_to_disabled_instance_type(self):
+        instance = self._create_fake_instance()
+        orig_get_instance_type_by_flavor_id = \
+                instance_types.get_instance_type_by_flavor_id
+
+        def fake_get_instance_type_by_flavor_id(flavor_id):
+            instance_type = orig_get_instance_type_by_flavor_id(flavor_id)
+            instance_type['disabled'] = True
+            return instance_type
+
+        self.stubs.Set(instance_types, 'get_instance_type_by_flavor_id',
+                       fake_get_instance_type_by_flavor_id)
+
+        # FIXME(sirp): for legacy this raises FlavorNotFound instead of
+        # InstanceTypeNot; we should eventually make it raise
+        # InstanceTypeNotFound for consistency.
+        self.assertRaises(exception.FlavorNotFound,
+            self.compute_api.resize, self.context, instance, '4')
+
+    def test_can_migrate_to_visible_instance_type(self):
+        instance = self._create_fake_instance()
+        instance['instance_type']['disabled'] = False
+
+        # FIXME(sirp): for legacy this raises FlavorNotFound instead of
+        # InstanceTypeNot; we should eventually make it raise
+        # InstanceTypeNotFound for consistency.
+        self.assertNotRaises(exception.FlavorNotFound,
+            self.compute_api.resize, self.context, instance, None,
+            exc_msg="Visible flavors can be migrated to")
+
+    def test_can_migrate_to_disabled_instance_type(self):
+        """
+        We don't want to require a customers instance-type to change when ops
+        is migrating a failed server.
+        """
+        instance = self._create_fake_instance()
+        instance['instance_type']['disabled'] = True
+
+        # FIXME(sirp): for legacy this raises FlavorNotFound instead of
+        # InstanceTypeNot; we should eventually make it raise
+        # InstanceTypeNotFound for consistency.
+        self.assertNotRaises(exception.FlavorNotFound,
+            self.compute_api.resize, self.context, instance, None,
+            exc_msg="Disabled flavors can be migrated to")

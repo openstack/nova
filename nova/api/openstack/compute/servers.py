@@ -704,6 +704,8 @@ class Controller(wsgi.Controller):
                                                 headers={'Retry-After': 0})
         except exception.InstanceTypeMemoryTooSmall as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
+        except exception.InstanceTypeNotFound as error:
+            raise exc.HTTPBadRequest(explanation=unicode(error))
         except exception.InstanceTypeDiskTooSmall as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
         except exception.InvalidMetadata as error:

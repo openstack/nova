@@ -97,14 +97,15 @@ def destroy(name):
         raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
 
 
-def get_all_types(inactive=0, filters=None):
+def get_all_types(inactive=False, filters=None):
     """Get all non-deleted instance_types.
 
     Pass true as argument if you want deleted instance types returned also.
-
     """
     ctxt = context.get_admin_context()
-    inst_types = db.instance_type_get_all(ctxt, inactive, filters)
+    inst_types = db.instance_type_get_all(
+            ctxt, inactive=inactive, filters=filters)
+
     inst_type_dict = {}
     for inst_type in inst_types:
         inst_type_dict[inst_type['name']] = inst_type
