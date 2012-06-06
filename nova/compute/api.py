@@ -1824,6 +1824,20 @@ class API(base.Base):
         return self.db.block_device_mapping_get_all_by_instance(context,
                 instance['uuid'])
 
+    @check_instance_state(vm_state=[vm_states.ACTIVE])
+    def live_migrate(self, context, instance, block_migration,
+                     disk_over_commit, host):
+        """Migrate a server lively to a new host."""
+        instance_uuid = instance["uuid"]
+        LOG.debug(_("Going to try to live migrate instance"),
+                  instance=instance)
+        self.scheduler_rpcapi.live_migration(context,
+                block_migration,
+                disk_over_commit,
+                instance["id"],
+                host,
+                topic=FLAGS.compute_topic)
+
 
 class HostAPI(base.Base):
     def __init__(self):
