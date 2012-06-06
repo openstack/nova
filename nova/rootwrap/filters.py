@@ -91,28 +91,33 @@ class DnsmasqFilter(CommandFilter):
 
 class KillFilter(CommandFilter):
     """Specific filter for the kill calls.
-       1st argument is a list of accepted signals (emptystring means no signal)
-       2nd argument is a list of accepted affected executables.
+       1st argument is the user to run /bin/kill under
+       2nd argument is the location of the affected executable
+       Subsequent arguments list the accepted signals (if any)
 
        This filter relies on /proc to accurately determine affected
        executable, so it will only work on procfs-capable systems (not OSX).
     """
+
+    def __init__(self, *args):
+        super(KillFilter, self).__init__("/bin/kill", *args)
 
     def match(self, userargs):
         if userargs[0] != "kill":
             return False
         args = list(userargs)
         if len(args) == 3:
+            # A specific signal is requested
             signal = args.pop(1)
-            if signal not in self.args[0]:
+            if signal not in self.args[1:]:
                 # Requested signal not in accepted list
                 return False
         else:
             if len(args) != 2:
                 # Incorrect number of arguments
                 return False
-            if '' not in self.args[0]:
-                # No signal, but list doesn't include empty string
+            if len(self.args) > 1:
+                # No signal requested, but filter requires specific signal
                 return False
         try:
             command = os.readlink("/proc/%d/exe" % int(args[1]))
@@ -120,8 +125,8 @@ class KillFilter(CommandFilter):
             # the end if an executable is updated or deleted
             if command.endswith(" (deleted)"):
                 command = command[:command.rindex(" ")]
-            if command not in self.args[1]:
-                # Affected executable not in accepted list
+            if command != self.args[0]:
+                # Affected executable does not match
                 return False
         except (ValueError, OSError):
             # Incorrect PID
