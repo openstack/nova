@@ -503,7 +503,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         cfg = conn.get_guest_config(instance_ref,
                                     _fake_network_info(self.stubs, 1),
-                                    None, False)
+                                    None, None)
         self.assertEquals(cfg.acpi, True)
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
         self.assertEquals(cfg.vcpus, 1)
@@ -532,7 +532,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         cfg = conn.get_guest_config(instance_ref,
                                     _fake_network_info(self.stubs, 2),
-                                    None, False)
+                                    None, None)
         self.assertEquals(cfg.acpi, True)
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
         self.assertEquals(cfg.vcpus, 1)
@@ -562,7 +562,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn = connection.LibvirtDriver(True)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
-        cfg = conn.get_guest_config(instance_ref, [], None, False,
+        cfg = conn.get_guest_config(instance_ref, [], None, None,
                                     {'root_device_name': 'dev/vdb'})
         self.assertEquals(cfg.acpi, False)
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
@@ -607,7 +607,24 @@ class LibvirtConnTestCase(test.TestCase):
         instance_data['ramdisk_id'] = 'ari-deadbeef'
         instance_data['kernel_id'] = 'aki-deadbeef'
         self._check_xml_and_uri(instance_data, expect_kernel=True,
-                                expect_ramdisk=True, rescue=True)
+                                expect_ramdisk=True, rescue=instance_data)
+
+    def test_xml_and_uri_rescue_no_kernel_no_ramdisk(self):
+        instance_data = dict(self.test_instance)
+        self._check_xml_and_uri(instance_data, expect_kernel=False,
+                                expect_ramdisk=False, rescue=instance_data)
+
+    def test_xml_and_uri_rescue_no_kernel(self):
+        instance_data = dict(self.test_instance)
+        instance_data['ramdisk_id'] = 'aki-deadbeef'
+        self._check_xml_and_uri(instance_data, expect_kernel=False,
+                                expect_ramdisk=True, rescue=instance_data)
+
+    def test_xml_and_uri_rescue_no_ramdisk(self):
+        instance_data = dict(self.test_instance)
+        instance_data['kernel_id'] = 'aki-deadbeef'
+        self._check_xml_and_uri(instance_data, expect_kernel=True,
+                                expect_ramdisk=False, rescue=instance_data)
 
     def test_xml_uuid(self):
         instance_data = dict(self.test_instance)
@@ -1090,7 +1107,7 @@ class LibvirtConnTestCase(test.TestCase):
                          instance_ref['uuid'])
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
-                           rescue=False):
+                           rescue=None):
         user_context = context.RequestContext(self.user_id, self.project_id)
         instance_ref = db.instance_create(user_context, instance)
         network_ref = db.project_get_networks(context.get_admin_context(),
@@ -1116,26 +1133,22 @@ class LibvirtConnTestCase(test.TestCase):
             check_list = type_uri_map[hypervisor_type][1]
 
             if rescue:
-                check = (lambda t: t.find('./os/kernel').text.split('/')[1],
-                         'kernel.rescue')
-                check_list.append(check)
-                check = (lambda t: t.find('./os/initrd').text.split('/')[1],
-                         'ramdisk.rescue')
-                check_list.append(check)
+                suffix = '.rescue'
             else:
-                if expect_kernel:
-                    check = (lambda t: t.find('./os/kernel').text.split(
-                        '/')[1], 'kernel')
-                else:
-                    check = (lambda t: t.find('./os/kernel'), None)
-                check_list.append(check)
+                suffix = ''
+            if expect_kernel:
+                check = (lambda t: t.find('./os/kernel').text.split(
+                    '/')[1], 'kernel' + suffix)
+            else:
+                check = (lambda t: t.find('./os/kernel'), None)
+            check_list.append(check)
 
-                if expect_ramdisk:
-                    check = (lambda t: t.find('./os/initrd').text.split(
-                        '/')[1], 'ramdisk')
-                else:
-                    check = (lambda t: t.find('./os/initrd'), None)
-                check_list.append(check)
+            if expect_ramdisk:
+                check = (lambda t: t.find('./os/initrd').text.split(
+                    '/')[1], 'ramdisk' + suffix)
+            else:
+                check = (lambda t: t.find('./os/initrd'), None)
+            check_list.append(check)
 
             if hypervisor_type in ['qemu', 'kvm']:
                 check = (lambda t: t.findall('./devices/serial')[0].get(

@@ -864,12 +864,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                          'unrescue.xml')
         libvirt_utils.write_to_file(unrescue_xml_path, unrescue_xml)
 
-        xml = self.to_xml(instance, network_info, image_meta, rescue=True)
         rescue_images = {
             'image_id': FLAGS.rescue_image_id or instance['image_ref'],
             'kernel_id': FLAGS.rescue_kernel_id or instance['kernel_id'],
             'ramdisk_id': FLAGS.rescue_ramdisk_id or instance['ramdisk_id'],
         }
+        xml = self.to_xml(instance, network_info, image_meta,
+                          rescue=rescue_images)
         self._create_image(context, instance, xml, '.rescue', rescue_images,
                            network_info=network_info)
         self._hard_reboot(instance, network_info, xml=xml)
@@ -915,7 +916,7 @@ class LibvirtDriver(driver.ComputeDriver):
     @exception.wrap_exception()
     def spawn(self, context, instance, image_meta, network_info,
               block_device_info=None):
-        xml = self.to_xml(instance, network_info, image_meta, False,
+        xml = self.to_xml(instance, network_info, image_meta,
                           block_device_info=block_device_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
@@ -1427,8 +1428,14 @@ class LibvirtDriver(driver.ComputeDriver):
         config_drive, config_drive_id = self._get_config_drive_info(instance)
         return any((config_drive, config_drive_id))
 
-    def get_guest_config(self, instance, network_info, image_meta, rescue,
+    def get_guest_config(self, instance, network_info, image_meta, rescue=None,
                          block_device_info=None):
+        """Get config data for parameters.
+
+        :param rescue: optional dictionary that should contain the key
+            'ramdisk_id' if a ramdisk is needed for the rescue image and
+            'kernel_id' if a kernel is needed for the rescue image.
+        """
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
 
@@ -1472,12 +1479,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.os_type = "hvm"
 
             if rescue:
-                guest.os_kernel = os.path.join(FLAGS.instances_path,
-                                               instance['name'],
-                                               "kernel.rescue")
-                guest.os_initrd = os.path.join(FLAGS.instances_path,
-                                               instance['name'],
-                                               "ramdisk.rescue")
+                if rescue.get('kernel_id'):
+                    guest.os_kernel = os.path.join(FLAGS.instances_path,
+                                                   instance['name'],
+                                                   "kernel.rescue")
+                if rescue.get('ramdisk_id'):
+                    guest.os_initrd = os.path.join(FLAGS.instances_path,
+                                                   instance['name'],
+                                                   "ramdisk.rescue")
             elif instance['kernel_id']:
                 guest.os_kernel = os.path.join(FLAGS.instances_path,
                                                instance['name'],
@@ -1699,7 +1708,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return guest
 
-    def to_xml(self, instance, network_info, image_meta=None, rescue=False,
+    def to_xml(self, instance, network_info, image_meta=None, rescue=None,
                block_device_info=None):
         LOG.debug(_('Starting toXML method'), instance=instance)
         conf = self.get_guest_config(instance, network_info, image_meta,
