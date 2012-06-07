@@ -1358,17 +1358,17 @@ def instance_data_get_for_project(context, project_id, session=None):
 
 
 @require_context
-def instance_destroy(context, instance_id, constraint=None):
+def instance_destroy(context, instance_uuid, constraint=None):
     session = get_session()
     with session.begin():
-        if utils.is_uuid_like(instance_id):
-            instance_ref = instance_get_by_uuid(context, instance_id,
+        if utils.is_uuid_like(instance_uuid):
+            instance_ref = instance_get_by_uuid(context, instance_uuid,
                     session=session)
-            instance_id = instance_ref['id']
         else:
-            instance_ref = instance_get(context, instance_id,
-                    session=session)
-        query = session.query(models.Instance).filter_by(id=instance_id)
+            raise exception.InvalidUUID(instance_uuid)
+
+        query = session.query(models.Instance).\
+                        filter_by(uuid=instance_ref['uuid'])
         if constraint is not None:
             query = constraint.apply(models.Instance, query)
         count = query.update({'deleted': True,

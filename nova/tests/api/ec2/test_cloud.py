@@ -244,7 +244,7 @@ class CloudTestCase(test.TestCase):
                                   public_ip=address)
         self.network.deallocate_fixed_ip(self.context, fixed_ips[0]['address'],
                                          inst['host'])
-        db.instance_destroy(self.context, inst['id'])
+        db.instance_destroy(self.context, inst['uuid'])
         db.floating_ip_destroy(self.context, address)
 
     def test_describe_security_groups(self):
@@ -584,7 +584,7 @@ class CloudTestCase(test.TestCase):
                           self.cloud.delete_security_group,
                           self.context, 'testgrp')
 
-        db.instance_destroy(self.context, inst.id)
+        db.instance_destroy(self.context, inst['uuid'])
 
         self.cloud.delete_security_group(self.context, 'testgrp')
 
@@ -759,8 +759,8 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
         self.assertEqual(instance['dnsNameV6'],
                 'fe80:b33f::a8bb:ccff:fedd:eeff')
-        db.instance_destroy(self.context, inst1['id'])
-        db.instance_destroy(self.context, inst2['id'])
+        db.instance_destroy(self.context, inst1['uuid'])
+        db.instance_destroy(self.context, inst2['uuid'])
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
 
@@ -814,9 +814,9 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(result[1]['launchTime'], inst3_kwargs['created_at'])
         self.assertEqual(result[2]['launchTime'], inst1_kwargs['created_at'])
 
-        db.instance_destroy(self.context, inst1['id'])
-        db.instance_destroy(self.context, inst2['id'])
-        db.instance_destroy(self.context, inst3['id'])
+        db.instance_destroy(self.context, inst1['uuid'])
+        db.instance_destroy(self.context, inst2['uuid'])
+        db.instance_destroy(self.context, inst3['uuid'])
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
 
@@ -842,7 +842,7 @@ class CloudTestCase(test.TestCase):
             self.assertEqual(code, expected_code)
             self.assertEqual(name, expected_name)
 
-            db.instance_destroy(self.context, inst['id'])
+            db.instance_destroy(self.context, inst['uuid'])
 
         test_instance_state(inst_state.RUNNING_CODE, inst_state.RUNNING,
                             power_state.RUNNING, vm_states.ACTIVE)
@@ -879,7 +879,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['privateDnsName'], 'server-1234')
         self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
         self.assertNotIn('dnsNameV6', instance)
-        db.instance_destroy(self.context, inst1['id'])
+        db.instance_destroy(self.context, inst1['uuid'])
         db.service_destroy(self.context, comp1['id'])
 
     def test_describe_instances_deleted(self):
@@ -896,7 +896,7 @@ class CloudTestCase(test.TestCase):
                  'host': 'host1',
                  'vm_state': 'active'}
         inst2 = db.instance_create(self.context, args2)
-        db.instance_destroy(self.context, inst1.id)
+        db.instance_destroy(self.context, inst1['uuid'])
         result = self.cloud.describe_instances(self.context)
         self.assertEqual(len(result['reservationSet']), 1)
         result1 = result['reservationSet'][0]['instancesSet']
@@ -1000,8 +1000,8 @@ class CloudTestCase(test.TestCase):
             for bdm in db.block_device_mapping_get_all_by_instance(
                 self.context, uuid):
                 db.block_device_mapping_destroy(self.context, bdm['id'])
-        db.instance_destroy(self.context, inst2['id'])
-        db.instance_destroy(self.context, inst1['id'])
+        db.instance_destroy(self.context, inst2['uuid'])
+        db.instance_destroy(self.context, inst1['uuid'])
 
     # NOTE(jdg) Modified expected volume_id's to string
     _expected_instance_bdm1 = {

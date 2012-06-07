@@ -1219,7 +1219,7 @@ class LibvirtConnTestCase(test.TestCase):
             self.flags(libvirt_type=libvirt_type)
             conn = connection.LibvirtDriver(True)
             self.assertEquals(conn.uri, testuri)
-        db.instance_destroy(user_context, instance_ref['id'])
+        db.instance_destroy(user_context, instance_ref['uuid'])
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_ensure_filtering_rules_for_instance_timeout(self):
@@ -1270,7 +1270,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "
                                                  "amount of time")
 
-        db.instance_destroy(self.context, instance_ref['id'])
+        db.instance_destroy(self.context, instance_ref['uuid'])
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_live_migration_raises_exception(self):
@@ -1323,7 +1323,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(volume_ref['status'] == 'in-use')
 
         db.volume_destroy(self.context, volume_ref['id'])
-        db.instance_destroy(self.context, instance_ref['id'])
+        db.instance_destroy(self.context, instance_ref['uuid'])
 
     def test_pre_live_migration_works_correctly(self):
         """Confirms pre_block_migration works correctly."""
@@ -1369,7 +1369,7 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertTrue(os.path.exists('%s/%s/' %
                                            (tmpdir, instance_ref.name)))
 
-        db.instance_destroy(self.context, instance_ref['id'])
+        db.instance_destroy(self.context, instance_ref['uuid'])
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_get_instance_disk_info_works_correctly(self):
@@ -1430,7 +1430,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(info[1]['virt_disk_size'], 21474836480)
         self.assertEquals(info[1]['backing_file'], "file")
 
-        db.instance_destroy(self.context, instance_ref['id'])
+        db.instance_destroy(self.context, instance_ref['uuid'])
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_spawn_with_network_info(self):
@@ -1956,7 +1956,7 @@ class IptablesFirewallTestCase(test.TestCase):
                            '-m multiport --dports 80:81 -s 192.168.10.0/24')
         self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
                         "TCP port 80/81 acceptance rule wasn't added")
-        db.instance_destroy(admin_ctxt, instance_ref['id'])
+        db.instance_destroy(admin_ctxt, instance_ref['uuid'])
 
     def test_filters_for_instance_with_ip_v6(self):
         self.flags(use_ipv6=True)
@@ -2026,7 +2026,7 @@ class IptablesFirewallTestCase(test.TestCase):
         # should undefine just the instance filter
         self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
 
-        db.instance_destroy(admin_ctxt, instance_ref['id'])
+        db.instance_destroy(admin_ctxt, instance_ref['uuid'])
 
     def test_provider_firewall_rules(self):
         # setup basic instance data
@@ -2229,7 +2229,7 @@ class NWFilterTestCase(test.TestCase):
         db.instance_remove_security_group(self.context, inst_uuid,
                                           self.security_group.id)
         self.teardown_security_group()
-        db.instance_destroy(context.get_admin_context(), instance_ref['id'])
+        db.instance_destroy(context.get_admin_context(), instance_ref['uuid'])
 
     def test_unfilter_instance_undefines_nwfilters(self):
         admin_ctxt = context.get_admin_context()
@@ -2255,7 +2255,7 @@ class NWFilterTestCase(test.TestCase):
         self.fw.unfilter_instance(instance, network_info)
         self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
 
-        db.instance_destroy(admin_ctxt, instance_ref['id'])
+        db.instance_destroy(admin_ctxt, instance_ref['uuid'])
 
 
 class LibvirtUtilsTestCase(test.TestCase):
