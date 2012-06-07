@@ -15,10 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 import netaddr
 
 from nova import exception
+from nova.openstack.common import jsonutils
 
 
 def ensure_string_keys(d):
@@ -271,11 +271,11 @@ class NetworkInfo(list):
     @classmethod
     def hydrate(cls, network_info):
         if isinstance(network_info, basestring):
-            network_info = json.loads(network_info)
+            network_info = jsonutils.loads(network_info)
         return NetworkInfo([VIF.hydrate(vif) for vif in network_info])
 
     def json(self):
-        return json.dumps(self)
+        return jsonutils.dumps(self)
 
     def legacy(self):
         """

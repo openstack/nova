@@ -16,7 +16,6 @@
 #    under the License.
 
 import httplib
-import json
 import socket
 import time
 import urllib
@@ -25,6 +24,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 
 
 melange_opts = [
@@ -111,13 +111,13 @@ class MelangeConnection(object):
                    "belonging to |%(project_id)s| ") % locals())
         tenant_scope = "/tenants/%s" % (network_tenant_id
                                         if network_tenant_id else "")
-        request_body = (json.dumps(dict(network=dict(mac_address=mac_address,
-                                                     tenant_id=project_id)))
-                    if mac_address else None)
+        network_info = dict(network=dict(mac_address=mac_address,
+                                         tenant_id=project_id))
+        request_body = jsonutils.dumps(network_info) if mac_address else None
         url = ("ipam%(tenant_scope)s/networks/%(network_id)s/"
                "interfaces/%(vif_id)s/ip_allocations" % locals())
         response = self.post(url, body=request_body, headers=json_content_type)
-        return json.loads(response)['ip_addresses']
+        return jsonutils.loads(response)['ip_addresses']
 
     def create_block(self, network_id, cidr,
                      project_id=None, gateway=None, dns1=None, dns2=None):
@@ -128,7 +128,9 @@ class MelangeConnection(object):
         req_params = dict(ip_block=dict(cidr=cidr, network_id=network_id,
                                         type='private', gateway=gateway,
                                         dns1=dns1, dns2=dns2))
-        self.post(url, body=json.dumps(req_params), headers=json_content_type)
+        self.post(url,
+                  body=jsonutils.dumps(req_params),
+                  headers=json_content_type)
 
     def delete_block(self, block_id, project_id=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
@@ -143,7 +145,7 @@ class MelangeConnection(object):
         url = "ipam%(tenant_scope)s/ip_blocks" % locals()
 
         response = self.get(url, headers=json_content_type)
-        return json.loads(response)
+        return jsonutils.loads(response)
 
     def get_routes(self, block_id, project_id=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
@@ -152,7 +154,7 @@ class MelangeConnection(object):
                locals())
 
         response = self.get(url, headers=json_content_type)
-        return json.loads(response)['ip_routes']
+        return jsonutils.loads(response)['ip_routes']
 
     def get_allocated_ips(self, network_id, vif_id, project_id=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
@@ -161,7 +163,7 @@ class MelangeConnection(object):
                "interfaces/%(vif_id)s/ip_allocations" % locals())
 
         response = self.get(url, headers=json_content_type)
-        return json.loads(response)['ip_addresses']
+        return jsonutils.loads(response)['ip_addresses']
 
     def get_allocated_ips_by_address(self, address):
         url = "ipam/allocated_ip_addresses"
@@ -169,7 +171,7 @@ class MelangeConnection(object):
         response = self.get(url, params={'address': address},
                             headers=json_content_type)
 
-        return json.loads(response).get('ip_addresses', [])
+        return jsonutils.loads(response).get('ip_addresses', [])
 
     def get_allocated_ips_for_network(self, network_id, project_id=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
@@ -177,7 +179,7 @@ class MelangeConnection(object):
         # TODO(bgh): This request fails if you add the ".json" to the end so
         # it has to call do_request itself.  Melange bug?
         response = self.do_request("GET", url, content_type="")
-        return json.loads(response)['ip_addresses']
+        return jsonutils.loads(response)['ip_addresses']
 
     def deallocate_ips(self, network_id, vif_id, project_id=None):
         tenant_scope = "/tenants/%s" % project_id if project_id else ""
@@ -193,7 +195,8 @@ class MelangeConnection(object):
         request_body = dict(interface=dict(id=vif_id, tenant_id=project_id,
                                            device_id=instance_id))
 
-        response = self.post(url, body=json.dumps(request_body),
+        response = self.post(url,
+                             body=jsonutils.dumps(request_body),
                              headers=json_content_type)
 
-        return json.loads(response)['interface']['mac_address']
+        return jsonutils.loads(response)['interface']['mac_address']

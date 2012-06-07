@@ -13,12 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import webob
 
 from nova import compute
 from nova import exception
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -52,11 +51,11 @@ class ConsolesExtensionTest(test.TestCase):
         body = {'os-getVNCConsole': {'type': 'novnc'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
-        output = json.loads(res.body)
+        output = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 200)
         self.assertEqual(output,
             {u'console': {u'url': u'http://fake', u'type': u'novnc'}})
@@ -66,7 +65,7 @@ class ConsolesExtensionTest(test.TestCase):
         body = {'os-getVNCConsole': {}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
@@ -77,7 +76,7 @@ class ConsolesExtensionTest(test.TestCase):
         body = {'os-getVNCConsole': {'type': 'novnc'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
@@ -88,7 +87,7 @@ class ConsolesExtensionTest(test.TestCase):
         body = {'os-getVNCConsole': {'type': 'novnc'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
@@ -101,7 +100,7 @@ class ConsolesExtensionTest(test.TestCase):
                        fake_get_vnc_console_invalid_type)
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())

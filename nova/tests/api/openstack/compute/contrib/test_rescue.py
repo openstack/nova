@@ -12,13 +12,12 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import json
-
 import webob
 
 from nova import compute
 from nova import exception
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -49,24 +48,24 @@ class RescueTest(test.TestCase):
         body = {"rescue": {"adminPass": "AABBCC112233"}}
         req = webob.Request.blank('/v2/fake/servers/test_inst/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
-        resp_json = json.loads(resp.body)
+        resp_json = jsonutils.loads(resp.body)
         self.assertEqual("AABBCC112233", resp_json['adminPass'])
 
     def test_rescue_generates_password(self):
         body = dict(rescue=None)
         req = webob.Request.blank('/v2/fake/servers/test_inst/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
-        resp_json = json.loads(resp.body)
+        resp_json = jsonutils.loads(resp.body)
         self.assertEqual(FLAGS.password_length, len(resp_json['adminPass']))
 
     def test_rescue_of_rescued_instance(self):
@@ -78,7 +77,7 @@ class RescueTest(test.TestCase):
         self.stubs.Set(compute.api.API, "rescue", fake_rescue)
         req = webob.Request.blank('/v2/fake/servers/test_inst/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(fakes.wsgi_app())
@@ -88,7 +87,7 @@ class RescueTest(test.TestCase):
         body = dict(unrescue=None)
         req = webob.Request.blank('/v2/fake/servers/test_inst/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(fakes.wsgi_app())
@@ -103,7 +102,7 @@ class RescueTest(test.TestCase):
         self.stubs.Set(compute.api.API, "unrescue", fake_unrescue)
         req = webob.Request.blank('/v2/fake/servers/test_inst/action')
         req.method = "POST"
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(fakes.wsgi_app())

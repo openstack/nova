@@ -15,13 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 import webob
 
 from nova.api.openstack.compute import server_metadata
 import nova.db
 from nova import exception
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
@@ -185,7 +185,7 @@ class ServerMetaDataTest(test.TestCase):
         req.method = 'POST'
         req.content_type = "application/json"
         body = {"metadata": {"key9": "value9"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         res_dict = self.controller.create(req, self.uuid, body)
 
         body['metadata'].update({
@@ -211,7 +211,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"meta": {"": "value1"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -223,7 +223,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"meta": {("a" * 260): "value1"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -236,7 +236,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'POST'
         body = {"metadata": {"key1": "value1"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -254,7 +254,7 @@ class ServerMetaDataTest(test.TestCase):
                 'key99': 'value99',
             },
         }
-        req.body = json.dumps(expected)
+        req.body = jsonutils.dumps(expected)
         res_dict = self.controller.update_all(req, self.uuid, expected)
 
         self.assertEqual(expected, res_dict)
@@ -266,7 +266,7 @@ class ServerMetaDataTest(test.TestCase):
         req.method = 'PUT'
         req.content_type = "application/json"
         expected = {'metadata': {}}
-        req.body = json.dumps(expected)
+        req.body = jsonutils.dumps(expected)
         res_dict = self.controller.update_all(req, self.uuid, expected)
 
         self.assertEqual(expected, res_dict)
@@ -278,7 +278,7 @@ class ServerMetaDataTest(test.TestCase):
         req.method = 'PUT'
         req.content_type = "application/json"
         expected = {'meta': {}}
-        req.body = json.dumps(expected)
+        req.body = jsonutils.dumps(expected)
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update_all, req, self.uuid, expected)
@@ -290,7 +290,7 @@ class ServerMetaDataTest(test.TestCase):
         req.method = 'PUT'
         req.content_type = "application/json"
         expected = {'metadata': ['asdf']}
-        req.body = json.dumps(expected)
+        req.body = jsonutils.dumps(expected)
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update_all, req, self.uuid, expected)
@@ -301,7 +301,7 @@ class ServerMetaDataTest(test.TestCase):
         req.method = 'PUT'
         req.content_type = "application/json"
         body = {'metadata': {'key10': 'value10'}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
 
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.update_all, req, '100', body)
@@ -312,7 +312,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"meta": {"key1": "value1"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         res_dict = self.controller.update(req, self.uuid, 'key1', body)
         expected = {'meta': {'key1': 'value1'}}
@@ -324,7 +324,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v1.1/fake/servers/asdf/metadata/key1')
         req.method = 'PUT'
         body = {"meta": {"key1": "value1"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -346,7 +346,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"meta": {"": "value1"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -358,7 +358,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"meta": {("a" * 260): "value1"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -371,7 +371,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"meta": {"key1": ("a" * 260)}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -384,7 +384,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"meta": {"key1": "value1", "key2": "value2"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -396,7 +396,7 @@ class ServerMetaDataTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url + '/bad')
         req.method = 'PUT'
         body = {"meta": {"key1": "value1"}}
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -410,7 +410,7 @@ class ServerMetaDataTest(test.TestCase):
             data['metadata']['key%i' % num] = "blah"
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'POST'
-        req.body = json.dumps(data)
+        req.body = jsonutils.dumps(data)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
@@ -425,19 +425,19 @@ class ServerMetaDataTest(test.TestCase):
 
         #test for long key
         data = {"metadata": {"a" * 260: "value1"}}
-        req.body = json.dumps(data)
+        req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, self.uuid, data)
 
         #test for long value
         data = {"metadata": {"key": "v" * 260}}
-        req.body = json.dumps(data)
+        req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, self.uuid, data)
 
         #test for empty key.
         data = {"metadata": {"": "value1"}}
-        req.body = json.dumps(data)
+        req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, self.uuid, data)
 
@@ -449,7 +449,7 @@ class ServerMetaDataTest(test.TestCase):
             data['metadata']['key%i' % num] = "blah"
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'PUT'
-        req.body = json.dumps(data)
+        req.body = jsonutils.dumps(data)
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
@@ -463,23 +463,23 @@ class ServerMetaDataTest(test.TestCase):
             data['metadata']['key%i' % num] = "blah"
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'PUT'
-        req.body = json.dumps(data)
+        req.body = jsonutils.dumps(data)
         req.headers["content-type"] = "application/json"
 
         #test for long key
         data = {"metadata": {"a" * 260: "value1"}}
-        req.body = json.dumps(data)
+        req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update_all, req, self.uuid, data)
 
         #test for long value
         data = {"metadata": {"key": "v" * 260}}
-        req.body = json.dumps(data)
+        req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update_all, req, self.uuid, data)
 
         #test for empty key.
         data = {"metadata": {"": "value1"}}
-        req.body = json.dumps(data)
+        req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update_all, req, self.uuid, data)

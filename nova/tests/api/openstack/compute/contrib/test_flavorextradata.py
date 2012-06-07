@@ -14,11 +14,11 @@
 #    under the License.
 
 import datetime
-import json
 
 import webob
 
 from nova.compute import instance_types
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -79,7 +79,7 @@ class FlavorextradataTest(test.TestCase):
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
-        body = json.loads(res.body)
+        body = jsonutils.loads(res.body)
         self._verify_server_response(body['flavor'], expected['flavor'])
 
     def test_detail(self):
@@ -110,6 +110,6 @@ class FlavorextradataTest(test.TestCase):
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
-        body = json.loads(res.body)
+        body = jsonutils.loads(res.body)
         for i, flavor in enumerate(body['flavors']):
             self._verify_server_response(flavor, expected[i])

@@ -18,7 +18,6 @@ Tests dealing with HTTP rate-limiting.
 """
 
 import httplib
-import json
 import StringIO
 import unittest
 from xml.dom import minidom
@@ -32,6 +31,7 @@ from nova.api.openstack.compute import views
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.context
+from nova.openstack.common import jsonutils
 from nova import test
 
 
@@ -112,7 +112,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
                 "absolute": {},
             },
         }
-        body = json.loads(response.body)
+        body = jsonutils.loads(response.body)
         self.assertEqual(expected, body)
 
     def test_index_json(self):
@@ -170,7 +170,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
                     },
             },
         }
-        body = json.loads(response.body)
+        body = jsonutils.loads(response.body)
         self.assertEqual(expected, body)
 
     def _populate_limits_diff_regex(self, request):
@@ -221,13 +221,13 @@ class LimitsControllerTest(BaseLimitTestSuite):
                 "absolute": {},
             },
         }
-        body = json.loads(response.body)
+        body = jsonutils.loads(response.body)
         self.assertEqual(expected, body)
 
     def _test_index_absolute_limits_json(self, expected):
         request = self._get_index_request()
         response = request.get_response(self.controller)
-        body = json.loads(response.body)
+        body = jsonutils.loads(response.body)
         self.assertEqual(expected, body['limits']['absolute'])
 
     def test_index_ignores_extra_absolute_limits_json(self):
@@ -314,7 +314,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         retry_after = int(response.headers['Retry-After'])
         self.assertAlmostEqual(retry_after, 60, 1)
 
-        body = json.loads(response.body)
+        body = jsonutils.loads(response.body)
         expected = "Only 1 GET request(s) can be made to * every minute."
         value = body["overLimitFault"]["details"].strip()
         self.assertEqual(value, expected)
@@ -604,7 +604,7 @@ class WsgiLimiterTest(BaseLimitTestSuite):
 
     def _request_data(self, verb, path):
         """Get data decribing a limit request verb/path."""
-        return json.dumps({"verb": verb, "path": path})
+        return jsonutils.dumps({"verb": verb, "path": path})
 
     def _request(self, verb, url, username=None):
         """Make sure that POSTing to the given url causes the given username

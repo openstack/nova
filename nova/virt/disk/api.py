@@ -26,7 +26,6 @@ Includes injection of SSH PGP keys into authorized_keys file.
 """
 
 import crypt
-import json
 import os
 import random
 import re
@@ -36,6 +35,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 from nova import utils
 from nova.virt.disk import guestfs
 from nova.virt.disk import loop
@@ -320,7 +320,7 @@ def _inject_metadata_into_fs(metadata, fs, execute=None):
     metadata = dict([(m.key, m.value) for m in metadata])
 
     utils.execute('tee', metadata_path,
-                  process_input=json.dumps(metadata), run_as_root=True)
+                  process_input=jsonutils.dumps(metadata), run_as_root=True)
 
 
 def _inject_key_into_fs(key, fs, execute=None):

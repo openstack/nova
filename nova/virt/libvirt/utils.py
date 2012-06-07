@@ -20,7 +20,6 @@
 #    under the License.
 
 import hashlib
-import json
 import os
 import random
 import re
@@ -29,6 +28,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 from nova import utils
 from nova.virt import images
 
@@ -375,7 +375,7 @@ def read_stored_info(base_path, field=None):
         LOG.info(_('Read: %s'), serialized)
 
         try:
-            d = json.loads(serialized)
+            d = jsonutils.loads(serialized)
 
         except ValueError, e:
             LOG.error(_('Error reading image info file %(filename)s: '
@@ -400,7 +400,7 @@ def write_stored_info(target, field=None, value=None):
 
     d = read_stored_info(info_file)
     d[field] = value
-    serialized = json.dumps(d)
+    serialized = jsonutils.dumps(d)
 
     LOG.info(_('Writing image info file: %s'), info_file)
     LOG.info(_('Wrote: %s'), serialized)

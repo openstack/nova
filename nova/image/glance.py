@@ -20,7 +20,6 @@
 from __future__ import absolute_import
 
 import copy
-import json
 import random
 import sys
 import time
@@ -32,6 +31,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova import utils
 
 
@@ -416,13 +416,13 @@ def _parse_glance_iso8601_timestamp(timestamp):
 def _json_loads(properties, attr):
     prop = properties[attr]
     if isinstance(prop, basestring):
-        properties[attr] = json.loads(prop)
+        properties[attr] = jsonutils.loads(prop)
 
 
 def _json_dumps(properties, attr):
     prop = properties[attr]
     if not isinstance(prop, basestring):
-        properties[attr] = json.dumps(prop)
+        properties[attr] = jsonutils.dumps(prop)
 
 
 _CONVERT_PROPS = ('block_device_mapping', 'mappings')

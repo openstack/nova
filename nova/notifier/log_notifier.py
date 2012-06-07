@@ -13,10 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import jsonutils
 
 
 FLAGS = flags.FLAGS
@@ -31,4 +30,4 @@ def notify(_context, message):
     priority = priority.lower()
     logger = logging.getLogger(
             'nova.notification.%s' % message['event_type'])
-    getattr(logger, priority)(json.dumps(message))
+    getattr(logger, priority)(jsonutils.dumps(message))

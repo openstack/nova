@@ -17,9 +17,9 @@ Tests For PickledScheduler.
 """
 
 import datetime
-import json
 import StringIO
 
+from nova.openstack.common import jsonutils
 from nova.scheduler import scheduler_options
 from nova import test
 
@@ -58,7 +58,7 @@ class SchedulerOptionsTestCase(test.TestCase):
         file_now = datetime.datetime(2012, 1, 1, 1, 1, 1)
 
         data = dict(a=1, b=2, c=3)
-        jdata = json.dumps(data)
+        jdata = jsonutils.dumps(data)
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                                   {}, jdata)
@@ -86,7 +86,7 @@ class SchedulerOptionsTestCase(test.TestCase):
         file_now = datetime.datetime(2012, 1, 1, 1, 1, 1)
 
         data = dict(a=1, b=2, c=3)
-        jdata = json.dumps(data)
+        jdata = jsonutils.dumps(data)
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                                   {}, jdata)
@@ -100,7 +100,7 @@ class SchedulerOptionsTestCase(test.TestCase):
         file_now = datetime.datetime(2012, 1, 1, 1, 1, 1)
 
         data = dict(a=1, b=2, c=3)
-        jdata = json.dumps(data)
+        jdata = jsonutils.dumps(data)
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                                  data, jdata)
@@ -115,7 +115,7 @@ class SchedulerOptionsTestCase(test.TestCase):
 
         old_data = dict(a=1, b=2, c=3)
         data = dict(a=11, b=12, c=13)
-        jdata = json.dumps(data)
+        jdata = jsonutils.dumps(data)
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                             old_data, jdata)
@@ -130,7 +130,7 @@ class SchedulerOptionsTestCase(test.TestCase):
 
         old_data = dict(a=1, b=2, c=3)
         data = dict(a=11, b=12, c=13)
-        jdata = json.dumps(data)
+        jdata = jsonutils.dumps(data)
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                             old_data, jdata)

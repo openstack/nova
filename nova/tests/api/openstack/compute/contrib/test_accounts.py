@@ -13,14 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-import json
-
 from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import accounts
 from nova.auth import manager as auth_manager
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -51,7 +49,7 @@ class AccountsTest(test.TestCase):
     def test_get_account(self):
         req = webob.Request.blank('/v2/fake/accounts/test1')
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        res_dict = jsonutils.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res_dict['account']['id'], 'test1')
@@ -82,10 +80,10 @@ class AccountsTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/accounts/newacct')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        res_dict = jsonutils.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res_dict['account']['id'], 'newacct')
@@ -102,7 +100,7 @@ class AccountsTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/accounts/newacct.xml')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
         res_tree = etree.fromstring(res.body)
@@ -123,10 +121,10 @@ class AccountsTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/accounts/test1')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        res_dict = jsonutils.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res_dict['account']['id'], 'test1')
@@ -141,7 +139,7 @@ class AccountsTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/accounts/test1.xml')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
         res_tree = etree.fromstring(res.body)

@@ -32,7 +32,6 @@ It also allows setting of formatting information through flags.
 import cStringIO
 import inspect
 import itertools
-import json
 import logging
 import logging.config
 import logging.handlers
@@ -44,6 +43,7 @@ import traceback
 import nova
 from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 from nova.openstack.common import local
 from nova import version
 
@@ -222,7 +222,7 @@ class JSONFormatter(logging.Formatter):
         if record.exc_info:
             message['traceback'] = self.formatException(record.exc_info)
 
-        return json.dumps(message)
+        return jsonutils.dumps(message)
 
 
 class LegacyNovaFormatter(logging.Formatter):

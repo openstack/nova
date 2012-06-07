@@ -51,7 +51,6 @@ A fake XenAPI SDK.
 """
 
 
-import json
 import random
 import uuid
 from xml.sax import saxutils
@@ -60,6 +59,7 @@ import pprint
 
 from nova import exception
 from nova import log as logging
+from nova.openstack.common import jsonutils
 from nova import utils
 
 
@@ -337,7 +337,7 @@ def as_json(*args, **kwargs):
     then these are rendered as a JSON list.  If it's given keyword
     arguments then these are rendered as a JSON dict."""
     arg = args or kwargs
-    return json.dumps(arg)
+    return jsonutils.dumps(arg)
 
 
 class Failure(Exception):
@@ -510,17 +510,17 @@ class SessionBase(object):
         elif (plugin, method) == ('migration', 'transfer_vhd'):
             return ''
         elif (plugin, method) == ('xenhost', 'host_data'):
-            return json.dumps({'host_memory': {'total': 10,
-                                               'overhead': 20,
-                                               'free': 30,
-                                               'free-computed': 40}, })
+            return jsonutils.dumps({'host_memory': {'total': 10,
+                                                    'overhead': 20,
+                                                    'free': 30,
+                                                    'free-computed': 40}, })
         elif (plugin == 'xenhost' and method in ['host_reboot',
                                                  'host_startup',
                                                  'host_shutdown']):
-            return json.dumps({"power_action": method[5:]})
+            return jsonutils.dumps({"power_action": method[5:]})
         elif (plugin, method) == ('xenhost', 'set_host_enabled'):
             enabled = 'enabled' if _5.get('enabled') == 'true' else 'disabled'
-            return json.dumps({"status": enabled})
+            return jsonutils.dumps({"status": enabled})
         else:
             raise Exception('No simulation in host_call_plugin for %s,%s' %
                             (plugin, method))

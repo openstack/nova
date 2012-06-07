@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from lxml import etree
 import webob
 
@@ -23,6 +21,7 @@ from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
@@ -117,7 +116,7 @@ class SnapshotApiTest(test.TestCase):
         body = dict(snapshot=snapshot)
         req = webob.Request.blank('/v2/fake/os-snapshots')
         req.method = 'POST'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -129,7 +128,7 @@ class SnapshotApiTest(test.TestCase):
         self.assertEqual(_last_param['display_description'],
             "Snapshot Test Desc")
 
-        resp_dict = json.loads(resp.body)
+        resp_dict = jsonutils.loads(resp.body)
         LOG.debug(_("test_snapshot_create: resp_dict=%s"), resp_dict)
         self.assertTrue('snapshot' in resp_dict)
         self.assertEqual(resp_dict['snapshot']['displayName'],
@@ -148,7 +147,7 @@ class SnapshotApiTest(test.TestCase):
         body = dict(snapshot=snapshot)
         req = webob.Request.blank('/v2/fake/os-snapshots')
         req.method = 'POST'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -160,7 +159,7 @@ class SnapshotApiTest(test.TestCase):
         self.assertEqual(_last_param['display_description'],
             "Snapshot Test Desc")
 
-        resp_dict = json.loads(resp.body)
+        resp_dict = jsonutils.loads(resp.body)
         LOG.debug(_("test_snapshot_create_force: resp_dict=%s"), resp_dict)
         self.assertTrue('snapshot' in resp_dict)
         self.assertEqual(resp_dict['snapshot']['displayName'],
@@ -205,7 +204,7 @@ class SnapshotApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 200)
         self.assertEqual(str(_last_param['snapshot_id']), str(snapshot_id))
 
-        resp_dict = json.loads(resp.body)
+        resp_dict = jsonutils.loads(resp.body)
         self.assertTrue('snapshot' in resp_dict)
         self.assertEqual(resp_dict['snapshot']['id'], str(snapshot_id))
 
@@ -226,7 +225,7 @@ class SnapshotApiTest(test.TestCase):
         resp = req.get_response(fakes.wsgi_app())
         self.assertEqual(resp.status_int, 200)
 
-        resp_dict = json.loads(resp.body)
+        resp_dict = jsonutils.loads(resp.body)
         LOG.debug(_("test_snapshot_detail: resp_dict=%s"), resp_dict)
         self.assertTrue('snapshots' in resp_dict)
         resp_snapshots = resp_dict['snapshots']

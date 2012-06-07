@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 import unittest
 
 from lxml import etree
@@ -22,6 +21,7 @@ from nova.api.openstack import compute
 from nova.api.openstack.compute.contrib import server_diagnostics
 from nova.api.openstack import wsgi
 import nova.compute
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 import nova.utils
@@ -54,7 +54,7 @@ class ServerDiagnosticsTest(test.TestCase):
     def test_get_diagnostics(self):
         req = fakes.HTTPRequest.blank('/fake/servers/%s/diagnostics' % UUID)
         res = req.get_response(self.router)
-        output = json.loads(res.body)
+        output = jsonutils.loads(res.body)
         self.assertEqual(output, {'data': 'Some diagnostic info'})
 
 

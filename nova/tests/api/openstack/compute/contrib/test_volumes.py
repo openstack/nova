@@ -14,7 +14,6 @@
 #    under the License.
 
 import datetime
-import json
 
 from lxml import etree
 import webob
@@ -25,6 +24,7 @@ from nova.compute import instance_types
 from nova import context
 import nova.db
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
@@ -118,11 +118,11 @@ class BootFromVolumeTest(test.TestCase):
         _block_device_mapping_seen = None
         req = webob.Request.blank('/v2/fake/os-volumes_boot')
         req.method = 'POST'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
-        server = json.loads(res.body)['server']
+        server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
         self.assertEqual(FLAGS.password_length, len(server['adminPass']))
         self.assertEqual(len(_block_device_mapping_seen), 1)
@@ -160,13 +160,13 @@ class VolumeApiTest(test.TestCase):
         body = {"volume": vol}
         req = webob.Request.blank('/v2/fake/os-volumes')
         req.method = 'POST'
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
         resp = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(resp.status_int, 200)
 
-        resp_dict = json.loads(resp.body)
+        resp_dict = jsonutils.loads(resp.body)
         self.assertTrue('volume' in resp_dict)
         self.assertEqual(resp_dict['volume']['size'],
                          vol['size'])
@@ -180,7 +180,7 @@ class VolumeApiTest(test.TestCase):
     def test_volume_create_no_body(self):
         req = webob.Request.blank('/v2/fake/os-volumes')
         req.method = 'POST'
-        req.body = json.dumps({})
+        req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(fakes.wsgi_app())
@@ -242,7 +242,7 @@ class VolumeAttachTests(test.TestCase):
         attachments = volumes.VolumeAttachmentController()
         req = webob.Request.blank('/v2/fake/os-volumes/show')
         req.method = 'POST'
-        req.body = json.dumps({})
+        req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -254,7 +254,7 @@ class VolumeAttachTests(test.TestCase):
         attachments = volumes.VolumeAttachmentController()
         req = webob.Request.blank('/v2/fake/os-volumes/delete')
         req.method = 'POST'
-        req.body = json.dumps({})
+        req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -266,7 +266,7 @@ class VolumeAttachTests(test.TestCase):
         attachments = volumes.VolumeAttachmentController()
         req = webob.Request.blank('/v2/fake/os-volumes/delete')
         req.method = 'POST'
-        req.body = json.dumps({})
+        req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
@@ -283,7 +283,7 @@ class VolumeAttachTests(test.TestCase):
                                     'device': '/dev/fake'}}
         req = webob.Request.blank('/v2/fake/os-volumes/attach')
         req.method = 'POST'
-        req.body = json.dumps({})
+        req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         result = attachments.create(req, FAKE_UUID, body)

@@ -24,7 +24,8 @@ library to work with nova.
 """
 
 import fnmatch
-import json
+
+from nova.openstack.common import jsonutils
 
 
 class Store(object):
@@ -191,7 +192,7 @@ def _from_json(encoded):
     Returns a list of strings
 
     """
-    return [str(x) for x in json.loads(encoded)]
+    return [str(x) for x in jsonutils.loads(encoded)]
 
 
 def _to_json(unencoded):
@@ -204,7 +205,7 @@ def _to_json(unencoded):
     Returns a json string
 
     """
-    return json.dumps(list(unencoded))
+    return jsonutils.dumps(list(unencoded))
 
 
 server_fail = False

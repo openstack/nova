@@ -23,7 +23,6 @@ controller on the SAN hardware.  We expect to access it over SSH or some API.
 
 import base64
 import httplib
-import json
 import os
 import paramiko
 import random
@@ -37,6 +36,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import jsonutils
 from nova import utils
 import nova.volume.driver
 
@@ -673,7 +673,7 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
         if params is not None:
             command['params'] = params
 
-        payload = json.dumps(command, ensure_ascii=False)
+        payload = jsonutils.dumps(command, ensure_ascii=False)
         payload.encode('utf-8')
         # we use json-rpc, webserver needs to see json-rpc in header
         header = {'Content-Type': 'application/json-rpc; charset=utf-8'}
@@ -698,11 +698,12 @@ class SolidFireSanISCSIDriver(SanISCSIDriver):
         else:
             data = response.read()
             try:
-                data = json.loads(data)
+                data = jsonutils.loads(data)
 
             except (TypeError, ValueError), exc:
                 connection.close()
-                msg = _("Call to json.loads() raised an exception: %s") % exc
+                msg = _("Call to jsonutils.loads() "
+                        "raised an exception: %s") % exc
                 raise exception.SfJsonEncodeFailure(msg)
 
             connection.close()
