@@ -1321,6 +1321,15 @@ def strcmp_const_time(s1, s2):
     return result == 0
 
 
+def sys_platform_translate(arch):
+    """Translate cpu architecture into supported platforms."""
+    if (arch[0] == 'i' and arch[1].isdigit() and arch[2:4] == '86'):
+        arch = 'i686'
+    elif arch.startswith('arm'):
+        arch = 'arm'
+    return arch
+
+
 class UndoManager(object):
     """Provides a mechanism to facilitate rolling back a series of actions
     when an exception is raised.
