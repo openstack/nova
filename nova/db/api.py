@@ -1505,19 +1505,19 @@ def console_delete(context, console_id):
     return IMPL.console_delete(context, console_id)
 
 
-def console_get_by_pool_instance(context, pool_id, instance_id):
+def console_get_by_pool_instance(context, pool_id, instance_uuid):
     """Get console entry for a given instance and pool."""
-    return IMPL.console_get_by_pool_instance(context, pool_id, instance_id)
+    return IMPL.console_get_by_pool_instance(context, pool_id, instance_uuid)
 
 
-def console_get_all_by_instance(context, instance_id):
+def console_get_all_by_instance(context, instance_uuid):
     """Get consoles for a given instance."""
-    return IMPL.console_get_all_by_instance(context, instance_id)
+    return IMPL.console_get_all_by_instance(context, instance_uuid)
 
 
-def console_get(context, console_id, instance_id=None):
+def console_get(context, console_id, instance_uuid=None):
     """Get a specific console (possibly on a given instance)."""
-    return IMPL.console_get(context, console_id, instance_id)
+    return IMPL.console_get(context, console_id, instance_uuid)
 
 
     ##################

@@ -34,29 +34,29 @@ class API(base.Base):
     def __init__(self, **kwargs):
         super(API, self).__init__(**kwargs)
 
-    def get_consoles(self, context, instance_id):
-        instance_id = self._translate_uuid_if_necessary(context, instance_id)
-        return self.db.console_get_all_by_instance(context, instance_id)
+    def get_consoles(self, context, instance_uuid):
+        instance_id = self._translate_uuid_if_necessary(context, instance_uuid)
+        return self.db.console_get_all_by_instance(context, instance_uuid)
 
-    def get_console(self, context, instance_id, console_id):
-        instance_id = self._translate_uuid_if_necessary(context, instance_id)
-        return self.db.console_get(context, console_id, instance_id)
+    def get_console(self, context, instance_id, console_uuid):
+        instance_id = self._translate_uuid_if_necessary(context, instance_uuid)
+        return self.db.console_get(context, console_id, instance_uuid)
 
-    def delete_console(self, context, instance_id, console_id):
-        instance_id = self._translate_uuid_if_necessary(context, instance_id)
-        console = self.db.console_get(context, console_id, instance_id)
+    def delete_console(self, context, instance_id, console_uuid):
+        instance_id = self._translate_uuid_if_necessary(context, instance_uuid)
+        console = self.db.console_get(context, console_id, instance_uuid)
         topic = rpc.queue_get_for(context, FLAGS.console_topic,
                                   pool['host'])
         rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
         rpcapi.remove_console(context, console['id'])
 
-    def create_console(self, context, instance_id):
+    def create_console(self, context, instance_uuid):
         #NOTE(mdragon): If we wanted to return this the console info
         #               here, as we would need to do a call.
         #               They can just do an index later to fetch
         #               console info. I am not sure which is better
         #               here.
-        instance = self._get_instance(context, instance_id)
+        instance = self._get_instance(context, instance_uuid)
         topic = self._get_console_topic(context, instance['host']),
         rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
         rpcapi.add_console(context, instance['id'])
@@ -65,15 +65,15 @@ class API(base.Base):
         rpcapi = compute_rpcapi.ComputeAPI()
         return rpcapi.get_console_topic(context, instance_host)
 
-    def _translate_uuid_if_necessary(self, context, instance_id):
-        if utils.is_uuid_like(instance_id):
-            instance = self.db.instance_get_by_uuid(context, instance_id)
-            instance_id = instance['id']
-        return instance_id
+    def _translate_id_if_necessary(self, context, instance_uuid):
+        if not utils.is_uuid_like(instance_uuid):
+            instance = self.db.instance_get(context, instance_uuid)
+            instance_uuid = instance['uuid']
+        return instance_uuid
 
-    def _get_instance(self, context, instance_id):
-        if utils.is_uuid_like(instance_id):
-            instance = self.db.instance_get_by_uuid(context, instance_id)
+    def _get_instance(self, context, instance_uuid):
+        if utils.is_uuid_like(instance_uuid):
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         else:
-            instance = self.db.instance_get(context, instance_id)
+            instance = self.db.instance_get(context, instance_uuid)
         return instance

@@ -99,7 +99,7 @@ class ConsoleVMRCManager(manager.Manager):
         try:
             console = self.db.console_get_by_pool_instance(context,
                                                       pool['id'],
-                                                      instance_id)
+                                                      instance['uuid'])
             if self.driver.is_otp():
                 console = self._generate_console(context,
                                                  pool,

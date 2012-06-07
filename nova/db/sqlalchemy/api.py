@@ -3894,40 +3894,40 @@ def console_delete(context, console_id):
                 delete()
 
 
-def console_get_by_pool_instance(context, pool_id, instance_id):
+def console_get_by_pool_instance(context, pool_id, instance_uuid):
     result = model_query(context, models.Console, read_deleted="yes").\
                    filter_by(pool_id=pool_id).\
-                   filter_by(instance_id=instance_id).\
+                   filter_by(instance_uuid=instance_uuid).\
                    options(joinedload('pool')).\
                    first()
 
     if not result:
         raise exception.ConsoleNotFoundInPoolForInstance(
-                pool_id=pool_id, instance_id=instance_id)
+                pool_id=pool_id, instance_uuid=instance_uuid)
 
     return result
 
 
-def console_get_all_by_instance(context, instance_id):
+def console_get_all_by_instance(context, instance_uuid):
     return model_query(context, models.Console, read_deleted="yes").\
-                   filter_by(instance_id=instance_id).\
+                   filter_by(instance_uuid=instance_uuid).\
                    all()
 
 
-def console_get(context, console_id, instance_id=None):
+def console_get(context, console_id, instance_uuid=None):
     query = model_query(context, models.Console, read_deleted="yes").\
                     filter_by(id=console_id).\
                     options(joinedload('pool'))
 
-    if instance_id is not None:
-        query = query.filter_by(instance_id=instance_id)
+    if instance_uuid is not None:
+        query = query.filter_by(instance_uuid=instance_uuid)
 
     result = query.first()
 
     if not result:
-        if instance_id:
+        if instance_uuid:
             raise exception.ConsoleNotFoundForInstance(
-                    console_id=console_id, instance_id=instance_id)
+                    console_id=console_id, instance_uuid=instance_uuid)
         else:
             raise exception.ConsoleNotFound(console_id=console_id)
 

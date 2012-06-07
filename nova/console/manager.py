@@ -75,8 +75,8 @@ class ConsoleProxyManager(manager.Manager):
         pool = self.get_pool_for_instance_host(context, host)
         try:
             console = self.db.console_get_by_pool_instance(context,
-                                                      pool['id'],
-                                                      instance_id)
+                                                           pool['id'],
+                                                           instance['uuid'])
         except exception.NotFound:
             LOG.debug(_('Adding console'), instance=instance)
             if not password:
@@ -84,13 +84,14 @@ class ConsoleProxyManager(manager.Manager):
             if not port:
                 port = self.driver.get_port(context)
             console_data = {'instance_name': name,
-                            'instance_id': instance_id,
+                            'instance_uuid': instance['uuid'],
                             'password': password,
                             'pool_id': pool['id']}
             if port:
                 console_data['port'] = port
             console = self.db.console_create(context, console_data)
             self.driver.setup_console(context, console)
+
         return console['id']
 
     @exception.wrap_exception()

@@ -846,7 +846,7 @@ class Console(BASE, NovaBase):
     __tablename__ = 'consoles'
     id = Column(Integer, primary_key=True)
     instance_name = Column(String(255))
-    instance_id = Column(Integer)
+    instance_uuid = Column(String(36))
     password = Column(String(255))
     port = Column(Integer, nullable=True)
     pool_id = Column(Integer, ForeignKey('console_pools.id'))
