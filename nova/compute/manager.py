@@ -701,24 +701,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._run_instance(context, instance_uuid, **kwargs)
         do_run_instance()
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    @checks_instance_lock
-    @wrap_instance_fault
-    def start_instance(self, context, instance_uuid):
-        @utils.synchronized(instance_uuid)
-        def do_start_instance():
-            """Starting an instance on this host."""
-            # TODO(yamahata): injected_files isn't supported.
-            #                 Anyway OSAPI doesn't support stop/start yet
-            # FIXME(vish): I've kept the files during stop instance, but
-            #              I think start will fail due to the files still
-            self._run_instance(context, instance_uuid)
-        do_start_instance()
-
-    def _shutdown_instance(self, context, instance, action_str):
+    def _shutdown_instance(self, context, instance):
         """Shutdown an instance on this host."""
         context = context.elevated()
-        LOG.audit(_('%(action_str)s instance') % {'action_str': action_str},
+        LOG.audit(_('%(action_str)s instance') % {'action_str': 'Terminating'},
                   context=context, instance=instance)
 
         self._notify_about_instance_usage(context, instance, "shutdown.start")
@@ -765,7 +751,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Delete an instance on this host."""
         instance_uuid = instance['uuid']
         self._notify_about_instance_usage(context, instance, "delete.start")
-        self._shutdown_instance(context, instance, 'Terminating')
+        self._shutdown_instance(context, instance)
         self._cleanup_volumes(context, instance_uuid)
         instance = self._instance_update(context,
                               instance_uuid,
@@ -804,21 +790,26 @@ class ComputeManager(manager.SchedulerDependentManager):
     @checks_instance_lock
     @wrap_instance_fault
     def stop_instance(self, context, instance_uuid):
-        """Stopping an instance on this host."""
-        @utils.synchronized(instance_uuid)
-        def do_stop_instance():
-            instance = self.db.instance_get_by_uuid(context, instance_uuid)
-            self._shutdown_instance(context, instance, 'Stopping')
-            self._instance_update(context,
-                                  instance_uuid,
-                                  vm_state=vm_states.STOPPED,
-                                  task_state=None)
-        do_stop_instance()
+        """Stopping an instance on this host.
+
+        Alias for power_off_instance for compatibility"""
+        self.power_off_instance(context, instance_uuid,
+                                final_state=vm_states.STOPPED)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def power_off_instance(self, context, instance_uuid):
+    def start_instance(self, context, instance_uuid):
+        """Starting an instance on this host.
+
+        Alias for power_on_instance for compatibility"""
+        self.power_on_instance(context, instance_uuid)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @checks_instance_lock
+    @wrap_instance_fault
+    def power_off_instance(self, context, instance_uuid,
+                           final_state=vm_states.SOFT_DELETE):
         """Power off an instance on this host."""
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
         self._notify_about_instance_usage(context, instance, "power_off.start")
@@ -827,6 +818,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_uuid,
                               power_state=current_power_state,
+                              vm_state=final_state,
                               task_state=None)
         self._notify_about_instance_usage(context, instance, "power_off.end")
 
@@ -842,6 +834,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._instance_update(context,
                               instance_uuid,
                               power_state=current_power_state,
+                              vm_state=vm_states.ACTIVE,
                               task_state=None)
         self._notify_about_instance_usage(context, instance, "power_on.end")
 
@@ -2579,7 +2572,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                "'%(name)s' which is marked as "
                                "DELETED but still present on host."),
                              locals(), instance=instance)
-                    self._shutdown_instance(context, instance, 'Terminating')
+                    self._shutdown_instance(context, instance)
                     self._cleanup_volumes(context, instance['uuid'])
                 else:
                     raise Exception(_("Unrecognized value '%(action)s'"

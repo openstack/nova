@@ -177,6 +177,22 @@ class _VirtDriverTestCase(test.TestCase):
             network_info)
 
     @catch_notimplementederror
+    def test_power_off(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.power_off(instance_ref)
+
+    @catch_notimplementederror
+    def test_test_power_on_running(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.power_on(instance_ref)
+
+    @catch_notimplementederror
+    def test_test_power_on_powered_off(self):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.power_off(instance_ref)
+        self.connection.power_on(instance_ref)
+
+    @catch_notimplementederror
     def test_pause(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.pause(instance_ref)

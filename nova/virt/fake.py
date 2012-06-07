@@ -139,6 +139,12 @@ class FakeDriver(driver.ComputeDriver):
     def finish_revert_migration(self, instance, network_info):
         pass
 
+    def power_off(self, instance):
+        pass
+
+    def power_on(self, instance):
+        pass
+
     def pause(self, instance):
         pass
 

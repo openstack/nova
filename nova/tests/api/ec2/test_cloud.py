@@ -1968,9 +1968,10 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(result)
 
         vol = db.volume_get(self.context, vol1['id'])
-        self._assert_volume_detached(vol)
+        self._assert_volume_attached(vol, instance_uuid, '/dev/vdb')
+
         vol = db.volume_get(self.context, vol2['id'])
-        self._assert_volume_detached(vol)
+        self._assert_volume_attached(vol, instance_uuid, '/dev/vdc')
 
         self.cloud.start_instances(self.context, [ec2_instance_id])
         vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
@@ -2039,9 +2040,8 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.stop_instances(self.context, [ec2_instance_id])
         self.assertTrue(result)
 
-        for vol_id in (vol1['id'], vol2['id']):
-            vol = db.volume_get(self.context, vol_id)
-            self._assert_volume_detached(vol)
+        vol = db.volume_get(self.context, vol2['id'])
+        self._assert_volume_attached(vol, instance_uuid, '/dev/vdc')
 
         self.cloud.start_instances(self.context, [ec2_instance_id])
         vols = db.volume_get_all_by_instance_uuid(self.context, instance_uuid)
