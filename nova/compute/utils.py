@@ -19,6 +19,7 @@
 from nova import db
 from nova import flags
 from nova import log
+from nova.network import model as network_model
 from nova import notifications
 from nova.notifier import api as notifier_api
 
@@ -100,3 +101,9 @@ def notify_about_instance_usage(context, instance, event_suffix,
     notifier_api.notify(context, 'compute.%s' % host,
                         'compute.instance.%s' % event_suffix,
                         notifier_api.INFO, usage_info)
+
+
+def get_nw_info_for_instance(instance):
+    info_cache = instance['info_cache'] or {}
+    cached_nwinfo = info_cache.get('network_info') or []
+    return network_model.NetworkInfo.hydrate(cached_nwinfo)
