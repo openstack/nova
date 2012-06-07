@@ -8,9 +8,9 @@ BEGIN TRANSACTION;
         instance_name VARCHAR(255),
         instance_id INTEGER NOT NULL,
         instance_uuid VARCHAR(36),
-	password VARCHAR(255),
-	port INTEGER,
-	pool_id INTEGER,
+        password VARCHAR(255),
+        port INTEGER,
+        pool_id INTEGER,
         PRIMARY KEY (id)
     );
 
@@ -21,11 +21,11 @@ BEGIN TRANSACTION;
                deleted,
                id,
                instance_name,
-	       NULL,
+               NULL,
                instance_uuid,
-	       password,
-	       port,
-	       pool_id
+               password,
+               port,
+               pool_id
         FROM consoles;
 
     UPDATE consoles_backup
@@ -45,9 +45,9 @@ BEGIN TRANSACTION;
         id INTEGER NOT NULL,
         instance_name VARCHAR(255),
         instance_id INTEGER NOT NULL,
-	password VARCHAR(255),
-	port INTEGER,
-	pool_id INTEGER,
+        password VARCHAR(255),
+        port INTEGER,
+        pool_id INTEGER,
         PRIMARY KEY (id),
         FOREIGN KEY(instance_id) REFERENCES instances (id)
     );
@@ -62,9 +62,9 @@ BEGIN TRANSACTION;
                id,
                instance_name,
                instance_id,
-	       password,
-	       port,
-	       pool_id
+               password,
+               port,
+               pool_id
         FROM consoles_backup;
 
     DROP TABLE consoles_backup;
