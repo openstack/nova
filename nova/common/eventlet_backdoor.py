@@ -17,6 +17,8 @@
 #    under the License.
 
 import gc
+import pprint
+import sys
 import traceback
 
 import eventlet
@@ -52,7 +54,6 @@ def print_greenthreads():
 
 
 backdoor_locals = {
-    '_': None,                  # So it doesn't interfere with the global
     'exit': dont_use_this,      # So we don't exit the entire process
     'quit': dont_use_this,      # So we don't exit the entire process
     'fo': find_objects,
@@ -63,6 +64,16 @@ backdoor_locals = {
 def initialize_if_enabled():
     if FLAGS.backdoor_port is None:
         return
+
+    # NOTE(johannes): The standard sys.displayhook will print the value of
+    # the last expression and set it to __builtin__._, which overwrites
+    # the __builtin__._ that gettext sets. Let's switch to using pprint
+    # since it won't interact poorly with gettext, and it's easier to
+    # read the output too.
+    def displayhook(val):
+        if val is not None:
+            pprint.pprint(val)
+    sys.displayhook = displayhook
 
     eventlet.spawn(eventlet.backdoor.backdoor_server,
                    eventlet.listen(('localhost', FLAGS.backdoor_port)),
