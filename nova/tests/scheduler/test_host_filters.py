@@ -166,10 +166,9 @@ class HostFiltersTestCase(test.TestCase):
     def test_affinity_simple_cidr_filter_passes(self):
         filt_cls = self.class_map['SimpleCIDRAffinityFilter']()
         host = fakes.FakeHostState('host1', 'compute', {})
+        host.capabilities = {'host_ip': '10.8.1.1'}
 
-        affinity_ip = flags.FLAGS.my_ip.split('.')[0:3]
-        affinity_ip.append('100')
-        affinity_ip = str.join('.', affinity_ip)
+        affinity_ip = "10.8.1.100"
 
         filter_properties = {'context': self.context.elevated(),
                              'scheduler_hints': {
@@ -181,10 +180,9 @@ class HostFiltersTestCase(test.TestCase):
     def test_affinity_simple_cidr_filter_fails(self):
         filt_cls = self.class_map['SimpleCIDRAffinityFilter']()
         host = fakes.FakeHostState('host1', 'compute', {})
+        host.capabilities = {'host_ip': '10.8.1.1'}
 
-        affinity_ip = flags.FLAGS.my_ip.split('.')
-        affinity_ip[-1] = '100' if affinity_ip[-1] != '100' else '101'
-        affinity_ip = str.join('.', affinity_ip)
+        affinity_ip = "10.8.1.100"
 
         filter_properties = {'context': self.context.elevated(),
                              'scheduler_hints': {

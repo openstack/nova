@@ -2385,6 +2385,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # This will grab info about the host and queue it
             # to be sent to the Schedulers.
             capabilities = _get_additional_capabilities()
+            capabilities['host_ip'] = FLAGS.my_ip
             capabilities.update(self.driver.get_host_stats(refresh=True))
             self.update_service_capabilities(capabilities)
 
