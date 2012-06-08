@@ -413,9 +413,25 @@ def get_sr_path(session):
 def find_cached_image(session, image_id, sr_ref):
     """Returns the vdi-ref of the cached image."""
     for vdi_ref, vdi_rec in _get_all_vdis_in_sr(session, sr_ref):
-        if ('image-id' in vdi_rec['other_config'] and
-            vdi_rec['other_config']['image-id'] == image_id):
-                return vdi_ref
+        other_config = vdi_rec['other_config']
+
+        try:
+            image_id_match = other_config['image-id'] == image_id
+        except KeyError:
+            image_id_match = False
+
+        # NOTE(sirp): `VDI.copy` stores the partially-completed file in the SR.
+        # In order to avoid these half-baked files, we compare its current size
+        # to the expected size pulled from the original cache file.
+        try:
+            size_match = (other_config['expected_physical_utilisation'] ==
+                          vdi_rec['physical_utilisation'])
+        except KeyError:
+            size_match = False
+
+        if image_id_match and size_match:
+            return vdi_ref
+
     return None
 
 
@@ -615,6 +631,11 @@ def _create_cached_image(context, session, instance, image, image_type):
             session.call_xenapi('VDI.add_to_other_config',
                                 vdi_ref, 'nova_disk_type',
                                 vdi_type)
+
+            vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+            session.call_xenapi('VDI.add_to_other_config',
+                                vdi_ref, 'expected_physical_utilisation',
+                                vdi_rec['physical_utilisation'])
 
             if vdi_type == 'swap':
                 session.call_xenapi('VDI.add_to_other_config',
