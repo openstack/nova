@@ -438,7 +438,7 @@ class LibvirtDriver(driver.ComputeDriver):
                           instance=instance)
                 raise utils.LoopingCallDone(False)
 
-            if state == power_state.SHUTOFF:
+            if state == power_state.SHUTDOWN:
                 LOG.info(_("Instance destroyed successfully."),
                          instance=instance)
                 raise utils.LoopingCallDone(True)
