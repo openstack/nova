@@ -385,12 +385,10 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
 
         try:
             instance = self.compute_api.get(context, server_id)
-            groups = db.security_group_get_by_instance(context,
-                                                       instance['id'])
-        except exception.ApiError, e:
-            raise webob.exc.HTTPBadRequest(explanation=e.message)
-        except exception.NotAuthorized, e:
-            raise webob.exc.HTTPUnauthorized()
+        except exception.InstanceNotFound as exp:
+            raise exc.HTTPNotFound(explanation=unicode(exp))
+
+        groups = db.security_group_get_by_instance(context, instance['id'])
 
         result = [self._format_security_group(context, group)
                     for group in groups]
