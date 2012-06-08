@@ -88,7 +88,7 @@ class _RpcZmqBaseTestCase(common.BaseRpcTestCase):
         except zmq.ZMQError:
             assert False, _("Could not create ZeroMQ receiver daemon. "
                             "Socket may already be in use.")
-        except exception.ProcessExecutionError:
+        except OSError:
             assert False, _("Could not create IPC directory %s") % \
                                                                 (ipc_dir, )
         finally:
