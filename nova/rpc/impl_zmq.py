@@ -74,7 +74,7 @@ def _serialize(data):
     Error if a developer passes us bad data.
     """
     try:
-        return str(jsonutils.dumps(data, ensure_ascii=True))
+        return str(jsonutils.dumps(data))
     except TypeError:
         LOG.error(_("JSON serialization failed."))
         raise
