@@ -98,7 +98,7 @@ MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
 KERNEL_DIR = '/boot/guest'
 
 
-class ImageType:
+class ImageType(object):
     """Enumeration class for distinguishing different image types
 
     | 0 - kernel image (goes on dom0's filesystem)
@@ -580,7 +580,7 @@ def generate_ephemeral(session, instance, vm_ref, userdevice, size_gb):
                    size_gb * 1024, FLAGS.default_ephemeral_format)
 
 
-def create_kernel_image(context, session, instance, image, user_id,
+def create_kernel_image(context, session, instance, image_id, user_id,
                         project_id, image_type):
     """Creates kernel/ramdisk file from the image stored in the cache.
     If the image is not present in the cache, it streams it from glance.
@@ -590,19 +590,19 @@ def create_kernel_image(context, session, instance, image, user_id,
     filename = ""
     if FLAGS.cache_images:
         args = {}
-        args['cached-image'] = image
+        args['cached-image'] = image_id
         args['new-image-uuid'] = str(uuid.uuid4())
         filename = session.call_plugin('glance', 'create_kernel_ramdisk',
                                        args)
 
     if filename == "":
-        return fetch_image(context, session, instance, image, image_type)
+        return fetch_image(context, session, instance, image_id, image_type)
     else:
         vdi_type = ImageType.to_string(image_type)
         return {vdi_type: dict(uuid=None, file=filename)}
 
 
-def _create_cached_image(context, session, instance, image, image_type):
+def _create_cached_image(context, session, instance, image_id, image_type):
     sr_ref = safe_find_sr(session)
     sr_type = session.call_xenapi('SR.get_record', sr_ref)["type"]
     vdis = {}
@@ -613,17 +613,17 @@ def _create_cached_image(context, session, instance, image, image_type):
                       "type %(sr_type)s. Ignoring the cow flag.")
                       % locals())
 
-    root_vdi_ref = find_cached_image(session, image, sr_ref)
+    root_vdi_ref = find_cached_image(session, image_id, sr_ref)
     if root_vdi_ref is None:
-        fetched_vdis = fetch_image(context, session, instance, image,
+        fetched_vdis = fetch_image(context, session, instance, image_id,
                                    image_type)
         root_vdi = fetched_vdis['root']
         root_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                            root_vdi['uuid'])
-        set_vdi_name(session, root_vdi['uuid'], 'Glance Image %s' % image,
+        set_vdi_name(session, root_vdi['uuid'], 'Glance Image %s' % image_id,
                      'root', vdi_ref=root_vdi_ref)
         session.call_xenapi('VDI.add_to_other_config',
-                            root_vdi_ref, 'image-id', str(image))
+                            root_vdi_ref, 'image-id', str(image_id))
 
         for vdi_type, vdi in fetched_vdis.iteritems():
             vdi_ref = session.call_xenapi('VDI.get_by_uuid',
@@ -671,20 +671,20 @@ def _create_cached_image(context, session, instance, image, image_type):
     return vdis
 
 
-def create_image(context, session, instance, image, image_type):
+def create_image(context, session, instance, image_id, image_type):
     """Creates VDI from the image stored in the local cache. If the image
     is not present in the cache, it streams it from glance.
 
     Returns: A list of dictionaries that describe VDIs
     """
-    if FLAGS.cache_images is True and image_type != ImageType.DISK_ISO:
-        vdis = _create_cached_image(context, session, instance, image,
-                                    image_type)
+    if FLAGS.cache_images and image_type != ImageType.DISK_ISO:
+        vdis = _create_cached_image(
+                context, session, instance, image_id, image_type)
     else:
         # If caching is disabled, we do not have to keep a copy of the
         # image. Fetch the image from glance.
-        vdis = fetch_image(context, session, instance,
-                           instance.image_ref, image_type)
+        vdis = fetch_image(
+                context, session, instance, image_id, image_type)
 
     # Set the name label and description to easily identify what
     # instance and disk it's for
@@ -694,20 +694,20 @@ def create_image(context, session, instance, image, image_type):
     return vdis
 
 
-def fetch_image(context, session, instance, image, image_type):
+def fetch_image(context, session, instance, image_id, image_type):
     """Fetch image from glance based on image type.
 
     Returns: A single filename if image_type is KERNEL or RAMDISK
              A list of dictionaries that describe VDIs, otherwise
     """
     if image_type == ImageType.DISK_VHD:
-        return _fetch_image_glance_vhd(context, session, instance, image)
+        return _fetch_image_glance_vhd(context, session, instance, image_id)
     else:
-        return _fetch_image_glance_disk(context, session, instance, image,
+        return _fetch_image_glance_disk(context, session, instance, image_id,
                                         image_type)
 
 
-def _retry_glance_download_vhd(context, session, image):
+def _retry_glance_download_vhd(context, session, image_id):
     # NOTE(sirp): The Glance plugin runs under Python 2.4
     # which does not have the `uuid` module. To work around this,
     # we generate the uuids here (under Python 2.6+) and
@@ -718,7 +718,7 @@ def _retry_glance_download_vhd(context, session, image):
     sleep_time = 0.5
     for attempt_num in xrange(1, max_attempts + 1):
         glance_host, glance_port = glance.pick_glance_api_server()
-        params = {'image_id': image,
+        params = {'image_id': image_id,
                   'glance_host': glance_host,
                   'glance_port': glance_port,
                   'uuid_stack': uuid_stack,
@@ -726,7 +726,7 @@ def _retry_glance_download_vhd(context, session, image):
                   'auth_token': getattr(context, 'auth_token', None)}
         kwargs = {'params': pickle.dumps(params)}
 
-        LOG.info(_('download_vhd %(image)s '
+        LOG.info(_('download_vhd %(image_id)s '
                    'attempt %(attempt_num)d/%(max_attempts)d '
                    'from %(glance_host)s:%(glance_port)s') % locals())
 
@@ -744,19 +744,19 @@ def _retry_glance_download_vhd(context, session, image):
         time.sleep(sleep_time)
         sleep_time = min(2 * sleep_time, 15)
 
-    raise exception.CouldNotFetchImage(image=image)
+    raise exception.CouldNotFetchImage(image_id=image_id)
 
 
-def _fetch_image_glance_vhd(context, session, instance, image):
+def _fetch_image_glance_vhd(context, session, instance, image_id):
     """Tell glance to download an image and put the VHDs into the SR
 
     Returns: A list of dictionaries that describe VDIs
     """
-    LOG.debug(_("Asking xapi to fetch vhd image %(image)s"), locals(),
+    LOG.debug(_("Asking xapi to fetch vhd image %(image_id)s"), locals(),
               instance=instance)
     sr_ref = safe_find_sr(session)
 
-    fetched_vdis = _retry_glance_download_vhd(context, session, image)
+    fetched_vdis = _retry_glance_download_vhd(context, session, image_id)
 
     # 'download_vhd' will return a list of dictionaries describing VDIs.
     # The dictionary will contain 'vdi_type' and 'vdi_uuid' keys.
@@ -819,7 +819,7 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
         raise exception.ImageTooLarge()
 
 
-def _fetch_image_glance_disk(context, session, instance, image, image_type):
+def _fetch_image_glance_disk(context, session, instance, image_id, image_type):
     """Fetch the image from Glance
 
     NOTE:
@@ -834,7 +834,7 @@ def _fetch_image_glance_disk(context, session, instance, image, image_type):
     # VHD disk, it may be worth using the plugin for both VHD and RAW and
     # DISK restores
     image_type_str = ImageType.to_string(image_type)
-    LOG.debug(_("Fetching image %(image)s, type %(image_type_str)s"),
+    LOG.debug(_("Fetching image %(image_id)s, type %(image_type_str)s"),
               locals(), instance=instance)
 
     if image_type == ImageType.DISK_ISO:
@@ -842,12 +842,12 @@ def _fetch_image_glance_disk(context, session, instance, image, image_type):
     else:
         sr_ref = safe_find_sr(session)
 
-    glance_client, image_id = glance.get_glance_client(context, image)
+    glance_client, image_id = glance.get_glance_client(context, image_id)
     glance_client.set_auth_token(getattr(context, 'auth_token', None))
     meta, image_file = glance_client.get_image(image_id)
     virtual_size = int(meta['size'])
     vdi_size = virtual_size
-    LOG.debug(_("Size for image %(image)s: %(virtual_size)d"), locals(),
+    LOG.debug(_("Size for image %(image_id)s: %(virtual_size)d"), locals(),
               instance=instance)
     if image_type == ImageType.DISK:
         # Make room for MBR.
@@ -881,7 +881,7 @@ def _fetch_image_glance_disk(context, session, instance, image, image_type):
             # Let the plugin copy the correct number of bytes.
             args['image-size'] = str(vdi_size)
             if FLAGS.cache_images:
-                args['cached-image'] = image
+                args['cached-image'] = image_id
             filename = session.call_plugin('glance', fn, args)
 
             # Remove the VDI as it is not needed anymore.

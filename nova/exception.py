@@ -1093,7 +1093,7 @@ class InvalidInstanceIDMalformed(Invalid):
 
 
 class CouldNotFetchImage(NovaException):
-    message = _("Could not fetch image %(image)s")
+    message = _("Could not fetch image %(image_id)s")
 
 
 def get_context_from_function_and_args(function, args, kwargs):
