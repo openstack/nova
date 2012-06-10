@@ -211,11 +211,26 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(inst_type_name, inst_type["name"])
 
         # NOTE(jk0): The deleted flavor will show up here because the context
-        # in get_instance_type_by_flavor_id() is set to use read_deleted.
+        # in get_instance_type_by_flavor_id() is set to use read_deleted by
+        # default.
         instance_types.destroy(inst_type["name"])
         deleted_inst_type = instance_types.get_instance_type_by_flavor_id(
                 inst_type_flavor_id)
         self.assertEqual(inst_type_name, deleted_inst_type["name"])
+
+    def test_read_deleted_false_converting_flavorid(self):
+        """
+        Ensure deleted instance types are not returned when not needed (for
+        example when creating a server and attempting to translate from
+        flavorid to instance_type_id.
+        """
+        instance_types.create("instance_type1", 256, 1, 120, 100, "test1")
+        instance_types.destroy("instance_type1")
+        instance_types.create("instance_type1_redo", 256, 1, 120, 100, "test1")
+
+        instance_type = instance_types.get_instance_type_by_flavor_id(
+                "test1", read_deleted="no")
+        self.assertEqual("instance_type1_redo", instance_type["name"])
 
     def test_will_list_deleted_type_for_active_instance(self):
         """Ensure deleted instance types with active instances can be read"""
