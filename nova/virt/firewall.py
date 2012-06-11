@@ -331,7 +331,11 @@ class IptablesFirewallDriver(FirewallDriver):
                 else:
                     fw_rules = ipv6_rules
 
-                protocol = rule.protocol.lower()
+                protocol = rule.protocol
+
+                if protocol:
+                    protocol = rule.protocol.lower()
+
                 if version == 6 and protocol == 'icmp':
                     protocol = 'icmpv6'
 
