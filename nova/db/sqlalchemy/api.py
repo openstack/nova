@@ -474,18 +474,6 @@ def service_update(context, service_id, values):
 
 
 @require_admin_context
-def compute_node_get(context, compute_id, session=None):
-    result = model_query(context, models.ComputeNode, session=session).\
-                     filter_by(id=compute_id).\
-                     first()
-
-    if not result:
-        raise exception.ComputeHostNotFound(host=compute_id)
-
-    return result
-
-
-@require_admin_context
 def compute_node_get_all(context, session=None):
     return model_query(context, models.ComputeNode, session=session).\
                     options(joinedload('service')).\
@@ -3841,17 +3829,6 @@ def console_pool_create(context, values):
     return pool
 
 
-def console_pool_get(context, pool_id):
-    result = model_query(context, models.ConsolePool, read_deleted="no").\
-                     filter_by(id=pool_id).\
-                     first()
-
-    if not result:
-        raise exception.ConsolePoolNotFound(pool_id=pool_id)
-
-    return result
-
-
 def console_pool_get_by_host_type(context, compute_host, host,
                                   console_type):
 
@@ -4090,53 +4067,6 @@ def instance_type_destroy(context, name):
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
-
-
-####################
-
-
-@require_admin_context
-def cell_create(context, values):
-    cell = models.Cell()
-    cell.update(values)
-    cell.save()
-    return cell
-
-
-def _cell_get_by_id_query(context, cell_id, session=None):
-    return model_query(context, models.Cell, session=session).\
-                       filter_by(id=cell_id)
-
-
-@require_admin_context
-def cell_update(context, cell_id, values):
-    cell = cell_get(context, cell_id)
-    cell.update(values)
-    cell.save()
-    return cell
-
-
-@require_admin_context
-def cell_delete(context, cell_id):
-    session = get_session()
-    with session.begin():
-        _cell_get_by_id_query(context, cell_id, session=session).\
-                delete()
-
-
-@require_admin_context
-def cell_get(context, cell_id):
-    result = _cell_get_by_id_query(context, cell_id).first()
-
-    if not result:
-        raise exception.CellNotFound(cell_id=cell_id)
-
-    return result
-
-
-@require_admin_context
-def cell_get_all(context):
-    return model_query(context, models.Cell, read_deleted="no").all()
 
 
 ########################
