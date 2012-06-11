@@ -27,9 +27,9 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import vm_states
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova import flags
 from nova import log as logging
-from nova.network import model as network_model
 from nova import quota
 
 
@@ -302,12 +302,6 @@ def get_networks_for_instance_from_nw_info(nw_info):
     return networks
 
 
-def get_nw_info_for_instance(context, instance):
-    info_cache = instance['info_cache'] or {}
-    cached_nwinfo = info_cache.get('network_info') or []
-    return network_model.NetworkInfo.hydrate(cached_nwinfo)
-
-
 def get_networks_for_instance(context, instance):
     """Returns a prepared nw_info list for passing into the view builders
 
@@ -319,7 +313,7 @@ def get_networks_for_instance(context, instance):
                                      {'addr': '172.16.2.1', 'version': 4}]},
          ...}
     """
-    nw_info = get_nw_info_for_instance(context, instance)
+    nw_info = compute_utils.get_nw_info_for_instance(instance)
     return get_networks_for_instance_from_nw_info(nw_info)
 
 

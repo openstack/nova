@@ -77,6 +77,12 @@ def notify_usage_exists(instance_ref, current_period=False):
                         usage_info)
 
 
+def get_nw_info_for_instance(instance):
+    info_cache = instance['info_cache'] or {}
+    cached_nwinfo = info_cache.get('network_info') or []
+    return network_model.NetworkInfo.hydrate(cached_nwinfo)
+
+
 def legacy_network_info(network_model):
     """
     Return the legacy network_info representation of the network_model
