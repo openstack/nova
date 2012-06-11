@@ -660,7 +660,14 @@ def update_dhcp_hostfile_with_text(dev, hosts_text):
 def kill_dhcp(dev):
     pid = _dnsmasq_pid_for(dev)
     if pid:
-        _execute('kill', '-9', pid, run_as_root=True)
+        # Check that the process exists and looks like a dnsmasq process
+        conffile = _dhcp_file(dev, 'conf')
+        out, _err = _execute('cat', '/proc/%d/cmdline' % pid,
+                             check_exit_code=False)
+        if conffile.split('/')[-1] in out:
+            _execute('kill', '-9', pid, run_as_root=True)
+        else:
+            LOG.debug(_('Pid %d is stale, skip killing dnsmasq'), pid)
 
 
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
