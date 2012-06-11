@@ -406,9 +406,12 @@ global_opts = [
     cfg.ListOpt('isolated_hosts',
                 default=[],
                 help='Host reserved for specific images'),
-    cfg.BoolOpt('cache_images',
-                default=True,
-                help='Cache glance images locally'),
+    cfg.StrOpt('cache_images',
+                default='all',
+                help='Cache glance images locally. `all` will cache all'
+                     ' images, `some` will only cache images that have the'
+                     ' image_property `cache_in_nova=True`, and `none` turns'
+                     ' off caching entirely'),
     cfg.BoolOpt('use_cow_images',
                 default=True,
                 help='Whether to use cow images'),
