@@ -553,9 +553,9 @@ def instance_data_get_for_project(context, project_id, session=None):
                                               session=session)
 
 
-def instance_destroy(context, instance_id, constraint=None):
+def instance_destroy(context, instance_uuid, constraint=None):
     """Destroy the instance or raise if it does not exist."""
-    return IMPL.instance_destroy(context, instance_id, constraint)
+    return IMPL.instance_destroy(context, instance_uuid, constraint)
 
 
 def instance_get_by_uuid(context, uuid):

@@ -53,7 +53,7 @@ class ConsoleTestCase(test.TestCase):
         inst['project_id'] = self.project_id
         inst['instance_type_id'] = 1
         inst['ami_launch_index'] = 0
-        return db.instance_create(self.context, inst)['id']
+        return db.instance_create(self.context, inst)
 
     def test_get_pool_for_instance_host(self):
         pool = self.console.get_pool_for_instance_host(self.context,
@@ -88,31 +88,31 @@ class ConsoleTestCase(test.TestCase):
         self.assertEqual(pool['id'], new_pool['id'])
 
     def test_add_console(self):
-        instance_id = self._create_instance()
-        self.console.add_console(self.context, instance_id)
-        instance = db.instance_get(self.context, instance_id)
+        instance = self._create_instance()
+        self.console.add_console(self.context, instance['id'])
+        instance = db.instance_get(self.context, instance['id'])
         pool = db.console_pool_get_by_host_type(self.context,
                 instance['host'], self.console.host,
                 self.console.driver.console_type)
 
         console_instances = [con['instance_uuid'] for con in pool.consoles]
         self.assert_(instance['uuid'] in console_instances)
-        db.instance_destroy(self.context, instance_id)
+        db.instance_destroy(self.context, instance['uuid'])
 
     def test_add_console_does_not_duplicate(self):
-        instance_id = self._create_instance()
-        cons1 = self.console.add_console(self.context, instance_id)
-        cons2 = self.console.add_console(self.context, instance_id)
+        instance = self._create_instance()
+        cons1 = self.console.add_console(self.context, instance['id'])
+        cons2 = self.console.add_console(self.context, instance['id'])
         self.assertEqual(cons1, cons2)
-        db.instance_destroy(self.context, instance_id)
+        db.instance_destroy(self.context, instance['uuid'])
 
     def test_remove_console(self):
-        instance_id = self._create_instance()
-        console_id = self.console.add_console(self.context, instance_id)
+        instance = self._create_instance()
+        console_id = self.console.add_console(self.context, instance['id'])
         self.console.remove_console(self.context, console_id)
 
         self.assertRaises(exception.NotFound,
                           db.console_get,
                           self.context,
                           console_id)
-        db.instance_destroy(self.context, instance_id)
+        db.instance_destroy(self.context, instance['uuid'])

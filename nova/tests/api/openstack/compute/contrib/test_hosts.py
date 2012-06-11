@@ -251,8 +251,8 @@ class HostTestCase(test.TestCase):
             self.assertEqual(len(resource['resource']), 5)
             self.assertTrue(set(resource['resource'].keys()) == set(column))
         db.service_destroy(ctxt, s_ref['id'])
-        db.instance_destroy(ctxt, i_ref1['id'])
-        db.instance_destroy(ctxt, i_ref2['id'])
+        db.instance_destroy(ctxt, i_ref1['uuid'])
+        db.instance_destroy(ctxt, i_ref2['uuid'])
 
 
 class HostSerializerTest(test.TestCase):

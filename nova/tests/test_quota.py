@@ -88,7 +88,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         inst['project_id'] = self.project_id
         inst['instance_type_id'] = '3'  # m1.large
         inst['vcpus'] = cores
-        return db.instance_create(self.context, inst)['id']
+        return db.instance_create(self.context, inst)
 
     def _create_volume(self, size=10):
         """Create a test volume"""
@@ -99,10 +99,10 @@ class QuotaIntegrationTestCase(test.TestCase):
         return db.volume_create(self.context, vol)['id']
 
     def test_too_many_instances(self):
-        instance_ids = []
+        instance_uuids = []
         for i in range(FLAGS.quota_instances):
-            instance_id = self._create_instance()
-            instance_ids.append(instance_id)
+            instance = self._create_instance()
+            instance_uuids.append(instance['uuid'])
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(exception.QuotaError, compute.API().create,
@@ -111,13 +111,11 @@ class QuotaIntegrationTestCase(test.TestCase):
                                             max_count=1,
                                             instance_type=inst_type,
                                             image_href=image_uuid)
-        for instance_id in instance_ids:
-            db.instance_destroy(self.context, instance_id)
+        for instance_uuid in instance_uuids:
+            db.instance_destroy(self.context, instance_uuid)
 
     def test_too_many_cores(self):
-        instance_ids = []
-        instance_id = self._create_instance(cores=4)
-        instance_ids.append(instance_id)
+        instance = self._create_instance(cores=4)
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(exception.QuotaError, compute.API().create,
@@ -126,8 +124,7 @@ class QuotaIntegrationTestCase(test.TestCase):
                                             max_count=1,
                                             instance_type=inst_type,
                                             image_href=image_uuid)
-        for instance_id in instance_ids:
-            db.instance_destroy(self.context, instance_id)
+        db.instance_destroy(self.context, instance['uuid'])
 
     def test_too_many_volumes(self):
         volume_ids = []

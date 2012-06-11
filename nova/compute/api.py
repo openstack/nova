@@ -975,7 +975,7 @@ class API(base.Base):
             LOG.warning(_('No host for instance, deleting immediately'),
                         instance=instance)
             try:
-                self.db.instance_destroy(context, instance['id'])
+                self.db.instance_destroy(context, instance['uuid'])
             except exception.InstanceNotFound:
                 # NOTE(comstud): Race condition.  Instance already gone.
                 pass
@@ -991,8 +991,9 @@ class API(base.Base):
                 # Just update database, nothing else we can do
                 constraint = self.db.constraint(host=self.db.equal_any(host))
                 try:
-                    result = self.db.instance_destroy(
-                            context, instance['uuid'], constraint)
+                    result = self.db.instance_destroy(context,
+                                                      instance['uuid'],
+                                                      constraint)
                     QUOTAS.commit(context, reservations)
                     return result
                 except exception.ConstraintNotMet:
