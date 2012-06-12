@@ -429,6 +429,10 @@ class NotFound(NovaException):
     code = 404
 
 
+class VirtDriverNotFound(NotFound):
+    message = _("Could not find driver for connection_type %(name)s")
+
+
 class VolumeNotFound(NotFound):
     message = _("Volume %(volume_id)s could not be found.")
 

@@ -234,6 +234,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         #             and re-document the module docstring
         if not compute_driver:
             compute_driver = FLAGS.compute_driver
+
         try:
             self.driver = utils.check_isinstance(
                     importutils.import_object(compute_driver),
