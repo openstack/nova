@@ -21,6 +21,7 @@
 
 import sys
 
+from nova.common import deprecated
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -66,7 +67,8 @@ def get_connection(read_only=False):
                             * baremetal
 
     """
-    LOG.warning(_('Specifying virt driver via connection_type is deprecated'))
+    deprecated.warn(_('Specifying virt driver via connection_type is '
+                      'deprecated. Use compute_driver=classname instead.'))
 
     driver_name = known_drivers.get(FLAGS.connection_type)
 

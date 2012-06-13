@@ -175,6 +175,10 @@ class DBError(NovaException):
         super(DBError, self).__init__(str(inner_exception))
 
 
+class DeprecatedConfig(NovaException):
+    message = _("Fatal call to deprecated config %(msg)")
+
+
 class DecryptionFailure(NovaException):
     message = _("Failed to decrypt text")
 
