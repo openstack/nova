@@ -520,7 +520,7 @@ class Connection(object):
                 sleep_time = min(sleep_time, self.interval_max)
 
             log_info['sleep_time'] = sleep_time
-            LOG.exception(_('AMQP server on %(hostname)s:%(port)d is'
+            LOG.warn(_('AMQP server on %(hostname)s:%(port)d is'
                     ' unreachable: %(err_str)s. Trying again in '
                     '%(sleep_time)d seconds.') % log_info)
             time.sleep(sleep_time)
