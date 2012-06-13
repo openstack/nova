@@ -66,9 +66,7 @@ def get_connection(read_only=False):
                             * baremetal
 
     """
-    # TODO(termie): check whether we can be disconnected
-    # TODO(sdague): is there a better way to mark things deprecated
-    LOG.error(_('Specifying virt driver via connection_type is deprecated'))
+    LOG.warning(_('Specifying virt driver via connection_type is deprecated'))
 
     driver_name = known_drivers.get(FLAGS.connection_type)
 
