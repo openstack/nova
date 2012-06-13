@@ -188,11 +188,6 @@ def service_update(context, service_id, values):
 ###################
 
 
-def compute_node_get(context, compute_id):
-    """Get a computeNode or raise if it does not exist."""
-    return IMPL.compute_node_get(context, compute_id)
-
-
 def compute_node_get_all(context):
     """Get all computeNodes."""
     return IMPL.compute_node_get_all(context)
@@ -1353,11 +1348,6 @@ def user_get(context, id):
     return IMPL.user_get(context, id)
 
 
-def user_get_by_uid(context, uid):
-    """Get user by uid."""
-    return IMPL.user_get_by_uid(context, uid)
-
-
 def user_get_by_access_key(context, access_key):
     """Get user by access key."""
     return IMPL.user_get_by_access_key(context, access_key)
@@ -1474,11 +1464,6 @@ def console_pool_create(context, values):
     return IMPL.console_pool_create(context, values)
 
 
-def console_pool_get(context, pool_id):
-    """Get a console pool."""
-    return IMPL.console_pool_get(context, pool_id)
-
-
 def console_pool_get_by_host_type(context, compute_host, proxy_host,
                                   console_type):
     """Fetch a console pool for a given proxy host, compute host, and type."""
@@ -1552,34 +1537,6 @@ def instance_type_get_by_flavor_id(context, id):
 def instance_type_destroy(context, name):
     """Delete an instance type."""
     return IMPL.instance_type_destroy(context, name)
-
-
-####################
-
-
-def cell_create(context, values):
-    """Create a new child Cell entry."""
-    return IMPL.cell_create(context, values)
-
-
-def cell_update(context, cell_id, values):
-    """Update a child Cell entry."""
-    return IMPL.cell_update(context, cell_id, values)
-
-
-def cell_delete(context, cell_id):
-    """Delete a child Cell."""
-    return IMPL.cell_delete(context, cell_id)
-
-
-def cell_get(context, cell_id):
-    """Get a specific child Cell."""
-    return IMPL.cell_get(context, cell_id)
-
-
-def cell_get_all(context):
-    """Get all child Cells."""
-    return IMPL.cell_get_all(context)
 
 
 ####################

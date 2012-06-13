@@ -278,9 +278,6 @@ class Instance(BASE, NovaBase):
     # EC2 disable_api_termination
     disable_terminate = Column(Boolean(), default=False, nullable=False)
 
-    # OpenStack compute cell name
-    cell_name = Column(String(255))
-
 
 class InstanceInfoCache(BASE, NovaBase):
     """
@@ -899,22 +896,6 @@ class InstanceTypeExtraSpecs(BASE, NovaBase):
                  primaryjoin='and_('
                  'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
                  'InstanceTypeExtraSpecs.deleted == False)')
-
-
-class Cell(BASE, NovaBase):
-    """Represents parent and child cells of this cell."""
-    __tablename__ = 'cells'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255))
-    api_url = Column(String(255))
-    username = Column(String(255))
-    password = Column(String(255))
-    weight_offset = Column(Float(), default=0.0)
-    weight_scale = Column(Float(), default=1.0)
-    is_parent = Column(Boolean())
-    rpc_host = Column(String(255))
-    rpc_port = Column(Integer())
-    rpc_virtual_host = Column(String(255))
 
 
 class AggregateHost(BASE, NovaBase):
