@@ -165,6 +165,17 @@ libvirt_opts = [
                default=None,
                help='Set to force injection to take place on a config drive '
                     '(if set, valid options are: always)'),
+    cfg.StrOpt('libvirt_cpu_mode',
+               default=None,
+               help='Set to "host-model" to clone the host CPU feature flags; '
+                    'to "host-passthrough" to use the host CPU model '
+                    'exactly; or to "custom" to use a named CPU model. Only '
+                    'has effect if libvirt_type="kvm|qemu"'),
+    cfg.StrOpt('libvirt_cpu_model',
+               default=None,
+               help='Set to a named libvirt CPU model (see names listed '
+                    'in /usr/share/libvirt/cpu_map.xml). Only has effect if '
+                    'libvirt_cpu_mode="custom" and libvirt_type="kvm|qemu"'),
     ]
 
 FLAGS = flags.FLAGS
@@ -1438,6 +1449,37 @@ class LibvirtDriver(driver.ComputeDriver):
         caps.parse_str(xmlstr)
         return caps
 
+    def get_guest_cpu_config(self):
+        mode = FLAGS.libvirt_cpu_mode
+        model = FLAGS.libvirt_cpu_model
+
+        if mode is None:
+            return None
+
+        if FLAGS.libvirt_type != "kvm" and FLAGS.libvirt_type != "qemu":
+            msg = _("Config requested an explicit CPU model, but "
+                    "the current libvirt hypervisor '%s' does not "
+                    "support selecting CPU models") % FLAGS.libvirt_type
+            raise exception.Invalid(msg)
+
+        if mode == "custom" and model is None:
+            msg = _("Config requested a custom CPU model, but no "
+                    "model name was provided")
+            raise exception.Invalid(msg)
+        elif mode != "custom" and model is not None:
+            msg = _("A CPU model name should not be set when a "
+                    "host CPU model is requested")
+            raise exception.Invalid(msg)
+
+        LOG.debug(_("CPU mode '%(mode)s' model '%(model)s' was chosen")
+                  % {'mode': mode, 'model': (model or "")})
+
+        cpu = config.LibvirtConfigGuestCPU()
+        cpu.mode = mode
+        cpu.model = model
+
+        return cpu
+
     def get_guest_config(self, instance, network_info, image_meta, rescue=None,
                          block_device_info=None):
         """Get config data for parameters.
@@ -1461,6 +1503,8 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.uuid = instance['uuid']
         guest.memory = inst_type['memory_mb'] * 1024
         guest.vcpus = inst_type['vcpus']
+
+        guest.cpu = self.get_guest_cpu_config()
 
         root_device_name = driver.block_device_info_get_root(block_device_info)
         if root_device_name:
