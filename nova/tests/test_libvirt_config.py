@@ -151,6 +151,123 @@ class LibvirtConfigGuestClockTest(LibvirtConfigBaseTest):
         """)
 
 
+class LibvirtConfigCPUFeatureTest(LibvirtConfigBaseTest):
+
+    def test_config_simple(self):
+        obj = config.LibvirtConfigCPUFeature("mtrr")
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <feature name="mtrr"/>
+        """)
+
+
+class LibvirtConfigGuestCPUFeatureTest(LibvirtConfigBaseTest):
+
+    def test_config_simple(self):
+        obj = config.LibvirtConfigGuestCPUFeature("mtrr")
+        obj.policy = "force"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <feature name="mtrr" policy="force"/>
+        """)
+
+
+class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
+
+    def test_config_simple(self):
+        obj = config.LibvirtConfigCPU()
+        obj.model = "Penryn"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu>
+              <model>Penryn</model>
+            </cpu>
+        """)
+
+    def test_config_complex(self):
+        obj = config.LibvirtConfigCPU()
+        obj.model = "Penryn"
+        obj.vendor = "Intel"
+        obj.arch = "x86_64"
+
+        obj.add_feature(config.LibvirtConfigCPUFeature("mtrr"))
+        obj.add_feature(config.LibvirtConfigCPUFeature("apic"))
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu>
+              <arch>x86_64</arch>
+              <model>Penryn</model>
+              <vendor>Intel</vendor>
+              <feature name="mtrr"/>
+              <feature name="apic"/>
+            </cpu>
+        """)
+
+    def test_config_topology(self):
+        obj = config.LibvirtConfigCPU()
+        obj.model = "Penryn"
+        obj.sockets = 4
+        obj.cores = 4
+        obj.threads = 2
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu>
+              <model>Penryn</model>
+              <topology sockets="4" cores="4" threads="2"/>
+            </cpu>
+        """)
+
+
+class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
+
+    def test_config_simple(self):
+        obj = config.LibvirtConfigGuestCPU()
+        obj.model = "Penryn"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu match="exact">
+              <model>Penryn</model>
+            </cpu>
+        """)
+
+    def test_config_complex(self):
+        obj = config.LibvirtConfigGuestCPU()
+        obj.model = "Penryn"
+        obj.vendor = "Intel"
+        obj.arch = "x86_64"
+        obj.mode = "custom"
+
+        obj.add_feature(config.LibvirtConfigGuestCPUFeature("mtrr"))
+        obj.add_feature(config.LibvirtConfigGuestCPUFeature("apic"))
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu mode="custom" match="exact">
+              <arch>x86_64</arch>
+              <model>Penryn</model>
+              <vendor>Intel</vendor>
+              <feature name="mtrr" policy="require"/>
+              <feature name="apic" policy="require"/>
+            </cpu>
+        """)
+
+    def test_config_host(self):
+        obj = config.LibvirtConfigGuestCPU()
+        obj.mode = "host-model"
+        obj.match = "exact"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu mode="host-model" match="exact"/>
+        """)
+
+
 class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
 
     def test_config_file(self):
@@ -483,43 +600,6 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 </disk>
               </devices>
             </domain>""")
-
-
-class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
-
-    def test_config_cpu(self):
-        obj = config.LibvirtConfigCPU()
-        obj.vendor = "AMD"
-        obj.model = "Quad-Core AMD Opteron(tm) Processor 2350"
-        obj.arch = "x86_64"
-        obj.add_feature("svm")
-        obj.add_feature("extapic")
-        obj.add_feature("constant_tsc")
-
-        xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
-            <cpu>
-              <arch>x86_64</arch>
-              <model>Quad-Core AMD Opteron(tm) Processor 2350</model>
-              <vendor>AMD</vendor>
-              <feature name="svm"/>
-              <feature name="extapic"/>
-              <feature name="constant_tsc"/>
-            </cpu>""")
-
-    def test_config_topology(self):
-        obj = config.LibvirtConfigCPU()
-        obj.vendor = "AMD"
-        obj.sockets = 2
-        obj.cores = 4
-        obj.threads = 2
-
-        xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
-            <cpu>
-              <vendor>AMD</vendor>
-              <topology cores="4" threads="2" sockets="2"/>
-            </cpu>""")
 
 
 class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
