@@ -71,6 +71,7 @@ from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt.libvirt import config
 from nova.virt.libvirt import firewall
+from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
 
@@ -271,6 +272,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._disk_cachemode = None
         self.image_cache_manager = imagecache.ImageCacheManager()
+        self.image_backend = imagebackend.Backend(FLAGS.use_cow_images)
 
     @property
     def disk_cachemode(self):
@@ -506,6 +508,34 @@ class LibvirtDriver(driver.ComputeDriver):
         if os.path.exists(target):
             shutil.rmtree(target)
 
+        #NOTE(bfilippov): destroy all LVM disks for this instance
+        self._cleanup_lvm(instance)
+
+    def _cleanup_lvm(self, instance):
+        """Delete all LVM disks for given instance object"""
+        disks = self._lvm_disks(instance)
+        if disks:
+            libvirt_utils.remove_logical_volumes(*disks)
+
+    def _lvm_disks(self, instance):
+        """Returns all LVM disks for given instance object"""
+        if FLAGS.libvirt_images_volume_group:
+            vg = os.path.join('/dev', FLAGS.libvirt_images_volume_group)
+            if not os.path.exists(vg):
+                return []
+            pattern = '%s_' % instance['name']
+
+            def belongs_to_instance(disk):
+                return disk.startswith(pattern)
+
+            def fullpath(name):
+                return os.path.join(vg, name)
+
+            disk_names = filter(belongs_to_instance, os.listdir(vg))
+            disks = map(fullpath, disk_names)
+            return disks
+        return []
+
     def get_volume_connector(self, instance):
         if not self._initiator:
             self._initiator = libvirt_utils.get_iscsi_initiator()
@@ -681,7 +711,10 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(vish): assume amis are raw
             source_format = 'raw'
         image_format = FLAGS.snapshot_image_format or source_format
-        if FLAGS.use_cow_images:
+        use_qcow2 = ((FLAGS.libvirt_images_type == 'default' and
+                FLAGS.use_cow_images) or
+                FLAGS.libvirt_images_type == 'qcow2')
+        if use_qcow2:
             source_format = 'qcow2'
         # NOTE(vish): glance forces ami disk format to be ami
         if base.get('disk_format') == 'ami':
@@ -957,8 +990,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return fpath
 
     def _inject_files(self, instance, files, partition):
-        disk_path = os.path.join(FLAGS.instances_path,
-                                 instance['name'], 'disk')
+        disk_path = self.image_backend.image(instance['name'],
+                                             'disk').path
         disk.inject_files(disk_path, files, partition=partition,
                           use_cow=FLAGS.use_cow_images)
 
@@ -1071,72 +1104,6 @@ class LibvirtDriver(driver.ComputeDriver):
         return hasDirectIO
 
     @staticmethod
-    def _cache_image(fn, target, fname, cow=False, size=None, *args, **kwargs):
-        """Wrapper for a method that creates an image that caches the image.
-
-        This wrapper will save the image into a common store and create a
-        copy for use by the hypervisor.
-
-        The underlying method should specify a kwarg of target representing
-        where the image will be saved.
-
-        fname is used as the filename of the base image.  The filename needs
-        to be unique to a given image.
-
-        If cow is True, it will make a CoW image instead of a copy.
-
-        If size is specified, we attempt to resize up to that size.
-        """
-
-        # NOTE(mikal): Checksums aren't created here, even if the image cache
-        # manager is enabled, as that would slow down VM startup. If both
-        # cache management and checksumming are enabled, then the checksum
-        # will be created on the first pass of the image cache manager.
-
-        generating = 'image_id' not in kwargs
-        if not os.path.exists(target):
-            base_dir = os.path.join(FLAGS.instances_path, FLAGS.base_dir_name)
-
-            if not os.path.exists(base_dir):
-                libvirt_utils.ensure_tree(base_dir)
-            base = os.path.join(base_dir, fname)
-
-            @utils.synchronized(fname)
-            def call_if_not_exists(base, fn, *args, **kwargs):
-                if not os.path.exists(base):
-                    with utils.remove_path_on_error(base):
-                        fn(target=base, *args, **kwargs)
-
-            if cow or not generating:
-                call_if_not_exists(base, fn, *args, **kwargs)
-            elif generating:
-                # For raw it's quicker to just generate outside the cache
-                call_if_not_exists(target, fn, *args, **kwargs)
-
-            @utils.synchronized(base)
-            def copy_and_extend(cow, generating, base, target, size):
-                if cow:
-                    cow_base = base
-                    if size:
-                        size_gb = size / (1024 * 1024 * 1024)
-                        cow_base += "_%d" % size_gb
-                        if not os.path.exists(cow_base):
-                            with utils.remove_path_on_error(cow_base):
-                                libvirt_utils.copy_image(base, cow_base)
-                                disk.extend(cow_base, size)
-                    libvirt_utils.create_cow_image(cow_base, target)
-                elif not generating:
-                    libvirt_utils.copy_image(base, target)
-                    # Resize after the copy, as it's usually much faster
-                    # to make sparse updates, rather than potentially
-                    # naively copying the whole image file.
-                    if size:
-                        disk.extend(target, size)
-
-            with utils.remove_path_on_error(target):
-                copy_and_extend(cow, generating, base, target, size)
-
-    @staticmethod
     def _create_local(target, local_size, unit='G',
                       fs_format=None, label=None):
         """Create a blank image of specified size"""
@@ -1181,6 +1148,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                 instance['name'],
                                 fname + suffix)
 
+        def image(fname, image_type=FLAGS.libvirt_images_type):
+            return self.image_backend.image(instance['name'],
+                                            fname, suffix, image_type)
+
+        def raw(fname):
+            return image(fname, image_type='raw')
+
         # ensure directories exist and are writable
         libvirt_utils.ensure_tree(basepath(suffix=''))
 
@@ -1204,22 +1178,20 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if disk_images['kernel_id']:
             fname = disk_images['kernel_id']
-            self._cache_image(fn=libvirt_utils.fetch_image,
-                              context=context,
-                              target=basepath('kernel'),
-                              fname=fname,
-                              image_id=disk_images['kernel_id'],
-                              user_id=instance['user_id'],
-                              project_id=instance['project_id'])
+            raw('kernel').cache(fn=libvirt_utils.fetch_image,
+                                context=context,
+                                fname=fname,
+                                image_id=disk_images['kernel_id'],
+                                user_id=instance['user_id'],
+                                project_id=instance['project_id'])
             if disk_images['ramdisk_id']:
                 fname = disk_images['ramdisk_id']
-                self._cache_image(fn=libvirt_utils.fetch_image,
-                                  context=context,
-                                  target=basepath('ramdisk'),
-                                  fname=fname,
-                                  image_id=disk_images['ramdisk_id'],
-                                  user_id=instance['user_id'],
-                                  project_id=instance['project_id'])
+                raw('ramdisk').cache(fn=libvirt_utils.fetch_image,
+                                     context=context,
+                                     fname=fname,
+                                     image_id=disk_images['ramdisk_id'],
+                                     user_id=instance['user_id'],
+                                     project_id=instance['project_id'])
 
         root_fname = hashlib.sha1(str(disk_images['image_id'])).hexdigest()
         size = instance['root_gb'] * 1024 * 1024 * 1024
@@ -1231,15 +1203,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if not self._volume_in_mapping(self.default_root_device,
                                        block_device_info):
-            self._cache_image(fn=libvirt_utils.fetch_image,
-                              context=context,
-                              target=basepath('disk'),
-                              fname=root_fname,
-                              cow=FLAGS.use_cow_images,
-                              image_id=disk_images['image_id'],
-                              user_id=instance['user_id'],
-                              project_id=instance['project_id'],
-                              size=size)
+            image('disk').cache(fn=libvirt_utils.fetch_image,
+                                context=context,
+                                fname=root_fname,
+                                size=size,
+                                image_id=disk_images['image_id'],
+                                user_id=instance['user_id'],
+                                project_id=instance['project_id'])
 
         ephemeral_gb = instance['ephemeral_gb']
         if ephemeral_gb and not self._volume_in_mapping(
@@ -1248,12 +1218,14 @@ class LibvirtDriver(driver.ComputeDriver):
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral0',
                                    os_type=instance.os_type)
-            self._cache_image(fn=fn,
-                              target=basepath('disk.local'),
-                              fname="ephemeral_%s_%s_%s" %
-                              ("0", ephemeral_gb, instance.os_type),
-                              cow=FLAGS.use_cow_images,
-                              ephemeral_size=ephemeral_gb)
+            fname = "ephemeral_%s_%s_%s" % ("0",
+                                            ephemeral_gb,
+                                            instance.os_type)
+            size = ephemeral_gb * 1024 * 1024 * 1024
+            image('disk.local').cache(fn=fn,
+                                      fname=fname,
+                                      size=size,
+                                      ephemeral_size=ephemeral_gb)
         else:
             swap_device = self.default_second_device
 
@@ -1261,12 +1233,14 @@ class LibvirtDriver(driver.ComputeDriver):
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral%d' % eph['num'],
                                    os_type=instance.os_type)
-            self._cache_image(fn=fn,
-                              target=basepath(_get_eph_disk(eph)),
-                              fname="ephemeral_%s_%s_%s" %
-                              (eph['num'], eph['size'], instance.os_type),
-                              cow=FLAGS.use_cow_images,
-                              ephemeral_size=eph['size'])
+            size = eph['size'] * 1024 * 1024 * 1024
+            fname = "ephemeral_%s_%s_%s" % (eph['num'],
+                                            eph['size'],
+                                            instance.os_type)
+            image(_get_eph_disk(eph)).cache(fn=fn,
+                                            fname=fname,
+                                            size=size,
+                                            ephemeral_size=eph['size'])
 
         swap_mb = 0
 
@@ -1278,11 +1252,11 @@ class LibvirtDriver(driver.ComputeDriver):
             swap_mb = inst_type['swap']
 
         if swap_mb > 0:
-            self._cache_image(fn=self._create_swap,
-                              target=basepath('disk.swap'),
-                              fname="swap_%s" % swap_mb,
-                              cow=FLAGS.use_cow_images,
-                              swap_mb=swap_mb)
+            size = swap_mb * 1024 * 1024
+            image('disk.swap').cache(fn=self._create_swap,
+                                     fname="swap_%s" % swap_mb,
+                                     size=size,
+                                     swap_mb=swap_mb)
 
         target_partition = None
         if not instance['kernel_id']:
@@ -1297,12 +1271,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if config_drive_id:
             fname = config_drive_id
-            self._cache_image(fn=libvirt_utils.fetch_image,
-                              target=basepath('disk.config'),
-                              fname=fname,
-                              image_id=config_drive_id,
-                              user_id=instance['user_id'],
-                              project_id=instance['project_id'],)
+            raw('disk.config').cache(fn=libvirt_utils.fetch_image,
+                                     fname=fname,
+                                     image_id=config_drive_id,
+                                     user_id=instance['user_id'],
+                                     project_id=instance['project_id'])
         elif config_drive:
             label = 'config'
             with utils.remove_path_on_error(basepath('disk.config')):
@@ -1360,10 +1333,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if any((key, net, metadata, admin_password)):
             if config_drive:  # Should be True or None by now.
-                injection_path = basepath('disk.config')
+                injection_path = raw('disk.config').path
                 img_id = 'config-drive'
             else:
-                injection_path = basepath('disk')
+                injection_path = image('disk').path
                 img_id = instance.image_ref
 
             for injection in ('metadata', 'key', 'net', 'admin_password'):
@@ -1511,15 +1484,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                          "rootfs")
             guest.add_device(fs)
         else:
-            if FLAGS.use_cow_images:
-                driver_type = 'qcow2'
-            else:
-                driver_type = 'raw'
-
             if image_meta and image_meta.get('disk_format') == 'iso':
                 root_device_type = 'cdrom'
             else:
                 root_device_type = 'disk'
+
+            def disk_info(name, suffix=''):
+                image = self.image_backend.image(instance['name'],
+                                                 name, suffix)
+                return image.libvirt_info(root_device_type)
 
             if FLAGS.libvirt_type == "uml":
                 ephemeral_disk_bus = "uml"
@@ -1529,23 +1502,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 ephemeral_disk_bus = "virtio"
 
             if rescue:
-                diskrescue = config.LibvirtConfigGuestDisk()
-                diskrescue.source_type = "file"
-                diskrescue.source_path = os.path.join(FLAGS.instances_path,
-                                                      instance['name'],
-                                                      "disk.rescue")
-                diskrescue.driver_format = driver_type
+                diskrescue = disk_info('disk', '.rescue')
                 diskrescue.driver_cache = self.disk_cachemode
                 diskrescue.target_dev = self.default_root_device
                 diskrescue.target_bus = ephemeral_disk_bus
                 guest.add_device(diskrescue)
 
-                diskos = config.LibvirtConfigGuestDisk()
-                diskos.source_type = "file"
-                diskos.source_path = os.path.join(FLAGS.instances_path,
-                                                  instance['name'],
-                                                  "disk")
-                diskos.driver_format = driver_type
+                diskos = disk_info('disk')
                 diskos.driver_cache = self.disk_cachemode
                 diskos.target_dev = self.default_second_device
                 diskos.target_bus = ephemeral_disk_bus
@@ -1555,14 +1518,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                    block_device_info)
 
                 if not ebs_root:
-                    diskos = config.LibvirtConfigGuestDisk()
-                    diskos.source_type = "file"
-                    diskos.source_device = root_device_type
-                    diskos.driver_format = driver_type
+                    diskos = disk_info('disk')
                     diskos.driver_cache = self.disk_cachemode
-                    diskos.source_path = os.path.join(FLAGS.instances_path,
-                                                      instance['name'],
-                                                      "disk")
                     diskos.target_dev = root_device
                     if root_device_type == "cdrom":
                         diskos.target_bus = "ide"
@@ -1580,14 +1537,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         ephemeral_device = self.default_second_device
 
                 if ephemeral_device is not None:
-                    disklocal = config.LibvirtConfigGuestDisk()
-                    disklocal.source_type = "file"
-                    disklocal.source_device = root_device_type
-                    disklocal.driver_format = driver_type
+                    disklocal = disk_info('disk.local')
                     disklocal.driver_cache = self.disk_cachemode
-                    disklocal.source_path = os.path.join(FLAGS.instances_path,
-                                                         instance['name'],
-                                                         "disk.local")
                     disklocal.target_dev = ephemeral_device
                     disklocal.target_bus = ephemeral_disk_bus
                     guest.add_device(disklocal)
@@ -1603,14 +1554,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 for eph in driver.block_device_info_get_ephemerals(
                     block_device_info):
-                    diskeph = config.LibvirtConfigGuestDisk()
-                    diskeph.source_type = "block"
-                    diskeph.source_device = root_device_type
-                    diskeph.driver_format = driver_type
+                    diskeph = disk_info(_get_eph_disk(eph))
                     diskeph.driver_cache = self.disk_cachemode
-                    diskeph.source_path = os.path.join(FLAGS.instances_path,
-                                                       instance['name'],
-                                                       _get_eph_disk(eph))
                     diskeph.target_dev = block_device.strip_dev(
                         eph['device_name'])
                     diskeph.target_bus = ephemeral_disk_bus
@@ -1618,13 +1563,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 swap = driver.block_device_info_get_swap(block_device_info)
                 if driver.swap_is_usable(swap):
-                    diskswap = config.LibvirtConfigGuestDisk()
-                    diskswap.disk_type = "file"
-                    diskswap.driver_format = driver_type
+                    diskswap = disk_info('disk.swap')
                     diskswap.driver_cache = self.disk_cachemode
-                    diskswap.source_path = os.path.join(FLAGS.instances_path,
-                                                        instance['name'],
-                                                        "disk.swap")
                     diskswap.target_dev = block_device.strip_dev(
                         swap['device_name'])
                     diskswap.target_bus = ephemeral_disk_bus
@@ -1632,13 +1572,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 elif (inst_type['swap'] > 0 and
                       not self._volume_in_mapping(swap_device,
                                                   block_device_info)):
-                    diskswap = config.LibvirtConfigGuestDisk()
-                    diskswap.disk_type = "file"
-                    diskswap.driver_format = driver_type
+                    diskswap = disk_info('disk.swap')
                     diskswap.driver_cache = self.disk_cachemode
-                    diskswap.source_path = os.path.join(FLAGS.instances_path,
-                                                        instance['name'],
-                                                        "disk.swap")
                     diskswap.target_dev = swap_device
                     diskswap.target_bus = ephemeral_disk_bus
                     guest.add_device(diskswap)

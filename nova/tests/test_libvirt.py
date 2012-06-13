@@ -47,6 +47,7 @@ from nova.virt import images
 from nova.virt.libvirt import config
 from nova.virt.libvirt import connection
 from nova.virt.libvirt import firewall
+from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
 from nova.volume import driver as volume_driver
@@ -342,24 +343,24 @@ class CacheConcurrencyTestCase(test.TestCase):
 
         self.stubs.Set(os.path, 'exists', fake_exists)
         self.stubs.Set(utils, 'execute', fake_execute)
-        self.stubs.Set(connection.disk, 'extend', fake_extend)
-        connection.libvirt_utils = fake_libvirt_utils
+        self.stubs.Set(imagebackend.disk, 'extend', fake_extend)
+        imagebackend.libvirt_utils = fake_libvirt_utils
 
     def tearDown(self):
-        connection.libvirt_utils = libvirt_utils
+        imagebackend.libvirt_utils = libvirt_utils
         super(CacheConcurrencyTestCase, self).tearDown()
 
     def test_same_fname_concurrency(self):
         """Ensures that the same fname cache runs at a sequentially"""
-        conn = connection.LibvirtDriver
+        backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
-        eventlet.spawn(conn._cache_image, _concurrency,
-                       'target', 'fname', False, None, wait1, done1)
+        eventlet.spawn(backend.image('instance', 'name').cache,
+                _concurrency, 'fname', None, wait=wait1, done=done1)
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
-        eventlet.spawn(conn._cache_image, _concurrency,
-                       'target', 'fname', False, None, wait2, done2)
+        eventlet.spawn(backend.image('instance', 'name').cache,
+                _concurrency, 'fname', None, wait=wait2, done=done2)
         wait2.send()
         eventlet.sleep(0)
         try:
@@ -372,15 +373,15 @@ class CacheConcurrencyTestCase(test.TestCase):
 
     def test_different_fname_concurrency(self):
         """Ensures that two different fname caches are concurrent"""
-        conn = connection.LibvirtDriver
+        backend = imagebackend.Backend(False)
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
-        eventlet.spawn(conn._cache_image, _concurrency,
-                       'target', 'fname2', False, None, wait1, done1)
+        eventlet.spawn(backend.image('instance', 'name').cache,
+                _concurrency, 'fname2', None, wait=wait1, done=done1)
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
-        eventlet.spawn(conn._cache_image, _concurrency,
-                       'target', 'fname1', False, None, wait2, done2)
+        eventlet.spawn(backend.image('instance', 'name').cache,
+                _concurrency, 'fname1', None, wait=wait2, done=done2)
         wait2.send()
         eventlet.sleep(0)
         try:

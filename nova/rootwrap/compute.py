@@ -188,4 +188,13 @@ filterlist = [
     # nova/virt/libvirt/connection.py:
     filters.ReadFileFilter("/etc/iscsi/initiatorname.iscsi"),
 
+    # nova/virt/libvirt/connection.py:
+    filters.CommandFilter("/sbin/lvremove", "root"),
+
+    # nova/virt/libvirt/utils.py:
+    filters.CommandFilter("/sbin/lvcreate", "root"),
+
+    # nova/virt/libvirt/utils.py:
+    filters.CommandFilter("/sbin/vgs", "root")
+
     ]
