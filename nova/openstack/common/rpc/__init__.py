@@ -31,7 +31,7 @@ from nova.openstack.common import importutils
 
 rpc_opts = [
     cfg.StrOpt('rpc_backend',
-               default='nova.rpc.impl_kombu',
+               default='%s.impl_kombu' % __package__,
                help="The messaging module to use, defaults to kombu."),
     cfg.IntOpt('rpc_thread_pool_size',
                default=64,
@@ -47,9 +47,9 @@ rpc_opts = [
                help='Seconds to wait before a cast expires (TTL). '
                     'Only supported by impl_zmq.'),
     cfg.ListOpt('allowed_rpc_exception_modules',
-               default=['nova.exception'],
-               help='Modules of exceptions that are permitted to be recreated'
-                    'upon receiving exception data from an rpc call.'),
+                default=['openstack.common.exception', 'nova.exception'],
+                help='Modules of exceptions that are permitted to be recreated'
+                     'upon receiving exception data from an rpc call.'),
     cfg.StrOpt('control_exchange',
                default='nova',
                help='AMQP exchange to connect to if using RabbitMQ or Qpid'),
@@ -72,7 +72,7 @@ def create_connection(new=True):
                 implementation is free to return an existing connection from a
                 pool.
 
-    :returns: An instance of nova.rpc.common.Connection
+    :returns: An instance of openstack.common.rpc.common.Connection
     """
     return _get_impl().create_connection(cfg.CONF, new=new)
 
@@ -84,8 +84,9 @@ def call(context, topic, msg, timeout=None):
                     request.
     :param topic: The topic to send the rpc message to.  This correlates to the
                   topic argument of
-                  nova.rpc.common.Connection.create_consumer() and only applies
-                  when the consumer was created with fanout=False.
+                  openstack.common.rpc.common.Connection.create_consumer()
+                  and only applies when the consumer was created with
+                  fanout=False.
     :param msg: This is a dict in the form { "method" : "method_to_invoke",
                                              "args" : dict_of_kwargs }
     :param timeout: int, number of seconds to use for a response timeout.
@@ -93,8 +94,8 @@ def call(context, topic, msg, timeout=None):
 
     :returns: A dict from the remote method.
 
-    :raises: nova.rpc.common.Timeout if a complete response is not received
-             before the timeout is reached.
+    :raises: openstack.common.rpc.common.Timeout if a complete response
+             is not received before the timeout is reached.
     """
     return _get_impl().call(cfg.CONF, context, topic, msg, timeout)
 
@@ -106,8 +107,9 @@ def cast(context, topic, msg):
                     request.
     :param topic: The topic to send the rpc message to.  This correlates to the
                   topic argument of
-                  nova.rpc.common.Connection.create_consumer() and only applies
-                  when the consumer was created with fanout=False.
+                  openstack.common.rpc.common.Connection.create_consumer()
+                  and only applies when the consumer was created with
+                  fanout=False.
     :param msg: This is a dict in the form { "method" : "method_to_invoke",
                                              "args" : dict_of_kwargs }
 
@@ -126,8 +128,9 @@ def fanout_cast(context, topic, msg):
                     request.
     :param topic: The topic to send the rpc message to.  This correlates to the
                   topic argument of
-                  nova.rpc.common.Connection.create_consumer() and only applies
-                  when the consumer was created with fanout=True.
+                  openstack.common.rpc.common.Connection.create_consumer()
+                  and only applies when the consumer was created with
+                  fanout=True.
     :param msg: This is a dict in the form { "method" : "method_to_invoke",
                                              "args" : dict_of_kwargs }
 
@@ -147,8 +150,9 @@ def multicall(context, topic, msg, timeout=None):
                     request.
     :param topic: The topic to send the rpc message to.  This correlates to the
                   topic argument of
-                  nova.rpc.common.Connection.create_consumer() and only applies
-                  when the consumer was created with fanout=False.
+                  openstack.common.rpc.common.Connection.create_consumer()
+                  and only applies when the consumer was created with
+                  fanout=False.
     :param msg: This is a dict in the form { "method" : "method_to_invoke",
                                              "args" : dict_of_kwargs }
     :param timeout: int, number of seconds to use for a response timeout.
@@ -159,8 +163,8 @@ def multicall(context, topic, msg, timeout=None):
               returned and X is the Nth value that was returned by the remote
               method.
 
-    :raises: nova.rpc.common.Timeout if a complete response is not received
-             before the timeout is reached.
+    :raises: openstack.common.rpc.common.Timeout if a complete response
+             is not received before the timeout is reached.
     """
     return _get_impl().multicall(cfg.CONF, context, topic, msg, timeout)
 
@@ -248,5 +252,11 @@ def _get_impl():
     """Delay import of rpc_backend until configuration is loaded."""
     global _RPCIMPL
     if _RPCIMPL is None:
-        _RPCIMPL = importutils.import_module(cfg.CONF.rpc_backend)
+        try:
+            _RPCIMPL = importutils.import_module(cfg.CONF.rpc_backend)
+        except ImportError:
+            # For backwards compatibility with older nova config.
+            impl = cfg.CONF.rpc_backend.replace('nova.rpc',
+                                                'nova.openstack.common.rpc')
+            _RPCIMPL = importutils.import_module(impl)
     return _RPCIMPL

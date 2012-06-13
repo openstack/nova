@@ -18,7 +18,7 @@
 
 """Tests for the testing base code."""
 
-from nova import rpc
+from nova.openstack.common import rpc
 from nova import test
 
 

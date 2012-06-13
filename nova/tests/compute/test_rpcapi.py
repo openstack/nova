@@ -21,7 +21,7 @@ Unit Tests for nova.compute.rpcapi
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import flags
-from nova import rpc
+from nova.openstack.common import rpc
 from nova import test
 
 

@@ -28,7 +28,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
-from nova import rpc
+from nova.openstack.common import rpc
 from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger(__name__)

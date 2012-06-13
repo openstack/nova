@@ -19,13 +19,13 @@ Client side of the scheduler manager RPC API.
 """
 
 from nova import flags
-import nova.rpc.proxy
+import nova.openstack.common.rpc.proxy
 
 
 FLAGS = flags.FLAGS
 
 
-class SchedulerAPI(nova.rpc.proxy.RpcProxy):
+class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     '''Client side of the scheduler rpc API.
 
     API version history:

@@ -23,7 +23,7 @@ from nova.db import base
 from nova import flags
 from nova import log as logging
 from nova.network import model as network_model
-from nova import rpc
+from nova.openstack.common import rpc
 
 
 FLAGS = flags.FLAGS

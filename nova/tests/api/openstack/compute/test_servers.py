@@ -37,7 +37,7 @@ from nova.db.sqlalchemy import models
 from nova import flags
 import nova.image.fake
 from nova.openstack.common import jsonutils
-import nova.rpc
+import nova.openstack.common.rpc
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
@@ -1493,11 +1493,12 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_system_metadata_update',
                 fake_method)
         self.stubs.Set(nova.db, 'instance_get', instance_get)
-        self.stubs.Set(nova.rpc, 'cast', fake_method)
-        self.stubs.Set(nova.rpc, 'call', rpc_call_wrapper)
+        self.stubs.Set(nova.openstack.common.rpc, 'cast', fake_method)
+        self.stubs.Set(nova.openstack.common.rpc, 'call', rpc_call_wrapper)
         self.stubs.Set(nova.db, 'instance_update_and_get_original',
                 server_update)
-        self.stubs.Set(nova.rpc, 'queue_get_for', queue_get_for)
+        self.stubs.Set(nova.openstack.common.rpc, 'queue_get_for',
+                queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
                        fake_method)
 

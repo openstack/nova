@@ -18,7 +18,7 @@
 #    under the License.
 
 """
-Shared code between AMQP based nova.rpc implementations.
+Shared code between AMQP based openstack.common.rpc implementations.
 
 The code in this module is shared between the rpc implemenations based on AMQP.
 Specifically, this includes impl_kombu and impl_qpid.  impl_carrot also uses
@@ -36,7 +36,7 @@ from eventlet import semaphore
 
 from nova.openstack.common import excutils
 from nova.openstack.common import local
-import nova.rpc.common as rpc_common
+from nova.openstack.common.rpc import common as rpc_common
 
 
 LOG = logging.getLogger(__name__)

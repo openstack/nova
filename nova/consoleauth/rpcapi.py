@@ -19,13 +19,13 @@ Client side of the consoleauth RPC API.
 """
 
 from nova import flags
-import nova.rpc.proxy
+import nova.openstack.common.rpc.proxy
 
 
 FLAGS = flags.FLAGS
 
 
-class ConsoleAuthAPI(nova.rpc.proxy.RpcProxy):
+class ConsoleAuthAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     '''Client side of the consoleauth rpc API.
 
     API version history:

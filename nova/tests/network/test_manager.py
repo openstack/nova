@@ -27,8 +27,8 @@ from nova import log as logging
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.openstack.common import importutils
+from nova.openstack.common import rpc
 import nova.policy
-from nova import rpc
 from nova import test
 from nova.tests import fake_network
 from nova import utils

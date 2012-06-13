@@ -32,8 +32,8 @@ from nova.compute import instance_types
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
-from nova.rpc import common as rpc_common
 from nova import utils
 
 

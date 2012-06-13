@@ -40,7 +40,7 @@ from nova.image import fake
 from nova.image import s3
 from nova import log as logging
 from nova.network import api as network_api
-from nova import rpc
+from nova.openstack.common import rpc
 from nova import test
 from nova import utils
 

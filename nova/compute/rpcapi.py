@@ -20,8 +20,8 @@ Client side of the compute RPC API.
 
 from nova import exception
 from nova import flags
-from nova import rpc
-import nova.rpc.proxy
+from nova.openstack.common import rpc
+import nova.openstack.common.rpc.proxy
 
 
 FLAGS = flags.FLAGS
@@ -48,7 +48,7 @@ def _compute_topic(topic, ctxt, host, instance):
     return rpc.queue_get_for(ctxt, topic, host)
 
 
-class ComputeAPI(nova.rpc.proxy.RpcProxy):
+class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     '''Client side of the compute rpc API.
 
     API version history:
@@ -358,7 +358,7 @@ class ComputeAPI(nova.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
 
-class SecurityGroupAPI(nova.rpc.proxy.RpcProxy):
+class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     '''Client side of the security group rpc API.
 
     API version history:

@@ -42,7 +42,7 @@ there can be both versioned and unversioned APIs implemented in the same code
 base.
 """
 
-from nova.rpc import common as rpc_common
+from nova.openstack.common.rpc import common as rpc_common
 
 
 class RpcDispatcher(object):

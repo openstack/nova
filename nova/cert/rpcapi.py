@@ -19,13 +19,13 @@ Client side of the cert manager RPC API.
 """
 
 from nova import flags
-import nova.rpc.proxy
+import nova.openstack.common.rpc.proxy
 
 
 FLAGS = flags.FLAGS
 
 
-class CertAPI(nova.rpc.proxy.RpcProxy):
+class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     '''Client side of the cert rpc API.
 
     API version history:

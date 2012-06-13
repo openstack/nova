@@ -26,9 +26,9 @@ from nova.db.sqlalchemy import api as sqa_api
 from nova.db.sqlalchemy import models as sqa_models
 from nova import exception
 from nova import flags
+from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import quota
-from nova import rpc
 from nova.scheduler import driver as scheduler_driver
 from nova import test
 from nova import volume

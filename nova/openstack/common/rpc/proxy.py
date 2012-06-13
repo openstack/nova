@@ -22,7 +22,7 @@ For more information about rpc API version numbers, see:
 """
 
 
-from nova import rpc
+from nova.openstack.common import rpc
 
 
 class RpcProxy(object):

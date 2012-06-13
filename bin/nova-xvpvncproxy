@@ -33,7 +33,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 from nova import flags
 from nova import log as logging
-from nova import rpc
+from nova.openstack.common import rpc
 from nova import service
 from nova.vnc import xvp_proxy
 

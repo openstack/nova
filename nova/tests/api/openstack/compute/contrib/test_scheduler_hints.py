@@ -18,7 +18,7 @@
 from nova.api.openstack import compute
 import nova.db.api
 from nova.openstack.common import jsonutils
-import nova.rpc
+import nova.openstack.common.rpc
 from nova import test
 from nova.tests.api.openstack import fakes
 

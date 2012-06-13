@@ -67,10 +67,10 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota
-from nova import rpc
 from nova import utils
 
 

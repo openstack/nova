@@ -35,7 +35,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova import rpc
+from nova.openstack.common import rpc
 from nova import utils
 from nova import version
 from nova import wsgi

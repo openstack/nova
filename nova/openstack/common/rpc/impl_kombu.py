@@ -30,8 +30,8 @@ import kombu.entity
 import kombu.messaging
 
 from nova.openstack.common import cfg
-from nova.rpc import amqp as rpc_amqp
-from nova.rpc import common as rpc_common
+from nova.openstack.common.rpc import amqp as rpc_amqp
+from nova.openstack.common.rpc import common as rpc_common
 
 kombu_opts = [
     cfg.StrOpt('kombu_ssl_version',
@@ -139,10 +139,9 @@ class ConsumerBase(object):
             message = self.channel.message_to_python(raw_message)
             try:
                 callback(message.payload)
+                message.ack()
             except Exception:
                 LOG.exception(_("Failed to process message... skipping it."))
-            finally:
-                message.ack()
 
         self.queue.consume(*args, callback=_callback, **options)
 

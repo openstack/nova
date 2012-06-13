@@ -19,8 +19,10 @@
 
 import copy
 import logging
+import sys
 import traceback
 
+from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import local

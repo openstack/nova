@@ -68,8 +68,8 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
-from nova import rpc
 from nova import utils
 from nova.virt import driver
 from nova import volume

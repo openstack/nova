@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 import pprint
 import string
 import sys
@@ -25,9 +26,9 @@ from eventlet.green import zmq
 import greenlet
 
 from nova.openstack.common import cfg
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
-from nova.openstack.common import jsonutils
-from nova.rpc import common as rpc_common
+from nova.openstack.common.rpc import common as rpc_common
 
 
 # for convenience, are not modified.
@@ -45,7 +46,7 @@ zmq_opts = [
 
     # The module.Class to use for matchmaking.
     cfg.StrOpt('rpc_zmq_matchmaker',
-        default='nova.rpc.matchmaker.MatchMakerLocalhost',
+        default='openstack.common.rpc.matchmaker.MatchMakerLocalhost',
         help='MatchMaker driver'),
 
     # The following port is unassigned by IANA as of 2012-05-21
@@ -55,7 +56,7 @@ zmq_opts = [
     cfg.IntOpt('rpc_zmq_contexts', default=1,
         help='Number of ZeroMQ contexts, defaults to 1'),
 
-    cfg.StrOpt('rpc_zmq_ipc_dir', default='/var/run/nova',
+    cfg.StrOpt('rpc_zmq_ipc_dir', default='/var/run/openstack',
         help='Directory for holding IPC sockets'),
     ]
 
@@ -74,7 +75,7 @@ def _serialize(data):
     Error if a developer passes us bad data.
     """
     try:
-        return str(jsonutils.dumps(data))
+        return str(json.dumps(data, ensure_ascii=True))
     except TypeError:
         LOG.error(_("JSON serialization failed."))
         raise
@@ -85,7 +86,7 @@ def _deserialize(data):
     Deserialization wrapper
     """
     LOG.debug(_("Deserializing: %s"), data)
-    return jsonutils.loads(data)
+    return json.loads(data)
 
 
 class ZmqSocket(object):

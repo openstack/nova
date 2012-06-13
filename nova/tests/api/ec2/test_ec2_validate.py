@@ -25,7 +25,7 @@ from nova import flags
 from nova.image import fake
 from nova import log as logging
 from nova.openstack.common import importutils
-from nova import rpc
+from nova.openstack.common import rpc
 from nova import test
 
 LOG = logging.getLogger(__name__)

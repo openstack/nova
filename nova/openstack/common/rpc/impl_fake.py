@@ -18,12 +18,12 @@ queues.  Casts will block, but this is very useful for tests.
 """
 
 import inspect
+import json
 import time
 
 import eventlet
 
-from nova.openstack.common import jsonutils
-from nova.rpc import common as rpc_common
+from nova.openstack.common.rpc import common as rpc_common
 
 CONSUMERS = {}
 
@@ -121,7 +121,7 @@ def create_connection(conf, new=True):
 
 def check_serialize(msg):
     """Make sure a message intended for rpc can be serialized."""
-    jsonutils.dumps(msg)
+    json.dumps(msg)
 
 
 def multicall(conf, context, topic, msg, timeout=None):

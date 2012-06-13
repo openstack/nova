@@ -56,7 +56,7 @@ This module provides Manager, a base class for managers.
 from nova.db import base
 from nova import flags
 from nova import log as logging
-from nova.rpc import dispatcher as rpc_dispatcher
+from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import version
 

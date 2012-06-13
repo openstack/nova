@@ -90,9 +90,9 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import quota
-from nova import rpc
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova import version

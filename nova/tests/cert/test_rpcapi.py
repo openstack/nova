@@ -21,7 +21,7 @@ Unit Tests for nova.cert.rpcapi
 from nova.cert import rpcapi as cert_rpcapi
 from nova import context
 from nova import flags
-from nova import rpc
+from nova.openstack.common import rpc
 from nova import test
 
 

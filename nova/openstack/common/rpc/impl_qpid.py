@@ -17,6 +17,7 @@
 
 import functools
 import itertools
+import json
 import logging
 import time
 import uuid
@@ -27,9 +28,9 @@ import qpid.messaging
 import qpid.messaging.exceptions
 
 from nova.openstack.common import cfg
-from nova.openstack.common import jsonutils
-from nova.rpc import amqp as rpc_amqp
-from nova.rpc import common as rpc_common
+from nova.openstack.common.gettextutils import _
+from nova.openstack.common.rpc import amqp as rpc_amqp
+from nova.openstack.common.rpc import common as rpc_common
 
 LOG = logging.getLogger(__name__)
 
@@ -124,7 +125,7 @@ class ConsumerBase(object):
         addr_opts["node"]["x-declare"].update(node_opts)
         addr_opts["link"]["x-declare"].update(link_opts)
 
-        self.address = "%s ; %s" % (node_name, jsonutils.dumps(addr_opts))
+        self.address = "%s ; %s" % (node_name, json.dumps(addr_opts))
 
         self.reconnect(session)
 
@@ -227,7 +228,7 @@ class Publisher(object):
         if node_opts:
             addr_opts["node"]["x-declare"].update(node_opts)
 
-        self.address = "%s ; %s" % (node_name, jsonutils.dumps(addr_opts))
+        self.address = "%s ; %s" % (node_name, json.dumps(addr_opts))
 
         self.reconnect(session)
 

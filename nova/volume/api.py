@@ -26,10 +26,10 @@ from nova.db import base
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota
-from nova import rpc
 
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')

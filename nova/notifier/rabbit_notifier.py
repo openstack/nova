@@ -19,7 +19,7 @@ import nova.context
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
-from nova import rpc
+from nova.openstack.common import rpc
 
 LOG = logging.getLogger(__name__)
 

@@ -31,9 +31,9 @@ from nova import flags
 from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
+from nova.openstack.common import rpc
 import nova.policy
 from nova import quota
-from nova import rpc
 from nova import test
 import nova.volume.api
 
