@@ -219,6 +219,8 @@ LIBVIRT_POWER_STATE = {
     VIR_DOMAIN_PMSUSPENDED: power_state.SUSPENDED,
 }
 
+MIN_LIBVIRT_VERSION = (0, 9, 7)
+
 
 def _late_load_cheetah():
     global Template
@@ -296,8 +298,18 @@ class LibvirtDriver(driver.ComputeDriver):
         return self._host_state
 
     def init_host(self, host):
-        # NOTE(nsokolov): moved instance restarting to ComputeManager
-        pass
+        libvirt_version = self._conn.getLibVersion()
+
+        def _munge_version(ver):
+            return ver[0] * 1000000 + ver[1] * 1000 + ver[2]
+
+        if libvirt_version < _munge_version(MIN_LIBVIRT_VERSION):
+            major = MIN_LIBVIRT_VERSION[0]
+            minor = MIN_LIBVIRT_VERSION[1]
+            micro = MIN_LIBVIRT_VERSION[2]
+            LOG.error(_('Nova requires libvirt version '
+                        '%(major)i.%(minor)i.%(micro)i or greater.') %
+                        locals())
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
