@@ -730,6 +730,9 @@ def wire_HTTPConnection_to_WSGI(host, app):
 
     This method may be called multiple times to map different hosts to
     different apps.
+
+    This method returns the original HTTPConnection object, so that the caller
+    can restore the default HTTPConnection interface (for all hosts).
     """
     class HTTPConnectionDecorator(object):
         """Wraps the real HTTPConnection class so that when you instantiate
@@ -744,7 +747,9 @@ def wire_HTTPConnection_to_WSGI(host, app):
             else:
                 return self.wrapped(connection_host, *args, **kwargs)
 
+    oldHTTPConnection = httplib.HTTPConnection
     httplib.HTTPConnection = HTTPConnectionDecorator(httplib.HTTPConnection)
+    return oldHTTPConnection
 
 
 class WsgiLimiterProxyTest(BaseLimitTestSuite):
@@ -759,7 +764,8 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
         """
         super(WsgiLimiterProxyTest, self).setUp()
         self.app = limits.WsgiLimiter(TEST_LIMITS)
-        wire_HTTPConnection_to_WSGI("169.254.0.1:80", self.app)
+        self.oldHTTPConnection = (
+            wire_HTTPConnection_to_WSGI("169.254.0.1:80", self.app))
         self.proxy = limits.WsgiLimiterProxy("169.254.0.1:80")
 
     def test_200(self):
@@ -779,6 +785,10 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
                     "made to /delayed every minute.")
 
         self.assertEqual((delay, error), expected)
+
+    def tearDown(self):
+        # restore original HTTPConnection object
+        httplib.HTTPConnection = self.oldHTTPConnection
 
 
 class LimitsViewBuilderTest(test.TestCase):
