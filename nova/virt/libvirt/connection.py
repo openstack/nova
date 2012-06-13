@@ -1476,6 +1476,24 @@ class LibvirtDriver(driver.ComputeDriver):
         if FLAGS.libvirt_type != "lxc" and FLAGS.libvirt_type != "uml":
             guest.acpi = True
 
+        clk = config.LibvirtConfigGuestClock()
+        clk.offset = "utc"
+        guest.set_clock(clk)
+
+        if FLAGS.libvirt_type == "kvm":
+            # TODO(berrange) One day this should be per-guest
+            # OS type configurable
+            tmpit = config.LibvirtConfigGuestTimer()
+            tmpit.name = "pit"
+            tmpit.tickpolicy = "delay"
+
+            tmrtc = config.LibvirtConfigGuestTimer()
+            tmrtc.name = "rtc"
+            tmrtc.tickpolicy = "catchup"
+
+            clk.add_timer(tmpit)
+            clk.add_timer(tmrtc)
+
         if FLAGS.libvirt_type == "lxc":
             fs = config.LibvirtConfigGuestFilesys()
             fs.type = "mount"

@@ -527,6 +527,21 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(type(cfg.devices[6]),
                           config.LibvirtConfigGuestGraphics)
 
+        self.assertEquals(type(cfg.clock),
+                          config.LibvirtConfigGuestClock)
+        self.assertEquals(cfg.clock.offset, "utc")
+        self.assertEquals(len(cfg.clock.timers), 2)
+        self.assertEquals(type(cfg.clock.timers[0]),
+                          config.LibvirtConfigGuestTimer)
+        self.assertEquals(type(cfg.clock.timers[1]),
+                          config.LibvirtConfigGuestTimer)
+        self.assertEquals(cfg.clock.timers[0].name, "pit")
+        self.assertEquals(cfg.clock.timers[0].tickpolicy,
+                          "delay")
+        self.assertEquals(cfg.clock.timers[1].name, "rtc")
+        self.assertEquals(cfg.clock.timers[1].tickpolicy,
+                          "catchup")
+
     def test_get_guest_config_with_two_nics(self):
         conn = connection.LibvirtDriver(True)
         instance_ref = db.instance_create(self.context, self.test_instance)
