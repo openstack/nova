@@ -44,7 +44,12 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def _test_compute_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
-        rpcapi = compute_rpcapi.ComputeAPI()
+        if 'rpcapi_class' in kwargs:
+            rpcapi_class = kwargs['rpcapi_class']
+            del kwargs['rpcapi_class']
+        else:
+            rpcapi_class = compute_rpcapi.ComputeAPI
+        rpcapi = rpcapi_class()
         expected_retval = 'foo' if method == 'call' else None
 
         expected_msg = rpcapi.make_msg(method, **kwargs)
@@ -224,10 +229,12 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_refresh_security_group_rules(self):
         self._test_compute_api('refresh_security_group_rules', 'cast',
+                rpcapi_class=compute_rpcapi.SecurityGroupAPI,
                 security_group_id='id', host='host')
 
     def test_refresh_security_group_members(self):
         self._test_compute_api('refresh_security_group_members', 'cast',
+                rpcapi_class=compute_rpcapi.SecurityGroupAPI,
                 security_group_id='id', host='host')
 
     def test_remove_aggregate_host(self):
