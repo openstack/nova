@@ -335,6 +335,10 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def resume_state_on_host_boot(self, context, instance, network_info):
+        """resume guest state when a host is booted"""
+        raise NotImplementedError()
+
     def rescue(self, context, instance, network_info, image_meta):
         """Rescue the specified instance"""
         raise NotImplementedError()

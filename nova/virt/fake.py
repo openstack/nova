@@ -131,6 +131,9 @@ class FakeConnection(driver.ComputeDriver):
     def agent_update(self, instance, url, md5hash):
         pass
 
+    def resume_state_on_host_boot(self, context, instance, network_info):
+        pass
+
     def rescue(self, context, instance, network_info, image_meta):
         pass
 
