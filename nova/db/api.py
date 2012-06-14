@@ -630,16 +630,16 @@ def instance_test_and_set(context, instance_id, attr, ok_states,
             context, instance_id, attr, ok_states, new_state)
 
 
-def instance_update(context, instance_id, values):
+def instance_update(context, instance_uuid, values):
     """Set the given properties on an instance and update it.
 
     Raises NotFound if instance does not exist.
 
     """
-    return IMPL.instance_update(context, instance_id, values)
+    return IMPL.instance_update(context, instance_uuid, values)
 
 
-def instance_update_and_get_original(context, instance_id, values):
+def instance_update_and_get_original(context, instance_uuid, values):
     """Set the given properties on an instance and update it. Return
     a shallow copy of the original instance reference, as well as the
     updated one.
@@ -652,7 +652,8 @@ def instance_update_and_get_original(context, instance_id, values):
 
     Raises NotFound if instance does not exist.
     """
-    return IMPL.instance_update_and_get_original(context, instance_id, values)
+    return IMPL.instance_update_and_get_original(context, instance_uuid,
+                                                 values)
 
 
 def instance_add_security_group(context, instance_id, security_group_id):

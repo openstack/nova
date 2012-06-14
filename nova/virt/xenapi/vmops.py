@@ -121,8 +121,6 @@ def make_step_decorator(context, instance):
     the current-step-count would be 1 giving a progress of ``1 / 2 *
     100`` or 50%.
     """
-    instance_uuid = instance['uuid']
-
     step_info = dict(total=0, current=0)
 
     def bump_progress():
@@ -131,7 +129,7 @@ def make_step_decorator(context, instance):
                          step_info['total'] * 100)
         LOG.debug(_("Updating progress to %(progress)d"), locals(),
                   instance=instance)
-        db.instance_update(context, instance_uuid, {'progress': progress})
+        db.instance_update(context, instance['uuid'], {'progress': progress})
 
     def step_decorator(f):
         step_info['total'] += 1
@@ -384,7 +382,7 @@ class VMOps(object):
         if instance.vm_mode != vm_mode:
             # Update database with normalized (or determined) value
             db.instance_update(nova_context.get_admin_context(),
-                               instance['id'], {'vm_mode': vm_mode})
+                               instance['uuid'], {'vm_mode': vm_mode})
 
         vm_ref = vm_utils.create_vm(
             self._session, instance, kernel_file, ramdisk_file,
@@ -654,10 +652,9 @@ class VMOps(object):
         # better approximation would use the percentage of the VM image that
         # has been streamed to the destination host.
         progress = round(float(step) / total_steps * 100)
-        instance_uuid = instance['uuid']
         LOG.debug(_("Updating progress to %(progress)d"), locals(),
                   instance=instance)
-        db.instance_update(context, instance_uuid, {'progress': progress})
+        db.instance_update(context, instance['uuid'], {'progress': progress})
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type):

@@ -1687,38 +1687,37 @@ def instance_test_and_set(context, instance_id, attr, ok_states,
 
 
 @require_context
-def instance_update(context, instance_id, values):
-
-    instance_ref = _instance_update(context, instance_id, values)[1]
+def instance_update(context, instance_uuid, values):
+    instance_ref = _instance_update(context, instance_uuid, values)[1]
     return instance_ref
 
 
 @require_context
-def instance_update_and_get_original(context, instance_id, values):
+def instance_update_and_get_original(context, instance_uuid, values):
     """Set the given properties on an instance and update it. Return
     a shallow copy of the original instance reference, as well as the
     updated one.
 
     :param context: = request context object
-    :param instance_id: = instance id or uuid
+    :param instance_uuid: = instance uuid
     :param values: = dict containing column values
 
     :returns: a tuple of the form (old_instance_ref, new_instance_ref)
 
     Raises NotFound if instance does not exist.
     """
-    return _instance_update(context, instance_id, values,
-            copy_old_instance=True)
+    return _instance_update(context, instance_uuid, values,
+                            copy_old_instance=True)
 
 
-def _instance_update(context, instance_id, values, copy_old_instance=False):
+def _instance_update(context, instance_uuid, values, copy_old_instance=False):
     session = get_session()
 
-    if utils.is_uuid_like(instance_id):
-        instance_ref = instance_get_by_uuid(context, instance_id,
+    if utils.is_uuid_like(instance_uuid):
+        instance_ref = instance_get_by_uuid(context, instance_uuid,
                                             session=session)
     else:
-        instance_ref = instance_get(context, instance_id, session=session)
+        raise exception.InvalidUUID(instance_uuid)
 
     if copy_old_instance:
         old_instance_ref = copy.copy(instance_ref)

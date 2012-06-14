@@ -1267,7 +1267,7 @@ class XenAPIGenerateLocal(test.TestCase):
     def test_generate_swap(self):
         """Test swap disk generation."""
         instance = db.instance_create(self.context, self.instance_values)
-        instance = db.instance_update(self.context, instance['id'],
+        instance = db.instance_update(self.context, instance['uuid'],
                                       {'instance_type_id': 5})
 
         def fake_generate_swap(*args, **kwargs):
@@ -1279,7 +1279,7 @@ class XenAPIGenerateLocal(test.TestCase):
     def test_generate_ephemeral(self):
         """Test ephemeral disk generation."""
         instance = db.instance_create(self.context, self.instance_values)
-        instance = db.instance_update(self.context, instance['id'],
+        instance = db.instance_update(self.context, instance['uuid'],
                                       {'instance_type_id': 4})
 
         def fake_generate_ephemeral(*args):

@@ -117,7 +117,7 @@ class DbApiTestCase(test.TestCase):
         instance = db.instance_create(ctxt, values)
         results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
         self.assertEqual(1, len(results))
-        db.instance_update(ctxt, instance.id, {"task_state": None})
+        db.instance_update(ctxt, instance['uuid'], {"task_state": None})
 
         # Ensure the newly rebooted instance is not returned.
         updated_at = utils.utcnow()
@@ -125,7 +125,7 @@ class DbApiTestCase(test.TestCase):
         instance = db.instance_create(ctxt, values)
         results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
         self.assertEqual(0, len(results))
-        db.instance_update(ctxt, instance.id, {"task_state": None})
+        db.instance_update(ctxt, instance['uuid'], {"task_state": None})
 
     def test_network_create_safe(self):
         ctxt = context.get_admin_context()
@@ -177,7 +177,7 @@ class DbApiTestCase(test.TestCase):
         # Update the metadata
         values = {'metadata': {'host': 'bar'},
                   'system_metadata': {'original_image_ref': 'baz'}}
-        db.instance_update(ctxt, instance.id, values)
+        db.instance_update(ctxt, instance['uuid'], values)
 
         # Retrieve the user-provided metadata to ensure it was successfully
         # updated
@@ -200,7 +200,7 @@ class DbApiTestCase(test.TestCase):
         # Update the metadata
         values = {'metadata': {'host': 'bar'},
                   'system_metadata': {'original_image_ref': 'baz'}}
-        db.instance_update(ctxt, instance.uuid, values)
+        db.instance_update(ctxt, instance['uuid'], values)
 
         # Retrieve the user-provided metadata to ensure it was successfully
         # updated
@@ -219,7 +219,7 @@ class DbApiTestCase(test.TestCase):
         instance = db.instance_create(ctxt, values)
 
         (old_ref, new_ref) = db.instance_update_and_get_original(ctxt,
-                instance['id'], {'vm_state': 'needscoffee'})
+                instance['uuid'], {'vm_state': 'needscoffee'})
         self.assertEquals("building", old_ref["vm_state"])
         self.assertEquals("needscoffee", new_ref["vm_state"])
 

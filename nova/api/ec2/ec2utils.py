@@ -81,6 +81,13 @@ def ec2_id_to_id(ec2_id):
         raise exception.InvalidEc2Id(ec2_id=ec2_id)
 
 
+def ec2_id_to_uuid(context, ec2_id):
+    """Convert an ec2 ID into an instance UUID"""
+    instance_id = ec2_id_to_id(ec2_id)
+    instance = db.instance_get(context, instance_id)
+    return instance['uuid']
+
+
 def image_ec2_id(image_id, image_type='ami'):
     """Returns image ec2_id using id and three letter type."""
     template = image_type + '-%08x'
