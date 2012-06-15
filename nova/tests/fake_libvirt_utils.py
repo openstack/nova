@@ -17,6 +17,7 @@
 import os
 import StringIO
 
+
 files = {}
 disk_sizes = {}
 disk_backing_files = {}

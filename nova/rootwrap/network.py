@@ -15,8 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from nova.rootwrap import filters
+
 
 filterlist = [
     # nova/network/linux_net.py: 'ip', 'addr', 'add', str(floating_ip)+'/32'i..

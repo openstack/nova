@@ -38,6 +38,7 @@ from nova.db.sqlalchemy.migration import versioning_api as migration_api
 from nova import log as logging
 from nova import test
 
+
 LOG = logging.getLogger(__name__)
 
 

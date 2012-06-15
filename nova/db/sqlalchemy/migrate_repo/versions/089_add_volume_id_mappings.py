@@ -17,6 +17,7 @@
 
 from sqlalchemy import Boolean, Column, DateTime, Integer
 from sqlalchemy import MetaData, String, Table
+
 from nova import log as logging
 from nova import utils
 

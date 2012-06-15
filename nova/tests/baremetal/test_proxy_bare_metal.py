@@ -29,6 +29,7 @@ from nova.tests import fake_utils
 from nova.virt.baremetal import dom
 from nova.virt.baremetal import proxy
 
+
 FLAGS = flags.FLAGS
 
 

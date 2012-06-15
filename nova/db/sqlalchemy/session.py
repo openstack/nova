@@ -20,9 +20,9 @@
 
 import time
 
+from sqlalchemy.exc import DisconnectionError, OperationalError
 import sqlalchemy.interfaces
 import sqlalchemy.orm
-from sqlalchemy.exc import DisconnectionError, OperationalError
 from sqlalchemy.pool import NullPool, StaticPool
 
 import nova.exception

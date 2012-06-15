@@ -15,9 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from migrate import ForeignKeyConstraint
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey
 from sqlalchemy import MetaData, String, Table
-from migrate import ForeignKeyConstraint
 
 
 def upgrade(migrate_engine):

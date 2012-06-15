@@ -29,6 +29,7 @@ from nova import log as logging
 from nova import test
 from nova.volume import netapp
 
+
 LOG = logging.getLogger(__name__)
 
 

@@ -43,6 +43,7 @@ from nova import log as logging
 
 import eventlet
 
+
 eventlet.monkey_patch()
 
 FLAGS = flags.FLAGS

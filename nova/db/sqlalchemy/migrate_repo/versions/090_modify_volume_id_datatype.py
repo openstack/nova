@@ -15,9 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from migrate import ForeignKeyConstraint
 from sqlalchemy import Integer
 from sqlalchemy import MetaData, String, Table
-from migrate import ForeignKeyConstraint
+
 from nova import log as logging
 
 LOG = logging.getLogger(__name__)
