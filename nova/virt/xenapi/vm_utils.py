@@ -36,6 +36,7 @@ from eventlet import greenthread
 
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova import db
 from nova import exception
 from nova import flags
 from nova.image import glance
@@ -677,12 +678,33 @@ def create_image(context, session, instance, image_id, image_type):
 
     Returns: A list of dictionaries that describe VDIs
     """
-    if FLAGS.cache_images and image_type != ImageType.DISK_ISO:
+    cache_images = FLAGS.cache_images.lower()
+
+    # Deterimine if the image is cacheable
+    if image_type == ImageType.DISK_ISO:
+        cache = False
+    elif cache_images == 'all':
+        cache = True
+    elif cache_images == 'some':
+        # FIXME(sirp): This should be eager loaded like instance metadata
+        sys_meta = db.instance_system_metadata_get(context,
+                instance['uuid'])
+        try:
+            cache = utils.bool_from_str(sys_meta['image_cache_in_nova'])
+        except KeyError:
+            cache = False
+    elif cache_images == 'none':
+        cache = False
+    else:
+        LOG.warning(_("Unrecognized cache_images value '%s', defaulting to"
+                      " True"), FLAGS.cache_images)
+        cache = True
+
+    # Fetch (and cache) the image
+    if cache:
         vdis = _create_cached_image(
                 context, session, instance, image_id, image_type)
     else:
-        # If caching is disabled, we do not have to keep a copy of the
-        # image. Fetch the image from glance.
         vdis = fetch_image(
                 context, session, instance, image_id, image_type)
 
