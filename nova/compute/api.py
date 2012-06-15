@@ -804,7 +804,7 @@ class API(base.Base):
         # Update the instance record and send a state update notification
         # if task or vm state changed
         old_ref, instance_ref = self.db.instance_update_and_get_original(
-                context, instance["id"], kwargs)
+                context, instance['uuid'], kwargs)
         notifications.send_update(context, old_ref, instance_ref,
                 service="api")
 

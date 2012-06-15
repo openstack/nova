@@ -255,19 +255,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
-    def _instance_update(self, context, instance_id, **kwargs):
+    def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
 
         (old_ref, instance_ref) = self.db.instance_update_and_get_original(
-                context, instance_id, kwargs)
+                context, instance_uuid, kwargs)
         notifications.send_update(context, old_ref, instance_ref)
 
         return instance_ref
 
     def _set_instance_error_state(self, context, instance_uuid):
         try:
-            self._instance_update(context,
-                    instance_uuid, vm_state=vm_states.ERROR)
+            self._instance_update(context, instance_uuid,
+                                  vm_state=vm_states.ERROR)
         except exception.InstanceNotFound:
             LOG.debug(_('Instance has been destroyed from under us while '
                         'trying to set it to ERROR'),
@@ -755,10 +755,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._shutdown_instance(context, instance)
         self._cleanup_volumes(context, instance_uuid)
         instance = self._instance_update(context,
-                              instance_uuid,
-                              vm_state=vm_states.DELETED,
-                              task_state=None,
-                              terminated_at=utils.utcnow())
+                                         instance_uuid,
+                                         vm_state=vm_states.DELETED,
+                                         task_state=None,
+                                         terminated_at=utils.utcnow())
         # Pull the system_metadata before we delete the instance, so we
         # can pass it to delete.end notification, as it will not be able
         # to look it up anymore, if it needs it.
@@ -911,9 +911,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         device_info = self._setup_block_device_mapping(context, instance)
 
         instance = self._instance_update(context,
-                              instance_uuid,
-                              vm_state=vm_states.REBUILDING,
-                              task_state=task_states.SPAWNING)
+                                         instance_uuid,
+                                         vm_state=vm_states.REBUILDING,
+                                         task_state=task_states.SPAWNING)
         # pull in new password here since the original password isn't in the db
         instance.admin_pass = kwargs.get('new_pass',
                 utils.generate_password(FLAGS.password_length))
@@ -925,11 +925,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance)
         instance = self._instance_update(context,
-                                          instance_uuid,
-                                          power_state=current_power_state,
-                                          vm_state=vm_states.ACTIVE,
-                                          task_state=None,
-                                          launched_at=utils.utcnow())
+                                         instance_uuid,
+                                         power_state=current_power_state,
+                                         vm_state=vm_states.ACTIVE,
+                                         task_state=None,
+                                         launched_at=utils.utcnow())
 
         self._notify_about_instance_usage(context, instance, "rebuild.end",
                                           network_info=network_info)
@@ -993,7 +993,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_ref['id'],
+                              instance_ref['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE)
 
@@ -1014,7 +1014,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self.driver.snapshot(context, instance_ref, image_id)
         finally:
-            self._instance_update(context, instance_ref['id'], task_state=None)
+            self._instance_update(context, instance_ref['uuid'],
+                                  task_state=None)
 
         if image_type == 'snapshot' and rotation:
             raise exception.ImageRotationNotAllowed()
@@ -1097,13 +1098,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         for i in xrange(max_tries):
             instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-            instance_id = instance_ref["id"]
 
             current_power_state = self._get_power_state(context, instance_ref)
             expected_state = power_state.RUNNING
 
             if current_power_state != expected_state:
-                self._instance_update(context, instance_id, task_state=None)
+                self._instance_update(context, instance_ref['uuid'],
+                                      task_state=None)
                 _msg = _('Failed to set admin password. Instance %s is not'
                          ' running') % instance_ref["uuid"]
                 raise exception.Invalid(_msg)
@@ -1112,7 +1113,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     self.driver.set_admin_password(instance_ref, new_pass)
                     LOG.audit(_("Root password set"), instance=instance_ref)
                     self._instance_update(context,
-                                          instance_id,
+                                          instance_ref['uuid'],
                                           task_state=None)
                     break
                 except NotImplementedError:
@@ -1121,14 +1122,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                     LOG.warn(_('set_admin_password is not implemented '
                              'by this driver.'), instance=instance_ref)
                     self._instance_update(context,
-                                          instance_id,
+                                          instance_ref['uuid'],
                                           task_state=None)
                     break
                 except Exception, e:
                     # Catch all here because this could be anything.
                     LOG.exception(e, instance=instance_ref)
                     if i == max_tries - 1:
-                        self._set_instance_error_state(context, instance_id)
+                        self._set_instance_error_state(context,
+                                                       instance_ref['uuid'])
                         # We create a new exception here so that we won't
                         # potentially reveal password information to the
                         # API caller.  The real exception is logged above
@@ -1552,7 +1554,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_ref['id'],
+                              instance_ref['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.PAUSED,
                               task_state=None)
@@ -1570,7 +1572,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_ref['id'],
+                              instance_ref['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
@@ -1615,7 +1617,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_ref['id'],
+                              instance_ref['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.SUSPENDED,
                               task_state=None)
@@ -1635,7 +1637,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_ref['id'],
+                              instance_ref['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
@@ -2164,7 +2166,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Restore instance state
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
-                              instance_ref['id'],
+                              instance_ref['uuid'],
                               host=self.host,
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
@@ -2189,7 +2191,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         host = instance_ref['host']
         self._instance_update(context,
-                              instance_ref['id'],
+                              instance_ref['uuid'],
                               host=host,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
@@ -2474,12 +2476,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    power_state.CRASHED)
                 and db_instance['vm_state'] == vm_states.ACTIVE):
                 self._instance_update(context,
-                                      db_instance["id"],
+                                      db_instance['uuid'],
                                       power_state=vm_power_state,
                                       vm_state=vm_states.SHUTOFF)
             else:
                 self._instance_update(context,
-                                      db_instance["id"],
+                                      db_instance['uuid'],
                                       power_state=vm_power_state)
 
     @manager.periodic_task

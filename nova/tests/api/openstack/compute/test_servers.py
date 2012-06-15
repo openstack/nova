@@ -53,6 +53,8 @@ XPATH_NS = {
     'ns': 'http://docs.openstack.org/compute/api/v1.1'
 }
 
+INSTANCE_IDS = {FAKE_UUID: 1}
+
 
 def fake_gen_uuid():
     return FAKE_UUID
@@ -71,8 +73,9 @@ def return_security_group(context, instance_id, security_group_id):
     pass
 
 
-def instance_update(context, instance_id, values):
-    inst = fakes.stub_instance(instance_id, name=values.get('display_name'))
+def instance_update(context, instance_uuid, values):
+    inst = fakes.stub_instance(INSTANCE_IDS.get(instance_uuid),
+                               name=values.get('display_name'))
     return (inst, inst)
 
 
@@ -1411,7 +1414,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.flags(verbose=True,
                    enable_instance_password=True)
         self.instance_cache_num = 0
-        self.instance_cache = {}
+        self.instance_cache_by_id = {}
+        self.instance_cache_by_uuid = {}
 
         self.controller = servers.Controller()
 
@@ -1439,14 +1443,16 @@ class ServersControllerCreateTest(test.TestCase):
                 "task_state": "",
                 "vm_state": "",
             }
-            self.instance_cache[instance['id']] = instance
+
+            self.instance_cache_by_id[instance['id']] = instance
+            self.instance_cache_by_uuid[instance['uuid']] = instance
             return instance
 
         def instance_get(context, instance_id):
             """Stub for compute/api create() pulling in instance after
             scheduling
             """
-            return self.instance_cache[instance_id]
+            return self.instance_cache_by_id[instance_id]
 
         def rpc_call_wrapper(context, topic, msg, timeout=None):
             """Stub out the scheduler creating the instance entry"""
@@ -1460,8 +1466,8 @@ class ServersControllerCreateTest(test.TestCase):
                         request_spec['instance_properties']))
                 return instances
 
-        def server_update(context, instance_id, params):
-            inst = self.instance_cache[instance_id]
+        def server_update(context, instance_uuid, params):
+            inst = self.instance_cache_by_uuid[instance_uuid]
             inst.update(params)
             return (inst, inst)
 

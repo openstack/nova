@@ -1297,7 +1297,7 @@ class LibvirtConnTestCase(test.TestCase):
                          'power_state': power_state.RUNNING,
                          'vm_state': vm_states.ACTIVE}
         instance_ref = db.instance_create(self.context, self.test_instance)
-        instance_ref = db.instance_update(self.context, instance_ref['id'],
+        instance_ref = db.instance_update(self.context, instance_ref['uuid'],
                                           instance_dict)
         vol_dict = {'status': 'migrating', 'size': 1}
         volume_ref = db.volume_create(self.context, vol_dict)

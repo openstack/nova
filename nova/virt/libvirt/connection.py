@@ -1442,7 +1442,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # for nova.api.ec2.cloud.CloudController.get_metadata()
             root_device = self.default_root_device
             db.instance_update(
-                nova_context.get_admin_context(), instance['id'],
+                nova_context.get_admin_context(), instance['uuid'],
                 {'root_device_name': '/dev/' + self.default_root_device})
 
         if FLAGS.libvirt_type == "lxc":
@@ -1576,7 +1576,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if ephemeral_device is not None:
                     swap_device = self.default_third_device
                     db.instance_update(
-                        nova_context.get_admin_context(), instance['id'],
+                        nova_context.get_admin_context(), instance['uuid'],
                         {'default_ephemeral_device':
                              '/dev/' + self.default_second_device})
                 else:
@@ -1608,7 +1608,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     diskswap.target_bus = ephemeral_disk_bus
                     guest.add_device(diskswap)
                     db.instance_update(
-                        nova_context.get_admin_context(), instance['id'],
+                        nova_context.get_admin_context(), instance['uuid'],
                         {'default_swap_device': '/dev/' + swap_device})
 
                 for vol in block_device_mapping:

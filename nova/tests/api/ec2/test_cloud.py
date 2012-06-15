@@ -1844,8 +1844,8 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
-        internal_id = ec2utils.ec2_id_to_id(instance_id)
-        instance = db.instance_update(self.context, internal_id,
+        internal_uuid = ec2utils.ec2_id_to_uuid(self.context, instance_id)
+        instance = db.instance_update(self.context, internal_uuid,
                                       {'disable_terminate': True})
 
         expected = {'instancesSet': [
@@ -1857,7 +1857,7 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
 
-        instance = db.instance_update(self.context, internal_id,
+        instance = db.instance_update(self.context, internal_uuid,
                                       {'disable_terminate': False})
 
         expected = {'instancesSet': [
