@@ -509,6 +509,9 @@ class Connection(object):
         if self._uri == 'qemu:///system':
             return 'QEMU'
 
+    def getLibVersion(self):
+        return 9007
+
     def getVersion(self):
         return 14000
 
