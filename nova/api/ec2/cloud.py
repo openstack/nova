@@ -357,6 +357,11 @@ class CloudController(object):
         if not key_name is None:
             key_pairs = [x for x in key_pairs if x['name'] in key_name]
 
+        #If looking for non existent key pair
+        if key_name != None and key_pairs == []:
+            msg = _('Could not find key pair(s): %s') % ','.join(key_name)
+            raise exception.EC2APIError(msg)
+
         result = []
         for key_pair in key_pairs:
             # filter out the vpn keys
