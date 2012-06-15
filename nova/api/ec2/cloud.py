@@ -1111,17 +1111,48 @@ class CloudController(object):
                 " instance %(instance_id)s") % locals(), context=context)
         instance_id = ec2utils.ec2_id_to_id(instance_id)
         instance = self.compute_api.get(context, instance_id)
+
+        cached_ipinfo = ec2utils.get_ip_info_for_instance(context, instance)
+        fixed_ips = cached_ipinfo['fixed_ips'] + cached_ipinfo['fixed_ip6s']
+        if not fixed_ips:
+            msg = _('Unable to associate IP Address, no fixed_ips.')
+            raise exception.EC2APIError(msg)
+
+        # TODO(tr3buchet): this will associate the floating IP with the
+        # first fixed_ip an instance has. This should be
+        # changed to support specifying a particular fixed_ip if
+        # multiple exist but this may not apply to ec2..
+        if len(fixed_ips) > 1:
+            msg = _('multiple fixed_ips exist, using the first: %s')
+            LOG.warning(msg, fixed_ips[0])
+
         try:
-            self.compute_api.associate_floating_ip(context,
-                                                   instance,
-                                                   address=public_ip)
-            return {'return': "true"}
-        except exception.FloatingIpNotFound:
-            raise exception.EC2APIError(_('Unable to associate IP Address.'))
+            self.network_api.associate_floating_ip(context, instance,
+                                  floating_address=public_ip,
+                                  fixed_address=fixed_ips[0])
+            return {'return': 'true'}
+        except exception.FloatingIpAssociated:
+            msg = _('Floating ip is already associated.')
+            raise exception.EC2APIError(msg)
+        except exception.NoFloatingIpInterface:
+            msg = _('l3driver call to add floating ip failed.')
+            raise exception.EC2APIError(msg)
+        except:
+            msg = _('Error, unable to associate floating ip.')
+            raise exception.EC2APIError(msg)
 
     def disassociate_address(self, context, public_ip, **kwargs):
+        instance_id = self.network_api.get_instance_id_by_floating_address(
+                                                         context, public_ip)
+        instance = self.compute_api.get(context, instance_id)
         LOG.audit(_("Disassociate address %s"), public_ip, context=context)
-        self.network_api.disassociate_floating_ip(context, address=public_ip)
+        try:
+            self.network_api.disassociate_floating_ip(context, instance,
+                                                      address=public_ip)
+        except exception.FloatingIpNotAssociated:
+            msg = _('Floating ip is not associated.')
+            raise exception.EC2APIError(msg)
+
         return {'return': "true"}
 
     def run_instances(self, context, **kwargs):

@@ -1589,44 +1589,6 @@ class API(base.Base):
         return instance
 
     @wrap_check_policy
-    def associate_floating_ip(self, context, instance, address):
-        """Makes calls to network_api to associate_floating_ip.
-
-        :param address: is a string floating ip address
-        """
-        instance_uuid = instance['uuid']
-
-        # TODO(tr3buchet): currently network_info doesn't contain floating IPs
-        # in its info, if this changes, the next few lines will need to
-        # accommodate the info containing floating as well as fixed ip
-        # addresses
-        nw_info = self.network_api.get_instance_nw_info(context.elevated(),
-                                                        instance)
-
-        if not nw_info:
-            raise exception.FixedIpNotFoundForInstance(
-                    instance_id=instance_uuid)
-
-        ips = [ip for ip in nw_info[0].fixed_ips()]
-
-        if not ips:
-            raise exception.FixedIpNotFoundForInstance(
-                    instance_id=instance_uuid)
-
-        # TODO(tr3buchet): this will associate the floating IP with the
-        # first fixed_ip (lowest id) an instance has. This should be
-        # changed to support specifying a particular fixed_ip if
-        # multiple exist.
-        if len(ips) > 1:
-            msg = _('multiple fixedips exist, using the first: %s')
-            LOG.warning(msg, ips[0]['address'])
-
-        self.network_api.associate_floating_ip(context,
-                floating_address=address, fixed_address=ips[0]['address'])
-        self.network_api.invalidate_instance_cache(context.elevated(),
-                                                   instance)
-
-    @wrap_check_policy
     def get_instance_metadata(self, context, instance):
         """Get all metadata associated with an instance."""
         rv = self.db.instance_metadata_get(context, instance['uuid'])
