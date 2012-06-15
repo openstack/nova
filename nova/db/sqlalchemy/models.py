@@ -290,12 +290,12 @@ class InstanceInfoCache(BASE, NovaBase):
     # text column used for storing a json object of network data for api
     network_info = Column(Text)
 
-    instance_id = Column(String(36), ForeignKey('instances.uuid'),
-                                     nullable=False, unique=True)
+    instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
+                           nullable=False, unique=True)
     instance = relationship(Instance,
                             backref=backref('info_cache', uselist=False),
-                            foreign_keys=instance_id,
-                            primaryjoin=instance_id == Instance.uuid)
+                            foreign_keys=instance_uuid,
+                            primaryjoin=instance_uuid == Instance.uuid)
 
 
 class InstanceTypes(BASE, NovaBase):
