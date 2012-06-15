@@ -265,6 +265,7 @@ class RpcQpidTestCase(test.TestCase):
                                                         self.mock_receiver)
         self.mock_receiver.fetch().AndReturn(qpid.messaging.Message(
                         {"result": "foo", "failure": False, "ending": False}))
+        self.mock_session.acknowledge(mox.IgnoreArg())
         if multi:
             self.mock_session.next_receiver(timeout=mox.IsA(int)).AndReturn(
                                                         self.mock_receiver)
@@ -272,16 +273,19 @@ class RpcQpidTestCase(test.TestCase):
                             qpid.messaging.Message(
                                 {"result": "bar", "failure": False,
                                  "ending": False}))
+            self.mock_session.acknowledge(mox.IgnoreArg())
             self.mock_session.next_receiver(timeout=mox.IsA(int)).AndReturn(
                                                         self.mock_receiver)
             self.mock_receiver.fetch().AndReturn(
                             qpid.messaging.Message(
                                 {"result": "baz", "failure": False,
                                  "ending": False}))
+            self.mock_session.acknowledge(mox.IgnoreArg())
         self.mock_session.next_receiver(timeout=mox.IsA(int)).AndReturn(
                                                         self.mock_receiver)
         self.mock_receiver.fetch().AndReturn(qpid.messaging.Message(
                         {"failure": False, "ending": True}))
+        self.mock_session.acknowledge(mox.IgnoreArg())
         self.mock_session.close()
         self.mock_connection.session().AndReturn(self.mock_session)
 
