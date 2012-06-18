@@ -114,7 +114,8 @@ def check_host(fn):
         if id in hosts:
             return fn(self, req, id, *args, **kwargs)
         else:
-            raise exception.HostNotFound(host=id)
+            message = _("Host '%s' could not be found.") % id
+            raise webob.exc.HTTPNotFound(explanation=message)
     return wrapped
 
 

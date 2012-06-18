@@ -182,7 +182,7 @@ class HostTestCase(test.TestCase):
         self.assertEqual(result["maintenance_mode"], "on_maintenance")
 
     def test_bad_host(self):
-        self.assertRaises(exception.HostNotFound, self.controller.update,
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
                 self.req, "bogus_host_name", body={"status": "disable"})
 
     def test_show_forbidden(self):
