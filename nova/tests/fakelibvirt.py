@@ -797,3 +797,9 @@ def openAuth(uri, auth, flags):
                           "this auth method"))
 
     return Connection(uri, readonly=False)
+
+
+virDomain = Domain
+
+
+virConnect = Connection
