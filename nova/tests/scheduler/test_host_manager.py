@@ -20,10 +20,10 @@ import datetime
 
 from nova import db
 from nova import exception
+from nova.openstack.common import timeutils
 from nova.scheduler import host_manager
 from nova import test
 from nova.tests.scheduler import fakes
-from nova import utils
 
 
 class ComputeFilterClass1(object):
@@ -90,10 +90,10 @@ class HostManagerTestCase(test.TestCase):
     def test_update_service_capabilities(self):
         service_states = self.host_manager.service_states
         self.assertDictMatch(service_states, {})
-        self.mox.StubOutWithMock(utils, 'utcnow')
-        utils.utcnow().AndReturn(31337)
-        utils.utcnow().AndReturn(31338)
-        utils.utcnow().AndReturn(31339)
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
+        timeutils.utcnow().AndReturn(31337)
+        timeutils.utcnow().AndReturn(31338)
+        timeutils.utcnow().AndReturn(31339)
 
         host1_compute_capabs = dict(free_memory=1234, host_memory=5678,
                 timestamp=1)
@@ -138,10 +138,10 @@ class HostManagerTestCase(test.TestCase):
 
         self.host_manager.service_states = service_states
 
-        self.mox.StubOutWithMock(utils, 'utcnow')
-        utils.utcnow().AndReturn(datetime.datetime.fromtimestamp(3020))
-        utils.utcnow().AndReturn(datetime.datetime.fromtimestamp(3020))
-        utils.utcnow().AndReturn(datetime.datetime.fromtimestamp(3020))
+        self.mox.StubOutWithMock(timeutils, 'utcnow')
+        timeutils.utcnow().AndReturn(datetime.datetime.fromtimestamp(3020))
+        timeutils.utcnow().AndReturn(datetime.datetime.fromtimestamp(3020))
+        timeutils.utcnow().AndReturn(datetime.datetime.fromtimestamp(3020))
 
         self.mox.ReplayAll()
         res1 = self.host_manager.host_service_caps_stale('host1', 'compute')

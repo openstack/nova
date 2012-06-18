@@ -26,11 +26,11 @@ from nova.db.sqlalchemy import api as sqa_api
 from nova.db.sqlalchemy import models as sqa_models
 from nova import exception
 from nova import flags
+from nova.openstack.common import timeutils
 from nova import quota
 from nova import rpc
 from nova.scheduler import driver as scheduler_driver
 from nova import test
-from nova import utils
 from nova import volume
 
 
@@ -706,10 +706,10 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.calls = []
 
-        utils.set_time_override()
+        timeutils.set_time_override()
 
     def tearDown(self):
-        utils.clear_time_override()
+        timeutils.clear_time_override()
         super(DbQuotaDriverTestCase, self).tearDown()
 
     def test_get_defaults(self):
@@ -1273,7 +1273,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                                      quota.QUOTAS._resources,
                                      dict(instances=2))
 
-        expire = utils.utcnow() + datetime.timedelta(seconds=86400)
+        expire = timeutils.utcnow() + datetime.timedelta(seconds=86400)
         self.assertEqual(self.calls, [
                 'get_project_quotas',
                 ('quota_reserve', expire, 0, 0),
@@ -1287,7 +1287,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                                      quota.QUOTAS._resources,
                                      dict(instances=2), expire=3600)
 
-        expire = utils.utcnow() + datetime.timedelta(seconds=3600)
+        expire = timeutils.utcnow() + datetime.timedelta(seconds=3600)
         self.assertEqual(self.calls, [
                 'get_project_quotas',
                 ('quota_reserve', expire, 0, 0),
@@ -1302,7 +1302,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                                      quota.QUOTAS._resources,
                                      dict(instances=2), expire=expire_delta)
 
-        expire = utils.utcnow() + expire_delta
+        expire = timeutils.utcnow() + expire_delta
         self.assertEqual(self.calls, [
                 'get_project_quotas',
                 ('quota_reserve', expire, 0, 0),
@@ -1312,7 +1312,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_reserve_datetime_expire(self):
         self._stub_get_project_quotas()
         self._stub_quota_reserve()
-        expire = utils.utcnow() + datetime.timedelta(seconds=120)
+        expire = timeutils.utcnow() + datetime.timedelta(seconds=120)
         result = self.driver.reserve(FakeContext('test_project', 'test_class'),
                                      quota.QUOTAS._resources,
                                      dict(instances=2), expire=expire)
@@ -1327,7 +1327,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         self._stub_get_project_quotas()
         self._stub_quota_reserve()
         self.flags(until_refresh=500)
-        expire = utils.utcnow() + datetime.timedelta(seconds=120)
+        expire = timeutils.utcnow() + datetime.timedelta(seconds=120)
         result = self.driver.reserve(FakeContext('test_project', 'test_class'),
                                      quota.QUOTAS._resources,
                                      dict(instances=2), expire=expire)
@@ -1342,7 +1342,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         self._stub_get_project_quotas()
         self._stub_quota_reserve()
         self.flags(max_age=86400)
-        expire = utils.utcnow() + datetime.timedelta(seconds=120)
+        expire = timeutils.utcnow() + datetime.timedelta(seconds=120)
         result = self.driver.reserve(FakeContext('test_project', 'test_class'),
                                      quota.QUOTAS._resources,
                                      dict(instances=2), expire=expire)
@@ -1396,7 +1396,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             res = quota.ReservableResource(res_name, make_sync(res_name))
             self.resources[res_name] = res
 
-        self.expire = utils.utcnow() + datetime.timedelta(seconds=3600)
+        self.expire = timeutils.utcnow() + datetime.timedelta(seconds=3600)
 
         self.usages = {}
         self.usages_created = {}
@@ -1413,7 +1413,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                                     save=True):
             quota_usage_ref = self._make_quota_usage(
                 project_id, resource, in_use, reserved, until_refresh,
-                utils.utcnow(), utils.utcnow())
+                timeutils.utcnow(), timeutils.utcnow())
 
             self.usages_created[resource] = quota_usage_ref
 
@@ -1423,7 +1423,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                                     resource, delta, expire, session=None):
             reservation_ref = self._make_reservation(
                 uuid, usage_id, project_id, resource, delta, expire,
-                utils.utcnow(), utils.utcnow())
+                timeutils.utcnow(), timeutils.utcnow())
 
             self.reservations_created[resource] = reservation_ref
 
@@ -1434,7 +1434,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         self.stubs.Set(sqa_api, 'quota_usage_create', fake_quota_usage_create)
         self.stubs.Set(sqa_api, 'reservation_create', fake_reservation_create)
 
-        utils.set_time_override()
+        timeutils.set_time_override()
 
     def _make_quota_usage(self, project_id, resource, in_use, reserved,
                           until_refresh, created_at, updated_at):
@@ -1455,9 +1455,9 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
     def init_usage(self, project_id, resource, in_use, reserved,
                    until_refresh=None, created_at=None, updated_at=None):
         if created_at is None:
-            created_at = utils.utcnow()
+            created_at = timeutils.utcnow()
         if updated_at is None:
-            updated_at = utils.utcnow()
+            updated_at = timeutils.utcnow()
 
         quota_usage_ref = self._make_quota_usage(project_id, resource, in_use,
                                                  reserved, until_refresh,
@@ -1659,7 +1659,8 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
 
     def test_quota_reserve_max_age(self):
         max_age = 3600
-        record_created = utils.utcnow() - datetime.timedelta(seconds=max_age)
+        record_created = (timeutils.utcnow() -
+                          datetime.timedelta(seconds=max_age))
         self.init_usage('test_project', 'instances', 3, 0,
                         created_at=record_created, updated_at=record_created)
         self.init_usage('test_project', 'cores', 3, 0,

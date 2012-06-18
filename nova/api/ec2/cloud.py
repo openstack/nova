@@ -40,6 +40,7 @@ from nova.image import s3
 from nova import log as logging
 from nova import network
 from nova.openstack.common import excutils
+from nova.openstack.common import timeutils
 from nova import quota
 from nova import utils
 from nova import volume
@@ -666,7 +667,7 @@ class CloudController(object):
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
         instance = self.compute_api.get(context, instance_id)
         output = self.compute_api.get_console_output(context, instance)
-        now = utils.utcnow()
+        now = timeutils.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
                 "output": base64.b64encode(output)}

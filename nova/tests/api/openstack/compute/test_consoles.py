@@ -27,6 +27,7 @@ from nova import console
 from nova import db
 from nova import exception
 from nova import flags
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova import utils
@@ -108,9 +109,9 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
         "user_data": "",
         "reservation_id": reservation_id,
         "mac_address": "",
-        "scheduled_at": utils.utcnow(),
-        "launched_at": utils.utcnow(),
-        "terminated_at": utils.utcnow(),
+        "scheduled_at": timeutils.utcnow(),
+        "launched_at": timeutils.utcnow(),
+        "terminated_at": timeutils.utcnow(),
         "availability_zone": "",
         "display_name": server_name,
         "display_description": "",

@@ -39,6 +39,7 @@ from nova.db.sqlalchemy import models
 from nova import exception as exc
 import nova.image.fake
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import quota
 from nova.tests import fake_network
 from nova.tests.glance import stubs as glance_stubs
@@ -329,7 +330,7 @@ class FakeAuthDatabase(object):
 
     @staticmethod
     def auth_token_create(context, token):
-        fake_token = FakeToken(created_at=utils.utcnow(), **token)
+        fake_token = FakeToken(created_at=timeutils.utcnow(), **token)
         FakeAuthDatabase.data[fake_token.token_hash] = fake_token
         FakeAuthDatabase.data['id_%i' % fake_token.id] = fake_token
         return fake_token
@@ -575,9 +576,9 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "user_data": "",
         "reservation_id": reservation_id,
         "mac_address": "",
-        "scheduled_at": utils.utcnow(),
-        "launched_at": utils.utcnow(),
-        "terminated_at": utils.utcnow(),
+        "scheduled_at": timeutils.utcnow(),
+        "launched_at": timeutils.utcnow(),
+        "terminated_at": timeutils.utcnow(),
         "availability_zone": "",
         "display_name": display_name or server_name,
         "display_description": "",

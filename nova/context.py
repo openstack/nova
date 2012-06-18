@@ -23,6 +23,7 @@ import copy
 
 from nova import log as logging
 from nova.openstack.common import local
+from nova.openstack.common import timeutils
 from nova import utils
 
 
@@ -71,9 +72,9 @@ class RequestContext(object):
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:
-            timestamp = utils.utcnow()
+            timestamp = timeutils.utcnow()
         if isinstance(timestamp, basestring):
-            timestamp = utils.parse_strtime(timestamp)
+            timestamp = timeutils.parse_strtime(timestamp)
         self.timestamp = timestamp
         if not request_id:
             request_id = generate_request_id()
@@ -115,7 +116,7 @@ class RequestContext(object):
                 'read_deleted': self.read_deleted,
                 'roles': self.roles,
                 'remote_address': self.remote_address,
-                'timestamp': utils.strtime(self.timestamp),
+                'timestamp': timeutils.strtime(self.timestamp),
                 'request_id': self.request_id,
                 'auth_token': self.auth_token,
                 'quota_class': self.quota_class,

@@ -38,6 +38,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import utils
 from nova import wsgi
 
@@ -106,7 +107,7 @@ class RequestLogging(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        start = utils.utcnow()
+        start = timeutils.utcnow()
         rv = req.get_response(self.application)
         self.log_request_completion(rv, req, start)
         return rv
@@ -120,7 +121,7 @@ class RequestLogging(wsgi.Middleware):
             controller = None
             action = None
         ctxt = request.environ.get('nova.context', None)
-        delta = utils.utcnow() - start
+        delta = timeutils.utcnow() - start
         seconds = delta.seconds
         microseconds = delta.microseconds
         LOG.info(

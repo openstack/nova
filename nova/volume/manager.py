@@ -46,6 +46,7 @@ from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
+from nova.openstack.common import timeutils
 from nova import quota
 from nova import utils
 from nova.volume import utils as volume_utils
@@ -149,7 +150,7 @@ class VolumeManager(manager.SchedulerDependentManager):
                 self.db.volume_update(context,
                                       volume_ref['id'], {'status': 'error'})
 
-        now = utils.utcnow()
+        now = timeutils.utcnow()
         volume_ref = self.db.volume_update(context,
                               volume_ref['id'], {'status': 'available',
                                                  'launched_at': now})

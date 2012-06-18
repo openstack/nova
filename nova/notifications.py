@@ -28,6 +28,7 @@ from nova import network
 from nova.network import model as network_model
 from nova.notifier import api as notifier_api
 from nova.openstack.common import cfg
+from nova.openstack.common import timeutils
 from nova import utils
 
 LOG = log.getLogger(__name__)
@@ -140,7 +141,7 @@ def audit_period_bounds(current_period=False):
     begin, end = utils.last_completed_audit_period()
     if current_period:
         audit_start = end
-        audit_end = utils.utcnow()
+        audit_end = timeutils.utcnow()
     else:
         audit_start = begin
         audit_end = end

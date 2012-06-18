@@ -22,9 +22,9 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import utils
 from nova import volume
 
 FLAGS = flags.FLAGS
@@ -249,7 +249,7 @@ class SnapshotSerializerTest(test.TestCase):
             id='snap_id',
             status='snap_status',
             size=1024,
-            createdAt=utils.utcnow(),
+            createdAt=timeutils.utcnow(),
             displayName='snap_name',
             displayDescription='snap_desc',
             volumeId='vol_id',
@@ -267,7 +267,7 @@ class SnapshotSerializerTest(test.TestCase):
                 id='snap1_id',
                 status='snap1_status',
                 size=1024,
-                createdAt=utils.utcnow(),
+                createdAt=timeutils.utcnow(),
                 displayName='snap1_name',
                 displayDescription='snap1_desc',
                 volumeId='vol1_id',
@@ -276,7 +276,7 @@ class SnapshotSerializerTest(test.TestCase):
                 id='snap2_id',
                 status='snap2_status',
                 size=1024,
-                createdAt=utils.utcnow(),
+                createdAt=timeutils.utcnow(),
                 displayName='snap2_name',
                 displayDescription='snap2_desc',
                 volumeId='vol2_id',

@@ -32,6 +32,7 @@ from nova.compute import instance_types
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import timeutils
 from nova.rpc import common as rpc_common
 from nova import utils
 
@@ -426,7 +427,7 @@ class Controller(wsgi.Controller):
 
         if 'changes-since' in search_opts:
             try:
-                parsed = utils.parse_isotime(search_opts['changes-since'])
+                parsed = timeutils.parse_isotime(search_opts['changes-since'])
             except ValueError:
                 msg = _('Invalid changes-since value')
                 raise exc.HTTPBadRequest(explanation=msg)

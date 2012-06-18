@@ -26,10 +26,10 @@ from nova import context
 from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
+from nova.openstack.common import timeutils
 from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -41,7 +41,7 @@ ROOT_GB = 10
 EPHEMERAL_GB = 20
 MEMORY_MB = 1024
 VCPUS = 2
-STOP = utils.utcnow()
+STOP = timeutils.utcnow()
 START = STOP - datetime.timedelta(hours=HOURS)
 
 
@@ -226,7 +226,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
 
     def test_serializer_show(self):
         serializer = simple_tenant_usage.SimpleTenantUsageTemplate()
-        today = utils.utcnow()
+        today = timeutils.utcnow()
         yesterday = today - datetime.timedelta(days=1)
         raw_usage = dict(
             tenant_id='tenant',
@@ -272,7 +272,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
 
     def test_serializer_index(self):
         serializer = simple_tenant_usage.SimpleTenantUsagesTemplate()
-        today = utils.utcnow()
+        today = timeutils.utcnow()
         yesterday = today - datetime.timedelta(days=1)
         raw_usages = [dict(
                 tenant_id='tenant1',

@@ -33,6 +33,7 @@ from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import rpc
 from nova import utils
 
@@ -58,7 +59,7 @@ def cast_to_volume_host(context, host, method, update_db=True, **kwargs):
     if update_db:
         volume_id = kwargs.get('volume_id', None)
         if volume_id is not None:
-            now = utils.utcnow()
+            now = timeutils.utcnow()
             db.volume_update(context, volume_id,
                     {'host': host, 'scheduled_at': now})
     rpc.cast(context,
@@ -75,7 +76,7 @@ def cast_to_compute_host(context, host, method, update_db=True, **kwargs):
         instance_id = kwargs.get('instance_id', None)
         instance_uuid = kwargs.get('instance_uuid', instance_id)
         if instance_uuid is not None:
-            now = utils.utcnow()
+            now = timeutils.utcnow()
             db.instance_update(context, instance_uuid,
                     {'host': host, 'scheduled_at': now})
     rpc.cast(context,

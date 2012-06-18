@@ -67,6 +67,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota
 from nova import rpc
@@ -819,7 +820,7 @@ class NetworkManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _disassociate_stale_fixed_ips(self, context):
         if self.timeout_fixed_ips:
-            now = utils.utcnow()
+            now = timeutils.utcnow()
             timeout = FLAGS.fixed_ip_disassociate_timeout
             time = now - datetime.timedelta(seconds=timeout)
             num = self.db.fixed_ip_disassociate_all_by_timeout(context,
@@ -1303,7 +1304,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         if fixed_ip['instance_id'] is None:
             msg = _('IP %s leased that is not associated') % address
             raise exception.NovaException(msg)
-        now = utils.utcnow()
+        now = timeutils.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip['address'],
                                 {'leased': True,

@@ -37,6 +37,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import timeutils
 from nova import utils
 
 
@@ -210,12 +211,12 @@ def revoke_certs_by_user_and_project(user_id, project_id):
 
 def _project_cert_subject(project_id):
     """Helper to generate user cert subject."""
-    return FLAGS.project_cert_subject % (project_id, utils.isotime())
+    return FLAGS.project_cert_subject % (project_id, timeutils.isotime())
 
 
 def _user_cert_subject(user_id, project_id):
     """Helper to generate user cert subject."""
-    return FLAGS.user_cert_subject % (project_id, user_id, utils.isotime())
+    return FLAGS.user_cert_subject % (project_id, user_id, timeutils.isotime())
 
 
 def generate_x509_cert(user_id, project_id, bits=1024):

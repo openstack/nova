@@ -24,6 +24,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.openstack.common import timeutils
 from nova import test
 from nova import utils
 
@@ -96,7 +97,7 @@ class DbApiTestCase(test.TestCase):
         db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
 
         # Ensure the new migration is not returned.
-        updated_at = utils.utcnow()
+        updated_at = timeutils.utcnow()
         values = {"status": "finished", "updated_at": updated_at}
         migration = db.migration_create(ctxt, values)
         results = db.migration_get_all_unconfirmed(ctxt, 10)
@@ -120,7 +121,7 @@ class DbApiTestCase(test.TestCase):
         db.instance_update(ctxt, instance['uuid'], {"task_state": None})
 
         # Ensure the newly rebooted instance is not returned.
-        updated_at = utils.utcnow()
+        updated_at = timeutils.utcnow()
         values = {"task_state": "rebooting", "updated_at": updated_at}
         instance = db.instance_create(ctxt, values)
         results = db.instance_get_all_hung_in_rebooting(ctxt, 10)
@@ -383,7 +384,7 @@ class DbApiTestCase(test.TestCase):
         db.fixed_ip_create(ctxt, values)
 
     def test_fixed_ip_disassociate_all_by_timeout_single_host(self):
-        now = utils.utcnow()
+        now = timeutils.utcnow()
         ctxt = context.get_admin_context()
         self._timeout_test(ctxt, now, False)
         result = db.fixed_ip_disassociate_all_by_timeout(ctxt, 'foo', now)
@@ -392,7 +393,7 @@ class DbApiTestCase(test.TestCase):
         self.assertEqual(result, 1)
 
     def test_fixed_ip_disassociate_all_by_timeout_multi_host(self):
-        now = utils.utcnow()
+        now = timeutils.utcnow()
         ctxt = context.get_admin_context()
         self._timeout_test(ctxt, now, True)
         result = db.fixed_ip_disassociate_all_by_timeout(ctxt, 'foo', now)

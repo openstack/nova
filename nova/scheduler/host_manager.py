@@ -25,8 +25,8 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import timeutils
 from nova.scheduler import filters
-from nova import utils
 
 
 host_manager_opts = [
@@ -274,7 +274,7 @@ class HostManager(object):
         service_caps = self.service_states.get(host, {})
         # Copy the capabilities, so we don't modify the original dict
         capab_copy = dict(capabilities)
-        capab_copy["timestamp"] = utils.utcnow()  # Reported time
+        capab_copy["timestamp"] = timeutils.utcnow()  # Reported time
         service_caps[service_name] = capab_copy
         self.service_states[host] = service_caps
 
@@ -282,7 +282,7 @@ class HostManager(object):
         """Check if host service capabilites are not recent enough."""
         allowed_time_diff = FLAGS.periodic_interval * 3
         caps = self.service_states[host][service]
-        if ((utils.utcnow() - caps["timestamp"]) <=
+        if ((timeutils.utcnow() - caps["timestamp"]) <=
             datetime.timedelta(seconds=allowed_time_diff)):
             return False
         return True

@@ -46,6 +46,7 @@ from nova import notifications
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
@@ -827,7 +828,7 @@ class API(base.Base):
             self.update(context,
                         instance,
                         task_state=task_states.POWERING_OFF,
-                        deleted_at=utils.utcnow())
+                        deleted_at=timeutils.utcnow())
 
             self.compute_rpcapi.power_off_instance(context, instance)
         else:

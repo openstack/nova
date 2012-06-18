@@ -25,7 +25,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import utils
+from nova.openstack.common import timeutils
 
 from nova.virt.xenapi import connection as xenapi_conn
 
@@ -90,7 +90,7 @@ def find_orphaned_instances(session, verbose=False):
         # NOTE(jk0): A zombie VM is an instance that is not active and hasn't
         # been updated in over the specified period.
         is_zombie_vm = (instance.vm_state != "active"
-                and utils.is_older_than(instance.updated_at,
+                and timeutils.is_older_than(instance.updated_at,
                         FLAGS.zombie_instance_updated_at_window))
 
         if is_active_and_deleting or is_zombie_vm:

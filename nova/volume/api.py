@@ -26,10 +26,10 @@ from nova.db import base
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota
 from nova import rpc
-from nova import utils
 
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
@@ -136,7 +136,7 @@ class API(base.Base):
             msg = _("Volume still has %d dependent snapshots") % len(snapshots)
             raise exception.InvalidVolume(reason=msg)
 
-        now = utils.utcnow()
+        now = timeutils.utcnow()
         self.db.volume_update(context, volume_id, {'status': 'deleting',
                                                    'terminated_at': now})
         host = volume['host']

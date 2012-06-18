@@ -32,6 +32,7 @@ from nova import flags
 from nova import log as logging
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import timeutils
 from nova import utils
 
 
@@ -404,7 +405,7 @@ def _parse_glance_iso8601_timestamp(timestamp):
 
     for iso_format in iso_formats:
         try:
-            return utils.parse_strtime(timestamp, iso_format)
+            return timeutils.parse_strtime(timestamp, iso_format)
         except ValueError:
             pass
 
