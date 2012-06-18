@@ -2008,8 +2008,12 @@ class LibvirtDriver(driver.ComputeDriver):
         for nodes in feature_nodes:
             features.append(nodes.get('name'))
 
+        arch_nodes = xml.findall('.//guest/arch')
+        guest_cpu_arches = list(node.get('name') for node in arch_nodes)
+
         cpu_info['topology'] = topology
         cpu_info['features'] = features
+        cpu_info['permitted_instance_types'] = guest_cpu_arches
         return jsonutils.dumps(cpu_info)
 
     def block_stats(self, instance_name, disk):

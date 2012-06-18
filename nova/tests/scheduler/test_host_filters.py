@@ -793,3 +793,57 @@ class HostFiltersTestCase(test.TestCase):
         request = self._make_zone_request('bad')
         host = fakes.FakeHostState('host1', 'compute', {'service': service})
         self.assertFalse(filt_cls.host_passes(host, request))
+
+    def test_arch_filter_same(self):
+        permitted_instances = ['x86_64']
+        filt_cls = self.class_map['ArchFilter']()
+        filter_properties = {
+            'request_spec': {
+                'instance_properties': {'architecture': 'x86_64'}
+            }
+        }
+        capabilities = {'enabled': True,
+                            'cpu_info': {
+                                'permitted_instance_types': permitted_instances
+                            }
+                        }
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+            {'capabilities': capabilities, 'service': service})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_arch_filter_different(self):
+        permitted_instances = ['arm']
+        filt_cls = self.class_map['ArchFilter']()
+        filter_properties = {
+            'request_spec': {
+                    'instance_properties': {'architecture': 'x86_64'}
+                }
+            }
+        capabilities = {'enabled': True,
+                            'cpu_info': {
+                                'permitted_instance_types': permitted_instances
+                            }
+                        }
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+            {'capabilities': capabilities, 'service': service})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_arch_filter_without_permitted_instances(self):
+        permitted_instances = []
+        filt_cls = self.class_map['ArchFilter']()
+        filter_properties = {
+             'request_spec': {
+                'instance_properties': {'architecture': 'x86_64'}
+            }
+        }
+        capabilities = {'enabled': True,
+                            'cpu_info': {
+                                'permitted_instance_types': permitted_instances
+                            }
+                        }
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+            {'capabilities': capabilities, 'service': service})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
