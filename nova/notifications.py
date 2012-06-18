@@ -223,23 +223,52 @@ def usage_from_instance(context, instance_ref, network_info,
     instance_type_name = instance_ref.get('instance_type', {}).get('name', '')
 
     usage_info = dict(
+        # Owner properties
         tenant_id=instance_ref['project_id'],
         user_id=instance_ref['user_id'],
+
+        # Identity properties
         instance_id=instance_ref['uuid'],
+        display_name=instance_ref['display_name'],
+        reservation_id=instance_ref['reservation_id'],
+
+        # Type properties
         instance_type=instance_type_name,
         instance_type_id=instance_ref['instance_type_id'],
+        architecture=instance_ref['architecture'],
+
+        # Capacity properties
         memory_mb=instance_ref['memory_mb'],
         disk_gb=instance_ref['root_gb'] + instance_ref['ephemeral_gb'],
-        display_name=instance_ref['display_name'],
+        vcpus=instance_ref['vcpus'],
+        # Note(dhellmann): This makes the disk_gb value redundant, but
+        # we are keeping it for backwards-compatibility with existing
+        # users of notifications.
+        root_gb=instance_ref['root_gb'],
+        ephemeral_gb=instance_ref['ephemeral_gb'],
+
+        # Location properties
+        host=instance_ref['host'],
+        availability_zone=instance_ref['availability_zone'],
+
+        # Date properties
         created_at=str(instance_ref['created_at']),
         # Nova's deleted vs terminated instance terminology is confusing,
         # this should be when the instance was deleted (i.e. terminated_at),
         # not when the db record was deleted. (mdragon)
         deleted_at=null_safe_str(instance_ref.get('terminated_at')),
         launched_at=null_safe_str(instance_ref.get('launched_at')),
+
+        # Image properties
         image_ref_url=image_ref_url,
+        os_type=instance_ref['os_type'],
+        kernel_id=instance_ref['kernel_id'],
+        ramdisk_id=instance_ref['ramdisk_id'],
+
+        # Status properties
         state=instance_ref['vm_state'],
-        state_description=null_safe_str(instance_ref.get('task_state')))
+        state_description=null_safe_str(instance_ref.get('task_state')),
+        )
 
     if network_info is not None:
         usage_info['fixed_ips'] = network_info.fixed_ips()
