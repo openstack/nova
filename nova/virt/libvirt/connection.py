@@ -297,13 +297,19 @@ class LibvirtDriver(driver.ComputeDriver):
             self._host_state = HostState(self.read_only)
         return self._host_state
 
-    def init_host(self, host):
+    def has_min_version(self, ver):
         libvirt_version = self._conn.getLibVersion()
 
         def _munge_version(ver):
             return ver[0] * 1000000 + ver[1] * 1000 + ver[2]
 
-        if libvirt_version < _munge_version(MIN_LIBVIRT_VERSION):
+        if libvirt_version < _munge_version(ver):
+            return False
+
+        return True
+
+    def init_host(self, host):
+        if not self.has_min_version(MIN_LIBVIRT_VERSION):
             major = MIN_LIBVIRT_VERSION[0]
             minor = MIN_LIBVIRT_VERSION[1]
             micro = MIN_LIBVIRT_VERSION[2]
