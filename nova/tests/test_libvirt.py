@@ -684,6 +684,79 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(conf.cpu.mode, "custom")
         self.assertEquals(conf.cpu.model, "Penryn")
 
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
+    def test_get_guest_cpu_config_host_passthrough_old(self):
+        def get_lib_version_stub(self):
+            return (0 * 1000 * 1000) + (9 * 1000) + 7
+
+        self.stubs.Set(libvirt.virConnect, "getLibVersion",
+                       get_lib_version_stub)
+        conn = libvirt_driver.LibvirtDriver(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        self.flags(libvirt_cpu_mode="host-passthrough")
+        self.assertRaises(exception.NovaException,
+                          conn.get_guest_config,
+                          instance_ref,
+                          _fake_network_info(self.stubs, 1),
+                          None, None)
+
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
+    def test_get_guest_cpu_config_host_model_old(self):
+        def get_lib_version_stub(self):
+            return (0 * 1000 * 1000) + (9 * 1000) + 7
+
+        # Ensure we have a predictable host CPU
+        def get_host_capabilities_stub(self):
+            cpu = config.LibvirtConfigGuestCPU()
+            cpu.model = "Opteron_G4"
+            cpu.vendor = "AMD"
+
+            caps = config.LibvirtConfigCaps()
+            caps.host = config.LibvirtConfigCapsHost()
+            caps.host.cpu = cpu
+            return caps
+
+        self.stubs.Set(libvirt.virConnect,
+                       "getLibVersion",
+                       get_lib_version_stub)
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       "get_host_capabilities",
+                       get_host_capabilities_stub)
+        conn = libvirt_driver.LibvirtDriver(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        self.flags(libvirt_cpu_mode="host-model")
+        conf = conn.get_guest_config(instance_ref,
+                                     _fake_network_info(self.stubs, 1),
+                                     None, None)
+        self.assertEquals(type(conf.cpu),
+                          config.LibvirtConfigGuestCPU)
+        self.assertEquals(conf.cpu.mode, None)
+        self.assertEquals(conf.cpu.model, "Opteron_G4")
+        self.assertEquals(conf.cpu.vendor, "AMD")
+
+    @test.skip_if(missing_libvirt(), "Test requires libvirt")
+    def test_get_guest_cpu_config_custom_old(self):
+        def get_lib_version_stub(self):
+            return (0 * 1000 * 1000) + (9 * 1000) + 7
+
+        self.stubs.Set(libvirt.virConnect,
+                       "getLibVersion",
+                       get_lib_version_stub)
+        conn = libvirt_driver.LibvirtDriver(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        self.flags(libvirt_cpu_mode="custom")
+        self.flags(libvirt_cpu_model="Penryn")
+        conf = conn.get_guest_config(instance_ref,
+                                     _fake_network_info(self.stubs, 1),
+                                     None, None)
+        self.assertEquals(type(conf.cpu),
+                          config.LibvirtConfigGuestCPU)
+        self.assertEquals(conf.cpu.mode, None)
+        self.assertEquals(conf.cpu.model, "Penryn")
+
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_uri(instance_data,

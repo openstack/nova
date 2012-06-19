@@ -231,6 +231,9 @@ LIBVIRT_POWER_STATE = {
 }
 
 MIN_LIBVIRT_VERSION = (0, 9, 6)
+# When the above version matches/exceeds this version
+# delete it & corresponding code using it
+MIN_LIBVIRT_HOST_CPU_VERSION = (0, 9, 10)
 
 
 def _late_load_cheetah():
@@ -1469,6 +1472,27 @@ class LibvirtDriver(driver.ComputeDriver):
         caps.parse_str(xmlstr)
         return caps
 
+    def get_host_cpu_for_guest(self):
+        """Returns an instance of config.LibvirtConfigGuestCPU
+           representing the host's CPU model & topology with
+           policy for configuring a guest to match"""
+
+        caps = self.get_host_capabilities()
+        hostcpu = caps.host.cpu
+        guestcpu = config.LibvirtConfigGuestCPU()
+
+        guestcpu.model = hostcpu.model
+        guestcpu.vendor = hostcpu.vendor
+        guestcpu.arch = hostcpu.arch
+
+        guestcpu.match = "exact"
+
+        for hostfeat in hostcpu.features:
+            guestfeat = config.LibvirtConfigGuestCPUFeature(hostfeat.name)
+            guestfeat.policy = "require"
+
+        return guestcpu
+
     def get_guest_cpu_config(self):
         mode = FLAGS.libvirt_cpu_mode
         model = FLAGS.libvirt_cpu_model
@@ -1494,9 +1518,22 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug(_("CPU mode '%(mode)s' model '%(model)s' was chosen")
                   % {'mode': mode, 'model': (model or "")})
 
-        cpu = config.LibvirtConfigGuestCPU()
-        cpu.mode = mode
-        cpu.model = model
+        # TODO(berrange): in the future, when MIN_LIBVIRT_VERSION is
+        # updated to be at least this new, we can kill off the elif
+        # blocks here
+        if self.has_min_version(MIN_LIBVIRT_HOST_CPU_VERSION):
+            cpu = config.LibvirtConfigGuestCPU()
+            cpu.mode = mode
+            cpu.model = model
+        elif mode == "custom":
+            cpu = config.LibvirtConfigGuestCPU()
+            cpu.model = model
+        elif mode == "host-model":
+            cpu = self.get_host_cpu_for_guest()
+        elif mode == "host-passthrough":
+            msg = _("Passthrough of the host CPU was requested but "
+                    "this libvirt version does not support this feature")
+            raise exception.NovaException(msg)
 
         return cpu
 
