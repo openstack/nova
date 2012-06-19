@@ -1138,8 +1138,9 @@ class CloudController(object):
         except exception.NoFloatingIpInterface:
             msg = _('l3driver call to add floating ip failed.')
             raise exception.EC2APIError(msg)
-        except:
+        except Exception:
             msg = _('Error, unable to associate floating ip.')
+            LOG.exception(msg)
             raise exception.EC2APIError(msg)
 
     def disassociate_address(self, context, public_ip, **kwargs):
