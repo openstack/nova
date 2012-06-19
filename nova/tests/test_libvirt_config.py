@@ -53,6 +53,11 @@ class LibvirtConfigTest(LibvirtConfigBaseTest):
         xml = etree.tostring(root)
         self.assertXmlEqual(xml, "<demo><foo>bar</foo></demo>")
 
+    def test_config_parse(self):
+        inxml = "<demo><foo/></demo>"
+        obj = config.LibvirtConfigObject(root_name="demo")
+        obj.parse_str(inxml)
+
 
 class LibvirtConfigGuestTimerTest(LibvirtConfigBaseTest):
     def test_config_platform(self):

@@ -21,6 +21,7 @@ Classes to represent the configuration of various libvirt objects
 and support conversion to/from XML
 """
 
+from nova import exception
 from nova import log as logging
 
 from lxml import etree
@@ -38,9 +39,6 @@ class LibvirtConfigObject(object):
         self.ns_prefix = kwargs.get('ns_prefix')
         self.ns_uri = kwargs.get('ns_uri')
 
-        if "xml_str" in kwargs:
-            self.parse_dom(kwargs.get("xml_str"))
-
     def _text_node(self, name, value):
         child = etree.Element(name)
         child.text = str(value)
@@ -53,8 +51,14 @@ class LibvirtConfigObject(object):
             return etree.Element("{" + self.ns_uri + "}" + self.root_name,
                                  nsmap={self.ns_prefix: self.ns_uri})
 
-    def parse_dom(xmldoc):
-        raise NotImplementedError()
+    def parse_str(self, xmlstr):
+        self.parse_dom(etree.fromstring(xmlstr))
+
+    def parse_dom(self, xmldoc):
+        if self.root_name != xmldoc.tag:
+            raise exception.InvalidInput(
+                "Root element name should be '%s' not '%s'"
+                % (self.root_name, xmldoc.tag))
 
     def to_xml(self, pretty_print=True):
         root = self.format_dom()
