@@ -17,6 +17,7 @@
 """Compute-related Utilities and helpers."""
 
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log
 from nova.network import model as network_model
