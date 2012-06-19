@@ -100,19 +100,13 @@ def image_ec2_id(image_id, image_type='ami'):
 
 
 def get_ip_info_for_instance_from_nw_info(nw_info):
-    ip_info = dict(fixed_ips=[], fixed_ip6s=[], floating_ips=[])
-    for vif in nw_info:
-        vif_fixed_ips = vif.fixed_ips()
-
-        fixed_ips = [ip['address']
-                     for ip in vif_fixed_ips if ip['version'] == 4]
-        fixed_ip6s = [ip['address']
-                      for ip in vif_fixed_ips if ip['version'] == 6]
-        floating_ips = [ip['address']
-                        for ip in vif.floating_ips()]
-        ip_info['fixed_ips'].extend(fixed_ips)
-        ip_info['fixed_ip6s'].extend(fixed_ip6s)
-        ip_info['floating_ips'].extend(floating_ips)
+    ip_info = {}
+    fixed_ips = nw_info.fixed_ips()
+    ip_info['fixed_ips'] = [ip['address'] for ip in fixed_ips
+                                          if ip['version'] == 4]
+    ip_info['fixed_ip6s'] = [ip['address'] for ip in fixed_ips
+                                           if ip['version'] == 6]
+    ip_info['floating_ips'] = [ip['address'] for ip in nw_info.floating_ips()]
 
     return ip_info
 

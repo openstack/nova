@@ -699,7 +699,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.local = True
         self.stubs.Set(self.network.db, 'fixed_ip_get_by_address', fake4)
         self.stubs.Set(self.network.db, 'network_get', fake4_network)
-        self.stubs.Set(rpc, 'cast', fake6)
+        self.stubs.Set(rpc, 'call', fake6)
         self.network.associate_floating_ip(ctxt, mox.IgnoreArg(),
                                                  mox.IgnoreArg())
         self.assertFalse(self.local)
@@ -817,7 +817,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.local = True
         self.stubs.Set(self.network.db, 'fixed_ip_get', fake4)
         self.stubs.Set(self.network.db, 'network_get', fake4_network)
-        self.stubs.Set(rpc, 'cast', fake6)
+        self.stubs.Set(rpc, 'call', fake6)
         self.network.disassociate_floating_ip(ctxt, mox.IgnoreArg())
         self.assertFalse(self.local)
 

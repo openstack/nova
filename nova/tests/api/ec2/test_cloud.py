@@ -39,6 +39,7 @@ from nova import flags
 from nova.image import fake
 from nova.image import s3
 from nova import log as logging
+from nova.network import api as network_api
 from nova import rpc
 from nova import test
 from nova import utils
@@ -233,8 +234,14 @@ class CloudTestCase(test.TestCase):
                                                  project_id=project_id)
 
         fixed_ips = nw_info.fixed_ips()
-
         ec2_id = ec2utils.id_to_ec2_id(inst['id'])
+
+        self.stubs.Set(ec2utils, 'get_ip_info_for_instance',
+                       lambda *args: {'fixed_ips': ['10.0.0.1'],
+                                      'fixed_ip6s': [],
+                                      'floating_ips': []})
+        self.stubs.Set(network_api.API, 'get_instance_id_by_floating_address',
+                       lambda *args: 1)
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)

@@ -17,6 +17,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
+
 from nova.db import base
 from nova import flags
 from nova import log as logging
@@ -26,6 +28,43 @@ from nova import rpc
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
+
+
+def refresh_cache(f):
+    """
+    Decorator to update the instance_info_cache
+    """
+    @functools.wraps(f)
+    def wrapper(self, context, *args, **kwargs):
+        res = f(self, context, *args, **kwargs)
+        try:
+            # get the instance from arguments
+            instance = kwargs.get('instance')
+            if not instance and len(args) > 0:
+                instance = args[0]
+
+            # if no instance, nothing to do
+            if instance is None:
+                return res
+
+            # get nw_info from return if possible, otherwise call for it
+            nw_info = res
+            if not nw_info or \
+               not isinstance(nw_info, network_model.NetworkInfo):
+                nw_info = self.get_instance_nw_info(context, instance)
+
+            # update cache
+            cache = {'network_info': nw_info.json()}
+            self.db.instance_info_cache_update(context, instance['uuid'],
+                                               cache)
+        except Exception:
+            LOG.exception('Failed storing info cache', instance=instance)
+            LOG.debug(_('args: %s') % args)
+            LOG.debug(_('kwargs: %s') % kwargs)
+
+        # return the original function's return value
+        return res
+    return wrapper
 
 
 class API(base.Base):
@@ -95,6 +134,13 @@ class API(base.Base):
                         {'method': 'get_floating_ips_by_fixed_address',
                          'args': {'fixed_address': fixed_address}})
 
+    def get_instance_id_by_floating_address(self, context, address):
+        # NOTE(tr3buchet): i hate this
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'get_instance_id_by_floating_address',
+                         'args': {'address': address}})
+
     def get_vifs_by_instance(self, context, instance):
         # NOTE(vish): When the db calls are converted to store network
         #             data by instance_uuid, this should pass uuid instead.
@@ -130,8 +176,10 @@ class API(base.Base):
                   'args': {'address': address,
                            'affect_auto_assigned': affect_auto_assigned}})
 
-    def associate_floating_ip(self, context, floating_address, fixed_address,
-                                                 affect_auto_assigned=False):
+    @refresh_cache
+    def associate_floating_ip(self, context, instance,
+                              floating_address, fixed_address,
+                              affect_auto_assigned=False):
         """Associates a floating ip with a fixed ip.
 
         ensures floating ip is allocated to the project in context
@@ -143,22 +191,16 @@ class API(base.Base):
                            'fixed_address': fixed_address,
                            'affect_auto_assigned': affect_auto_assigned}})
 
-    def disassociate_floating_ip(self, context, address,
+    @refresh_cache
+    def disassociate_floating_ip(self, context, instance, address,
                                  affect_auto_assigned=False):
         """Disassociates a floating ip from fixed ip it is associated with."""
-        floating_ip = self.db.floating_ip_get_by_address(context, address)
-        fixed_ip = self.db.fixed_ip_get(context, floating_ip['fixed_ip_id'])
-        instance = self.db.instance_get(context, fixed_ip['instance_id'])
-        rpc.cast(context,
+        rpc.call(context,
                  FLAGS.network_topic,
                  {'method': 'disassociate_floating_ip',
                   'args': {'address': address}})
-        self.invalidate_instance_cache(context, instance)
 
-    def invalidate_instance_cache(self, context, instance):
-        # NOTE(vish): get_instance_nw_info will recreate the cache for us
-        self.get_instance_nw_info(context, instance)
-
+    @refresh_cache
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocates all network structures for an instance.
 
@@ -222,6 +264,7 @@ class API(base.Base):
         nw_info = rpc.call(context, FLAGS.network_topic,
                            {'method': 'get_instance_nw_info',
                             'args': args})
+
         return network_model.NetworkInfo.hydrate(nw_info)
 
     def validate_networks(self, context, requested_networks):

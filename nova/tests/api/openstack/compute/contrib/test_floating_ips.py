@@ -19,6 +19,7 @@ import webob
 
 from nova.api.openstack.compute.contrib import floating_ips
 from nova import compute
+from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import exception
@@ -56,7 +57,7 @@ def network_api_get_floating_ips_by_project(self, context):
             {'id': 2,
              'pool': 'nova', 'interface': 'eth0',
              'address': '10.10.10.11',
-            'fixed_ip_id': None}]
+             'fixed_ip_id': None}]
 
 
 def compute_api_get(self, context, instance_id):
@@ -79,7 +80,7 @@ def network_api_associate(self, context, floating_address, fixed_address):
     pass
 
 
-def network_api_disassociate(self, context, floating_address):
+def network_api_disassociate(self, context, instance, floating_address):
     pass
 
 
@@ -90,6 +91,12 @@ def fake_instance_get(context, instance_id):
         "name": 'fake',
         "user_id": 'fakeuser',
         "project_id": '123'}
+
+
+def stub_nw_info(stubs):
+    def get_nw_info_for_instance(instance):
+        return fake_network.fake_get_instance_nw_info(stubs, spectacular=True)
+    return get_nw_info_for_instance
 
 
 class FloatingIpTest(test.TestCase):
@@ -122,9 +129,8 @@ class FloatingIpTest(test.TestCase):
                        network_api_release)
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        network_api_disassociate)
-
-        fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
-                                               spectacular=True)
+        self.stubs.Set(compute_utils, "get_nw_info_for_instance",
+                       stub_nw_info(self.stubs))
 
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
