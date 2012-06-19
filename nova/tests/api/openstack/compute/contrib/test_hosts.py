@@ -24,22 +24,25 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
-# Simulate the hosts returned by the zone manager.
 HOST_LIST = [
         {"host_name": "host_c1", "service": "compute"},
         {"host_name": "host_c2", "service": "compute"},
         {"host_name": "host_v1", "service": "volume"},
         {"host_name": "host_v2", "service": "volume"}]
+SERVICES_LIST = [
+        {"host": "host_c1", "topic": "compute"},
+        {"host": "host_c2", "topic": "compute"},
+        {"host": "host_v1", "topic": "volume"},
+        {"host": "host_v2", "topic": "volume"}]
 
 
-def stub_get_host_list(self, req):
-    return HOST_LIST
+def stub_service_get_all(self, req):
+    return SERVICES_LIST
 
 
 def stub_set_host_enabled(context, host, enabled):
@@ -104,8 +107,8 @@ class HostTestCase(test.TestCase):
         super(HostTestCase, self).setUp()
         self.controller = os_hosts.HostController()
         self.req = FakeRequest()
-        self.stubs.Set(scheduler_rpcapi.SchedulerAPI, 'get_host_list',
-                       stub_get_host_list)
+        self.stubs.Set(db, 'service_get_all',
+                       stub_service_get_all)
         self.stubs.Set(self.controller.api, 'set_host_enabled',
                        stub_set_host_enabled)
         self.stubs.Set(self.controller.api, 'set_host_maintenance',
