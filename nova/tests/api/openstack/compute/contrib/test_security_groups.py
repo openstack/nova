@@ -285,6 +285,20 @@ class TestSecurityGroups(test.TestCase):
 
         self.assertEquals(res_dict, expected)
 
+    def test_get_security_group_by_instance_non_existing(self):
+        self.stubs.Set(nova.db, 'instance_get', return_server_nonexistent)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_nonexistent)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/os-security-groups')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.server_controller.index, req, '1')
+
+    def test_get_security_group_by_instance_invalid_id(self):
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/servers/invalid/os-security-groups')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.server_controller.index, req, 'invalid')
+
     def test_get_security_group_by_id(self):
         sg = security_group_template(id=2, rules=[])
 
