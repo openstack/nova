@@ -1747,6 +1747,51 @@ class LibvirtConnTestCase(test.TestCase):
         space = fake_libvirt_utils.get_fs_info(FLAGS.instances_path)['free']
         self.assertEqual(result, space / 1024 ** 3)
 
+    def test_cpu_info(self):
+        conn = libvirt_driver.LibvirtDriver(True)
+
+        def get_host_capabilities_stub(self):
+            cpu = config.LibvirtConfigCPU()
+            cpu.model = "Opteron_G4"
+            cpu.vendor = "AMD"
+            cpu.arch = "x86_64"
+
+            cpu.cores = 2
+            cpu.threads = 1
+            cpu.sockets = 4
+
+            cpu.add_feature(config.LibvirtConfigCPUFeature("extapic"))
+            cpu.add_feature(config.LibvirtConfigCPUFeature("3dnow"))
+
+            caps = config.LibvirtConfigCaps()
+            caps.host = config.LibvirtConfigCapsHost()
+            caps.host.cpu = cpu
+
+            guest = config.LibvirtConfigGuest()
+            guest.ostype = "hvm"
+            guest.arch = "x86_64"
+            caps.guests.append(guest)
+
+            guest = config.LibvirtConfigGuest()
+            guest.ostype = "hvm"
+            guest.arch = "i686"
+            caps.guests.append(guest)
+
+            return caps
+
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       'get_host_capabilities',
+                       get_host_capabilities_stub)
+
+        want = {"vendor": "AMD",
+                "features": ["extapic", "3dnow"],
+                "permitted_instance_types": ["x86_64", "i686"],
+                "model": "Opteron_G4",
+                "arch": "x86_64",
+                "topology": {"cores": 2, "threads": 1, "sockets": 4}}
+        got = jsonutils.loads(conn.get_cpu_info())
+        self.assertEqual(want, got)
+
 
 class HostStateTestCase(test.TestCase):
 
