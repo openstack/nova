@@ -17,6 +17,7 @@ import datetime
 import webob
 
 from nova.api.openstack import compute as compute_api
+from nova.api.openstack.compute.contrib import admin_actions
 from nova import compute
 from nova.compute import vm_states
 from nova import context
@@ -285,3 +286,62 @@ class CreateBackupTests(test.TestCase):
         request = self._get_request(body)
         response = request.get_response(self.app)
         self.assertEqual(response.status_int, 409)
+
+
+class ResetStateTests(test.TestCase):
+    def setUp(self):
+        super(ResetStateTests, self).setUp()
+
+        self.exists = True
+        self.kwargs = None
+        self.uuid = utils.gen_uuid()
+
+        def fake_get(inst, context, instance_id):
+            if self.exists:
+                return dict(id=1, uuid=instance_id, vm_state=vm_states.ACTIVE)
+            raise exception.InstanceNotFound()
+
+        def fake_update(inst, context, instance, **kwargs):
+            self.kwargs = kwargs
+
+        self.stubs.Set(compute.API, 'get', fake_get)
+        self.stubs.Set(compute.API, 'update', fake_update)
+        self.admin_api = admin_actions.AdminActionsController()
+
+        url = '/fake/servers/%s/action' % self.uuid
+        self.request = fakes.HTTPRequest.blank(url)
+
+    def test_no_state(self):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.admin_api._reset_state,
+                          self.request, 'inst_id',
+                          {"os-resetState": None})
+
+    def test_bad_state(self):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.admin_api._reset_state,
+                          self.request, 'inst_id',
+                          {"os-resetState": {"state": "spam"}})
+
+    def test_no_instance(self):
+        self.exists = False
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.admin_api._reset_state,
+                          self.request, 'inst_id',
+                          {"os-resetState": {"state": "active"}})
+
+    def test_reset_active(self):
+        body = {"os-resetState": {"state": "active"}}
+        result = self.admin_api._reset_state(self.request, 'inst_id', body)
+
+        self.assertEqual(result.status_int, 202)
+        self.assertEqual(self.kwargs, dict(vm_state=vm_states.ACTIVE,
+                                           task_state=None))
+
+    def test_reset_error(self):
+        body = {"os-resetState": {"state": "error"}}
+        result = self.admin_api._reset_state(self.request, 'inst_id', body)
+
+        self.assertEqual(result.status_int, 202)
+        self.assertEqual(self.kwargs, dict(vm_state=vm_states.ERROR,
+                                           task_state=None))

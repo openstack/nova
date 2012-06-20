@@ -78,6 +78,7 @@
     "compute_extension:admin_actions:injectNetworkInfo": [],
     "compute_extension:admin_actions:createBackup": [],
     "compute_extension:admin_actions:migrateLive": [],
+    "compute_extension:admin_actions:resetState": [],
     "compute_extension:admin_actions:migrate": [],
     "compute_extension:aggregates": [],
     "compute_extension:certificates": [],
