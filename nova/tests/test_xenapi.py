@@ -109,7 +109,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'os_type': 'linux',
                   'architecture': 'x86-64'}
 
-    def _create_volume(self, size='0'):
+    def _create_volume(self, size=0):
         """Create a volume object."""
         vol = {}
         vol['size'] = size
