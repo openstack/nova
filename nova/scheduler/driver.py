@@ -50,7 +50,7 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(scheduler_driver_opts)
 
 flags.DECLARE('instances_path', 'nova.compute.manager')
-flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
+flags.DECLARE('libvirt_type', 'nova.virt.libvirt.driver')
 
 
 def cast_to_volume_host(context, host, method, update_db=True, **kwargs):
