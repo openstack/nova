@@ -40,15 +40,20 @@ filterlist = [
 
     # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd,), '-t', ...
     filters.CommandFilter("/sbin/iptables-save", "root"),
+    filters.CommandFilter("/usr/sbin/iptables-save", "root"),
     filters.CommandFilter("/sbin/ip6tables-save", "root"),
+    filters.CommandFilter("/usr/sbin/ip6tables-save", "root"),
 
     # nova/network/linux_net.py: 'ip[6]tables-restore' % (cmd,)
     filters.CommandFilter("/sbin/iptables-restore", "root"),
+    filters.CommandFilter("/usr/sbin/iptables-restore", "root"),
     filters.CommandFilter("/sbin/ip6tables-restore", "root"),
+    filters.CommandFilter("/usr/sbin/ip6tables-restore", "root"),
 
     # nova/network/linux_net.py: 'arping', '-U', floating_ip, '-A', '-I', ...
     # nova/network/linux_net.py: 'arping', '-U', network_ref['dhcp_server'],..
     filters.CommandFilter("/usr/bin/arping", "root"),
+    filters.CommandFilter("/sbin/arping", "root"),
 
     # nova/network/linux_net.py: 'route', '-n'
     # nova/network/linux_net.py: 'route', 'del', 'default', 'gw'
