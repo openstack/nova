@@ -77,7 +77,7 @@ class XenSMTestCase(test.TestCase):
         beconf = db.sm_backend_conf_get(ctxt, beconf['id'])
         self.assertIsInstance(beconf['sr_uuid'], basestring)
 
-    def _create_volume(self, size='0'):
+    def _create_volume(self, size=0):
         """Create a volume object."""
         vol = {}
         vol['size'] = size
