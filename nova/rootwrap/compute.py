@@ -100,6 +100,7 @@ filterlist = [
     # nova/virt/libvirt/vif.py: 'tunctl', '-b', '-t', dev
     # nova/network/linux_net.py: 'tunctl', '-b', '-t', dev
     filters.CommandFilter("/usr/sbin/tunctl", "root"),
+    filters.CommandFilter("/bin/tunctl", "root"),
 
     # nova/virt/libvirt/vif.py: 'ovs-vsctl', ...
     # nova/virt/libvirt/vif.py: 'ovs-vsctl', 'del-port', ...
@@ -118,6 +119,7 @@ filterlist = [
     # nova/virt/xenapi/vm_utils.py: "parted", "--script", ...
     # nova/virt/xenapi/vm_utils.py: 'parted', '--script', dev_path, ..*.
     filters.CommandFilter("/sbin/parted", "root"),
+    filters.CommandFilter("/usr/sbin/parted", "root"),
 
     # nova/virt/xenapi/vm_utils.py: fdisk %(dev_path)s
     filters.CommandFilter("/sbin/fdisk", "root"),
@@ -130,15 +132,20 @@ filterlist = [
 
     # nova/network/linux_net.py: 'ip[6]tables-save' % (cmd,), '-t', ...
     filters.CommandFilter("/sbin/iptables-save", "root"),
+    filters.CommandFilter("/usr/sbin/iptables-save", "root"),
     filters.CommandFilter("/sbin/ip6tables-save", "root"),
+    filters.CommandFilter("/usr/sbin/ip6tables-save", "root"),
 
     # nova/network/linux_net.py: 'ip[6]tables-restore' % (cmd,)
     filters.CommandFilter("/sbin/iptables-restore", "root"),
+    filters.CommandFilter("/usr/sbin/iptables-restore", "root"),
     filters.CommandFilter("/sbin/ip6tables-restore", "root"),
+    filters.CommandFilter("/usr/sbin/ip6tables-restore", "root"),
 
     # nova/network/linux_net.py: 'arping', '-U', floating_ip, '-A', '-I', ...
     # nova/network/linux_net.py: 'arping', '-U', network_ref['dhcp_server'],..
     filters.CommandFilter("/usr/bin/arping", "root"),
+    filters.CommandFilter("/sbin/arping", "root"),
 
     # nova/network/linux_net.py: 'route', '-n'
     # nova/network/linux_net.py: 'route', 'del', 'default', 'gw'
