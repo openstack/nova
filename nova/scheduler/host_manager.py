@@ -120,19 +120,26 @@ class HostState(object):
         """Update information about a host from its compute_node info."""
         all_disk_mb = compute['local_gb'] * 1024
         all_ram_mb = compute['memory_mb']
-        vcpus_total = compute['vcpus']
+
+        free_disk_mb = compute['free_disk_gb'] * 1024
+        free_ram_mb = compute['free_ram_mb']
+
         if FLAGS.reserved_host_disk_mb > 0:
             all_disk_mb -= FLAGS.reserved_host_disk_mb
+            free_disk_mb -= FLAGS.reserved_host_disk_mb
         if FLAGS.reserved_host_memory_mb > 0:
             all_ram_mb -= FLAGS.reserved_host_memory_mb
+            free_ram_mb -= FLAGS.reserved_host_memory_mb
+
         #NOTE(jogo) free_ram_mb can be negative
-        self.free_ram_mb = all_ram_mb
+        self.free_ram_mb = free_ram_mb
         self.total_usable_ram_mb = all_ram_mb
-        self.free_disk_mb = all_disk_mb
-        self.vcpus_total = vcpus_total
+        self.free_disk_mb = free_disk_mb
+        self.vcpus_total = compute['vcpus']
+        self.vcpus_used = compute['vcpus_used']
 
     def consume_from_instance(self, instance):
-        """Update information about a host from instance info."""
+        """Incrementally update host state from an instance"""
         disk_mb = (instance['root_gb'] + instance['ephemeral_gb']) * 1024
         ram_mb = instance['memory_mb']
         vcpus = instance['vcpus']
@@ -252,7 +259,7 @@ class HostManager(object):
 
         host_state_map = {}
 
-        # Make a compute node dict with the bare essential metrics.
+        # Get resource usage across the available compute nodes:
         compute_nodes = db.compute_node_get_all(context)
         for compute in compute_nodes:
             service = compute['service']
@@ -267,15 +274,4 @@ class HostManager(object):
             host_state.update_from_compute_node(compute)
             host_state_map[host] = host_state
 
-        # "Consume" resources from the host the instance resides on.
-        instances = db.instance_get_all(context,
-                columns_to_join=['instance_type'])
-        for instance in instances:
-            host = instance['host']
-            if not host:
-                continue
-            host_state = host_state_map.get(host, None)
-            if not host_state:
-                continue
-            host_state.consume_from_instance(instance)
         return host_state_map

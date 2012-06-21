@@ -887,9 +887,15 @@ class CapacityTestCase(test.TestCase):
 
         self.compute_node_dict = dict(vcpus=2, memory_mb=1024, local_gb=2048,
                                  vcpus_used=0, memory_mb_used=0,
-                                 local_gb_used=0, hypervisor_type="xen",
+                                 local_gb_used=0, free_ram_mb=1024,
+                                 free_disk_gb=2048, hypervisor_type="xen",
                                  hypervisor_version=1, cpu_info="",
+                                 running_vms=0, current_workload=0,
                                  service_id=self.service.id)
+        # add some random stats
+        stats = dict(num_instances=3, num_proj_12345=2,
+                     num_proj_23456=2, num_vm_building=3)
+        self.compute_node_dict['stats'] = stats
 
         self.flags(reserved_host_memory_mb=0)
         self.flags(reserved_host_disk_mb=0)
@@ -898,6 +904,13 @@ class CapacityTestCase(test.TestCase):
         self.compute_node_dict['host'] = host
         return db.compute_node_create(self.ctxt, self.compute_node_dict)
 
+    def _stats_as_dict(self, stats):
+        d = {}
+        for s in stats:
+            key = s['key']
+            d[key] = s['value']
+        return d
+
     def test_compute_node_create(self):
         item = self._create_helper('host1')
         self.assertEquals(item.free_ram_mb, 1024)
@@ -905,70 +918,63 @@ class CapacityTestCase(test.TestCase):
         self.assertEquals(item.running_vms, 0)
         self.assertEquals(item.current_workload, 0)
 
-    def test_compute_node_create_with_reservations(self):
-        self.flags(reserved_host_memory_mb=256)
+        stats = self._stats_as_dict(item['stats'])
+        self.assertEqual(3, stats['num_instances'])
+        self.assertEqual(2, stats['num_proj_12345'])
+        self.assertEqual(3, stats['num_vm_building'])
+
+    def test_compute_node_get_all(self):
         item = self._create_helper('host1')
-        self.assertEquals(item.free_ram_mb, 1024 - 256)
+        nodes = db.compute_node_get_all(self.ctxt)
+        self.assertEqual(1, len(nodes))
 
-    def test_compute_node_set(self):
-        self._create_helper('host1')
+        node = nodes[0]
+        self.assertEqual(2, node['vcpus'])
 
-        x = db.compute_node_utilization_set(self.ctxt, 'host1',
-                            free_ram_mb=2048, free_disk_gb=4096)
-        self.assertEquals(x.free_ram_mb, 2048)
-        self.assertEquals(x.free_disk_gb, 4096)
-        self.assertEquals(x.running_vms, 0)
-        self.assertEquals(x.current_workload, 0)
+        stats = self._stats_as_dict(node['stats'])
+        self.assertEqual(3, int(stats['num_instances']))
+        self.assertEqual(2, int(stats['num_proj_12345']))
+        self.assertEqual(3, int(stats['num_vm_building']))
 
-        x = db.compute_node_utilization_set(self.ctxt, 'host1', work=3)
-        self.assertEquals(x.free_ram_mb, 2048)
-        self.assertEquals(x.free_disk_gb, 4096)
-        self.assertEquals(x.current_workload, 3)
-        self.assertEquals(x.running_vms, 0)
+    def test_compute_node_update(self):
+        item = self._create_helper('host1')
 
-        x = db.compute_node_utilization_set(self.ctxt, 'host1', vms=5)
-        self.assertEquals(x.free_ram_mb, 2048)
-        self.assertEquals(x.free_disk_gb, 4096)
-        self.assertEquals(x.current_workload, 3)
-        self.assertEquals(x.running_vms, 5)
+        compute_node_id = item['id']
+        stats = self._stats_as_dict(item['stats'])
 
-    def test_compute_node_utilization_update(self):
-        self._create_helper('host1')
+        # change some values:
+        stats['num_instances'] = 8
+        stats['num_tribbles'] = 1
+        values = {
+            'vcpus': 4,
+            'stats': stats,
+        }
+        item = db.compute_node_update(self.ctxt, compute_node_id, values)
+        stats = self._stats_as_dict(item['stats'])
 
-        x = db.compute_node_utilization_update(self.ctxt, 'host1',
-                                               free_ram_mb_delta=-24)
-        self.assertEquals(x.free_ram_mb, 1000)
-        self.assertEquals(x.free_disk_gb, 2048)
-        self.assertEquals(x.running_vms, 0)
-        self.assertEquals(x.current_workload, 0)
+        self.assertEqual(4, item['vcpus'])
+        self.assertEqual(8, int(stats['num_instances']))
+        self.assertEqual(2, int(stats['num_proj_12345']))
+        self.assertEqual(1, int(stats['num_tribbles']))
 
-        x = db.compute_node_utilization_update(self.ctxt, 'host1',
-                                               free_disk_gb_delta=-48)
-        self.assertEquals(x.free_ram_mb, 1000)
-        self.assertEquals(x.free_disk_gb, 2000)
-        self.assertEquals(x.running_vms, 0)
-        self.assertEquals(x.current_workload, 0)
+    def test_compute_node_stat_prune(self):
+        item = self._create_helper('host1')
+        for stat in item['stats']:
+            if stat['key'] == 'num_instances':
+                num_instance_stat = stat
+                break
 
-        x = db.compute_node_utilization_update(self.ctxt, 'host1',
-                                               work_delta=3)
-        self.assertEquals(x.free_ram_mb, 1000)
-        self.assertEquals(x.free_disk_gb, 2000)
-        self.assertEquals(x.current_workload, 3)
-        self.assertEquals(x.running_vms, 0)
+        values = {
+            'stats': dict(num_instances=1)
+        }
+        db.compute_node_update(self.ctxt, item['id'], values, prune_stats=True)
+        item = db.compute_node_get_all(self.ctxt)[0]
+        self.assertEqual(1, len(item['stats']))
 
-        x = db.compute_node_utilization_update(self.ctxt, 'host1',
-                                               work_delta=-1)
-        self.assertEquals(x.free_ram_mb, 1000)
-        self.assertEquals(x.free_disk_gb, 2000)
-        self.assertEquals(x.current_workload, 2)
-        self.assertEquals(x.running_vms, 0)
-
-        x = db.compute_node_utilization_update(self.ctxt, 'host1',
-                                               vm_delta=5)
-        self.assertEquals(x.free_ram_mb, 1000)
-        self.assertEquals(x.free_disk_gb, 2000)
-        self.assertEquals(x.current_workload, 2)
-        self.assertEquals(x.running_vms, 5)
+        stat = item['stats'][0]
+        self.assertEqual(num_instance_stat['id'], stat['id'])
+        self.assertEqual(num_instance_stat['key'], stat['key'])
+        self.assertEqual(1, int(stat['value']))
 
 
 class TestIpAllocation(test.TestCase):

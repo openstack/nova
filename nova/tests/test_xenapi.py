@@ -1240,7 +1240,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
     def test_host_state(self):
         stats = self.conn.get_host_stats()
-        self.assertEquals(stats['disk_total'], 10000)
+        self.assertEquals(stats['disk_total'], 40000)
         self.assertEquals(stats['disk_used'], 20000)
         self.assertEquals(stats['host_memory_total'], 10)
         self.assertEquals(stats['host_memory_overhead'], 20)

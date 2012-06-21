@@ -208,29 +208,16 @@ def compute_node_create(context, values):
     return IMPL.compute_node_create(context, values)
 
 
-def compute_node_update(context, compute_id, values, auto_adjust=True):
+def compute_node_update(context, compute_id, values, prune_stats=False):
     """Set the given properties on a computeNode and update it.
 
     Raises NotFound if computeNode does not exist.
     """
-    return IMPL.compute_node_update(context, compute_id, values, auto_adjust)
+    return IMPL.compute_node_update(context, compute_id, values, prune_stats)
 
 
 def compute_node_get_by_host(context, host):
     return IMPL.compute_node_get_by_host(context, host)
-
-
-def compute_node_utilization_update(context, host, free_ram_mb_delta=0,
-                          free_disk_gb_delta=0, work_delta=0, vm_delta=0):
-    return IMPL.compute_node_utilization_update(context, host,
-                          free_ram_mb_delta, free_disk_gb_delta, work_delta,
-                          vm_delta)
-
-
-def compute_node_utilization_set(context, host, free_ram_mb=None,
-                                 free_disk_gb=None, work=None, vms=None):
-    return IMPL.compute_node_utilization_set(context, host, free_ram_mb,
-                                             free_disk_gb, work, vms)
 
 
 def compute_node_statistics(context):
