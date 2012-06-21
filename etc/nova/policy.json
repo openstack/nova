@@ -22,6 +22,7 @@
     "compute_extension:admin_actions:injectNetworkInfo": [["rule:admin_api"]],
     "compute_extension:admin_actions:createBackup": [["rule:admin_or_owner"]],
     "compute_extension:admin_actions:migrateLive": [["rule:admin_api"]],
+    "compute_extension:admin_actions:resetState": [["rule:admin_api"]],
     "compute_extension:admin_actions:migrate": [["rule:admin_api"]],
     "compute_extension:aggregates": [["rule:admin_api"]],
     "compute_extension:certificates": [],

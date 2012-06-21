@@ -22,6 +22,7 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+from nova.compute import vm_states
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -29,6 +30,10 @@ from nova import log as logging
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger(__name__)
+
+
+# States usable in resetState action
+state_map = dict(active=vm_states.ACTIVE, error=vm_states.ERROR)
 
 
 def authorize(context, action_name):
@@ -282,6 +287,33 @@ class AdminActionsController(wsgi.Controller):
             # Return messages from scheduler
             raise exc.HTTPBadRequest(explanation=msg)
 
+        return webob.Response(status_int=202)
+
+    @wsgi.action('os-resetState')
+    def _reset_state(self, req, id, body):
+        """Permit admins to reset the state of a server."""
+        context = req.environ["nova.context"]
+        authorize(context, 'resetState')
+
+        # Identify the desired state from the body
+        try:
+            state = state_map[body["os-resetState"]["state"]]
+        except (TypeError, KeyError):
+            msg = _("Desired state must be specified.  Valid states "
+                    "are: %s") % ', '.join(sorted(state_map.keys()))
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        try:
+            instance = self.compute_api.get(context, id)
+            self.compute_api.update(context, instance,
+                                    vm_state=state,
+                                    task_state=None)
+        except exception.InstanceNotFound:
+            raise exc.HTTPNotFound(_("Server not found"))
+        except Exception:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::resetState %s"), readable)
+            raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
 
