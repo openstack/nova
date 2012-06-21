@@ -124,7 +124,9 @@ class HostState(object):
             all_disk_mb -= FLAGS.reserved_host_disk_mb
         if FLAGS.reserved_host_memory_mb > 0:
             all_ram_mb -= FLAGS.reserved_host_memory_mb
+        #NOTE(jogo) free_ram_mb can be negative
         self.free_ram_mb = all_ram_mb
+        self.total_usable_ram_mb = all_ram_mb
         self.free_disk_mb = all_disk_mb
         self.vcpus_total = vcpus_total
 
