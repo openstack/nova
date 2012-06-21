@@ -18,6 +18,7 @@
 #    under the License.
 
 import functools
+import inspect
 
 from nova.db import base
 from nova import flags
@@ -33,25 +34,29 @@ LOG = logging.getLogger(__name__)
 def refresh_cache(f):
     """
     Decorator to update the instance_info_cache
+
+    Requires context and instance as function args
     """
+    argspec = inspect.getargspec(f)
+
     @functools.wraps(f)
     def wrapper(self, context, *args, **kwargs):
         res = f(self, context, *args, **kwargs)
+
         try:
-            # get the instance from arguments
+            # get the instance from arguments (or raise ValueError)
             instance = kwargs.get('instance')
-            if not instance and len(args) > 0:
-                instance = args[0]
+            if not instance:
+                instance = args[argspec.args.index('instance') - 2]
+        except ValueError:
+            msg = _('instance is a required argument to use @refresh_cache')
+            raise Exception(msg)
 
-            # if no instance, nothing to do
-            if instance is None:
-                return res
-
+        try:
             # get nw_info from return if possible, otherwise call for it
             nw_info = res
-            if not nw_info or \
-               not isinstance(nw_info, network_model.NetworkInfo):
-                nw_info = self.get_instance_nw_info(context, instance)
+            if not isinstance(nw_info, network_model.NetworkInfo):
+                nw_info = self._get_instance_nw_info(context, instance)
 
             # update cache
             cache = {'network_info': nw_info.json()}
@@ -254,7 +259,12 @@ class API(base.Base):
                  {'method': 'add_network_to_project',
                   'args': {'project_id': project_id}})
 
+    @refresh_cache
     def get_instance_nw_info(self, context, instance):
+        """Returns all network info related to an instance."""
+        return self._get_instance_nw_info(context, instance)
+
+    def _get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
         args = {'instance_id': instance['id'],
                 'instance_uuid': instance['uuid'],
