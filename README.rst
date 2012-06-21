@@ -19,4 +19,4 @@ To watch it: http://jenkins.openstack.org
 
 To hack at it: read HACKING
 
-To cry over its pylint problems: http://jenkins.openstack.org/job/nova-pylint/violations
+To cry over its PEP-8 problems: http://jenkins.openstack.org/job/gate-nova-pep8/violations
