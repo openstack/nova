@@ -44,9 +44,9 @@ def make_usage(elem):
     server_usages = xmlutil.SubTemplateElement(elem, 'server_usages')
     server_usage = xmlutil.SubTemplateElement(server_usages, 'server_usage',
                                               selector='server_usages')
-    for subelem_tag in ('name', 'hours', 'memory_mb', 'local_gb', 'vcpus',
-                        'tenant_id', 'flavor', 'started_at', 'ended_at',
-                        'state', 'uptime'):
+    for subelem_tag in ('instance_id', 'name', 'hours', 'memory_mb',
+                        'local_gb', 'vcpus', 'tenant_id', 'flavor',
+                        'started_at', 'ended_at', 'state', 'uptime'):
         subelem = xmlutil.SubTemplateElement(server_usage, subelem_tag)
         subelem.text = subelem_tag
 
@@ -133,6 +133,7 @@ class SimpleTenantUsageController(object):
 
             flavor = flavors[flavor_type]
 
+            info['instance_id'] = instance['uuid']
             info['name'] = instance['display_name']
 
             info['memory_mb'] = flavor['memory_mb']

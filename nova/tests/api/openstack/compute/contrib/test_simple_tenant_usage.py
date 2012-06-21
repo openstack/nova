@@ -57,6 +57,7 @@ def fake_instance_type_get(self, context, instance_type_id):
 
 def get_fake_db_instance(start, end, instance_id, tenant_id):
     return {'id': instance_id,
+            'uuid': '00000000-0000-0000-0000-00000000000000%02d' % instance_id,
             'image_ref': '1',
             'project_id': tenant_id,
             'user_id': 'fakeuser',
@@ -149,10 +150,11 @@ class SimpleTenantUsageTest(test.TestCase):
             self.assertEqual(usages[i].get('server_usages'), None)
 
     def test_verify_show(self):
+        tenant_id = 0
         req = webob.Request.blank(
                   '/v2/faketenant_0/os-simple-tenant-usage/'
-                  'faketenant_0?start=%s&end=%s' %
-                  (START.isoformat(), STOP.isoformat()))
+                  'faketenant_%s?start=%s&end=%s' %
+                  (tenant_id, START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
@@ -164,11 +166,14 @@ class SimpleTenantUsageTest(test.TestCase):
         usage = res_dict['tenant_usage']
         servers = usage['server_usages']
         self.assertEqual(len(usage['server_usages']), SERVERS)
+        uuids = ['00000000-0000-0000-0000-00000000000000%02d' %
+                    (x + (tenant_id * SERVERS)) for x in xrange(SERVERS)]
         for j in xrange(SERVERS):
             delta = STOP - START
             uptime = delta.days * 24 * 3600 + delta.seconds
             self.assertEqual(int(servers[j]['uptime']), uptime)
             self.assertEqual(int(servers[j]['hours']), HOURS)
+            self.assertTrue(servers[j]['instance_id'] in uuids)
 
     def test_verify_show_cant_view_other_tenant(self):
         req = webob.Request.blank(
@@ -237,6 +242,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
             start=yesterday,
             stop=today,
             server_usages=[dict(
+                    instance_id='00000000-0000-0000-0000-0000000000000000',
                     name='test',
                     hours=24,
                     memory_mb=1024,
@@ -249,6 +255,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
                     state='terminated',
                     uptime=86400),
                            dict(
+                    instance_id='00000000-0000-0000-0000-0000000000000002',
                     name='test2',
                     hours=12,
                     memory_mb=512,
@@ -283,6 +290,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
                 start=yesterday,
                 stop=today,
                 server_usages=[dict(
+                        instance_id='00000000-0000-0000-0000-0000000000000001',
                         name='test1',
                         hours=24,
                         memory_mb=1024,
@@ -295,6 +303,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
                         state='terminated',
                         uptime=86400),
                                dict(
+                        instance_id='00000000-0000-0000-0000-0000000000000002',
                         name='test2',
                         hours=42,
                         memory_mb=4201,
@@ -317,6 +326,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
                 start=today,
                 stop=yesterday,
                 server_usages=[dict(
+                        instance_id='00000000-0000-0000-0000-0000000000000003',
                         name='test3',
                         hours=24,
                         memory_mb=1024,
@@ -329,6 +339,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
                         state='terminated',
                         uptime=86400),
                                dict(
+                        instance_id='00000000-0000-0000-0000-0000000000000002',
                         name='test2',
                         hours=42,
                         memory_mb=4201,
