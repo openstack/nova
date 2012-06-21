@@ -1194,7 +1194,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.StubOutWithMock(conn, "volume_driver_method")
         for v in vol['block_device_mapping']:
             conn.volume_driver_method('connect_volume',
-                                     v['connection_info'], v['mount_device'])
+                                     v['connection_info'],
+                                     v['mount_device'].rpartition("/")[2])
 
         # Starting test
         self.mox.ReplayAll()
