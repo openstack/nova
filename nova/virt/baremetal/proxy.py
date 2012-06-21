@@ -174,7 +174,7 @@ class ProxyConnection(driver.ComputeDriver):
                 LOG.exception(_('_wait_for_reboot failed'), instance=instance)
                 timer.stop()
         timer.f = _wait_for_reboot
-        return timer.start(interval=0.5)
+        return timer.start(interval=0.5).wait()
 
     @exception.wrap_exception
     def rescue(self, context, instance, network_info):
@@ -207,7 +207,7 @@ class ProxyConnection(driver.ComputeDriver):
                 LOG.exception(_('_wait_for_rescue failed'), instance=instance)
                 timer.stop()
         timer.f = _wait_for_rescue
-        return timer.start(interval=0.5)
+        return timer.start(interval=0.5).wait()
 
     @exception.wrap_exception
     def unrescue(self, instance, network_info):
@@ -275,7 +275,7 @@ class ProxyConnection(driver.ComputeDriver):
             timer.stop()
         timer.f = _wait_for_boot
 
-        return timer.start(interval=0.5)
+        return timer.start(interval=0.5).wait()
 
     def get_console_output(self, instance):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
