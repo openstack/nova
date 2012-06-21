@@ -44,6 +44,7 @@ host_manager_opts = [
                     'maps to all filters included with nova.'),
     cfg.ListOpt('scheduler_default_filters',
                 default=[
+                  'RetryFilter',
                   'AvailabilityZoneFilter',
                   'RamFilter',
                   'ComputeFilter'

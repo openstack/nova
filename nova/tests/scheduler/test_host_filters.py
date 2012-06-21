@@ -885,3 +885,26 @@ class HostFiltersTestCase(test.TestCase):
         host = fakes.FakeHostState('host1', 'compute',
             {'capabilities': capabilities, 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_retry_filter_disabled(self):
+        """Test case where retry/re-scheduling is disabled"""
+        filt_cls = self.class_map['RetryFilter']()
+        host = fakes.FakeHostState('host1', 'compute', {})
+        filter_properties = {}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_retry_filter_pass(self):
+        """Host not previously tried"""
+        filt_cls = self.class_map['RetryFilter']()
+        host = fakes.FakeHostState('host1', 'compute', {})
+        retry = dict(num_attempts=1, hosts=['host2', 'host3'])
+        filter_properties = dict(retry=retry)
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_retry_filter_fail(self):
+        """Host was already tried"""
+        filt_cls = self.class_map['RetryFilter']()
+        host = fakes.FakeHostState('host1', 'compute', {})
+        retry = dict(num_attempts=1, hosts=['host3', 'host1'])
+        filter_properties = dict(retry=retry)
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
