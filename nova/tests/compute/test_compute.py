@@ -789,7 +789,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_invalid_vnc_console_type(self):
-        """Make sure we can a vnc console for an instance."""
+        """Raise useful error if console type is an unrecognised string"""
         instance = self._create_fake_instance()
         self.compute.run_instance(self.context, instance['uuid'])
 
@@ -798,6 +798,18 @@ class ComputeTestCase(BaseTestCase):
                           self.context,
                           instance['uuid'],
                           'invalid')
+        self.compute.terminate_instance(self.context, instance['uuid'])
+
+    def test_missing_vnc_console_type(self):
+        """Raise useful error is console type is None"""
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance['uuid'])
+
+        self.assertRaises(exception.ConsoleTypeInvalid,
+                          self.compute.get_vnc_console,
+                          self.context,
+                          instance['uuid'],
+                          None)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_diagnostics(self):

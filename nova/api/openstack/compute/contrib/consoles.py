@@ -38,26 +38,16 @@ class ConsolesController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
+        # If type is not supplied or unknown, get_vnc_console below will cope
         console_type = body['os-getVNCConsole'].get('type')
-
-        if not console_type:
-            raise webob.exc.HTTPBadRequest(_('Missing type specification'))
 
         try:
             instance = self.compute_api.get(context, id)
-        except exception.NotFound:
-            raise webob.exc.HTTPNotFound(_('Instance not found'))
-
-        try:
             output = self.compute_api.get_vnc_console(context,
                                                       instance,
                                                       console_type)
-        except exception.ConsoleTypeInvalid, e:
-            raise webob.exc.HTTPBadRequest(_('Invalid type specification'))
-        except exception.NotAuthorized:
-            raise webob.exc.HTTPUnauthorized()
-        except exception.NotFound:
-            raise webob.exc.HTTPNotFound(_('Instance not found'))
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=unicode(e))
 
         return {'console': {'type': console_type, 'url': output['url']}}
 

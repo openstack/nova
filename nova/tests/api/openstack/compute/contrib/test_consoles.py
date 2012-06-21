@@ -28,15 +28,19 @@ def fake_get_vnc_console(self, _context, _instance, _console_type):
 
 def fake_get_vnc_console_invalid_type(self, _context,
                                       _instance, _console_type):
-    raise exception.ConsoleTypeInvalid()
+    raise exception.ConsoleTypeInvalid(console_type=_console_type)
+
+
+def fake_get_vnc_console_not_found(self, _context, instance, _console_type):
+    raise exception.InstanceNotFound(instance_id=instance["uuid"])
 
 
 def fake_get(self, context, instance_uuid):
     return {'uuid': instance_uuid}
 
 
-def fake_get_not_found(*args, **kwargs):
-    raise exception.NotFound()
+def fake_get_not_found(self, context, instance_uuid):
+    raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 
 class ConsolesExtensionTest(test.TestCase):
@@ -62,6 +66,8 @@ class ConsolesExtensionTest(test.TestCase):
 
     def test_get_vnc_console_no_type(self):
         self.stubs.Set(compute.API, 'get', fake_get)
+        self.stubs.Set(compute.API, 'get_vnc_console',
+                       fake_get_vnc_console_invalid_type)
         body = {'os-getVNCConsole': {}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
@@ -83,7 +89,8 @@ class ConsolesExtensionTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_get_vnc_console_no_instance_on_console_get(self):
-        self.stubs.Set(compute.API, 'get_vnc_console', fake_get_not_found)
+        self.stubs.Set(compute.API, 'get_vnc_console',
+            fake_get_vnc_console_not_found)
         body = {'os-getVNCConsole': {'type': 'novnc'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = "POST"
