@@ -272,7 +272,9 @@ class Instance(BASE, NovaBase):
     # EC2 instance_initiated_shutdown_teminate
     # True: -> 'terminate'
     # False: -> 'stop'
-    shutdown_terminate = Column(Boolean(), default=True, nullable=False)
+    # Note(maoy): currently Nova will always stop instead of terminate
+    # no matter what the flag says. So we set the default to False.
+    shutdown_terminate = Column(Boolean(), default=False, nullable=False)
 
     # EC2 disable_api_termination
     disable_terminate = Column(Boolean(), default=False, nullable=False)

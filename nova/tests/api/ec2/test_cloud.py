@@ -853,8 +853,6 @@ class CloudTestCase(test.TestCase):
 
         test_instance_state(inst_state.RUNNING_CODE, inst_state.RUNNING,
                             power_state.RUNNING, vm_states.ACTIVE)
-        test_instance_state(inst_state.TERMINATED_CODE, inst_state.SHUTOFF,
-                            power_state.NOSTATE, vm_states.SHUTOFF)
         test_instance_state(inst_state.STOPPED_CODE, inst_state.STOPPED,
                             power_state.NOSTATE, vm_states.SHUTOFF,
                             {'shutdown_terminate': False})
@@ -2311,7 +2309,7 @@ class CloudTestCase(test.TestCase):
             self.assertEqual(result, expected)
             self._restart_compute_service()
 
-        test_dia_iisb('terminate', image_id='ami-1')
+        test_dia_iisb('stop', image_id='ami-1')
 
         block_device_mapping = [{'device_name': '/dev/vdb',
                                  'virtual_name': 'ephemeral0'}]
@@ -2357,7 +2355,7 @@ class CloudTestCase(test.TestCase):
         self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
 
-        test_dia_iisb('terminate', image_id='ami-3')
+        test_dia_iisb('stop', image_id='ami-3')
         test_dia_iisb('stop', image_id='ami-4')
         test_dia_iisb('stop', image_id='ami-5')
         test_dia_iisb('stop', image_id='ami-6')
