@@ -513,10 +513,10 @@ class LibvirtDriver(driver.ComputeDriver):
             block_device_info)
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
-            mountpoint = vol['mount_device']
+            mount_device = vol['mount_device'].rpartition("/")[2]
             self.volume_driver_method('disconnect_volume',
                                       connection_info,
-                                      mountpoint)
+                                      mount_device)
 
         target = os.path.join(FLAGS.instances_path, instance['name'])
         LOG.info(_('Deleting instance files %(target)s') % locals(),
@@ -1619,10 +1619,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 for vol in block_device_mapping:
                     connection_info = vol['connection_info']
-                    mountpoint = vol['mount_device']
+                    mount_device = vol['mount_device'].rpartition("/")[2]
                     cfg = self.volume_driver_method('connect_volume',
                                                     connection_info,
-                                                    mountpoint)
+                                                    mount_device)
                     guest.add_device(cfg)
 
             if self._has_config_drive(instance):
@@ -2265,10 +2265,10 @@ class LibvirtDriver(driver.ComputeDriver):
             block_device_info)
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
-            mountpoint = vol['mount_device']
+            mount_device = vol['mount_device'].rpartition("/")[2]
             self.volume_driver_method('connect_volume',
                                       connection_info,
-                                      mountpoint)
+                                      mount_device)
 
     def pre_block_migration(self, ctxt, instance_ref, disk_info_json):
         """Preparation block migration.
