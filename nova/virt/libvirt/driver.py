@@ -5,6 +5,7 @@
 # All Rights Reserved.
 # Copyright (c) 2010 Citrix Systems, Inc.
 # Copyright (c) 2011 Piston Cloud Computing, Inc
+# Copyright (c) 2012 University Of Minho
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -2714,6 +2715,80 @@ class LibvirtDriver(driver.ComputeDriver):
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM"""
         self._cleanup_resize(instance)
+
+    def get_diagnostics(self, instance):
+        def get_io_devices(xml_doc):
+            """ get the list of io devices from the
+            xml document."""
+            result = {"volumes": [], "ifaces": []}
+            try:
+                doc = etree.fromstring(xml_doc)
+            except Exception:
+                return result
+            blocks = [('./devices/disk', 'volumes'),
+                ('./devices/interface', 'ifaces')]
+            for block, key in blocks:
+                section = doc.findall(block)
+                for node in section:
+                    for child in node.getchildren():
+                        if child.tag == 'target' and child.get('dev'):
+                            result[key].append(child.get('dev'))
+            return result
+
+        domain = self._lookup_by_name(instance['name'])
+        output = {}
+        # get cpu time, might launch an exception if the method
+        # is not supported by the underlying hypervisor being
+        # used by libvirt
+        try:
+            cputime = domain.vcpus()[0]
+            for i in range(len(cputime)):
+                output["cpu" + str(i) + "_time"] = cputime[i][2]
+        except libvirt.libvirtError:
+            pass
+        # get io status
+        xml = domain.XMLDesc(0)
+        dom_io = get_io_devices(xml)
+        for disk in dom_io["volumes"]:
+            try:
+                # blockStats might launch an exception if the method
+                # is not supported by the underlying hypervisor being
+                # used by libvirt
+                stats = domain.blockStats(disk)
+                output[disk + "_read_req"] = stats[0]
+                output[disk + "_read"] = stats[1]
+                output[disk + "_write_req"] = stats[2]
+                output[disk + "_write"] = stats[3]
+                output[disk + "_errors"] = stats[4]
+            except libvirt.libvirtError:
+                pass
+        for interface in dom_io["ifaces"]:
+            try:
+                # interfaceStats might launch an exception if the method
+                # is not supported by the underlying hypervisor being
+                # used by libvirt
+                stats = domain.interfaceStats(interface)
+                output[interface + "_rx"] = stats[0]
+                output[interface + "_rx_packets"] = stats[1]
+                output[interface + "_rx_errors"] = stats[2]
+                output[interface + "_rx_drop"] = stats[3]
+                output[interface + "_tx"] = stats[4]
+                output[interface + "_tx_packets"] = stats[5]
+                output[interface + "_tx_errors"] = stats[6]
+                output[interface + "_tx_drop"] = stats[7]
+            except libvirt.libvirtError:
+                pass
+        output["memory"] = domain.maxMemory()
+        # memoryStats might launch an exception if the method
+        # is not supported by the underlying hypervisor being
+        # used by libvirt
+        try:
+            mem = domain.memoryStats()
+            for key in mem.keys():
+                output["memory-" + key] = mem[key]
+        except libvirt.libvirtError:
+            pass
+        return output
 
 
 class HostState(object):
