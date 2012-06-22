@@ -136,10 +136,18 @@ class InstanceMetadata():
         if self.userdata_b64 != None:
             data['user-data'] = self.userdata_b64
 
-        # public-keys should be in meta-data only if user specified one
+        # public keys are strangely rendered in ec2 metadata service
+        #  meta-data/public-keys/ returns '0=keyname' (with no trailing /)
+        # and only if there is a public key given.
+        # '0=keyname' means there is a normally rendered dict at
+        #  meta-data/public-keys/0
+        #
+        # meta-data/public-keys/ : '0=%s' % keyname
+        # meta-data/public-keys/0/ : 'openssh-key'
+        # meta-data/public-keys/0/openssh-key : '%s' % publickey
         if self.instance['key_name']:
             data['meta-data']['public-keys'] = {
-                '0': {'_name': self.instance['key_name'],
+                '0': {'_name': "0=" + self.instance['key_name'],
                       'openssh-key': self.instance['key_data']}}
 
         if False:  # TODO(vish): store ancestor ids
@@ -241,12 +249,14 @@ def ec2_md_print(data):
         for key in sorted(data.keys()):
             if key == '_name':
                 continue
-            output += key
             if isinstance(data[key], dict):
                 if '_name' in data[key]:
-                    output += '=' + str(data[key]['_name'])
+                    output += str(data[key]['_name'])
                 else:
-                    output += '/'
+                    output += key + '/'
+            else:
+                output += key
+
             output += '\n'
         return output[:-1]
     elif isinstance(data, list):

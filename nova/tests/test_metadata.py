@@ -180,6 +180,16 @@ class MetadataTestCase(test.TestCase):
         self.assertEqual(base._format_instance_mapping(ctxt, instance_ref1),
                          expected)
 
+    def test_pubkey(self):
+        md = fake_InstanceMetadata(self.stubs, copy(self.instance))
+        data = md.get_ec2_metadata(version='2009-04-04')
+        pubkey_ent = data['meta-data']['public-keys']
+
+        self.assertEqual(base.ec2_md_print(pubkey_ent),
+            "0=%s" % self.instance['key_name'])
+        self.assertEqual(base.ec2_md_print(pubkey_ent['0']['openssh-key']),
+            self.instance['key_data'])
+
 
 class MetadataHandlerTestCase(test.TestCase):
     """Test that metadata is returning proper values."""
