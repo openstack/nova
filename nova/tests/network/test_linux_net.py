@@ -409,7 +409,7 @@ class LinuxNetworkTestCase(test.TestCase):
             executes.append(args)
             if args[0] == 'ip' and args[1] == 'addr' and args[2] == 'show':
                 return existing, ""
-            if args[0] == 'route' and args[1] == '-n':
+            if args[0] == 'ip' and args[1] == 'route' and args[2] == 'show':
                 return routes, ""
         self.stubs.Set(utils, 'execute', fake_execute)
         network = {'dhcp_server': '192.168.1.1',
@@ -429,7 +429,7 @@ class LinuxNetworkTestCase(test.TestCase):
         expected = [
             ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-            ('route', '-n'),
+            ('ip', 'route', 'show', 'dev', 'eth0'),
             ('ip', 'addr', 'del', '192.168.0.1/24',
              'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.1.1/24',
@@ -442,8 +442,8 @@ class LinuxNetworkTestCase(test.TestCase):
         self._test_initialize_gateway(existing, expected)
 
     def test_initialize_gateway_resets_route(self):
-        routes = ("0.0.0.0         192.68.0.1        0.0.0.0         "
-                  "UG    100    0        0 eth0")
+        routes = ("default via 192.168.0.1 dev eth0\n"
+                  "192.168.100.0/24 via 192.168.0.254 dev eth0 proto static\n")
         existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
             "    mtu 1500 qdisc pfifo_fast state UNKNOWN qlen 1000\n"
             "    link/ether de:ad:be:ef:be:ef brd ff:ff:ff:ff:ff:ff\n"
@@ -453,15 +453,19 @@ class LinuxNetworkTestCase(test.TestCase):
         expected = [
             ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-            ('route', '-n'),
-            ('route', 'del', 'default', 'gw', '192.68.0.1', 'dev', 'eth0'),
+            ('ip', 'route', 'show', 'dev', 'eth0'),
+            ('ip', 'route', 'del', 'default', 'dev', 'eth0'),
+            ('ip', 'route', 'del', '192.168.100.0/24', 'dev', 'eth0'),
             ('ip', 'addr', 'del', '192.168.0.1/24',
              'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.1.1/24',
              'brd', '192.168.1.255', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.0.1/24',
              'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
-            ('route', 'add', 'default', 'gw', '192.68.0.1'),
+            ('ip', 'route', 'add', 'default', 'via', '192.168.0.1',
+             'dev', 'eth0'),
+            ('ip', 'route', 'add', '192.168.100.0/24', 'via', '192.168.0.254',
+             'dev', 'eth0', 'proto', 'static'),
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
         ]
@@ -492,7 +496,7 @@ class LinuxNetworkTestCase(test.TestCase):
         expected = [
             ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
-            ('route', '-n'),
+            ('ip', 'route', 'show', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.1.1/24',
              'brd', '192.168.1.255', 'dev', 'eth0'),
             ('ip', '-f', 'inet6', 'addr', 'change',

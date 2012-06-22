@@ -548,24 +548,27 @@ def initialize_gateway_device(dev, network_ref):
             if ip_params[0] != full_ip:
                 new_ip_params.append(ip_params)
     if not old_ip_params or old_ip_params[0][0] != full_ip:
-        gateway = None
-        out, err = _execute('route', '-n', run_as_root=True)
-        for line in out.split('\n'):
-            fields = line.split()
-            if fields and fields[0] == '0.0.0.0' and fields[-1] == dev:
-                gateway = fields[1]
-                _execute('route', 'del', 'default', 'gw', gateway,
-                         'dev', dev, run_as_root=True,
-                         check_exit_code=[0, 7])
+        old_routes = []
+        result = _execute('ip', 'route', 'show', 'dev', dev,
+                          run_as_root=True)
+        if result:
+            out, err = result
+            for line in out.split('\n'):
+                fields = line.split()
+                if fields and 'via' in fields:
+                    old_routes.append(fields)
+                    _execute('ip', 'route', 'del', fields[0],
+                             'dev', dev, run_as_root=True)
         for ip_params in old_ip_params:
             _execute(*_ip_bridge_cmd('del', ip_params, dev),
                      run_as_root=True, check_exit_code=[0, 2, 254])
         for ip_params in new_ip_params:
             _execute(*_ip_bridge_cmd('add', ip_params, dev),
                      run_as_root=True, check_exit_code=[0, 2, 254])
-        if gateway:
-            _execute('route', 'add', 'default', 'gw', gateway,
-                     run_as_root=True, check_exit_code=[0, 7])
+
+        for fields in old_routes:
+            _execute('ip', 'route', 'add', *fields,
+                     run_as_root=True)
         if FLAGS.send_arp_for_ha:
             _execute('arping', '-U', network_ref['dhcp_server'],
                      '-A', '-I', dev,
@@ -1030,16 +1033,16 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
             # NOTE(vish): This will break if there is already an ip on the
             #             interface, so we move any ips to the bridge
-            old_gateway = None
-            out, err = _execute('route', '-n', run_as_root=True)
+            # NOTE(danms): We also need to copy routes to the bridge so as
+            #              not to break existing connectivity on the interface
+            old_routes = []
+            out, err = _execute('ip', 'route', 'show', 'dev', interface)
             for line in out.split('\n'):
                 fields = line.split()
-                if (fields and fields[0] == '0.0.0.0' and
-                    fields[-1] == interface):
-                    old_gateway = fields[1]
-                    _execute('route', 'del', 'default', 'gw', old_gateway,
-                             'dev', interface, run_as_root=True,
-                             check_exit_code=[0, 7])
+                if fields and 'via' in fields:
+                    old_routes.append(fields)
+                    _execute('ip', 'route', 'del', *fields,
+                             run_as_root=True)
             out, err = _execute('ip', 'addr', 'show', 'dev', interface,
                                 'scope', 'global', run_as_root=True)
             for line in out.split('\n'):
@@ -1050,9 +1053,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                              run_as_root=True, check_exit_code=[0, 2, 254])
                     _execute(*_ip_bridge_cmd('add', params, bridge),
                              run_as_root=True, check_exit_code=[0, 2, 254])
-            if old_gateway:
-                _execute('route', 'add', 'default', 'gw', old_gateway,
-                         run_as_root=True, check_exit_code=[0, 7])
+            for fields in old_routes:
+                _execute('ip', 'route', 'add', *fields,
+                         run_as_root=True)
 
             if (err and err != "device %s is already a member of a bridge;"
                      "can't enslave it to bridge %s.\n" % (interface, bridge)):
