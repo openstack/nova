@@ -19,6 +19,7 @@ import random
 
 from eventlet import tpool
 
+import nova.image.fake
 from nova.openstack.common import jsonutils
 from nova.virt.xenapi import connection as xenapi_conn
 from nova.virt.xenapi import fake
@@ -81,10 +82,16 @@ def stubout_get_this_vm_uuid(stubs):
     stubs.Set(vm_utils, 'get_this_vm_uuid', f)
 
 
-def stubout_stream_disk(stubs):
-    def f(_1, _2, _3, _4):
+def stubout_image_service_get(stubs):
+    def fake_get(*args, **kwargs):
         pass
-    stubs.Set(vm_utils, '_stream_disk', f)
+    stubs.Set(nova.image.fake._FakeImageService, 'get', fake_get)
+
+
+def stubout_stream_disk(stubs):
+    def fake_stream_disk(*args, **kwargs):
+        pass
+    stubs.Set(vm_utils, '_stream_disk', fake_stream_disk)
 
 
 def stubout_is_vdi_pv(stubs):

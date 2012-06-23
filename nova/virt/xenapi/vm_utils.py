@@ -39,6 +39,7 @@ from nova.compute import power_state
 from nova import db
 from nova import exception
 from nova import flags
+import nova.image
 from nova.image import glance
 from nova import log as logging
 from nova.openstack.common import cfg
@@ -871,9 +872,8 @@ def _fetch_image_glance_disk(context, session, instance, image_id, image_type):
     else:
         sr_ref = safe_find_sr(session)
 
-    glance_client, image_id = glance.get_glance_client(context, image_id)
-    glance_client.set_auth_token(getattr(context, 'auth_token', None))
-    meta, image_file = glance_client.get_image(image_id)
+    image_service, image_id = nova.image.get_image_service(context, image_id)
+    meta = image_service.show(context, image_id)
     virtual_size = int(meta['size'])
     vdi_size = virtual_size
     LOG.debug(_("Size for image %(image_id)s: %(virtual_size)d"), locals(),
@@ -896,7 +896,8 @@ def _fetch_image_glance_disk(context, session, instance, image_id, image_type):
         vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
 
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
-            _stream_disk(dev, image_type, virtual_size, image_file)
+            stream_func = lambda f: image_service.get(context, image_id, f)
+            _stream_disk(stream_func, image_type, virtual_size, dev)
 
         if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
             # We need to invoke a plugin for copying the
@@ -1600,7 +1601,7 @@ def _get_partitions(dev):
     return partitions
 
 
-def _stream_disk(dev, image_type, virtual_size, image_file):
+def _stream_disk(image_service_func, image_type, virtual_size, dev):
     offset = 0
     if image_type == ImageType.DISK:
         offset = MBR_SIZE_BYTES
@@ -1611,8 +1612,7 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
     with utils.temporary_chown(dev_path):
         with open(dev_path, 'wb') as f:
             f.seek(offset)
-            for chunk in image_file:
-                f.write(chunk)
+            image_service_func(f)
 
 
 def _write_partition(virtual_size, dev):

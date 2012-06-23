@@ -45,7 +45,7 @@ def get_image_service(context, image_href):
         return (get_default_image_service(), image_href)
 
     else:
-        (glance_client, image_id) = glance.get_glance_client(context,
-                                                             image_href)
+        (glance_client, image_id) = glance._get_glance_client(context,
+                                                              image_href)
         image_service = nova.image.glance.GlanceImageService(glance_client)
         return (image_service, image_id)

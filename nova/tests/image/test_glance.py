@@ -572,13 +572,13 @@ class TestGlanceImageService(test.TestCase):
     def test_glance_client_image_id(self):
         fixture = self._make_fixture(name='test image')
         image_id = self.service.create(self.context, fixture)['id']
-        client, same_id = glance.get_glance_client(self.context, image_id)
+        client, same_id = glance._get_glance_client(self.context, image_id)
         self.assertEquals(same_id, image_id)
 
     def test_glance_client_image_ref(self):
         fixture = self._make_fixture(name='test image')
         image_id = self.service.create(self.context, fixture)['id']
         image_url = 'http://something-less-likely/%s' % image_id
-        client, same_id = glance.get_glance_client(self.context, image_url)
+        client, same_id = glance._get_glance_client(self.context, image_url)
         self.assertEquals(same_id, image_id)
         self.assertEquals(client.host, 'something-less-likely')

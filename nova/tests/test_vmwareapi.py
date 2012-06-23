@@ -24,8 +24,9 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+import nova.image.fake
 from nova import test
-from nova.tests.glance import stubs as glance_stubs
+import nova.tests.api.openstack.fakes as api_fakes
 from nova.tests.vmwareapi import db_fakes
 from nova.tests.vmwareapi import stubs
 from nova.virt.vmwareapi import fake as vmwareapi_fake
@@ -50,7 +51,6 @@ class VMWareAPIVMTestCase(test.TestCase):
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
-        glance_stubs.stubout_glance_client(self.stubs)
         self.conn = vmwareapi_conn.VMWareESXDriver(False)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
@@ -78,10 +78,12 @@ class VMWareAPIVMTestCase(test.TestCase):
             'disk_format': 'vhd',
             'size': 512,
         }
+        api_fakes.stub_out_image_service(self.stubs)
 
     def tearDown(self):
         super(VMWareAPIVMTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
+        nova.image.fake.FakeImageService_reset()
 
     def _create_instance_in_the_db(self):
         values = {'name': 1,

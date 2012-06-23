@@ -89,13 +89,16 @@ def pick_glance_api_server():
     return host, port
 
 
-def get_glance_client(context, image_href):
+def _get_glance_client(context, image_href):
     """Get the correct glance client and id for the given image_href.
 
     The image_href param can be an href of the form
     http://myglanceserver:9292/images/42, or just an int such as 42. If the
     image_href is an int, then flags are used to create the default
     glance client.
+
+    NOTE: Do not use this or glance.client directly, all other code
+    should be using GlanceImageService.
 
     :param image_href: image ref/id for an image
     :returns: a tuple of the form (glance_client, image_id)
