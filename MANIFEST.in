@@ -1,51 +1,6 @@
-include HACKING.rst
-include LICENSE run_tests.sh
-include README.rst
-include MANIFEST.in pylintrc Authors
-include openstack-common.conf
-include babel.cfg tox.ini
+include Authors
 include ChangeLog
-graft nova/CA
-graft doc
-graft smoketests
-graft tools
-graft etc
-graft contrib
-graft plugins
-graft nova/api/openstack/*/schemas
-include nova/auth/*.schema
-include nova/auth/novarc.template
-include nova/auth/opendj.sh
-include nova/auth/slap.sh
-include nova/cloudpipe/bootscript.sh
-include nova/cloudpipe/client.ovpn.template
-include nova/cloudpipe/bootscript.template
-include nova/compute/fakevirtinstance.xml
-include nova/compute/interfaces.template
-include nova/console/xvp.conf.template
-include nova/db/sqlalchemy/migrate_repo/migrate.cfg
-include nova/db/sqlalchemy/migrate_repo/README
-include nova/db/sqlalchemy/migrate_repo/versions/*.sql
-include nova/openstack/common/README
-include nova/virt/interfaces.template
-include nova/testing/README.rst
-include nova/tests/CA/
-include nova/tests/CA/cacert.pem
-include nova/tests/CA/private/
-include nova/tests/CA/private/cakey.pem
-include nova/tests/bundle/
-include nova/tests/bundle/1mb.manifest.xml
-include nova/tests/bundle/1mb.no_kernel_or_ramdisk.manifest.xml
-include nova/tests/bundle/1mb.part.0
-include nova/tests/bundle/1mb.part.1
-include nova/tests/api/ec2/public_key/*
-include nova/tests/image/*.tar.gz
-include nova/tests/policy.json
-include nova/tests/test_migrations.conf
-include nova/tests/xenapi/vm_rrd.xml
-include plugins/xenapi/README
-include plugins/xenapi/etc/xapi.d/plugins/objectstore
-include plugins/xenapi/etc/xapi.d/plugins/pluginlib_nova.py
-global-exclude *.pyc
+exclude .gitignore
+exclude .gitreview
 
-recursive-include nova/locale *
+global-exclude *.pyc
