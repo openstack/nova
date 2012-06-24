@@ -18,22 +18,25 @@
 
 import doctest
 import optparse
+import os
 import sys
 import XenAPI
+
+
+possible_topdir = os.getcwd()
+if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
+        sys.path.insert(0, possible_topdir)
+
 
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
-
 from nova.virt.xenapi import connection as xenapi_conn
 
 
 flags.DECLARE("resize_confirm_window", "nova.compute.manager")
-flags.DECLARE("xenapi_connection_url", "nova.virt.xenapi.connection")
-flags.DECLARE("xenapi_connection_username", "nova.virt.xenapi.connection")
-flags.DECLARE("xenapi_connection_password", "nova.virt.xenapi.connection")
 
 FLAGS = flags.FLAGS
 # NOTE(sirp): Nova futzs with the sys.argv in order to provide default
@@ -65,13 +68,18 @@ def parse_options():
     return options, args
 
 
-def find_orphaned_instances(session, verbose=False):
+def call_xenapi(xenapi, method, *args):
+    """Make a call to xapi"""
+    return xenapi._session.call_xenapi(method, *args)
+
+
+def find_orphaned_instances(xenapi, verbose=False):
     """Find and return a list of orphaned instances."""
     ctxt = context.get_admin_context(read_deleted="only")
 
     orphaned_instances = []
 
-    for vm_ref, vm_rec in _get_applicable_vm_recs(session):
+    for vm_ref, vm_rec in _get_applicable_vm_recs(xenapi):
         try:
             uuid = vm_rec['other_config']['nova_uuid']
             instance = db.api.instance_get_by_uuid(ctxt, uuid)
@@ -99,22 +107,20 @@ def find_orphaned_instances(session, verbose=False):
     return orphaned_instances
 
 
-def cleanup_instance(session, instance, vm_ref, vm_rec):
+def cleanup_instance(xenapi, instance, vm_ref, vm_rec):
     """Delete orphaned instances."""
-    network_info = None
-    connection = xenapi_conn.get_connection(_)
     if vm_rec['power_state'] == 'Running':
-        session.xenapi.VM.hard_shutdown(vm_ref)
-    connection._vmops._destroy(instance, vm_ref, shutdown=False)
+        call_xenapi(xenapi, 'VM.hard_shutdown', vm_ref)
+    xenapi._vmops._destroy(instance, vm_ref, shutdown=False)
 
 
-def _get_applicable_vm_recs(session):
+def _get_applicable_vm_recs(xenapi):
     """An 'applicable' VM is one that is not a template and not the control
     domain.
     """
-    for vm_ref in session.xenapi.VM.get_all():
+    for vm_ref in call_xenapi(xenapi, 'VM.get_all'):
         try:
-            vm_rec = session.xenapi.VM.get_record(vm_ref)
+            vm_rec = call_xenapi(xenapi, 'VM.get_record', vm_ref)
         except XenAPI.Failure, e:
             if e.details[0] != 'HANDLE_INVALID':
                 raise
@@ -145,7 +151,7 @@ def print_xen_object(obj_type, obj, indent_level=0, spaces_per_indent=4,
     print "".join([indent, msg])
 
 
-def _find_vdis_connected_to_vm(session, connected_vdi_uuids, verbose=False):
+def _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids, verbose=False):
     """Find VDIs which are connected to VBDs which are connected to VMs."""
     def _is_null_ref(ref):
         return ref == "OpaqueRef:NULL"
@@ -170,10 +176,10 @@ def _find_vdis_connected_to_vm(session, connected_vdi_uuids, verbose=False):
             # NOTE(sirp): VDI's can have themselves as a parent?!
             if parent_vdi_uuid and parent_vdi_uuid != cur_vdi_uuid:
                 indent_level += 1
-                cur_vdi_ref = session.xenapi.VDI.get_by_uuid(
+                cur_vdi_ref = call_xenapi(xenapi, 'VDI.get_by_uuid',
                     parent_vdi_uuid)
                 try:
-                    cur_vdi_rec = session.xenapi.VDI.get_record(
+                    cur_vdi_rec = call_xenapi(xenapi, 'VDI.get_record',
                             cur_vdi_ref)
                 except XenAPI.Failure, e:
                     if e.details[0] != 'HANDLE_INVALID':
@@ -182,7 +188,7 @@ def _find_vdis_connected_to_vm(session, connected_vdi_uuids, verbose=False):
             else:
                 break
 
-    for vm_ref, vm_rec in _get_applicable_vm_recs(session):
+    for vm_ref, vm_rec in _get_applicable_vm_recs(xenapi):
         indent_level = 0
         print_xen_object("VM", vm_rec, indent_level=indent_level,
                          verbose=verbose)
@@ -190,7 +196,7 @@ def _find_vdis_connected_to_vm(session, connected_vdi_uuids, verbose=False):
         vbd_refs = vm_rec["VBDs"]
         for vbd_ref in vbd_refs:
             try:
-                vbd_rec = session.xenapi.VBD.get_record(vbd_ref)
+                vbd_rec = call_xenapi(xenapi, 'VBD.get_record', vbd_ref)
             except XenAPI.Failure, e:
                 if e.details[0] != 'HANDLE_INVALID':
                     raise
@@ -206,7 +212,7 @@ def _find_vdis_connected_to_vm(session, connected_vdi_uuids, verbose=False):
                 continue
 
             try:
-                vdi_rec = session.xenapi.VDI.get_record(vbd_vdi_ref)
+                vdi_rec = call_xenapi(xenapi, 'VDI.get_record', vbd_vdi_ref)
             except XenAPI.Failure, e:
                 if e.details[0] != 'HANDLE_INVALID':
                     raise
@@ -215,7 +221,7 @@ def _find_vdis_connected_to_vm(session, connected_vdi_uuids, verbose=False):
             _add_vdi_and_parents_to_connected(vdi_rec, indent_level)
 
 
-def _find_all_vdis_and_system_vdis(session, all_vdi_uuids, connected_vdi_uuids,
+def _find_all_vdis_and_system_vdis(xenapi, all_vdi_uuids, connected_vdi_uuids,
                                    verbose=False):
     """Collects all VDIs and adds system VDIs to the connected set."""
     def _system_owned(vdi_rec):
@@ -224,9 +230,9 @@ def _find_all_vdis_and_system_vdis(session, all_vdi_uuids, connected_vdi_uuids,
                 vdi_name.endswith(".iso") or
                 vdi_rec["type"] == "system")
 
-    for vdi_ref in session.xenapi.VDI.get_all():
+    for vdi_ref in call_xenapi(xenapi, 'VDI.get_all'):
         try:
-            vdi_rec = session.xenapi.VDI.get_record(vdi_ref)
+            vdi_rec = call_xenapi(xenapi, 'VDI.get_record', vdi_ref)
         except XenAPI.Failure, e:
             if e.details[0] != 'HANDLE_INVALID':
                 raise
@@ -246,14 +252,14 @@ def _find_all_vdis_and_system_vdis(session, all_vdi_uuids, connected_vdi_uuids,
             connected_vdi_uuids.add(vdi_uuid)
 
 
-def find_orphaned_vdi_uuids(session, verbose=False):
+def find_orphaned_vdi_uuids(xenapi, verbose=False):
     """Walk VM -> VBD -> VDI change and accumulate connected VDIs."""
     connected_vdi_uuids = set()
 
-    _find_vdis_connected_to_vm(session, connected_vdi_uuids, verbose=verbose)
+    _find_vdis_connected_to_vm(xenapi, connected_vdi_uuids, verbose=verbose)
 
     all_vdi_uuids = set()
-    _find_all_vdis_and_system_vdis(session, all_vdi_uuids, connected_vdi_uuids,
+    _find_all_vdis_and_system_vdis(xenapi, all_vdi_uuids, connected_vdi_uuids,
                                    verbose=verbose)
 
     orphaned_vdi_uuids = all_vdi_uuids - connected_vdi_uuids
@@ -269,15 +275,15 @@ def list_orphaned_vdis(vdi_uuids, verbose=False):
             print vdi_uuid
 
 
-def clean_orphaned_vdis(session, vdi_uuids, verbose=False):
+def clean_orphaned_vdis(xenapi, vdi_uuids, verbose=False):
     """Clean orphaned VDIs."""
     for vdi_uuid in vdi_uuids:
         if verbose:
             print "CLEANING VDI (%s)" % vdi_uuid
 
-        vdi_ref = session.xenapi.VDI.get_by_uuid(vdi_uuid)
+        vdi_ref = call_xenapi(xenapi, 'VDI.get_by_uuid', vdi_uuid)
         try:
-            session.xenapi.VDI.destroy(vdi_ref)
+            call_xenapi(xenapi, 'VDI.destroy', vdi_ref)
         except XenAPI.Failure, exc:
             print >> sys.stderr, "Skipping %s: %s" % (vdi_uuid, exc)
 
@@ -291,13 +297,13 @@ def list_orphaned_instances(orphaned_instances, verbose=False):
             print orphaned_instance.name
 
 
-def clean_orphaned_instances(session, orphaned_instances, verbose=False):
+def clean_orphaned_instances(xenapi, orphaned_instances, verbose=False):
     """Clean orphaned instances."""
     for vm_ref, vm_rec, instance in orphaned_instances:
         if verbose:
             print "CLEANING INSTANCE (%s)" % instance.name
 
-        cleanup_instance(session, instance, vm_ref, vm_rec)
+        cleanup_instance(xenapi, instance, vm_ref, vm_rec)
 
 
 def main():
@@ -310,26 +316,24 @@ def main():
         raise Exception("`zombie_instance_updated_at_window` has to be longer"
                 " than `resize_confirm_window`.")
 
-    session = XenAPI.Session(FLAGS.xenapi_connection_url)
-    session.xenapi.login_with_password(FLAGS.xenapi_connection_username,
-            FLAGS.xenapi_connection_password)
+    xenapi = xenapi_conn.XenAPIDriver()
 
     if command == "list-vdis":
         if verbose:
             print "Connected VDIs:\n"
-        orphaned_vdi_uuids = find_orphaned_vdi_uuids(session, verbose=verbose)
+        orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi, verbose=verbose)
         if verbose:
             print "\nOrphaned VDIs:\n"
         list_orphaned_vdis(orphaned_vdi_uuids, verbose=verbose)
     elif command == "clean-vdis":
-        orphaned_vdi_uuids = find_orphaned_vdi_uuids(session, verbose=verbose)
-        clean_orphaned_vdis(session, orphaned_vdi_uuids, verbose=verbose)
+        orphaned_vdi_uuids = find_orphaned_vdi_uuids(xenapi, verbose=verbose)
+        clean_orphaned_vdis(xenapi, orphaned_vdi_uuids, verbose=verbose)
     elif command == "list-instances":
-        orphaned_instances = find_orphaned_instances(session, verbose=verbose)
+        orphaned_instances = find_orphaned_instances(xenapi, verbose=verbose)
         list_orphaned_instances(orphaned_instances, verbose=verbose)
     elif command == "clean-instances":
-        orphaned_instances = find_orphaned_instances(session, verbose=verbose)
-        clean_orphaned_instances(session, orphaned_instances,
+        orphaned_instances = find_orphaned_instances(xenapi, verbose=verbose)
+        clean_orphaned_instances(xenapi, orphaned_instances,
                 verbose=verbose)
     elif command == "test":
         doctest.testmod()
