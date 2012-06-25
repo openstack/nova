@@ -1417,7 +1417,7 @@
 ####          soft reboot request is made. We fall back to hard reboot if
 ####          instance does not shutdown within this window.
 
-# libvirt_nonblocking=false
+# libvirt_nonblocking=true
 #### (BoolOpt) Use a separated OS thread pool to realize non-blocking
 ####           libvirt calls
 

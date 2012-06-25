@@ -156,7 +156,7 @@ libvirt_opts = [
                     ' soft reboot request is made. We fall back to hard reboot'
                     ' if instance does not shutdown within this window.'),
     cfg.BoolOpt('libvirt_nonblocking',
-                default=False,
+                default=True,
                 help='Use a separated OS thread pool to realize non-blocking'
                      ' libvirt calls'),
     # force_config_drive is a string option, to allow for future behaviors
