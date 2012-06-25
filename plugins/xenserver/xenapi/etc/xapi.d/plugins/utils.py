@@ -27,6 +27,16 @@ import XenAPIPlugin
 CHUNK_SIZE = 8192
 
 
+def delete_if_exists(path):
+    try:
+        os.unlink(path)
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            logging.warning("'%s' was already deleted, skipping delete" % path)
+        else:
+            raise
+
+
 def _link(src, dst):
     logging.info("Hard-linking file '%s' -> '%s'" % (src, dst))
     os.link(src, dst)

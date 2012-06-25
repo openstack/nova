@@ -80,6 +80,39 @@ xenapi_vm_utils_opts = [
     cfg.IntOpt('xenapi_num_vbd_unplug_retries',
                default=10,
                help='Maximum number of retries to unplug VBD'),
+    cfg.StrOpt('xenapi_torrent_images',
+               default='none',
+               help='Whether or not to download images via Bit Torrent '
+                    '(all|some|none).'),
+    cfg.StrOpt('xenapi_torrent_base_url',
+               default=None,
+               help='Base URL for torrent files.'),
+    cfg.FloatOpt('xenapi_torrent_seed_chance',
+                 default=1.0,
+                 help='Probability that peer will become a seeder.'
+                      ' (1.0 = 100%)'),
+    cfg.IntOpt('xenapi_torrent_seed_duration',
+               default=3600,
+               help='Number of seconds after downloading an image via'
+                    ' BitTorrent that it should be seeded for other peers.'),
+    cfg.IntOpt('xenapi_torrent_max_last_accessed',
+               default=86400,
+               help='Cached torrent files not accessed within this number of'
+                    ' seconds can be reaped'),
+    cfg.IntOpt('xenapi_torrent_listen_port_start',
+               default=6881,
+               help='Beginning of port range to listen on'),
+    cfg.IntOpt('xenapi_torrent_listen_port_end',
+               default=6891,
+               help='End of port range to listen on'),
+    cfg.IntOpt('xenapi_torrent_download_stall_cutoff',
+               default=600,
+               help='Number of seconds a download can remain at the same'
+                    ' progress percentage w/o being considered a stall'),
+    cfg.IntOpt('xenapi_torrent_max_seeder_processes_per_host',
+               default=1,
+               help='Maximum number of seeder processes to run concurrently'
+                    ' within a given dom0. (-1 = no limit)')
     ]
 
 FLAGS = flags.FLAGS
@@ -975,6 +1008,29 @@ def _make_uuid_stack():
     return [str(uuid.uuid4()) for i in xrange(MAX_VDI_CHAIN_SIZE)]
 
 
+def _image_uses_bittorrent(context, instance):
+    bittorrent = False
+    xenapi_torrent_images = FLAGS.xenapi_torrent_images.lower()
+
+    if xenapi_torrent_images == 'all':
+        bittorrent = True
+    elif xenapi_torrent_images == 'some':
+        # FIXME(sirp): This should be eager loaded like instance metadata
+        sys_meta = db.instance_system_metadata_get(context,
+                instance['uuid'])
+        try:
+            bittorrent = utils.bool_from_str(sys_meta['image_bittorrent'])
+        except KeyError:
+            pass
+    elif xenapi_torrent_images == 'none':
+        pass
+    else:
+        LOG.warning(_("Invalid value '%s' for xenapi_torrent_images"),
+                    xenapi_torrent_images)
+
+    return bittorrent
+
+
 def _fetch_vhd_image(context, session, instance, image_id):
     """Tell glance to download an image and put the VHDs into the SR
 
@@ -985,21 +1041,40 @@ def _fetch_vhd_image(context, session, instance, image_id):
 
     params = {'image_id': image_id,
               'uuid_stack': _make_uuid_stack(),
-              'sr_path': get_sr_path(session),
-              'auth_token': getattr(context, 'auth_token', None)}
+              'sr_path': get_sr_path(session)}
 
-    glance_api_servers = glance.get_api_servers()
+    if _image_uses_bittorrent(context, instance):
+        plugin_name = 'bittorrent'
+        callback = None
+        params['torrent_base_url'] = FLAGS.xenapi_torrent_base_url
+        params['torrent_seed_duration'] = FLAGS.xenapi_torrent_seed_duration
+        params['torrent_seed_chance'] = FLAGS.xenapi_torrent_seed_chance
+        params['torrent_max_last_accessed'] =\
+                FLAGS.xenapi_torrent_max_last_accessed
+        params['torrent_listen_port_start'] =\
+                FLAGS.xenapi_torrent_listen_port_start
+        params['torrent_listen_port_end'] =\
+                FLAGS.xenapi_torrent_listen_port_end
+        params['torrent_download_stall_cutoff'] =\
+                FLAGS.xenapi_torrent_download_stall_cutoff
+        params['torrent_max_seeder_processes_per_host'] =\
+                FLAGS.xenapi_torrent_max_seeder_processes_per_host
+    else:
+        plugin_name = 'glance'
+        glance_api_servers = glance.get_api_servers()
 
-    def pick_glance(params):
-        glance_host, glance_port, glance_use_ssl = glance_api_servers.next()
-        params['glance_host'] = glance_host
-        params['glance_port'] = glance_port
-        params['glance_use_ssl'] = glance_use_ssl
+        def pick_glance(params):
+            g_host, g_port, g_use_ssl = glance_api_servers.next()
+            params['glance_host'] = g_host
+            params['glance_port'] = g_port
+            params['glance_use_ssl'] = g_use_ssl
+            params['auth_token'] = getattr(context, 'auth_token', None)
 
-    plugin_name = 'glance'
+        callback = pick_glance
+
     vdis = _fetch_using_dom0_plugin_with_retry(
             context, session, image_id, plugin_name, params,
-            callback=pick_glance)
+            callback=callback)
 
     sr_ref = safe_find_sr(session)
     _scan_sr(session, sr_ref)

@@ -28,8 +28,10 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
+/etc/xapi.d/plugins/_bittorrent_seeder
 /etc/xapi.d/plugins/agent
 /etc/xapi.d/plugins/bandwidth
+/etc/xapi.d/plugins/bittorrent
 /etc/xapi.d/plugins/glance
 /etc/xapi.d/plugins/kernel
 /etc/xapi.d/plugins/migration
