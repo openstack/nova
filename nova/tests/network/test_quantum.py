@@ -492,7 +492,7 @@ class QuantumManagerTestCase(QuantumNovaTestCase):
         net = db.network_get_by_uuid(ctx.elevated(), net_id)
         self.assertTrue(net is not None)
         self.assertEquals(net['uuid'], net_id)
-        self.assertTrue(net['host'] != None)
+        self.assertTrue(net['host'] is not None)
 
 
 class QuantumNovaMACGenerationTestCase(QuantumNovaTestCase):

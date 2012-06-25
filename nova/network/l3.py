@@ -85,7 +85,7 @@ class LinuxNetL3(L3Driver):
         self.initialized = True
 
     def is_initialized(self):
-        return self.initialized == True
+        return self.initialized
 
     def initialize_network(self, cidr):
         linux_net.add_snat_rule(cidr)

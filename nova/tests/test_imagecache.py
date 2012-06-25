@@ -429,7 +429,7 @@ class ImageCacheManagerTestCase(test.TestCase):
             image_cache_manager = imagecache.ImageCacheManager()
             res = image_cache_manager._verify_checksum(
                 img, fname, create_if_missing=True)
-            self.assertTrue(res == None)
+            self.assertTrue(res is None)
 
     def test_verify_checksum_invalid(self):
         img = {'container_format': 'ami', 'id': '42'}

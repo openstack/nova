@@ -81,7 +81,7 @@ class InstanceMetadata():
 
         self.mappings = _format_instance_mapping(ctxt, instance)
 
-        if instance.get('user_data', None) != None:
+        if instance.get('user_data', None) is not None:
             self.userdata_b64 = base64.b64decode(instance['user_data'])
         else:
             self.userdata_b64 = None
@@ -133,7 +133,7 @@ class InstanceMetadata():
         for key in self.ec2_ids:
             data['meta-data'][key] = self.ec2_ids[key]
 
-        if self.userdata_b64 != None:
+        if self.userdata_b64 is not None:
             data['user-data'] = self.userdata_b64
 
         # public-keys should be in meta-data only if user specified one

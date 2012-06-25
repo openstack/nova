@@ -26,7 +26,7 @@ class ValidatorTestCase(test.TestCase):
 
     def test_validate(self):
         fixture = {
-            'foo': lambda val: val == True
+            'foo': lambda val: val is True
         }
 
         self.assertTrue(

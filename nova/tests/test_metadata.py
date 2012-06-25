@@ -66,7 +66,7 @@ def return_non_existing_address(*args, **kwarg):
 
 def fake_InstanceMetadata(stubs, inst_data, address=None, sgroups=None):
 
-    if sgroups == None:
+    if sgroups is None:
         sgroups = [{'name': 'default'}]
 
     def sg_get(*args, **kwargs):
@@ -84,7 +84,7 @@ def fake_request(stubs, mdinst, relpath, address="127.0.0.1",
 
     app = handler.MetadataRequestHandler()
 
-    if fake_get_metadata == None:
+    if fake_get_metadata is None:
         fake_get_metadata = get_metadata
 
     if stubs:
@@ -93,7 +93,7 @@ def fake_request(stubs, mdinst, relpath, address="127.0.0.1",
     request = webob.Request.blank(relpath)
     request.remote_addr = address
 
-    if headers != None:
+    if headers is not None:
         request.headers.update(headers)
 
     response = request.get_response(app)

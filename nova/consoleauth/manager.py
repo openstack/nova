@@ -71,7 +71,7 @@ class ConsoleAuthManager(manager.Manager):
 
     def check_token(self, context, token):
         token_str = self.mc.get(token)
-        token_valid = (token_str != None)
+        token_valid = (token_str is not None)
         LOG.audit(_("Checking Token: %(token)s, %(token_valid)s)"), locals())
         if token_valid:
             return jsonutils.loads(token_str)

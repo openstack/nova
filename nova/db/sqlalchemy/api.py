@@ -611,13 +611,13 @@ def compute_node_utilization_set(context, host, free_ram_mb=None,
             raise exception.NotFound(_("No ComputeNode for %(host)s") %
                                      locals())
 
-        if free_ram_mb != None:
+        if free_ram_mb is not None:
             compute_node.free_ram_mb = free_ram_mb
-        if free_disk_gb != None:
+        if free_disk_gb is not None:
             compute_node.free_disk_gb = free_disk_gb
-        if work != None:
+        if work is not None:
             compute_node.current_workload = work
-        if vms != None:
+        if vms is not None:
             compute_node.running_vms = vms
 
     return compute_node

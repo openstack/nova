@@ -52,7 +52,7 @@ class AggregateTestCase(test.TestCase):
 
     def test_index(self):
         def stub_list_aggregates(context):
-            if context == None:
+            if context is None:
                 raise Exception()
             return AGGREGATE_LIST
         self.stubs.Set(self.controller.api, 'get_aggregate_list',

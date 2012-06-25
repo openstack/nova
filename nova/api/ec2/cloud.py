@@ -334,7 +334,7 @@ class CloudController(object):
             key_pairs = [x for x in key_pairs if x['name'] in key_name]
 
         #If looking for non existent key pair
-        if key_name != None and key_pairs == []:
+        if key_name is not None and not key_pairs:
             msg = _('Could not find key pair(s): %s') % ','.join(key_name)
             raise exception.EC2APIError(msg)
 
