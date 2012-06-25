@@ -21,7 +21,6 @@ from webob import exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import db
 from nova import utils
 
 ALIAS = 'OS-DCF'
@@ -102,30 +101,25 @@ class ServersDiskConfigTemplate(xmlutil.TemplateBuilder):
 
 
 class ServerDiskConfigController(wsgi.Controller):
-    def _add_disk_config(self, context, servers):
-        # Get DB information for servers
-        uuids = [server['id'] for server in servers]
-        db_servers = db.instance_get_all_by_filters(context,
-                                                    {'uuid': uuids})
-        db_servers_by_uuid = dict((s['uuid'], s) for s in db_servers)
-
+    def _add_disk_config(self, req, servers):
         for server in servers:
-            db_server = db_servers_by_uuid.get(server['id'])
-            if db_server:
-                value = db_server[INTERNAL_DISK_CONFIG]
-                server[API_DISK_CONFIG] = disk_config_to_api(value)
+            db_server = req.get_db_instance(server['id'])
+            # server['id'] is guaranteed to be in the cache due to
+            # the core API adding it in its 'show'/'detail' methods.
+            value = db_server[INTERNAL_DISK_CONFIG]
+            server[API_DISK_CONFIG] = disk_config_to_api(value)
 
-    def _show(self, context, resp_obj):
+    def _show(self, req, resp_obj):
         if 'server' in resp_obj.obj:
             resp_obj.attach(xml=ServerDiskConfigTemplate())
             server = resp_obj.obj['server']
-            self._add_disk_config(context, [server])
+            self._add_disk_config(req, [server])
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            self._show(context, resp_obj)
+            self._show(req, resp_obj)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
@@ -133,7 +127,7 @@ class ServerDiskConfigController(wsgi.Controller):
         if 'servers' in resp_obj.obj and authorize(context):
             resp_obj.attach(xml=ServersDiskConfigTemplate())
             servers = resp_obj.obj['servers']
-            self._add_disk_config(context, servers)
+            self._add_disk_config(req, servers)
 
     def _set_disk_config(self, dict_):
         if API_DISK_CONFIG in dict_:
@@ -147,7 +141,7 @@ class ServerDiskConfigController(wsgi.Controller):
         if authorize(context):
             self._set_disk_config(body['server'])
             resp_obj = (yield)
-            self._show(context, resp_obj)
+            self._show(req, resp_obj)
 
     @wsgi.extends
     def update(self, req, id, body):
@@ -155,7 +149,7 @@ class ServerDiskConfigController(wsgi.Controller):
         if authorize(context):
             self._set_disk_config(body['server'])
             resp_obj = (yield)
-            self._show(context, resp_obj)
+            self._show(req, resp_obj)
 
     @wsgi.extends(action='rebuild')
     def _action_rebuild(self, req, id, body):
@@ -163,7 +157,7 @@ class ServerDiskConfigController(wsgi.Controller):
         if authorize(context):
             self._set_disk_config(body['rebuild'])
             resp_obj = (yield)
-            self._show(context, resp_obj)
+            self._show(req, resp_obj)
 
     @wsgi.extends(action='resize')
     def _action_resize(self, req, id, body):

@@ -14,14 +14,11 @@
 
 """The Extended Server Attributes API extension."""
 
-from webob import exc
-
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova import db
-from nova import exception
 from nova import flags
 from nova import log as logging
 
@@ -37,11 +34,6 @@ class ExtendedServerAttributesController(wsgi.Controller):
         super(ExtendedServerAttributesController, self).__init__(*args,
                                                                  **kwargs)
         self.compute_api = compute.API()
-
-    def _get_instances(self, context, instance_uuids):
-        filters = {'uuid': instance_uuids}
-        instances = self.compute_api.get_all(context, filters)
-        return dict((instance['uuid'], instance) for instance in instances)
 
     def _get_hypervisor_hostname(self, context, instance):
         compute_node = db.compute_node_get_by_host(context, instance["host"])
@@ -69,14 +61,11 @@ class ExtendedServerAttributesController(wsgi.Controller):
         if authorize(context):
             # Attach our slave template to the response object
             resp_obj.attach(xml=ExtendedServerAttributeTemplate())
-
-            try:
-                instance = self.compute_api.get(context, id)
-            except exception.NotFound:
-                explanation = _("Server not found.")
-                raise exc.HTTPNotFound(explanation=explanation)
-
-            self._extend_server(context, resp_obj.obj['server'], instance)
+            server = resp_obj.obj['server']
+            db_instance = req.get_db_instance(server['id'])
+            # server['id'] is guaranteed to be in the cache due to
+            # the core API adding it in its 'show' method.
+            self._extend_server(context, server, db_instance)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
@@ -86,17 +75,11 @@ class ExtendedServerAttributesController(wsgi.Controller):
             resp_obj.attach(xml=ExtendedServerAttributesTemplate())
 
             servers = list(resp_obj.obj['servers'])
-            instance_uuids = [server['id'] for server in servers]
-            instances = self._get_instances(context, instance_uuids)
-
-            for server_object in servers:
-                try:
-                    instance_data = instances[server_object['id']]
-                except KeyError:
-                    # Ignore missing instance data
-                    continue
-
-                self._extend_server(context, server_object, instance_data)
+            for server in servers:
+                db_instance = req.get_db_instance(server['id'])
+                # server['id'] is guaranteed to be in the cache due to
+                # the core API adding it in its 'detail' method.
+                self._extend_server(context, server, db_instance)
 
 
 class Extended_server_attributes(extensions.ExtensionDescriptor):
