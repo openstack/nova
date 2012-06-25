@@ -1828,26 +1828,14 @@ class LibvirtDriver(driver.ComputeDriver):
                        "This error can be safely ignored for now."))
             return 0
 
-    @staticmethod
-    def get_memory_mb_total():
+    def get_memory_mb_total(self):
         """Get the total memory size(MB) of physical computer.
 
         :returns: the total amount of memory(MB).
 
         """
 
-        if sys.platform.upper() not in ['LINUX2', 'LINUX3']:
-            return 0
-
-        if FLAGS.libvirt_type == 'xen':
-            meminfo = self._conn.getInfo()[1]
-            # this is in MB
-            return meminfo
-        else:
-            meminfo = open('/proc/meminfo').read().split()
-            idx = meminfo.index('MemTotal:')
-            # transforming KB to MB
-            return int(meminfo[idx + 1]) / 1024
+        return self._conn.getInfo()[1]
 
     @staticmethod
     def get_local_gb_total():
