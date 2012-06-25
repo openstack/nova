@@ -637,9 +637,6 @@ def _create_cached_image(context, session, instance, image_id, image_type):
         for vdi_type, vdi in fetched_vdis.iteritems():
             vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                           vdi['uuid'])
-            session.call_xenapi('VDI.add_to_other_config',
-                                vdi_ref, 'nova_disk_type',
-                                vdi_type)
 
             vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
             session.call_xenapi('VDI.add_to_other_config',
