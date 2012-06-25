@@ -24,7 +24,6 @@ import string
 
 from nova import flags
 from nova import log as logging
-from nova.virt import xenapi
 
 
 FLAGS = flags.FLAGS
