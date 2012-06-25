@@ -37,4 +37,7 @@ class RamFilter(filters.BaseHostFilter):
         instance_type = filter_properties.get('instance_type')
         requested_ram = instance_type['memory_mb']
         free_ram_mb = host_state.free_ram_mb
-        return free_ram_mb * FLAGS.ram_allocation_ratio >= requested_ram
+        total_usable_ram_mb = host_state.total_usable_ram_mb
+        used_ram_mb = total_usable_ram_mb - free_ram_mb
+        return (total_usable_ram_mb * FLAGS.ram_allocation_ratio -
+                used_ram_mb >= requested_ram)

@@ -274,9 +274,21 @@ class HostFiltersTestCase(test.TestCase):
         capabilities = {'enabled': True}
         service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'compute',
-                {'free_ram_mb': 1023, 'capabilities': capabilities,
-                 'service': service})
+                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024,
+                 'capabilities': capabilities, 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_ram_filter_oversubscribe(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['RamFilter']()
+        self.flags(ram_allocation_ratio=2.0)
+        filter_properties = {'instance_type': {'memory_mb': 1024}}
+        capabilities = {'enabled': True}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'compute',
+                {'free_ram_mb': -1024, 'total_usable_ram_mb': 2048,
+                 'capabilities': capabilities, 'service': service})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_compute_filter_fails_on_service_disabled(self):
         self._stub_service_is_up(True)
