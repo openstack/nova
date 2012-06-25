@@ -67,35 +67,33 @@ class RootwrapTestCase(test.TestCase):
                   "Test requires /proc filesystem (procfs)")
     def test_KillFilter(self):
         p = subprocess.Popen(["/bin/sleep", "5"])
-        f = filters.KillFilter("/bin/kill", "root",
-                               ["-ALRM"],
-                               ["/bin/sleep", "/usr/bin/sleep"])
-        usercmd = ['kill', '-9', p.pid]
+        f = filters.KillFilter("root", "/bin/sleep", "-9", "-HUP")
+        f2 = filters.KillFilter("root", "/usr/bin/sleep", "-9", "-HUP")
+        usercmd = ['kill', '-ALRM', p.pid]
         # Incorrect signal should fail
-        self.assertFalse(f.match(usercmd))
+        self.assertFalse(f.match(usercmd) or f2.match(usercmd))
         usercmd = ['kill', p.pid]
         # Providing no signal should fail
-        self.assertFalse(f.match(usercmd))
+        self.assertFalse(f.match(usercmd) or f2.match(usercmd))
+        # Providing matching signal should be allowed
+        usercmd = ['kill', '-9', p.pid]
+        self.assertTrue(f.match(usercmd) or f2.match(usercmd))
 
-        f = filters.KillFilter("/bin/kill", "root",
-                               ["-9", ""],
-                               ["/bin/sleep", "/usr/bin/sleep"])
-        usercmd = ['kill', '-9', os.getpid()]
+        f = filters.KillFilter("root", "/bin/sleep")
+        f2 = filters.KillFilter("root", "/usr/bin/sleep")
+        usercmd = ['kill', os.getpid()]
         # Our own PID does not match /bin/sleep, so it should fail
-        self.assertFalse(f.match(usercmd))
-        usercmd = ['kill', '-9', 999999]
+        self.assertFalse(f.match(usercmd) or f2.match(usercmd))
+        usercmd = ['kill', 999999]
         # Nonexistant PID should fail
-        self.assertFalse(f.match(usercmd))
+        self.assertFalse(f.match(usercmd) or f2.match(usercmd))
         usercmd = ['kill', p.pid]
         # Providing no signal should work
-        self.assertTrue(f.match(usercmd))
-        usercmd = ['kill', '-9', p.pid]
-        # Providing -9 signal should work
         self.assertTrue(f.match(usercmd))
 
     def test_KillFilter_no_raise(self):
         """Makes sure ValueError from bug 926412 is gone"""
-        f = filters.KillFilter("/bin/kill", "root", [""])
+        f = filters.KillFilter("root", "")
         # Providing anything other than kill should be False
         usercmd = ['notkill', 999999]
         self.assertFalse(f.match(usercmd))
@@ -109,9 +107,7 @@ class RootwrapTestCase(test.TestCase):
         def fake_readlink(blah):
             return '/bin/commandddddd (deleted)'
 
-        f = filters.KillFilter("/bin/kill", "root",
-                               [""],
-                               ["/bin/commandddddd"])
+        f = filters.KillFilter("root", "/bin/commandddddd")
         usercmd = ['kill', 1234]
         # Providing no signal should work
         self.stubs.Set(os, 'readlink', fake_readlink)

@@ -15,29 +15,39 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
+import ConfigParser
 import os
-import sys
+import string
+
+from nova.rootwrap import filters
 
 
-FILTERS_MODULES = ['nova.rootwrap.compute',
-                   'nova.rootwrap.network',
-                   'nova.rootwrap.volume',
-                  ]
+def build_filter(class_name, *args):
+    """Returns a filter object of class class_name"""
+    if not hasattr(filters, class_name):
+        # TODO(ttx): Log the error (whenever nova-rootwrap has a log file)
+        return None
+    filterclass = getattr(filters, class_name)
+    return filterclass(*args)
 
 
-def load_filters():
-    """Load filters from modules present in nova.rootwrap."""
-    filters = []
-    for modulename in FILTERS_MODULES:
-        try:
-            __import__(modulename)
-            module = sys.modules[modulename]
-            filters = filters + module.filterlist
-        except ImportError:
-            # It's OK to have missing filters, since filter modules are
-            # shipped with specific nodes rather than with python-nova
-            pass
-    return filters
+def load_filters(filters_path):
+    """Load filters from a list of directories"""
+    filterlist = []
+    for filterdir in filters_path:
+        if not os.path.isdir(filterdir):
+            continue
+        for filterfile in os.listdir(filterdir):
+            filterconfig = ConfigParser.RawConfigParser()
+            filterconfig.read(os.path.join(filterdir, filterfile))
+            for (name, value) in filterconfig.items("Filters"):
+                filterdefinition = [string.strip(s) for s in value.split(',')]
+                newfilter = build_filter(*filterdefinition)
+                if newfilter is None:
+                    continue
+                filterlist.append(newfilter)
+    return filterlist
 
 
 def match_filter(filters, userargs):
