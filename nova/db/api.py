@@ -1276,6 +1276,11 @@ def security_group_create(context, values):
     return IMPL.security_group_create(context, values)
 
 
+def security_group_ensure_default(context):
+    """Ensure default security group exists for a project_id."""
+    return IMPL.security_group_ensure_default(context)
+
+
 def security_group_destroy(context, security_group_id):
     """Deletes a security group."""
     return IMPL.security_group_destroy(context, security_group_id)

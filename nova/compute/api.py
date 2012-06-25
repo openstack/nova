@@ -398,8 +398,6 @@ class API(base.Base):
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, kernel_id, ramdisk_id, image, image_service)
 
-        self.security_group_api.ensure_default(context)
-
         if key_data is None and key_name:
             key_pair = self.db.key_pair_get(context, context.user_id, key_name)
             key_data = key_pair['public_key']
@@ -521,9 +519,6 @@ class API(base.Base):
         """tell vm driver to create ephemeral/swap device at boot time by
         updating BlockDeviceMapping
         """
-        instance_type = (instance_type or
-                         instance_types.get_default_instance_type())
-
         for bdm in block_device.mappings_prepend_dev(mappings):
             LOG.debug(_("bdm %s"), bdm)
 
@@ -583,6 +578,74 @@ class API(base.Base):
             self.db.block_device_mapping_update_or_create(elevated_context,
                                                           values)
 
+    def _populate_instance_for_bdm(self, context, instance, instance_type,
+            image, block_device_mapping):
+        """Populate instance block device mapping information."""
+        # FIXME(comstud): Why do the block_device_mapping DB calls
+        # require elevated context?
+        elevated = context.elevated()
+        instance_uuid = instance['uuid']
+        mappings = image['properties'].get('mappings', [])
+        if mappings:
+            instance['shutdown_terminate'] = False
+            self._update_image_block_device_mapping(elevated,
+                    instance_type, instance_uuid, mappings)
+
+        image_bdm = image['properties'].get('block_device_mapping', [])
+        for mapping in (image_bdm, block_device_mapping):
+            if not mapping:
+                continue
+            instance['shutdown_terminate'] = False
+            self._update_block_device_mapping(elevated,
+                    instance_type, instance_uuid, mapping)
+
+    def _populate_instance_names(self, instance):
+        """Populate instance display_name and hostname."""
+        display_name = instance.get('display_name')
+        hostname = instance.get('hostname')
+
+        if display_name is None:
+            display_name = self._default_display_name(instance['uuid'])
+            instance['display_name'] = display_name
+        if hostname is None:
+            hostname = display_name
+        instance['hostname'] = utils.sanitize_hostname(hostname)
+
+    def _default_display_name(self, instance_uuid):
+        return "Server %s" % instance_uuid
+
+    def _populate_instance_for_create(self, base_options, image,
+            security_groups):
+        """Build the beginning of a new instance."""
+
+        instance = base_options
+        if not instance.get('uuid'):
+            # Generate the instance_uuid here so we can use it
+            # for additional setup before creating the DB entry.
+            instance['uuid'] = str(utils.gen_uuid())
+
+        instance['launch_index'] = 0
+        instance['vm_state'] = vm_states.BUILDING
+        instance['task_state'] = task_states.SCHEDULING
+        instance['architecture'] = image['properties'].get('architecture')
+        instance['info_cache'] = {'network_info': '[]'}
+
+        # Store image properties so we can use them later
+        # (for notifications, etc).  Only store what we can.
+        instance.setdefault('system_metadata', {})
+        for key, value in image['properties'].iteritems():
+            new_value = str(value)[:255]
+            instance['system_metadata']['image_%s' % key] = new_value
+
+        # Use 'default' security_group if none specified.
+        if security_groups is None:
+            security_groups = ['default']
+        elif not isinstance(security_groups, list):
+            security_groups = [security_groups]
+        instance['security_groups'] = security_groups
+
+        return instance
+
     #NOTE(bcwaldon): No policy check since this is only used by scheduler and
     # the compute api. That should probably be cleaned up, though.
     def create_db_entry_for_new_instance(self, context, instance_type, image,
@@ -594,83 +657,26 @@ class API(base.Base):
         This is called by the scheduler after a location for the
         instance has been determined.
         """
-        elevated = context.elevated()
-        if security_group is None:
-            security_group = ['default']
-        if not isinstance(security_group, list):
-            security_group = [security_group]
+        instance = self._populate_instance_for_create(base_options,
+                image, security_group)
 
-        security_groups = []
-        for security_group_name in security_group:
-            group = self.db.security_group_get_by_name(context,
-                    context.project_id,
-                    security_group_name)
-            security_groups.append(group['id'])
+        self._populate_instance_names(instance)
 
-        # Store image properties so we can use them later
-        # (for notifications, etc).  Only store what we can.
-        base_options.setdefault('system_metadata', {})
-        for key, value in image['properties'].iteritems():
-            new_value = str(value)[:255]
-            base_options['system_metadata']['image_%s' % key] = new_value
+        self._populate_instance_for_bdm(context, instance,
+                instance_type, image, block_device_mapping)
 
-        base_options.setdefault('launch_index', 0)
-        instance = self.db.instance_create(context, base_options)
-
-        # Commit the reservations
-        if reservations:
-            QUOTAS.commit(context, reservations)
-
-        instance_id = instance['id']
-        instance_uuid = instance['uuid']
+        instance = self.db.instance_create(context, instance)
 
         # send a state update notification for the initial create to
         # show it going from non-existent to BUILDING
         notifications.send_update_with_states(context, instance, None,
                 vm_states.BUILDING, None, None, service="api")
 
-        for security_group_id in security_groups:
-            self.db.instance_add_security_group(elevated,
-                                                instance_uuid,
-                                                security_group_id)
+        # Commit the reservations
+        if reservations:
+            QUOTAS.commit(context, reservations)
 
-        # BlockDeviceMapping table
-        self._update_image_block_device_mapping(elevated, instance_type,
-            instance_uuid, image['properties'].get('mappings', []))
-        self._update_block_device_mapping(elevated, instance_type,
-                                          instance_uuid,
-            image['properties'].get('block_device_mapping', []))
-        # override via command line option
-        self._update_block_device_mapping(elevated, instance_type,
-                                          instance_uuid, block_device_mapping)
-
-        # Set sane defaults if not specified
-        updates = {}
-
-        display_name = instance.get('display_name')
-        if display_name is None:
-            display_name = self._default_display_name(instance_id)
-
-        hostname = instance.get('hostname')
-        if hostname is None:
-            hostname = display_name
-
-        updates['display_name'] = display_name
-        updates['hostname'] = utils.sanitize_hostname(hostname)
-        updates['vm_state'] = vm_states.BUILDING
-        updates['task_state'] = task_states.SCHEDULING
-
-        updates['architecture'] = image['properties'].get('architecture')
-
-        if (image['properties'].get('mappings', []) or
-            image['properties'].get('block_device_mapping', []) or
-            block_device_mapping):
-            updates['shutdown_terminate'] = False
-
-        return self.update(context, instance, **updates)
-
-    def _default_display_name(self, instance_id):
-        return "Server %s" % instance_id
+        return instance
 
     def _schedule_run_instance(self,
             use_call,
@@ -749,7 +755,7 @@ class API(base.Base):
         # only going to create 1 instance.
         # This speeds up API responses for builds
         # as we don't need to wait for the scheduler.
-        create_instance_here = max_count == 1
+        create_instance_here = max_count == 1 or max_count == None
 
         (instances, reservation_id) = self._create_instance(
                                context, instance_type,
@@ -1926,16 +1932,7 @@ class SecurityGroupAPI(base.Base):
 
         :param context: the security context
         """
-        try:
-            self.db.security_group_get_by_name(context,
-                                               context.project_id,
-                                               'default')
-        except exception.NotFound:
-            values = {'name': 'default',
-                      'description': 'default',
-                      'user_id': context.user_id,
-                      'project_id': context.project_id}
-            self.db.security_group_create(context, values)
+        self.db.security_group_ensure_default(context)
 
     def create(self, context, name, description):
         try:

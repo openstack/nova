@@ -2159,7 +2159,20 @@ class ComputeAPITestCase(BaseTestCase):
                          len(db.instance_get_all(context.get_admin_context())))
 
     def test_default_hostname_generator(self):
-        cases = [(None, 'server-1'), ('Hello, Server!', 'hello-server'),
+        fake_uuids = [str(utils.gen_uuid()) for x in xrange(4)]
+
+        orig_populate = self.compute_api._populate_instance_for_create
+
+        def _fake_populate(base_options, *args, **kwargs):
+            base_options['uuid'] = fake_uuids.pop(0)
+            return orig_populate(base_options, *args, **kwargs)
+
+        self.stubs.Set(self.compute_api,
+                '_populate_instance_for_create',
+                _fake_populate)
+
+        cases = [(None, 'server-%s' % fake_uuids[0]),
+                 ('Hello, Server!', 'hello-server'),
                  ('<}\x1fh\x10e\x08l\x02l\x05o\x12!{>', 'hello'),
                  ('hello_server', 'hello-server')]
         for display_name, hostname in cases:
