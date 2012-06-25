@@ -17,6 +17,7 @@
 #    under the License.
 
 """Metadata request handler."""
+import os
 
 import webob.dec
 import webob.exc
@@ -66,6 +67,9 @@ class MetadataRequestHandler(wsgi.Application):
         remote_address = req.remote_addr
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
+
+        if os.path.normpath("/" + req.path_info) == "/":
+            return(base.ec2_md_print(base.VERSIONS + ["latest"]))
 
         try:
             meta_data = self.get_metadata(remote_address)
