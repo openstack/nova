@@ -60,7 +60,7 @@ from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
-import nova.image
+from nova.image import glance
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
@@ -698,14 +698,14 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning()
 
-        (image_service, image_id) = nova.image.get_image_service(
+        (image_service, image_id) = glance.get_remote_image_service(
             context, instance['image_ref'])
         try:
             base = image_service.show(context, image_id)
         except exception.ImageNotFound:
             base = {}
 
-        _image_service = nova.image.get_image_service(context, image_href)
+        _image_service = glance.get_remote_image_service(context, image_href)
         snapshot_image_service, snapshot_image_id = _image_service
         snapshot = snapshot_image_service.show(context, snapshot_image_id)
 

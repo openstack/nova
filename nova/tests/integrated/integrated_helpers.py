@@ -22,10 +22,10 @@ Provides common functionality for integrated unit tests
 import random
 import string
 
-import nova.image.glance
 from nova.log import logging
 from nova import service
 from nova import test  # For the flags
+import nova.tests.image.fake
 from nova.tests.integrated.api import client
 from nova import utils
 
@@ -65,10 +65,7 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(**f)
         self.flags(verbose=True)
 
-        def fake_get_image_service(context, image_href):
-            image_id = str(image_href).split('/')[-1]
-            return (nova.image.fake.FakeImageService(), image_id)
-        self.stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.flags(compute_scheduler_driver='nova.scheduler.'
                     'chance.ChanceScheduler')
 
@@ -84,6 +81,7 @@ class _IntegratedTestBase(test.TestCase):
 
     def tearDown(self):
         self.osapi.stop()
+        nova.tests.image.fake.FakeImageService_reset()
         super(_IntegratedTestBase, self).tearDown()
 
     def _start_api_service(self):
@@ -108,7 +106,6 @@ class _IntegratedTestBase(test.TestCase):
         f['osapi_volume_listen_port'] = 0
         f['metadata_listen_port'] = 0
 
-        f['image_service'] = 'nova.image.fake.FakeImageService'
         f['fake_network'] = True
         return f
 

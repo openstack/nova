@@ -39,7 +39,7 @@ from nova import crypto
 from nova.db import base
 from nova import exception
 from nova import flags
-import nova.image
+from nova.image import glance
 from nova import log as logging
 from nova import network
 from nova import notifications
@@ -121,7 +121,7 @@ class API(base.Base):
     def __init__(self, image_service=None, network_api=None, volume_api=None,
                  security_group_api=None, **kwargs):
         self.image_service = (image_service or
-                              nova.image.get_default_image_service())
+                              glance.get_default_image_service())
 
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or volume.API()
@@ -374,8 +374,8 @@ class API(base.Base):
         self._check_injected_file_quota(context, injected_files)
         self._check_requested_networks(context, requested_networks)
 
-        (image_service, image_id) = nova.image.get_image_service(context,
-                                                                 image_href)
+        (image_service, image_id) = glance.get_remote_image_service(context,
+                                                                    image_href)
         image = image_service.show(context, image_id)
 
         if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
@@ -1219,7 +1219,7 @@ class API(base.Base):
 
     def _get_image(self, context, image_href):
         """Throws an ImageNotFound exception if image_href does not exist."""
-        (image_service, image_id) = nova.image.get_image_service(context,
+        (image_service, image_id) = glance.get_remote_image_service(context,
                                                                  image_href)
         return image_service.show(context, image_id)
 

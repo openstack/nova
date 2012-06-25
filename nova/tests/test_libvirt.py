@@ -40,6 +40,7 @@ from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_libvirt_utils
 from nova.tests import fake_network
+import nova.tests.image.fake
 from nova import utils
 from nova.virt import driver
 from nova.virt import firewall as base_firewall
@@ -427,8 +428,11 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
 
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
+
     def tearDown(self):
         libvirt_driver.libvirt_utils = libvirt_utils
+        nova.tests.image.fake.FakeImageService_reset()
         super(LibvirtConnTestCase, self).tearDown()
 
     test_instance = {'memory_kb': '1024000',
@@ -458,7 +462,6 @@ class LibvirtConnTestCase(test.TestCase):
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
 
-        self.flags(image_service='nova.image.fake.FakeImageService')
         self.flags(libvirt_vif_driver="nova.tests.fake_network.FakeVIFDriver")
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
@@ -807,10 +810,8 @@ class LibvirtConnTestCase(test.TestCase):
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_in_ami_format(self):
-        self.flags(image_service='nova.image.fake.FakeImageService')
-
         # Start test
-        image_service = importutils.import_object(FLAGS.image_service)
+        image_service = nova.tests.image.fake.FakeImageService()
 
         # Assign different image_ref from nova/images/fakes for testing ami
         test_instance = copy.deepcopy(self.test_instance)
@@ -845,10 +846,8 @@ class LibvirtConnTestCase(test.TestCase):
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_in_raw_format(self):
-        self.flags(image_service='nova.image.fake.FakeImageService')
-
         # Start test
-        image_service = importutils.import_object(FLAGS.image_service)
+        image_service = nova.tests.image.fake.FakeImageService()
 
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -879,11 +878,10 @@ class LibvirtConnTestCase(test.TestCase):
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_in_qcow2_format(self):
-        self.flags(image_service='nova.image.fake.FakeImageService')
         self.flags(snapshot_image_format='qcow2')
 
         # Start test
-        image_service = importutils.import_object(FLAGS.image_service)
+        image_service = nova.tests.image.fake.FakeImageService()
 
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -914,10 +912,8 @@ class LibvirtConnTestCase(test.TestCase):
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_no_image_architecture(self):
-        self.flags(image_service='nova.image.fake.FakeImageService')
-
         # Start test
-        image_service = importutils.import_object(FLAGS.image_service)
+        image_service = nova.tests.image.fake.FakeImageService()
 
         # Assign different image_ref from nova/images/fakes for
         # testing different base image
@@ -952,10 +948,8 @@ class LibvirtConnTestCase(test.TestCase):
 
     @test.skip_if(missing_libvirt(), "Test requires libvirt")
     def test_snapshot_no_original_image(self):
-        self.flags(image_service='nova.image.fake.FakeImageService')
-
         # Start test
-        image_service = importutils.import_object(FLAGS.image_service)
+        image_service = nova.tests.image.fake.FakeImageService()
 
         # Assign a non-existent image
         test_instance = copy.deepcopy(self.test_instance)

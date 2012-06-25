@@ -57,7 +57,7 @@ from nova.compute import vm_states
 import nova.context
 from nova import exception
 from nova import flags
-import nova.image
+from nova.image import glance
 from nova import log as logging
 from nova import manager
 from nova import network
@@ -205,7 +205,8 @@ def wrap_instance_fault(function):
 
 
 def _get_image_meta(context, image_ref):
-    image_service, image_id = nova.image.get_image_service(context, image_ref)
+    image_service, image_id = glance.get_remote_image_service(context,
+                                                              image_ref)
     return image_service.show(context, image_id)
 
 
@@ -1056,7 +1057,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 marker = batch[-1]['id']
             return images
 
-        image_service = nova.image.get_default_image_service()
+        image_service = glance.get_default_image_service()
         filters = {'property-image_type': 'backup',
                    'property-backup_type': backup_type,
                    'property-instance_uuid': instance_uuid}

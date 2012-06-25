@@ -21,7 +21,7 @@ from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import exception
 from nova import flags
-from nova import image
+from nova.image import glance
 
 
 FLAGS = flags.FLAGS
@@ -31,7 +31,7 @@ class Controller(object):
     """The image metadata API controller for the OpenStack API"""
 
     def __init__(self):
-        self.image_service = image.get_default_image_service()
+        self.image_service = glance.get_default_image_service()
 
     def _get_image(self, context, image_id):
         try:

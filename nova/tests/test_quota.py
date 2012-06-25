@@ -31,6 +31,7 @@ from nova.openstack.common import timeutils
 from nova import quota
 from nova.scheduler import driver as scheduler_driver
 from nova import test
+import nova.tests.image.fake
 from nova import volume
 
 
@@ -38,11 +39,6 @@ FLAGS = flags.FLAGS
 
 
 class QuotaIntegrationTestCase(test.TestCase):
-
-    class StubImageService(object):
-
-        def show(self, *args, **kwargs):
-            return {"properties": {}}
 
     def setUp(self):
         super(QuotaIntegrationTestCase, self).setUp()
@@ -78,6 +74,11 @@ class QuotaIntegrationTestCase(test.TestCase):
                 return orig_rpc_call(context, topic, msg)
 
         self.stubs.Set(rpc, 'call', rpc_call_wrapper)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
+
+    def tearDown(self):
+        super(QuotaIntegrationTestCase, self).tearDown()
+        nova.tests.image.fake.FakeImageService_reset()
 
     def _create_instance(self, cores=2):
         """Create a test instance"""
@@ -173,8 +174,7 @@ class QuotaIntegrationTestCase(test.TestCase):
                                             metadata=metadata)
 
     def _create_with_injected_files(self, files):
-        self.flags(image_service='nova.image.fake.FakeImageService')
-        api = compute.API(image_service=self.StubImageService())
+        api = compute.API()
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         api.create(self.context, min_count=1, max_count=1,
@@ -182,8 +182,7 @@ class QuotaIntegrationTestCase(test.TestCase):
                 injected_files=files)
 
     def test_no_injected_files(self):
-        self.flags(image_service='nova.image.fake.FakeImageService')
-        api = compute.API(image_service=self.StubImageService())
+        api = compute.API()
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         api.create(self.context,

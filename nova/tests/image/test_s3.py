@@ -24,6 +24,7 @@ import tempfile
 from nova import context
 import nova.db.api
 from nova import exception
+from nova.tests.image import fake
 from nova.image import s3
 from nova import test
 
@@ -81,13 +82,18 @@ file_manifest_xml = """<?xml version="1.0" ?>
 class TestS3ImageService(test.TestCase):
     def setUp(self):
         super(TestS3ImageService, self).setUp()
-        self.flags(image_service='nova.image.fake.FakeImageService')
-        self.image_service = s3.S3ImageService()
         self.context = context.RequestContext(None, None)
 
         # set up one fixture to test shows, should have id '1'
         nova.db.api.s3_image_create(self.context,
                                     '155d900f-4e14-4e4c-a73d-069cbf4541e6')
+
+        fake.stub_out_image_service(self.stubs)
+        self.image_service = s3.S3ImageService()
+
+    def tearDown(self):
+        super(TestS3ImageService, self).tearDown()
+        fake.FakeImageService_reset()
 
     def _assertEqualList(self, list0, list1, keys):
         self.assertEqual(len(list0), len(list1))
@@ -183,8 +189,8 @@ class TestS3ImageService(test.TestCase):
         eventlet.sleep()
         translated = self.image_service._translate_id_to_uuid(context, img)
         uuid = translated['id']
-        self.glance_service = nova.image.get_default_image_service()
-        updated_image = self.glance_service.update(self.context, uuid,
+        image_service = fake.FakeImageService()
+        updated_image = image_service.update(self.context, uuid,
                         {'is_public': True}, None,
                         {'x-glance-registry-purge-props': False})
         self.assertTrue(updated_image['is_public'])

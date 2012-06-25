@@ -36,12 +36,12 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova.image import fake
 from nova.image import s3
 from nova import log as logging
 from nova.network import api as network_api
 from nova.openstack.common import rpc
 from nova import test
+from nova.tests.image import fake
 from nova import utils
 
 
@@ -94,6 +94,19 @@ class CloudTestCase(test.TestCase):
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True)
 
+        def fake_show(meh, context, id):
+            return {'id': id,
+                    'container_format': 'ami',
+                    'properties': {
+                        'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                        'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                        'type': 'machine',
+                        'image_state': 'available'}}
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
+        fake.stub_out_image_service(self.stubs)
+
         def dumb(*args, **kwargs):
             pass
 
@@ -115,18 +128,6 @@ class CloudTestCase(test.TestCase):
                                               self.project_id,
                                               is_admin=True)
 
-        def fake_show(meh, context, id):
-            return {'id': id,
-                    'container_format': 'ami',
-                    'properties': {
-                        'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
-                        'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
-                        'type': 'machine',
-                        'image_state': 'available'}}
-
-        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
-        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
-
         # NOTE(comstud): Make 'cast' behave like a 'call' which will
         # ensure that operations complete
         self.stubs.Set(rpc, 'cast', rpc.call)
@@ -136,6 +137,10 @@ class CloudTestCase(test.TestCase):
                                'cedef40a-ed67-4d10-800e-17455edce175')
         db.api.s3_image_create(self.context,
                                '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
+
+    def tearDown(self):
+        super(CloudTestCase, self).tearDown()
+        fake.FakeImageService_reset()
 
     def _stub_instance_get_with_fixed_ips(self, func_name):
         orig_func = getattr(self.cloud.compute_api, func_name)
@@ -1618,7 +1623,6 @@ class CloudTestCase(test.TestCase):
                     'container_format': 'ami',
                     'status': 'active'}
 
-        self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
 
         def dumb(*args, **kwargs):
@@ -2352,7 +2356,6 @@ class CloudTestCase(test.TestCase):
         for i in range(3, 7):
             db.api.s3_image_create(self.context, 'ami-%d' % i)
 
-        self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
 
         test_dia_iisb('stop', image_id='ami-3')

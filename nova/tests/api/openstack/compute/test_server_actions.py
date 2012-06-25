@@ -27,6 +27,7 @@ from nova import flags
 from nova.openstack.common import importutils
 from nova import test
 from nova.tests.api.openstack import fakes
+import nova.tests.image.fake
 from nova import utils
 
 
@@ -69,7 +70,7 @@ class ServerActionsControllerTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
-        fakes.stub_out_image_service(self.stubs)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = importutils.import_object(service_class)
         self.service.delete_all()

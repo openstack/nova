@@ -24,9 +24,8 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-import nova.image.fake
 from nova import test
-import nova.tests.api.openstack.fakes as api_fakes
+import nova.tests.image.fake
 from nova.tests.vmwareapi import db_fakes
 from nova.tests.vmwareapi import stubs
 from nova.virt.vmwareapi import fake as vmwareapi_fake
@@ -78,12 +77,12 @@ class VMWareAPIVMTestCase(test.TestCase):
             'disk_format': 'vhd',
             'size': 512,
         }
-        api_fakes.stub_out_image_service(self.stubs)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
 
     def tearDown(self):
         super(VMWareAPIVMTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
-        nova.image.fake.FakeImageService_reset()
+        nova.tests.image.fake.FakeImageService_reset()
 
     def _create_instance_in_the_db(self):
         values = {'name': 1,
