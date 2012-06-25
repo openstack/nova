@@ -109,9 +109,7 @@ def find_orphaned_instances(xenapi, verbose=False):
 
 def cleanup_instance(xenapi, instance, vm_ref, vm_rec):
     """Delete orphaned instances."""
-    if vm_rec['power_state'] == 'Running':
-        call_xenapi(xenapi, 'VM.hard_shutdown', vm_ref)
-    xenapi._vmops._destroy(instance, vm_ref, shutdown=False)
+    xenapi._vmops._destroy(instance, vm_ref)
 
 
 def _get_applicable_vm_recs(xenapi):
