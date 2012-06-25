@@ -18,24 +18,29 @@
 """Possible vm states for instances.
 
 Compute instance vm states represent the state of an instance as it pertains to
-a user or administrator. When combined with task states (task_states.py), a
-better picture can be formed regarding the instance's health.
+a user or administrator.
 
+vm_state describes a VM's current stable (not transition) state. That is, if
+there is no ongoing compute API calls (running tasks), vm_state should reflect
+what the customer expect the VM to be. When combined with task states
+(task_states.py), a better picture can be formed regarding the instance's
+health and progress.
+
+See http://wiki.openstack.org/VMState
 """
 
-ACTIVE = 'active'
-BUILDING = 'building'
-REBUILDING = 'rebuilding'
-
+ACTIVE = 'active'  # VM is running
+BUILDING = 'building'  # VM only exists in DB
 PAUSED = 'paused'
-SUSPENDED = 'suspended'
-SHUTOFF = 'shutoff'
-RESCUED = 'rescued'
-DELETED = 'deleted'
-STOPPED = 'stopped'
-SOFT_DELETE = 'soft-delete'
+SUSPENDED = 'suspended'  # VM is suspended to disk.
+STOPPED = 'stopped'  # VM is powered off, the disk image is still there.
+RESCUED = 'rescued'  # A rescue image is running with the original VM image
+# attached.
+RESIZED = 'resized'  # a VM with the new size is active. The user is expected
+# to manually confirm or revert.
 
-MIGRATING = 'migrating'
-RESIZING = 'resizing'
+SOFT_DELETED = 'soft-delete'  # VM is marked as deleted but the disk images are
+# still available to restore.
+DELETED = 'deleted'  # VM is permanently deleted.
 
 ERROR = 'error'

@@ -1518,7 +1518,7 @@ class ComputeTestCase(BaseTestCase):
         instance_id = instance['id']
         i_ref = db.instance_get(c, instance_id)
         db.instance_update(c, i_ref['uuid'],
-                           {'vm_state': vm_states.MIGRATING,
+                           {'task_state': task_states.MIGRATING,
                             'power_state': power_state.PAUSED})
         v_ref = db.volume_create(c, {'size': 1, 'instance_id': instance_id})
         fix_addr = db.fixed_ip_create(c, {'address': '1.1.1.1',
@@ -1579,7 +1579,7 @@ class ComputeTestCase(BaseTestCase):
         instances = db.instance_get_all(ctxt)
         LOG.info(_("After force-killing instances: %s"), instances)
         self.assertEqual(len(instances), 1)
-        self.assertEqual(power_state.NOSTATE, instances[0]['power_state'])
+        self.assertEqual(task_states.STOPPING, instances[0]['task_state'])
 
     def test_add_instance_fault(self):
         exc_info = None
@@ -1819,17 +1819,17 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(call_info['get_nw_info'], 4)
 
     def test_poll_unconfirmed_resizes(self):
-        instances = [{'uuid': 'fake_uuid1', 'vm_state': vm_states.ACTIVE,
-                      'task_state': task_states.RESIZE_VERIFY},
+        instances = [{'uuid': 'fake_uuid1', 'vm_state': vm_states.RESIZED,
+                      'task_state': None},
                      {'uuid': 'noexist'},
                      {'uuid': 'fake_uuid2', 'vm_state': vm_states.ERROR,
-                      'task_state': task_states.RESIZE_VERIFY},
+                      'task_state': None},
                      {'uuid': 'fake_uuid3', 'vm_state': vm_states.ACTIVE,
                       'task_state': task_states.REBOOTING},
                      {'uuid': 'fake_uuid4', 'vm_state': vm_states.ACTIVE,
-                      'task_state': task_states.RESIZE_VERIFY},
+                      'task_state': None},
                      {'uuid': 'fake_uuid5', 'vm_state': vm_states.ACTIVE,
-                      'task_state': task_states.RESIZE_VERIFY}]
+                      'task_state': None}]
         expected_migration_status = {'fake_uuid1': 'confirmed',
                                      'noexist': 'error',
                                      'fake_uuid2': 'error',
@@ -2261,12 +2261,12 @@ class ComputeAPITestCase(BaseTestCase):
         # the instance is shutdown by itself
         db.instance_update(self.context, instance['uuid'],
                            {'power_state': power_state.NOSTATE,
-                            'vm_state': vm_states.SHUTOFF})
-        check_state(instance['uuid'], power_state.NOSTATE, vm_states.SHUTOFF,
+                            'vm_state': vm_states.STOPPED})
+        check_state(instance['uuid'], power_state.NOSTATE, vm_states.STOPPED,
                     None)
 
         start_check_state(instance['uuid'], power_state.NOSTATE,
-                          vm_states.SHUTOFF, task_states.STARTING)
+                          vm_states.STOPPED, task_states.STARTING)
 
         db.instance_destroy(self.context, instance['uuid'])
 
@@ -2344,7 +2344,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         # set the state that the instance gets when soft_delete finishes
         instance = db.instance_update(self.context, instance['uuid'],
-                                      {'vm_state': vm_states.SOFT_DELETE})
+                                      {'vm_state': vm_states.SOFT_DELETED,
+                                       'task_state': None})
 
         self.compute_api.force_delete(self.context, instance)
 
@@ -2432,7 +2433,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         # set the state that the instance gets when soft_delete finishes
         instance = db.instance_update(self.context, instance['uuid'],
-                                      {'vm_state': vm_states.SOFT_DELETE})
+                                      {'vm_state': vm_states.SOFT_DELETED,
+                                       'task_state': None})
 
         self.compute_api.restore(self.context, instance)
 
@@ -2476,7 +2478,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(info['image_ref'], image_ref)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['vm_state'], vm_states.REBUILDING)
+        self.assertEqual(instance['task_state'], task_states.REBUILDING)
         sys_metadata = db.instance_system_metadata_get(self.context,
                 instance_uuid)
         self.assertEqual(sys_metadata,
@@ -2772,8 +2774,8 @@ class ComputeAPITestCase(BaseTestCase):
                  'status': 'finished'})
         # set the state that the instance gets when resize finishes
         instance = db.instance_update(self.context, instance['uuid'],
-                                      {'task_state': task_states.RESIZE_VERIFY,
-                                       'vm_state': vm_states.ACTIVE})
+                                      {'task_state': None,
+                                       'vm_state': vm_states.RESIZED})
 
         self.compute_api.confirm_resize(context, instance)
         self.compute.terminate_instance(context, instance['uuid'])
@@ -2792,13 +2794,13 @@ class ComputeAPITestCase(BaseTestCase):
                  'status': 'finished'})
         # set the state that the instance gets when resize finishes
         instance = db.instance_update(self.context, instance['uuid'],
-                                      {'task_state': task_states.RESIZE_VERIFY,
-                                       'vm_state': vm_states.ACTIVE})
+                                      {'task_state': None,
+                                       'vm_state': vm_states.RESIZED})
 
         self.compute_api.revert_resize(context, instance)
 
         instance = db.instance_get_by_uuid(context, instance['uuid'])
-        self.assertEqual(instance['vm_state'], vm_states.RESIZING)
+        self.assertEqual(instance['vm_state'], vm_states.RESIZED)
         self.assertEqual(instance['task_state'], task_states.RESIZE_REVERTING)
 
         self.compute.terminate_instance(context, instance['uuid'])

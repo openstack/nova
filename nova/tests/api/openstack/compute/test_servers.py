@@ -1331,16 +1331,17 @@ class ServersControllerTest(test.TestCase):
         self.server_delete_called = False
 
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.RESIZING))
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                        task_state=task_states.RESIZE_PREP))
 
-        def instance_destroy_mock(context, id):
+        def instance_destroy_mock(*args, **kwargs):
             self.server_delete_called = True
         self.stubs.Set(nova.db, 'instance_destroy', instance_destroy_mock)
 
-        self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller.delete,
-                          req,
-                          FAKE_UUID)
+        self.controller.delete(req, FAKE_UUID)
+        # Delete shoud be allowed in any case, even during resizing,
+        # because it may get stuck.
+        self.assertEqual(self.server_delete_called, True)
 
 
 class ServerStatusTest(test.TestCase):
@@ -1374,7 +1375,8 @@ class ServerStatusTest(test.TestCase):
         self.assertEqual(response['server']['status'], 'HARD_REBOOT')
 
     def test_rebuild(self):
-        response = self._get_with_state(vm_states.REBUILDING)
+        response = self._get_with_state(vm_states.ACTIVE,
+                                        task_states.REBUILDING)
         self.assertEqual(response['server']['status'], 'REBUILD')
 
     def test_rebuild_error(self):
@@ -1382,16 +1384,16 @@ class ServerStatusTest(test.TestCase):
         self.assertEqual(response['server']['status'], 'ERROR')
 
     def test_resize(self):
-        response = self._get_with_state(vm_states.RESIZING)
+        response = self._get_with_state(vm_states.ACTIVE,
+                                        task_states.RESIZE_PREP)
         self.assertEqual(response['server']['status'], 'RESIZE')
 
     def test_verify_resize(self):
-        response = self._get_with_state(vm_states.ACTIVE,
-                                        task_states.RESIZE_VERIFY)
+        response = self._get_with_state(vm_states.RESIZED, None)
         self.assertEqual(response['server']['status'], 'VERIFY_RESIZE')
 
     def test_revert_resize(self):
-        response = self._get_with_state(vm_states.RESIZING,
+        response = self._get_with_state(vm_states.RESIZED,
                                         task_states.RESIZE_REVERTING)
         self.assertEqual(response['server']['status'], 'REVERT_RESIZE')
 

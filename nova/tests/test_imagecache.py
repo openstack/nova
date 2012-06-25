@@ -26,7 +26,7 @@ import time
 
 from nova import test
 
-from nova.compute import task_states
+from nova.compute import vm_states
 from nova import db
 from nova import flags
 from nova import log
@@ -150,16 +150,19 @@ class ImageCacheManagerTestCase(test.TestCase):
                                    'host': FLAGS.host,
                                    'name': 'inst-1',
                                    'uuid': '123',
+                                   'vm_state': '',
                                    'task_state': ''},
                                   {'image_ref': '2',
                                    'host': FLAGS.host,
                                    'name': 'inst-2',
                                    'uuid': '456',
+                                   'vm_state': '',
                                    'task_state': ''},
                                   {'image_ref': '2',
                                    'host': 'remotehost',
                                    'name': 'inst-3',
                                    'uuid': '789',
+                                   'vm_state': '',
                                    'task_state': ''}])
 
         image_cache_manager = imagecache.ImageCacheManager()
@@ -183,7 +186,8 @@ class ImageCacheManagerTestCase(test.TestCase):
                                    'host': FLAGS.host,
                                    'name': 'inst-1',
                                    'uuid': '123',
-                                   'task_state': task_states.RESIZE_VERIFY}])
+                                   'vm_state': vm_states.RESIZED,
+                                   'task_state': None}])
 
         image_cache_manager = imagecache.ImageCacheManager()
         image_cache_manager._list_running_instances(None)
@@ -766,11 +770,13 @@ class ImageCacheManagerTestCase(test.TestCase):
                                    'host': FLAGS.host,
                                    'name': 'instance-1',
                                    'uuid': '123',
+                                   'vm_state': '',
                                    'task_state': ''},
                                   {'image_ref': '1',
                                    'host': FLAGS.host,
                                    'name': 'instance-2',
                                    'uuid': '456',
+                                   'vm_state': '',
                                    'task_state': ''}])
 
         image_cache_manager = imagecache.ImageCacheManager()
@@ -865,11 +871,13 @@ class ImageCacheManagerTestCase(test.TestCase):
                                        'host': FLAGS.host,
                                        'name': 'instance-1',
                                        'uuid': '123',
+                                       'vm_state': '',
                                        'task_state': ''},
                                       {'image_ref': '1',
                                        'host': FLAGS.host,
                                        'name': 'instance-2',
                                        'uuid': '456',
+                                       'vm_state': '',
                                        'task_state': ''}])
 
             def touch(filename):

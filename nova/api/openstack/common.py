@@ -48,25 +48,26 @@ _STATE_MAP = {
         task_states.REBOOTING: 'REBOOT',
         task_states.REBOOTING_HARD: 'HARD_REBOOT',
         task_states.UPDATING_PASSWORD: 'PASSWORD',
-        task_states.RESIZE_VERIFY: 'VERIFY_RESIZE',
+        task_states.REBUILDING: 'REBUILD',
+        task_states.REBUILD_BLOCK_DEVICE_MAPPING: 'REBUILD',
+        task_states.REBUILD_SPAWNING: 'REBUILD',
+        task_states.MIGRATING: 'MIGRATING',
+        task_states.RESIZE_PREP: 'RESIZE',
+        task_states.RESIZE_MIGRATING: 'RESIZE',
+        task_states.RESIZE_MIGRATED: 'RESIZE',
+        task_states.RESIZE_FINISH: 'RESIZE',
     },
     vm_states.BUILDING: {
         'default': 'BUILD',
     },
-    vm_states.REBUILDING: {
-        'default': 'REBUILD',
-    },
     vm_states.STOPPED: {
         'default': 'STOPPED',
     },
-    vm_states.SHUTOFF: {
-        'default': 'SHUTOFF',
-    },
-    vm_states.MIGRATING: {
-        'default': 'MIGRATING',
-    },
-    vm_states.RESIZING: {
-        'default': 'RESIZE',
+    vm_states.RESIZED: {
+        'default': 'VERIFY_RESIZE',
+        # Note(maoy): the OS API spec 1.1 doesn't have CONFIRMING_RESIZE
+        # state so we comment that out for future reference only.
+        #task_states.RESIZE_CONFIRMING: 'CONFIRMING_RESIZE',
         task_states.RESIZE_REVERTING: 'REVERT_RESIZE',
     },
     vm_states.PAUSED: {
@@ -84,7 +85,7 @@ _STATE_MAP = {
     vm_states.DELETED: {
         'default': 'DELETED',
     },
-    vm_states.SOFT_DELETE: {
+    vm_states.SOFT_DELETED: {
         'default': 'DELETED',
     },
 }

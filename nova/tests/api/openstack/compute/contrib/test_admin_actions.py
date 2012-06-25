@@ -58,7 +58,8 @@ def fake_compute_api_raises_invalid_state(*args, **kwargs):
 
 
 def fake_compute_api_get(self, context, instance_id):
-    return {'id': 1, 'uuid': instance_id, 'vm_state': vm_states.ACTIVE}
+    return {'id': 1, 'uuid': instance_id, 'vm_state': vm_states.ACTIVE,
+            'task_state': None}
 
 
 def fake_scheduler_api_live_migration(self, context, block_migration,
