@@ -26,7 +26,7 @@ from nova import utils
 
 
 iscsi_helper_opt = cfg.StrOpt('iscsi_helper',
-                              default='ietadm',
+                              default='tgtadm',
                               help='iscsi target user-land tool to use')
 
 FLAGS = flags.FLAGS
