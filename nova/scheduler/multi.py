@@ -35,6 +35,9 @@ multi_scheduler_opts = [
     cfg.StrOpt('volume_scheduler_driver',
                default='nova.scheduler.chance.ChanceScheduler',
                help='Driver to use for scheduling volume calls'),
+    cfg.StrOpt('default_scheduler_driver',
+               default='nova.scheduler.chance.ChanceScheduler',
+               help='Default driver to use for scheduling calls'),
     ]
 
 FLAGS = flags.FLAGS
@@ -60,9 +63,12 @@ class MultiScheduler(driver.Scheduler):
                 FLAGS.compute_scheduler_driver)
         volume_driver = importutils.import_object(
                 FLAGS.volume_scheduler_driver)
+        default_driver = importutils.import_object(
+                FLAGS.default_scheduler_driver)
 
         self.drivers = {'compute': compute_driver,
-                        'volume': volume_driver}
+                        'volume': volume_driver,
+                        'default': default_driver}
 
     def __getattr__(self, key):
         if not key.startswith('schedule_'):
@@ -73,7 +79,8 @@ class MultiScheduler(driver.Scheduler):
         return getattr(self.drivers[_METHOD_MAP[method]], key)
 
     def schedule(self, context, topic, method, *_args, **_kwargs):
-        return self.drivers[topic].schedule(context, topic,
+        driver = self.drivers.get(topic, self.drivers['default'])
+        return driver.schedule(context, topic,
                 method, *_args, **_kwargs)
 
     def schedule_run_instance(self, *args, **kwargs):
