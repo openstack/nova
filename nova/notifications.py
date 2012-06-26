@@ -158,7 +158,7 @@ def bandwidth_usage(instance_ref, audit_start,
     admin_context = nova.context.get_admin_context(read_deleted='yes')
 
     if (instance_ref.get('info_cache') and
-        instance_ref['info_cache'].get('network_info')):
+        instance_ref['info_cache'].get('network_info') is not None):
 
         cached_info = instance_ref['info_cache']['network_info']
         nw_info = network_model.NetworkInfo.hydrate(cached_info)
