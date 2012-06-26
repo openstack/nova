@@ -89,7 +89,7 @@ class RootwrapTestCase(test.TestCase):
         self.assertFalse(f.match(usercmd) or f2.match(usercmd))
         usercmd = ['kill', p.pid]
         # Providing no signal should work
-        self.assertTrue(f.match(usercmd))
+        self.assertTrue(f.match(usercmd) or f2.match(usercmd))
 
     def test_KillFilter_no_raise(self):
         """Makes sure ValueError from bug 926412 is gone"""
