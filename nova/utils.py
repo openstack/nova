@@ -114,11 +114,6 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
         return server_sess
 
 
-def fetchfile(url, target):
-    LOG.debug(_('Fetching %s') % url)
-    execute('curl', '--fail', url, '-o', target)
-
-
 def execute(*cmd, **kwargs):
     """Helper method to execute command with optional retry.
 
