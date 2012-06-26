@@ -1036,19 +1036,6 @@ def generate_image_url(image_ref):
 
 
 @contextlib.contextmanager
-def logging_error(message):
-    """Catches exception, write message to the log, re-raise.
-    This is a common refinement of save_and_reraise that writes a specific
-    message to the log.
-    """
-    try:
-        yield
-    except Exception as error:
-        with excutils.save_and_reraise_exception():
-            LOG.exception(message)
-
-
-@contextlib.contextmanager
 def remove_path_on_error(path):
     """Protect code that wants to operate on PATH atomically.
     Any exception will cause PATH to be removed.
