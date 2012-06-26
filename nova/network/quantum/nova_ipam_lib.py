@@ -47,10 +47,6 @@ class QuantumNovaIPAMLib(object):
         """
         self.net_manager = net_manager
 
-        # NOTE(s0mik) : If DHCP is not in use, we need to timeout IPs
-        # periodically.  See comment in deallocate_ips_by_vif for more
-        self.net_manager.timeout_fixed_ips = not self.net_manager.DHCP
-
     def create_subnet(self, context, label, tenant_id,
                       quantum_net_id, priority, cidr=None,
                       gateway=None, gateway_v6=None, cidr_v6=None,
@@ -224,16 +220,12 @@ class QuantumNovaIPAMLib(object):
         # be disassociated with the instance-id by a call to one of two
         # methods inherited from FlatManager:
         # - if DHCP is in use, a lease expiring in dnsmasq triggers
-        #   a call to release_fixed_ip in the network manager.
-        # - otherwise, _disassociate_stale_fixed_ips is called periodically
-        #   to disassociate all fixed ips that are unallocated
-        #   but still associated with an instance-id.
+        #   a call to release_fixed_ip in the network manager, or it will
+        #   be timed out periodically if the lease fails.
+        # - otherwise, we release the ip immediately
 
         read_deleted_context = admin_context.elevated(read_deleted='yes')
         for fixed_ip in fixed_ips:
-            db.fixed_ip_update(admin_context, fixed_ip['address'],
-                               {'allocated': False,
-                                'virtual_interface_id': None})
             fixed_id = fixed_ip['id']
             floating_ips = self.net_manager.db.floating_ip_get_by_fixed_ip_id(
                                 admin_context,
@@ -252,6 +244,11 @@ class QuantumNovaIPAMLib(object):
                         read_deleted_context,
                         address,
                         affect_auto_assigned=True)
+            db.fixed_ip_update(admin_context, fixed_ip['address'],
+                               {'allocated': False,
+                                'virtual_interface_id': None})
+            if not self.net_manager.DHCP:
+                db.fixed_ip_disassociate(admin_context, fixed_ip['address'])
 
         if len(fixed_ips) == 0:
             LOG.error(_('No fixed IPs to deallocate for vif %s'),
