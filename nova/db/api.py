@@ -1154,6 +1154,11 @@ def get_snapshot_uuid_by_ec2_id(context, ec2_id):
 def get_ec2_snapshot_id_by_uuid(context, snapshot_id):
     return IMPL.get_ec2_snapshot_id_by_uuid(context, snapshot_id)
 
+
+def ec2_snapshot_create(context, snapshot_id, forced_id=None):
+    return IMPL.ec2_snapshot_create(context, snapshot_id, forced_id)
+
+
 ####################
 
 

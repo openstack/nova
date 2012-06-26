@@ -401,6 +401,16 @@ class DbApiTestCase(test.TestCase):
         result = db.fixed_ip_disassociate_all_by_timeout(ctxt, 'bar', now)
         self.assertEqual(result, 0)
 
+    def test_get_vol_mapping_non_admin(self):
+        ref = db.ec2_volume_create(self.context, 'fake-uuid')
+        ec2_id = db.get_ec2_volume_id_by_uuid(self.context, 'fake-uuid')
+        self.assertEqual(ref['id'], ec2_id)
+
+    def test_get_snap_mapping_non_admin(self):
+        ref = db.ec2_snapshot_create(self.context, 'fake-uuid')
+        ec2_id = db.get_ec2_snapshot_id_by_uuid(self.context, 'fake-uuid')
+        self.assertEqual(ref['id'], ec2_id)
+
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate',
