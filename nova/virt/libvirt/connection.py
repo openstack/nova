@@ -1514,7 +1514,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if FLAGS.libvirt_type == "lxc":
             fs = config.LibvirtConfigGuestFilesys()
-            fs.type = "mount"
+            fs.source_type = "mount"
             fs.source_dir = os.path.join(FLAGS.instances_path,
                                          instance['name'],
                                          "rootfs")
