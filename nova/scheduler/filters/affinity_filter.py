@@ -18,7 +18,6 @@
 import netaddr
 
 from nova.compute import api as compute
-from nova import flags
 from nova.scheduler import filters
 
 
@@ -39,6 +38,8 @@ class DifferentHostFilter(AffinityFilter):
         me = host_state.host
 
         affinity_uuids = scheduler_hints.get('different_host', [])
+        if isinstance(affinity_uuids, basestring):
+            affinity_uuids = [affinity_uuids]
         if affinity_uuids:
             return not any([i for i in affinity_uuids
                               if self._affinity_host(context, i) == me])
@@ -57,6 +58,8 @@ class SameHostFilter(AffinityFilter):
         me = host_state.host
 
         affinity_uuids = scheduler_hints.get('same_host', [])
+        if isinstance(affinity_uuids, basestring):
+            affinity_uuids = [affinity_uuids]
         if affinity_uuids:
             return any([i for i
                           in affinity_uuids
