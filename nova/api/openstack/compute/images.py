@@ -177,8 +177,8 @@ class Controller(wsgi.Controller):
             params[key] = val
 
         try:
-            images = self._image_service.index(context, filters=filters,
-                                               **page_params)
+            images = self._image_service.detail(context, filters=filters,
+                                                **page_params)
         except exception.Invalid as e:
             raise webob.exc.HTTPBadRequest(explanation=str(e))
         return self._view_builder.index(req, images)

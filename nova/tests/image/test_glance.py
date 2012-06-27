@@ -173,12 +173,12 @@ class TestGlanceImageService(test.TestCase):
 
     def test_create(self):
         fixture = self._make_fixture(name='test image')
-        num_images = len(self.service.index(self.context))
+        num_images = len(self.service.detail(self.context))
         image_id = self.service.create(self.context, fixture)['id']
 
         self.assertNotEquals(None, image_id)
         self.assertEquals(num_images + 1,
-                          len(self.service.index(self.context)))
+                          len(self.service.detail(self.context)))
 
     def test_create_and_show_non_existing_image(self):
         fixture = self._make_fixture(name='test image')
@@ -190,102 +190,24 @@ class TestGlanceImageService(test.TestCase):
                           self.context,
                           'bad image id')
 
-    def test_index(self):
-        fixture = self._make_fixture(name='test image')
-        image_id = self.service.create(self.context, fixture)['id']
-        image_metas = self.service.index(self.context)
-        expected = [{'id': image_id, 'name': 'test image'}]
-        self.assertDictListMatch(image_metas, expected)
-
-    def test_index_default_limit(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        image_metas = self.service.index(self.context)
-        i = 0
-        for meta in image_metas:
-            expected = {'id': 'DONTCARE',
-                        'name': 'TestImage %d' % (i)}
-            self.assertDictMatch(meta, expected)
-            i = i + 1
-
-    def test_index_marker(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        image_metas = self.service.index(self.context, marker=ids[1])
-        self.assertEquals(len(image_metas), 8)
-        i = 2
-        for meta in image_metas:
-            expected = {'id': 'DONTCARE',
-                        'name': 'TestImage %d' % (i)}
-            self.assertDictMatch(meta, expected)
-            i = i + 1
-
-    def test_index_limit(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        image_metas = self.service.index(self.context, limit=5)
-        self.assertEquals(len(image_metas), 5)
-
-    def test_index_marker_and_limit(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        image_metas = self.service.index(self.context, marker=ids[3], limit=1)
-        self.assertEquals(len(image_metas), 1)
-        i = 4
-        for meta in image_metas:
-            expected = {'id': ids[i],
-                        'name': 'TestImage %d' % (i)}
-            self.assertDictMatch(meta, expected)
-            i = i + 1
-
-    def test_index_invalid_marker(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        self.assertRaises(exception.Invalid, self.service.index,
-                          self.context, marker='invalidmarker')
-
-    def test_index_private_image(self):
+    def test_detail_private_image(self):
         fixture = self._make_fixture(name='test image')
         fixture['is_public'] = False
         properties = {'owner_id': 'proj1'}
         fixture['properties'] = properties
 
-        image_id = self.service.create(self.context, fixture)['id']
+        self.service.create(self.context, fixture)['id']
 
         proj = self.context.project_id
         self.context.project_id = 'proj1'
 
-        image_metas = self.service.index(self.context)
+        image_metas = self.service.detail(self.context)
 
         self.context.project_id = proj
 
-        expected = [{'id': 'DONTCARE', 'name': 'test image'}]
-        self.assertDictListMatch(image_metas, expected)
+        self.assertEqual(1, len(image_metas))
+        self.assertEqual(image_metas[0]['name'], 'test image')
+        self.assertEqual(image_metas[0]['is_public'], False)
 
     def test_detail_marker(self):
         fixtures = []
@@ -331,6 +253,18 @@ class TestGlanceImageService(test.TestCase):
 
         image_metas = self.service.detail(self.context, limit=5)
         self.assertEquals(len(image_metas), 5)
+
+    def test_detail_default_limit(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture(name='TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.detail(self.context)
+        for i, meta in enumerate(image_metas):
+            self.assertEqual(meta['name'], 'TestImage %d' % (i))
 
     def test_detail_marker_and_limit(self):
         fixtures = []
@@ -390,20 +324,20 @@ class TestGlanceImageService(test.TestCase):
         fixture2 = self._make_fixture(name='test image 2')
         fixtures = [fixture1, fixture2]
 
-        num_images = len(self.service.index(self.context))
-        self.assertEquals(0, num_images, str(self.service.index(self.context)))
+        num_images = len(self.service.detail(self.context))
+        self.assertEquals(0, num_images)
 
         ids = []
         for fixture in fixtures:
             new_id = self.service.create(self.context, fixture)['id']
             ids.append(new_id)
 
-        num_images = len(self.service.index(self.context))
-        self.assertEquals(2, num_images, str(self.service.index(self.context)))
+        num_images = len(self.service.detail(self.context))
+        self.assertEquals(2, num_images)
 
         self.service.delete(self.context, ids[0])
 
-        num_images = len(self.service.index(self.context))
+        num_images = len(self.service.detail(self.context))
         self.assertEquals(1, num_images)
 
     def test_delete_not_by_owner(self):
@@ -414,11 +348,11 @@ class TestGlanceImageService(test.TestCase):
         properties = {'project_id': 'proj1'}
         fixture['properties'] = properties
 
-        num_images = len(self.service.index(self.context))
+        num_images = len(self.service.detail(self.context))
         self.assertEquals(0, num_images)
 
         image_id = self.service.create(self.context, fixture)['id']
-        num_images = len(self.service.index(self.context))
+        num_images = len(self.service.detail(self.context))
         self.assertEquals(1, num_images)
 
         proj_id = self.context.project_id
@@ -429,7 +363,7 @@ class TestGlanceImageService(test.TestCase):
 
         self.context.project_id = proj_id
 
-        num_images = len(self.service.index(self.context))
+        num_images = len(self.service.detail(self.context))
         self.assertEquals(1, num_images)
 
     def test_show_passes_through_to_client(self):

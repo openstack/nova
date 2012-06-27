@@ -156,21 +156,6 @@ class GlanceImageService(object):
         raise exception.GlanceConnectionFailed(
                 reason=_('Maximum attempts reached'))
 
-    def index(self, context, **kwargs):
-        """Calls out to Glance for a list of images available."""
-        params = self._extract_query_params(kwargs)
-        image_metas = self._get_images(context, **params)
-
-        images = []
-        for image_meta in image_metas:
-            # NOTE(sirp): We need to use `get_images_detailed` and not
-            # `get_images` here because we need `is_public` and `properties`
-            # included so we can filter by user
-            if self._is_image_available(context, image_meta):
-                meta_subset = utils.subset_dict(image_meta, ('id', 'name'))
-                images.append(meta_subset)
-        return images
-
     def detail(self, context, **kwargs):
         """Calls out to Glance for a list of detailed image information."""
         params = self._extract_query_params(kwargs)
