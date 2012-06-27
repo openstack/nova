@@ -88,6 +88,7 @@ class Mount(mount.Mount):
     def unmnt_dev(self):
         if not self.mounted:
             return
+        utils.execute('sync')
         # root users don't need a specific unmnt_dev()
         # but ordinary users do
         utils.execute('fusermount', '-u', self.mount_dir, run_as_root=True)
