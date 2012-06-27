@@ -97,6 +97,7 @@
     "compute_extension:floating_ip_pools": [],
     "compute_extension:floating_ips": [],
     "compute_extension:hosts": [],
+    "compute_extension:hypervisors": [],
     "compute_extension:keypairs": [],
     "compute_extension:multinic": [],
     "compute_extension:networks": [],

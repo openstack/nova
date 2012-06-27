@@ -188,9 +188,19 @@ def service_update(context, service_id, values):
 ###################
 
 
+def compute_node_get(context, compute_id):
+    """Get a computeNode."""
+    return IMPL.compute_node_get(context, compute_id)
+
+
 def compute_node_get_all(context):
     """Get all computeNodes."""
     return IMPL.compute_node_get_all(context)
+
+
+def compute_node_search_by_hypervisor(context, hypervisor_match):
+    """Get computeNodes given a hypervisor hostname match string."""
+    return IMPL.compute_node_search_by_hypervisor(context, hypervisor_match)
 
 
 def compute_node_create(context, values):
