@@ -28,6 +28,7 @@ import time
 import uuid
 
 from eventlet import greenthread
+import netaddr
 
 from nova.compute import api as compute
 from nova.compute import power_state
