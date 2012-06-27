@@ -250,14 +250,6 @@ class GlanceImageService(object):
         base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
-    def show_by_name(self, context, name):
-        """Returns a dict containing image data for the given name."""
-        image_metas = self.detail(context, filters={'name': name})
-        try:
-            return image_metas[0]
-        except (IndexError, TypeError):
-            raise exception.ImageNotFound(image_id=name)
-
     def get(self, context, image_id, data):
         """Calls out to Glance for metadata and data and writes data."""
         try:

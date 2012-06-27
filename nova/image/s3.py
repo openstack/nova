@@ -142,19 +142,16 @@ class S3ImageService(object):
         images = self.service.index(context, sort_dir='asc')
         return self._translate_uuids_to_ids(context, images)
 
-    def detail(self, context):
+    def detail(self, context, **kwargs):
         #NOTE(bcwaldon): sort asc to make sure we assign lower ids
         # to older images
-        images = self.service.detail(context, sort_dir='asc')
+        kwargs.setdefault('sort_dir', 'asc')
+        images = self.service.detail(context, **kwargs)
         return self._translate_uuids_to_ids(context, images)
 
     def show(self, context, image_id):
         image_uuid = ec2utils.id_to_glance_id(context, image_id)
         image = self.service.show(context, image_uuid)
-        return self._translate_uuid_to_id(context, image)
-
-    def show_by_name(self, context, name):
-        image = self.service.show_by_name(context, name)
         return self._translate_uuid_to_id(context, image)
 
     @staticmethod

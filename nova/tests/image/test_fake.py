@@ -77,12 +77,6 @@ class FakeImageServiceTestCase(test.TestCase):
                           self.context,
                           'this image does not exist')
 
-    def test_show_by_name(self):
-        self.assertRaises(exception.ImageNotFound,
-                          self.image_service.show_by_name,
-                          self.context,
-                          'this image does not exist')
-
     def test_create_adds_id(self):
         index = self.image_service.index(self.context)
         image_count = len(index)

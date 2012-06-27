@@ -80,9 +80,14 @@ class EC2ValidateTestCase(test.TestCase):
                         'type': 'machine',
                         'image_state': 'available'}}
 
+        def fake_detail(self, context, **kwargs):
+            image = fake_show(self, context, None)
+            image['name'] = kwargs.get('name')
+            return [image]
+
         fake.stub_out_image_service(self.stubs)
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
-        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
 
         # NOTE(comstud): Make 'cast' behave like a 'call' which will
         # ensure that operations complete
