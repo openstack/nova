@@ -336,6 +336,37 @@ def _inject_metadata_into_fs(metadata, fs):
     _inject_file_into_fs(fs, 'meta.js', jsonutils.dumps(metadata))
 
 
+def _setup_selinux_for_keys(fs):
+    """Get selinux guests to ensure correct context on injected keys."""
+
+    se_cfg = _join_and_check_path_within_fs(fs, 'etc', 'selinux')
+    se_cfg, _err = utils.trycmd('readlink', '-e', se_cfg, run_as_root=True)
+    if not se_cfg:
+        return
+
+    rclocal = _join_and_check_path_within_fs(fs, 'etc', 'rc.local')
+
+    # Support systemd based systems
+    rc_d = _join_and_check_path_within_fs(fs, 'etc', 'rc.d')
+    rclocal_e, _err = utils.trycmd('readlink', '-e', rclocal, run_as_root=True)
+    rc_d_e, _err = utils.trycmd('readlink', '-e', rc_d, run_as_root=True)
+    if not rclocal_e and rc_d_e:
+        rclocal = os.path.join(rc_d, 'rc.local')
+
+    # Note some systems end rc.local with "exit 0"
+    # and so to append there you'd need something like:
+    #  utils.execute('sed', '-i', '${/^exit 0$/d}' rclocal, run_as_root=True)
+    restorecon = [
+        '#!/bin/sh\n',
+        '# Added by Nova to ensure injected ssh keys have the right context\n',
+        'restorecon -RF /root/.ssh/ 2>/dev/null || :\n',
+    ]
+
+    rclocal_rel = os.path.relpath(rclocal, fs)
+    _inject_file_into_fs(fs, rclocal_rel, ''.join(restorecon), append=True)
+    utils.execute('chmod', 'a+x', rclocal, run_as_root=True)
+
+
 def _inject_key_into_fs(key, fs):
     """Add the given public ssh key to root's authorized_keys.
 
@@ -358,6 +389,8 @@ def _inject_key_into_fs(key, fs):
     ])
 
     _inject_file_into_fs(fs, keyfile, key_data, append=True)
+
+    _setup_selinux_for_keys(fs)
 
 
 def _inject_net_into_fs(net, fs):
