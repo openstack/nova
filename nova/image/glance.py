@@ -452,7 +452,7 @@ def _convert_to_string(metadata):
 
 
 def _limit_attributes(image_meta):
-    IMAGE_ATTRIBUTES = ['size', 'disk_format',
+    IMAGE_ATTRIBUTES = ['size', 'disk_format', 'owner',
                         'container_format', 'checksum', 'id',
                         'name', 'created_at', 'updated_at',
                         'deleted_at', 'deleted', 'status',
