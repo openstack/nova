@@ -659,9 +659,6 @@ class Controller(wsgi.Controller):
         self._validate_user_data(user_data)
 
         availability_zone = server_dict.get('availability_zone')
-        name = server_dict['name']
-        self._validate_server_name(name)
-        name = name.strip()
 
         block_device_mapping = self._get_block_device_mapping(server_dict)
 
