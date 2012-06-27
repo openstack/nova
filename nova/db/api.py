@@ -563,9 +563,9 @@ def instance_get(context, instance_id):
     return IMPL.instance_get(context, instance_id)
 
 
-def instance_get_all(context):
+def instance_get_all(context, columns_to_join=None):
     """Get all instances."""
-    return IMPL.instance_get_all(context)
+    return IMPL.instance_get_all(context, columns_to_join=columns_to_join)
 
 
 def instance_get_all_by_filters(context, filters, sort_key='created_at',

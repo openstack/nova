@@ -1455,13 +1455,14 @@ def _build_instance_get(context, session=None):
 
 
 @require_admin_context
-def instance_get_all(context):
-    return model_query(context, models.Instance).\
-                   options(joinedload('info_cache')).\
-                   options(joinedload('security_groups')).\
-                   options(joinedload('metadata')).\
-                   options(joinedload('instance_type')).\
-                   all()
+def instance_get_all(context, columns_to_join=None):
+    if columns_to_join is None:
+        columns_to_join = ['info_cache', 'security_groups',
+                           'metadata', 'instance_type']
+    query = model_query(context, models.Instance)
+    for column in columns_to_join:
+        query = query.options(joinedload(column))
+    return query.all()
 
 
 @require_context

@@ -250,7 +250,9 @@ class HostManagerTestCase(test.TestCase):
         db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # Invalid service
         host_manager.LOG.warn("No service for compute ID 5")
-        db.instance_get_all(context).AndReturn(fakes.INSTANCES)
+        db.instance_get_all(context,
+                columns_to_join=['instance_type']).AndReturn(
+                        fakes.INSTANCES)
 
         self.mox.ReplayAll()
         host_states = self.host_manager.get_all_host_states(context, topic)

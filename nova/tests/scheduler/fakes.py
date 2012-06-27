@@ -139,4 +139,5 @@ def mox_host_manager_db_calls(mock, context):
     mock.StubOutWithMock(db, 'instance_get_all')
 
     db.compute_node_get_all(mox.IgnoreArg()).AndReturn(COMPUTE_NODES)
-    db.instance_get_all(mox.IgnoreArg()).AndReturn(INSTANCES)
+    db.instance_get_all(mox.IgnoreArg(),
+            columns_to_join=['instance_type']).AndReturn(INSTANCES)

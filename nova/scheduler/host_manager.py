@@ -333,7 +333,8 @@ class HostManager(object):
             host_state_map[host] = host_state
 
         # "Consume" resources from the host the instance resides on.
-        instances = db.instance_get_all(context)
+        instances = db.instance_get_all(context,
+                columns_to_join=['instance_type'])
         for instance in instances:
             host = instance['host']
             if not host:
