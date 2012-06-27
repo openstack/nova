@@ -124,6 +124,19 @@ class HostFiltersTestCase(test.TestCase):
 
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
+    def test_affinity_different_filter_no_list_passes(self):
+        filt_cls = self.class_map['DifferentHostFilter']()
+        host = fakes.FakeHostState('host1', 'compute', {})
+        instance = fakes.FakeInstance(context=self.context,
+                                         params={'host': 'host2'})
+        instance_uuid = instance.uuid
+
+        filter_properties = {'context': self.context.elevated(),
+                             'scheduler_hints': {
+                                 'different_host': instance_uuid}}
+
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
     def test_affinity_different_filter_fails(self):
         filt_cls = self.class_map['DifferentHostFilter']()
         host = fakes.FakeHostState('host1', 'compute', {})
@@ -146,6 +159,19 @@ class HostFiltersTestCase(test.TestCase):
 
         filter_properties = {'context': self.context.elevated(),
                              'scheduler_hints': None}
+
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_affinity_same_filter_no_list_passes(self):
+        filt_cls = self.class_map['SameHostFilter']()
+        host = fakes.FakeHostState('host1', 'compute', {})
+        instance = fakes.FakeInstance(context=self.context,
+                                         params={'host': 'host1'})
+        instance_uuid = instance.uuid
+
+        filter_properties = {'context': self.context.elevated(),
+                             'scheduler_hints': {
+                                 'same_host': instance_uuid}}
 
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
