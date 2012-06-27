@@ -82,10 +82,11 @@ def stubout_get_this_vm_uuid(stubs):
     stubs.Set(vm_utils, 'get_this_vm_uuid', f)
 
 
-def stubout_image_service_get(stubs):
-    def fake_get(*args, **kwargs):
+def stubout_image_service_download(stubs):
+    def fake_download(*args, **kwargs):
         pass
-    stubs.Set(nova.tests.image.fake._FakeImageService, 'get', fake_get)
+    stubs.Set(nova.tests.image.fake._FakeImageService,
+        'download', fake_download)
 
 
 def stubout_stream_disk(stubs):

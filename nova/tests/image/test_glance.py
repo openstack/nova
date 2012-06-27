@@ -453,15 +453,7 @@ class TestGlanceImageService(test.TestCase):
         self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
         self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
 
-    def test_get_makes_datetimes(self):
-        fixture = self._make_datetime_fixture()
-        image_id = self.service.create(self.context, fixture)['id']
-        writer = NullWriter()
-        image_meta = self.service.get(self.context, image_id, writer)
-        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
-        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
-
-    def test_get_with_retries(self):
+    def test_download_with_retries(self):
         tries = [0]
 
         class GlanceBusyException(Exception):
@@ -483,12 +475,12 @@ class TestGlanceImageService(test.TestCase):
 
         # When retries are disabled, we should get an exception
         self.flags(glance_num_retries=0)
-        self.assertRaises(GlanceBusyException, service.get, self.context,
+        self.assertRaises(GlanceBusyException, service.download, self.context,
                           image_id, writer)
 
         # Now lets enable retries. No exception should happen now.
         self.flags(glance_num_retries=1)
-        service.get(self.context, image_id, writer)
+        service.download(self.context, image_id, writer)
 
     def test_client_raises_forbidden(self):
         class MyGlanceStubClient(glance_stubs.StubGlanceClient):
@@ -500,7 +492,7 @@ class TestGlanceImageService(test.TestCase):
         service = glance.GlanceImageService(client=client)
         image_id = 1  # doesn't matter
         writer = NullWriter()
-        self.assertRaises(exception.ImageNotAuthorized, service.get,
+        self.assertRaises(exception.ImageNotAuthorized, service.download,
                           self.context, image_id, writer)
 
     def test_glance_client_image_id(self):
