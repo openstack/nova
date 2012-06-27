@@ -134,6 +134,7 @@ class TestGlanceImageService(test.TestCase):
             'deleted': None,
             'status': None,
             'properties': {'instance_id': '42', 'user_id': 'fake'},
+            'owner': None,
         }
         self.assertDictMatch(image_meta, expected)
 
@@ -165,6 +166,7 @@ class TestGlanceImageService(test.TestCase):
             'deleted': None,
             'status': None,
             'properties': {},
+            'owner': None,
         }
         actual = self.service.show(self.context, image_id)
         self.assertDictMatch(actual, expected)
@@ -318,7 +320,8 @@ class TestGlanceImageService(test.TestCase):
                 'created_at': self.NOW_DATETIME,
                 'updated_at': self.NOW_DATETIME,
                 'deleted_at': None,
-                'deleted': None
+                'deleted': None,
+                'owner': None,
             }
 
             self.assertDictMatch(meta, expected)
@@ -362,7 +365,8 @@ class TestGlanceImageService(test.TestCase):
                 'created_at': self.NOW_DATETIME,
                 'updated_at': self.NOW_DATETIME,
                 'deleted_at': None,
-                'deleted': None
+                'deleted': None,
+                'owner': None,
             }
             self.assertDictMatch(meta, expected)
             i = i + 1
@@ -455,6 +459,7 @@ class TestGlanceImageService(test.TestCase):
             'deleted': None,
             'status': None,
             'properties': {},
+            'owner': None,
         }
         self.assertEqual(image_meta, expected)
 
@@ -501,6 +506,7 @@ class TestGlanceImageService(test.TestCase):
                 'deleted': None,
                 'status': None,
                 'properties': {},
+                'owner': None,
             },
         ]
         self.assertEqual(image_metas, expected)
