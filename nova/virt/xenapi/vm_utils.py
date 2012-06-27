@@ -322,7 +322,7 @@ def create_vdi(session, sr_ref, info, disk_type, virtual_size,
     # hence information about instance may or may not be present
     otherconf = {}
     if not isinstance(info, basestring):
-        name_label = info['display_name']
+        name_label = info['name']
         otherconf = {'nova_instance_uuid': info['uuid'],
                      'nova_disk_type': disk_type}
     else:
