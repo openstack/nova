@@ -98,27 +98,30 @@ function run_tests {
   return $RESULT
 }
 
-# Files of interest
-# NOTE(lzyeval): Avoid selecting nova-api-paste.ini and nova.conf in nova/bin
-#                when running on devstack.
-# NOTE(lzyeval): Avoid selecting *.pyc files to reduce pep8 check-up time
-#                when running on devstack.
-# NOTE(dprince): Exclude xenapi plugins. They are Python 2.4 code and as such
-#                cannot be expected to work with tools/hacking checks.
-xen_net_path="plugins/xenserver/networking/etc/xensource/scripts"
-srcfiles=`find nova -type f -name "*.py"`
-srcfiles+=" `find bin -type f ! -name "nova.conf*" ! -name "*api-paste.ini*"`"
-srcfiles+=" `find tools -type f -name "*.py"`"
-srcfiles+=" setup.py"
 
 function run_pep8 {
   echo "Running PEP8 and HACKING compliance check..."
-  # Just run PEP8 in current environment
-  #
+
+  # Files of interest
+  # NOTE(lzyeval): Avoid selecting nova-api-paste.ini and nova.conf in nova/bin
+  #                when running on devstack.
+  # NOTE(lzyeval): Avoid selecting *.pyc files to reduce pep8 check-up time
+  #                when running on devstack.
+  srcfiles=`find nova -type f -name "*.py"`
+  srcfiles+=" `find bin -type f ! -name "nova.conf*" ! -name "*api-paste.ini*"`"
+  srcfiles+=" `find tools -type f -name "*.py"`"
+  srcfiles+=" setup.py"
 
   # Until all these issues get fixed, ignore.
   ignore='--ignore=N4'
+
   ${wrapper} python tools/hacking.py ${ignore} ${srcfiles}
+
+  # NOTE(sirp): Dom0 plugins are written for Python 2.4, meaning some HACKING
+  #             checks are too strict.
+  pep8onlyfiles=`find plugins -type f -name "*.py"`
+  pep8onlyfiles+=" `find plugins/xenserver/xenapi/etc/xapi.d/plugins/ -type f -executable`"
+  ${wrapper} pep8 ${pep8onlyfiles}
 }
 
 
