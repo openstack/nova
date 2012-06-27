@@ -2949,15 +2949,13 @@ def _volume_get_query(context, session=None, project_only=False):
 
 
 @require_context
-def _ec2_volume_get_query(context, session=None, project_only=False):
-    return model_query(context, models.VolumeIdMapping, session=session,
-                       project_only=project_only)
+def _ec2_volume_get_query(context, session=None):
+    return model_query(context, models.VolumeIdMapping, session=session)
 
 
 @require_context
-def _ec2_snapshot_get_query(context, session=None, project_only=False):
-    return model_query(context, models.SnapshotIdMapping, session=session,
-                       project_only=project_only)
+def _ec2_snapshot_get_query(context, session=None):
+    return model_query(context, models.SnapshotIdMapping, session=session)
 
 
 @require_context
@@ -3046,9 +3044,7 @@ def ec2_volume_create(context, volume_uuid, id=None):
 
 @require_context
 def get_ec2_volume_id_by_uuid(context, volume_id, session=None):
-    result = _ec2_volume_get_query(context,
-                                   session=session,
-                                   project_only=True).\
+    result = _ec2_volume_get_query(context, session=session).\
                     filter_by(uuid=volume_id).\
                     first()
 
@@ -3060,9 +3056,7 @@ def get_ec2_volume_id_by_uuid(context, volume_id, session=None):
 
 @require_context
 def get_volume_uuid_by_ec2_id(context, ec2_id, session=None):
-    result = _ec2_volume_get_query(context,
-                                   session=session,
-                                   project_only=True).\
+    result = _ec2_volume_get_query(context, session=session).\
                     filter_by(id=ec2_id).\
                     first()
 
@@ -3087,9 +3081,7 @@ def ec2_snapshot_create(context, snapshot_uuid, id=None):
 
 @require_context
 def get_ec2_snapshot_id_by_uuid(context, snapshot_id, session=None):
-    result = _ec2_snapshot_get_query(context,
-                                   session=session,
-                                   project_only=True).\
+    result = _ec2_snapshot_get_query(context, session=session).\
                     filter_by(uuid=snapshot_id).\
                     first()
 
@@ -3101,9 +3093,7 @@ def get_ec2_snapshot_id_by_uuid(context, snapshot_id, session=None):
 
 @require_context
 def get_snapshot_uuid_by_ec2_id(context, ec2_id, session=None):
-    result = _ec2_snapshot_get_query(context,
-                                   session=session,
-                                   project_only=True).\
+    result = _ec2_snapshot_get_query(context, session=session).\
                     filter_by(id=ec2_id).\
                     first()
 
