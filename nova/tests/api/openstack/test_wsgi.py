@@ -75,6 +75,27 @@ class RequestTest(test.TestCase):
         result = request.best_match_content_type()
         self.assertEqual(result, "application/json")
 
+    def test_cache_and_retrieve_instances(self):
+        request = wsgi.Request.blank('/foo')
+        instances = []
+        for x in xrange(3):
+            instances.append({'uuid': 'uuid%s' % x})
+        # Store 2
+        request.cache_db_instances(instances[:2])
+        # Store 1
+        request.cache_db_instance(instances[2])
+        self.assertEqual(request.get_db_instance('uuid0'),
+                instances[0])
+        self.assertEqual(request.get_db_instance('uuid1'),
+                instances[1])
+        self.assertEqual(request.get_db_instance('uuid2'),
+                instances[2])
+        self.assertEqual(request.get_db_instance('uuid3'), None)
+        self.assertEqual(request.get_db_instances(),
+                {'uuid0': instances[0],
+                 'uuid1': instances[1],
+                 'uuid2': instances[2]})
+
 
 class ActionDispatcherTest(test.TestCase):
     def test_dispatch(self):
@@ -215,7 +236,7 @@ class ResourceTest(test.TestCase):
         expected = 'off'
         self.assertEqual(actual, expected)
 
-    def test_get_method_unknown_controller_action(self):
+    def test_get_method_unknown_controller_method(self):
         class Controller(object):
             def index(self, req, pants=None):
                 return pants

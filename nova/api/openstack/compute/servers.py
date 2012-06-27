@@ -461,16 +461,20 @@ class Controller(wsgi.Controller):
         limited_list = self._limit_items(instance_list, req)
         if is_detail:
             self._add_instance_faults(context, limited_list)
-            return self._view_builder.detail(req, limited_list)
+            response = self._view_builder.detail(req, limited_list)
         else:
-            return self._view_builder.index(req, limited_list)
+            response = self._view_builder.index(req, limited_list)
+        req.cache_db_instances(limited_list)
+        return response
 
-    def _get_server(self, context, instance_uuid):
+    def _get_server(self, context, req, instance_uuid):
         """Utility function for looking up an instance by uuid."""
         try:
-            return self.compute_api.get(context, instance_uuid)
+            instance = self.compute_api.get(context, instance_uuid)
         except exception.NotFound:
             raise exc.HTTPNotFound()
+        req.cache_db_instance(instance)
+        return instance
 
     def _validate_server_name(self, value):
         if not isinstance(value, basestring):
@@ -580,6 +584,7 @@ class Controller(wsgi.Controller):
         try:
             context = req.environ['nova.context']
             instance = self.compute_api.get(context, id)
+            req.cache_db_instance(instance)
             self._add_instance_faults(context, [instance])
             return self._view_builder.show(req, instance)
         except exception.NotFound:
@@ -732,6 +737,7 @@ class Controller(wsgi.Controller):
         if ret_resv_id:
             return {'reservation_id': resv_id}
 
+        req.cache_db_instances(instances)
         server = self._view_builder.create(req, instances[0])
 
         if '_is_precooked' in server['server'].keys():
@@ -744,8 +750,8 @@ class Controller(wsgi.Controller):
 
         return self._add_location(robj)
 
-    def _delete(self, context, id):
-        instance = self._get_server(context, id)
+    def _delete(self, context, req, instance_uuid):
+        instance = self._get_server(context, req, instance_uuid)
         if FLAGS.reclaim_instance_interval:
             self.compute_api.soft_delete(context, instance)
         else:
@@ -789,6 +795,7 @@ class Controller(wsgi.Controller):
 
         try:
             instance = self.compute_api.get(ctxt, id)
+            req.cache_db_instance(instance)
             self.compute_api.update(ctxt, instance, **update_dict)
         except exception.NotFound:
             raise exc.HTTPNotFound()
@@ -804,7 +811,7 @@ class Controller(wsgi.Controller):
     @wsgi.action('confirmResize')
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
-        instance = self._get_server(context, id)
+        instance = self._get_server(context, req, id)
         try:
             self.compute_api.confirm_resize(context, instance)
         except exception.MigrationNotFound:
@@ -824,7 +831,7 @@ class Controller(wsgi.Controller):
     @wsgi.action('revertResize')
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
-        instance = self._get_server(context, id)
+        instance = self._get_server(context, req, id)
         try:
             self.compute_api.revert_resize(context, instance)
         except exception.MigrationNotFound:
@@ -856,7 +863,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         context = req.environ['nova.context']
-        instance = self._get_server(context, id)
+        instance = self._get_server(context, req, id)
 
         try:
             self.compute_api.reboot(context, instance, reboot_type)
@@ -871,7 +878,7 @@ class Controller(wsgi.Controller):
     def _resize(self, req, instance_id, flavor_id, **kwargs):
         """Begin the resize process with given instance/flavor."""
         context = req.environ["nova.context"]
-        instance = self._get_server(context, instance_id)
+        instance = self._get_server(context, req, instance_id)
 
         try:
             self.compute_api.resize(context, instance, flavor_id, **kwargs)
@@ -891,7 +898,7 @@ class Controller(wsgi.Controller):
     def delete(self, req, id):
         """Destroys a server."""
         try:
-            self._delete(req.environ['nova.context'], id)
+            self._delete(req.environ['nova.context'], req, id)
         except exception.NotFound:
             raise exc.HTTPNotFound()
         except exception.InstanceInvalidState as state_error:
@@ -947,7 +954,7 @@ class Controller(wsgi.Controller):
         if not isinstance(password, basestring):
             msg = _("Invalid adminPass")
             raise exc.HTTPBadRequest(explanation=msg)
-        server = self._get_server(context, id)
+        server = self._get_server(context, req, id)
         self.compute_api.set_admin_password(context, server, password)
         return webob.Response(status_int=202)
 
@@ -1009,7 +1016,7 @@ class Controller(wsgi.Controller):
             password = utils.generate_password(FLAGS.password_length)
 
         context = req.environ['nova.context']
-        instance = self._get_server(context, id)
+        instance = self._get_server(context, req, id)
 
         attr_map = {
             'personality': 'files_to_inject',
@@ -1065,7 +1072,7 @@ class Controller(wsgi.Controller):
         except exception.InstanceTypeDiskTooSmall as error:
             raise exc.HTTPBadRequest(explanation=unicode(error))
 
-        instance = self._get_server(context, id)
+        instance = self._get_server(context, req, id)
 
         self._add_instance_faults(context, [instance])
         view = self._view_builder.show(req, instance)
@@ -1103,7 +1110,7 @@ class Controller(wsgi.Controller):
             msg = _("Invalid metadata")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        instance = self._get_server(context, id)
+        instance = self._get_server(context, req, id)
 
         try:
             image = self.compute_api.snapshot(context,

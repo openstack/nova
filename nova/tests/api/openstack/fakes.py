@@ -301,13 +301,13 @@ class FakeRequestContext(context.RequestContext):
         return super(FakeRequestContext, self).__init__(*args, **kwargs)
 
 
-class HTTPRequest(webob.Request):
+class HTTPRequest(os_wsgi.Request):
 
     @classmethod
     def blank(cls, *args, **kwargs):
         kwargs['base_url'] = 'http://localhost/v2'
         use_admin_context = kwargs.pop('use_admin_context', False)
-        out = webob.Request.blank(*args, **kwargs)
+        out = os_wsgi.Request.blank(*args, **kwargs)
         out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
                 is_admin=use_admin_context)
         return out

@@ -64,6 +64,52 @@ _MEDIA_TYPE_MAP = {
 class Request(webob.Request):
     """Add some OpenStack API-specific logic to the base webob.Request."""
 
+    def __init__(self, *args, **kwargs):
+        super(Request, self).__init__(*args, **kwargs)
+        self._extension_data = {'db_instances': {}}
+
+    def cache_db_instances(self, instances):
+        """
+        Allow API methods to store instances from a DB query to be
+        used by API extensions within the same API request.
+
+        An instance of this class only lives for the lifetime of a
+        single API request, so there's no need to implement full
+        cache management.
+        """
+        db_instances = self._extension_data['db_instances']
+        for instance in instances:
+            db_instances[instance['uuid']] = instance
+
+    def cache_db_instance(self, instance):
+        """
+        Allow API methods to store an instance from a DB query to be
+        used by API extensions within the same API request.
+
+        An instance of this class only lives for the lifetime of a
+        single API request, so there's no need to implement full
+        cache management.
+        """
+        self.cache_db_instances([instance])
+
+    def get_db_instances(self):
+        """
+        Allow an API extension to get previously stored instances within
+        the same API request.
+
+        Note that the instance data will be slightly stale.
+        """
+        return self._extension_data['db_instances']
+
+    def get_db_instance(self, instance_uuid):
+        """
+        Allow an API extension to get a previously stored instance
+        within the same API request.
+
+        Note that the instance data will be slightly stale.
+        """
+        return self._extension_data['db_instances'].get(instance_uuid)
+
     def best_match_content_type(self):
         """Determine the requested response content-type."""
         if 'nova.best_content_type' not in self.environ:
