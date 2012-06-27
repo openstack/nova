@@ -68,12 +68,12 @@ class _FakeDriverBackendTestCase(test.TestCase):
         import fakelibvirt
 
         sys.modules['libvirt'] = fakelibvirt
-        import nova.virt.libvirt.connection
+        import nova.virt.libvirt.driver
         import nova.virt.libvirt.firewall
 
-        nova.virt.libvirt.connection.imagebackend = fake_imagebackend
-        nova.virt.libvirt.connection.libvirt = fakelibvirt
-        nova.virt.libvirt.connection.libvirt_utils = fake_libvirt_utils
+        nova.virt.libvirt.driver.imagebackend = fake_imagebackend
+        nova.virt.libvirt.driver.libvirt = fakelibvirt
+        nova.virt.libvirt.driver.libvirt_utils = fake_libvirt_utils
         nova.virt.libvirt.firewall.libvirt = fakelibvirt
 
         self.flags(firewall_driver=nova.virt.libvirt.firewall.drivers[0],
@@ -84,17 +84,17 @@ class _FakeDriverBackendTestCase(test.TestCase):
         def fake_extend(image, size):
             pass
 
-        self.stubs.Set(nova.virt.libvirt.connection.disk,
+        self.stubs.Set(nova.virt.libvirt.driver.disk,
                        'extend', fake_extend)
 
     def _teardown_fakelibvirt(self):
         # Restore libvirt
-        import nova.virt.libvirt.connection
+        import nova.virt.libvirt.driver
         import nova.virt.libvirt.firewall
         if self.saved_libvirt:
             sys.modules['libvirt'] = self.saved_libvirt
-            nova.virt.libvirt.connection.libvirt = self.saved_libvirt
-            nova.virt.libvirt.connection.libvirt_utils = self.saved_libvirt
+            nova.virt.libvirt.driver.libvirt = self.saved_libvirt
+            nova.virt.libvirt.driver.libvirt_utils = self.saved_libvirt
             nova.virt.libvirt.firewall.libvirt = self.saved_libvirt
 
     def setUp(self):
@@ -117,7 +117,7 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase):
     # if your driver supports being tested in a fake way, it can go here
     new_drivers = {
         'nova.virt.fake.FakeDriver': 'FakeDriver',
-        'nova.virt.libvirt.connection.LibvirtDriver': 'LibvirtDriver'
+        'nova.virt.libvirt.LibvirtDriver': 'LibvirtDriver'
         }
 
     # NOTE(sdague): remove after Folsom release when connection_type
@@ -560,7 +560,7 @@ class FakeConnectionTestCase(_VirtDriverTestCase):
 class LibvirtConnTestCase(_VirtDriverTestCase):
     def setUp(self):
         # Point _VirtDriverTestCase at the right module
-        self.driver_module = 'nova.virt.libvirt.connection.LibvirtDriver'
+        self.driver_module = 'nova.virt.libvirt.LibvirtDriver'
         super(LibvirtConnTestCase, self).setUp()
 
     def tearDown(self):

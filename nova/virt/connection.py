@@ -35,7 +35,7 @@ FLAGS = flags.FLAGS
 known_drivers = {
     'baremetal': 'nova.virt.baremetal.proxy.ProxyConnection',
     'fake': 'nova.virt.fake.FakeDriver',
-    'libvirt': 'nova.virt.libvirt.connection.LibvirtDriver',
+    'libvirt': 'nova.virt.libvirt.LibvirtDriver',
     'vmwareapi': 'nova.virt.vmwareapi_conn.VMWareESXDriver',
     'xenapi': 'nova.virt.xenapi.connection.XenAPIDriver'
     }
