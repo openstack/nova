@@ -2849,6 +2849,19 @@ class ServersViewBuilderTest(test.TestCase):
         self.view_builder = views.servers.ViewBuilder()
         self.request = fakes.HTTPRequest.blank("/v2")
 
+    def test_get_flavor_valid_instance_type(self):
+        flavor_bookmark = "http://localhost/fake/flavors/1"
+        expected = {"id": "1",
+                    "links": [{"rel": "bookmark",
+                               "href": flavor_bookmark}]}
+        result = self.view_builder._get_flavor(self.request, self.instance)
+        self.assertEqual(result, expected)
+
+    def test_get_flavor_deleted_instance_type(self):
+        self.instance['instance_type'] = {}
+        result = self.view_builder._get_flavor(self.request, self.instance)
+        self.assertEqual(result, {})
+
     def test_build_server(self):
         self_link = "http://localhost/v2/fake/servers/%s" % self.uuid
         bookmark_link = "http://localhost/fake/servers/%s" % self.uuid

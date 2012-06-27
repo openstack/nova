@@ -179,7 +179,12 @@ class ViewBuilder(common.ViewBuilder):
         }
 
     def _get_flavor(self, request, instance):
-        flavor_id = instance["instance_type"]["flavorid"]
+        instance_type = instance["instance_type"]
+        if not instance_type:
+            LOG.warn(_("Instance has had its instance_type removed "
+                    "from the DB"), instance=instance)
+            return {}
+        flavor_id = instance_type["flavorid"]
         flavor_bookmark = self._flavor_builder._get_bookmark_link(request,
                                                                   flavor_id,
                                                                   "flavors")
