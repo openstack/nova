@@ -219,7 +219,7 @@ LIBVIRT_POWER_STATE = {
     VIR_DOMAIN_PMSUSPENDED: power_state.SUSPENDED,
 }
 
-MIN_LIBVIRT_VERSION = (0, 9, 7)
+MIN_LIBVIRT_VERSION = (0, 9, 6)
 
 
 def _late_load_cheetah():
@@ -790,7 +790,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 LOG.warn(_("Failed to soft reboot instance."),
                          instance=instance)
-        return self._hard_reboot(instance, network_info)
+        return self._hard_reboot(instance)
 
     def _soft_reboot(self, instance):
         """Attempt to shutdown and restart the instance gracefully.
@@ -827,17 +827,30 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(1)
         return False
 
-    def _hard_reboot(self, instance, network_info, xml=None):
+    def _hard_reboot(self, instance, xml=None):
         """Reboot a virtual machine, given an instance reference.
 
-        This method actually destroys and re-creates the domain to ensure the
-        reboot happens, as the guest OS cannot ignore this action.
+        Performs a Libvirt reset (if supported) on the domain.
+
+        If Libvirt reset is unavailable this method actually destroys and
+        re-creates the domain to ensure the reboot happens, as the guest
+        OS cannot ignore this action.
 
         If xml is set, it uses the passed in xml in place of the xml from the
         existing domain.
         """
+
         virt_dom = self._conn.lookupByName(instance['name'])
-        virt_dom.reset(0)
+        # NOTE(itoumsn): Use XML delived from the running instance.
+        if not xml:
+            xml = virt_dom.XMLDesc(0)
+
+        # NOTE(dprince): reset was added in Libvirt 0.9.7
+        if hasattr(virt_dom, 'reset'):
+            virt_dom.reset(0)
+        else:
+            self._destroy(instance)
+            self._create_domain(xml, virt_dom)
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
