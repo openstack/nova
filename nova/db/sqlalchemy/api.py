@@ -1329,14 +1329,34 @@ def instance_create(context, values):
     instance_ref = models.Instance()
     if not values.get('uuid'):
         values['uuid'] = str(utils.gen_uuid())
+    instance_ref['info_cache'] = models.InstanceInfoCache()
+    info_cache = values.pop('info_cache', None)
+    if info_cache is not None:
+        instance_ref['info_cache'].update(info_cache)
+    security_groups = values.pop('security_groups', [])
     instance_ref.update(values)
+
+    def _get_sec_group_models(session, security_groups):
+        models = []
+        default_group = security_group_ensure_default(context,
+                session=session)
+        if 'default' in security_groups:
+            models.append(default_group)
+            # Generate a new list, so we don't modify the original
+            security_groups = [x for x in security_groups if x != 'default']
+        if security_groups:
+            models.extend(_security_group_get_by_names(context,
+                    session, context.project_id, security_groups))
+        return models
 
     session = get_session()
     with session.begin():
+        instance_ref.security_groups = _get_sec_group_models(session,
+                security_groups)
         instance_ref.save(session=session)
-
-    # and creat the info_cache table entry for instance
-    instance_info_cache_create(context, {'instance_id': instance_ref['uuid']})
+        # NOTE(comstud): This forces instance_type to be loaded so it
+        # exists in the ref when we return.  Fixes lazy loading issues.
+        instance_ref.instance_type
 
     return instance_ref
 
@@ -3331,10 +3351,33 @@ def block_device_mapping_destroy_by_instance_and_volume(context, instance_uuid,
 ###################
 
 def _security_group_get_query(context, session=None, read_deleted=None,
-                              project_only=False):
-    return model_query(context, models.SecurityGroup, session=session,
-                       read_deleted=read_deleted, project_only=project_only).\
-                   options(joinedload_all('rules'))
+                              project_only=False, join_rules=True):
+    query = model_query(context, models.SecurityGroup, session=session,
+            read_deleted=read_deleted, project_only=project_only)
+    if join_rules:
+        query = query.options(joinedload_all('rules'))
+    return query
+
+
+def _security_group_get_by_names(context, session, project_id, group_names):
+    """
+    Get security group models for a project by a list of names.
+    Raise SecurityGroupNotFoundForProject for a name not found.
+    """
+    query = _security_group_get_query(context, session=session,
+            read_deleted="no", join_rules=False).\
+            filter_by(project_id=project_id).\
+            filter(models.SecurityGroup.name.in_(group_names))
+    sg_models = query.all()
+    if len(sg_models) == len(group_names):
+        return sg_models
+    # Find the first one missing and raise
+    group_names_from_models = [x.name for x in sg_models]
+    for group_name in group_names:
+        if group_name not in group_names_from_models:
+            raise exception.SecurityGroupNotFoundForProject(
+                    project_id=project_id, security_group_id=group_name)
+    # Not Reached
 
 
 @require_context
@@ -3358,13 +3401,23 @@ def security_group_get(context, security_group_id, session=None):
 
 
 @require_context
-def security_group_get_by_name(context, project_id, group_name):
-    result = _security_group_get_query(context, read_deleted="no").\
-                        filter_by(project_id=project_id).\
-                        filter_by(name=group_name).\
-                        options(joinedload_all('instances')).\
-                        first()
+def security_group_get_by_name(context, project_id, group_name,
+        columns_to_join=None, session=None):
+    if session is None:
+        session = get_session()
 
+    query = _security_group_get_query(context, session=session,
+            read_deleted="no", join_rules=False).\
+            filter_by(project_id=project_id).\
+            filter_by(name=group_name)
+
+    if columns_to_join is None:
+        columns_to_join = ['instances', 'rules']
+
+    for column in columns_to_join:
+        query = query.options(joinedload_all(column))
+
+    result = query.first()
     if not result:
         raise exception.SecurityGroupNotFoundForProject(
                 project_id=project_id, security_group_id=group_name)
@@ -3418,14 +3471,32 @@ def security_group_in_use(context, group_id):
 
 
 @require_context
-def security_group_create(context, values):
+def security_group_create(context, values, session=None):
     security_group_ref = models.SecurityGroup()
     # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
     # once save() is called.  This will get cleaned up in next orm pass.
     security_group_ref.rules
     security_group_ref.update(values)
-    security_group_ref.save()
+    if session is None:
+        session = get_session()
+    security_group_ref.save(session=session)
     return security_group_ref
+
+
+def security_group_ensure_default(context, session=None):
+    """Ensure default security group exists for a project_id."""
+    try:
+        default_group = security_group_get_by_name(context,
+                context.project_id, 'default',
+                columns_to_join=[], session=session)
+    except exception.NotFound:
+        values = {'name': 'default',
+                  'description': 'default',
+                  'user_id': context.user_id,
+                  'project_id': context.project_id}
+        default_group = security_group_create(context, values,
+                session=session)
+    return default_group
 
 
 @require_context
