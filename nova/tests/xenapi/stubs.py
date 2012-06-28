@@ -17,8 +17,6 @@
 
 import random
 
-from eventlet import tpool
-
 from nova.openstack.common import jsonutils
 import nova.tests.image.fake
 from nova.virt.xenapi import connection as xenapi_conn
@@ -66,11 +64,6 @@ def stubout_session(stubs, cls, product_version=(5, 6, 2), **opt_args):
               fake_import)
     stubs.Set(xenapi_conn.XenAPISession, '_get_product_version',
               lambda s: product_version)
-    # NOTE(johannes): logging can't be used reliably from a thread
-    # since it can deadlock with eventlet. It's safe for our faked
-    # sessions to be called synchronously in the unit tests. (see
-    # bug 946687)
-    stubs.Set(tpool, 'execute', lambda m, *a, **kw: m(*a, **kw))
 
 
 def stubout_get_this_vm_uuid(stubs):
