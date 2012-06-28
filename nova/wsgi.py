@@ -44,8 +44,8 @@ class Server(object):
 
     default_pool_size = 1000
 
-    def __init__(self, name, app, host=None, port=None, pool_size=None,
-                       protocol=eventlet.wsgi.HttpProtocol):
+    def __init__(self, name, app, host='0.0.0.0', port=0, pool_size=None,
+                       protocol=eventlet.wsgi.HttpProtocol, backlog=128):
         """Initialize, but do not start, a WSGI server.
 
         :param name: Pretty name for logging.
@@ -53,47 +53,37 @@ class Server(object):
         :param host: IP address to serve the application.
         :param port: Port number to server the application.
         :param pool_size: Maximum number of eventlets to spawn concurrently.
-        :returns: None
-
-        """
-        self.name = name
-        self.app = app
-        self.host = host or "0.0.0.0"
-        self.port = port or 0
-        self._server = None
-        self._socket = None
-        self._protocol = protocol
-        self._pool = eventlet.GreenPool(pool_size or self.default_pool_size)
-        self._logger = logging.getLogger("eventlet.wsgi.server")
-        self._wsgi_logger = logging.WritableLogger(self._logger)
-
-    def _start(self):
-        """Run the blocking eventlet WSGI server.
-
-        :returns: None
-
-        """
-        eventlet.wsgi.server(self._socket,
-                             self.app,
-                             protocol=self._protocol,
-                             custom_pool=self._pool,
-                             log=self._wsgi_logger)
-
-    def start(self, backlog=128):
-        """Start serving a WSGI application.
-
         :param backlog: Maximum number of queued connections.
         :returns: None
         :raises: nova.exception.InvalidInput
-
         """
+        self.name = name
+        self.app = app
+        self._server = None
+        self._protocol = protocol
+        self._pool = eventlet.GreenPool(pool_size or self.default_pool_size)
+        self._logger = logging.getLogger("nova.%s.wsgi.server" % self.name)
+        self._wsgi_logger = logging.WritableLogger(self._logger)
+
         if backlog < 1:
             raise exception.InvalidInput(
                     reason='The backlog must be more than 1')
-        self._socket = eventlet.listen((self.host, self.port), backlog=backlog)
-        self._server = eventlet.spawn(self._start)
+
+        self._socket = eventlet.listen((host, port), backlog=backlog)
         (self.host, self.port) = self._socket.getsockname()
-        LOG.info(_("Started %(name)s on %(host)s:%(port)s") % self.__dict__)
+        LOG.info(_("%(name)s listening on %(host)s:%(port)s") % self.__dict__)
+
+    def start(self):
+        """Start serving a WSGI application.
+
+        :returns: None
+        """
+        self._server = eventlet.spawn(eventlet.wsgi.server,
+                                      self._socket,
+                                      self.app,
+                                      protocol=self._protocol,
+                                      custom_pool=self._pool,
+                                      log=self._wsgi_logger)
 
     def stop(self):
         """Stop this server.
@@ -105,7 +95,11 @@ class Server(object):
 
         """
         LOG.info(_("Stopping WSGI server."))
-        self._server.kill()
+
+        if self._server is not None:
+            # Resize pool to stop new requests from being processed
+            self._pool.resize(0)
+            self._server.kill()
 
     def wait(self):
         """Block, until the server has stopped.

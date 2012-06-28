@@ -44,7 +44,7 @@ from nova import log as logging
 import eventlet
 
 
-eventlet.monkey_patch()
+eventlet.monkey_patch(os=False)
 
 FLAGS = flags.FLAGS
 FLAGS.use_stderr = False

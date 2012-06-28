@@ -40,7 +40,7 @@ test_service_opts = [
                default="nova.tests.test_service.FakeManager",
                help="Manager for testing"),
     cfg.StrOpt("test_service_listen",
-               default=None,
+               default='127.0.0.1',
                help="Host to bind test service to"),
     cfg.IntOpt("test_service_listen_port",
                default=0,
@@ -202,7 +202,6 @@ class TestWSGIService(test.TestCase):
 
     def test_service_random_port(self):
         test_service = service.WSGIService("test_service")
-        self.assertEquals(0, test_service.port)
         test_service.start()
         self.assertNotEqual(0, test_service.port)
         test_service.stop()
@@ -216,10 +215,7 @@ class TestLauncher(test.TestCase):
         self.service = service.WSGIService("test_service")
 
     def test_launch_app(self):
-        self.assertEquals(0, self.service.port)
         launcher = service.Launcher()
         launcher.launch_server(self.service)
-        # Give spawned thread a chance to execute
-        greenthread.sleep(0)
         self.assertNotEquals(0, self.service.port)
         launcher.stop()
