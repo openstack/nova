@@ -60,7 +60,7 @@ if __name__ == '__main__':
         try:
             servers.append(service.WSGIService(api))
         except (Exception, SystemExit):
-            logging.exception(_('Failed to load %s') % '%s-api' % api)
+            LOG.exception(_('Failed to load %s') % '%s-api' % api)
 
     for mod in [s3server, xvp_proxy]:
         try:
