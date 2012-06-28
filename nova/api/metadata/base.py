@@ -96,9 +96,9 @@ class InstanceMetadata():
         for image_type in ['kernel', 'ramdisk']:
             if self.instance.get('%s_id' % image_type):
                 image_id = self.instance['%s_id' % image_type]
-                image_type = ec2utils.image_type(image_type)
+                ec2_image_type = ec2utils.image_type(image_type)
                 ec2_id = ec2utils.glance_id_to_ec2_id(ctxt, image_id,
-                                                      image_type)
+                                                      ec2_image_type)
                 self.ec2_ids['%s-id' % image_type] = ec2_id
 
         self.address = address

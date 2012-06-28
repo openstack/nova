@@ -20,6 +20,7 @@
 
 import base64
 from copy import copy
+import re
 
 import stubout
 import webob
@@ -189,6 +190,26 @@ class MetadataTestCase(test.TestCase):
             "0=%s" % self.instance['key_name'])
         self.assertEqual(base.ec2_md_print(pubkey_ent['0']['openssh-key']),
             self.instance['key_data'])
+
+    def test_image_type_ramdisk(self):
+        inst = copy(self.instance)
+        inst['ramdisk_id'] = 'ari-853667c0'
+        md = fake_InstanceMetadata(self.stubs, inst)
+        data = md.get_ec2_metadata(version='latest')
+
+        self.assertTrue(data['meta-data']['ramdisk-id'] is not None)
+        self.assertTrue(re.match('ari-[0-9a-f]{8}',
+                                 data['meta-data']['ramdisk-id']))
+
+    def test_image_type_kernel(self):
+        inst = copy(self.instance)
+        inst['kernel_id'] = 'aki-c2e26ff2'
+        md = fake_InstanceMetadata(self.stubs, inst)
+        data = md.get_ec2_metadata(version='2009-04-04')
+
+        self.assertTrue(data['meta-data']['kernel-id'] is not None)
+        self.assertTrue(re.match('aki-[0-9a-f]{8}',
+                                 data['meta-data']['kernel-id']))
 
 
 class MetadataHandlerTestCase(test.TestCase):
