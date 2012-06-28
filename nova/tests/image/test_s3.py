@@ -24,9 +24,9 @@ import tempfile
 from nova import context
 import nova.db.api
 from nova import exception
-from nova.tests.image import fake
 from nova.image import s3
 from nova import test
+from nova.tests.image import fake
 
 
 ami_manifest_xml = """<?xml version="1.0" ?>

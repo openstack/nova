@@ -20,8 +20,8 @@ import StringIO
 
 from nova import context
 from nova import exception
-import nova.tests.image.fake
 from nova import test
+import nova.tests.image.fake
 
 
 class FakeImageServiceTestCase(test.TestCase):

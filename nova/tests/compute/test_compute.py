@@ -39,7 +39,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova.tests.image import fake as fake_image
 from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
@@ -52,6 +51,7 @@ from nova import quota
 from nova.scheduler import driver as scheduler_driver
 from nova import test
 from nova.tests import fake_network
+from nova.tests.image import fake as fake_image
 from nova import utils
 import nova.volume
 
