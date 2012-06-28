@@ -213,3 +213,24 @@ with the help of openstack-common's update.py script. See:
 The copy of the code should never be directly modified here. Please
 always update openstack-common first and then run the script to copy
 the changes across.
+
+Commit Messages
+---------------
+Using a common format for commit messages will help keep our git history
+readable. Follow these guidelines:
+
+  First, provide a brief summary (limited to 50 chars).
+
+  The first line of the commit message should provide an accurate
+  description of the change, not just a reference to a bug or
+  blueprint. It must be followed by a single blank line.
+
+  Following your brief summary, provide a more detailed description of
+  the patch, manually wrapping the text at 72 characters. This
+  description should provide enough detail that one does not have to
+  refer to external resources to determine its high-level functionality.
+
+  Once you use 'git review', two lines will be appended to the commit
+  message: a blank line followed by a 'Change-Id'. This is important
+  to correlate this commit with a specific review in Gerrit, and it
+  should not be modified.
