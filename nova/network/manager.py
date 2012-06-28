@@ -370,8 +370,12 @@ class FloatingIP(object):
             # disassociate floating ips related to fixed_ip
             for floating_ip in floating_ips:
                 address = floating_ip['address']
-                self.disassociate_floating_ip(read_deleted_context, address,
-                                              affect_auto_assigned=True)
+                try:
+                    self.disassociate_floating_ip(read_deleted_context,
+                                                  address,
+                                                  affect_auto_assigned=True)
+                except exception.FloatingIpNotAssociated:
+                    LOG.exception(_("Floating IP is not associated. Ignore."))
                 # deallocate if auto_assigned
                 if floating_ip['auto_assigned']:
                     self.deallocate_floating_ip(read_deleted_context, address,
