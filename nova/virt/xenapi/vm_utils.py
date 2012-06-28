@@ -734,20 +734,7 @@ def fetch_image(context, session, instance, image_id, image_type):
 
 
 def _fetch_using_dom0_plugin_with_retry(context, session, image_id,
-                                        plugin_name, params):
-    # NOTE(sirp): The XenAPI plugins run under Python 2.4
-    # which does not have the `uuid` module. To work around this,
-    # we generate the uuids here (under Python 2.6+) and
-    # pass them as arguments
-    extra_params = {
-              'image_id': image_id,
-              'uuid_stack': [str(uuid.uuid4()) for i in xrange(3)],
-              'sr_path': get_sr_path(session),
-              'auth_token': getattr(context, 'auth_token', None)}
-
-    extra_params.update(params)
-    kwargs = {'params': pickle.dumps(extra_params)}
-
+                                        plugin_name, params, callback=None):
     max_attempts = FLAGS.glance_num_retries + 1
     sleep_time = 0.5
     for attempt_num in xrange(1, max_attempts + 1):
@@ -756,6 +743,9 @@ def _fetch_using_dom0_plugin_with_retry(context, session, image_id,
                    'params: %(params)s') % locals())
 
         try:
+            if callback:
+                callback(params)
+            kwargs = {'params': pickle.dumps(params)}
             result = session.call_plugin(plugin_name, 'download_vhd', kwargs)
             return jsonutils.loads(result)
         except session.XenAPI.Failure as exc:
@@ -780,12 +770,24 @@ def _fetch_vhd_image(context, session, instance, image_id):
     LOG.debug(_("Asking xapi to fetch vhd image %(image_id)s"), locals(),
               instance=instance)
 
-    plugin_name = 'glance'
-    glance_host, glance_port = glance.pick_glance_api_server()
-    params = {'glance_host': glance_host, 'glance_port': glance_port}
+    # NOTE(sirp): The XenAPI plugins run under Python 2.4
+    # which does not have the `uuid` module. To work around this,
+    # we generate the uuids here (under Python 2.6+) and
+    # pass them as arguments
+    params = {'image_id': image_id,
+              'uuid_stack': [str(uuid.uuid4()) for i in xrange(3)],
+              'sr_path': get_sr_path(session),
+              'auth_token': getattr(context, 'auth_token', None)}
 
+    def pick_glance(params):
+        glance_host, glance_port = glance.pick_glance_api_server()
+        params['glance_host'] = glance_host
+        params['glance_port'] = glance_port
+
+    plugin_name = 'glance'
     fetched_vdis = _fetch_using_dom0_plugin_with_retry(
-            context, session, image_id, plugin_name, params)
+            context, session, image_id, plugin_name, params,
+            callback=pick_glance)
 
     sr_ref = safe_find_sr(session)
     scan_sr(session, sr_ref)
