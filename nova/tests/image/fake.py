@@ -155,10 +155,9 @@ class _FakeImageService(object):
         """Return list of detailed image information."""
         return copy.deepcopy(self.images.values())
 
-    def get(self, context, image_id, data):
-        metadata = self.show(context, image_id)
+    def download(self, context, image_id, data):
+        self.show(context, image_id)
         data.write(self._imagedata.get(image_id, ''))
-        return metadata
 
     def show(self, context, image_id):
         """Get data about specified image.

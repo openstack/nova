@@ -52,8 +52,7 @@ def fetch(context, image_href, path, _user_id, _project_id):
                                                                 image_href)
     with utils.remove_path_on_error(path):
         with open(path, "wb") as image_file:
-            metadata = image_service.get(context, image_id, image_file)
-            return metadata
+            image_service.download(context, image_id, image_file)
 
 
 def fetch_to_raw(context, image_href, path, user_id, project_id):

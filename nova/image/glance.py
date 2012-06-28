@@ -235,7 +235,7 @@ class GlanceImageService(object):
         base_image_meta = self._translate_from_glance(image_meta)
         return base_image_meta
 
-    def get(self, context, image_id, data):
+    def download(self, context, image_id, data):
         """Calls out to Glance for metadata and data and writes data."""
         try:
             image_meta, image_chunks = self._call_retry(context, 'get_image',
@@ -245,9 +245,6 @@ class GlanceImageService(object):
 
         for chunk in image_chunks:
             data.write(chunk)
-
-        base_image_meta = self._translate_from_glance(image_meta)
-        return base_image_meta
 
     def create(self, context, image_meta, data=None):
         """Store the image data and return the new image id.

@@ -893,7 +893,8 @@ def _fetch_image_glance_disk(context, session, instance, image_id, image_type):
         vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
 
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
-            stream_func = lambda f: image_service.get(context, image_id, f)
+            stream_func = lambda f: image_service.download(
+                    context, image_id, f)
             _stream_disk(stream_func, image_type, virtual_size, dev)
 
         if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
