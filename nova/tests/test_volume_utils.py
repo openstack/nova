@@ -20,7 +20,6 @@
 from nova import context
 from nova import db
 from nova import flags
-import nova.image.fake
 from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
@@ -39,7 +38,7 @@ class UsageInfoTestCase(test.TestCase):
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True,
                    host='fake')
-        self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
+        self.stubs.Set(flags.FLAGS, 'notification_driver',
                 'nova.notifier.test_notifier')
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.user_id = 'fake'

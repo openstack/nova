@@ -24,6 +24,7 @@ from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc
 from nova import test
 from nova.tests.api.openstack import fakes
+import nova.tests.image.fake
 
 
 MANUAL_INSTANCE_UUID = fakes.FAKE_UUID
@@ -45,6 +46,8 @@ class DiskConfigTestCase(test.TestCase):
     def setUp(self):
         super(DiskConfigTestCase, self).setUp()
         self.flags(verbose=True)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
+
         fakes.stub_out_nw_api(self.stubs)
 
         FAKE_INSTANCES = [
@@ -119,6 +122,10 @@ class DiskConfigTestCase(test.TestCase):
         self.stubs.Set(nova.db, 'instance_create', fake_instance_create)
 
         self.app = compute.APIRouter()
+
+    def tearDown(self):
+        super(DiskConfigTestCase, self).tearDown()
+        nova.tests.image.fake.FakeImageService_reset()
 
     def assertDiskConfig(self, dict_, value):
         self.assert_(API_DISK_CONFIG in dict_)

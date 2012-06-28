@@ -25,7 +25,7 @@ import os
 
 from nova import exception
 from nova import flags
-import nova.image
+from nova.image import glance
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
@@ -48,8 +48,8 @@ def fetch(context, image_href, path, _user_id, _project_id):
     #             when it is added to glance.  Right now there is no
     #             auth checking in glance, so we assume that access was
     #             checked before we got here.
-    (image_service, image_id) = nova.image.get_image_service(context,
-                                                             image_href)
+    (image_service, image_id) = glance.get_remote_image_service(context,
+                                                                image_href)
     with utils.remove_path_on_error(path):
         with open(path, "wb") as image_file:
             metadata = image_service.get(context, image_id, image_file)

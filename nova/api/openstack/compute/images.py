@@ -21,7 +21,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova import flags
-import nova.image
+import nova.image.glance
 from nova import log as logging
 import nova.utils
 
@@ -96,12 +96,12 @@ class Controller(wsgi.Controller):
     def __init__(self, image_service=None, **kwargs):
         """Initialize new `ImageController`.
 
-        :param image_service: `nova.image.glance:GlancemageService`
+        :param image_service: `nova.image.glance:GlanceImageService`
 
         """
         super(Controller, self).__init__(**kwargs)
         self._image_service = (image_service or
-                               nova.image.get_default_image_service())
+                               nova.image.glance.get_default_image_service())
 
     def _get_filters(self, req):
         """

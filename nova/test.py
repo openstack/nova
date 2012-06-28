@@ -32,7 +32,6 @@ import nose.plugins.skip
 import stubout
 
 from nova import flags
-import nova.image.fake
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
@@ -150,9 +149,6 @@ class TestCase(unittest.TestCase):
             self.mox.VerifyAll()
             super(TestCase, self).tearDown()
         finally:
-            if FLAGS.image_service == 'nova.image.fake.FakeImageService':
-                nova.image.fake.FakeImageService_reset()
-
             # Reset any overridden flags
             FLAGS.reset()
 

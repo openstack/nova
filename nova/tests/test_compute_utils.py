@@ -22,12 +22,12 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import flags
-import nova.image.fake
 from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
 from nova import test
 from nova.tests import fake_network
+import nova.tests.image.fake
 from nova import utils
 
 
@@ -61,7 +61,8 @@ class UsageInfoTestCase(test.TestCase):
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
-        self.stubs.Set(nova.image.fake._FakeImageService, 'show', fake_show)
+        self.stubs.Set(nova.tests.image.fake._FakeImageService,
+                       'show', fake_show)
 
     def _create_instance(self, params={}):
         """Create a test instance"""

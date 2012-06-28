@@ -17,6 +17,7 @@
 import nova.context
 import nova.db
 import nova.flags
+from nova.image import glance
 
 FLAGS = nova.flags.FLAGS
 
@@ -30,7 +31,8 @@ def get_test_image_info(context, instance_ref):
         context = get_test_admin_context()
 
     image_ref = instance_ref['image_ref']
-    image_service, image_id = nova.image.get_image_service(context, image_ref)
+    image_service, image_id = glance.get_remote_image_service(context,
+                                                              image_ref)
     return image_service.show(context, image_id)
 
 

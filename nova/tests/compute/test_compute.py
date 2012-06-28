@@ -39,7 +39,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova.image import fake as fake_image
+from nova.tests.image import fake as fake_image
 from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
@@ -125,11 +125,13 @@ class BaseTestCase(test.TestCase):
                                    'ramdisk_id': 'fake_ramdisk_id',
                                    'something_else': 'meow'}}
 
+        fake_image.stub_out_image_service(self.stubs)
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
         self.stubs.Set(rpc, 'call', rpc_call_wrapper)
         self.stubs.Set(rpc, 'cast', rpc_cast_wrapper)
 
     def tearDown(self):
+        fake_image.FakeImageService_reset()
         instances = db.instance_get_all(self.context.elevated())
         for instance in instances:
             db.instance_destroy(self.context.elevated(), instance['uuid'])

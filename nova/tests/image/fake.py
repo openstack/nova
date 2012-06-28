@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2011 Justin Santa Barbara
+# Copyright 2012 OpenStack LLC
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -22,6 +23,7 @@ import datetime
 
 from nova import exception
 from nova import flags
+import nova.image.glance
 from nova import log as logging
 from nova import utils
 
@@ -41,7 +43,6 @@ class _FakeImageService(object):
         # So, make sure we've got one..
         timestamp = datetime.datetime(2011, 01, 01, 01, 02, 03)
 
-        # NOTE(bcwaldon): was image '123456'
         image1 = {'id': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
@@ -56,7 +57,6 @@ class _FakeImageService(object):
                                 'ramdisk_id': FLAGS.null_kernel,
                                 'architecture': 'x86_64'}}
 
-        # NOTE(bcwaldon): was image 'fake'
         image2 = {'id': 'a2459075-d96c-40d5-893e-577ff92e721c',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
@@ -70,7 +70,6 @@ class _FakeImageService(object):
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
-        # NOTE(bcwaldon): was image '2'
         image3 = {'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
@@ -84,7 +83,6 @@ class _FakeImageService(object):
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
-        # NOTE(bcwaldon): was image '1'
         image4 = {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
@@ -98,7 +96,6 @@ class _FakeImageService(object):
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
 
-        # NOTE(bcwaldon): was image '3'
         image5 = {'id': 'c905cedb-7281-47e4-8a62-f26bc5fc4c77',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
@@ -113,7 +110,6 @@ class _FakeImageService(object):
                                     '155d900f-4e14-4e4c-a73d-069cbf4541e6',
                                 'ramdisk_id': None}}
 
-        # NOTE(sirp): was image '6'
         image6 = {'id': 'a440c04b-79fa-479c-bed1-0b816eaec379',
                  'name': 'fakeimage6',
                  'created_at': timestamp,
@@ -129,7 +125,6 @@ class _FakeImageService(object):
                                 'architecture': 'x86_64',
                                 'auto_disk_config': 'False'}}
 
-        # NOTE(sirp): was image '7'
         image7 = {'id': '70a599e0-31e7-49b7-b260-868f441e862b',
                  'name': 'fakeimage7',
                  'created_at': timestamp,
@@ -258,3 +253,12 @@ def FakeImageService():
 def FakeImageService_reset():
     global _fakeImageService
     _fakeImageService = _FakeImageService()
+
+
+def stub_out_image_service(stubs):
+    def fake_get_remote_image_service(context, image_href):
+        return (FakeImageService(), image_href)
+    stubs.Set(nova.image.glance, 'get_remote_image_service',
+              lambda x, y: (FakeImageService(), y))
+    stubs.Set(nova.image.glance, 'get_default_image_service',
+              lambda: FakeImageService())

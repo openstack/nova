@@ -25,9 +25,9 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import flags
-import nova.image.fake
 from nova import log as logging
 from nova import notifications
+import nova.network
 from nova.notifier import test_notifier
 from nova import test
 from nova.tests import fake_network

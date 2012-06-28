@@ -19,6 +19,7 @@ from nova import log as logging
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
+import nova.tests.image.fake
 
 LOG = logging.getLogger(__name__)
 
@@ -27,6 +28,11 @@ class UrlmapTest(test.TestCase):
     def setUp(self):
         super(UrlmapTest, self).setUp()
         fakes.stub_out_rate_limiting(self.stubs)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
+
+    def tearDown(self):
+        super(UrlmapTest, self).tearDown()
+        nova.tests.image.fake.FakeImageService_reset()
 
     def test_path_version_v1_1(self):
         """Test URL path specifying v1.1 returns v2 content."""

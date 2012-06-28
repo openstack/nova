@@ -38,7 +38,6 @@ def set_defaults(conf):
     conf.set_default('fake_network', True)
     conf.set_default('fake_rabbit', True)
     conf.set_default('flat_network_bridge', 'br100')
-    conf.set_default('image_service', 'nova.image.fake.FakeImageService')
     conf.set_default('iscsi_num_targets', 8)
     conf.set_default('network_size', 8)
     conf.set_default('num_networks', 2)

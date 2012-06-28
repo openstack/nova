@@ -21,10 +21,10 @@ import traceback
 
 from nova.compute.manager import ComputeManager
 from nova import exception
-from nova import image
 from nova import log as logging
 from nova.openstack.common import importutils
 from nova import test
+from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
 
 LOG = logging.getLogger(__name__)
@@ -102,9 +102,11 @@ class _FakeDriverBackendTestCase(test.TestCase):
         # TODO(sdague): it would be nice to do this in a way that only
         # the relevant backends where replaced for tests, though this
         # should not harm anything by doing it for all backends
+        fake_image.stub_out_image_service(self.stubs)
         self._setup_fakelibvirt()
 
     def tearDown(self):
+        fake_image.FakeImageService_reset()
         self._teardown_fakelibvirt()
         super(_FakeDriverBackendTestCase, self).tearDown()
 
@@ -177,7 +179,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         super(_VirtDriverTestCase, self).setUp()
         self.connection = importutils.import_object(self.driver_module, '')
         self.ctxt = test_utils.get_test_admin_context()
-        self.image_service = image.get_default_image_service()
+        self.image_service = fake_image.FakeImageService()
 
     def _get_running_instance(self):
         instance_ref = test_utils.get_test_instance()

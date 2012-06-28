@@ -35,12 +35,12 @@ from nova.compute import vm_states
 import nova.db
 from nova.db.sqlalchemy import models
 from nova import flags
-import nova.image.fake
 from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
+import nova.tests.image.fake
 from nova import utils
 
 
@@ -99,7 +99,7 @@ class ServersControllerTest(test.TestCase):
         self.flags(verbose=True, use_ipv6=False)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        fakes.stub_out_image_service(self.stubs)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
         return_server = fakes.fake_instance_get()
         return_servers = fakes.fake_instance_get_all_by_filters()
         self.stubs.Set(nova.db, 'instance_get_all_by_filters',
@@ -1484,7 +1484,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        fakes.stub_out_image_service(self.stubs)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(utils, 'gen_uuid', fake_gen_uuid)
         self.stubs.Set(nova.db, 'instance_add_security_group',

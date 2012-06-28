@@ -20,14 +20,19 @@ import StringIO
 
 from nova import context
 from nova import exception
-import nova.image
+import nova.tests.image.fake
 from nova import test
 
 
-class _ImageTestCase(test.TestCase):
+class FakeImageServiceTestCase(test.TestCase):
     def setUp(self):
-        super(_ImageTestCase, self).setUp()
+        super(FakeImageServiceTestCase, self).setUp()
+        self.image_service = nova.tests.image.fake.FakeImageService()
         self.context = context.get_admin_context()
+
+    def tearDown(self):
+        super(FakeImageServiceTestCase, self).setUp()
+        nova.tests.image.fake.FakeImageService_reset()
 
     def test_index(self):
         res = self.image_service.index(self.context)
@@ -138,9 +143,3 @@ class _ImageTestCase(test.TestCase):
         s2 = StringIO.StringIO()
         self.image_service.get(self.context, '32', data=s2)
         self.assertEquals(s2.getvalue(), blob, 'Did not get blob back intact')
-
-
-class FakeImageTestCase(_ImageTestCase):
-    def setUp(self):
-        super(FakeImageTestCase, self).setUp()
-        self.image_service = nova.image.fake.FakeImageService()

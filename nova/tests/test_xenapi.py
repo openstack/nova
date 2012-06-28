@@ -29,7 +29,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-import nova.image.fake
 from nova import log as logging
 from nova.openstack.common import importutils
 from nova.openstack.common import timeutils
@@ -38,6 +37,7 @@ import nova.tests.api.openstack.fakes as api_fakes
 from nova.tests.db import fakes as db_fakes
 from nova.tests import fake_network
 from nova.tests import fake_utils
+import nova.tests.image.fake
 from nova.tests.xenapi import stubs
 from nova.virt.xenapi import connection as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
@@ -92,7 +92,7 @@ IMAGE_FIXTURES = {
 
 
 def set_image_fixtures():
-    image_service = nova.image.fake.FakeImageService()
+    image_service = nova.tests.image.fake.FakeImageService()
     image_service.delete_all()
     for image_id, image_meta in IMAGE_FIXTURES.items():
         image_meta = image_meta['image_meta']
@@ -113,23 +113,23 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
             fake_dev = 'fakedev'
             yield fake_dev
 
-        def fake_image_service_get(*args, **kwargs):
+        def fake_image_get(*args, **kwargs):
             pass
 
         def fake_is_vdi_pv(*args, **kwargs):
             return should_return
 
         orig_vdi_attached_here = vm_utils.vdi_attached_here
-        orig_image_service_get = nova.image.fake._FakeImageService.get
+        orig_image_get = nova.tests.image.fake._FakeImageService.get
         orig_is_vdi_pv = vm_utils._is_vdi_pv
         try:
             vm_utils.vdi_attached_here = fake_vdi_attached_here
-            nova.image.fake._FakeImageService.get = fake_image_service_get
+            nova.tests.image.fake._FakeImageService.get = fake_image_get
             vm_utils._is_vdi_pv = fake_is_vdi_pv
             return function(self, *args, **kwargs)
         finally:
             vm_utils._is_vdi_pv = orig_is_vdi_pv
-            nova.image.fake._FakeImageService.get = orig_image_service_get
+            nova.tests.image.fake._FakeImageService.get = orig_image_get
             vm_utils.vdi_attached_here = orig_vdi_attached_here
 
     return decorated_function
@@ -278,14 +278,14 @@ class XenAPIVMTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.conn = xenapi_conn.XenAPIDriver(False)
 
-        api_fakes.stub_out_image_service(self.stubs)
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
         set_image_fixtures()
         stubs.stubout_image_service_get(self.stubs)
         stubs.stubout_stream_disk(self.stubs)
 
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
-        nova.image.fake.FakeImageService_reset()
+        nova.tests.image.fake.FakeImageService_reset()
 
     def test_init_host(self):
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')

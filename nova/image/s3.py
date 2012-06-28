@@ -33,7 +33,7 @@ from nova.api.ec2 import ec2utils
 import nova.cert.rpcapi
 from nova import exception
 from nova import flags
-from nova import image
+from nova.image import glance
 from nova import log as logging
 from nova.openstack.common import cfg
 from nova import utils
@@ -69,7 +69,7 @@ class S3ImageService(object):
 
     def __init__(self, service=None, *args, **kwargs):
         self.cert_rpcapi = nova.cert.rpcapi.CertAPI()
-        self.service = service or image.get_default_image_service()
+        self.service = service or glance.get_default_image_service()
         self.service.__init__(*args, **kwargs)
 
     def _translate_uuids_to_ids(self, context, images):
