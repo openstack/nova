@@ -7,4 +7,3 @@ nose
 openstack.nose_plugin>=0.7
 pep8==1.2
 sphinx>=1.1.2
-MySQL-python
