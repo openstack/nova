@@ -21,6 +21,9 @@
 # nova/network/linux_net.py: 'ip', 'addr', 'show', 'dev', interface, ..
 # nova/network/linux_net.py: 'ip', 'link', 'set', dev, address, ..
 # nova/network/linux_net.py: 'ip', 'link', 'set', dev, 'up'
+# nova/network/linux_net.py: 'ip', 'route', 'add', ..
+# nova/network/linux_net.py: 'ip', 'route', 'del', .
+# nova/network/linux_net.py: 'ip', 'route', 'show', 'dev', dev
 ip: CommandFilter, /sbin/ip, root
 
 # nova/virt/libvirt/vif.py: 'ovs-vsctl', ...
@@ -47,14 +50,6 @@ ip6tables-restore_usr: CommandFilter, /usr/sbin/ip6tables-restore, root
 # nova/network/linux_net.py: 'arping', '-U', network_ref['dhcp_server'],..
 arping: CommandFilter, /usr/bin/arping, root
 arping_sbin: CommandFilter, /sbin/arping, root
-
-# nova/network/linux_net.py: 'route', '-n'
-# nova/network/linux_net.py: 'route', 'del', 'default', 'gw'
-# nova/network/linux_net.py: 'route', 'add', 'default', 'gw'
-# nova/network/linux_net.py: 'route', '-n'
-# nova/network/linux_net.py: 'route', 'del', 'default', 'gw', old_gw, ..
-# nova/network/linux_net.py: 'route', 'add', 'default', 'gw', old_gateway
-route: CommandFilter, /sbin/route, root
 
 # nova/network/linux_net.py: 'dhcp_release', dev, address, mac_address
 dhcp_release: CommandFilter, /usr/bin/dhcp_release, root
