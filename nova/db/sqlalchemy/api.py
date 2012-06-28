@@ -473,7 +473,7 @@ def service_update(context, service_id, values):
 
 ###################
 
-def _compute_node_get(context, compute_id, session=None):
+def compute_node_get(context, compute_id, session=None):
     result = model_query(context, models.ComputeNode, session=session).\
                      filter_by(id=compute_id).\
                      first()
@@ -488,6 +488,15 @@ def _compute_node_get(context, compute_id, session=None):
 def compute_node_get_all(context, session=None):
     return model_query(context, models.ComputeNode, session=session).\
                     options(joinedload('service')).\
+                    all()
+
+
+@require_admin_context
+def compute_node_search_by_hypervisor(context, hypervisor_match):
+    field = models.ComputeNode.hypervisor_hostname
+    return model_query(context, models.ComputeNode).\
+                    options(joinedload('service')).\
+                    filter(field.like('%%%s%%' % hypervisor_match)).\
                     all()
 
 
@@ -542,7 +551,7 @@ def compute_node_update(context, compute_id, values, auto_adjust):
     if auto_adjust:
         _adjust_compute_node_values_for_utilization(context, values, session)
     with session.begin(subtransactions=True):
-        compute_ref = _compute_node_get(context, compute_id, session=session)
+        compute_ref = compute_node_get(context, compute_id, session=session)
         compute_ref.update(values)
         compute_ref.save(session=session)
 
