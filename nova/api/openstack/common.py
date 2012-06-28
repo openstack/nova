@@ -61,7 +61,7 @@ _STATE_MAP = {
         'default': 'BUILD',
     },
     vm_states.STOPPED: {
-        'default': 'STOPPED',
+        'default': 'SHUTOFF',
     },
     vm_states.RESIZED: {
         'default': 'VERIFY_RESIZE',

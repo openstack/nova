@@ -1404,7 +1404,7 @@ class ServerStatusTest(test.TestCase):
 
     def test_stopped(self):
         response = self._get_with_state(vm_states.STOPPED)
-        self.assertEqual(response['server']['status'], 'STOPPED')
+        self.assertEqual(response['server']['status'], 'SHUTOFF')
 
 
 class ServersControllerCreateTest(test.TestCase):
