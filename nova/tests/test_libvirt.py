@@ -2811,4 +2811,4 @@ class LibvirtNonblockingTestCase(test.TestCase):
         """Test bug 962840"""
         import nova.virt.libvirt.driver as libvirt_driver
         connection = libvirt_driver.LibvirtDriver('')
-        jsonutils.to_primitive(libvirt_driver._conn, convert_instances=True)
+        jsonutils.to_primitive(connection._conn, convert_instances=True)
