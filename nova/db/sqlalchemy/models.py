@@ -1036,3 +1036,10 @@ class InstanceFault(BASE, NovaBase):
     code = Column(Integer(), nullable=False)
     message = Column(String(255))
     details = Column(Text)
+
+
+class InstanceIdMapping(BASE, NovaBase):
+    """Compatability layer for the EC2 instance service"""
+    __tablename__ = 'instance_id_mappings'
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    uuid = Column(String(36), nullable=False)

@@ -244,7 +244,7 @@ class CloudTestCase(test.TestCase):
                                                  project_id=project_id)
 
         fixed_ips = nw_info.fixed_ips()
-        ec2_id = ec2utils.id_to_ec2_id(inst['id'])
+        ec2_id = ec2utils.id_to_ec2_inst_id(inst['id'])
 
         self.stubs.Set(ec2utils, 'get_ip_info_for_instance',
                        lambda *args: {'fixed_ips': ['10.0.0.1'],
@@ -760,7 +760,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(len(result['instancesSet']), 2)
 
         # Now try filtering.
-        instance_id = ec2utils.id_to_ec2_id(inst2['id'])
+        instance_id = ec2utils.id_to_ec2_inst_id(inst2['uuid'])
         result = self.cloud.describe_instances(self.context,
                                              instance_id=[instance_id])
         result = result['reservationSet'][0]
@@ -848,7 +848,7 @@ class CloudTestCase(test.TestCase):
                            'power_state': power_state_, 'vm_state': vm_state_})
             inst = db.instance_create(self.context, values)
 
-            instance_id = ec2utils.id_to_ec2_id(inst['id'])
+            instance_id = ec2utils.id_to_ec2_inst_id(inst['uuid'])
             result = self.cloud.describe_instances(self.context,
                                                  instance_id=[instance_id])
             result = result['reservationSet'][0]
@@ -886,7 +886,7 @@ class CloudTestCase(test.TestCase):
         result = result['reservationSet'][0]
         self.assertEqual(len(result['instancesSet']), 1)
         instance = result['instancesSet'][0]
-        instance_id = ec2utils.id_to_ec2_id(inst1['id'])
+        instance_id = ec2utils.id_to_ec2_inst_id(inst1['uuid'])
         self.assertEqual(instance['instanceId'], instance_id)
         self.assertEqual(instance['publicDnsName'], '1.2.3.4')
         self.assertEqual(instance['ipAddress'], '1.2.3.4')
@@ -916,7 +916,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(len(result['reservationSet']), 1)
         result1 = result['reservationSet'][0]['instancesSet']
         self.assertEqual(result1[0]['instanceId'],
-                         ec2utils.id_to_ec2_id(inst2.id))
+                         ec2utils.id_to_ec2_inst_id(inst2['uuid']))
 
     def test_describe_instances_with_image_deleted(self):
         image_uuid = 'aebef54a-ed67-4d10-912f-14455edce176'
@@ -1083,7 +1083,7 @@ class CloudTestCase(test.TestCase):
         self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
 
     def _assertInstance(self, instance_id):
-        ec2_instance_id = ec2utils.id_to_ec2_id(instance_id)
+        ec2_instance_id = ec2utils.id_to_ec2_inst_id(instance_id)
         result = self.cloud.describe_instances(self.context,
                                                instance_id=[ec2_instance_id])
         result = result['reservationSet'][0]
@@ -1109,12 +1109,12 @@ class CloudTestCase(test.TestCase):
         """
         (inst1, inst2, volumes) = self._setUpBlockDeviceMapping()
 
-        result = self._assertInstance(inst1['id'])
+        result = self._assertInstance(inst1['uuid'])
         self.assertSubDictMatch(self._expected_instance_bdm1, result)
         self._assertEqualBlockDeviceMapping(
             self._expected_block_device_mapping0, result['blockDeviceMapping'])
 
-        result = self._assertInstance(inst2['id'])
+        result = self._assertInstance(inst2['uuid'])
         self.assertSubDictMatch(self._expected_instance_bdm2, result)
 
         self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
@@ -1875,7 +1875,8 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
-        internal_uuid = ec2utils.ec2_id_to_uuid(self.context, instance_id)
+        internal_uuid = db.get_instance_uuid_by_ec2_id(self.context,
+                    ec2utils.ec2_id_to_id(instance_id))
         instance = db.instance_update(self.context, internal_uuid,
                                       {'disable_terminate': True})
 

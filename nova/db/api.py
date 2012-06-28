@@ -1930,3 +1930,21 @@ def instance_fault_create(context, values):
 def instance_fault_get_by_instance_uuids(context, instance_uuids):
     """Get all instance faults for the provided instance_uuids."""
     return IMPL.instance_fault_get_by_instance_uuids(context, instance_uuids)
+
+
+####################
+
+
+def get_ec2_instance_id_by_uuid(context, instance_id):
+    """Get ec2 id through uuid from instance_id_mappings table"""
+    return IMPL.get_ec2_instance_id_by_uuid(context, instance_id)
+
+
+def get_instance_uuid_by_ec2_id(context, instance_id):
+    """Get uuid through ec2 id from instance_id_mappings table"""
+    return IMPL.get_instance_uuid_by_ec2_id(context, instance_id)
+
+
+def ec2_instance_create(context, instance_ec2_id):
+    """Create the ec2 id to instance uuid mapping on demand"""
+    return IMPL.ec2_instance_create(context, instance_ec2_id)

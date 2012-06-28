@@ -1367,6 +1367,9 @@ def instance_create(context, values):
         # exists in the ref when we return.  Fixes lazy loading issues.
         instance_ref.instance_type
 
+    # create the instance uuid to ec2_id mapping entry for instance
+    ec2_instance_create(context, instance_ref['uuid'])
+
     return instance_ref
 
 
@@ -5163,3 +5166,50 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids):
         output[row['instance_uuid']].append(data)
 
     return output
+
+
+##################
+
+
+@require_context
+def ec2_instance_create(context, instance_uuid, id=None):
+    """Create ec2 compatable instance by provided uuid"""
+    ec2_instance_ref = models.InstanceIdMapping()
+    ec2_instance_ref.update({'uuid': instance_uuid})
+    if id is not None:
+        ec2_instance_ref.update({'id': id})
+
+    ec2_instance_ref.save()
+
+    return ec2_instance_ref
+
+
+@require_context
+def get_ec2_instance_id_by_uuid(context, instance_id, session=None):
+    result = _ec2_instance_get_query(context,
+                                     session=session).\
+                    filter_by(uuid=instance_id).\
+                    first()
+
+    if not result:
+        raise exception.InstanceNotFound(uuid=instance_id)
+
+    return result['id']
+
+
+@require_context
+def get_instance_uuid_by_ec2_id(context, instance_id, session=None):
+    result = _ec2_instance_get_query(context,
+                                     session=session).\
+                    filter_by(id=instance_id).\
+                    first()
+
+    if not result:
+        raise exception.InstanceNotFound(id=instance_id)
+
+    return result['uuid']
+
+
+@require_context
+def _ec2_instance_get_query(context, session=None):
+    return model_query(context, models.InstanceIdMapping, session=session)

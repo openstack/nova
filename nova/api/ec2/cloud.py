@@ -690,8 +690,7 @@ class CloudController(object):
             instance = db.instance_get_by_uuid(context.elevated(),
                     instance_uuid)
 
-            instance_id = instance['id']
-            instance_ec2_id = ec2utils.id_to_ec2_id(instance_id)
+            instance_ec2_id = ec2utils.id_to_ec2_inst_id(instance_uuid)
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         instance['host'])
         v = {}
@@ -778,7 +777,7 @@ class CloudController(object):
         volume = self.volume_api.get(context, volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
-                'instanceId': ec2utils.id_to_ec2_id(instance_id),
+                'instanceId': ec2utils.id_to_ec2_inst_id(instance_id),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
@@ -797,7 +796,7 @@ class CloudController(object):
 
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
-                'instanceId': ec2utils.id_to_ec2_id(instance['id']),
+                'instanceId': ec2utils.id_to_ec2_inst_id(instance['uuid']),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
@@ -987,9 +986,10 @@ class CloudController(object):
         if instance_id:
             instances = []
             for ec2_id in instance_id:
-                internal_id = ec2utils.ec2_id_to_id(ec2_id)
                 try:
-                    instance = self.compute_api.get(context, internal_id)
+                    instance_uuid = ec2utils.ec2_inst_id_to_uuid(context,
+                                                                 ec2_id)
+                    instance = self.compute_api.get(context, instance_uuid)
                 except exception.NotFound:
                     continue
                 instances.append(instance)
@@ -1007,8 +1007,8 @@ class CloudController(object):
                 if instance['image_ref'] == str(FLAGS.vpn_image_id):
                     continue
             i = {}
-            instance_id = instance['id']
-            ec2_id = ec2utils.id_to_ec2_id(instance_id)
+            instance_uuid = instance['uuid']
+            ec2_id = ec2utils.id_to_ec2_inst_id(instance_uuid)
             i['instanceId'] = ec2_id
             image_uuid = instance['image_ref']
             i['imageId'] = ec2utils.glance_id_to_ec2_id(context, image_uuid)
@@ -1081,7 +1081,7 @@ class CloudController(object):
             fixed_id = floating_ip['fixed_ip_id']
             fixed = self.network_api.get_fixed_ip(context, fixed_id)
             if fixed['instance_id'] is not None:
-                ec2_id = ec2utils.id_to_ec2_id(fixed['instance_id'])
+                ec2_id = ec2utils.id_to_ec2_inst_id(fixed['instance_id'])
         address = {'public_ip': floating_ip['address'],
                    'instance_id': ec2_id}
         if context.is_admin:
