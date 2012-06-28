@@ -1832,7 +1832,7 @@ def instance_info_cache_get(context, instance_uuid, session=None):
     session = session or get_session()
 
     info_cache = session.query(models.InstanceInfoCache).\
-                         filter_by(instance_id=instance_uuid).\
+                         filter_by(instance_uuid=instance_uuid).\
                          first()
     return info_cache
 
@@ -1856,7 +1856,7 @@ def instance_info_cache_update(context, instance_uuid, values,
     else:
         # NOTE(tr3buchet): just in case someone blows away an instance's
         #                  cache entry
-        values['instance_id'] = instance_uuid
+        values['instance_uuid'] = instance_uuid
         info_cache = instance_info_cache_create(context, values)
 
     return info_cache
