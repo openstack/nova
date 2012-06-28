@@ -1429,6 +1429,15 @@ class LibvirtDriver(driver.ComputeDriver):
         config_drive, config_drive_id = self._get_config_drive_info(instance)
         return any((config_drive, config_drive_id))
 
+    def get_host_capabilities(self):
+        """Returns an instance of config.LibvirtConfigCaps representing
+           the capabilities of the host"""
+        xmlstr = self._conn.getCapabilities()
+
+        caps = config.LibvirtConfigCaps()
+        caps.parse_str(xmlstr)
+        return caps
+
     def get_guest_config(self, instance, network_info, image_meta, rescue=None,
                          block_device_info=None):
         """Get config data for parameters.
@@ -1974,53 +1983,38 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        xml = self._conn.getCapabilities()
-        xml = etree.fromstring(xml)
-        nodes = xml.findall('.//host/cpu')
-        if len(nodes) != 1:
-            reason = _("'<cpu>' must be 1, but %d\n") % len(nodes)
-            reason += xml.serialize()
-            raise exception.InvalidCPUInfo(reason=reason)
-
+        caps = self.get_host_capabilities()
         cpu_info = dict()
 
-        arch_nodes = xml.findall('.//host/cpu/arch')
-        if arch_nodes:
-            cpu_info['arch'] = arch_nodes[0].text
+        cpu_info['arch'] = caps.host.cpu.arch
+        cpu_info['model'] = caps.host.cpu.model
+        cpu_info['vendor'] = caps.host.cpu.vendor
 
-        model_nodes = xml.findall('.//host/cpu/model')
-        if model_nodes:
-            cpu_info['model'] = model_nodes[0].text
-
-        vendor_nodes = xml.findall('.//host/cpu/vendor')
-        if vendor_nodes:
-            cpu_info['vendor'] = vendor_nodes[0].text
-
-        topology_nodes = xml.findall('.//host/cpu/topology')
         topology = dict()
-        if topology_nodes:
-            topology_node = topology_nodes[0]
-
-            keys = ['cores', 'sockets', 'threads']
-            tkeys = topology_node.keys()
-            if set(tkeys) != set(keys):
-                ks = ', '.join(keys)
-                reason = _("topology (%(topology)s) must have %(ks)s")
-                raise exception.InvalidCPUInfo(reason=reason % locals())
-            for key in keys:
-                topology[key] = topology_node.get(key)
-
-        feature_nodes = xml.findall('.//host/cpu/feature')
-        features = list()
-        for nodes in feature_nodes:
-            features.append(nodes.get('name'))
-
-        arch_nodes = xml.findall('.//guest/arch')
-        guest_cpu_arches = list(node.get('name') for node in arch_nodes)
-
+        topology['sockets'] = caps.host.cpu.sockets
+        topology['cores'] = caps.host.cpu.cores
+        topology['threads'] = caps.host.cpu.threads
         cpu_info['topology'] = topology
+
+        features = list()
+        for f in caps.host.cpu.features:
+            features.append(f.name)
         cpu_info['features'] = features
-        cpu_info['permitted_instance_types'] = guest_cpu_arches
+
+        guest_arches = list()
+        for g in caps.guests:
+            guest_arches.append(g.arch)
+        cpu_info['permitted_instance_types'] = guest_arches
+
+        # TODO(berrange): why do we bother converting the
+        # libvirt capabilities XML into a special JSON format ?
+        # The data format is different across all the drivers
+        # so we could just return the raw capabilties XML
+        # which 'compare_cpu' could use directly
+        #
+        # That said, arch_filter.py now seems to rely on
+        # the libvirt drivers format which suggests this
+        # data format needs to be standardized across drivers
         return jsonutils.dumps(cpu_info)
 
     def block_stats(self, instance_name, disk):
