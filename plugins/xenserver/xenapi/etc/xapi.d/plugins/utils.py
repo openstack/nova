@@ -124,14 +124,10 @@ def import_vhds(sr_path, staging_path, uuid_stack):
            however, the chances of an SR.scan occuring between the rename()s
            invocations is so small that we can safely ignore it)
 
-    Returns: A list of VDIs.  Each list element is a dictionary containing
-    information about the VHD.  Dictionary keys are:
-        1. "vdi_type" - The type of VDI. Currently they can be "root" or
-           "swap"
-        2. "vdi_uuid" - The UUID of the VDI
+    Returns: A dict of the VDIs imported. For example:
 
-    Example return: [{"vdi_type": "root","vdi_uuid": "ffff-aaa..vhd"},
-                     {"vdi_type": "swap","vdi_uuid": "ffff-bbb..vhd"}]
+        {'root': {'uuid': 'ffff-aaaa'},
+         'swap': {'uuid': 'ffff-bbbb'}}
     """
     def rename_with_uuid(orig_path):
         """Rename VHD using UUID so that it will be recognized by SR on a
@@ -233,7 +229,7 @@ def import_vhds(sr_path, staging_path, uuid_stack):
         while cur_path:
             cur_path = get_parent_path(cur_path)
 
-    vdi_return_list = []
+    imported_vhds = {}
     paths_to_move = []
 
     image_parent = None
@@ -258,23 +254,23 @@ def import_vhds(sr_path, staging_path, uuid_stack):
         # delete the base_copy since it is an unreferenced parent.
         paths_to_move.insert(0, snap_info[0])
         # We return this snap as the VDI instead of image.vhd
-        vdi_return_list.append(dict(vdi_type="root", vdi_uuid=snap_info[1]))
+        imported_vhds['root'] = dict(uuid=snap_info[1])
     else:
         validate_vdi_chain(image_info[0])
         assert_vhd_not_hidden(image_info[0])
         # If there's no snap, we return the image.vhd UUID
-        vdi_return_list.append(dict(vdi_type="root", vdi_uuid=image_info[1]))
+        imported_vhds['root'] = dict(uuid=image_info[1])
 
     swap_info = prepare_if_exists(staging_path, 'swap.vhd')
     if swap_info:
         assert_vhd_not_hidden(swap_info[0])
         paths_to_move.append(swap_info[0])
-        vdi_return_list.append(dict(vdi_type="swap", vdi_uuid=swap_info[1]))
+        imported_vhds['swap'] = dict(uuid=swap_info[1])
 
     for path in paths_to_move:
         move_into_sr(path)
 
-    return vdi_return_list
+    return imported_vhds
 
 
 def prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):

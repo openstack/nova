@@ -604,7 +604,7 @@ def create_kernel_image(context, session, instance, image_id, user_id,
                                        args)
 
     if filename == "":
-        return fetch_image(context, session, instance, image_id, image_type)
+        return _fetch_image(context, session, instance, image_id, image_type)
     else:
         vdi_type = ImageType.to_string(image_type)
         return {vdi_type: dict(uuid=None, file=filename)}
@@ -623,9 +623,9 @@ def _create_cached_image(context, session, instance, image_id, image_type):
 
     root_vdi_ref = find_cached_image(session, image_id, sr_ref)
     if root_vdi_ref is None:
-        fetched_vdis = fetch_image(context, session, instance, image_id,
+        vdis = _fetch_image(context, session, instance, image_id,
                                    image_type)
-        root_vdi = fetched_vdis['root']
+        root_vdi = vdis['root']
         root_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                            root_vdi['uuid'])
         set_vdi_name(session, root_vdi['uuid'], 'Glance Image %s' % image_id,
@@ -633,7 +633,7 @@ def _create_cached_image(context, session, instance, image_id, image_type):
         session.call_xenapi('VDI.add_to_other_config',
                             root_vdi_ref, 'image-id', str(image_id))
 
-        for vdi_type, vdi in fetched_vdis.iteritems():
+        for vdi_type, vdi in vdis.iteritems():
             vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                           vdi['uuid'])
 
@@ -709,7 +709,7 @@ def create_image(context, session, instance, image_id, image_type):
         vdis = _create_cached_image(
                 context, session, instance, image_id, image_type)
     else:
-        vdis = fetch_image(
+        vdis = _fetch_image(
                 context, session, instance, image_id, image_type)
 
     # Set the name label and description to easily identify what
@@ -720,17 +720,25 @@ def create_image(context, session, instance, image_id, image_type):
     return vdis
 
 
-def fetch_image(context, session, instance, image_id, image_type):
+def _fetch_image(context, session, instance, image_id, image_type):
     """Fetch image from glance based on image type.
 
     Returns: A single filename if image_type is KERNEL or RAMDISK
              A list of dictionaries that describe VDIs, otherwise
     """
     if image_type == ImageType.DISK_VHD:
-        return _fetch_vhd_image(context, session, instance, image_id)
+        vdis = _fetch_vhd_image(context, session, instance, image_id)
     else:
-        return _fetch_disk_image(context, session, instance, image_id,
+        vdis = _fetch_disk_image(context, session, instance, image_id,
                                  image_type)
+
+    for vdi_type, vdi in vdis.iteritems():
+        vdi_uuid = vdi['uuid']
+        LOG.debug(_("Fetched VDIs of type '%(vdi_type)s' with UUID"
+                    "  '%(vdi_uuid)s'"),
+                  locals(), instance=instance)
+
+    return vdis
 
 
 def _fetch_using_dom0_plugin_with_retry(context, session, image_id,
@@ -785,21 +793,12 @@ def _fetch_vhd_image(context, session, instance, image_id):
         params['glance_port'] = glance_port
 
     plugin_name = 'glance'
-    fetched_vdis = _fetch_using_dom0_plugin_with_retry(
+    vdis = _fetch_using_dom0_plugin_with_retry(
             context, session, image_id, plugin_name, params,
             callback=pick_glance)
 
     sr_ref = safe_find_sr(session)
     scan_sr(session, sr_ref)
-
-    # TODO(sirp): the plugin should return the correct format rather than
-    # munging here
-    vdis = {}
-    for vdi in fetched_vdis:
-        LOG.debug(_("xapi 'download_vhd' returned VDI of "
-                    "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'"),
-                  vdi, instance=instance)
-        vdis[vdi['vdi_type']] = dict(uuid=vdi['vdi_uuid'], file=None)
 
     # Pull out the UUID of the root VDI
     root_vdi_uuid = vdis['root']['uuid']
