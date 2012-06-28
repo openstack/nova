@@ -49,9 +49,9 @@ import socket
 import ssl
 
 from nova import flags
-from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.scheduler import filters
 
 

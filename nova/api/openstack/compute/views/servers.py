@@ -22,7 +22,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
 

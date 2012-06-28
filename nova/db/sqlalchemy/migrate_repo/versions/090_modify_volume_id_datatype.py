@@ -19,7 +19,8 @@ from migrate import ForeignKeyConstraint
 from sqlalchemy import Integer
 from sqlalchemy import MetaData, String, Table
 
-from nova import log as logging
+from migrate import ForeignKeyConstraint
+from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

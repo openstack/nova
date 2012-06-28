@@ -32,8 +32,8 @@ from suds.sax import text
 
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
 from nova.volume import driver
 
 LOG = logging.getLogger(__name__)

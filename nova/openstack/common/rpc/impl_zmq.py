@@ -47,8 +47,8 @@ zmq_opts = [
 
     # The module.Class to use for matchmaking.
     cfg.StrOpt('rpc_zmq_matchmaker',
-               default='openstack.common.rpc.matchmaker.MatchMakerLocalhost',
-               help='MatchMaker driver'),
+        default='nova.openstack.common.rpc.matchmaker.MatchMakerLocalhost',
+        help='MatchMaker driver'),
 
     # The following port is unassigned by IANA as of 2012-05-21
     cfg.IntOpt('rpc_zmq_port', default=9501,

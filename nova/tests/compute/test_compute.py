@@ -39,9 +39,9 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common

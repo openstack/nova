@@ -15,7 +15,7 @@
 
 from nova import context
 from nova import db
-from nova import log as logging
+from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

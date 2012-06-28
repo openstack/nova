@@ -21,7 +21,7 @@ import StringIO
 
 from nova import exception
 from nova.image import glance
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import io_util
 from nova.virt.vmwareapi import read_write_util
 

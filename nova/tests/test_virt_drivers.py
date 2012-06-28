@@ -21,8 +21,8 @@ import traceback
 
 from nova.compute.manager import ComputeManager
 from nova import exception
-from nova import log as logging
 from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils

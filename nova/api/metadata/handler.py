@@ -25,7 +25,7 @@ import webob.exc
 from nova.api.metadata import base
 from nova import exception
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import wsgi
 
 LOG = logging.getLogger(__name__)

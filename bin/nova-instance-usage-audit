@@ -55,7 +55,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import utils
 
@@ -65,7 +65,7 @@ FLAGS = flags.FLAGS
 if __name__ == '__main__':
     admin_context = context.get_admin_context()
     flags.parse_args(sys.argv)
-    logging.setup()
+    logging.setup("nova")
     begin, end = utils.last_completed_audit_period()
     print "Starting instance usage audit"
     print "Creating usages for %s until %s" % (str(begin), str(end))

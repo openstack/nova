@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 from nova import exception
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import test
 from nova.volume import san
 

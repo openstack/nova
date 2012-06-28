@@ -26,7 +26,7 @@ import logging
 import optparse
 
 from nova import flags
-from nova import log
+from nova.openstack.common import log
 from nova import utils
 
 

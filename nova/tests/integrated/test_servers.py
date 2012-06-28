@@ -18,7 +18,7 @@
 import time
 import unittest
 
-from nova.log import logging
+from nova.openstack.common.log import logging
 from nova.tests.integrated.api import client
 from nova.tests.integrated import integrated_helpers
 import nova.virt.fake

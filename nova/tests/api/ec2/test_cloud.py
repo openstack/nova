@@ -37,8 +37,8 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.image import s3
-from nova import log as logging
 from nova.network import api as network_api
+from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import test
 from nova.tests.image import fake

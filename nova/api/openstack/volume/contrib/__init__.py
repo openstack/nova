@@ -23,7 +23,7 @@ It can't be called 'extensions' because that causes namespacing problems.
 
 from nova.api.openstack import extensions
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 
 
 FLAGS = flags.FLAGS

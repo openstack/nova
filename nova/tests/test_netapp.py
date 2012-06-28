@@ -25,7 +25,7 @@ import StringIO
 
 from lxml import etree
 
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import test
 from nova.volume import netapp
 

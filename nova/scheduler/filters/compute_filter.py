@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova import utils
 

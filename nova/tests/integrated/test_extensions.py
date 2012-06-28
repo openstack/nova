@@ -16,7 +16,7 @@
 #    under the License.
 
 from nova import flags
-from nova.log import logging
+from nova.openstack.common.log import logging
 from nova.tests.integrated import integrated_helpers
 
 

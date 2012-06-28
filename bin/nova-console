@@ -34,12 +34,12 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import service
 
 if __name__ == '__main__':
     flags.parse_args(sys.argv)
-    logging.setup()
+    logging.setup("nova")
     server = service.Service.create(binary='nova-console')
     service.serve(server)
     service.wait()

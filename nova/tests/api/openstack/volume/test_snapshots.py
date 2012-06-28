@@ -19,7 +19,7 @@ import webob
 from nova.api.openstack.volume import snapshots
 from nova import exception
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes

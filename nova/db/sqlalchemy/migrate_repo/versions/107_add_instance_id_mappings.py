@@ -14,9 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.openstack.common import log as logging
 from sqlalchemy import Boolean, Column, DateTime, Integer
 from sqlalchemy import Index, MetaData, String, Table
-from nova import log as logging
 
 LOG = logging.getLogger(__name__)
 

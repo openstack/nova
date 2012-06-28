@@ -21,7 +21,7 @@ import re
 from eventlet import greenthread
 
 from nova import exception
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import utils
 
 LOG = logging.getLogger(__name__)

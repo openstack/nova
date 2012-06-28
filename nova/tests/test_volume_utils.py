@@ -20,9 +20,9 @@
 from nova import context
 from nova import db
 from nova import flags
-from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova import test
 from nova.volume import utils as volume_utils
 

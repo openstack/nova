@@ -25,10 +25,10 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import flags
-from nova import log as logging
 import nova.network
 from nova import notifications
 from nova.notifier import test_notifier
+from nova.openstack.common import log as logging
 from nova import test
 from nova.tests import fake_network
 

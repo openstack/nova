@@ -22,8 +22,8 @@ import inspect
 
 from nova.db import base
 from nova import flags
-from nova import log as logging
 from nova.network import model as network_model
+from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 
 

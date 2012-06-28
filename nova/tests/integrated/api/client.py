@@ -18,8 +18,8 @@ import httplib
 import urllib
 import urlparse
 
-from nova import log as logging
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

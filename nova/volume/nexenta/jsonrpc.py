@@ -24,8 +24,8 @@
 
 import urllib2
 
-from nova import log as logging
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.volume import nexenta
 
 LOG = logging.getLogger(__name__)

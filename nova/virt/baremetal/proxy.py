@@ -40,9 +40,9 @@ from nova import context as nova_context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova import notifications
 from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.baremetal import dom
 from nova.virt.baremetal import nodes

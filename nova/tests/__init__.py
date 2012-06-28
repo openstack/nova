@@ -39,7 +39,7 @@ import shutil
 
 from nova.db.sqlalchemy.session import get_engine
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 
 import eventlet
 
@@ -49,7 +49,7 @@ eventlet.monkey_patch(os=False)
 FLAGS = flags.FLAGS
 FLAGS.use_stderr = False
 
-logging.setup()
+logging.setup('nova')
 
 _DB = None
 

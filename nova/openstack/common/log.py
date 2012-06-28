@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Nova logging handler.
+"""Openstack logging handler.
 
 This module adds to logging functionality by adding the option to specify
 a context object when calling the various log methods.  If the context object
@@ -25,7 +25,7 @@ is not specified, default formatting is used. Additionally, an instance uuid
 may be passed as part of the log message, which is intended to make it easier
 for admins to find messages related to a specific instance.
 
-It also allows setting of formatting information through flags.
+It also allows setting of formatting information through conf.
 
 """
 
@@ -40,12 +40,10 @@ import stat
 import sys
 import traceback
 
-import nova
-from nova import flags
+from nova import notifier
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import local
-from nova import version
 
 
 log_opts = [
@@ -92,8 +90,26 @@ log_opts = [
                     'format it like this'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(log_opts)
+
+generic_log_opts = [
+    cfg.StrOpt('logdir',
+               default=None,
+               help='Log output to a per-service log file in named directory'),
+    cfg.StrOpt('logfile',
+               default=None,
+               help='Log output to a named file'),
+    cfg.BoolOpt('use_stderr',
+                default=True,
+                help='Log output to standard error'),
+    cfg.StrOpt('logfile_mode',
+               default='0644',
+               help='Default file mode used when creating log files'),
+    ]
+
+
+CONF = cfg.CONF
+CONF.register_opts(generic_log_opts)
+CONF.register_opts(log_opts)
 
 # our new audit level
 # NOTE(jkoelker) Since we synthesized an audit level, make the logging
@@ -129,8 +145,8 @@ def _get_binary_name():
 
 
 def _get_log_file_path(binary=None):
-    logfile = FLAGS.log_file or FLAGS.logfile
-    logdir = FLAGS.log_dir or FLAGS.logdir
+    logfile = CONF.log_file or CONF.logfile
+    logdir = CONF.log_dir or CONF.logdir
 
     if logfile and not logdir:
         return logfile
@@ -143,11 +159,13 @@ def _get_log_file_path(binary=None):
         return '%s.log' % (os.path.join(logdir, binary),)
 
 
-class NovaContextAdapter(logging.LoggerAdapter):
+class ContextAdapter(logging.LoggerAdapter):
     warn = logging.LoggerAdapter.warning
 
-    def __init__(self, logger):
+    def __init__(self, logger, project_name, version_string):
         self.logger = logger
+        self.project = project_name
+        self.version = version_string
 
     def audit(self, msg, *args, **kwargs):
         self.log(logging.AUDIT, msg, *args, **kwargs)
@@ -166,15 +184,16 @@ class NovaContextAdapter(logging.LoggerAdapter):
         instance = kwargs.pop('instance', None)
         instance_extra = ''
         if instance:
-            instance_extra = FLAGS.instance_format % instance
+            instance_extra = CONF.instance_format % instance
         else:
             instance_uuid = kwargs.pop('instance_uuid', None)
             if instance_uuid:
-                instance_extra = (FLAGS.instance_uuid_format
+                instance_extra = (CONF.instance_uuid_format
                                   % {'uuid': instance_uuid})
         extra.update({'instance': instance_extra})
 
-        extra.update({"nova_version": version.version_string_with_vcs()})
+        extra.update({"project": self.project})
+        extra.update({"version": self.version})
         extra['extra'] = extra.copy()
         return msg, kwargs
 
@@ -225,8 +244,153 @@ class JSONFormatter(logging.Formatter):
         return jsonutils.dumps(message)
 
 
-class LegacyNovaFormatter(logging.Formatter):
-    """A nova.context.RequestContext aware formatter configured through flags.
+class PublishErrorsHandler(logging.Handler):
+    def emit(self, record):
+        if 'list_notifier_drivers' in CONF:
+            if ('nova.openstack.common.notifier.log_notifier' in
+                CONF.list_notifier_drivers):
+                return
+        notifier.api.notify(None, 'error.publisher',
+                                 'error_notification',
+                                 notifier.api.ERROR,
+                                 dict(error=record.msg))
+
+
+def handle_exception(type, value, tb):
+    extra = {}
+    if CONF.verbose:
+        extra['exc_info'] = (type, value, tb)
+    getLogger().critical(str(value), **extra)
+
+
+def setup(product_name):
+    """Setup logging."""
+    sys.excepthook = handle_exception
+
+    if CONF.log_config:
+        try:
+            logging.config.fileConfig(CONF.log_config)
+        except Exception:
+            traceback.print_exc()
+            raise
+    else:
+        _setup_logging_from_conf(product_name)
+
+
+def _find_facility_from_conf():
+    facility_names = logging.handlers.SysLogHandler.facility_names
+    facility = getattr(logging.handlers.SysLogHandler,
+                       CONF.syslog_log_facility,
+                       None)
+
+    if facility is None and CONF.syslog_log_facility in facility_names:
+        facility = facility_names.get(CONF.syslog_log_facility)
+
+    if facility is None:
+        valid_facilities = facility_names.keys()
+        consts = ['LOG_AUTH', 'LOG_AUTHPRIV', 'LOG_CRON', 'LOG_DAEMON',
+                  'LOG_FTP', 'LOG_KERN', 'LOG_LPR', 'LOG_MAIL', 'LOG_NEWS',
+                  'LOG_AUTH', 'LOG_SYSLOG', 'LOG_USER', 'LOG_UUCP',
+                  'LOG_LOCAL0', 'LOG_LOCAL1', 'LOG_LOCAL2', 'LOG_LOCAL3',
+                  'LOG_LOCAL4', 'LOG_LOCAL5', 'LOG_LOCAL6', 'LOG_LOCAL7']
+        valid_facilities.extend(consts)
+        raise TypeError(_('syslog facility must be one of: %s') %
+                        ', '.join("'%s'" % fac
+                                  for fac in valid_facilities))
+
+    return facility
+
+
+def _setup_logging_from_conf(product_name):
+    log_root = getLogger(product_name).logger
+    for handler in log_root.handlers:
+        log_root.removeHandler(handler)
+
+    if CONF.use_syslog:
+        facility = _find_facility_from_conf()
+        syslog = logging.handlers.SysLogHandler(address='/dev/log',
+                                                facility=facility)
+        log_root.addHandler(syslog)
+
+    logpath = _get_log_file_path()
+    if logpath:
+        filelog = logging.handlers.WatchedFileHandler(logpath)
+        log_root.addHandler(filelog)
+
+        mode = int(CONF.logfile_mode, 8)
+        st = os.stat(logpath)
+        if st.st_mode != (stat.S_IFREG | mode):
+            os.chmod(logpath, mode)
+
+    if CONF.use_stderr:
+        streamlog = ColorHandler()
+        log_root.addHandler(streamlog)
+
+    elif not CONF.log_file:
+        # pass sys.stdout as a positional argument
+        # python2.6 calls the argument strm, in 2.7 it's stream
+        streamlog = logging.StreamHandler(sys.stdout)
+        log_root.addHandler(streamlog)
+
+    if CONF.publish_errors:
+        log_root.addHandler(PublishErrorsHandler(logging.ERROR))
+
+    for handler in log_root.handlers:
+        datefmt = CONF.log_date_format
+        if CONF.log_format:
+            handler.setFormatter(logging.Formatter(fmt=CONF.log_format,
+                                                   datefmt=datefmt))
+        handler.setFormatter(LegacyFormatter(datefmt=datefmt))
+
+    if CONF.verbose or CONF.debug:
+        log_root.setLevel(logging.DEBUG)
+    else:
+        log_root.setLevel(logging.INFO)
+
+    level = logging.NOTSET
+    for pair in CONF.default_log_levels:
+        mod, _sep, level_name = pair.partition('=')
+        level = logging.getLevelName(level_name)
+        logger = logging.getLogger(mod)
+        logger.setLevel(level)
+        for handler in log_root.handlers:
+            logger.addHandler(handler)
+
+    # NOTE(jkoelker) Clear the handlers for the root logger that was setup
+    #                by basicConfig in nova/__init__.py and install the
+    #                NullHandler.
+    root = logging.getLogger()
+    for handler in root.handlers:
+        root.removeHandler(handler)
+    handler = NullHandler()
+    handler.setFormatter(logging.Formatter())
+    root.addHandler(handler)
+
+
+_loggers = {}
+
+
+def getLogger(name='unknown', version='unknown'):
+    if name not in _loggers:
+        _loggers[name] = ContextAdapter(logging.getLogger(name),
+                                        name,
+                                        version)
+    return _loggers[name]
+
+
+class WritableLogger(object):
+    """A thin wrapper that responds to `write` and logs."""
+
+    def __init__(self, logger, level=logging.INFO):
+        self.logger = logger
+        self.level = level
+
+    def write(self, msg):
+        self.logger.log(self.level, msg)
+
+
+class LegacyFormatter(logging.Formatter):
+    """A context.RequestContext aware formatter configured through flags.
 
     The flags used to set format strings are: logging_context_format_string
     and logging_default_format_string.  You can also specify
@@ -244,13 +408,13 @@ class LegacyNovaFormatter(logging.Formatter):
             record.__dict__['instance'] = ''
 
         if record.__dict__.get('request_id', None):
-            self._fmt = FLAGS.logging_context_format_string
+            self._fmt = CONF.logging_context_format_string
         else:
-            self._fmt = FLAGS.logging_default_format_string
+            self._fmt = CONF.logging_default_format_string
 
         if (record.levelno == logging.DEBUG and
-            FLAGS.logging_debug_format_suffix):
-            self._fmt += " " + FLAGS.logging_debug_format_suffix
+            CONF.logging_debug_format_suffix):
+            self._fmt += " " + CONF.logging_debug_format_suffix
 
         # Cache this on the record, Logger will respect our formated copy
         if record.exc_info:
@@ -258,7 +422,7 @@ class LegacyNovaFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
     def formatException(self, exc_info, record=None):
-        """Format exception output with FLAGS.logging_exception_prefix."""
+        """Format exception output with CONF.logging_exception_prefix."""
         if not record:
             return logging.Formatter.formatException(self, exc_info)
 
@@ -268,18 +432,18 @@ class LegacyNovaFormatter(logging.Formatter):
         lines = stringbuffer.getvalue().split('\n')
         stringbuffer.close()
 
-        if FLAGS.logging_exception_prefix.find('%(asctime)') != -1:
+        if CONF.logging_exception_prefix.find('%(asctime)') != -1:
             record.asctime = self.formatTime(record, self.datefmt)
 
         formatted_lines = []
         for line in lines:
-            pl = FLAGS.logging_exception_prefix % record.__dict__
+            pl = CONF.logging_exception_prefix % record.__dict__
             fl = '%s%s' % (pl, line)
             formatted_lines.append(fl)
         return '\n'.join(formatted_lines)
 
 
-class NovaColorHandler(logging.StreamHandler):
+class ColorHandler(logging.StreamHandler):
     LEVEL_COLORS = {
         logging.DEBUG: '\033[00;32m',  # GREEN
         logging.INFO: '\033[00;36m',  # CYAN
@@ -292,145 +456,3 @@ class NovaColorHandler(logging.StreamHandler):
     def format(self, record):
         record.color = self.LEVEL_COLORS[record.levelno]
         return logging.StreamHandler.format(self, record)
-
-
-class PublishErrorsHandler(logging.Handler):
-    def emit(self, record):
-        if 'list_notifier_drivers' in FLAGS:
-            if 'nova.notifier.log_notifier' in FLAGS.list_notifier_drivers:
-                return
-        nova.notifier.api.notify(None, 'nova.error.publisher',
-                                 'error_notification',
-                                 nova.notifier.api.ERROR,
-                                 dict(error=record.msg))
-
-
-def handle_exception(type, value, tb):
-    extra = {}
-    if FLAGS.verbose:
-        extra['exc_info'] = (type, value, tb)
-    getLogger().critical(str(value), **extra)
-
-
-def setup():
-    """Setup nova logging."""
-    sys.excepthook = handle_exception
-
-    if FLAGS.log_config:
-        try:
-            logging.config.fileConfig(FLAGS.log_config)
-        except Exception:
-            traceback.print_exc()
-            raise
-    else:
-        _setup_logging_from_flags()
-
-
-def _find_facility_from_flags():
-    facility_names = logging.handlers.SysLogHandler.facility_names
-    facility = getattr(logging.handlers.SysLogHandler,
-                       FLAGS.syslog_log_facility,
-                       None)
-
-    if facility is None and FLAGS.syslog_log_facility in facility_names:
-        facility = facility_names.get(FLAGS.syslog_log_facility)
-
-    if facility is None:
-        valid_facilities = facility_names.keys()
-        consts = ['LOG_AUTH', 'LOG_AUTHPRIV', 'LOG_CRON', 'LOG_DAEMON',
-                  'LOG_FTP', 'LOG_KERN', 'LOG_LPR', 'LOG_MAIL', 'LOG_NEWS',
-                  'LOG_AUTH', 'LOG_SYSLOG', 'LOG_USER', 'LOG_UUCP',
-                  'LOG_LOCAL0', 'LOG_LOCAL1', 'LOG_LOCAL2', 'LOG_LOCAL3',
-                  'LOG_LOCAL4', 'LOG_LOCAL5', 'LOG_LOCAL6', 'LOG_LOCAL7']
-        valid_facilities.extend(consts)
-        raise TypeError(_('syslog facility must be one of: %s') %
-                        ', '.join("'%s'" % fac
-                                  for fac in valid_facilities))
-
-    return facility
-
-
-def _setup_logging_from_flags():
-    nova_root = getLogger().logger
-    for handler in nova_root.handlers:
-        nova_root.removeHandler(handler)
-
-    if FLAGS.use_syslog:
-        facility = _find_facility_from_flags()
-        syslog = logging.handlers.SysLogHandler(address='/dev/log',
-                                                facility=facility)
-        nova_root.addHandler(syslog)
-
-    logpath = _get_log_file_path()
-    if logpath:
-        filelog = logging.handlers.WatchedFileHandler(logpath)
-        nova_root.addHandler(filelog)
-
-        mode = int(FLAGS.logfile_mode, 8)
-        st = os.stat(logpath)
-        if st.st_mode != (stat.S_IFREG | mode):
-            os.chmod(logpath, mode)
-
-    if FLAGS.use_stderr:
-        streamlog = NovaColorHandler()
-        nova_root.addHandler(streamlog)
-
-    elif not FLAGS.log_file:
-        # pass sys.stdout as a positional argument
-        # python2.6 calls the argument strm, in 2.7 it's stream
-        streamlog = logging.StreamHandler(sys.stdout)
-        nova_root.addHandler(streamlog)
-
-    if FLAGS.publish_errors:
-        nova_root.addHandler(PublishErrorsHandler(logging.ERROR))
-
-    for handler in nova_root.handlers:
-        datefmt = FLAGS.log_date_format
-        if FLAGS.log_format:
-            handler.setFormatter(logging.Formatter(fmt=FLAGS.log_format,
-                                                   datefmt=datefmt))
-        handler.setFormatter(LegacyNovaFormatter(datefmt=datefmt))
-
-    if FLAGS.verbose or FLAGS.debug:
-        nova_root.setLevel(logging.DEBUG)
-    else:
-        nova_root.setLevel(logging.INFO)
-
-    level = logging.NOTSET
-    for pair in FLAGS.default_log_levels:
-        mod, _sep, level_name = pair.partition('=')
-        level = logging.getLevelName(level_name)
-        logger = logging.getLogger(mod)
-        logger.setLevel(level)
-        for handler in nova_root.handlers:
-            logger.addHandler(handler)
-
-    # NOTE(jkoelker) Clear the handlers for the root logger that was setup
-    #                by basicConfig in nova/__init__.py and install the
-    #                NullHandler.
-    root = logging.getLogger()
-    for handler in root.handlers:
-        root.removeHandler(handler)
-    handler = NullHandler()
-    handler.setFormatter(logging.Formatter())
-    root.addHandler(handler)
-
-
-_loggers = {}
-
-
-def getLogger(name='nova'):
-    if name not in _loggers:
-        _loggers[name] = NovaContextAdapter(logging.getLogger(name))
-    return _loggers[name]
-
-
-class WritableLogger(object):
-    """A thin wrapper that responds to `write` and logs."""
-
-    def __init__(self, logger, level=logging.INFO):
-        self.logger = logger
-        self.level = level
-
-    def write(self, msg):
-        self.logger.log(self.level, msg)

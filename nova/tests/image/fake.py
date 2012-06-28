@@ -24,7 +24,7 @@ import datetime
 from nova import exception
 from nova import flags
 import nova.image.glance
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import utils
 
 

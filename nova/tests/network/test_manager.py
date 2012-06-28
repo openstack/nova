@@ -23,10 +23,10 @@ import tempfile
 from nova import context
 from nova import db
 from nova import exception
-from nova import log as logging
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 import nova.policy
 from nova import test

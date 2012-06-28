@@ -35,7 +35,7 @@ import sqlalchemy
 import nova.db.migration as migration
 import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy.migration import versioning_api as migration_api
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import test
 
 

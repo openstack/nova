@@ -37,9 +37,9 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.image import s3
-from nova import log as logging
 from nova import network
 from nova.openstack.common import excutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota
 from nova import utils

@@ -28,8 +28,8 @@ import base64
 
 from nova import crypto
 from nova import flags
-from nova import log as logging
 from nova import manager
+from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS

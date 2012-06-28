@@ -20,8 +20,8 @@
 """VIF drivers for XenAPI."""
 
 from nova import flags
-from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
 from nova.virt import vif
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils

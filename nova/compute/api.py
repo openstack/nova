@@ -40,12 +40,12 @@ from nova.db import base
 from nova import exception
 from nova import flags
 from nova.image import glance
-from nova import log as logging
 from nova import network
 from nova import notifications
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 import nova.policy
 from nova import quota

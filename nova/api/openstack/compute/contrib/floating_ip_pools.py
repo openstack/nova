@@ -17,8 +17,8 @@
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import log as logging
 from nova import network
+from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

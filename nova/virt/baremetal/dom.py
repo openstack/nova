@@ -17,8 +17,8 @@
 from nova.compute import power_state
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.virt.baremetal import nodes
 
 FLAGS = flags.FLAGS

@@ -20,7 +20,7 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import db
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 
 
 FLAGS = flags.FLAGS

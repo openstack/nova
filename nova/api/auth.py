@@ -23,8 +23,8 @@ import webob.exc
 
 from nova import context
 from nova import flags
-from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
 from nova import wsgi
 
 

@@ -45,7 +45,7 @@ CONF = cfg.CONF
 def main():
     CONF.register_opts(rpc.rpc_opts)
     impl_zmq.register_opts(CONF)
-    logging.setup()
+    logging.setup("nova")
     utils.monkey_patch()
 
     ipc_dir = CONF.rpc_zmq_ipc_dir

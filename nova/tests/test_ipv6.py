@@ -17,7 +17,7 @@
 """Test suite for IPv6."""
 
 from nova import ipv6
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import test
 
 LOG = logging.getLogger(__name__)

@@ -27,7 +27,7 @@ from sqlalchemy.pool import NullPool, StaticPool
 
 import nova.exception
 import nova.flags as flags
-import nova.log as logging
+import nova.openstack.common.log as logging
 
 
 FLAGS = flags.FLAGS

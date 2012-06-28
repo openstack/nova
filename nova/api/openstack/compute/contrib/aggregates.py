@@ -20,7 +20,7 @@ from webob import exc
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova import exception
-from nova import log as logging
+from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'aggregates')

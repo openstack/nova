@@ -41,11 +41,11 @@ intact.
 from nova import context
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota
 from nova import utils

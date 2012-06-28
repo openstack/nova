@@ -16,9 +16,9 @@
 import nova
 from nova import context
 from nova import flags
-from nova import log
 from nova.notifier import api as notifier_api
 import nova.notifier.no_op_notifier
+from nova.openstack.common import log
 from nova import test
 
 
@@ -106,7 +106,7 @@ class NotifierTestCase(test.TestCase):
             'nova.notifier.rabbit_notifier')
         self.stubs.Set(nova.flags.FLAGS, 'publish_errors', True)
         LOG = log.getLogger('nova')
-        log.setup()
+        log.setup('nova')
         msgs = []
 
         def mock_notify(context, topic, data):

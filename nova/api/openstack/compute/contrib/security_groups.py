@@ -29,8 +29,8 @@ from nova import compute
 from nova import db
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova.openstack.common import excutils
+from nova.openstack.common import log as logging
 from nova import utils
 
 

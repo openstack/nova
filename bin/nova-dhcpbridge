@@ -38,9 +38,9 @@ gettext.install('nova', unicode=1)
 from nova import context
 from nova import db
 from nova import flags
-from nova import log as logging
 from nova.network import linux_net
 from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova import utils
 
@@ -97,7 +97,7 @@ def main():
     """Parse environment and arguments and call the approproate action."""
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
     argv = flags.parse_args(sys.argv)
-    logging.setup()
+    logging.setup("nova")
 
     if int(os.environ.get('TESTING', '0')):
         from nova.tests import fake_flags

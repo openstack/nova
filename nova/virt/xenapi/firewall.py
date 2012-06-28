@@ -20,8 +20,8 @@
 from nova import context
 from nova.db import api as db
 from nova import flags
-from nova import log as logging
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.virt import firewall
 from nova.virt import netutils
 

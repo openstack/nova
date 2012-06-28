@@ -28,9 +28,9 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova.notifier import test_notifier
 from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 import nova.policy
 from nova import quota
@@ -430,7 +430,7 @@ class DriverTestCase(test.TestCase):
             return self.output, None
         self.volume.driver.set_execute(_fake_execute)
 
-        log = logging.getLogger()
+        log = logging.getLogger('nova')
         self.stream = cStringIO.StringIO()
         log.logger.addHandler(logging.logging.StreamHandler(self.stream))
 

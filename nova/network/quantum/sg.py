@@ -27,7 +27,7 @@ will provide enhanced functionality and will be loadable via the
 security_group_handler flag.
 '''
 
-from nova import log as logging
+from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

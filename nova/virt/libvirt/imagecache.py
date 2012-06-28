@@ -32,8 +32,8 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
 from nova import flags
-from nova import log as logging
 from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.libvirt import utils as virtutils
 

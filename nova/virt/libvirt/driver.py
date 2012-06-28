@@ -61,11 +61,11 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.image import glance
-from nova import log as logging
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import driver

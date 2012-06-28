@@ -18,7 +18,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-import nova.log as logging
+import nova.openstack.common.log as logging
 
 LOG = logging.getLogger(__name__)
 

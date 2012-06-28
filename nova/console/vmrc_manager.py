@@ -20,10 +20,10 @@
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova.virt import vmwareapi_conn
 
 

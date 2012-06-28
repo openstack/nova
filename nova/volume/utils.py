@@ -17,8 +17,8 @@
 """Volume-related Utilities and helpers."""
 
 from nova import flags
-from nova import log as logging
 from nova.notifier import api as notifier_api
+from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
 

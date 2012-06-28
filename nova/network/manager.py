@@ -58,7 +58,6 @@ from nova import context
 from nova import exception
 from nova import flags
 from nova import ipv6
-from nova import log as logging
 from nova import manager
 from nova.network import api as network_api
 from nova.network import model as network_model
@@ -67,6 +66,7 @@ from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 import nova.policy

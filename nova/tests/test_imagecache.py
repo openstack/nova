@@ -29,7 +29,7 @@ from nova import test
 from nova.compute import vm_states
 from nova import db
 from nova import flags
-from nova import log
+from nova.openstack.common import log
 from nova import utils
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils
@@ -335,10 +335,10 @@ class ImageCacheManagerTestCase(test.TestCase):
     @contextlib.contextmanager
     def _intercept_log_messages(self):
         try:
-            mylog = log.getLogger()
+            mylog = log.getLogger('nova')
             stream = cStringIO.StringIO()
             handler = logging.StreamHandler(stream)
-            handler.setFormatter(log.LegacyNovaFormatter())
+            handler.setFormatter(log.LegacyFormatter())
             mylog.logger.addHandler(handler)
             yield stream
         finally:

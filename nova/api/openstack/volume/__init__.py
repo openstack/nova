@@ -26,7 +26,7 @@ from nova.api.openstack.volume import snapshots
 from nova.api.openstack.volume import types
 from nova.api.openstack.volume import versions
 from nova.api.openstack.volume import volumes
-from nova import log as logging
+from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

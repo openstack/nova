@@ -28,11 +28,11 @@ from nova.compute import task_states
 from nova import db
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova import notifications
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
 from nova import utils

@@ -14,11 +14,11 @@
 #    under the License.
 
 import nova
-from nova import log as logging
 import nova.notifier.api
 from nova.notifier import list_notifier
 import nova.notifier.log_notifier
 import nova.notifier.no_op_notifier
+from nova.openstack.common import log as logging
 from nova import test
 
 

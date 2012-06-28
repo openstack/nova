@@ -21,7 +21,7 @@
 from eventlet import tpool
 
 from nova import flags
-from nova import log as logging
+from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 
 

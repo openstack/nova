@@ -22,7 +22,8 @@ Provides common functionality for integrated unit tests
 import random
 import string
 
-from nova.log import logging
+import nova.image.glance
+from nova.openstack.common.log import logging
 from nova import service
 from nova import test  # For the flags
 import nova.tests.image.fake

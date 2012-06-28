@@ -20,7 +20,7 @@ from webob import exc
 from nova.api.openstack.compute.contrib import aggregates
 from nova import context
 from nova import exception
-from nova import log as logging
+from nova.openstack.common import log as logging
 from nova import test
 
 
