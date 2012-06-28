@@ -25,7 +25,7 @@ from eventlet import greenthread
 from nova import exception
 from nova import test
 from nova import utils
-from nova.utils import parse_mailmap, str_dict_replace
+from nova.openstack.common.setup import parse_mailmap, canonicalize_emails
 
 
 class ExceptionTestCase(test.TestCase):
@@ -62,8 +62,8 @@ class ProjectTestCase(test.TestCase):
                     for r in revs:
                         for author in r.get_apparent_authors():
                             email = author.split(' ')[-1]
-                            contributors.add(str_dict_replace(email,
-                                                              mailmap))
+                            contributors.add(canonicalize_emails(email,
+                                                                 mailmap))
             finally:
                 tree.unlock()
 
@@ -74,7 +74,7 @@ class ProjectTestCase(test.TestCase):
                 if "jenkins" in email and "openstack.org" in email:
                     continue
                 email = '<' + email + '>'
-                contributors.add(str_dict_replace(email, mailmap))
+                contributors.add(canonicalize_emails(email, mailmap))
         else:
             return
 

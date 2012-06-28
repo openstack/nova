@@ -1,0 +1,9 @@
+distribute
+
+coverage
+mox==0.5.3
+nose
+nosexcover
+pep8==1.0.1
+pylint==0.19
+sphinx

@@ -31,6 +31,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 VENV = os.path.join(ROOT, '.venv')
 PIP_REQUIRES = os.path.join(ROOT, 'tools', 'pip-requires')
+TEST_REQUIRES = os.path.join(ROOT, 'tools', 'test-requires')
 PY_VERSION = "python%s.%s" % (sys.version_info[0], sys.version_info[1])
 
 
@@ -101,10 +102,12 @@ def install_dependencies(venv=VENV):
     print 'Installing dependencies with pip (this can take a while)...'
     # Install greenlet by hand - just listing it in the requires file does not
     # get it in stalled in the right order
-    run_command(['tools/with_venv.sh', 'pip', 'install', '-E', venv,
-              'greenlet'], redirect_output=False)
-    run_command(['tools/with_venv.sh', 'pip', 'install', '-E', venv, '-r',
+    run_command(['tools/with_venv.sh', 'pip', 'install',
+              'greenlet==0.3.1'], redirect_output=False)
+    run_command(['tools/with_venv.sh', 'pip', 'install', '-r',
               PIP_REQUIRES], redirect_output=False)
+    run_command(['tools/with_venv.sh', 'pip', 'install', '-r',
+              TEST_REQUIRES], redirect_output=False)
 
     # Tell the virtual env how to "import nova"
     pthfile = os.path.join(venv, "lib", PY_VERSION, "site-packages",
