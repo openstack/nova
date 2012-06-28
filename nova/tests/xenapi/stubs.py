@@ -118,10 +118,10 @@ def stubout_lookup_image(stubs):
     stubs.Set(vm_utils, 'lookup_image', f)
 
 
-def stubout_fetch_image_glance_disk(stubs, raise_failure=False):
+def stubout_fetch_disk_image(stubs, raise_failure=False):
     """Simulates a failure in fetch image_glance_disk."""
 
-    def _fake_fetch_image_glance_disk(context, session, instance, image,
+    def _fake_fetch_disk_image(context, session, instance, image,
                                       image_type):
         if raise_failure:
             raise fake.Failure("Test Exception raised by "
@@ -136,8 +136,7 @@ def stubout_fetch_image_glance_disk(stubs, raise_failure=False):
         vdi_type = vm_utils.ImageType.to_string(image_type)
         return {vdi_type: dict(uuid=None, file=filename)}
 
-    stubs.Set(vm_utils, '_fetch_image_glance_disk',
-              _fake_fetch_image_glance_disk)
+    stubs.Set(vm_utils, '_fetch_disk_image', _fake_fetch_disk_image)
 
 
 def stubout_create_vm(stubs):

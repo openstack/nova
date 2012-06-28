@@ -727,37 +727,36 @@ def fetch_image(context, session, instance, image_id, image_type):
              A list of dictionaries that describe VDIs, otherwise
     """
     if image_type == ImageType.DISK_VHD:
-        return _fetch_image_glance_vhd(context, session, instance, image_id)
+        return _fetch_vhd_image(context, session, instance, image_id)
     else:
-        return _fetch_image_glance_disk(context, session, instance, image_id,
-                                        image_type)
+        return _fetch_disk_image(context, session, instance, image_id,
+                                 image_type)
 
 
-def _retry_glance_download_vhd(context, session, image_id):
-    # NOTE(sirp): The Glance plugin runs under Python 2.4
+def _fetch_using_dom0_plugin_with_retry(context, session, image_id,
+                                        plugin_name, params):
+    # NOTE(sirp): The XenAPI plugins run under Python 2.4
     # which does not have the `uuid` module. To work around this,
     # we generate the uuids here (under Python 2.6+) and
     # pass them as arguments
-    uuid_stack = [str(uuid.uuid4()) for i in xrange(3)]
+    extra_params = {
+              'image_id': image_id,
+              'uuid_stack': [str(uuid.uuid4()) for i in xrange(3)],
+              'sr_path': get_sr_path(session),
+              'auth_token': getattr(context, 'auth_token', None)}
+
+    extra_params.update(params)
+    kwargs = {'params': pickle.dumps(extra_params)}
 
     max_attempts = FLAGS.glance_num_retries + 1
     sleep_time = 0.5
     for attempt_num in xrange(1, max_attempts + 1):
-        glance_host, glance_port = glance.pick_glance_api_server()
-        params = {'image_id': image_id,
-                  'glance_host': glance_host,
-                  'glance_port': glance_port,
-                  'uuid_stack': uuid_stack,
-                  'sr_path': get_sr_path(session),
-                  'auth_token': getattr(context, 'auth_token', None)}
-        kwargs = {'params': pickle.dumps(params)}
-
-        LOG.info(_('download_vhd %(image_id)s '
-                   'attempt %(attempt_num)d/%(max_attempts)d '
-                   'from %(glance_host)s:%(glance_port)s') % locals())
+        LOG.info(_('download_vhd %(image_id)s, '
+                   'attempt %(attempt_num)d/%(max_attempts)d, '
+                   'params: %(params)s') % locals())
 
         try:
-            result = session.call_plugin('glance', 'download_vhd', kwargs)
+            result = session.call_plugin(plugin_name, 'download_vhd', kwargs)
             return jsonutils.loads(result)
         except session.XenAPI.Failure as exc:
             _type, _method, error = exc.details[:3]
@@ -773,29 +772,31 @@ def _retry_glance_download_vhd(context, session, image_id):
     raise exception.CouldNotFetchImage(image_id=image_id)
 
 
-def _fetch_image_glance_vhd(context, session, instance, image_id):
+def _fetch_vhd_image(context, session, instance, image_id):
     """Tell glance to download an image and put the VHDs into the SR
 
     Returns: A list of dictionaries that describe VDIs
     """
     LOG.debug(_("Asking xapi to fetch vhd image %(image_id)s"), locals(),
               instance=instance)
+
+    plugin_name = 'glance'
+    glance_host, glance_port = glance.pick_glance_api_server()
+    params = {'glance_host': glance_host, 'glance_port': glance_port}
+
+    fetched_vdis = _fetch_using_dom0_plugin_with_retry(
+            context, session, image_id, plugin_name, params)
+
     sr_ref = safe_find_sr(session)
+    scan_sr(session, sr_ref)
 
-    fetched_vdis = _retry_glance_download_vhd(context, session, image_id)
-
-    # 'download_vhd' will return a list of dictionaries describing VDIs.
-    # The dictionary will contain 'vdi_type' and 'vdi_uuid' keys.
-    # 'vdi_type' can be 'root' or 'swap' right now.
+    # TODO(sirp): the plugin should return the correct format rather than
+    # munging here
+    vdis = {}
     for vdi in fetched_vdis:
         LOG.debug(_("xapi 'download_vhd' returned VDI of "
                     "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'"),
                   vdi, instance=instance)
-
-    scan_sr(session, sr_ref)
-
-    vdis = {}
-    for vdi in fetched_vdis:
         vdis[vdi['vdi_type']] = dict(uuid=vdi['vdi_uuid'], file=None)
 
     # Pull out the UUID of the root VDI
@@ -845,11 +846,11 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
         raise exception.ImageTooLarge()
 
 
-def _fetch_image_glance_disk(context, session, instance, image_id, image_type):
+def _fetch_disk_image(context, session, instance, image_id, image_type):
     """Fetch the image from Glance
 
     NOTE:
-    Unlike _fetch_image_glance_vhd, this method does not use the Glance
+    Unlike _fetch_vhd_image, this method does not use the Glance
     plugin; instead, it streams the disks through domU to the VDI
     directly.
 
