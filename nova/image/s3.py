@@ -136,12 +136,6 @@ class S3ImageService(object):
         image = self.service.update(context, image_uuid, metadata, data)
         return self._translate_uuid_to_id(context, image)
 
-    def index(self, context):
-        #NOTE(bcwaldon): sort asc to make sure we assign lower ids
-        # to older images
-        images = self.service.index(context, sort_dir='asc')
-        return self._translate_uuids_to_ids(context, images)
-
     def detail(self, context, **kwargs):
         #NOTE(bcwaldon): sort asc to make sure we assign lower ids
         # to older images

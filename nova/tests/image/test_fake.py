@@ -34,11 +34,6 @@ class FakeImageServiceTestCase(test.TestCase):
         super(FakeImageServiceTestCase, self).setUp()
         nova.tests.image.fake.FakeImageService_reset()
 
-    def test_index(self):
-        res = self.image_service.index(self.context)
-        for image in res:
-            self.assertEquals(set(image.keys()), set(['id', 'name']))
-
     def test_detail(self):
         res = self.image_service.detail(self.context)
         for image in res:
@@ -64,13 +59,6 @@ class FakeImageServiceTestCase(test.TestCase):
             check_is_bool(image, 'deleted')
             check_is_bool(image, 'is_public')
 
-    def test_index_and_detail_have_same_results(self):
-        index = self.image_service.index(self.context)
-        detail = self.image_service.detail(self.context)
-        index_set = set([(i['id'], i['name']) for i in index])
-        detail_set = set([(i['id'], i['name']) for i in detail])
-        self.assertEqual(index_set, detail_set)
-
     def test_show_raises_imagenotfound_for_invalid_id(self):
         self.assertRaises(exception.ImageNotFound,
                           self.image_service.show,
@@ -78,12 +66,12 @@ class FakeImageServiceTestCase(test.TestCase):
                           'this image does not exist')
 
     def test_create_adds_id(self):
-        index = self.image_service.index(self.context)
+        index = self.image_service.detail(self.context)
         image_count = len(index)
 
         self.image_service.create(self.context, {})
 
-        index = self.image_service.index(self.context)
+        index = self.image_service.detail(self.context)
         self.assertEquals(len(index), image_count + 1)
 
         self.assertTrue(index[0]['id'])
@@ -125,7 +113,7 @@ class FakeImageServiceTestCase(test.TestCase):
         self.image_service.create(self.context, {'id': '33', 'foo': 'bar'})
         self.image_service.create(self.context, {'id': '34', 'foo': 'bar'})
         self.image_service.delete_all()
-        index = self.image_service.index(self.context)
+        index = self.image_service.detail(self.context)
         self.assertEquals(len(index), 0)
 
     def test_create_then_get(self):

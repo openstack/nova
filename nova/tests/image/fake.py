@@ -151,15 +151,6 @@ class _FakeImageService(object):
         super(_FakeImageService, self).__init__()
 
     #TODO(bcwaldon): implement optional kwargs such as limit, sort_dir
-    def index(self, context, **kwargs):
-        """Returns list of images."""
-        retval = []
-        for img in self.images.values():
-            retval += [dict([(k, v) for k, v in img.iteritems()
-                                                  if k in ['id', 'name']])]
-        return retval
-
-    #TODO(bcwaldon): implement optional kwargs such as limit, sort_dir
     def detail(self, context, **kwargs):
         """Return list of detailed image information."""
         return copy.deepcopy(self.images.values())
