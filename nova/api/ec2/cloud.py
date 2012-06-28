@@ -1245,9 +1245,11 @@ class CloudController(object):
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
             image = self.image_service.show(context, internal_id)
         except (exception.InvalidEc2Id, exception.ImageNotFound):
+            filters = {'name': ec2_id}
+            images = self.image_service.detail(context, filters=filters)
             try:
-                return self.image_service.show_by_name(context, ec2_id)
-            except exception.NotFound:
+                return images[0]
+            except IndexError:
                 raise exception.ImageNotFound(image_id=ec2_id)
         image_type = ec2_id.split('-')[0]
         if ec2utils.image_type(image.get('container_format')) != image_type:

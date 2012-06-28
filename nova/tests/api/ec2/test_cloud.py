@@ -103,8 +103,13 @@ class CloudTestCase(test.TestCase):
                         'type': 'machine',
                         'image_state': 'available'}}
 
+        def fake_detail(_self, context, **kwargs):
+            image = fake_show(None, context, None)
+            image['name'] = kwargs.get('filters', {}).get('name')
+            return [image]
+
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
-        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
         fake.stub_out_image_service(self.stubs)
 
         def dumb(*args, **kwargs):
@@ -1128,6 +1133,9 @@ class CloudTestCase(test.TestCase):
         def fake_show_none(meh, context, id):
             raise exception.ImageNotFound(image_id='bad_image_id')
 
+        def fake_detail_none(self, context, **kwargs):
+            return []
+
         self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
         # list all
         result1 = describe_images(self.context)
@@ -1143,7 +1151,7 @@ class CloudTestCase(test.TestCase):
         # provide a non-existing image_id
         self.stubs.UnsetAll()
         self.stubs.Set(fake._FakeImageService, 'show', fake_show_none)
-        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show_none)
+        self.stubs.Set(fake._FakeImageService, 'detail', fake_detail_none)
         self.assertRaises(exception.ImageNotFound, describe_images,
                           self.context, ['ami-fake'])
 
@@ -1211,7 +1219,7 @@ class CloudTestCase(test.TestCase):
                     return i
             raise exception.ImageNotFound(image_id=image_id)
 
-        def fake_detail(meh, context):
+        def fake_detail(meh, context, **kwargs):
             return [copy.deepcopy(image1), copy.deepcopy(image2)]
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
@@ -1313,8 +1321,13 @@ class CloudTestCase(test.TestCase):
                     'container_format': 'ami',
                     'is_public': True}
 
+        def fake_detail(self, context, **kwargs):
+            image = fake_show(None, context, None)
+            image['name'] = kwargs.get('filters', {}).get('name')
+            return [image]
+
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
-        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
         result = describe_image_attribute(self.context, 'ami-00000001',
                                           'launchPermission')
         self.assertEqual([{'group': 'all'}], result['launchPermission'])
@@ -1360,6 +1373,11 @@ class CloudTestCase(test.TestCase):
         def fake_show(meh, context, id):
             return copy.deepcopy(fake_metadata)
 
+        def fake_detail(self, context, **kwargs):
+            image = fake_show(None, context, None)
+            image['name'] = kwargs.get('filters', {}).get('name')
+            return [image]
+
         def fake_update(meh, context, image_id, metadata, data=None):
             self.assertEqual(metadata['properties']['kernel_id'],
                              fake_metadata['properties']['kernel_id'])
@@ -1371,7 +1389,7 @@ class CloudTestCase(test.TestCase):
             return image
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
-        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
         self.stubs.Set(fake._FakeImageService, 'update', fake_update)
         result = modify_image_attribute(self.context, 'ami-00000001',
                                           'launchPermission', 'add',
@@ -1473,7 +1491,7 @@ class CloudTestCase(test.TestCase):
         # invalid image
         self.stubs.UnsetAll()
 
-        def fake_detail_empty(self, context):
+        def fake_detail_empty(self, context, **kwargs):
             return []
 
         self.stubs.Set(fake._FakeImageService, 'detail', fake_detail_empty)
@@ -1727,7 +1745,11 @@ class CloudTestCase(test.TestCase):
                         'type': 'machine'},
                     'status': 'active'}
 
+        def fake_id_to_glance_id(context, id):
+            return 'cedef40a-ed67-4d10-800e-17455edce175'
+
         self.stubs.Set(fake._FakeImageService, 'show', fake_show_stat_active)
+        self.stubs.Set(ec2utils, 'id_to_glance_id', fake_id_to_glance_id)
 
         result = run_instances(self.context, **kwargs)
         self.assertEqual(len(result['instancesSet']), 1)
