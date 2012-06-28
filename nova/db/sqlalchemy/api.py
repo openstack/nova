@@ -386,13 +386,14 @@ def service_get_all_compute_by_host(context, host):
 @require_admin_context
 def _service_get_all_topic_subquery(context, session, topic, subq, label):
     sort_value = getattr(subq.c, label)
+	 coal = func.coalesce(sort_value, 0)
     return model_query(context, models.Service,
-                       func.coalesce(sort_value, 0),
+			              coal,
                        session=session, read_deleted="no").\
                 filter_by(topic=topic).\
                 filter_by(disabled=False).\
                 outerjoin((subq, models.Service.host == subq.c.host)).\
-                order_by(sort_value).\
+                order_by(coal).\
                 all()
 
 
