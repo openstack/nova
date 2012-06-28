@@ -608,6 +608,52 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.devices[3].target_dev, 'vdd')
 
     def test_get_guest_cpu_config_none(self):
+        self.flags(libvirt_cpu_mode="none")
+        conn = libvirt_driver.LibvirtDriver(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        conf = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, None)
+        self.assertEquals(conf.cpu, None)
+
+    def test_get_guest_cpu_config_default_kvm(self):
+        self.flags(libvirt_type="kvm",
+                   libvirt_cpu_mode=None)
+
+        def get_lib_version_stub(self):
+            return (0 * 1000 * 1000) + (9 * 1000) + 11
+
+        self.stubs.Set(libvirt.virConnect,
+                       "getLibVersion",
+                       get_lib_version_stub)
+        conn = libvirt_driver.LibvirtDriver(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        conf = conn.get_guest_config(instance_ref,
+                                     _fake_network_info(self.stubs, 1),
+                                     None, None)
+        self.assertEquals(type(conf.cpu),
+                          config.LibvirtConfigGuestCPU)
+        self.assertEquals(conf.cpu.mode, "host-model")
+        self.assertEquals(conf.cpu.model, None)
+
+    def test_get_guest_cpu_config_default_uml(self):
+        self.flags(libvirt_type="uml",
+                   libvirt_cpu_mode=None)
+
+        conn = libvirt_driver.LibvirtDriver(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        conf = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, None)
+        self.assertEquals(conf.cpu, None)
+
+    def test_get_guest_cpu_config_default_lxc(self):
+        self.flags(libvirt_type="lxc",
+                   libvirt_cpu_mode=None)
+
         conn = libvirt_driver.LibvirtDriver(True)
         instance_ref = db.instance_create(self.context, self.test_instance)
 

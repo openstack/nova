@@ -168,9 +168,11 @@ libvirt_opts = [
     cfg.StrOpt('libvirt_cpu_mode',
                default=None,
                help='Set to "host-model" to clone the host CPU feature flags; '
-                    'to "host-passthrough" to use the host CPU model '
-                    'exactly; or to "custom" to use a named CPU model. Only '
-                    'has effect if libvirt_type="kvm|qemu"'),
+                    'to "host-passthrough" to use the host CPU model exactly; '
+                    'to "custom" to use a named CPU model; '
+                    'to "none" to not set any CPU model. '
+                    'If libvirt_type="kvm|qemu", it will default to '
+                    '"host-model", otherwise it will default to "none"'),
     cfg.StrOpt('libvirt_cpu_model',
                default=None,
                help='Set to a named libvirt CPU model (see names listed '
@@ -1504,6 +1506,12 @@ class LibvirtDriver(driver.ComputeDriver):
         model = FLAGS.libvirt_cpu_model
 
         if mode is None:
+            if FLAGS.libvirt_type == "kvm" or FLAGS.libvirt_type == "qemu":
+                mode = "host-model"
+            else:
+                mode = "none"
+
+        if mode == "none":
             return None
 
         if FLAGS.libvirt_type != "kvm" and FLAGS.libvirt_type != "qemu":
