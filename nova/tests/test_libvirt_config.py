@@ -59,6 +59,41 @@ class LibvirtConfigTest(LibvirtConfigBaseTest):
         obj.parse_str(inxml)
 
 
+class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
+
+    def test_config_host(self):
+        xmlin = """
+        <capabilities>
+          <host>
+            <cpu>
+              <arch>x86_64</arch>
+              <model>Opteron_G3</model>
+              <vendor>AMD</vendor>
+              <topology sockets='1' cores='4' threads='1'/>
+              <feature name='ibs'/>
+              <feature name='osvw'/>
+            </cpu>
+          </host>
+          <guest>
+            <os_type>hvm</os_type>
+            <arch name='x86_64'/>
+          </guest>
+          <guest>
+            <os_type>hvm</os_type>
+            <arch name='i686'/>
+          </guest>
+        </capabilities>"""
+
+        obj = config.LibvirtConfigCaps()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(type(obj.host), config.LibvirtConfigCapsHost)
+
+        xmlout = obj.to_xml()
+
+        self.assertXmlEqual(xmlin, xmlout)
+
+
 class LibvirtConfigGuestTimerTest(LibvirtConfigBaseTest):
     def test_config_platform(self):
         obj = config.LibvirtConfigGuestTimer()

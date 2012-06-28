@@ -67,6 +67,94 @@ class LibvirtConfigObject(object):
         return xml_str
 
 
+class LibvirtConfigCaps(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCaps, self).__init__(root_name="capabilities",
+                                                **kwargs)
+        self.host = None
+        self.guests = []
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCaps, self).parse_dom(xmldoc)
+
+        for c in xmldoc.getchildren():
+            if c.tag == "host":
+                host = LibvirtConfigCapsHost()
+                host.parse_dom(c)
+                self.host = host
+            elif c.tag == "guest":
+                guest = LibvirtConfigCapsGuest()
+                guest.parse_dom(c)
+                self.guests.append(guest)
+
+    def format_dom(self):
+        caps = super(LibvirtConfigCaps, self).format_dom()
+
+        if self.host:
+            caps.append(self.host.format_dom())
+        for g in self.guests:
+            caps.append(g.format_dom())
+
+        return caps
+
+
+class LibvirtConfigCapsHost(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCapsHost, self).__init__(root_name="host",
+                                                    **kwargs)
+
+        self.cpu = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCapsHost, self).parse_dom(xmldoc)
+
+        for c in xmldoc.getchildren():
+            if c.tag == "cpu":
+                cpu = LibvirtConfigCPU()
+                cpu.parse_dom(c)
+                self.cpu = cpu
+
+    def format_dom(self):
+        caps = super(LibvirtConfigCapsHost, self).format_dom()
+
+        if self.cpu:
+            caps.append(self.cpu.format_dom())
+
+        return caps
+
+
+class LibvirtConfigCapsGuest(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCapsGuest, self).__init__(root_name="guest",
+                                                     **kwargs)
+
+        self.arch = None
+        self.ostype = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCapsGuest, self).parse_dom(xmldoc)
+
+        for c in xmldoc.getchildren():
+            if c.tag == "os_type":
+                self.ostype = c.text
+            elif c.tag == "arch":
+                self.arch = c.get("name")
+
+    def format_dom(self):
+        caps = super(LibvirtConfigCapsGuest, self).format_dom()
+
+        if self.ostype is not None:
+            caps.append(self._text_node("os_type", self.ostype))
+        if self.arch:
+            arch = etree.Element("arch", name=self.arch)
+            caps.append(arch)
+
+        return caps
+
+
 class LibvirtConfigGuestTimer(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -132,6 +220,11 @@ class LibvirtConfigCPUFeature(LibvirtConfigObject):
 
         self.name = name
 
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCPUFeature, self).parse_dom(xmldoc)
+
+        self.name = xmldoc.get("name")
+
     def format_dom(self):
         ft = super(LibvirtConfigCPUFeature, self).format_dom()
 
@@ -155,6 +248,25 @@ class LibvirtConfigCPU(LibvirtConfigObject):
         self.threads = None
 
         self.features = []
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCPU, self).parse_dom(xmldoc)
+
+        for c in xmldoc.getchildren():
+            if c.tag == "arch":
+                self.arch = c.text
+            elif c.tag == "model":
+                self.model = c.text
+            elif c.tag == "vendor":
+                self.vendor = c.text
+            elif c.tag == "topology":
+                self.sockets = int(c.get("sockets"))
+                self.cores = int(c.get("cores"))
+                self.threads = int(c.get("threads"))
+            elif c.tag == "feature":
+                f = LibvirtConfigCPUFeature()
+                f.parse_dom(c)
+                self.add_feature(f)
 
     def format_dom(self):
         cpu = super(LibvirtConfigCPU, self).format_dom()
