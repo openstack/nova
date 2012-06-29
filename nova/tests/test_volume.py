@@ -28,9 +28,9 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova.notifier import test_notifier
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common import rpc
 import nova.policy
 from nova import quota
@@ -50,7 +50,7 @@ class VolumeTestCase(test.TestCase):
         self.compute = importutils.import_object(FLAGS.compute_manager)
         self.flags(compute_driver='nova.virt.fake.FakeDriver')
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
-                'nova.notifier.test_notifier')
+                'nova.openstack.common.notifier.test_notifier')
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
         instance = db.instance_create(self.context, {})

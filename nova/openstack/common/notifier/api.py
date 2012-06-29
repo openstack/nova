@@ -13,11 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import inspect
 import uuid
 
-from nova import exception
-from nova import flags
 from nova.openstack.common import cfg
+from nova.openstack.common import context
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -27,6 +27,9 @@ from nova.openstack.common import timeutils
 LOG = logging.getLogger(__name__)
 
 notifier_opts = [
+    cfg.StrOpt('notification_driver',
+               default='nova.openstack.common.notifier.no_op_notifier',
+               help='Default driver for sending notifications'),
     cfg.StrOpt('default_notification_level',
                default='INFO',
                help='Default notification level for outgoing notifications'),
@@ -35,8 +38,8 @@ notifier_opts = [
                help='Default publisher_id for outgoing notifications'),
     ]
 
-FLAGS = flags.FLAGS
-FLAGS.register_opts(notifier_opts)
+CONF = cfg.CONF
+CONF.register_opts(notifier_opts)
 
 WARN = 'WARN'
 INFO = 'INFO'
@@ -68,11 +71,11 @@ def notify_decorator(name, fn):
         for key in kwarg:
             body['kwarg'][key] = kwarg[key]
 
-        context = exception.get_context_from_function_and_args(fn, args, kwarg)
-        notify(context,
-               FLAGS.default_publisher_id,
+        ctxt = context.get_context_from_function_and_args(fn, args, kwarg)
+        notify(ctxt,
+               CONF.default_publisher_id,
                name,
-               FLAGS.default_notification_level,
+               CONF.default_notification_level,
                body)
         return fn(*args, **kwarg)
     return wrapped_func
@@ -80,7 +83,7 @@ def notify_decorator(name, fn):
 
 def publisher_id(service, host=None):
     if not host:
-        host = FLAGS.host
+        host = CONF.host
     return "%s.%s" % (service, host)
 
 
@@ -123,7 +126,7 @@ def notify(context, publisher_id, event_type, priority, payload):
     # Ensure everything is JSON serializable.
     payload = jsonutils.to_primitive(payload, convert_instances=True)
 
-    driver = importutils.import_module(FLAGS.notification_driver)
+    driver = importutils.import_module(CONF.notification_driver)
     msg = dict(message_id=str(uuid.uuid4()),
                    publisher_id=publisher_id,
                    event_type=event_type,

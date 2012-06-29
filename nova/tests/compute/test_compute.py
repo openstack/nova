@@ -39,9 +39,9 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova.notifier import test_notifier
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
@@ -109,7 +109,7 @@ class BaseTestCase(test.TestCase):
         super(BaseTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True,
-                   notification_driver='nova.notifier.test_notifier',
+           notification_driver='nova.openstack.common.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(FLAGS.compute_manager)
 

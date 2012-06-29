@@ -20,9 +20,9 @@
 from nova import context
 from nova import db
 from nova import flags
-from nova.notifier import test_notifier
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import test_notifier
 from nova import test
 from nova.volume import utils as volume_utils
 
@@ -39,7 +39,7 @@ class UsageInfoTestCase(test.TestCase):
                    stub_network=True,
                    host='fake')
         self.stubs.Set(flags.FLAGS, 'notification_driver',
-                'nova.notifier.test_notifier')
+                'nova.openstack.common.notifier.test_notifier')
         self.volume = importutils.import_object(FLAGS.volume_manager)
         self.user_id = 'fake'
         self.project_id = 'fake'
