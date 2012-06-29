@@ -25,24 +25,19 @@ import sys
 import time
 import urlparse
 
+import glance.client
 from glance.common import exception as glance_exception
 
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import utils
 
 
 LOG = logging.getLogger(__name__)
-
-
 FLAGS = flags.FLAGS
-
-
-GlanceClient = importutils.import_class('glance.client.Client')
 
 
 def _parse_image_ref(image_href):
@@ -61,17 +56,16 @@ def _parse_image_ref(image_href):
 
 
 def _create_glance_client(context, host, port):
+    params = {}
     if FLAGS.auth_strategy == 'keystone':
-        # NOTE(dprince): Glance client just needs auth_tok right? Should we
-        # add username and tenant to the creds below?
-        creds = {'strategy': 'keystone',
-                 'username': context.user_id,
-                 'tenant': context.project_id}
-        glance_client = GlanceClient(host, port, auth_tok=context.auth_token,
-                                     creds=creds)
-    else:
-        glance_client = GlanceClient(host, port)
-    return glance_client
+        params['creds'] = {
+            'strategy': 'keystone',
+            'username': context.user_id,
+            'tenant': context.project_id,
+        }
+        params['auth_tok'] = context.auth_token
+
+    return glance.client.Client(host, port, **params)
 
 
 def pick_glance_api_server():
@@ -390,7 +384,7 @@ def _parse_glance_iso8601_timestamp(timestamp):
                        'signatures: %(iso_formats)s') % locals())
 
 
-# TODO(yamahata): use block-device-mapping extension to glance
+# NOTE(bcwaldon): used to store non-string data in glance metadata
 def _json_loads(properties, attr):
     prop = properties[attr]
     if isinstance(prop, basestring):
@@ -407,7 +401,7 @@ _CONVERT_PROPS = ('block_device_mapping', 'mappings')
 
 
 def _convert(method, metadata):
-    metadata = copy.deepcopy(metadata)  # don't touch original metadata
+    metadata = copy.deepcopy(metadata)
     properties = metadata.get('properties')
     if properties:
         for attr in _CONVERT_PROPS:
