@@ -600,14 +600,23 @@ def create_kernel_image(context, session, instance, image_id, user_id,
         args = {}
         args['cached-image'] = image_id
         args['new-image-uuid'] = str(uuid.uuid4())
-        filename = session.call_plugin('glance', 'create_kernel_ramdisk',
-                                       args)
+        filename = session.call_plugin(
+                'kernel', 'create_kernel_ramdisk', args)
 
     if filename == "":
         return _fetch_image(context, session, instance, image_id, image_type)
     else:
         vdi_type = ImageType.to_string(image_type)
         return {vdi_type: dict(uuid=None, file=filename)}
+
+
+def destroy_kernel_ramdisk(session, kernel, ramdisk):
+    args = {}
+    if kernel:
+        args['kernel-file'] = kernel
+    if ramdisk:
+        args['ramdisk-file'] = ramdisk
+    session.call_plugin('kernel', 'remove_kernel_ramdisk', args)
 
 
 def _create_cached_image(context, session, instance, image_id, image_type):
@@ -904,7 +913,7 @@ def _fetch_disk_image(context, session, instance, image_id, image_type):
             # content of the VDI into the proper path.
             LOG.debug(_("Copying VDI %s to /boot/guest on dom0"),
                       vdi_ref, instance=instance)
-            fn = "copy_kernel_vdi"
+
             args = {}
             args['vdi-ref'] = vdi_ref
 
@@ -912,7 +921,7 @@ def _fetch_disk_image(context, session, instance, image_id, image_type):
             args['image-size'] = str(vdi_size)
             if FLAGS.cache_images:
                 args['cached-image'] = image_id
-            filename = session.call_plugin('glance', fn, args)
+            filename = session.call_plugin('kernel', 'copy_vdi', args)
 
             # Remove the VDI as it is not needed anymore.
             destroy_vdi(session, vdi_ref)
