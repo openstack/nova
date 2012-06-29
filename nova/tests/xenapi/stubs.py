@@ -41,7 +41,7 @@ def stubout_instance_snapshot(stubs):
                 'kernel': dict(uuid=_make_fake_vdi(), file=None),
                 'ramdisk': dict(uuid=_make_fake_vdi(), file=None)}
 
-    stubs.Set(vm_utils, 'fetch_image', fake_fetch_image)
+    stubs.Set(vm_utils, '_fetch_image', fake_fetch_image)
 
     def fake_wait_for_vhd_coalesce(*args):
         #TODO(sirp): Should we actually fake out the data here
@@ -172,8 +172,8 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def host_call_plugin(self, _1, _2, plugin, method, _5):
         if (plugin, method) == ('glance', 'download_vhd'):
-            return fake.as_json(dict(vdi_type='root',
-                                     vdi_uuid=_make_fake_vdi()))
+            root_uuid = _make_fake_vdi()
+            return jsonutils.dumps(dict(root=dict(uuid=root_uuid)))
         elif (plugin, method) == ("xenhost", "iptables_config"):
             return fake.as_json(out=self._fake_iptables_save_output,
                                 err='')
@@ -183,10 +183,10 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def host_call_plugin_swap(self, _1, _2, plugin, method, _5):
         if (plugin, method) == ('glance', 'download_vhd'):
-            return fake.as_json(dict(vdi_type='root',
-                                     vdi_uuid=_make_fake_vdi()),
-                                dict(vdi_type='swap',
-                                     vdi_uuid=_make_fake_vdi()))
+            root_uuid = _make_fake_vdi()
+            swap_uuid = _make_fake_vdi()
+            return jsonutils.dumps(dict(root=dict(uuid=root_uuid),
+                                        swap=dict(uuid=swap_uuid)))
         else:
             return (super(FakeSessionForVMTests, self).
                     host_call_plugin(_1, _2, plugin, method, _5))
