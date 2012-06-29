@@ -118,11 +118,6 @@ def file_delete(path):
     return True
 
 
-def get_open_port(start_port, end_port):
-    # Return the port in the middle
-    return int((start_port + end_port) / 2)
-
-
 def get_fs_info(path):
     return {'total': 128 * (1024 ** 3),
             'used': 44 * (1024 ** 3),
