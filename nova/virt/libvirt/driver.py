@@ -390,9 +390,15 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError:
             return False
 
+    # TODO(Shrews): Remove when libvirt Bugzilla bug # 836647 is fixed.
+    def list_instance_ids(self):
+        if self._conn.numOfDomains() == 0:
+            return []
+        return self._conn.listDomainsID()
+
     def list_instances(self):
         return [self._conn.lookupByID(x).name()
-                for x in self._conn.listDomainsID()
+                for x in self.list_instance_ids()
                 if x != 0]  # We skip domains with ID 0 (hypervisors).
 
     @staticmethod
@@ -415,7 +421,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def list_instances_detail(self):
         infos = []
-        for domain_id in self._conn.listDomainsID():
+        for domain_id in self.list_instance_ids():
             domain = self._conn.lookupByID(domain_id)
             info = self._map_to_instance_info(domain)
             infos.append(info)
@@ -1811,7 +1817,7 @@ class LibvirtDriver(driver.ComputeDriver):
         Return all block devices in use on this node.
         """
         devices = []
-        for dom_id in self._conn.listDomainsID():
+        for dom_id in self.list_instance_ids():
             domain = self._conn.lookupByID(dom_id)
             try:
                 doc = etree.fromstring(domain.XMLDesc(0))
@@ -1925,7 +1931,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         total = 0
-        for dom_id in self._conn.listDomainsID():
+        for dom_id in self.list_instance_ids():
             dom = self._conn.lookupByID(dom_id)
             vcpus = dom.vcpus()
             if vcpus is None:
@@ -1952,7 +1958,7 @@ class LibvirtDriver(driver.ComputeDriver):
         idx3 = m.index('Cached:')
         if FLAGS.libvirt_type == 'xen':
             used = 0
-            for domain_id in self._conn.listDomainsID():
+            for domain_id in self.list_instance_ids():
                 # skip dom0
                 dom_mem = int(self._conn.lookupByID(domain_id).info()[2])
                 if domain_id != 0:
