@@ -616,6 +616,13 @@ class LibvirtDriver(driver.ComputeDriver):
                         raise exception.DeviceIsBusy(device=mount_device)
                 raise
 
+        # TODO(danms) once libvirt has support for LXC hotplug,
+        # replace this re-define with use of the
+        # VIR_DOMAIN_AFFECT_LIVE & VIR_DOMAIN_AFFECT_CONFIG flags with
+        # attachDevice()
+        domxml = virt_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
+        self._conn.defineXML(domxml)
+
     @staticmethod
     def _get_disk_xml(xml, device):
         """Returns the xml for the disk mounted at device"""
@@ -649,6 +656,13 @@ class LibvirtDriver(driver.ComputeDriver):
             self.volume_driver_method('disconnect_volume',
                                       connection_info,
                                       mount_device)
+
+        # TODO(danms) once libvirt has support for LXC hotplug,
+        # replace this re-define with use of the
+        # VIR_DOMAIN_AFFECT_LIVE & VIR_DOMAIN_AFFECT_CONFIG flags with
+        # detachDevice()
+        domxml = virt_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
+        self._conn.defineXML(domxml)
 
     @exception.wrap_exception()
     def _attach_lxc_volume(self, xml, virt_dom, instance_name):
