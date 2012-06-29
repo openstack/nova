@@ -22,6 +22,7 @@ import sys
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import test
 from nova.tests.db import fakes as db_fakes
 
@@ -64,6 +65,40 @@ class FixedIpCommandsTestCase(test.TestCase):
         self.assertRaises(SystemExit,
                           self.commands.unreserve,
                           '55.55.55.55')
+
+
+class FloatingIpCommandsTestCase(test.TestCase):
+    def setUp(self):
+        super(FloatingIpCommandsTestCase, self).setUp()
+        db_fakes.stub_out_db_network_api(self.stubs)
+        self.commands = nova_manage.FloatingIpCommands()
+
+    def test_address_to_hosts(self):
+        def assert_loop(result, expected):
+            for ip in result:
+                self.assertTrue(str(ip) in expected)
+
+        address_to_hosts = self.commands.address_to_hosts
+        # /32 and /31
+        self.assertRaises(exception.InvalidInput, address_to_hosts,
+                          '192.168.100.1/32')
+        self.assertRaises(exception.InvalidInput, address_to_hosts,
+                          '192.168.100.1/31')
+        # /30
+        expected = ["192.168.100.%s" % i for i in range(1, 3)]
+        result = address_to_hosts('192.168.100.0/30')
+        self.assertTrue(len(list(result)) == 2)
+        assert_loop(result, expected)
+        # /29
+        expected = ["192.168.100.%s" % i for i in range(1, 7)]
+        result = address_to_hosts('192.168.100.0/29')
+        self.assertTrue(len(list(result)) == 6)
+        assert_loop(result, expected)
+        # /28
+        expected = ["192.168.100.%s" % i for i in range(1, 15)]
+        result = address_to_hosts('192.168.100.0/28')
+        self.assertTrue(len(list(result)) == 14)
+        assert_loop(result, expected)
 
 
 class NetworkCommandsTestCase(test.TestCase):
