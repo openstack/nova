@@ -239,7 +239,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             self.driver = utils.check_isinstance(
-                    importutils.import_object(compute_driver),
+                    importutils.import_object_ns('nova.virt', compute_driver),
                     driver.ComputeDriver)
         except ImportError as e:
             LOG.error(_("Unable to load the virtualization driver: %s") % (e))
