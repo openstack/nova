@@ -474,6 +474,10 @@ class XenAPIDriver(driver.ComputeDriver):
         """Sets the specified host's ability to accept new instances."""
         return self._host.set_host_enabled(host, enabled)
 
+    def get_host_uptime(self, host):
+        """Returns the result of calling "uptime" on the target host."""
+        return self._host.get_host_uptime(host)
+
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation."""

@@ -522,6 +522,8 @@ class SessionBase(object):
         elif (plugin, method) == ('xenhost', 'set_host_enabled'):
             enabled = 'enabled' if _5.get('enabled') == 'true' else 'disabled'
             return jsonutils.dumps({"status": enabled})
+        elif (plugin, method) == ('xenhost', 'host_uptime'):
+            return jsonutils.dumps({"uptime": "fake uptime"})
         else:
             raise Exception('No simulation in host_call_plugin for %s,%s' %
                             (plugin, method))

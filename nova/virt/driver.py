@@ -548,6 +548,11 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def get_host_uptime(self, host):
+        """Returns the result of calling "uptime" on the target host."""
+        # TODO(Vek): Need to pass context in for access to auth_token
+        raise NotImplementedError()
+
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         # TODO(Vek): Need to pass context in for access to auth_token

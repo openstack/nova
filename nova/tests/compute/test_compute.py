@@ -4057,6 +4057,19 @@ class ComputeHostAPITestCase(BaseTestCase):
                  'args': {'enabled': 'fake_enabled'},
                  'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
 
+    def test_get_host_uptime(self):
+        ctxt = context.RequestContext('fake', 'fake')
+        call_info = {}
+        self._rpc_call_stub(call_info)
+
+        self.host_api.get_host_uptime(ctxt, 'fake_host')
+        self.assertEqual(call_info['context'], ctxt)
+        self.assertEqual(call_info['topic'], 'compute.fake_host')
+        self.assertEqual(call_info['msg'],
+                {'method': 'get_host_uptime',
+                 'args': {},
+                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
+
     def test_host_power_action(self):
         ctxt = context.RequestContext('fake', 'fake')
         call_info = {}

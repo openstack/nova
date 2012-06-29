@@ -339,6 +339,12 @@ def parse_response(resp):
     return data
 
 
+@jsonify
+def host_uptime(self, arg_dict):
+    """Returns the result of the uptime command on the xenhost."""
+    return {"uptime": _run_command('uptime')}
+
+
 def cleanup(dct):
     """Take the raw KV pairs returned and translate them into the
     appropriate types, discarding any we don't need.
@@ -432,4 +438,5 @@ if __name__ == "__main__":
             "host_join": host_join,
             "get_config": get_config,
             "set_config": set_config,
-            "iptables_config": iptables_config})
+            "iptables_config": iptables_config,
+            "host_uptime": host_uptime})

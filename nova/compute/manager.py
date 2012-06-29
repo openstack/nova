@@ -228,7 +228,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.0'
+    RPC_API_VERSION = '1.1'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1591,6 +1591,11 @@ class ComputeManager(manager.SchedulerDependentManager):
     def set_host_enabled(self, context, host=None, enabled=None):
         """Sets the specified host's ability to accept new instances."""
         return self.driver.set_host_enabled(host, enabled)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def get_host_uptime(self, context, host):
+        """Returns the result of calling "uptime" on the target host."""
+        return self.driver.get_host_uptime(host)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault

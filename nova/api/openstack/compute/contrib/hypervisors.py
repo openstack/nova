@@ -20,6 +20,7 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.compute import api as compute_api
 from nova import db
 from nova import exception
 from nova import log as logging
@@ -79,6 +80,14 @@ class HypervisorTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
+class HypervisorUptimeTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('hypervisor', selector='hypervisor')
+        make_hypervisor(root, False)
+        root.set('uptime')
+        return xmlutil.MasterTemplate(root, 1)
+
+
 class HypervisorServersTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('hypervisors')
@@ -98,7 +107,11 @@ class HypervisorServersTemplate(xmlutil.TemplateBuilder):
 class HypervisorsController(object):
     """The Hypervisors API controller for the OpenStack API."""
 
-    def _view_hypervisor(self, hypervisor, detail, servers=None):
+    def __init__(self):
+        self.api = compute_api.HostAPI()
+        super(HypervisorsController, self).__init__()
+
+    def _view_hypervisor(self, hypervisor, detail, servers=None, **kwargs):
         hyp_dict = {
             'id': hypervisor['id'],
             'hypervisor_hostname': hypervisor['hypervisor_hostname'],
@@ -120,6 +133,10 @@ class HypervisorsController(object):
         if servers:
             hyp_dict['servers'] = [dict(name=serv['name'], uuid=serv['uuid'])
                                    for serv in servers]
+
+        # Add any additional info
+        if kwargs:
+            hyp_dict.update(kwargs)
 
         return hyp_dict
 
@@ -147,6 +164,26 @@ class HypervisorsController(object):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
         return dict(hypervisor=self._view_hypervisor(hyp, True))
+
+    @wsgi.serializers(xml=HypervisorUptimeTemplate)
+    def uptime(self, req, id):
+        context = req.environ['nova.context']
+        authorize(context)
+        try:
+            hyp = db.compute_node_get(context, int(id))
+        except (ValueError, exception.ComputeHostNotFound):
+            msg = _("Hypervisor with ID '%s' could not be found.") % id
+            raise webob.exc.HTTPNotFound(explanation=msg)
+
+        # Get the uptime
+        try:
+            uptime = self.api.get_host_uptime(context, hyp)
+        except NotImplementedError:
+            msg = _("Virt driver does not implement uptime function.")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
+
+        return dict(hypervisor=self._view_hypervisor(hyp, False,
+                                                     uptime=uptime))
 
     @wsgi.serializers(xml=HypervisorIndexTemplate)
     def search(self, req, id):
@@ -187,6 +224,8 @@ class Hypervisors(extensions.ExtensionDescriptor):
         resources = [extensions.ResourceExtension('os-hypervisors',
                 HypervisorsController(),
                 collection_actions={'detail': 'GET'},
-                member_actions={'search': 'GET', 'servers': 'GET'})]
+                member_actions={'uptime': 'GET',
+                                'search': 'GET',
+                                'servers': 'GET'})]
 
         return resources
