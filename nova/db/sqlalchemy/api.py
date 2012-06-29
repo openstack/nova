@@ -4239,8 +4239,8 @@ def instance_metadata_update(context, instance_uuid, metadata, delete):
 # System-owned metadata
 
 def _instance_system_metadata_get_query(context, instance_uuid, session=None):
-    return model_query(context, models.InstanceSystemMetadata, session=session,
-                       read_deleted="no").\
+    return model_query(context, models.InstanceSystemMetadata,
+                       session=session).\
                     filter_by(instance_uuid=instance_uuid)
 
 
