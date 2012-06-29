@@ -761,12 +761,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          vm_state=vm_states.DELETED,
                                          task_state=None,
                                          terminated_at=timeutils.utcnow())
-        # Pull the system_metadata before we delete the instance, so we
-        # can pass it to delete.end notification, as it will not be able
-        # to look it up anymore, if it needs it.
-        system_meta = self.db.instance_system_metadata_get(context,
-                instance_uuid)
         self.db.instance_destroy(context, instance_uuid)
+        with utils.temporary_mutation(context, read_deleted="yes"):
+            system_meta = self.db.instance_system_metadata_get(context,
+                instance_uuid)
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
 
