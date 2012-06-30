@@ -18,6 +18,7 @@ Common Auth Middleware.
 
 """
 
+import json
 import webob.dec
 import webob.exc
 
@@ -95,13 +96,18 @@ class NovaKeystoneContext(wsgi.Middleware):
         remote_address = req.remote_addr
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
+
+        if req.headers.get('X_SERVICE_CATALOG') is not None:
+            service_catalog = json.loads(req.headers.get('X_SERVICE_CATALOG'))
+
         ctx = context.RequestContext(user_id,
                                      project_id,
                                      user_name=user_name,
                                      project_name=project_name,
                                      roles=roles,
                                      auth_token=auth_token,
-                                     remote_address=remote_address)
+                                     remote_address=remote_address,
+                                     service_catalog=service_catalog)
 
         req.environ['nova.context'] = ctx
         return self.application
