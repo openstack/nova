@@ -115,27 +115,16 @@ class InstanceMetadata():
         floating_ip = floating_ips and floating_ips[0] or ''
 
         fmt_sgroups = [x['name'] for x in self.security_groups]
-        data = {
-            'meta-data': {
-                'ami-launch-index': self.instance['launch_index'],
-                'ami-manifest-path': 'FIXME',
-                'block-device-mapping': self.mappings,
-                'hostname': hostname,
-                'instance-action': 'none',
-                'instance-type': self.instance['instance_type']['name'],
-                'local-hostname': hostname,
-                'local-ipv4': self.address,
-                'placement': {'availability-zone': self.availability_zone},
-                'public-hostname': hostname,
-                'public-ipv4': floating_ip,
-                'reservation-id': self.instance['reservation_id'],
-                'security-groups': fmt_sgroups}}
 
-        for key in self.ec2_ids:
-            data['meta-data'][key] = self.ec2_ids[key]
-
-        if self.userdata_b64 is not None:
-            data['user-data'] = self.userdata_b64
+        meta_data = {
+            'ami-id': self.ec2_ids['ami-id'],
+            'ami-launch-index': self.instance['launch_index'],
+            'ami-manifest-path': 'FIXME',
+            'instance-id': self.ec2_ids['instance-id'],
+            'hostname': hostname,
+            'local-ipv4': self.address,
+            'reservation-id': self.instance['reservation_id'],
+            'security-groups': fmt_sgroups}
 
         # public keys are strangely rendered in ec2 metadata service
         #  meta-data/public-keys/ returns '0=keyname' (with no trailing /)
@@ -147,16 +136,48 @@ class InstanceMetadata():
         # meta-data/public-keys/0/ : 'openssh-key'
         # meta-data/public-keys/0/openssh-key : '%s' % publickey
         if self.instance['key_name']:
-            data['meta-data']['public-keys'] = {
+            meta_data['public-keys'] = {
                 '0': {'_name': "0=" + self.instance['key_name'],
                       'openssh-key': self.instance['key_data']}}
 
-        if False:  # TODO(vish): store ancestor ids
-            data['ancestor-ami-ids'] = []
-        if False:  # TODO(vish): store product codes
-            data['product-codes'] = []
+        if self._check_version('2007-01-19', version):
+            meta_data['local-hostname'] = hostname
+            meta_data['public-hostname'] = hostname
+            meta_data['public-ipv4'] = floating_ip
+
+        if False and self._check_version('2007-03-01', version):
+            # TODO(vish): store product codes
+            meta_data['product-codes'] = []
+
+        if self._check_version('2007-08-29', version):
+            meta_data['instance-type'] = self.instance['instance_type']['name']
+
+        if False and self._check_version('2007-10-10', version):
+            # TODO(vish): store ancestor ids
+            meta_data['ancestor-ami-ids'] = []
+
+        if self._check_version('2007-12-15', version):
+            meta_data['block-device-mapping'] = self.mappings
+            if 'kernel-id' in self.ec2_ids:
+                meta_data['kernel-id'] = self.ec2_ids['kernel-id']
+            if 'ramdisk-id' in self.ec2_ids:
+                meta_data['ramdisk-id'] = self.ec2_ids['ramdisk-id']
+
+        if self._check_version('2008-02-01', version):
+            meta_data['placement'] = {'availability-zone':
+                                      self.availability_zone}
+
+        if self._check_version('2008-09-01', version):
+            meta_data['instance-action'] = 'none'
+
+        data = {'meta-data': meta_data}
+        if self.userdata_b64 is not None:
+            data['user-data'] = self.userdata_b64
 
         return data
+
+    def _check_version(self, required, requested):
+        return VERSIONS.index(requested) >= VERSIONS.index(required)
 
     def lookup(self, path):
         if path == "" or path[0] != "/":
