@@ -587,7 +587,6 @@ class API(base.Base):
         instance_uuid = instance['uuid']
         mappings = image['properties'].get('mappings', [])
         if mappings:
-            instance['shutdown_terminate'] = False
             self._update_image_block_device_mapping(elevated,
                     instance_type, instance_uuid, mappings)
 
@@ -595,9 +594,16 @@ class API(base.Base):
         for mapping in (image_bdm, block_device_mapping):
             if not mapping:
                 continue
-            instance['shutdown_terminate'] = False
             self._update_block_device_mapping(elevated,
                     instance_type, instance_uuid, mapping)
+
+    def _populate_instance_shutdown_terminate(self, instance, image,
+                                              block_device_mapping):
+        """Populate instance shutdown_terminate information."""
+        if (block_device_mapping or
+            image['properties'].get('mappings') or
+            image['properties'].get('block_device_mapping')):
+            instance['shutdown_terminate'] = False
 
     def _populate_instance_names(self, instance):
         """Populate instance display_name and hostname."""
@@ -662,10 +668,13 @@ class API(base.Base):
 
         self._populate_instance_names(instance)
 
-        self._populate_instance_for_bdm(context, instance,
-                instance_type, image, block_device_mapping)
+        self._populate_instance_shutdown_terminate(instance, image,
+                                                   block_device_mapping)
 
         instance = self.db.instance_create(context, instance)
+
+        self._populate_instance_for_bdm(context, instance,
+                instance_type, image, block_device_mapping)
 
         # send a state update notification for the initial create to
         # show it going from non-existent to BUILDING
