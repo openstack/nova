@@ -37,6 +37,7 @@ import datetime
 import inspect
 import itertools
 import json
+import xmlrpclib
 
 
 def to_primitive(value, convert_instances=False, level=0):
@@ -81,6 +82,12 @@ def to_primitive(value, convert_instances=False, level=0):
     # The try block may not be necessary after the class check above,
     # but just in case ...
     try:
+        # It's not clear why xmlrpclib created their own DateTime type, but
+        # for our purposes, make it a datetime type which is explicitly
+        # handled
+        if isinstance(value, xmlrpclib.DateTime):
+            value = datetime.datetime(*tuple(value.timetuple())[:6])
+
         if isinstance(value, (list, tuple)):
             o = []
             for v in value:
@@ -115,8 +122,8 @@ def to_primitive(value, convert_instances=False, level=0):
         return unicode(value)
 
 
-def dumps(value):
-    return json.dumps(value, default=to_primitive)
+def dumps(value, default=to_primitive, **kwargs):
+    return json.dumps(value, default=default, **kwargs)
 
 
 def loads(s):
