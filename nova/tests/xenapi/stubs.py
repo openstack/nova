@@ -211,12 +211,6 @@ class FakeSessionForVMTests(fake.SessionBase):
         template_vbd_ref = fake.create_vbd(template_vm_ref, template_vdi_ref)
         return template_vm_ref
 
-    def VDI_destroy(self, session_ref, vdi_ref):
-        fake.destroy_vdi(vdi_ref)
-
-    def VM_destroy(self, session_ref, vm_ref):
-        fake.destroy_vm(vm_ref)
-
     def SR_scan(self, session_ref, sr_ref):
         pass
 

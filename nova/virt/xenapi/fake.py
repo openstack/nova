@@ -127,17 +127,37 @@ def destroy_vm(vm_ref):
     vm_rec = _db_content['VM'][vm_ref]
 
     vbd_refs = vm_rec['VBDs']
-    for vbd_ref in vbd_refs:
+    # NOTE(johannes): Shallow copy since destroy_vbd will remove itself
+    # from the list
+    for vbd_ref in vbd_refs[:]:
         destroy_vbd(vbd_ref)
 
     del _db_content['VM'][vm_ref]
 
 
 def destroy_vbd(vbd_ref):
+    vbd_rec = _db_content['VBD'][vbd_ref]
+
+    vm_ref = vbd_rec['VM']
+    vm_rec = _db_content['VM'][vm_ref]
+    vm_rec['VBDs'].remove(vbd_ref)
+
+    vdi_ref = vbd_rec['VDI']
+    vdi_rec = _db_content['VDI'][vdi_ref]
+    vdi_rec['VBDs'].remove(vbd_ref)
+
     del _db_content['VBD'][vbd_ref]
 
 
 def destroy_vdi(vdi_ref):
+    vdi_rec = _db_content['VDI'][vdi_ref]
+
+    vbd_refs = vdi_rec['VBDs']
+    # NOTE(johannes): Shallow copy since destroy_vbd will remove itself
+    # from the list
+    for vbd_ref in vbd_refs[:]:
+        destroy_vbd(vbd_ref)
+
     del _db_content['VDI'][vdi_ref]
 
 
@@ -155,10 +175,15 @@ def create_vdi(name_label, sr_ref, **kwargs):
         'sm_config': {},
         'physical_utilisation': '123',
         'managed': True,
-        'VBDs': {},
     }
     vdi_rec.update(kwargs)
-    return _create_object('VDI', vdi_rec)
+    vdi_ref = _create_object('VDI', vdi_rec)
+    after_VDI_create(vdi_ref, vdi_rec)
+    return vdi_ref
+
+
+def after_VDI_create(vdi_ref, vdi_rec):
+    vdi_rec.setdefault('VBDs', [])
 
 
 def create_vbd(vm_ref, vdi_ref, userdevice=0):
@@ -172,13 +197,18 @@ def create_vbd(vm_ref, vdi_ref, userdevice=0):
 
 
 def after_VBD_create(vbd_ref, vbd_rec):
-    """Create read-only fields and backref from VM to VBD when VBD is
-    created."""
+    """Create read-only fields and backref from VM and VDI to VBD when VBD
+    is created."""
     vbd_rec['currently_attached'] = False
     vbd_rec['device'] = ''
+
     vm_ref = vbd_rec['VM']
     vm_rec = _db_content['VM'][vm_ref]
     vm_rec['VBDs'].append(vbd_ref)
+
+    vdi_ref = vbd_rec['VDI']
+    vdi_rec = _db_content['VDI'][vdi_ref]
+    vdi_rec['VBDs'].append(vbd_ref)
 
     vm_name_label = _db_content['VM'][vm_ref]['name_label']
     vbd_rec['vm_name_label'] = vm_name_label
@@ -725,7 +755,13 @@ class SessionBase(object):
         ref = params[1]
         if ref not in _db_content[table]:
             raise Failure(['HANDLE_INVALID', table, ref])
-        del _db_content[table][ref]
+
+        # Call destroy function (if exists)
+        destroy_func = globals().get('destroy_%s' % table.lower())
+        if destroy_func:
+            destroy_func(ref)
+        else:
+            del _db_content[table][ref]
 
     def _async(self, name, params):
         task_ref = create_task(name)
