@@ -21,5 +21,8 @@
 import nova.flags
 import nova.openstack.common.importutils
 
-API = nova.openstack.common.importutils.import_class(
-        nova.flags.FLAGS.volume_api_class)
+
+def API():
+    importutils = nova.openstack.common.importutils
+    cls = importutils.import_class(nova.flags.FLAGS.volume_api_class)
+    return cls()
