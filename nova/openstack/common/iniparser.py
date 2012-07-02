@@ -52,7 +52,10 @@ class BaseParser(object):
         else:
             key, value = line[:colon], line[colon + 1:]
 
-        return key.strip(), [value.strip()]
+        value = value.strip()
+        if value[0] == value[-1] and value[0] == "\"" or value[0] == "'":
+            value = value[1:-1]
+        return key.strip(), [value]
 
     def parse(self, lineiter):
         key = None
