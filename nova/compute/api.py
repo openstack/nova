@@ -570,9 +570,8 @@ class API(base.Base):
             #                 (--block-device-mapping)
             if virtual_name == 'NoDevice':
                 values['no_device'] = True
-                for k in ('delete_on_termination', 'volume_id',
-                          'snapshot_id', 'volume_id', 'volume_size',
-                          'virtual_name'):
+                for k in ('delete_on_termination', 'virtual_name',
+                          'snapshot_id', 'volume_id', 'volume_size'):
                     values[k] = None
 
             self.db.block_device_mapping_update_or_create(elevated_context,
