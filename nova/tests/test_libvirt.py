@@ -759,6 +759,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_list_instances(self):
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByID = self.fake_lookup
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
         libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
 
         self.mox.ReplayAll()
@@ -810,6 +811,7 @@ class LibvirtConnTestCase(test.TestCase):
             return FakeVirtDomain(xml[id])
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 4
         libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: range(4)
         libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
 
@@ -869,6 +871,7 @@ class LibvirtConnTestCase(test.TestCase):
             return FakeVirtDomain(xml[1])
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 4
         libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: range(4)
         libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
         libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name

@@ -480,6 +480,9 @@ class Connection(object):
                 node_cores,
                 node_threads]
 
+    def numOfDomains(self):
+        return len(self._running_vms)
+
     def listDomainsID(self):
         return self._running_vms.keys()
 
