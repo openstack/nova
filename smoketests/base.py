@@ -17,6 +17,7 @@
 #    under the License.
 
 import boto
+from boto.ec2.regioninfo import RegionInfo
 import commands
 import httplib
 import os
@@ -24,7 +25,6 @@ import paramiko
 import sys
 import time
 import unittest
-from boto.ec2.regioninfo import RegionInfo
 
 from smoketests import flags
 
@@ -150,7 +150,7 @@ class SmokeTestCase(unittest.TestCase):
     def create_key_pair(self, conn, key_name):
         try:
             os.remove('/tmp/%s.pem' % key_name)
-        except:
+        except Exception:
             pass
         key = conn.create_key_pair(key_name)
         key.save('/tmp/')
@@ -160,7 +160,7 @@ class SmokeTestCase(unittest.TestCase):
         conn.delete_key_pair(key_name)
         try:
             os.remove('/tmp/%s.pem' % key_name)
-        except:
+        except Exception:
             pass
 
     def bundle_image(self, image, tempdir='/tmp', kernel=False):

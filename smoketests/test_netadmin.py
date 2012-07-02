@@ -30,8 +30,8 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-from smoketests import flags
 from smoketests import base
+from smoketests import flags
 
 
 FLAGS = flags.FLAGS
