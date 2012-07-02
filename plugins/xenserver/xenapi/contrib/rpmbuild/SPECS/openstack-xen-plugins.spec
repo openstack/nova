@@ -30,6 +30,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 /etc/xapi.d/plugins/agent
 /etc/xapi.d/plugins/glance
+/etc/xapi.d/plugins/kernel
 /etc/xapi.d/plugins/migration
 /etc/xapi.d/plugins/pluginlib_nova.py
 /etc/xapi.d/plugins/xenhost

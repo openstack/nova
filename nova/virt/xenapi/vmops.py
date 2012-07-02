@@ -292,8 +292,9 @@ class VMOps(object):
                 if kernel_file or ramdisk_file:
                     LOG.debug(_("Removing kernel/ramdisk files from dom0"),
                               instance=instance)
-                    self._destroy_kernel_ramdisk_plugin_call(kernel_file,
-                                                             ramdisk_file)
+                    vm_utils.destroy_kernel_ramdisk(
+                            self._session, kernel_file, ramdisk_file)
+
             undo_mgr.undo_with(undo_create_kernel_ramdisk)
             return kernel_file, ramdisk_file
 
@@ -1001,14 +1002,6 @@ class VMOps(object):
             except volume_utils.StorageError as exc:
                 LOG.error(exc)
 
-    def _destroy_kernel_ramdisk_plugin_call(self, kernel, ramdisk):
-        args = {}
-        if kernel:
-            args['kernel-file'] = kernel
-        if ramdisk:
-            args['ramdisk-file'] = ramdisk
-        self._session.call_plugin('glance', 'remove_kernel_ramdisk', args)
-
     def _destroy_kernel_ramdisk(self, instance, vm_ref):
         """Three situations can occur:
 
@@ -1038,7 +1031,7 @@ class VMOps(object):
         (kernel, ramdisk) = vm_utils.lookup_kernel_ramdisk(self._session,
                                                            vm_ref)
 
-        self._destroy_kernel_ramdisk_plugin_call(kernel, ramdisk)
+        vm_utils.destroy_kernel_ramdisk(self._session, kernel, ramdisk)
         LOG.debug(_("kernel/ramdisk files removed"), instance=instance)
 
     def _destroy_vm(self, instance, vm_ref):
