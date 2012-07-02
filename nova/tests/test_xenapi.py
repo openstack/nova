@@ -756,8 +756,11 @@ class XenAPIVMTestCase(test.TestCase):
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         vm_ref = vm_utils.lookup(session, instance.name)
 
-        xenapi_fake.create_vbd(vm_ref, "swap", userdevice=1)
-        xenapi_fake.create_vbd(vm_ref, "rootfs", userdevice=0)
+        swap_vdi_ref = xenapi_fake.create_vdi('swap', None)
+        root_vdi_ref = xenapi_fake.create_vdi('root', None)
+
+        xenapi_fake.create_vbd(vm_ref, swap_vdi_ref, userdevice=1)
+        xenapi_fake.create_vbd(vm_ref, root_vdi_ref, userdevice=0)
 
         conn = xenapi_conn.XenAPIDriver(False)
         image_meta = {'id': IMAGE_VHD,
