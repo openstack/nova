@@ -40,25 +40,26 @@ RPCException = rpc_common.RPCException
 
 zmq_opts = [
     cfg.StrOpt('rpc_zmq_bind_address', default='*',
-        help='ZeroMQ bind address. Should be a wildcard (*), '
-             'an ethernet interface, or IP. '
-             'The "host" option should point or resolve to this address.'),
+               help='ZeroMQ bind address. Should be a wildcard (*), '
+                    'an ethernet interface, or IP. '
+                    'The "host" option should point or resolve to this '
+                    'address.'),
 
     # The module.Class to use for matchmaking.
     cfg.StrOpt('rpc_zmq_matchmaker',
-        default='openstack.common.rpc.matchmaker.MatchMakerLocalhost',
-        help='MatchMaker driver'),
+               default='openstack.common.rpc.matchmaker.MatchMakerLocalhost',
+               help='MatchMaker driver'),
 
     # The following port is unassigned by IANA as of 2012-05-21
     cfg.IntOpt('rpc_zmq_port', default=9501,
-        help='ZeroMQ receiver listening port'),
+               help='ZeroMQ receiver listening port'),
 
     cfg.IntOpt('rpc_zmq_contexts', default=1,
-        help='Number of ZeroMQ contexts, defaults to 1'),
+               help='Number of ZeroMQ contexts, defaults to 1'),
 
     cfg.StrOpt('rpc_zmq_ipc_dir', default='/var/run/openstack',
-        help='Directory for holding IPC sockets'),
-    ]
+               help='Directory for holding IPC sockets'),
+]
 
 
 # These globals are defined in register_opts(conf),
@@ -119,10 +120,10 @@ class ZmqSocket(object):
             self.subscribe(f)
 
         LOG.debug(_("Connecting to %{addr}s with %{type}s"
-                   "\n-> Subscribed to %{subscribe}s"
-                   "\n-> bind: %{bind}s"),
-                   {'addr': addr, 'type': self.socket_s(),
-                    'subscribe': subscribe, 'bind': bind})
+                    "\n-> Subscribed to %{subscribe}s"
+                    "\n-> bind: %{bind}s"),
+                  {'addr': addr, 'type': self.socket_s(),
+                   'subscribe': subscribe, 'bind': bind})
 
         try:
             if bind:
@@ -197,7 +198,7 @@ class ZmqClient(object):
 
     def cast(self, msg_id, topic, data):
         self.outq.send([str(msg_id), str(topic), str('cast'),
-            _serialize(data)])
+                        _serialize(data)])
 
     def close(self):
         self.outq.close()
@@ -306,7 +307,7 @@ class ConsumerBase(object):
         data.setdefault('version', None)
         data.setdefault('args', [])
         proxy.dispatch(ctx, data['version'],
-            data['method'], **data['args'])
+                       data['method'], **data['args'])
 
 
 class ZmqBaseReactor(ConsumerBase):
@@ -339,7 +340,7 @@ class ZmqBaseReactor(ConsumerBase):
 
         # Items push in.
         inq = ZmqSocket(in_addr, zmq_type_in, bind=in_bind,
-                          subscribe=subscribe)
+                        subscribe=subscribe)
 
         self.proxies[inq] = proxy
         self.sockets.append(inq)
@@ -353,8 +354,7 @@ class ZmqBaseReactor(ConsumerBase):
             raise RPCException("Bad output socktype")
 
         # Items push out.
-        outq = ZmqSocket(out_addr, zmq_type_out,
-                           bind=out_bind)
+        outq = ZmqSocket(out_addr, zmq_type_out, bind=out_bind)
 
         self.mapping[inq] = outq
         self.mapping[outq] = inq
@@ -428,7 +428,7 @@ class ZmqProxy(ZmqBaseReactor):
 
         if not topic in self.topic_proxy:
             outq = ZmqSocket("ipc://%s/zmq_topic_%s" % (ipc_dir, topic),
-                               sock_type, bind=True)
+                             sock_type, bind=True)
             self.topic_proxy[topic] = outq
             self.sockets.append(outq)
             LOG.info(_("Created topic proxy: %s"), topic)
@@ -486,7 +486,7 @@ class Connection(rpc_common.Connection):
         topic = topic.split('.', 1)[0]
 
         LOG.info(_("Create Consumer for topic (%(topic)s)") %
-            {'topic': topic})
+                 {'topic': topic})
 
         # Subscription scenarios
         if fanout:
@@ -502,7 +502,7 @@ class Connection(rpc_common.Connection):
             (self.conf.rpc_zmq_ipc_dir, topic)
 
         LOG.debug(_("Consumer is a zmq.%s"),
-            ['PULL', 'SUB'][sock_type == zmq.SUB])
+                  ['PULL', 'SUB'][sock_type == zmq.SUB])
 
         self.reactor.register(proxy, inaddr, sock_type,
                               subscribe=subscribe, in_bind=False)

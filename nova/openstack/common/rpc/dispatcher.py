@@ -92,14 +92,20 @@ class RpcDispatcher(object):
         if not version:
             version = '1.0'
 
+        had_compatible = False
         for proxyobj in self.callbacks:
             if hasattr(proxyobj, 'RPC_API_VERSION'):
                 rpc_api_version = proxyobj.RPC_API_VERSION
             else:
                 rpc_api_version = '1.0'
+            is_compatible = self._is_compatible(rpc_api_version, version)
+            had_compatible = had_compatible or is_compatible
             if not hasattr(proxyobj, method):
                 continue
-            if self._is_compatible(rpc_api_version, version):
+            if is_compatible:
                 return getattr(proxyobj, method)(ctxt, **kwargs)
 
-        raise rpc_common.UnsupportedRpcVersion(version=version)
+        if had_compatible:
+            raise AttributeError("No such RPC function '%s'" % method)
+        else:
+            raise rpc_common.UnsupportedRpcVersion(version=version)

@@ -56,7 +56,7 @@ rpc_opts = [
     cfg.BoolOpt('fake_rabbit',
                 default=False,
                 help='If passed, use a fake RabbitMQ provider'),
-    ]
+]
 
 cfg.CONF.register_opts(rpc_opts)
 
