@@ -29,8 +29,8 @@ from nova.openstack.common import cfg
 matchmaker_opts = [
     # Matchmaker ring file
     cfg.StrOpt('matchmaker_ringfile',
-        default='/etc/nova/matchmaker_ring.json',
-        help='Matchmaker ring file (JSON)'),
+               default='/etc/nova/matchmaker_ring.json',
+               help='Matchmaker ring file (JSON)'),
 ]
 
 CONF = cfg.CONF
