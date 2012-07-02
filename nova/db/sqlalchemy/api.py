@@ -2900,7 +2900,6 @@ def volume_create(context, values):
     with session.begin():
         volume_ref.save(session=session)
 
-    ec2_volume_create(context, volume_ref['id'])
     return volume_ref
 
 
@@ -3205,7 +3204,6 @@ def snapshot_create(context, values):
     session = get_session()
     with session.begin():
         snapshot_ref.save(session=session)
-    ec2_snapshot_create(context, snapshot_ref['id'])
     return snapshot_ref
 
 
