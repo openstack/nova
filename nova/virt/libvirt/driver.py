@@ -176,6 +176,10 @@ libvirt_opts = [
                help='Set to a named libvirt CPU model (see names listed '
                     'in /usr/share/libvirt/cpu_map.xml). Only has effect if '
                     'libvirt_cpu_mode="custom" and libvirt_type="kvm|qemu"'),
+    cfg.StrOpt('libvirt_snapshots_directory',
+               default='$instances_path/snapshots',
+               help='Location where libvirt driver will store snapshots '
+                    'before uploading them to image service'),
     ]
 
 FLAGS = flags.FLAGS
@@ -791,7 +795,9 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.create_snapshot(disk_path, snapshot_name)
 
         # Export the snapshot to a raw image
-        with utils.tempdir() as tmpdir:
+        snapshot_directory = FLAGS.libvirt_snapshots_directory
+        libvirt_utils.ensure_tree(snapshot_directory)
+        with utils.tempdir(dir=snapshot_directory) as tmpdir:
             try:
                 out_path = os.path.join(tmpdir, snapshot_name)
                 libvirt_utils.extract_snapshot(disk_path, source_format,

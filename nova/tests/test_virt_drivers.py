@@ -79,7 +79,8 @@ class _FakeDriverBackendTestCase(test.TestCase):
         self.flags(firewall_driver=nova.virt.libvirt.firewall.drivers[0],
                    rescue_image_id="2",
                    rescue_kernel_id="3",
-                   rescue_ramdisk_id=None)
+                   rescue_ramdisk_id=None,
+                   libvirt_snapshots_directory='./')
 
         def fake_extend(image, size):
             pass
