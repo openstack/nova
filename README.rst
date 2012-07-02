@@ -1,22 +1,58 @@
-The Choose Your Own Adventure README for Nova
-=============================================
+OpenStack Nova README
+=====================
 
-You have come across a cloud computing fabric controller.  It has identified
-itself as "Nova."  It is apparent that it maintains compatibility with
-the popular Amazon EC2 and S3 APIs.
+OpenStack Nova provides a cloud computing fabric controller,
+supporting a wide variety of virtualization technologies,
+including KVM, Xen, LXC, VMWare, and more. In addition to
+its native API, it includes compatibility with the commonly
+encountered Amazon EC2 and S3 APIs.
 
-To monitor it from a distance: follow `@openstack <http://twitter.com/openstack>`_ on twitter.
+OpenStack Nova is distributed under the terms of the Apache
+License, Version 2.0. The full terms and conditions of this
+license are detailed in the LICENSE file.
 
-To tame it for use in your own cloud: read http://docs.openstack.org
+Nova primarily consists of a set of Python daemons, though
+it requires and integrates with a number of native system
+components for databases, messaging and virtualization
+capabilities.
 
-To study its anatomy: read http://nova.openstack.org
+To keep updated with new developments in the OpenStack project
+follow `@openstack <http://twitter.com/openstack>`_ on Twitter.
 
-To dissect it in detail: visit http://github.com/openstack/nova
+To learn how to deploy OpenStack Nova, consult the documentation
+available online at:
 
-To taunt it with its weaknesses: use http://bugs.launchpad.net/nova
+   http://docs.openstack.org
 
-To watch it: http://jenkins.openstack.org
+In the unfortunate event that bugs are discovered, they should
+be reported to the appropriate bug tracker. If you obtained
+the software from a 3rd party operating system vendor, it is
+often wise to use their own bug tracker for reporting problems.
+In all other cases use the master OpenStack bug tracker,
+available at:
 
-To hack at it: read HACKING
+   http://bugs.launchpad.net/nova
 
-To cry over its PEP-8 problems: http://jenkins.openstack.org/job/gate-nova-pep8/violations
+Developers wishing to work on the OpenStack Nova project should
+always base their work on the latest Nova code, available from
+the master GIT repository at:
+
+   http://github.com/openstack/nova
+
+Developers should also join the dicussion on the mailing list,
+at:
+
+   https://lists.launchpad.net/openstack/
+
+Any new code must follow the development guidelines detailed
+in the HACKING.rst file, and pass all unit tests. Further
+developer focused documentation is available at:
+
+   http://nova.openstack.org/
+
+Changes to OpenStack Nova should be submitted for review via
+the Gerrit tool, following the workflow documented at:
+
+   http://wiki.openstack.org/GerritWorkflow
+
+-- End of broadcast
