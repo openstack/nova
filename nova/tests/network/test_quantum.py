@@ -291,7 +291,7 @@ class QuantumDeallocationTestCase(QuantumNovaTestCase):
         self.net_man.deallocate_ip_address('context', 'net_id', 'project_id',
                 {'uuid': 1}, 'instance_id')
 
-    def test_deallocate_ip_address(self):
+    def test_deallocate_ip_address_2(self):
         ipam = self.mox.CreateMock(melange_ipam_lib.QuantumMelangeIPAMLib)
         ipam.get_tenant_id_by_net_id('context', 'net_id', {'uuid': 1},
                                      'project_id').AndRaise(Exception())
@@ -492,7 +492,7 @@ class QuantumManagerTestCase(QuantumNovaTestCase):
         net = db.network_get_by_uuid(ctx.elevated(), net_id)
         self.assertTrue(net is not None)
         self.assertEquals(net['uuid'], net_id)
-        self.assertTrue(net['host'] is not None)
+        self.assertTrue(net['host'] != None)
 
 
 class QuantumNovaMACGenerationTestCase(QuantumNovaTestCase):
