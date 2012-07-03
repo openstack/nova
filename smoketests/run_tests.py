@@ -57,8 +57,8 @@ To run a single test module:
 
 import gettext
 import os
-import unittest
 import sys
+import unittest
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -110,7 +110,7 @@ class _AnsiColorizer(object):
                 except curses.error:
                     curses.setupterm()
                     return curses.tigetnum("colors") > 2
-            except:
+            except Exception:
                 raise
                 # guess false in case of error
                 return False
@@ -133,9 +133,13 @@ class _Win32Colorizer(object):
     See _AnsiColorizer docstring.
     """
     def __init__(self, stream):
-        from win32console import (GetStdHandle, STD_OUT_HANDLE,
-                                  FOREGROUND_RED, FOREGROUND_GREEN,
-                                  FOREGROUND_BLUE, FOREGROUND_INTENSITY)
+        from win32console import FOREGROUND_BLUE
+        from win32console import FOREGROUND_GREEN
+        from win32console import FOREGROUND_INTENSITY
+        from win32console import FOREGROUND_RED
+        from win32console import GetStdHandle
+        from win32console import STD_OUT_HANDLE
+
         red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
                                   FOREGROUND_BLUE, FOREGROUND_INTENSITY)
         self.stream = stream

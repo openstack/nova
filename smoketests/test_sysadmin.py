@@ -18,10 +18,10 @@
 
 import os
 import random
-import sys
-import time
-import tempfile
 import shutil
+import sys
+import tempfile
+import time
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -31,8 +31,8 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-from smoketests import flags
 from smoketests import base
+from smoketests import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('bundle_kernel', 'random.kernel',

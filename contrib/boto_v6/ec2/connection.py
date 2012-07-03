@@ -3,11 +3,11 @@ Created on 2010/12/20
 
 @author: Nachi Ueno <ueno.nachi@lab.ntt.co.jp>
 '''
-import boto
 import base64
+import boto
 import boto.ec2
-from boto_v6.ec2.instance import ReservationV6
 from boto.ec2.securitygroup import SecurityGroup
+from boto_v6.ec2.instance import ReservationV6
 
 
 class EC2ConnectionV6(boto.ec2.EC2Connection):

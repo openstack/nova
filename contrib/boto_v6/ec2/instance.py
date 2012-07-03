@@ -3,10 +3,10 @@ Created on 2010/12/20
 
 @author: Nachi Ueno <ueno.nachi@lab.ntt.co.jp>
 '''
-from boto.resultset import ResultSet
-from boto.ec2.instance import Reservation
 from boto.ec2.instance import Group
 from boto.ec2.instance import Instance
+from boto.ec2.instance import Reservation
+from boto.resultset import ResultSet
 
 
 class ReservationV6(Reservation):
