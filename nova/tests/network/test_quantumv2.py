@@ -27,6 +27,7 @@ from nova import test
 from nova import utils
 from quantumclient.v2_0 import client
 
+
 FLAGS = cfg.CONF
 #NOTE: Quantum client raises Exception which is discouraged by HACKING.
 #      We set this variable here and use it for assertions below to avoid
@@ -151,6 +152,10 @@ class TestQuantumv2(test.TestCase):
         self.nets2.append({'id': 'my_netid2',
                            'name': 'my_netname2',
                            'tenant_id': 'my_tenantid'})
+        self.nets3 = self.nets2 + [{'id': 'my_netid3',
+                                    'name': 'my_netname3',
+                                    'tenant_id': 'my_tenantid'}]
+        self.nets = [self.nets1, self.nets2, self.nets3]
 
         self.port_data1 = [{'network_id': 'my_netid1',
                            'device_id': 'device_id1',
@@ -247,17 +252,23 @@ class TestQuantumv2(test.TestCase):
                                           networks=self.nets1)
         self._verify_nw_info(nw_inf, 0)
 
-    def _allocate_for_instance(self, number):
+    def _allocate_for_instance(self, net_idx=1, **kwargs):
         api = quantumapi.API()
         self.mox.StubOutWithMock(api, 'get_instance_nw_info')
-        nets = number == 1 and self.nets1 or self.nets2
+        # Net idx is 1-based for compatibility with existing unit tests
+        nets = self.nets[net_idx - 1]
         api.get_instance_nw_info(mox.IgnoreArg(),
                                  self.instance,
                                  networks=nets).AndReturn(None)
 
+        mox_list_network_params = dict(tenant_id=self.instance['project_id'])
+        if 'requested_networks' in kwargs:
+            req_net_ids = [id for (id, _i) in kwargs['requested_networks']]
+            mox_list_network_params['id'] = [net['id'] for net in nets
+                                             if net['id'] in req_net_ids]
         self.moxed_client.list_networks(
-            tenant_id=self.instance['project_id']).AndReturn(
-                {'networks': nets})
+            **mox_list_network_params).AndReturn({'networks': nets})
+
         for network in nets:
             port_req_body = {
                 'port': {
@@ -271,7 +282,7 @@ class TestQuantumv2(test.TestCase):
             self.moxed_client.create_port(
                 MyComparator(port_req_body)).AndReturn({'port': port})
         self.mox.ReplayAll()
-        api.allocate_for_instance(self.context, self.instance)
+        api.allocate_for_instance(self.context, self.instance, **kwargs)
 
     def test_allocate_for_instance_1(self):
         """Allocate one port in one network env."""
@@ -280,6 +291,14 @@ class TestQuantumv2(test.TestCase):
     def test_allocate_for_instance_2(self):
         """Allocate one port in two networks env."""
         self._allocate_for_instance(2)
+
+    def test_allocate_for_instance_with_requested_networks(self):
+        # specify only first and last network
+        requested_networks = [(net['id'], object())
+                              for net in (self.nets3[0], self.nets3[-1])]
+
+        self._allocate_for_instance(net_idx=3,
+                                    requested_networks=requested_networks)
 
     def test_allocate_for_instance_ex1(self):
         """verify we will delete created ports
