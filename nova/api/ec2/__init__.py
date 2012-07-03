@@ -261,13 +261,16 @@ class EC2KeystoneAuth(wsgi.Middleware):
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For',
                                              remote_address)
+
+        catalog = result['access']['serviceCatalog']
         ctxt = context.RequestContext(user_id,
                                       project_id,
                                       user_name=user_name,
                                       project_name=project_name,
                                       roles=roles,
                                       auth_token=token_id,
-                                      remote_address=remote_address)
+                                      remote_address=remote_address,
+                                      service_catalog=catalog)
 
         req.environ['nova.context'] = ctxt
 

@@ -45,7 +45,7 @@ class RequestContext(object):
                  roles=None, remote_address=None, timestamp=None,
                  request_id=None, auth_token=None, overwrite=True,
                  quota_class=None, user_name=None, project_name=None,
-                 **kwargs):
+                 service_catalog=None, **kwargs):
         """
         :param read_deleted: 'no' indicates deleted records are hidden, 'yes'
             indicates deleted records are visible, 'only' indicates that
@@ -80,6 +80,7 @@ class RequestContext(object):
             request_id = generate_request_id()
         self.request_id = request_id
         self.auth_token = auth_token
+        self.service_catalog = service_catalog
 
         # NOTE(markmc): this attribute is currently only used by the
         # rs_limits turnstile pre-processor.
@@ -121,6 +122,7 @@ class RequestContext(object):
                 'auth_token': self.auth_token,
                 'quota_class': self.quota_class,
                 'user_name': self.user_name,
+                'service_catalog': self.service_catalog,
                 'project_name': self.project_name}
 
     @classmethod
