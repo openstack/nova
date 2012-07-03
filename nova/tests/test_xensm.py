@@ -35,7 +35,7 @@ LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 
-class XenSMTestCase(test.TestCase):
+class XenSMTestCase(stubs.XenAPITestBase):
     """Unit tests for Xen Storage Manager Volume operations."""
 
     def _get_sm_backend_params(self):

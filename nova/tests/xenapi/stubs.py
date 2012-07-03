@@ -16,8 +16,10 @@
 """Stubouts, mocks and fixtures for the test suite"""
 
 import random
+import sys
 
 from nova.openstack.common import jsonutils
+from nova import test
 import nova.tests.image.fake
 from nova.virt.xenapi import connection as xenapi_conn
 from nova.virt.xenapi import fake
@@ -51,17 +53,9 @@ def stubout_instance_snapshot(stubs):
 
 
 def stubout_session(stubs, cls, product_version=(5, 6, 2), **opt_args):
-    """Stubs out three methods from XenAPISession"""
-    def fake_import(self):
-        """Stubs out get_imported_xenapi of XenAPISession"""
-        fake_module = 'nova.virt.xenapi.fake'
-        from_list = ['fake']
-        return __import__(fake_module, globals(), locals(), from_list, -1)
-
+    """Stubs out methods from XenAPISession"""
     stubs.Set(xenapi_conn.XenAPISession, '_create_session',
               lambda s, url: cls(url, **opt_args))
-    stubs.Set(xenapi_conn.XenAPISession, 'get_imported_xenapi',
-              fake_import)
     stubs.Set(xenapi_conn.XenAPISession, '_get_product_version',
               lambda s: product_version)
 
@@ -363,3 +357,22 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vm_utils, 'get_vdi_for_vm_safely', fake_get_vdi)
     stubs.Set(vm_utils, 'get_sr_path', fake_get_sr_path)
     stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)
+
+
+class XenAPITestBase(test.TestCase):
+    def setUp(self):
+        super(XenAPITestBase, self).setUp()
+
+        self.orig_XenAPI = sys.modules.get('XenAPI')
+        sys.modules['XenAPI'] = fake
+
+        fake.reset()
+
+    def tearDown(self):
+        if self.orig_XenAPI is not None:
+            sys.modules['XenAPI'] = self.orig_XenAPI
+            self.orig_XenAPI = None
+        else:
+            sys.modules.pop('XenAPI')
+
+        super(XenAPITestBase, self).tearDown()

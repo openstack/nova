@@ -500,7 +500,8 @@ class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""
 
     def __init__(self, url, user, pw):
-        self.XenAPI = self.get_imported_xenapi()
+        import XenAPI
+        self.XenAPI = XenAPI
         self._sessions = queue.Queue()
         self.is_slave = False
         exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
@@ -557,10 +558,6 @@ class XenAPISession(object):
                                             host)
         product_version = software_version['product_version']
         return tuple(int(part) for part in product_version.split('.'))
-
-    def get_imported_xenapi(self):
-        """Stubout point. This can be replaced with a mock xenapi module."""
-        return __import__('XenAPI')
 
     def get_session_id(self):
         """Return a string session_id.  Used for vnc consoles."""

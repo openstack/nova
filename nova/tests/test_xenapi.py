@@ -134,7 +134,7 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
     return decorated_function
 
 
-class XenAPIVolumeTestCase(test.TestCase):
+class XenAPIVolumeTestCase(stubs.XenAPITestBase):
     """Unit tests for Volume operations."""
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
@@ -147,7 +147,6 @@ class XenAPIVolumeTestCase(test.TestCase):
                 firewall_driver='nova.virt.xenapi.firewall.'
                                 'Dom0IptablesFirewallDriver')
         db_fakes.stub_out_db_instance_api(self.stubs)
-        xenapi_fake.reset()
         self.instance_values = {'id': 1,
                   'project_id': self.user_id,
                   'user_id': 'fake',
@@ -252,7 +251,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                           '/dev/sdc')
 
 
-class XenAPIVMTestCase(test.TestCase):
+class XenAPIVMTestCase(stubs.XenAPITestBase):
     """Unit tests for VM operations."""
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
@@ -262,7 +261,6 @@ class XenAPIVMTestCase(test.TestCase):
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
-        xenapi_fake.reset()
         xenapi_fake.create_local_srs()
         xenapi_fake.create_local_pifs()
         db_fakes.stub_out_db_instance_api(self.stubs)
@@ -868,7 +866,7 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
         self._test_encryption(''.join(['abcd' for i in xrange(1024)]))
 
 
-class XenAPIMigrateInstance(test.TestCase):
+class XenAPIMigrateInstance(stubs.XenAPITestBase):
     """Unit test for verifying migration-related actions."""
 
     def setUp(self):
@@ -880,7 +878,6 @@ class XenAPIMigrateInstance(test.TestCase):
                                 'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
-        xenapi_fake.reset()
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -1122,7 +1119,7 @@ class CompareVersionTestCase(test.TestCase):
         self.assertTrue(vmops.cmp_version('1.2.3', '1.2.3.4') < 0)
 
 
-class XenAPIHostTestCase(test.TestCase):
+class XenAPIHostTestCase(stubs.XenAPITestBase):
     """Tests HostState, which holds metrics from XenServer that get
     reported back to the Schedulers."""
 
@@ -1131,7 +1128,6 @@ class XenAPIHostTestCase(test.TestCase):
         self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        xenapi_fake.reset()
         xenapi_fake.create_local_srs()
         self.conn = xenapi_conn.XenAPIDriver(False)
 
@@ -1175,7 +1171,7 @@ class XenAPIHostTestCase(test.TestCase):
         self._test_host_action(self.conn.set_host_enabled, False, 'disabled')
 
 
-class XenAPIAutoDiskConfigTestCase(test.TestCase):
+class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
     def setUp(self):
         super(XenAPIAutoDiskConfigTestCase, self).setUp()
         self.flags(target_host='127.0.0.1',
@@ -1184,7 +1180,6 @@ class XenAPIAutoDiskConfigTestCase(test.TestCase):
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        xenapi_fake.reset()
         self.conn = xenapi_conn.XenAPIDriver(False)
 
         self.user_id = 'fake'
@@ -1266,7 +1261,7 @@ class XenAPIAutoDiskConfigTestCase(test.TestCase):
         self.assertIsPartitionCalled(True)
 
 
-class XenAPIGenerateLocal(test.TestCase):
+class XenAPIGenerateLocal(stubs.XenAPITestBase):
     """Test generating of local disks, like swap and ephemeral"""
     def setUp(self):
         super(XenAPIGenerateLocal, self).setUp()
@@ -1278,7 +1273,6 @@ class XenAPIGenerateLocal(test.TestCase):
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
-        xenapi_fake.reset()
         self.conn = xenapi_conn.XenAPIDriver(False)
 
         self.user_id = 'fake'
@@ -1343,7 +1337,7 @@ class XenAPIGenerateLocal(test.TestCase):
         self.assertCalled(instance)
 
 
-class XenAPIBWUsageTestCase(test.TestCase):
+class XenAPIBWUsageTestCase(stubs.XenAPITestBase):
     def setUp(self):
         super(XenAPIBWUsageTestCase, self).setUp()
         self.stubs.Set(vm_utils, 'compile_metrics',
@@ -1354,7 +1348,6 @@ class XenAPIBWUsageTestCase(test.TestCase):
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        xenapi_fake.reset()
         self.conn = xenapi_conn.XenAPIDriver(False)
 
     @classmethod
@@ -1378,7 +1371,7 @@ class XenAPIBWUsageTestCase(test.TestCase):
 # TODO(salvatore-orlando): this class and
 # nova.tests.test_libvirt.IPTablesFirewallDriverTestCase share a lot of code.
 # Consider abstracting common code in a base class for firewall driver testing.
-class XenAPIDom0IptablesFirewallTestCase(test.TestCase):
+class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
     _in_nat_rules = [
       '# Generated by iptables-save v1.4.10 on Sat Feb 19 00:03:19 2011',
@@ -1424,7 +1417,6 @@ class XenAPIDom0IptablesFirewallTestCase(test.TestCase):
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
-        xenapi_fake.reset()
         xenapi_fake.create_local_srs()
         xenapi_fake.create_local_pifs()
         self.user_id = 'mappin'
@@ -1679,12 +1671,8 @@ class XenAPIDom0IptablesFirewallTestCase(test.TestCase):
         self.assertEqual(1, len(rules))
 
 
-class XenAPISRSelectionTestCase(test.TestCase):
+class XenAPISRSelectionTestCase(stubs.XenAPITestBase):
     """Unit tests for testing we find the right SR."""
-    def setUp(self):
-        super(XenAPISRSelectionTestCase, self).setUp()
-        xenapi_fake.reset()
-
     def test_safe_find_sr_raise_exception(self):
         """Ensure StorageRepositoryNotFound is raise when wrong filter."""
         self.flags(sr_matching_filter='yadayadayada')
@@ -1733,7 +1721,7 @@ class XenAPISRSelectionTestCase(test.TestCase):
                          expected)
 
 
-class XenAPIAggregateTestCase(test.TestCase):
+class XenAPIAggregateTestCase(stubs.XenAPITestBase):
     """Unit tests for aggregate operations."""
     def setUp(self):
         super(XenAPIAggregateTestCase, self).setUp()
@@ -1744,7 +1732,6 @@ class XenAPIAggregateTestCase(test.TestCase):
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver',
                    host='host')
-        xenapi_fake.reset()
         host_ref = xenapi_fake.get_all('host')[0]
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()

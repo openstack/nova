@@ -152,7 +152,6 @@ class VMOps(object):
     Management class for VM-related tasks
     """
     def __init__(self, session):
-        self.XenAPI = session.get_imported_xenapi()
         self.compute_api = compute.API()
         self._session = session
         self.poll_rescue_last_ran = None
@@ -619,7 +618,7 @@ class VMOps(object):
             template_vm_ref, template_vdi_uuids = vm_utils.create_snapshot(
                     self._session, instance, vm_ref, label)
             return template_vm_ref, template_vdi_uuids
-        except self.XenAPI.Failure, exc:
+        except self._session.XenAPI.Failure, exc:
             LOG.error(_("Unable to Snapshot instance: %(exc)s"), locals(),
                       instance=instance)
             raise
@@ -635,7 +634,7 @@ class VMOps(object):
             _params = {'params': pickle.dumps(params)}
             self._session.call_plugin('migration', 'transfer_vhd',
                                       _params)
-        except self.XenAPI.Failure:
+        except self._session.XenAPI.Failure:
             msg = _("Failed to transfer vhd to new host")
             raise exception.MigrationError(reason=msg)
 
@@ -977,7 +976,7 @@ class VMOps(object):
                 self._session.call_xenapi('VM.hard_shutdown', vm_ref)
             else:
                 self._session.call_xenapi('VM.clean_shutdown', vm_ref)
-        except self.XenAPI.Failure, exc:
+        except self._session.XenAPI.Failure, exc:
             LOG.exception(exc)
 
     def _find_root_vdi_ref(self, vm_ref):
@@ -1038,7 +1037,7 @@ class VMOps(object):
         """Destroys a VM record."""
         try:
             self._session.call_xenapi('VM.destroy', vm_ref)
-        except self.XenAPI.Failure, exc:
+        except self._session.XenAPI.Failure, exc:
             LOG.exception(exc)
             return
 
@@ -1492,7 +1491,7 @@ class VMOps(object):
         args.update(addl_args)
         try:
             return self._session.call_plugin(plugin, method, args)
-        except self.XenAPI.Failure, e:
+        except self._session.XenAPI.Failure, e:
             err_msg = e.details[-1].splitlines()[-1]
             if 'TIMEOUT:' in err_msg:
                 LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
