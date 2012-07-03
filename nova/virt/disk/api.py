@@ -306,20 +306,39 @@ def inject_data_into_fs(fs, key, net, metadata, admin_password, execute):
         _inject_admin_password_into_fs(admin_password, fs, execute=execute)
 
 
-def _inject_file_into_fs(fs, path, contents):
-    absolute_path = os.path.join(fs, path.lstrip('/'))
+def _join_and_check_path_within_fs(fs, *args):
+    '''os.path.join() with safety check for injected file paths.
+
+    Join the supplied path components and make sure that the
+    resulting path we are injecting into is within the
+    mounted guest fs.  Trying to be clever and specifying a
+    path with '..' in it will hit this safeguard.
+    '''
+    absolute_path = os.path.realpath(os.path.join(fs, *args))
+    if not absolute_path.startswith(os.path.realpath(fs) + '/'):
+        raise exception.Invalid(_('injected file path not valid'))
+    return absolute_path
+
+
+def _inject_file_into_fs(fs, path, contents, append=False):
+    absolute_path = _join_and_check_path_within_fs(fs, path.lstrip('/'))
+
     parent_dir = os.path.dirname(absolute_path)
     utils.execute('mkdir', '-p', parent_dir, run_as_root=True)
-    utils.execute('tee', absolute_path, process_input=contents,
-          run_as_root=True)
+
+    args = []
+    if append:
+        args.append('-a')
+    args.append(absolute_path)
+
+    kwargs = dict(process_input=contents, run_as_root=True)
+
+    utils.execute('tee', *args, **kwargs)
 
 
 def _inject_metadata_into_fs(metadata, fs, execute=None):
-    metadata_path = os.path.join(fs, "meta.js")
     metadata = dict([(m.key, m.value) for m in metadata])
-
-    utils.execute('tee', metadata_path,
-                  process_input=json.dumps(metadata), run_as_root=True)
+    _inject_file_into_fs(fs, 'meta.js', json.dumps(metadata))
 
 
 def _inject_key_into_fs(key, fs, execute=None):
@@ -328,20 +347,22 @@ def _inject_key_into_fs(key, fs, execute=None):
     key is an ssh key string.
     fs is the path to the base of the filesystem into which to inject the key.
     """
-    sshdir = os.path.join(fs, 'root', '.ssh')
+    sshdir = _join_and_check_path_within_fs(fs, 'root', '.ssh')
     utils.execute('mkdir', '-p', sshdir, run_as_root=True)
     utils.execute('chown', 'root', sshdir, run_as_root=True)
     utils.execute('chmod', '700', sshdir, run_as_root=True)
-    keyfile = os.path.join(sshdir, 'authorized_keys')
-    key_data = [
+
+    keyfile = os.path.join('root', '.ssh', 'authorized_keys')
+
+    key_data = ''.join([
         '\n',
         '# The following ssh key was injected by Nova',
         '\n',
         key.strip(),
         '\n',
-    ]
-    utils.execute('tee', '-a', keyfile,
-                  process_input=''.join(key_data), run_as_root=True)
+    ])
+
+    _inject_file_into_fs(fs, keyfile, key_data, append=True)
 
 
 def _inject_net_into_fs(net, fs, execute=None):
@@ -349,12 +370,13 @@ def _inject_net_into_fs(net, fs, execute=None):
 
     net is the contents of /etc/network/interfaces.
     """
-    netdir = os.path.join(os.path.join(fs, 'etc'), 'network')
+    netdir = _join_and_check_path_within_fs(fs, 'etc', 'network')
     utils.execute('mkdir', '-p', netdir, run_as_root=True)
     utils.execute('chown', 'root:root', netdir, run_as_root=True)
     utils.execute('chmod', 755, netdir, run_as_root=True)
-    netfile = os.path.join(netdir, 'interfaces')
-    utils.execute('tee', netfile, process_input=net, run_as_root=True)
+
+    netfile = os.path.join('etc', 'network', 'interfaces')
+    _inject_file_into_fs(fs, netfile, net)
 
 
 def _inject_admin_password_into_fs(admin_passwd, fs, execute=None):
@@ -379,16 +401,15 @@ def _inject_admin_password_into_fs(admin_passwd, fs, execute=None):
     fd, tmp_shadow = tempfile.mkstemp()
     os.close(fd)
 
-    utils.execute('cp', os.path.join(fs, 'etc', 'passwd'), tmp_passwd,
-                  run_as_root=True)
-    utils.execute('cp', os.path.join(fs, 'etc', 'shadow'), tmp_shadow,
-                  run_as_root=True)
+    passwd_path = _join_and_check_path_within_fs(fs, 'etc', 'passwd')
+    shadow_path = _join_and_check_path_within_fs(fs, 'etc', 'shadow')
+
+    utils.execute('cp', passwd_path, tmp_passwd, run_as_root=True)
+    utils.execute('cp', shadow_path, tmp_shadow, run_as_root=True)
     _set_passwd(admin_user, admin_passwd, tmp_passwd, tmp_shadow)
-    utils.execute('cp', tmp_passwd, os.path.join(fs, 'etc', 'passwd'),
-                  run_as_root=True)
+    utils.execute('cp', tmp_passwd, passwd_path, run_as_root=True)
     os.unlink(tmp_passwd)
-    utils.execute('cp', tmp_shadow, os.path.join(fs, 'etc', 'shadow'),
-                  run_as_root=True)
+    utils.execute('cp', tmp_shadow, shadow_path, run_as_root=True)
     os.unlink(tmp_shadow)
 
 
