@@ -117,9 +117,13 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase):
     final class"""
 
     # if your driver supports being tested in a fake way, it can go here
+    #
+    # both long form and short form drivers are supported
     new_drivers = {
         'nova.virt.fake.FakeDriver': 'FakeDriver',
-        'nova.virt.libvirt.LibvirtDriver': 'LibvirtDriver'
+        'nova.virt.libvirt.LibvirtDriver': 'LibvirtDriver',
+        'fake.FakeDriver': 'FakeDriver',
+        'libvirt.LibvirtDriver': 'LibvirtDriver'
         }
 
     # NOTE(sdague): remove after Folsom release when connection_type
