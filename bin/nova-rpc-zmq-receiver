@@ -1,4 +1,4 @@
-#!/usr/bin/env python -d
+#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 #    Copyright 2011 OpenStack LLC
@@ -19,7 +19,6 @@ import eventlet
 eventlet.monkey_patch()
 
 import contextlib
-import logging
 import os
 import sys
 
@@ -35,6 +34,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
 
 from nova import exception
 from nova.openstack.common import cfg
+from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import impl_zmq
 from nova import utils
