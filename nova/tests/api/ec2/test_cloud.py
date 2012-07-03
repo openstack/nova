@@ -1018,7 +1018,6 @@ class CloudTestCase(test.TestCase):
         db.instance_destroy(self.context, inst2['uuid'])
         db.instance_destroy(self.context, inst1['uuid'])
 
-    # NOTE(jdg) Modified expected volume_id's to string
     _expected_instance_bdm1 = {
         'instanceId': 'i-00000001',
         'rootDeviceName': '/dev/sdb1',

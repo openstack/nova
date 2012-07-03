@@ -315,11 +315,13 @@ class CloudController(object):
                   context=context)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
         volume = self.volume_api.get(context, volume_id)
-        snapshot = self.volume_api.create_snapshot(
-                context,
-                volume,
-                None,
-                kwargs.get('description'))
+        args = (context, volume, kwargs.get('name'), kwargs.get('description'))
+        if kwargs.get('force', False):
+            snapshot = self.volume_api.create_snapshot_force(*args)
+        else:
+            snapshot = self.volume_api.create_snapshot(*args)
+
+        db.ec2_snapshot_create(context, snapshot['id'])
         return self._format_snapshot(context, snapshot)
 
     def delete_snapshot(self, context, snapshot_id, **kwargs):
@@ -723,24 +725,28 @@ class CloudController(object):
         return v
 
     def create_volume(self, context, **kwargs):
-        size = kwargs.get('size')
-        if kwargs.get('snapshot_id') is not None:
+        snapshot_ec2id = kwargs.get('snapshot_id', None)
+        if snapshot_ec2id is not None:
             snapshot_id = ec2utils.ec2_snap_id_to_uuid(kwargs['snapshot_id'])
             snapshot = self.volume_api.get_snapshot(context, snapshot_id)
-            LOG.audit(_("Create volume from snapshot %s"), snapshot_id,
+            LOG.audit(_("Create volume from snapshot %s"), snapshot_ec2id,
                       context=context)
         else:
             snapshot = None
-            LOG.audit(_("Create volume of %s GB"), size, context=context)
-
-        availability_zone = kwargs.get('availability_zone', None)
+            LOG.audit(_("Create volume of %s GB"),
+                        kwargs.get('size'),
+                        context=context)
 
         volume = self.volume_api.create(context,
-                                        size,
-                                        None,
-                                        None,
+                                        kwargs.get('size'),
+                                        kwargs.get('name'),
+                                        kwargs.get('description'),
                                         snapshot,
-                                        availability_zone=availability_zone)
+                                        kwargs.get('volume_type'),
+                                        kwargs.get('metadata'),
+                                        kwargs.get('availability_zone'))
+
+        db.ec2_volume_create(context, volume['id'])
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
@@ -749,7 +755,6 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
-
         try:
             volume = self.volume_api.get(context, volume_id)
             self.volume_api.delete(context, volume)
@@ -758,7 +763,10 @@ class CloudController(object):
 
         return True
 
-    def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
+    def attach_volume(self, context,
+                      volume_id,
+                      instance_id,
+                      device, **kwargs):
         validate_ec2_id(instance_id)
         validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
