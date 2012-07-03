@@ -951,7 +951,7 @@ class VlanNetworkTestCase(test.TestCase):
 
         def teardown_network_on_host(_context, network):
             if network['id'] == 0:
-                raise Exception('Correct network/fixed_ip assertion')
+                raise test.TestingException()
 
         self.stubs.Set(db, 'network_get', network_get)
         self.stubs.Set(self.network, '_teardown_network_on_host',
@@ -976,7 +976,8 @@ class VlanNetworkTestCase(test.TestCase):
         elevated.read_deleted = 'yes'
 
         deallocate = self.network.deallocate_fixed_ip
-        self.assertRaises(Exception, deallocate, context1, fix_addr, 'fake')
+        self.assertRaises(test.TestingException, deallocate, context1,
+                          fix_addr, 'fake')
 
     def test_deallocate_fixed_no_vif(self):
         """Verify that deallocate doesn't raise when no vif is returned.
