@@ -19,8 +19,8 @@ import mox
 
 from nova import context
 from nova import exception
-from nova.network import quantumv2
 from nova.network import model
+from nova.network import quantumv2
 from nova.network.quantumv2 import api as quantumapi
 from nova.openstack.common import cfg
 from nova import test
@@ -28,6 +28,11 @@ from nova import utils
 from quantumclient.v2_0 import client
 
 FLAGS = cfg.CONF
+#NOTE: Quantum client raises Exception which is discouraged by HACKING.
+#      We set this variable here and use it for assertions below to avoid
+#      the hacking checks until we can make quantum client throw a custom
+#      exception class instead.
+QUANTUM_CLIENT_EXCEPTION = Exception
 
 
 class MyComparator(mox.Comparator):
@@ -99,7 +104,7 @@ class TestQuantumClient(test.TestCase):
         self.flags(quantum_auth_strategy='keystone')
         self.flags(quantum_url='http://anyhost/')
         my_context = context.RequestContext('userid', 'my_tenantid')
-        self.assertRaises(Exception,
+        self.assertRaises(QUANTUM_CLIENT_EXCEPTION,
                           quantumv2.get_client,
                           my_context)
 
@@ -308,7 +313,7 @@ class TestQuantumv2(test.TestCase):
             index += 1
         self.moxed_client.delete_port('portid_' + self.nets2[0]['id'])
         self.mox.ReplayAll()
-        self.assertRaises(Exception, api.allocate_for_instance,
+        self.assertRaises(QUANTUM_CLIENT_EXCEPTION, api.allocate_for_instance,
                           self.context, self.instance)
 
     def test_allocate_for_instance_ex2(self):
@@ -334,7 +339,7 @@ class TestQuantumv2(test.TestCase):
             MyComparator(port_req_body)).AndRaise(
                 Exception("fail to create port"))
         self.mox.ReplayAll()
-        self.assertRaises(Exception, api.allocate_for_instance,
+        self.assertRaises(QUANTUM_CLIENT_EXCEPTION, api.allocate_for_instance,
                           self.context, self.instance)
 
     def _deallocate_for_instance(self, number):

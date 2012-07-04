@@ -17,8 +17,8 @@
 
 from nova import exception
 from nova import flags
-from nova.openstack.common import log as logging
 from nova.openstack.common import excutils
+from nova.openstack.common import log as logging
 from quantumclient import client
 from quantumclient.v2_0 import client as clientv20
 

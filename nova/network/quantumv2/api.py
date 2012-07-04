@@ -18,12 +18,12 @@
 from nova.db import base
 from nova import exception
 from nova import flags
-from nova.openstack.common import log as logging
 from nova.network.api import refresh_cache
 from nova.network import model as network_model
 from nova.network import quantumv2
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
+from nova.openstack.common import log as logging
 
 quantum_opts = [
     cfg.StrOpt('quantum_url',
