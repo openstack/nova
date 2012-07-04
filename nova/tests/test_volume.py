@@ -81,6 +81,36 @@ class VolumeTestCase(test.TestCase):
                           self.context,
                           volume_id)
 
+    def _do_test_create_over_quota(self, resource, expected):
+        """Test volume creation over quota."""
+
+        def fake_allowed_volumes(context, requested_volumes, size):
+            return dict(overs=[resource],
+                        usages=dict(gigabytes=999, volumes=9),
+                        quotas=dict(gigabytes=1000, volumes=10),
+                        allowed=dict(gigabytes=0, volumes=0))
+
+        self.stubs.Set(nova.quota, 'allowed_volumes', fake_allowed_volumes)
+
+        volume_api = nova.volume.api.API()
+
+        try:
+            volume_api.create(self.context,
+                              2,
+                             'name',
+                             'description')
+            self.fail('expected QuotaError')
+        except exception.QuotaError as qe:
+            self.assertTrue(str(qe).endswith('code=%s' % expected))
+
+    def test_create_volumes_over_quota(self):
+        self._do_test_create_over_quota('volumes',
+                                        'VolumeLimitExceeded')
+
+    def test_create_gigabytes_over_quota(self):
+        self._do_test_create_over_quota('gigabytes',
+                                        'VolumeSizeTooLarge')
+
     def test_delete_busy_volume(self):
         """Test volume survives deletion if driver reports it as busy."""
         volume = self._create_volume()

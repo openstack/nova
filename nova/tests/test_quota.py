@@ -196,31 +196,36 @@ class QuotaTestCase(test.TestCase):
                                                 instance_type)
         self.assertEqual(num_instances, 101)
 
-    def test_unlimited_volumes(self):
-        self.flags(quota_volumes=10, quota_gigabytes=-1)
-        volumes = quota.allowed_volumes(self.context, 100, 1)
-        self.assertEqual(volumes, 10)
-        db.quota_create(self.context, self.project_id, 'volumes', None)
-        volumes = quota.allowed_volumes(self.context, 100, 1)
-        self.assertEqual(volumes, 100)
-        db.quota_create(self.context, self.project_id, 'volumes', -1)
-        volumes = quota.allowed_volumes(self.context, 100, 1)
-        self.assertEqual(volumes, 100)
-        volumes = quota.allowed_volumes(self.context, 101, 1)
-        self.assertEqual(volumes, 101)
+    def _do_test_volume_quota(self, resource):
 
-    def test_unlimited_gigabytes(self):
-        self.flags(quota_volumes=-1, quota_gigabytes=10)
-        volumes = quota.allowed_volumes(self.context, 100, 1)
-        self.assertEqual(volumes, 10)
-        db.quota_create(self.context, self.project_id, 'gigabytes', None)
-        volumes = quota.allowed_volumes(self.context, 100, 1)
-        self.assertEqual(volumes, 100)
-        db.quota_create(self.context, self.project_id, 'gigabytes', -1)
-        volumes = quota.allowed_volumes(self.context, 100, 1)
-        self.assertEqual(volumes, 100)
-        volumes = quota.allowed_volumes(self.context, 101, 1)
-        self.assertEqual(volumes, 101)
+        def _validate(result, request, quota, allow):
+            overs = result['overs']
+            usages = result['usages']
+            quotas = result['quotas']
+            allowed = result['allowed']
+            self.assertEquals(request > allow, resource in overs)
+            self.assertEquals(usages[resource], 0)
+            self.assertEquals(quotas[resource], quota)
+            self.assertEquals(allowed[resource], allow)
+
+        quota_volumes = 10 if resource == 'volumes' else -1
+        quota_gigabytes = 10 if resource == 'gigabytes' else -1
+        self.flags(quota_volumes=quota_volumes,
+                   quota_gigabytes=quota_gigabytes)
+        _validate(quota.allowed_volumes(self.context, 100, 1), 100, 10, 10)
+
+        db.quota_create(self.context, self.project_id, resource, None)
+        _validate(quota.allowed_volumes(self.context, 100, 1), 100, None, 100)
+
+        db.quota_create(self.context, self.project_id, resource, -1)
+        _validate(quota.allowed_volumes(self.context, 100, 1), 100, None, 100)
+        _validate(quota.allowed_volumes(self.context, 101, 1), 101, None, 101)
+
+    def test_volumes_quota(self):
+        self._do_test_volume_quota('volumes')
+
+    def test_gigabytes_quota(self):
+        self._do_test_volume_quota('gigabytes')
 
     def test_unlimited_floating_ips(self):
         self.flags(quota_floating_ips=10)

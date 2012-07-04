@@ -129,23 +129,36 @@ def allowed_instances(context, requested_instances, instance_type):
 
 
 def allowed_volumes(context, requested_volumes, size):
-    """Check quota and return min(requested_volumes, allowed_volumes)."""
+    """Check volume quotas and return breached if any."""
     project_id = context.project_id
     context = context.elevated()
     size = int(size)
-    requested_gigabytes = requested_volumes * size
+
+    allowed = {}
+    overs = []
+
     used_volumes, used_gigabytes = db.volume_data_get_for_project(context,
                                                                   project_id)
-    quota = get_project_quotas(context, project_id)
-    allowed_volumes = _get_request_allotment(requested_volumes, used_volumes,
-                                             quota['volumes'])
-    allowed_gigabytes = _get_request_allotment(requested_gigabytes,
-                                               used_gigabytes,
-                                               quota['gigabytes'])
+    usages = dict(volumes=used_volumes, gigabytes=used_gigabytes)
+
+    quotas = get_project_quotas(context, project_id)
+
+    def _check_allowed(resource, requested):
+        allow = _get_request_allotment(requested,
+                                       usages[resource],
+                                       quotas[resource])
+        if requested and allow < requested:
+            overs.append(resource)
+        allowed[resource] = allow
+
+    _check_allowed('volumes', requested_volumes)
+    _check_allowed('gigabytes', requested_volumes * size)
+
     if size != 0:
-        allowed_volumes = min(allowed_volumes,
-                              int(allowed_gigabytes // size))
-    return min(requested_volumes, allowed_volumes)
+        allowed['volumes'] = min(allowed['volumes'],
+                                 int(allowed['gigabytes'] // size))
+
+    return dict(overs=overs, usages=usages, quotas=quotas, allowed=allowed)
 
 
 def allowed_floating_ips(context, requested_floating_ips):
