@@ -423,7 +423,7 @@ class InvalidEc2Id(Invalid):
 
 
 class InvalidUUID(Invalid):
-    message = _("Expected a uuid but received %(uuid).")
+    message = _("Expected a uuid but received %(uuid)s.")
 
 
 class ConstraintNotMet(NovaException):
@@ -596,7 +596,7 @@ class FixedIpNotFoundForAddress(FixedIpNotFound):
 
 
 class FixedIpNotFoundForInstance(FixedIpNotFound):
-    message = _("Instance %(instance_id)s has zero fixed ips.")
+    message = _("Instance %(instance_uuid)s has zero fixed ips.")
 
 
 class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
@@ -605,7 +605,7 @@ class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
 
 
 class FixedIpNotFoundForSpecificInstance(FixedIpNotFound):
-    message = _("Instance %(instance_id)s doesn't have fixed ip '%(ip)s'.")
+    message = _("Instance %(instance_uuid)s doesn't have fixed ip '%(ip)s'.")
 
 
 class FixedIpNotFoundForHost(FixedIpNotFound):
@@ -618,7 +618,8 @@ class FixedIpNotFoundForNetwork(FixedIpNotFound):
 
 
 class FixedIpAlreadyInUse(NovaException):
-    message = _("Fixed IP address %(address)s is already in use.")
+    message = _("Fixed IP address %(address)s is already in use on instance "
+                "%(instance_uuid)s.")
 
 
 class FixedIpInvalid(Invalid):

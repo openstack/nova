@@ -36,7 +36,7 @@ FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 def network_api_get_fixed_ip(self, context, id):
     if id is None:
         return None
-    return {'address': '10.0.0.1', 'id': id, 'instance_id': 1}
+    return {'address': '10.0.0.1', 'id': id, 'instance_uuid': 1}
 
 
 def network_api_get_floating_ip(self, context, id):
@@ -214,7 +214,7 @@ class FloatingIpTest(test.TestCase):
                     'fixed_ip_id': 11}
 
         def get_fixed_ip(self, context, id):
-            return {'address': '10.0.0.1', 'instance_id': 1}
+            return {'address': '10.0.0.1', 'instance_uuid': 1}
 
         self.stubs.Set(network.api.API, "get_floating_ip", get_floating_ip)
         self.stubs.Set(network.api.API, "get_fixed_ip", get_fixed_ip)

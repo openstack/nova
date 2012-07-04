@@ -274,9 +274,9 @@ class FixedIpCommands(object):
             sys.exit(2)
 
         instances = db.instance_get_all(context.get_admin_context())
-        instances_by_id = {}
+        instances_by_uuid = {}
         for instance in instances:
-            instances_by_id[instance['id']] = instance
+            instances_by_uuid[instance['uuid']] = instance
 
         print "%-18s\t%-15s\t%-15s\t%s" % (_('network'),
                                               _('IP address'),
@@ -304,8 +304,8 @@ class FixedIpCommands(object):
             network = all_networks.get(fixed_ip['network_id'])
             if network:
                 has_ip = True
-                if fixed_ip.get('instance_id'):
-                    instance = instances_by_id.get(fixed_ip['instance_id'])
+                if fixed_ip.get('instance_uuid'):
+                    instance = instances_by_uuid.get(fixed_ip['instance_uuid'])
                     if instance:
                         hostname = instance['hostname']
                         host = instance['host']
@@ -414,16 +414,11 @@ class FloatingIpCommands(object):
             instance_id = None
             if floating_ip['fixed_ip_id']:
                 fixed_ip = db.fixed_ip_get(ctxt, floating_ip['fixed_ip_id'])
-                try:
-                    instance = db.instance_get(ctxt, fixed_ip['instance_id'])
-                    instance_id = instance.get('uuid', "none")
-                except exception.InstanceNotFound:
-                    msg = _('Missing instance %s')
-                    instance_id = msg % fixed_ip['instance_id']
+                instance_uuid = fixed_ip['instance_uuid']
 
             print "%s\t%s\t%s\t%s\t%s" % (floating_ip['project_id'],
                                           floating_ip['address'],
-                                          instance_id,
+                                          instance_uuid,
                                           floating_ip['pool'],
                                           floating_ip['interface'])
 

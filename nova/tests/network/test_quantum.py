@@ -542,7 +542,7 @@ class QuantumNovaMACGenerationTestCase(QuantumNovaTestCase):
 
 
 class QuantumNovaPortSecurityTestCase(QuantumNovaTestCase):
-    def test_port_securty(self):
+    def test_port_security(self):
         self.flags(use_melange_mac_generation=True)
         self.flags(quantum_use_port_security=True)
         fake_mac = "ab:cd:ef:ab:cd:ef"
@@ -578,7 +578,7 @@ class QuantumNovaPortSecurityTestCase(QuantumNovaTestCase):
                         requested_networks=requested_networks)
         self.assertEqual(nw_info[0]['address'], fake_mac)
 
-    def test_port_securty_negative(self):
+    def test_port_security_negative(self):
         self.flags(use_melange_mac_generation=True)
         self.flags(quantum_use_port_security=False)
         fake_mac = "ab:cd:ef:ab:cd:ef"
@@ -593,7 +593,7 @@ class QuantumNovaPortSecurityTestCase(QuantumNovaTestCase):
         requested_networks = [(n[0], None) for n in all_valid_networks]
 
         instance_ref = db.api.instance_create(ctx,
-                                    {"project_id": project_id})
+                                              {"project_id": project_id})
         oldfunc = self.net_man.q_conn.create_and_attach_port
 
         # Make sure no pairs are passed in if port security is turned off

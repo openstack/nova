@@ -539,7 +539,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         return self.db.virtual_interface_create(context, vif)
 
     def get_instance_nw_info(self, context, instance_id, instance_uuid,
-                                            rxtx_factor, host, **kwargs):
+                             rxtx_factor, host, **kwargs):
         """This method is used by compute to fetch all network data
            that should be used when creating the VM.
 

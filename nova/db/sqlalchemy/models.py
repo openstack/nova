@@ -717,7 +717,7 @@ class FixedIp(BASE, NovaBase):
     address = Column(String(255))
     network_id = Column(Integer, nullable=True)
     virtual_interface_id = Column(Integer, nullable=True)
-    instance_id = Column(Integer, nullable=True)
+    instance_uuid = Column(String(36), nullable=True)
     # associated means that a fixed_ip has its instance_id column set
     # allocated means that a fixed_ip has its virtual_interface_id column set
     allocated = Column(Boolean, default=False)

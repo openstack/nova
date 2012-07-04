@@ -120,13 +120,13 @@ class FloatingIPController(object):
         fixed_ip_id = floating_ip['fixed_ip_id']
         floating_ip['fixed_ip'] = self._get_fixed_ip(context,
                                                      fixed_ip_id)
-        instance_id = None
+        instance_uuid = None
         if floating_ip['fixed_ip']:
-            instance_id = floating_ip['fixed_ip']['instance_id']
+            instance_uuid = floating_ip['fixed_ip']['instance_uuid']
 
-        if instance_id:
+        if instance_uuid:
             floating_ip['instance'] = self._get_instance(context,
-                                                         instance_id)
+                                                         instance_uuid)
         else:
             floating_ip['instance'] = None
 
