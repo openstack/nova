@@ -97,6 +97,7 @@ class NovaKeystoneContext(wsgi.Middleware):
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
 
+        service_catalog = None
         if req.headers.get('X_SERVICE_CATALOG') is not None:
             service_catalog = json.loads(req.headers.get('X_SERVICE_CATALOG'))
 
