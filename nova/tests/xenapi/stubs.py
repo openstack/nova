@@ -21,7 +21,7 @@ import sys
 from nova.openstack.common import jsonutils
 from nova import test
 import nova.tests.image.fake
-from nova.virt.xenapi import connection as xenapi_conn
+from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops

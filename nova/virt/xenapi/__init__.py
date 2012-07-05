@@ -18,3 +18,4 @@
 :mod:`xenapi` -- Nova support for XenServer and XCP through XenAPI
 ==================================================================
 """
+from nova.virt.xenapi.driver import XenAPIDriver

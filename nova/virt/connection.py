@@ -37,7 +37,7 @@ known_drivers = {
     'fake': 'fake.FakeDriver',
     'libvirt': 'libvirt.LibvirtDriver',
     'vmwareapi': 'vmwareapi.VMWareESXDriver',
-    'xenapi': 'xenapi.connection.XenAPIDriver'
+    'xenapi': 'xenapi.XenAPIDriver'
     }
 
 

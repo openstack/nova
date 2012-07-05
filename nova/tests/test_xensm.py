@@ -25,7 +25,7 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.xenapi import stubs
-from nova.virt.xenapi import connection as xenapi_conn
+from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import volume_utils
 from nova.volume import xensm

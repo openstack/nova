@@ -16,7 +16,7 @@
 #    under the License.
 
 """
-A connection to XenServer or Xen Cloud Platform.
+A driver for XenServer or Xen Cloud Platform.
 
 **Related Flags**
 

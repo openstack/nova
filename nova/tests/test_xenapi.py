@@ -40,7 +40,7 @@ from nova.tests import fake_network
 from nova.tests import fake_utils
 import nova.tests.image.fake as fake_image
 from nova.tests.xenapi import stubs
-from nova.virt.xenapi import connection as xenapi_conn
+from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
