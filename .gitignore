@@ -30,3 +30,7 @@ tools/conf/nova.conf*
 *.sqlite
 *.DS_Store
 *.egg*
+.project
+.pydevproject
+doc/source/api/*
+doc/build/*
