@@ -1074,17 +1074,6 @@ class XenAPIImageTypeTestCase(test.TestCase):
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
     """Unit tests for code that detects the ImageType."""
-    def setUp(self):
-        super(XenAPIDetermineDiskImageTestCase, self).setUp()
-
-        class FakeInstance(object):
-            pass
-
-        self.fake_instance = FakeInstance()
-        self.fake_instance.id = 42
-        self.fake_instance.os_type = 'linux'
-        self.fake_instance.architecture = 'x86-64'
-
     def assert_disk_type(self, image_meta, expected_disk_type):
         actual = vm_utils.determine_disk_image_type(image_meta)
         self.assertEqual(expected_disk_type, actual)
