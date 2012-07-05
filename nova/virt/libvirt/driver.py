@@ -551,7 +551,14 @@ class LibvirtDriver(driver.ComputeDriver):
         if FLAGS.libvirt_type == 'lxc':
             disk.destroy_container(self.container)
         if os.path.exists(target):
-            shutil.rmtree(target)
+            # If we fail to get rid of the directory
+            # tree, this shouldn't block deletion of
+            # the instance as whole.
+            try:
+                shutil.rmtree(target)
+            except OSError, e:
+                LOG.error(_("Failed to cleanup directory %(target)s: %(e)s") %
+                          locals())
 
         #NOTE(bfilippov): destroy all LVM disks for this instance
         self._cleanup_lvm(instance)
