@@ -61,7 +61,6 @@ import math
 import netaddr
 import optparse
 import os
-import StringIO
 import sys
 
 
@@ -81,14 +80,12 @@ from nova.compat import flagfile
 from nova.compute import instance_types
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
-from nova import crypto
 from nova import db
 from nova.db import migration
 from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 from nova.openstack.common import timeutils
@@ -219,98 +216,6 @@ class ShellCommands(object):
         arguments: path"""
         exec(compile(open(path).read(), path, 'exec'), locals(), globals())
 
-    @args('--filename', dest='filename', metavar='<path>', default=False,
-          help='Export file path')
-    def export(self, filename):
-        """Export Nova users into a file that can be consumed by Keystone"""
-
-        def create_file(filename):
-            data = generate_data()
-            with open(filename, 'w') as f:
-                f.write(data.getvalue())
-
-        def tenants(data, am):
-            for project in am.get_projects():
-                print >> data, ("tenant add '%s'" %
-                               (project.name))
-                for u in project.member_ids:
-                    user = am.get_user(u)
-                    print >> data, ("user add '%s' '%s' '%s'" %
-                                   (user.name, user.access, project.name))
-                    print >> data, ("credentials add 'EC2' '%s:%s' '%s' '%s'" %
-                            (user.access, project.id, user.secret, project.id))
-
-        def roles(data, am):
-            for role in am.get_roles():
-                print >> data, ("role add '%s'" % (role))
-
-        def grant_roles(data, am):
-            roles = am.get_roles()
-            for project in am.get_projects():
-                for u in project.member_ids:
-                    user = am.get_user(u)
-                    for role in db.user_get_roles_for_project(ctxt, u,
-                                                              project.id):
-                        print >> data, ("role grant '%s', '%s', '%s')," %
-                                       (user.name, role, project.name))
-            print >> data
-
-        def generate_data():
-            data = StringIO.StringIO()
-            am = manager.AuthManager()
-            tenants(data, am)
-            roles(data, am)
-            grant_roles(data, am)
-            data.seek(0)
-            return data
-
-        ctxt = context.get_admin_context()
-        if filename:
-            create_file(filename)
-        else:
-            data = generate_data()
-            print data.getvalue()
-
-
-class RoleCommands(object):
-    """Class for managing roles."""
-
-    def __init__(self):
-        self.manager = manager.AuthManager()
-
-    @args('--user', dest="user", metavar='<user name>', help='User name')
-    @args('--role', dest="role", metavar='<user role>', help='User role')
-    @args('--project', dest="project", metavar='<Project name>',
-            help='Project name')
-    def add(self, user, role, project=None):
-        """adds role to user
-        if project is specified, adds project specific role"""
-        if project:
-            projobj = self.manager.get_project(project)
-            if not projobj.has_member(user):
-                print "%s not a member of %s" % (user, project)
-                return
-        self.manager.add_role(user, role, project)
-
-    @args('--user', dest="user", metavar='<user name>', help='User name')
-    @args('--role', dest="role", metavar='<user role>', help='User role')
-    @args('--project', dest="project", metavar='<Project name>',
-            help='Project name')
-    def has(self, user, role, project=None):
-        """checks to see if user has role
-        if project is specified, returns True if user has
-        the global role and the project role"""
-        print self.manager.has_role(user, role, project)
-
-    @args('--user', dest="user", metavar='<user name>', help='User name')
-    @args('--role', dest="role", metavar='<user role>', help='User role')
-    @args('--project', dest="project", metavar='<Project name>',
-            help='Project name')
-    def remove(self, user, role, project=None):
-        """removes role from user
-        if project is specified, removes project specific role"""
-        self.manager.remove_role(user, role, project)
-
 
 def _db_error(caught_exception):
     print caught_exception
@@ -320,174 +225,12 @@ def _db_error(caught_exception):
     exit(1)
 
 
-class UserCommands(object):
-    """Class for managing users."""
-
-    @staticmethod
-    def _print_export(user):
-        """Print export variables to use with API."""
-        print 'export EC2_ACCESS_KEY=%s' % user.access
-        print 'export EC2_SECRET_KEY=%s' % user.secret
-
-    def __init__(self):
-        self.manager = manager.AuthManager()
-
-    @args('--name', dest="name", metavar='<admin name>', help='Admin name')
-    @args('--access', dest="access", metavar='<access>', help='Access')
-    @args('--secret', dest="secret", metavar='<secret>', help='Secret')
-    def admin(self, name, access=None, secret=None):
-        """creates a new admin and prints exports"""
-        try:
-            user = self.manager.create_user(name, access, secret, True)
-        except exception.DBError, e:
-            _db_error(e)
-        self._print_export(user)
-
-    @args('--name', dest="name", metavar='<name>', help='User name')
-    @args('--access', dest="access", metavar='<access>', help='Access')
-    @args('--secret', dest="secret", metavar='<secret>', help='Secret')
-    def create(self, name, access=None, secret=None):
-        """creates a new user and prints exports"""
-        try:
-            user = self.manager.create_user(name, access, secret, False)
-        except exception.DBError, e:
-            _db_error(e)
-        self._print_export(user)
-
-    @args('--name', dest="name", metavar='<name>', help='User name')
-    def delete(self, name):
-        """deletes an existing user
-        arguments: name"""
-        self.manager.delete_user(name)
-
-    @args('--name', dest="name", metavar='<admin name>', help='User name')
-    def exports(self, name):
-        """prints access and secrets for user in export format"""
-        user = self.manager.get_user(name)
-        if user:
-            self._print_export(user)
-        else:
-            print "User %s doesn't exist" % name
-
-    def list(self):
-        """lists all users"""
-        for user in self.manager.get_users():
-            print user.name
-
-    @args('--name', dest="name", metavar='<name>', help='User name')
-    @args('--access', dest="access_key", metavar='<access>',
-            help='Access key')
-    @args('--secret', dest="secret_key", metavar='<secret>',
-            help='Secret key')
-    @args('--is_admin', dest='is_admin', metavar="<'T'|'F'>",
-            help='Is admin?')
-    def modify(self, name, access_key, secret_key, is_admin):
-        """update a users keys & admin flag
-        arguments: accesskey secretkey admin
-        leave any field blank to ignore it, admin should be 'T', 'F', or blank
-        """
-        if not is_admin:
-            is_admin = None
-        elif is_admin.upper()[0] == 'T':
-            is_admin = True
-        else:
-            is_admin = False
-        self.manager.modify_user(name, access_key, secret_key, is_admin)
-
-    @args('--name', dest="user_id", metavar='<name>', help='User name')
-    @args('--project', dest="project_id", metavar='<Project name>',
-            help='Project name')
-    def revoke(self, user_id, project_id=None):
-        """revoke certs for a user"""
-        if project_id:
-            crypto.revoke_certs_by_user_and_project(user_id, project_id)
-        else:
-            crypto.revoke_certs_by_user(user_id)
-
-
 class ProjectCommands(object):
     """Class for managing projects."""
 
     def __init__(self):
         self.manager = manager.AuthManager()
 
-    @args('--project', dest="project_id", metavar='<Project name>',
-            help='Project name')
-    @args('--user', dest="user_id", metavar='<name>', help='User name')
-    def add(self, project_id, user_id):
-        """Adds user to project"""
-        try:
-            self.manager.add_to_project(user_id, project_id)
-        except exception.UserNotFound as ex:
-            print ex
-            raise
-
-    @args('--project', dest="name", metavar='<Project name>',
-            help='Project name')
-    @args('--user', dest="project_manager", metavar='<user>',
-            help='Project manager')
-    @args('--desc', dest="description", metavar='<description>',
-            help='Description')
-    def create(self, name, project_manager, description=None):
-        """Creates a new project"""
-        try:
-            self.manager.create_project(name, project_manager, description)
-        except exception.UserNotFound as ex:
-            print ex
-            raise
-
-    @args('--project', dest="name", metavar='<Project name>',
-            help='Project name')
-    @args('--user', dest="project_manager", metavar='<user>',
-            help='Project manager')
-    @args('--desc', dest="description", metavar='<description>',
-            help='Description')
-    def modify(self, name, project_manager, description=None):
-        """Modifies a project"""
-        try:
-            self.manager.modify_project(name, project_manager, description)
-        except exception.UserNotFound as ex:
-            print ex
-            raise
-
-    @args('--project', dest="name", metavar='<Project name>',
-            help='Project name')
-    def delete(self, name):
-        """Deletes an existing project"""
-        try:
-            self.manager.delete_project(name)
-        except exception.ProjectNotFound as ex:
-            print ex
-            raise
-
-    @args('--project', dest="project_id", metavar='<Project name>',
-            help='Project name')
-    @args('--user', dest="user_id", metavar='<name>', help='User name')
-    @args('--file', dest="filename", metavar='<filename>',
-            help='File name(Default: novarc)')
-    def environment(self, project_id, user_id, filename='novarc'):
-        """Exports environment variables to a sourceable file"""
-        try:
-            rc = self.manager.get_environment_rc(user_id, project_id)
-        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
-            print ex
-            raise
-        if filename == "-":
-            sys.stdout.write(rc)
-        else:
-            with open(filename, 'w') as f:
-                f.write(rc)
-
-    @args('--user', dest="username", metavar='<username>', help='User name')
-    def list(self, username=None):
-        """Lists all projects"""
-        for project in self.manager.get_projects(username):
-            print project.name
-
-    @args('--project', dest="project_id", metavar='<Project name>',
-            help='Project name')
-    @args('--key', dest="key", metavar='<key>', help='Key')
-    @args('--value', dest="value", metavar='<value>', help='Value')
     def quota(self, project_id, key=None, value=None):
         """Set or display quotas for project"""
         ctxt = context.get_admin_context()
@@ -506,17 +249,6 @@ class ProjectCommands(object):
 
     @args('--project', dest="project_id", metavar='<Project name>',
             help='Project name')
-    @args('--user', dest="user_id", metavar='<name>', help='User name')
-    def remove(self, project_id, user_id):
-        """Removes user from project"""
-        try:
-            self.manager.remove_from_project(user_id, project_id)
-        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
-            print ex
-            raise
-
-    @args('--project', dest="project_id", metavar='<Project name>',
-            help='Project name')
     def scrub(self, project_id):
         """Deletes data associated with project"""
         admin_context = context.get_admin_context()
@@ -527,32 +259,6 @@ class ProjectCommands(object):
         for group in groups:
             db.security_group_destroy(admin_context, group['id'])
 
-    @args('--project', dest="project_id", metavar='<Project name>',
-            help='Project name')
-    @args('--user', dest="user_id", metavar='<name>', help='User name')
-    @args('--file', dest="filename", metavar='<filename>',
-            help='File name(Default: nova.zip)')
-    def zipfile(self, project_id, user_id, filename='nova.zip'):
-        """Exports credentials for project to a zip file"""
-        try:
-            zip_file = self.manager.get_credentials(user_id, project_id)
-            if filename == "-":
-                sys.stdout.write(zip_file)
-            else:
-                with open(filename, 'w') as f:
-                    f.write(zip_file)
-        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
-            print ex
-            raise
-        except db.api.NoMoreNetworks:
-            print _('No more networks available. If this is a new '
-                    'installation, you need\nto call something like this:\n\n'
-                    '  nova-manage network create pvt 10.0.0.0/8 10 64\n\n')
-        except exception.ProcessExecutionError, e:
-            print e
-            print _("The above error may show that the certificate db has "
-                    "not been created.\nPlease create a database by running "
-                    "a nova-cert server on this host.")
 
 AccountCommands = ProjectCommands
 
@@ -1531,86 +1237,11 @@ class GetLogCommands(object):
             print "No nova entries in syslog!"
 
 
-class ExportCommands(object):
-    """Commands used to export data from Nova"""
-
-    def auth(self):
-        """Export Nova auth data in format that can be consumed by Keystone"""
-        print jsonutils.dumps(self._get_auth_data())
-
-    def _get_auth_data(self):
-        output = {
-            'users': [],
-            'tenants': [],
-            'user_tenant_list': [],
-            'ec2_credentials': [],
-            'roles': [],
-            'role_user_tenant_list': [],
-        }
-
-        am = manager.AuthManager()
-
-        for user in am.get_users():
-            # NOTE(vish): Deprecated auth uses an access key, no auth uses a
-            #             the user_id in place of it.
-            if FLAGS.auth_strategy == 'deprecated':
-                access = user.access
-            else:
-                access = user.id
-
-            user_dict = {
-                'id': user.id,
-                'name': user.name,
-                'password': access,
-            }
-            output['users'].append(user_dict)
-
-            ec2_cred = {
-                'user_id': user.id,
-                'access_key': access,
-                'secret_key': user.secret,
-            }
-            output['ec2_credentials'].append(ec2_cred)
-
-        for project in am.get_projects():
-            tenant = {
-                'id': project.id,
-                'name': project.name,
-                'description': project.description,
-            }
-            output['tenants'].append(tenant)
-
-            for user_id in project.member_ids:
-                membership = {
-                    'tenant_id': project.id,
-                    'user_id': user_id,
-                }
-                output['user_tenant_list'].append(membership)
-
-        for role in am.get_roles():
-            if role not in output['roles']:
-                output['roles'].append(role)
-
-        for project in am.get_projects():
-            for user_id in project.member_ids:
-                user = am.get_user(user_id)
-                for role in am.get_user_roles(user_id, project.id):
-                    role_grant = {
-                        'role': role,
-                        'user_id': user_id,
-                        'tenant_id': project.id,
-                    }
-                    output['role_user_tenant_list'].append(role_grant)
-
-        return output
-
-
 CATEGORIES = [
     ('account', AccountCommands),
     ('agent', AgentBuildCommands),
     ('config', ConfigCommands),
     ('db', DbCommands),
-    ('export', ExportCommands),
     ('fixed', FixedIpCommands),
     ('flavor', InstanceTypeCommands),
     ('floating', FloatingIpCommands),
@@ -1619,11 +1250,9 @@ CATEGORIES = [
     ('logs', GetLogCommands),
     ('network', NetworkCommands),
     ('project', ProjectCommands),
-    ('role', RoleCommands),
     ('service', ServiceCommands),
     ('shell', ShellCommands),
     ('sm', StorageManagerCommands),
-    ('user', UserCommands),
     ('version', VersionCommands),
     ('vm', VmCommands),
     ('volume', VolumeCommands),
