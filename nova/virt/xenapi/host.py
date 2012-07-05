@@ -38,7 +38,6 @@ class Host(object):
     Implements host related operations.
     """
     def __init__(self, session):
-        self.XenAPI = session.get_imported_xenapi()
         self._session = session
 
     def host_power_action(self, _host, action):
@@ -95,7 +94,7 @@ class Host(object):
                     notifications.send_update(ctxt, old_ref, new_ref)
 
                     break
-                except self.XenAPI.Failure:
+                except self._session.XenAPI.Failure:
                     LOG.exception('Unable to migrate VM %(vm_ref)s'
                                   'from %(host)s' % locals())
                     (old_ref, new_ref) = db.instance_update_and_get_original(
@@ -173,7 +172,6 @@ def call_xenhost(session, method, arg_dict):
     out that behavior.
     """
     # Create a task ID as something that won't match any instance ID
-    XenAPI = session.get_imported_xenapi()
     try:
         result = session.call_plugin('xenhost', method, args=arg_dict)
         if not result:
@@ -182,7 +180,7 @@ def call_xenhost(session, method, arg_dict):
     except ValueError:
         LOG.exception(_("Unable to get updated status"))
         return None
-    except XenAPI.Failure as e:
+    except session.XenAPI.Failure as e:
         LOG.error(_("The call to %(method)s returned "
                     "an error: %(e)s.") % locals())
         return e.details[1]

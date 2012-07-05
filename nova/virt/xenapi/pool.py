@@ -48,7 +48,6 @@ class ResourcePool(object):
     Implements resource pool operations.
     """
     def __init__(self, session):
-        self.XenAPI = session.get_imported_xenapi()
         host_ref = session.get_xenapi_host()
         host_rec = session.call_xenapi('host.get_record', host_ref)
         self._host_name = host_rec['hostname']
@@ -139,7 +138,7 @@ class ResourcePool(object):
                     'master_user': FLAGS.xenapi_connection_username,
                     'master_pass': FLAGS.xenapi_connection_password, }
             self._session.call_plugin('xenhost', 'host_join', args)
-        except self.XenAPI.Failure as e:
+        except self._session.XenAPI.Failure as e:
             LOG.error(_("Pool-Join failed: %(e)s") % locals())
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='add_to_aggregate',
@@ -158,7 +157,7 @@ class ResourcePool(object):
 
             host_ref = self._session.call_xenapi('host.get_by_uuid', host_uuid)
             self._session.call_xenapi("pool.eject", host_ref)
-        except self.XenAPI.Failure as e:
+        except self._session.XenAPI.Failure as e:
             LOG.error(_("Pool-eject failed: %(e)s") % locals())
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='remove_from_aggregate',
@@ -170,7 +169,7 @@ class ResourcePool(object):
             pool_ref = self._session.call_xenapi("pool.get_all")[0]
             self._session.call_xenapi("pool.set_name_label",
                                       pool_ref, aggregate_name)
-        except self.XenAPI.Failure as e:
+        except self._session.XenAPI.Failure as e:
             LOG.error(_("Unable to set up pool: %(e)s.") % locals())
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='add_to_aggregate',
@@ -181,7 +180,7 @@ class ResourcePool(object):
         try:
             pool_ref = self._session.call_xenapi('pool.get_all')[0]
             self._session.call_xenapi('pool.set_name_label', pool_ref, '')
-        except self.XenAPI.Failure as e:
+        except self._session.XenAPI.Failure as e:
             LOG.error(_("Pool-set_name_label failed: %(e)s") % locals())
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='remove_from_aggregate',
