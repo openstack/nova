@@ -23,6 +23,7 @@ from nova.network import model as network_model
 from nova import notifications
 from nova.notifier import api as notifier_api
 from nova.openstack.common import log
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -55,8 +56,13 @@ def notify_usage_exists(context, instance_ref, current_period=False,
 
     if system_metadata is None:
         try:
-            system_metadata = db.instance_system_metadata_get(
-                    context, instance_ref.uuid)
+            if instance_ref.get('deleted'):
+                with utils.temporary_mutation(context, read_deleted='yes'):
+                    system_metadata = db.instance_system_metadata_get(
+                            context, instance_ref.uuid)
+            else:
+                system_metadata = db.instance_system_metadata_get(
+                        context, instance_ref.uuid)
         except exception.NotFound:
             system_metadata = {}
 
