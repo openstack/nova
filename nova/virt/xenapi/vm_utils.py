@@ -454,7 +454,13 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
 
     glance_host, glance_port = glance.pick_glance_api_server()
 
+    sys_meta = db.instance_system_metadata_get(context, instance['uuid'])
     properties = {}
+    prefix = 'image_'
+    for key, value in sys_meta.iteritems():
+        if key.startswith(prefix):
+            key = key[len(prefix):]
+        properties[key] = value
     properties['auto_disk_config'] = instance.auto_disk_config
     properties['os_type'] = instance.os_type or FLAGS.default_os_type
 
