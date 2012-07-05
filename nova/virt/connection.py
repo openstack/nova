@@ -36,7 +36,7 @@ known_drivers = {
     'baremetal': 'baremetal.proxy.ProxyConnection',
     'fake': 'fake.FakeDriver',
     'libvirt': 'libvirt.LibvirtDriver',
-    'vmwareapi': 'vmwareapi_conn.VMWareESXDriver',
+    'vmwareapi': 'vmwareapi.VMWareESXDriver',
     'xenapi': 'xenapi.connection.XenAPIDriver'
     }
 

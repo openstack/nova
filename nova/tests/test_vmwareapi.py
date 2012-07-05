@@ -28,8 +28,8 @@ from nova import test
 import nova.tests.image.fake
 from nova.tests.vmwareapi import db_fakes
 from nova.tests.vmwareapi import stubs
+from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
-from nova.virt import vmwareapi_conn
 
 
 FLAGS = flags.FLAGS
@@ -50,7 +50,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
-        self.conn = vmwareapi_conn.VMWareESXDriver(False)
+        self.conn = driver.VMWareESXDriver(False)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
         self.network_info = [({'bridge': 'fa0',

@@ -19,11 +19,11 @@
 Stubouts for the test suite
 """
 
+from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import network_utils
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
-from nova.virt import vmwareapi_conn
 
 
 def fake_get_vim_object(arg):
@@ -45,7 +45,7 @@ def set_stubs(stubs):
     stubs.Set(vmware_images, 'get_vmdk_size_and_properties',
               fake.fake_get_vmdk_size_and_properties)
     stubs.Set(vmware_images, 'upload_image', fake.fake_upload_image)
-    stubs.Set(vmwareapi_conn.VMWareAPISession, "_get_vim_object",
+    stubs.Set(driver.VMWareAPISession, "_get_vim_object",
               fake_get_vim_object)
-    stubs.Set(vmwareapi_conn.VMWareAPISession, "_is_vim_object",
+    stubs.Set(driver.VMWareAPISession, "_is_vim_object",
               fake_is_vim_object)

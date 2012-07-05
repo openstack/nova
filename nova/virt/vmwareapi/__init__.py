@@ -17,3 +17,5 @@
 """
 :mod:`vmwareapi` -- Nova support for VMware ESX/ESXi Server through VMware API.
 """
+# NOTE(sdague) for nicer compute_driver specification
+from nova.virt.vmwareapi.driver import VMWareESXDriver
