@@ -283,10 +283,12 @@ def check_i18n():
     """
     while True:
         try:
-            token_type, text, _, _, _ = yield
+            token_type, text, _, _, line = yield
         except GeneratorExit:
             return
-        if token_type == tokenize.NAME and text == "_":
+        if (token_type == tokenize.NAME and text == "_" and
+            not line.startswith('def _(msg):')):
+
             while True:
                 token_type, text, start, _, _ = yield
                 if token_type != tokenize.NL:
