@@ -28,3 +28,6 @@ dist/*
 .coverage
 covhtml
 *.egg*
+.project
+.pydevproject
+
