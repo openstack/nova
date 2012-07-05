@@ -231,6 +231,36 @@ class HypervisorsTest(test.TestCase):
                     cpu_info='cpu_info',
                     disk_available_least=100)))
 
+    def test_uptime_noid(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/3')
+        self.assertRaises(exc.HTTPNotFound, self.controller.show, req, '3')
+
+    def test_uptime_notimplemented(self):
+        def fake_get_host_uptime(context, hyp):
+            raise exc.HTTPNotImplemented()
+
+        self.stubs.Set(self.controller.api, 'get_host_uptime',
+                       fake_get_host_uptime)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1')
+        self.assertRaises(exc.HTTPNotImplemented,
+                          self.controller.uptime, req, '1')
+
+    def test_uptime_implemented(self):
+        def fake_get_host_uptime(context, hyp):
+            return "fake uptime"
+
+        self.stubs.Set(self.controller.api, 'get_host_uptime',
+                       fake_get_host_uptime)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1')
+        result = self.controller.uptime(req, '1')
+
+        self.assertEqual(result, dict(hypervisor=dict(
+                    id=1,
+                    hypervisor_hostname="hyper1",
+                    uptime="fake uptime")))
+
     def test_search(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/hyper/search')
         result = self.controller.search(req, 'hyper')
@@ -369,6 +399,17 @@ class HypervisorsSerializersTest(test.TestCase):
                 cpu_info="json data",
                 disk_available_least=100,
                 service=dict(id=1, host="compute1")))
+        text = serializer.serialize(exemplar)
+        tree = etree.fromstring(text)
+
+        self.compare_to_exemplar(exemplar['hypervisor'], tree)
+
+    def test_uptime_serializer(self):
+        serializer = hypervisors.HypervisorUptimeTemplate()
+        exemplar = dict(hypervisor=dict(
+                hypervisor_hostname="hyper1",
+                id=1,
+                uptime='fake uptime'))
         text = serializer.serialize(exemplar)
         tree = etree.fromstring(text)
 

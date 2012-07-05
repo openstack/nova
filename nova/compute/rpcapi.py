@@ -54,9 +54,10 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     API version history:
 
         1.0 - Initial version.
+        1.1 - Adds get_host_uptime()
     '''
 
-    RPC_API_VERSION = '1.0'
+    RPC_API_VERSION = '1.1'
 
     def __init__(self):
         super(ComputeAPI, self).__init__(topic=FLAGS.compute_topic,
@@ -312,6 +313,10 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         topic = _compute_topic(self.topic, ctxt, host, None)
         return self.call(ctxt, self.make_msg('set_host_enabled',
                 enabled=enabled), topic)
+
+    def get_host_uptime(self, ctxt, host):
+        topic = _compute_topic(self.topic, ctxt, host, None)
+        return self.call(ctxt, self.make_msg('get_host_uptime'), topic)
 
     def snapshot_instance(self, ctxt, instance, image_id, image_type,
             backup_type, rotation):

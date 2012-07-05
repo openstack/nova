@@ -1162,6 +1162,10 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
     def test_set_enable_host_disable(self):
         self._test_host_action(self.conn.set_host_enabled, False, 'disabled')
 
+    def test_get_host_uptime(self):
+        result = self.conn.get_host_uptime('host')
+        self.assertEqual(result, 'fake uptime')
+
 
 class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
     def setUp(self):

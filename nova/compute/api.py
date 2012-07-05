@@ -1662,6 +1662,12 @@ class HostAPI(base.Base):
         return self.compute_rpcapi.set_host_enabled(context, enabled=enabled,
                 host=host)
 
+    def get_host_uptime(self, context, host):
+        """Returns the result of calling "uptime" on the target host."""
+        # NOTE(comstud): No instance_uuid argument to this compute manager
+        # call
+        return self.compute_rpcapi.get_host_uptime(context, host=host)
+
     def host_power_action(self, context, host, action):
         """Reboots, shuts down or powers up the host."""
         # NOTE(comstud): No instance_uuid argument to this compute manager
