@@ -143,11 +143,10 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        self.flags(target_host='127.0.0.1',
-                xenapi_connection_url='test_url',
-                xenapi_connection_password='test_pass',
-                firewall_driver='nova.virt.xenapi.firewall.'
-                                'Dom0IptablesFirewallDriver')
+        self.flags(xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',
+                   firewall_driver='nova.virt.xenapi.firewall.'
+                                   'Dom0IptablesFirewallDriver')
         db_fakes.stub_out_db_instance_api(self.stubs)
         self.instance_values = {'id': 1,
                   'project_id': self.user_id,
@@ -876,11 +875,10 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def setUp(self):
         super(XenAPIMigrateInstance, self).setUp()
-        self.flags(target_host='127.0.0.1',
-                xenapi_connection_url='test_url',
-                xenapi_connection_password='test_pass',
-                firewall_driver='nova.virt.xenapi.firewall.'
-                                'Dom0IptablesFirewallDriver')
+        self.flags(xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',
+                   firewall_driver='nova.virt.xenapi.firewall.'
+                                   'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
@@ -1168,8 +1166,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
     def setUp(self):
         super(XenAPIAutoDiskConfigTestCase, self).setUp()
-        self.flags(target_host='127.0.0.1',
-                   xenapi_connection_url='test_url',
+        self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
@@ -1259,8 +1256,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
     """Test generating of local disks, like swap and ephemeral"""
     def setUp(self):
         super(XenAPIGenerateLocal, self).setUp()
-        self.flags(target_host='127.0.0.1',
-                   xenapi_connection_url='test_url',
+        self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',
                    xenapi_generate_swap=True,
                    firewall_driver='nova.virt.xenapi.firewall.'
@@ -1336,8 +1332,7 @@ class XenAPIBWUsageTestCase(stubs.XenAPITestBase):
         super(XenAPIBWUsageTestCase, self).setUp()
         self.stubs.Set(vm_utils, 'compile_metrics',
                        XenAPIBWUsageTestCase._fake_compile_metrics)
-        self.flags(target_host='127.0.0.1',
-                   xenapi_connection_url='test_url',
+        self.flags(xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
