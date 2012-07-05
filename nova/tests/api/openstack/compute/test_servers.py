@@ -119,6 +119,12 @@ class ServersControllerTest(test.TestCase):
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
 
+    def test_requested_networks_prefix(self):
+        uuid = 'br-00000000-0000-0000-0000-000000000000'
+        requested_networks = [{'uuid': uuid}]
+        res = self.controller._get_requested_networks(requested_networks)
+        self.assertTrue((uuid, None) in res)
+
     def test_get_server_by_uuid(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)

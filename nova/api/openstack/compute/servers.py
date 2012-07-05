@@ -524,9 +524,12 @@ class Controller(wsgi.Controller):
                 network_uuid = network['uuid']
 
                 if not utils.is_uuid_like(network_uuid):
-                    msg = _("Bad networks format: network uuid is not in"
-                         " proper format (%s)") % network_uuid
-                    raise exc.HTTPBadRequest(explanation=msg)
+                    br_uuid = network_uuid.split('-', 1)[-1]
+                    if not utils.is_uuid_like(br_uuid):
+                        msg = _("Bad networks format: network uuid is "
+                                "not in proper format "
+                                "(%s)") % network_uuid
+                        raise exc.HTTPBadRequest(explanation=msg)
 
                 #fixed IP address is optional
                 #if the fixed IP address is not provided then
