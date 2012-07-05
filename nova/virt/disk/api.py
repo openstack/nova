@@ -271,14 +271,15 @@ def setup_container(image, container_dir=None, use_cow=False):
 
     LXC does not support qcow2 images yet.
     """
-    try:
-        img = _DiskImage(image=image, use_cow=use_cow, mount_dir=container_dir)
-        if img.mount():
-            return img
-        else:
-            raise exception.NovaException(img.errors)
-    except Exception, exn:
-        LOG.exception(_('Failed to mount filesystem: %s'), exn)
+    img = _DiskImage(image=image, use_cow=use_cow, mount_dir=container_dir)
+    if img.mount():
+        return img
+    else:
+        LOG.error(_("Failed to mount container filesystem '%(image)s' "
+                    "on '%(target)s': %(errors)s") %
+                  {"image": img, "target": container_dir,
+                   "errors": img.errors})
+        raise exception.NovaException(img.errors)
 
 
 def destroy_container(img):
@@ -293,7 +294,7 @@ def destroy_container(img):
         if img:
             img.umount()
     except Exception, exn:
-        LOG.exception(_('Failed to remove container: %s'), exn)
+        LOG.exception(_('Failed to unmount container filesystem: %s'), exn)
 
 
 def inject_data_into_fs(fs, key, net, metadata, admin_password, execute):
