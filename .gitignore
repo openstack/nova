@@ -1,6 +1,8 @@
 *.pyc
 *.DS_Store
 local_settings.py
+Authors
+AUTHORS
 ChangeLog
 MANIFEST
 CA/
