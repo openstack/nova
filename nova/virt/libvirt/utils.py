@@ -330,24 +330,6 @@ def file_delete(path):
     return os.unlink(path)
 
 
-def get_open_port(start_port, end_port):
-    """Find an available port
-
-    :param start_port: Start of acceptable port range
-    :param end_port: End of acceptable port range
-    """
-    for i in xrange(0, 100):  # don't loop forever
-        port = random.randint(start_port, end_port)
-        # netcat will exit with 0 only if the port is in use,
-        # so a nonzero return value implies it is unused
-        cmd = 'netcat', '0.0.0.0', port, '-w', '1'
-        try:
-            stdout, stderr = execute(*cmd, process_input='')
-        except exception.ProcessExecutionError:
-            return port
-    raise Exception(_('Unable to find an open port'))
-
-
 def get_fs_info(path):
     """Get free/used/total space info for a filesystem
 
