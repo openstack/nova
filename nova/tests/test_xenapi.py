@@ -18,6 +18,7 @@
 
 import ast
 import contextlib
+import cPickle as pickle
 import functools
 import os
 import re
@@ -29,6 +30,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova.image import glance
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -1875,3 +1877,52 @@ class XenAPIAggregateTestCase(test.TestCase):
         if metadata:
             db.aggregate_metadata_add(self.context, result.id, metadata)
         return db.aggregate_get(self.context, result.id)
+
+
+class VmUtilsTestCase(test.TestCase):
+    """Unit tests for xenapi utils."""
+
+    def test_upload_image(self):
+        """Ensure image properties include instance system metadata
+           as well as few local settings."""
+        def fake_pick_glance_api_server():
+            return ("host", 80)
+
+        def fake_instance_system_metadata_get(context, uuid):
+            return dict(image_a=1, image_b=2, image_c='c', d='d')
+
+        def fake_get_sr_path(session):
+            return "foo"
+
+        class FakeInstance(object):
+            auto_disk_config = "auto disk config"
+            os_type = "os type"
+
+            def __getitem__(instance_self, item):
+                return "whatever"
+
+        class FakeSession(object):
+            def call_plugin(session_self, service, command, kwargs):
+                self.kwargs = kwargs
+
+        def fake_dumps(thing):
+            return thing
+
+        self.stubs.Set(glance, "pick_glance_api_server",
+                                                   fake_pick_glance_api_server)
+        self.stubs.Set(db, "instance_system_metadata_get",
+                                             fake_instance_system_metadata_get)
+        self.stubs.Set(vm_utils, "get_sr_path", fake_get_sr_path)
+        self.stubs.Set(pickle, "dumps", fake_dumps)
+
+        ctx = context.get_admin_context()
+
+        instance = FakeInstance()
+        session = FakeSession()
+        vm_utils.upload_image(ctx, session, instance, "vmi uuids", "image id")
+
+        actual = self.kwargs['params']['properties']
+        expected = dict(a=1, b=2, c='c', d='d',
+                        auto_disk_config='auto disk config',
+                        os_type='os type')
+        self.assertEquals(expected, actual)
