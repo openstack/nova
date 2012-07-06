@@ -25,6 +25,7 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
+from nova import exception
 from nova.openstack.common import log as logging
 from nova import wsgi as base_wsgi
 
@@ -35,20 +36,31 @@ LOG = logging.getLogger(__name__)
 class FaultWrapper(base_wsgi.Middleware):
     """Calls down the middleware stack, making exceptions into faults."""
 
+    def _error(self, inner, req, safe=False):
+        LOG.exception(_("Caught error: %s"), unicode(inner))
+        msg_dict = dict(url=req.url, status=500)
+        LOG.info(_("%(url)s returned with HTTP %(status)d") % msg_dict)
+        outer = webob.exc.HTTPInternalServerError()
+        # NOTE(johannes): We leave the explanation empty here on
+        # purpose. It could possibly have sensitive information
+        # that should not be returned back to the user. See
+        # bugs 868360 and 874472
+        # NOTE(eglynn): However, it would be over-conservative and
+        # inconsistent with the EC2 API to hide every exception,
+        # including those that are safe to expose, see bug 1021373
+        if safe:
+            outer.explanation = '%s: %s' % (inner.__class__.__name__,
+                                            unicode(inner))
+        return wsgi.Fault(outer)
+
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         try:
             return req.get_response(self.application)
+        except exception.NovaException as ex:
+            return self._error(ex, req, ex.safe)
         except Exception as ex:
-            LOG.exception(_("Caught error: %s"), unicode(ex))
-            msg_dict = dict(url=req.url, status=500)
-            LOG.info(_("%(url)s returned with HTTP %(status)d") % msg_dict)
-            exc = webob.exc.HTTPInternalServerError()
-            # NOTE(johannes): We leave the explanation empty here on
-            # purpose. It could possibly have sensitive information
-            # that should not be returned back to the user. See
-            # bugs 868360 and 874472
-            return wsgi.Fault(exc)
+            return self._error(ex, req)
 
 
 class APIMapper(routes.Mapper):

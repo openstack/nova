@@ -23,6 +23,7 @@ import webob.exc
 from nova.api import openstack as openstack_api
 from nova.api.openstack import wsgi
 import nova.context
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -119,6 +120,29 @@ class APITest(test.TestCase):
         resp = webob.Request.blank('/.xml').get_response(api)
         self.assertTrue('<computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
+
+    def _do_test_exception_safety_reflected_in_faults(self, expose):
+        class ExceptionWithSafety(exception.NovaException):
+            safe = expose
+
+        @webob.dec.wsgify
+        def fail(req):
+            raise ExceptionWithSafety('some explanation')
+
+        api = self._wsgi_app(fail)
+        resp = webob.Request.blank('/').get_response(api)
+        self.assertTrue('{"computeFault' in resp.body, resp.body)
+        expected = ('ExceptionWithSafety: some explanation' if expose else
+                    'The server has either erred or is incapable '
+                    'of performing the requested operation.')
+        self.assertTrue(expected in resp.body, resp.body)
+        self.assertEqual(resp.status_int, 500, resp.body)
+
+    def test_safe_exceptions_are_described_in_faults(self):
+        self._do_test_exception_safety_reflected_in_faults(True)
+
+    def test_unsafe_exceptions_are_not_described_in_faults(self):
+        self._do_test_exception_safety_reflected_in_faults(False)
 
     def test_request_id_in_response(self):
         req = webob.Request.blank('/')
