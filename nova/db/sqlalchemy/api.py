@@ -1410,21 +1410,6 @@ def instance_destroy(context, instance_uuid, constraint=None):
                 update({'deleted': True,
                         'deleted_at': timeutils.utcnow(),
                         'updated_at': literal_column('updated_at')})
-        session.query(models.InstanceMetadata).\
-                filter_by(instance_uuid=instance_ref['uuid']).\
-                update({'deleted': True,
-                        'deleted_at': timeutils.utcnow(),
-                        'updated_at': literal_column('updated_at')})
-        session.query(models.InstanceSystemMetadata).\
-                filter_by(instance_uuid=instance_ref['uuid']).\
-                update({'deleted': True,
-                        'deleted_at': timeutils.utcnow(),
-                        'updated_at': literal_column('updated_at')})
-        session.query(models.BlockDeviceMapping).\
-                filter_by(instance_uuid=instance_ref['uuid']).\
-                update({'deleted': True,
-                        'deleted_at': timeutils.utcnow(),
-                        'updated_at': literal_column('updated_at')})
 
         instance_info_cache_delete(context, instance_ref['uuid'],
                                    session=session)
@@ -4161,7 +4146,6 @@ def _instance_metadata_get_query(context, instance_uuid, session=None):
 
 
 @require_context
-@require_instance_exists_using_uuid
 def instance_metadata_get(context, instance_uuid):
     rows = _instance_metadata_get_query(context, instance_uuid).all()
 
@@ -4173,7 +4157,6 @@ def instance_metadata_get(context, instance_uuid):
 
 
 @require_context
-@require_instance_exists_using_uuid
 def instance_metadata_delete(context, instance_uuid, key):
     _instance_metadata_get_query(context, instance_uuid).\
         filter_by(key=key).\
@@ -4183,7 +4166,6 @@ def instance_metadata_delete(context, instance_uuid, key):
 
 
 @require_context
-@require_instance_exists_using_uuid
 def instance_metadata_get_item(context, instance_uuid, key, session=None):
     result = _instance_metadata_get_query(
                             context, instance_uuid, session=session).\
@@ -4198,7 +4180,6 @@ def instance_metadata_get_item(context, instance_uuid, key, session=None):
 
 
 @require_context
-@require_instance_exists_using_uuid
 def instance_metadata_update(context, instance_uuid, metadata, delete):
     session = get_session()
 
@@ -4243,7 +4224,6 @@ def _instance_system_metadata_get_query(context, instance_uuid, session=None):
 
 
 @require_context
-@require_instance_exists_using_uuid
 def instance_system_metadata_get(context, instance_uuid):
     rows = _instance_system_metadata_get_query(context, instance_uuid).all()
 
@@ -4255,7 +4235,6 @@ def instance_system_metadata_get(context, instance_uuid):
 
 
 @require_context
-@require_instance_exists_using_uuid
 def instance_system_metadata_delete(context, instance_uuid, key):
     _instance_system_metadata_get_query(context, instance_uuid).\
         filter_by(key=key).\
@@ -4279,7 +4258,6 @@ def _instance_system_metadata_get_item(context, instance_uuid, key,
 
 
 @require_context
-@require_instance_exists_using_uuid
 def instance_system_metadata_update(context, instance_uuid, metadata, delete):
     session = get_session()
 

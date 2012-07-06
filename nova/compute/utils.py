@@ -56,13 +56,8 @@ def notify_usage_exists(context, instance_ref, current_period=False,
 
     if system_metadata is None:
         try:
-            if instance_ref.get('deleted'):
-                with utils.temporary_mutation(context, read_deleted='yes'):
-                    system_metadata = db.instance_system_metadata_get(
-                            context, instance_ref.uuid)
-            else:
-                system_metadata = db.instance_system_metadata_get(
-                        context, instance_ref.uuid)
+            system_metadata = db.instance_system_metadata_get(
+                    context, instance_ref.uuid)
         except exception.NotFound:
             system_metadata = {}
 

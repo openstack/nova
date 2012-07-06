@@ -762,9 +762,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          task_state=None,
                                          terminated_at=timeutils.utcnow())
         self.db.instance_destroy(context, instance_uuid)
-        with utils.temporary_mutation(context, read_deleted="yes"):
-            system_meta = self.db.instance_system_metadata_get(context,
-                instance_uuid)
+        system_meta = self.db.instance_system_metadata_get(context,
+            instance_uuid)
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
 
