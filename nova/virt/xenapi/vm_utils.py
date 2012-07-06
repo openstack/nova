@@ -429,6 +429,16 @@ def get_vdi_for_vm_safely(session, vm_ref):
 
 
 def create_snapshot(session, instance, vm_ref, label):
+    LOG.debug(_("Starting snapshot for VM"), instance=instance)
+    try:
+        return _create_snapshot(session, instance, vm_ref, label)
+    except session.XenAPI.Failure, exc:
+        LOG.error(_("Unable to Snapshot instance: %(exc)s"), locals(),
+                  instance=instance)
+        raise
+
+
+def _create_snapshot(session, instance, vm_ref, label):
     """Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
     Snapshot VHD"""
     LOG.debug(_("Snapshotting with label '%(label)s'"), locals(),
