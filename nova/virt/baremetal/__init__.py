@@ -13,3 +13,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+# NOTE(sdague) for more convenient compute_driver names
+from nova.virt.baremetal.driver import BareMetalDriver

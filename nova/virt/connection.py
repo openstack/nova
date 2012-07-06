@@ -33,7 +33,7 @@ LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
 
 known_drivers = {
-    'baremetal': 'baremetal.proxy.ProxyConnection',
+    'baremetal': 'baremetal.BareMetalDriver',
     'fake': 'fake.FakeDriver',
     'libvirt': 'libvirt.LibvirtDriver',
     'vmwareapi': 'vmwareapi.VMWareESXDriver',

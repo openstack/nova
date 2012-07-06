@@ -27,7 +27,7 @@ from nova import test
 from nova.tests import fake_utils
 
 from nova.virt.baremetal import dom
-from nova.virt.baremetal import proxy
+from nova.virt.baremetal import driver
 
 
 FLAGS = flags.FLAGS
@@ -226,7 +226,7 @@ class BareMetalDomTestCase(test.TestCase):
         self.assertEquals(bmdom.find_domain('instance-00000001'), domain)
 
 
-class ProxyBareMetalTestCase(test.TestCase):
+class BareMetalTestCase(test.TestCase):
 
     test_ip = '10.11.12.13'
     test_instance = {'memory_kb': '1024000',
@@ -240,7 +240,7 @@ class ProxyBareMetalTestCase(test.TestCase):
                      'instance_type_id': '5'}  # m1.small
 
     def setUp(self):
-        super(ProxyBareMetalTestCase, self).setUp()
+        super(BareMetalTestCase, self).setUp()
         self.flags(baremetal_driver='fake')
         fake_utils.stub_out_utils_execute(self.stubs)
 
@@ -257,7 +257,7 @@ class ProxyBareMetalTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         # Code under test
-        conn = proxy.ProxyConnection(True)
+        conn = driver.BareMetalDriver(True)
         # TODO(mikalstill): this is not a very good fake instance
         info = conn.get_info({'name': 'instance-00000001'})
 
