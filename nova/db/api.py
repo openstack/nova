@@ -585,20 +585,26 @@ def instance_get_all_by_filters(context, filters, sort_key='created_at',
                                             sort_dir)
 
 
-def instance_get_active_by_window(context, begin, end=None, project_id=None):
+def instance_get_active_by_window(context, begin, end=None, project_id=None,
+                                  host=None):
     """Get instances active during a certain time window.
 
-    Specifying a project_id will filter for a certain project."""
-    return IMPL.instance_get_active_by_window(context, begin, end, project_id)
+    Specifying a project_id will filter for a certain project.
+    Specifying a host will filter for instances on a given compute host.
+    """
+    return IMPL.instance_get_active_by_window(context, begin, end,
+                                              project_id, host)
 
 
 def instance_get_active_by_window_joined(context, begin, end=None,
-                                         project_id=None):
+                                         project_id=None, host=None):
     """Get instances and joins active during a certain time window.
 
-    Specifying a project_id will filter for a certain project."""
+    Specifying a project_id will filter for a certain project.
+    Specifying a host will filter for instances on a given compute host.
+    """
     return IMPL.instance_get_active_by_window_joined(context, begin, end,
-                                              project_id)
+                                              project_id, host)
 
 
 def instance_get_all_by_project(context, project_id):
@@ -1948,3 +1954,52 @@ def get_instance_uuid_by_ec2_id(context, instance_id):
 def ec2_instance_create(context, instance_ec2_id):
     """Create the ec2 id to instance uuid mapping on demand"""
     return IMPL.ec2_instance_create(context, instance_ec2_id)
+
+
+####################
+
+
+def task_log_end_task(context, task_name,
+                        period_beginning,
+                        period_ending,
+                        host,
+                        errors,
+                        message=None,
+                        session=None):
+    """Mark a task as complete for a given host/time period"""
+    return IMPL.task_log_end_task(context, task_name,
+                                  period_beginning,
+                                  period_ending,
+                                  host,
+                                  errors,
+                                  message,
+                                  session)
+
+
+def task_log_begin_task(context, task_name,
+                        period_beginning,
+                        period_ending,
+                        host,
+                        task_items=None,
+                        message=None,
+                        session=None):
+    """Mark a task as started for a given host/time period"""
+    return IMPL.task_log_begin_task(context, task_name,
+                                    period_beginning,
+                                    period_ending,
+                                    host,
+                                    task_items,
+                                    message,
+                                    session)
+
+
+def task_log_get_all(context, task_name, period_beginning,
+                 period_ending, host=None, state=None, session=None):
+    return IMPL.task_log_get_all(context, task_name, period_beginning,
+                 period_ending, host, state, session)
+
+
+def task_log_get(context, task_name, period_beginning,
+                 period_ending, host, state=None, session=None):
+    return IMPL.task_log_get(context, task_name, period_beginning,
+                 period_ending, host, state, session)

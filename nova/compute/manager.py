@@ -143,6 +143,9 @@ compute_opts = [
                'this functionality will be replaced when HostAggregates '
                'become more funtional for general grouping in Folsom. (see: '
                'http://etherpad.openstack.org/FolsomNovaHostAggregates-v2)'),
+    cfg.BoolOpt('instance_usage_audit',
+               default=False,
+               help="Generate periodic compute.instance.exists notifications"),
 
     ]
 
@@ -2364,6 +2367,52 @@ class ComputeManager(manager.SchedulerDependentManager):
                     msg = _("Error auto-confirming resize: %(e)s. "
                             "Will retry later.")
                     LOG.error(msg % locals(), instance=instance)
+
+    @manager.periodic_task
+    def _instance_usage_audit(self, context):
+        if FLAGS.instance_usage_audit:
+            if not compute_utils.has_audit_been_run(context, self.host):
+                begin, end = utils.last_completed_audit_period()
+                instances = self.db.instance_get_active_by_window_joined(
+                                                            context,
+                                                            begin,
+                                                            end,
+                                                            host=self.host)
+                num_instances = len(instances)
+                errors = 0
+                successes = 0
+                LOG.info(_("Running instance usage audit for"
+                           " host %(host)s from %(begin_time)s to "
+                           "%(end_time)s. %(number_instances)s"
+                           " instances.") % dict(host=self.host,
+                               begin_time=begin,
+                               end_time=end,
+                               number_instances=num_instances))
+                start_time = time.time()
+                compute_utils.start_instance_usage_audit(context,
+                                              begin, end,
+                                              self.host, num_instances)
+                for instance_ref in instances:
+                    try:
+                        compute_utils.notify_usage_exists(
+                            context, instance_ref,
+                            ignore_missing_network_data=False)
+                        successes += 1
+                    except Exception:
+                        LOG.exception(_('Failed to generate usage '
+                                        'audit for instance '
+                                        'on host %s') % self.host,
+                                      instance=instance)
+                        errors += 1
+                compute_utils.finish_instance_usage_audit(context,
+                                              begin, end,
+                                              self.host, errors,
+                                              "Instance usage audit ran "
+                                              "for host %s, %s instances "
+                                              "in %s seconds." % (
+                                              self.host,
+                                              num_instances,
+                                              time.time() - start_time))
 
     @manager.periodic_task
     def _poll_bandwidth_usage(self, context, start_time=None, stop_time=None):
