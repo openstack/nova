@@ -4371,6 +4371,7 @@ def bw_usage_update(context,
                               session=session, read_deleted="yes").\
                       filter_by(start_period=start_period).\
                       filter_by(uuid=uuid).\
+                      filter_by(mac=mac).\
                       first()
 
         if not bwusage:
