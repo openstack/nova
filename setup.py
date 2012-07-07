@@ -24,19 +24,6 @@ from nova.openstack.common import setup as common_setup
 from nova import version
 
 
-def find_data_files(destdir, srcdir):
-    package_data = []
-    files = []
-    for d in glob.glob('%s/*' % (srcdir, )):
-        if os.path.isdir(d):
-            package_data += find_data_files(
-                                 os.path.join(destdir, os.path.basename(d)), d)
-        else:
-            files += [d]
-    package_data += [(destdir, files)]
-    return package_data
-
-
 setuptools.setup(name='nova',
       version=version.canonical_version_string(),
       description='cloud computing fabric controller',
