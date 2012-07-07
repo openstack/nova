@@ -320,7 +320,7 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
 def stub_out_migration_methods(stubs):
     @contextlib.contextmanager
     def fake_snapshot_attached_here(session, instance, vm_ref, label):
-        yield dict(image='foo', snap='bar')
+        yield ['bar', 'foo']
 
     def fake_move_disks(self, instance, disk_info):
         vdi_ref = fake.create_vdi(instance['name'], 'fake')

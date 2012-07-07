@@ -606,9 +606,9 @@ class VMOps(object):
         label = "%s-snapshot" % instance.name
 
         with vm_utils.snapshot_attached_here(
-                self._session, instance, vm_ref, label) as template_vdi_uuids:
-            vm_utils.upload_image(context, self._session, instance,
-                                  template_vdi_uuids, image_id)
+                self._session, instance, vm_ref, label) as vdi_uuids:
+            vm_utils.upload_image(
+                    context, self._session, instance, vdi_uuids, image_id)
 
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
@@ -674,13 +674,14 @@ class VMOps(object):
         # 1. Create Snapshot
         label = "%s-snapshot" % instance.name
         with vm_utils.snapshot_attached_here(
-                self._session, instance, vm_ref, label) as template_vdi_uuids:
-
+                self._session, instance, vm_ref, label) as vdi_uuids:
             self._update_instance_progress(context, instance,
                                            step=1,
                                            total_steps=RESIZE_TOTAL_STEPS)
 
-            base_copy_uuid = template_vdi_uuids['image']
+            # FIXME(sirp): this needs to work with VDI chain of arbitrary
+            # length
+            base_copy_uuid = vdi_uuids[1]
             _vdi_info = vm_utils.get_vdi_for_vm_safely(self._session, vm_ref)
             vdi_ref, vm_vdi_rec = _vdi_info
             cow_uuid = vm_vdi_rec['uuid']
