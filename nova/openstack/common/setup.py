@@ -139,8 +139,14 @@ def _get_git_next_version_suffix(branch_name):
     if not milestonever:
         milestonever = ""
     post_version = _get_git_post_version()
-    revno = post_version.split(".")[-1]
-    return "%s~%s.%s%s" % (milestonever, datestamp, revno_prefix, revno)
+    # post version should look like:
+    # 0.1.1.4.gcc9e28a
+    # where the bit after the last . is the short sha, and the bit between
+    # the last and second to last is the revno count
+    (revno, sha) = post_version.split(".")[-2:]
+    first_half = "%(milestonever)s~%(datestamp)s" % locals()
+    second_half = "%(revno_prefix)s%(revno)s.%(sha)s" % locals()
+    return ".".join((first_half, second_half))
 
 
 def _get_git_current_tag():
@@ -162,11 +168,12 @@ def _get_git_post_version():
             cmd = "git --no-pager log --oneline"
             out = _run_shell_command(cmd)
             revno = len(out.split("\n"))
+            sha = _run_shell_command("git describe --always")
         else:
             tag_infos = tag_info.split("-")
             base_version = "-".join(tag_infos[:-2])
-            revno = tag_infos[-2]
-        return "%s.%s" % (base_version, revno)
+            (revno, sha) = tag_infos[-2:]
+        return "%s.%s.%s" % (base_version, revno, sha)
 
 
 def write_git_changelog():
@@ -313,7 +320,8 @@ def get_git_branchname():
 
 
 def get_pre_version(projectname, base_version):
-    """Return a version which is based"""
+    """Return a version which is leading up to a version that will
+       be released in the future."""
     if os.path.isdir('.git'):
         current_tag = _get_git_current_tag()
         if current_tag is not None:
@@ -325,10 +333,10 @@ def get_pre_version(projectname, base_version):
             version_suffix = _get_git_next_version_suffix(branch_name)
             version = "%s~%s" % (base_version, version_suffix)
         write_versioninfo(projectname, version)
-        return version.split('~')[0]
+        return version
     else:
         version = read_versioninfo(projectname)
-    return version.split('~')[0]
+    return version
 
 
 def get_post_version(projectname):
