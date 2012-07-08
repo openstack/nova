@@ -536,8 +536,18 @@ class SessionBase(object):
 
     VDI_resize = VDI_resize_online
 
+    def _VM_reboot(self, session, vm_ref):
+        db_ref = _db_content['VM'][vm_ref]
+        if db_ref['power_state'] != 'Running':
+            raise Failure(['VM_BAD_POWER_STATE',
+                'fake-opaque-ref', db_ref['power_state'].lower(), 'halted'])
+        db_ref['power_state'] = 'Running'
+
     def VM_clean_reboot(self, session, vm_ref):
-        pass
+        return self._VM_reboot(session, vm_ref)
+
+    def VM_hard_reboot(self, session, vm_ref):
+        return self._VM_reboot(session, vm_ref)
 
     def VM_hard_shutdown(self, session, vm_ref):
         db_ref = _db_content['VM'][vm_ref]

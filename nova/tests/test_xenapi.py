@@ -807,6 +807,33 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         conn.finish_revert_migration(instance, None)
         self.assertTrue(conn._vmops.finish_revert_migration_called)
 
+    def test_reboot_hard(self):
+        instance = self._create_instance()
+        conn = xenapi_conn.XenAPIDriver(False)
+        conn.reboot(instance, None, "HARD")
+
+    def test_reboot_soft(self):
+        instance = self._create_instance()
+        conn = xenapi_conn.XenAPIDriver(False)
+        conn.reboot(instance, None, "SOFT")
+
+    def test_reboot_halted(self):
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
+        instance = self._create_instance(spawn=False)
+        conn = xenapi_conn.XenAPIDriver(False)
+        xenapi_fake.create_vm(instance.name, 'Halted')
+        conn.reboot(instance, None, "SOFT")
+        vm_ref = vm_utils.lookup(session, instance.name)
+        vm = xenapi_fake.get_record('VM', vm_ref)
+        self.assertEquals(vm['power_state'], 'Running')
+
+    def test_reboot_unknown_state(self):
+        instance = self._create_instance(spawn=False)
+        conn = xenapi_conn.XenAPIDriver(False)
+        xenapi_fake.create_vm(instance.name, 'Unknown')
+        self.assertRaises(xenapi_fake.Failure, conn.reboot, instance,
+                None, "SOFT")
+
     def _create_instance(self, instance_id=1, spawn=True):
         """Creates and spawns a test instance."""
         instance_values = {
@@ -929,6 +956,14 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn._vmops._resize_instance(instance,
                                      {'uuid': vdi_uuid, 'ref': vdi_ref})
         self.assertEqual(called['resize'], True)
+
+    def test_migrate_disk_and_power_off(self):
+        instance = db.instance_create(self.context, self.instance_values)
+        xenapi_fake.create_vm(instance.name, 'Running')
+        instance_type = db.instance_type_get_by_name(self.context, 'm1.large')
+        conn = xenapi_conn.XenAPIDriver(False)
+        conn.migrate_disk_and_power_off(self.context, instance,
+                                        '127.0.0.1', instance_type, None)
 
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.instance_values)

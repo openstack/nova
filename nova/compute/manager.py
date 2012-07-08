@@ -959,8 +959,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context=context, instance_uuid=instance_uuid)
 
         network_info = self._get_instance_nw_info(context, instance)
-        self.driver.reboot(instance, self._legacy_nw_info(network_info),
-                           reboot_type)
+        try:
+            self.driver.reboot(instance, self._legacy_nw_info(network_info),
+                    reboot_type)
+        except Exception, exc:
+            LOG.error(_('Cannot reboot instance: %(exc)s'), locals(),
+                    context=context, instance_uuid=instance_uuid)
+            self.add_instance_fault_from_exc(context, instance_uuid, exc,
+                    sys.exc_info())
+            # Fall through and reset task_state to None
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,

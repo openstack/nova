@@ -843,10 +843,20 @@ class VMOps(object):
         # remove existing filters
         vm_ref = self._get_vm_opaque_ref(instance)
 
-        if reboot_type == "HARD":
-            self._session.call_xenapi('VM.hard_reboot', vm_ref)
-        else:
-            self._session.call_xenapi('VM.clean_reboot', vm_ref)
+        try:
+            if reboot_type == "HARD":
+                self._session.call_xenapi('VM.hard_reboot', vm_ref)
+            else:
+                self._session.call_xenapi('VM.clean_reboot', vm_ref)
+        except self._session.XenAPI.Failure, exc:
+            details = exc.details
+            if (details[0] == 'VM_BAD_POWER_STATE' and
+                    details[-1] == 'halted'):
+                LOG.info(_("Starting halted instance found during reboot"),
+                    instance=instance)
+                self._session.call_xenapi('VM.start', vm_ref, False, False)
+                return
+            raise
 
     def _get_agent_version(self, instance):
         """Get the version of the agent running on the VM instance."""
