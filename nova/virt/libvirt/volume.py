@@ -108,10 +108,11 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
                   (iscsi_command, out, err))
         return (out, err)
 
-    def _iscsiadm_update(self, iscsi_properties, property_key, property_value):
+    def _iscsiadm_update(self, iscsi_properties, property_key, property_value,
+                         **kwargs):
         iscsi_command = ('--op', 'update', '-n', property_key,
                          '-v', property_value)
-        return self._run_iscsiadm(iscsi_properties, iscsi_command)
+        return self._run_iscsiadm(iscsi_properties, iscsi_command, **kwargs)
 
     @utils.synchronized('connect_volume')
     def connect_volume(self, connection_info, mount_device):
@@ -197,7 +198,8 @@ class LibvirtISCSIVolumeDriver(LibvirtVolumeDriver):
         devices = self.connection.get_all_block_devices()
         devices = [dev for dev in devices if dev.startswith(device_prefix)]
         if not devices:
-            self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
+            self._iscsiadm_update(iscsi_properties, "node.startup", "manual",
+                                  check_exit_code=[0, 255])
             self._run_iscsiadm(iscsi_properties, ("--logout",),
                                check_exit_code=[0, 255])
             self._run_iscsiadm(iscsi_properties, ('--op', 'delete'),
