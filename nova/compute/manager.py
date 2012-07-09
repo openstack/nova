@@ -1002,7 +1002,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE)
 
-        LOG.audit(_('instance %s: snapshotting'), context=context,
+        LOG.audit(_('instance snapshotting'), context=context,
                   instance_uuid=instance_uuid)
 
         if instance_ref['power_state'] != power_state.RUNNING:
