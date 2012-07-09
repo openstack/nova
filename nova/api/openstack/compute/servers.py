@@ -776,12 +776,18 @@ class Controller(wsgi.Controller):
 
         if 'accessIPv4' in body['server']:
             access_ipv4 = body['server']['accessIPv4']
-            self._validate_access_ipv4(access_ipv4)
+            if access_ipv4 is None:
+                access_ipv4 = ''
+            if access_ipv4:
+                self._validate_access_ipv4(access_ipv4)
             update_dict['access_ip_v4'] = access_ipv4.strip()
 
         if 'accessIPv6' in body['server']:
             access_ipv6 = body['server']['accessIPv6']
-            self._validate_access_ipv6(access_ipv6)
+            if access_ipv6 is None:
+                access_ipv6 = ''
+            if access_ipv6:
+                self._validate_access_ipv6(access_ipv6)
             update_dict['access_ip_v6'] = access_ipv6.strip()
 
         if 'auto_disk_config' in body['server']:
