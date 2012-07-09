@@ -488,6 +488,9 @@ class SessionBase(object):
             db_ref['xenstore_data'] = {}
         db_ref['xenstore_data'][key] = value
 
+    def VM_pool_migrate(self, _1, vm_ref, host_ref, options):
+        pass
+
     def VDI_remove_from_other_config(self, _1, vdi_ref, key):
         db_ref = _db_content['VDI'][vdi_ref]
         if not 'other_config' in db_ref:

@@ -411,17 +411,90 @@ class XenAPIDriver(driver.ComputeDriver):
             db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
-        """This method is supported only libvirt."""
         # NOTE(salvatore-orlando): it enforces security groups on
         # host initialization and live migration.
-        # Live migration is not supported by XenAPI (as of 2011-11-09)
         # In XenAPI we do not assume instances running upon host initialization
         return
 
-    def live_migration(self, context, instance_ref, dest,
+    def check_can_live_migrate_destination(self, ctxt, instance_ref,
+                block_migration=False, disk_over_commit=False):
+        """Check if it is possible to execute live migration.
+
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param block_migration: if true, prepare for block migration
+        :param disk_over_commit: if true, allow disk over commit
+
+        """
+        self._vmops.check_can_live_migrate_destination(ctxt, instance_ref,
+                block_migration, disk_over_commit)
+
+    def check_can_live_migrate_destination_cleanup(self, ctxt,
+                                                   dest_check_data):
+        """Do required cleanup on dest host after check_can_live_migrate calls
+
+        :param ctxt: security context
+        :param disk_over_commit: if true, allow disk over commit
+        """
+        pass
+
+    def check_can_live_migrate_source(self, ctxt, instance_ref,
+                                      dest_check_data):
+        """Check if it is possible to execute live migration.
+
+        This checks if the live migration can succeed, based on the
+        results from check_can_live_migrate_destination.
+
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance
+        :param dest_check_data: result of check_can_live_migrate_destination
+        """
+        pass
+
+    def live_migration(self, ctxt, instance_ref, dest,
                        post_method, recover_method, block_migration=False):
-        """This method is supported only by libvirt."""
-        return
+        """Performs the live migration of the specified instance.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params dest: destination host
+        :params post_method:
+            post operation method.
+            expected nova.compute.manager.post_live_migration.
+        :params recover_method:
+            recovery method when any exception occurs.
+            expected nova.compute.manager.recover_live_migration.
+        :params block_migration: if true, migrate VM disk.
+        """
+        self._vmops.live_migrate(ctxt, instance_ref, dest, post_method,
+                                 recover_method, block_migration)
+
+    def pre_live_migration(self, context, instance_ref, block_device_info,
+                           network_info):
+        """Preparation live migration.
+
+        :params block_device_info:
+            It must be the result of _get_instance_volume_bdms()
+            at compute manager.
+        """
+        # TODO(JohnGarbutt) look again when boot-from-volume hits trunk
+        pass
+
+    def post_live_migration_at_destination(self, ctxt, instance_ref,
+                                           network_info, block_migration):
+        """Post operation of live migration at destination host.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params network_info: instance network infomation
+        :params : block_migration: if true, post operation of block_migraiton.
+        """
+        # TODO(JohnGarbutt) look at moving/downloading ramdisk and kernel
+        pass
 
     def unfilter_instance(self, instance_ref, network_info):
         """Removes security groups configured for an instance."""
