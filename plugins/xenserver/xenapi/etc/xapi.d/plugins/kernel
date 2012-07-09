@@ -20,6 +20,7 @@
 
 """Handle the manipulation of kernel images."""
 
+import errno
 import os
 import shutil
 
@@ -106,14 +107,22 @@ def create_kernel_ramdisk(session, args):
     return filename
 
 
+def _remove_file(filepath):
+    try:
+        os.remove(filepath)
+    except OSError, exc:
+        if exc.errno != errno.ENOENT:
+            raise
+
+
 def remove_kernel_ramdisk(session, args):
     """Removes kernel and/or ramdisk from dom0's file system"""
     kernel_file = optional(args, 'kernel-file')
     ramdisk_file = optional(args, 'ramdisk-file')
     if kernel_file:
-        os.remove(kernel_file)
+        _remove_file(kernel_file)
     if ramdisk_file:
-        os.remove(ramdisk_file)
+        _remove_file(ramdisk_file)
     return "ok"
 
 
