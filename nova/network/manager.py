@@ -493,9 +493,9 @@ class FloatingIP(object):
         # make sure project ownz this floating ip (allocated)
         self._floating_ip_owned_by_project(context, floating_ip)
 
-        # make sure floating ip isn't already associated
+        # disassociate any already associated
         if floating_ip['fixed_ip_id']:
-            raise exception.FloatingIpAssociated(address=floating_address)
+            self.disassociate_floating_ip(context, floating_address)
 
         fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_address)
 

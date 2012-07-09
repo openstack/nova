@@ -670,6 +670,9 @@ class VlanNetworkTestCase(test.TestCase):
             raise exception.ProcessExecutionError('',
                     'Cannot find device "em0"\n')
 
+        def fake9(*args, **kwargs):
+            raise test.TestingException()
+
         # raises because interface doesn't exist
         self.stubs.Set(self.network.db,
                        'floating_ip_fixed_ip_associate',
@@ -687,7 +690,8 @@ class VlanNetworkTestCase(test.TestCase):
 
         # raises because floating_ip is already associated to a fixed_ip
         self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake2)
-        self.assertRaises(exception.FloatingIpAssociated,
+        self.stubs.Set(self.network, 'disassociate_floating_ip', fake9)
+        self.assertRaises(test.TestingException,
                           self.network.associate_floating_ip,
                           ctxt,
                           mox.IgnoreArg(),
