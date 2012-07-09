@@ -231,7 +231,7 @@ def upload_vhd(session, args):
 
     staging_path = utils.make_staging_area(sr_path)
     try:
-        utils.prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids)
+        utils.prepare_staging_area(sr_path, staging_path, vdi_uuids)
         _upload_tarball(staging_path, image_id, glance_host, glance_port,
                         auth_token, properties)
     finally:

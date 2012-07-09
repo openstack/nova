@@ -346,7 +346,7 @@ def stub_out_migration_methods(stubs):
         pass
 
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
-    stubs.Set(vmops.VMOps, '_move_disks', fake_move_disks)
+    stubs.Set(vm_utils, 'move_disks', fake_move_disks)
     stubs.Set(vm_utils, 'scan_default_sr', fake_sr)
     stubs.Set(vm_utils, '_scan_sr', fake_sr)
     stubs.Set(vm_utils, 'snapshot_attached_here', fake_snapshot_attached_here)

@@ -897,6 +897,14 @@ def _fetch_using_dom0_plugin_with_retry(context, session, image_id,
     raise exception.CouldNotFetchImage(image_id=image_id)
 
 
+def _make_uuid_stack():
+    # NOTE(sirp): The XenAPI plugins run under Python 2.4
+    # which does not have the `uuid` module. To work around this,
+    # we generate the uuids here (under Python 2.6+) and
+    # pass them as arguments
+    return [str(uuid.uuid4()) for i in xrange(MAX_VDI_CHAIN_SIZE)]
+
+
 def _fetch_vhd_image(context, session, instance, image_id):
     """Tell glance to download an image and put the VHDs into the SR
 
@@ -905,13 +913,8 @@ def _fetch_vhd_image(context, session, instance, image_id):
     LOG.debug(_("Asking xapi to fetch vhd image %(image_id)s"), locals(),
               instance=instance)
 
-    # NOTE(sirp): The XenAPI plugins run under Python 2.4
-    # which does not have the `uuid` module. To work around this,
-    # we generate the uuids here (under Python 2.6+) and
-    # pass them as arguments
-    uuid_stack = [str(uuid.uuid4()) for i in xrange(MAX_VDI_CHAIN_SIZE)]
     params = {'image_id': image_id,
-              'uuid_stack': uuid_stack,
+              'uuid_stack': _make_uuid_stack(),
               'sr_path': get_sr_path(session),
               'auth_token': getattr(context, 'auth_token', None)}
 
@@ -2049,3 +2052,26 @@ def ensure_correct_host(session):
             raise
         raise Exception(_('This domU must be running on the host '
                           'specified by xenapi_connection_url'))
+
+
+def move_disks(session, instance, disk_info):
+    """Move and possibly link VHDs via the XAPI plugin."""
+    params = {'instance_uuid': instance['uuid'],
+              'sr_path': get_sr_path(session),
+              'uuid_stack': _make_uuid_stack()}
+
+    result = session.call_plugin(
+            'migration', 'move_vhds_into_sr', {'params': pickle.dumps(params)})
+    imported_vhds = jsonutils.loads(result)
+
+    # Now we rescan the SR so we find the VHDs
+    scan_default_sr(session)
+
+    # Set name-label so we can find if we need to clean up a failed
+    # migration
+    root_uuid = imported_vhds['root']['uuid']
+    set_vdi_name(session, root_uuid, instance.name, 'root')
+
+    root_vdi_ref = session.call_xenapi('VDI.get_by_uuid', root_uuid)
+
+    return {'uuid': root_uuid, 'ref': root_vdi_ref}

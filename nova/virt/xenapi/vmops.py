@@ -21,6 +21,7 @@ Management class for VM-related functions (spawn, reboot, etc).
 
 import cPickle as pickle
 import functools
+import itertools
 import os
 import time
 import uuid
@@ -203,7 +204,7 @@ class VMOps(object):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance):
-        root_vdi = self._move_disks(instance, disk_info)
+        root_vdi = vm_utils.move_disks(self._session, instance, disk_info)
 
         if resize_instance:
             self._resize_instance(instance, root_vdi)
@@ -613,12 +614,15 @@ class VMOps(object):
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
 
-    def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path):
+    def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path, seq_num):
+        LOG.debug(_("Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d"),
+                  locals(), instance=instance)
         instance_uuid = instance['uuid']
         params = {'host': dest,
                   'vdi_uuid': vdi_uuid,
                   'instance_uuid': instance_uuid,
-                  'sr_path': sr_path}
+                  'sr_path': sr_path,
+                  'seq_num': seq_num}
 
         try:
             _params = {'params': pickle.dumps(params)}
@@ -648,29 +652,49 @@ class VMOps(object):
                   instance=instance)
         db.instance_update(context, instance['uuid'], {'progress': progress})
 
-    def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type):
-        """Copies a VHD from one host machine to another, possibly
-        resizing filesystem before hand.
-
-        :param instance: the instance that owns the VHD in question.
-        :param dest: the destination host machine.
-        :param disk_type: values are 'primary' or 'cow'.
-
-        """
-        # 0. Zero out the progress to begin
+    def _migrate_disk_resizing_down(self, context, instance, dest,
+                                    instance_type, vm_ref, sr_path):
+        # 1. NOOP since we're not transmitting the base-copy separately
         self._update_instance_progress(context, instance,
-                                       step=0,
+                                       step=1,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        vm_ref = self._get_vm_opaque_ref(instance)
+        old_gb = instance['root_gb']
+        new_gb = instance_type['root_gb']
+        LOG.debug(_("Resizing down VDI %(cow_uuid)s from "
+                    "%(old_gb)dGB to %(new_gb)dGB"), locals(),
+                  instance=instance)
 
-        # The primary VDI becomes the COW after the snapshot, and we can
-        # identify it via the VBD. The base copy is the parent_uuid returned
-        # from the snapshot creation
+        # 2. Power down the instance before resizing
+        vm_utils.shutdown_vm(
+                self._session, instance, vm_ref, hard=False)
+        self._update_instance_progress(context, instance,
+                                       step=2,
+                                       total_steps=RESIZE_TOTAL_STEPS)
 
-        base_copy_uuid = cow_uuid = None
+        # 3. Copy VDI, resize partition and filesystem, forget VDI,
+        # truncate VHD
+        vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
+                self._session, vm_ref)
+        new_ref, new_uuid = vm_utils.resize_disk(self._session,
+                                                 instance,
+                                                 vdi_ref,
+                                                 instance_type)
+        self._update_instance_progress(context, instance,
+                                       step=3,
+                                       total_steps=RESIZE_TOTAL_STEPS)
 
+        # 4. Transfer the new VHD
+        self._migrate_vhd(instance, new_uuid, dest, sr_path, 0)
+        self._update_instance_progress(context, instance,
+                                       step=4,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+
+        # Clean up VDI now that it's been copied
+        vm_utils.destroy_vdi(self._session, new_ref)
+
+    def _migrate_disk_resizing_up(self, context, instance, dest, vm_ref,
+                                  sr_path):
         # 1. Create Snapshot
         label = "%s-snapshot" % instance.name
         with vm_utils.snapshot_attached_here(
@@ -679,124 +703,71 @@ class VMOps(object):
                                            step=1,
                                            total_steps=RESIZE_TOTAL_STEPS)
 
-            # FIXME(sirp): this needs to work with VDI chain of arbitrary
-            # length
-            base_copy_uuid = vdi_uuids[1]
-            _vdi_info = vm_utils.get_vdi_for_vm_safely(self._session, vm_ref)
-            vdi_ref, vm_vdi_rec = _vdi_info
-            cow_uuid = vm_vdi_rec['uuid']
-
-            sr_path = vm_utils.get_sr_path(self._session)
-
-            if (instance['auto_disk_config'] and
-                instance['root_gb'] > instance_type['root_gb']):
-                # Resizing disk storage down
-                old_gb = instance['root_gb']
-                new_gb = instance_type['root_gb']
-
-                LOG.debug(_("Resizing down VDI %(cow_uuid)s from "
-                            "%(old_gb)dGB to %(new_gb)dGB"), locals(),
-                          instance=instance)
-
-                # 2. Power down the instance before resizing
-                vm_utils.shutdown_vm(
-                        self._session, instance, vm_ref, hard=False)
+            # 2. Transfer the immutable VHDs (base-copies)
+            #
+            # The first VHD will be the leaf (aka COW) that is being used by
+            # the VM. For this step, we're only interested in the immutable
+            # VHDs which are all of the parents of the leaf VHD.
+            for seq_num, vdi_uuid in itertools.islice(
+                    enumerate(vdi_uuids), 1, None):
+                self._migrate_vhd(instance, vdi_uuid, dest, sr_path, seq_num)
                 self._update_instance_progress(context, instance,
                                                step=2,
                                                total_steps=RESIZE_TOTAL_STEPS)
 
-                # 3. Copy VDI, resize partition and filesystem, forget VDI,
-                # truncate VHD
-                new_ref, new_uuid = vm_utils.resize_disk(self._session,
-                                                         instance,
-                                                         vdi_ref,
-                                                         instance_type)
-                self._update_instance_progress(context, instance,
-                                               step=3,
-                                               total_steps=RESIZE_TOTAL_STEPS)
+        # 3. Now power down the instance
+        vm_utils.shutdown_vm(
+                self._session, instance, vm_ref, hard=False)
+        self._update_instance_progress(context, instance,
+                                       step=3,
+                                       total_steps=RESIZE_TOTAL_STEPS)
 
-                # 4. Transfer the new VHD
-                self._migrate_vhd(instance, new_uuid, dest, sr_path)
-                self._update_instance_progress(context, instance,
-                                               step=4,
-                                               total_steps=RESIZE_TOTAL_STEPS)
+        # 4. Transfer the COW VHD
+        vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
+                self._session, vm_ref)
+        cow_uuid = vm_vdi_rec['uuid']
+        self._migrate_vhd(instance, cow_uuid, dest, sr_path, 0)
+        self._update_instance_progress(context, instance,
+                                       step=4,
+                                       total_steps=RESIZE_TOTAL_STEPS)
 
-                # Clean up VDI now that it's been copied
-                vm_utils.destroy_vdi(self._session, new_ref)
+    def migrate_disk_and_power_off(self, context, instance, dest,
+                                   instance_type):
+        """Copies a VHD from one host machine to another, possibly
+        resizing filesystem before hand.
 
-                vdis = {'base_copy': new_uuid}
-            else:
-                # Resizing disk storage up, will be handled on destination
+        :param instance: the instance that owns the VHD in question.
+        :param dest: the destination host machine.
+        :param instance_type: instance_type to resize to
+        """
+        vm_ref = self._get_vm_opaque_ref(instance)
+        sr_path = vm_utils.get_sr_path(self._session)
+        resize_down = (instance['auto_disk_config'] and
+                       instance['root_gb'] > instance_type['root_gb'])
 
-                # As an optimization, we transfer the base VDI first,
-                # then shut down the VM, followed by transfering the COW
-                # VDI.
+        # 0. Zero out the progress to begin
+        self._update_instance_progress(context, instance,
+                                       step=0,
+                                       total_steps=RESIZE_TOTAL_STEPS)
 
-                # 2. Transfer the base copy
-                self._migrate_vhd(instance, base_copy_uuid, dest, sr_path)
-                self._update_instance_progress(context, instance,
-                                               step=2,
-                                               total_steps=RESIZE_TOTAL_STEPS)
-
-                # 3. Now power down the instance
-                vm_utils.shutdown_vm(
-                        self._session, instance, vm_ref, hard=False)
-                self._update_instance_progress(context, instance,
-                                               step=3,
-                                               total_steps=RESIZE_TOTAL_STEPS)
-
-                # 4. Transfer the COW VHD
-                self._migrate_vhd(instance, cow_uuid, dest, sr_path)
-                self._update_instance_progress(context, instance,
-                                               step=4,
-                                               total_steps=RESIZE_TOTAL_STEPS)
-
-                # TODO(mdietz): we could also consider renaming these to
-                # something sensible so we don't need to blindly pass
-                # around dictionaries
-                vdis = {'base_copy': base_copy_uuid, 'cow': cow_uuid}
-
-            # NOTE(sirp): in case we're resizing to the same host (for dev
-            # purposes), apply a suffix to name-label so the two VM records
-            # extant until a confirm_resize don't collide.
-            name_label = self._get_orig_vm_name_label(instance)
-            vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
-
-        return vdis
-
-    def _move_disks(self, instance, disk_info):
-        """Move and possibly link VHDs via the XAPI plugin."""
-        base_copy_uuid = disk_info['base_copy']
-        new_base_copy_uuid = str(uuid.uuid4())
-
-        params = {'instance_uuid': instance['uuid'],
-                  'sr_path': vm_utils.get_sr_path(self._session),
-                  'old_base_copy_uuid': base_copy_uuid,
-                  'new_base_copy_uuid': new_base_copy_uuid}
-
-        if 'cow' in disk_info:
-            cow_uuid = disk_info['cow']
-            new_cow_uuid = str(uuid.uuid4())
-            params['old_cow_uuid'] = cow_uuid
-            params['new_cow_uuid'] = new_cow_uuid
-
-            new_uuid = new_cow_uuid
+        if resize_down:
+            self._migrate_disk_resizing_down(
+                    context, instance, dest, instance_type, vm_ref, sr_path)
         else:
-            new_uuid = new_base_copy_uuid
+            self._migrate_disk_resizing_up(
+                    context, instance, dest, vm_ref, sr_path)
 
-        self._session.call_plugin('migration', 'move_vhds_into_sr',
-                                  {'params': pickle.dumps(params)})
+        # NOTE(sirp): in case we're resizing to the same host (for dev
+        # purposes), apply a suffix to name-label so the two VM records
+        # extant until a confirm_resize don't collide.
+        name_label = self._get_orig_vm_name_label(instance)
+        vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
 
-        # Now we rescan the SR so we find the VHDs
-        vm_utils.scan_default_sr(self._session)
-
-        # Set name-label so we can find if we need to clean up a failed
-        # migration
-        vm_utils.set_vdi_name(self._session, new_uuid, instance.name, 'root')
-
-        new_ref = self._session.call_xenapi('VDI.get_by_uuid', new_uuid)
-
-        return {'uuid': new_uuid, 'ref': new_ref}
+        # NOTE(sirp): disk_info isn't used by the xenapi driver, instead it
+        # uses a staging-area (/images/instance<uuid>) and sequence-numbered
+        # VHDs to figure out how to reconstruct the VDI chain after syncing
+        disk_info = {}
+        return disk_info
 
     def _resize_instance(self, instance, root_vdi):
         """Resize an instances root disk."""
