@@ -19,34 +19,9 @@ import glob
 import os
 
 import setuptools
-from setuptools.command import sdist
 
 from nova.openstack.common import setup as common_setup
 from nova import version
-
-
-class local_sdist(sdist.sdist):
-    """Customized sdist hook - builds the ChangeLog file from VC first."""
-    def run(self):
-        common_setup.write_git_changelog()
-        # sdist.sdist is an old style class, can't user super()
-        sdist.sdist.run(self)
-
-nova_cmdclass = {'sdist': local_sdist}
-
-try:
-    from sphinx import setup_command
-
-    class local_BuildDoc(setup_command.BuildDoc):
-        def run(self):
-            for builder in ['html', 'man']:
-                self.builder = builder
-                self.finalize_options()
-                setup_command.BuildDoc.run(self)
-    nova_cmdclass['build_sphinx'] = local_BuildDoc
-
-except Exception:
-    pass
 
 
 def find_data_files(destdir, srcdir):
@@ -68,7 +43,7 @@ setuptools.setup(name='nova',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
       url='http://www.openstack.org/',
-      cmdclass=nova_cmdclass,
+      cmdclass=common_setup.get_cmdclass(),
       packages=setuptools.find_packages(exclude=['bin', 'smoketests']),
       include_package_data=True,
       test_suite='nose.collector',
