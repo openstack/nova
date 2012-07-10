@@ -86,7 +86,10 @@ compute_opts = [
                     "For per-compute-host cached images, set to _base_$my_ip"),
     cfg.StrOpt('compute_driver',
                default='nova.virt.connection.get_connection',
-               help='Driver to use for controlling virtualization'),
+               help='Driver to use for controlling virtualization. Options '
+                   'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
+                   'fake.FakeDriver, baremetal.BareMetalDriver, '
+                   'vmwareapi.VMWareESXDriver'),
     cfg.StrOpt('console_host',
                default=socket.gethostname(),
                help='Console proxy host to use to connect '
