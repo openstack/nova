@@ -120,7 +120,7 @@ function run_pep8 {
   # NOTE(sirp): Dom0 plugins are written for Python 2.4, meaning some HACKING
   #             checks are too strict.
   pep8onlyfiles=`find plugins -type f -name "*.py"`
-  pep8onlyfiles+=" `find plugins/xenserver/xenapi/etc/xapi.d/plugins/ -type f -executable`"
+  pep8onlyfiles+=" `find plugins/xenserver/xenapi/etc/xapi.d/plugins/ -type f -perm +111`"
   ${wrapper} pep8 ${pep8onlyfiles}
 }
 
