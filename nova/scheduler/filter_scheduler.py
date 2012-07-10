@@ -23,9 +23,9 @@ import operator
 
 from nova import exception
 from nova import flags
-from nova.notifier import api as notifier
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier
 from nova.scheduler import driver
 from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options

@@ -13,4 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.tests import *
+
+NOTIFICATIONS = []
+
+
+def notify(_context, message):
+    """Test notifier, stores notifications in memory for unittests."""
+    NOTIFICATIONS.append(message)

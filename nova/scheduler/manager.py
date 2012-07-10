@@ -29,11 +29,11 @@ from nova import exception
 from nova import flags
 from nova import manager
 from nova import notifications
-from nova.notifier import api as notifier
 from nova.openstack.common import cfg
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier
 from nova import quota
 
 

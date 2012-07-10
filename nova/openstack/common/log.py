@@ -40,10 +40,10 @@ import stat
 import sys
 import traceback
 
-from nova import notifier
 from nova.openstack.common import cfg
 from nova.openstack.common import jsonutils
 from nova.openstack.common import local
+from nova.openstack.common import notifier
 
 
 log_opts = [

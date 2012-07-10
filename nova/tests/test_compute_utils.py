@@ -22,9 +22,9 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import flags
-from nova.notifier import test_notifier
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import test_notifier
 from nova import test
 from nova.tests import fake_network
 import nova.tests.image.fake
@@ -50,7 +50,7 @@ class UsageInfoTestCase(test.TestCase):
 
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    stub_network=True,
-                   notification_driver='nova.notifier.test_notifier',
+            notification_driver='nova.openstack.common.notifier.test_notifier',
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(FLAGS.compute_manager)
         self.user_id = 'fake'

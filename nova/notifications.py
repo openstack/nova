@@ -25,9 +25,9 @@ from nova import exception
 from nova import flags
 from nova import network
 from nova.network import model as network_model
-from nova.notifier import api as notifier_api
 from nova.openstack.common import cfg
 from nova.openstack.common import log
+from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common import timeutils
 from nova import utils
 
