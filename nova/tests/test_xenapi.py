@@ -355,9 +355,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         stubs.stubout_firewall_driver(self.stubs, self.conn)
         instance = self._create_instance()
 
-        name = "MySnapshot"
+        image_id = "my_snapshot_id"
         self.assertRaises(exception.NovaException, self.conn.snapshot,
-                          self.context, instance, name)
+                          self.context, instance, image_id)
 
     def test_instance_snapshot(self):
         stubs.stubout_instance_snapshot(self.stubs)
@@ -367,8 +367,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         stubs.stubout_firewall_driver(self.stubs, self.conn)
         instance = self._create_instance()
 
-        name = "MySnapshot"
-        template_vm_ref = self.conn.snapshot(self.context, instance, name)
+        image_id = "my_snapshot_id"
+        self.conn.snapshot(self.context, instance, image_id)
 
         # Ensure VM was torn down
         vm_labels = []

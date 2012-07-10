@@ -15,6 +15,7 @@
 
 """Stubouts, mocks and fixtures for the test suite"""
 
+import contextlib
 import random
 import sys
 
@@ -317,8 +318,9 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
 
 
 def stub_out_migration_methods(stubs):
-    def fake_create_snapshot(session, instance, vm_ref, label):
-        return 'vm_ref', dict(image='foo', snap='bar')
+    @contextlib.contextmanager
+    def fake_snapshot_attached_here(session, instance, vm_ref, label):
+        yield dict(image='foo', snap='bar')
 
     def fake_move_disks(self, instance, disk_info):
         vdi_ref = fake.create_vdi(instance['name'], 'fake')
@@ -347,7 +349,7 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vmops.VMOps, '_move_disks', fake_move_disks)
     stubs.Set(vm_utils, 'scan_default_sr', fake_sr)
     stubs.Set(vm_utils, '_scan_sr', fake_sr)
-    stubs.Set(vm_utils, 'create_snapshot', fake_create_snapshot)
+    stubs.Set(vm_utils, 'snapshot_attached_here', fake_snapshot_attached_here)
     stubs.Set(vm_utils, 'get_vdi_for_vm_safely', fake_get_vdi)
     stubs.Set(vm_utils, 'get_sr_path', fake_get_sr_path)
     stubs.Set(vm_utils, 'generate_ephemeral', fake_generate_ephemeral)

@@ -264,7 +264,8 @@ class VMOps(object):
                                       block_device_info)
 
             def undo_create_disks():
-                self._safe_destroy_vdis([vdi['ref'] for vdi in vdis.values()])
+                vdi_refs = [vdi['ref'] for vdi in vdis.values()]
+                vm_utils.safe_destroy_vdis(self._session, vdi_refs)
 
             undo_mgr.undo_with(undo_create_disks)
             return vdis
@@ -603,15 +604,11 @@ class VMOps(object):
         """
         vm_ref = self._get_vm_opaque_ref(instance)
         label = "%s-snapshot" % instance.name
-        template_vm_ref, template_vdi_uuids = vm_utils.create_snapshot(
-                self._session, instance, vm_ref, label)
 
-        try:
+        with vm_utils.snapshot_attached_here(
+                self._session, instance, vm_ref, label) as template_vdi_uuids:
             vm_utils.upload_image(context, self._session, instance,
                                   template_vdi_uuids, image_id)
-        finally:
-            self._destroy(instance, template_vm_ref,
-                          destroy_kernel_ramdisk=False)
 
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
@@ -673,12 +670,11 @@ class VMOps(object):
         # from the snapshot creation
 
         base_copy_uuid = cow_uuid = None
-        template_vdi_uuids = template_vm_ref = None
-        try:
-            # 1. Create Snapshot
-            label = "%s-snapshot" % instance.name
-            template_vm_ref, template_vdi_uuids = vm_utils.create_snapshot(
-                    self._session, instance, vm_ref, label)
+
+        # 1. Create Snapshot
+        label = "%s-snapshot" % instance.name
+        with vm_utils.snapshot_attached_here(
+                self._session, instance, vm_ref, label) as template_vdi_uuids:
 
             self._update_instance_progress(context, instance,
                                            step=1,
@@ -702,7 +698,8 @@ class VMOps(object):
                           instance=instance)
 
                 # 2. Power down the instance before resizing
-                self._shutdown(instance, vm_ref, hard=False)
+                vm_utils.shutdown_vm(
+                        self._session, instance, vm_ref, hard=False)
                 self._update_instance_progress(context, instance,
                                                step=2,
                                                total_steps=RESIZE_TOTAL_STEPS)
@@ -741,7 +738,8 @@ class VMOps(object):
                                                total_steps=RESIZE_TOTAL_STEPS)
 
                 # 3. Now power down the instance
-                self._shutdown(instance, vm_ref, hard=False)
+                vm_utils.shutdown_vm(
+                        self._session, instance, vm_ref, hard=False)
                 self._update_instance_progress(context, instance,
                                                step=3,
                                                total_steps=RESIZE_TOTAL_STEPS)
@@ -762,10 +760,6 @@ class VMOps(object):
             # extant until a confirm_resize don't collide.
             name_label = self._get_orig_vm_name_label(instance)
             vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
-        finally:
-            if template_vm_ref:
-                self._destroy(instance, template_vm_ref,
-                              destroy_kernel_ramdisk=False)
 
         return vdis
 
@@ -863,24 +857,6 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         agent.inject_file(self._session, instance, vm_ref, path, contents)
 
-    def _shutdown(self, instance, vm_ref, hard=True):
-        """Shutdown an instance."""
-        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-        state = vm_utils.compile_info(vm_rec)['state']
-        if state == power_state.SHUTDOWN:
-            LOG.warn(_("VM already halted, skipping shutdown..."),
-                     instance=instance)
-            return
-
-        LOG.debug(_("Shutting down VM"), instance=instance)
-        try:
-            if hard:
-                self._session.call_xenapi('VM.hard_shutdown', vm_ref)
-            else:
-                self._session.call_xenapi('VM.clean_shutdown', vm_ref)
-        except self._session.XenAPI.Failure, exc:
-            LOG.exception(exc)
-
     def _find_root_vdi_ref(self, vm_ref):
         """Find and return the root vdi ref for a VM."""
         if not vm_ref:
@@ -919,14 +895,6 @@ class VMOps(object):
             except volume_utils.StorageError as exc:
                 LOG.error(exc)
 
-    def _safe_destroy_vdis(self, vdi_refs):
-        """Destroys the requested VDIs, logging any StorageError exceptions."""
-        for vdi_ref in vdi_refs:
-            try:
-                vm_utils.destroy_vdi(self._session, vdi_ref)
-            except volume_utils.StorageError as exc:
-                LOG.error(exc)
-
     def _destroy_kernel_ramdisk(self, instance, vm_ref):
         """Three situations can occur:
 
@@ -959,16 +927,6 @@ class VMOps(object):
         vm_utils.destroy_kernel_ramdisk(self._session, kernel, ramdisk)
         LOG.debug(_("kernel/ramdisk files removed"), instance=instance)
 
-    def _destroy_vm(self, instance, vm_ref):
-        """Destroys a VM record."""
-        try:
-            self._session.call_xenapi('VM.destroy', vm_ref)
-        except self._session.XenAPI.Failure, exc:
-            LOG.exception(exc)
-            return
-
-        LOG.debug(_("VM destroyed"), instance=instance)
-
     def _destroy_rescue_instance(self, rescue_vm_ref, original_vm_ref):
         """Destroy a rescue instance."""
         # Shutdown Rescue VM
@@ -981,7 +939,7 @@ class VMOps(object):
         vdi_refs = vm_utils.lookup_vm_vdis(self._session, rescue_vm_ref)
         root_vdi_ref = self._find_root_vdi_ref(original_vm_ref)
         vdi_refs = [vdi_ref for vdi_ref in vdi_refs if vdi_ref != root_vdi_ref]
-        self._safe_destroy_vdis(vdi_refs)
+        vm_utils.safe_destroy_vdis(self._session, vdi_refs)
 
         # Destroy Rescue VM
         self._session.call_xenapi("VM.destroy", rescue_vm_ref)
@@ -1009,7 +967,7 @@ class VMOps(object):
                              block_device_info=block_device_info)
 
     def _destroy(self, instance, vm_ref, network_info=None,
-                 destroy_kernel_ramdisk=True, block_device_info=None):
+                 block_device_info=None):
         """Destroys VM instance by performing:
 
             1. A shutdown
@@ -1022,21 +980,18 @@ class VMOps(object):
             LOG.warning(_("VM is not present, skipping destroy..."),
                         instance=instance)
             return
-        is_snapshot = vm_utils.is_snapshot(self._session, vm_ref)
-        self._shutdown(instance, vm_ref)
+
+        vm_utils.shutdown_vm(self._session, instance, vm_ref)
 
         # Destroy VDIs
         self._destroy_vdis(instance, vm_ref, block_device_info)
-        if destroy_kernel_ramdisk:
-            self._destroy_kernel_ramdisk(instance, vm_ref)
+        self._destroy_kernel_ramdisk(instance, vm_ref)
 
-        self._destroy_vm(instance, vm_ref)
+        vm_utils.destroy_vm(self._session, instance, vm_ref)
+
         self.unplug_vifs(instance, network_info)
-        # Remove security groups filters for instance
-        # Unless the vm is a snapshot
-        if not is_snapshot:
-            self.firewall_driver.unfilter_instance(instance,
-                                                   network_info=network_info)
+        self.firewall_driver.unfilter_instance(
+                instance, network_info=network_info)
 
     def pause(self, instance):
         """Pause VM instance."""
@@ -1075,7 +1030,7 @@ class VMOps(object):
                                % instance.name)
 
         vm_ref = self._get_vm_opaque_ref(instance)
-        self._shutdown(instance, vm_ref)
+        vm_utils.shutdown_vm(self._session, instance, vm_ref)
         self._acquire_bootlock(vm_ref)
         instance._rescue = True
         self.spawn(context, instance, image_meta, network_info)
@@ -1111,7 +1066,7 @@ class VMOps(object):
     def power_off(self, instance):
         """Power off the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
-        self._shutdown(instance, vm_ref, hard=True)
+        vm_utils.shutdown_vm(self._session, instance, vm_ref, hard=True)
 
     def power_on(self, instance):
         """Power on the specified instance."""
