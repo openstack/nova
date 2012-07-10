@@ -499,6 +499,9 @@ class SessionBase(object):
         db_ref = _db_content['VDI'][vdi_ref]
         if not 'other_config' in db_ref:
             db_ref['other_config'] = {}
+        if key in db_ref['other_config']:
+            raise Failure(['MAP_DUPLICATE_KEY', 'VDI', 'other_config',
+                           vdi_ref, key])
         db_ref['other_config'][key] = value
 
     def VDI_copy(self, _1, vdi_to_copy_ref, sr_ref):
