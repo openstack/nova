@@ -74,13 +74,13 @@ def _late_load_cheetah():
         Template = t.Template
 
 
-class ProxyConnection(driver.ComputeDriver):
+class BareMetalDriver(driver.ComputeDriver):
 
     def __init__(self, read_only):
         _late_load_cheetah()
         # Note that baremetal doesn't have a read-only connection
         # mode, so the read_only parameter is ignored
-        super(ProxyConnection, self).__init__()
+        super(BareMetalDriver, self).__init__()
         self.baremetal_nodes = nodes.get_baremetal_nodes()
         self._wrapped_conn = None
         self._host_state = None
