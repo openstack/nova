@@ -393,7 +393,7 @@ def get_vdis_for_instance(context, session, instance, image,
                         image_type)
 
 
-def copy_vdi(session, sr_ref, vdi_to_copy_ref):
+def _copy_vdi(session, sr_ref, vdi_to_copy_ref):
     """Copy a VDI and return the new VDIs reference."""
     vdi_ref = session.call_xenapi('VDI.copy', vdi_to_copy_ref, sr_ref)
     LOG.debug(_('Copied VDI %(vdi_ref)s from VDI '
@@ -401,7 +401,7 @@ def copy_vdi(session, sr_ref, vdi_to_copy_ref):
     return vdi_ref
 
 
-def clone_vdi(session, vdi_to_clone_ref):
+def _clone_vdi(session, vdi_to_clone_ref):
     """Clones a VDI and return the new VDIs reference."""
     vdi_ref = session.call_xenapi('VDI.clone', vdi_to_clone_ref)
     LOG.debug(_('Cloned VDI %(vdi_ref)s from VDI '
@@ -437,7 +437,7 @@ def create_snapshot(session, instance, vm_ref, label):
     vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
     sr_ref = vm_vdi_rec["SR"]
 
-    original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
+    original_parent_uuid = _get_vhd_parent_uuid(session, vm_vdi_ref)
 
     template_vm_ref = session.call_xenapi('VM.snapshot', vm_ref, label)
     template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
@@ -711,9 +711,9 @@ def _create_cached_image(context, session, instance, image_id, image_type):
                                     str(vdi['uuid']))
 
     if FLAGS.use_cow_images and sr_type == 'ext':
-        new_vdi_ref = clone_vdi(session, root_vdi_ref)
+        new_vdi_ref = _clone_vdi(session, root_vdi_ref)
     else:
-        new_vdi_ref = copy_vdi(session, sr_ref, root_vdi_ref)
+        new_vdi_ref = _copy_vdi(session, sr_ref, root_vdi_ref)
 
     # Set the name label for the image we just created and remove image id
     # field from other-config.
@@ -731,7 +731,7 @@ def _create_cached_image(context, session, instance, image_id, image_type):
         swap_disk_uuid = vdi_rec['other_config']['swap-disk']
         swap_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                            swap_disk_uuid)
-        new_swap_vdi_ref = copy_vdi(session, sr_ref, swap_vdi_ref)
+        new_swap_vdi_ref = _copy_vdi(session, sr_ref, swap_vdi_ref)
         new_swap_vdi_uuid = session.call_xenapi('VDI.get_uuid',
                                                 new_swap_vdi_ref)
         vdis['swap'] = dict(uuid=new_swap_vdi_uuid, file=None)
@@ -861,7 +861,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
             callback=pick_glance)
 
     sr_ref = safe_find_sr(session)
-    scan_sr(session, sr_ref)
+    _scan_sr(session, sr_ref)
 
     # Pull out the UUID of the root VDI
     root_vdi_uuid = vdis['root']['uuid']
@@ -881,7 +881,7 @@ def _get_vdi_chain_size(session, vdi_uuid):
     the total.
     """
     size_bytes = 0
-    for vdi_rec in walk_vdi_chain(session, vdi_uuid):
+    for vdi_rec in _walk_vdi_chain(session, vdi_uuid):
         cur_vdi_uuid = vdi_rec['uuid']
         vdi_size_bytes = int(vdi_rec['physical_utilisation'])
         LOG.debug(_('vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes='
@@ -929,7 +929,7 @@ def _fetch_disk_image(context, session, instance, image_id, image_type):
               locals(), instance=instance)
 
     if image_type == ImageType.DISK_ISO:
-        sr_ref = safe_find_iso_sr(session)
+        sr_ref = _safe_find_iso_sr(session)
     else:
         sr_ref = safe_find_sr(session)
 
@@ -1165,7 +1165,7 @@ def compile_diagnostics(record):
         keys = []
         diags = {}
         vm_uuid = record["uuid"]
-        xml = get_rrd(get_rrd_server(), vm_uuid)
+        xml = _get_rrd(_get_rrd_server(), vm_uuid)
         if xml:
             rrd = minidom.parseString(xml)
             for i, node in enumerate(rrd.firstChild.childNodes):
@@ -1199,15 +1199,15 @@ def compile_metrics(start_time, stop_time=None):
        this host"""
     start_time = int(start_time)
 
-    xml = get_rrd_updates(get_rrd_server(), start_time)
+    xml = _get_rrd_updates(_get_rrd_server(), start_time)
     if xml:
         doc = minidom.parseString(xml)
-        return parse_rrd_update(doc, start_time, stop_time)
+        return _parse_rrd_update(doc, start_time, stop_time)
 
     raise exception.CouldNotFetchMetrics()
 
 
-def scan_sr(session, sr_ref=None):
+def _scan_sr(session, sr_ref=None):
     """Scans the SR specified by sr_ref"""
     if sr_ref:
         LOG.debug(_("Re-scanning SR %s"), sr_ref)
@@ -1216,20 +1216,20 @@ def scan_sr(session, sr_ref=None):
 
 def scan_default_sr(session):
     """Looks for the system default SR and triggers a re-scan"""
-    scan_sr(session, find_sr(session))
+    _scan_sr(session, _find_sr(session))
 
 
 def safe_find_sr(session):
-    """Same as find_sr except raises a NotFound exception if SR cannot be
+    """Same as _find_sr except raises a NotFound exception if SR cannot be
     determined
     """
-    sr_ref = find_sr(session)
+    sr_ref = _find_sr(session)
     if sr_ref is None:
         raise exception.StorageRepositoryNotFound()
     return sr_ref
 
 
-def find_sr(session):
+def _find_sr(session):
     """Return the storage repository to hold VM images"""
     host = session.get_xenapi_host()
     try:
@@ -1263,17 +1263,17 @@ def find_sr(session):
     return None
 
 
-def safe_find_iso_sr(session):
-    """Same as find_iso_sr except raises a NotFound exception if SR
+def _safe_find_iso_sr(session):
+    """Same as _find_iso_sr except raises a NotFound exception if SR
     cannot be determined
     """
-    sr_ref = find_iso_sr(session)
+    sr_ref = _find_iso_sr(session)
     if sr_ref is None:
         raise exception.NotFound(_('Cannot find SR of content-type ISO'))
     return sr_ref
 
 
-def find_iso_sr(session):
+def _find_iso_sr(session):
     """Return the storage repository to hold ISO images"""
     host = session.get_xenapi_host()
     for sr_ref, sr_rec in session.get_all_refs_and_recs('SR'):
@@ -1305,13 +1305,13 @@ def find_iso_sr(session):
     return None
 
 
-def get_rrd_server():
+def _get_rrd_server():
     """Return server's scheme and address to use for retrieving RRD XMLs."""
     xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
     return [xs_url.scheme, xs_url.netloc]
 
 
-def get_rrd(server, vm_uuid):
+def _get_rrd(server, vm_uuid):
     """Return the VM RRD XML as a string"""
     try:
         xml = urllib.urlopen("%s://%s:%s@%s/vm_rrd?uuid=%s" % (
@@ -1327,7 +1327,7 @@ def get_rrd(server, vm_uuid):
         return None
 
 
-def get_rrd_updates(server, start_time):
+def _get_rrd_updates(server, start_time):
     """Return the RRD updates XML as a string"""
     try:
         xml = urllib.urlopen("%s://%s:%s@%s/rrd_updates?start=%s" % (
@@ -1343,7 +1343,7 @@ def get_rrd_updates(server, start_time):
         return None
 
 
-def parse_rrd_meta(doc):
+def _parse_rrd_meta(doc):
     data = {}
     meta = doc.getElementsByTagName('meta')[0]
     for tag in ('start', 'end', 'step'):
@@ -1353,7 +1353,7 @@ def parse_rrd_meta(doc):
     return data
 
 
-def parse_rrd_data(doc):
+def _parse_rrd_data(doc):
     dnode = doc.getElementsByTagName('data')[0]
     return [dict(
             time=int(child.getElementsByTagName('t')[0].firstChild.data),
@@ -1362,22 +1362,22 @@ def parse_rrd_data(doc):
             for child in dnode.childNodes]
 
 
-def parse_rrd_update(doc, start, until=None):
+def _parse_rrd_update(doc, start, until=None):
     sum_data = {}
-    meta = parse_rrd_meta(doc)
-    data = parse_rrd_data(doc)
+    meta = _parse_rrd_meta(doc)
+    data = _parse_rrd_data(doc)
     for col, collabel in enumerate(meta['legend']):
         _datatype, _objtype, uuid, name = collabel.split(':')
         vm_data = sum_data.get(uuid, dict())
         if name.startswith('vif'):
-            vm_data[name] = integrate_series(data, col, start, until)
+            vm_data[name] = _integrate_series(data, col, start, until)
         else:
-            vm_data[name] = average_series(data, col, until)
+            vm_data[name] = _average_series(data, col, until)
         sum_data[uuid] = vm_data
     return sum_data
 
 
-def average_series(data, col, until=None):
+def _average_series(data, col, until=None):
     vals = [row['values'][col] for row in data
             if (not until or (row['time'] <= until)) and
                 row['values'][col].is_finite()]
@@ -1399,7 +1399,7 @@ def average_series(data, col, until=None):
         return decimal.Decimal('0.0000')
 
 
-def integrate_series(data, col, start, until=None):
+def _integrate_series(data, col, start, until=None):
     total = decimal.Decimal('0.0000')
     prev_time = int(start)
     prev_val = None
@@ -1435,7 +1435,7 @@ def _get_all_vdis_in_sr(session, sr_ref):
 
 #TODO(sirp): This code comes from XS5.6 pluginlib.py, we should refactor to
 # use that implmenetation
-def get_vhd_parent(session, vdi_rec):
+def _get_vhd_parent(session, vdi_rec):
     """
     Returns the VHD parent of the given VDI record, as a (ref, rec) pair.
     Returns None if we're at the root of the tree.
@@ -1451,9 +1451,9 @@ def get_vhd_parent(session, vdi_rec):
         return None
 
 
-def get_vhd_parent_uuid(session, vdi_ref):
+def _get_vhd_parent_uuid(session, vdi_ref):
     vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
-    ret = get_vhd_parent(session, vdi_rec)
+    ret = _get_vhd_parent(session, vdi_rec)
     if ret:
         _parent_ref, parent_rec = ret
         return parent_rec["uuid"]
@@ -1461,9 +1461,9 @@ def get_vhd_parent_uuid(session, vdi_ref):
         return None
 
 
-def walk_vdi_chain(session, vdi_uuid):
+def _walk_vdi_chain(session, vdi_uuid):
     """Yield vdi_recs for each element in a VDI chain"""
-    # TODO(jk0): perhaps make get_vhd_parent use this
+    # TODO(jk0): perhaps make _get_vhd_parent use this
     while True:
         vdi_ref = session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
@@ -1496,7 +1496,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
         # Search for any other vdi which parents to original parent and is not
         # in the active vm/instance vdi chain.
         vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
-        parent_vdi_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        parent_vdi_uuid = _get_vhd_parent_uuid(session, vdi_ref)
         for _ref, rec in _get_all_vdis_in_sr(session, sr_ref):
             if ((rec['uuid'] != vdi_uuid) and
                (rec['uuid'] != parent_vdi_uuid) and
@@ -1509,22 +1509,22 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     # Check if original parent has any other child. If so, coalesce will
     # not take place.
     if _another_child_vhd():
-        parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
         parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
-        base_uuid = get_vhd_parent_uuid(session, parent_ref)
+        base_uuid = _get_vhd_parent_uuid(session, parent_ref)
         return parent_uuid, base_uuid
 
     max_attempts = FLAGS.xenapi_vhd_coalesce_max_attempts
     for i in xrange(max_attempts):
-        scan_sr(session, sr_ref)
-        parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        _scan_sr(session, sr_ref)
+        parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
             LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
                         " %(original_parent_uuid)s, waiting for coalesce..."),
                       locals(), instance=instance)
         else:
             parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
-            base_uuid = get_vhd_parent_uuid(session, parent_ref)
+            base_uuid = _get_vhd_parent_uuid(session, parent_ref)
             return parent_uuid, base_uuid
 
         greenthread.sleep(FLAGS.xenapi_vhd_coalesce_poll_interval)
@@ -1534,7 +1534,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     raise exception.NovaException(msg)
 
 
-def remap_vbd_dev(dev):
+def _remap_vbd_dev(dev):
     """Return the appropriate location for a plugged-in VBD device
 
     Ubuntu Maverick moved xvd? -> sd?. This is considered a bug and will be
@@ -1569,7 +1569,7 @@ def _wait_for_device(dev):
 
 def cleanup_attached_vdis(session):
     """Unplug any instance VDIs left after an unclean restart"""
-    this_vm_ref = get_this_vm_ref(session)
+    this_vm_ref = _get_this_vm_ref(session)
 
     vbd_refs = session.call_xenapi('VM.get_VBDs', this_vm_ref)
     for vbd_ref in vbd_refs:
@@ -1592,7 +1592,7 @@ def cleanup_attached_vdis(session):
 
 @contextlib.contextmanager
 def vdi_attached_here(session, vdi_ref, read_only=False):
-    this_vm_ref = get_this_vm_ref(session)
+    this_vm_ref = _get_this_vm_ref(session)
 
     vbd_ref = create_vbd(session, this_vm_ref, vdi_ref, 'autodetect',
                          read_only=read_only, bootable=False)
@@ -1603,7 +1603,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
             LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
             orig_dev = session.call_xenapi("VBD.get_device", vbd_ref)
             LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s') % locals())
-            dev = remap_vbd_dev(orig_dev)
+            dev = _remap_vbd_dev(orig_dev)
             if dev != orig_dev:
                 LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
                             'remapping to %(dev)s') % locals())
@@ -1626,7 +1626,7 @@ def get_this_vm_uuid():
         return f.readline().strip()
 
 
-def get_this_vm_ref(session):
+def _get_this_vm_ref(session):
     return session.call_xenapi("VM.get_by_uuid", get_this_vm_uuid())
 
 
