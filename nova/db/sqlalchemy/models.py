@@ -26,7 +26,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
 from sqlalchemy.orm import relationship, backref, object_mapper
-from sqlalchemy.schema import ForeignKeyConstraint
 
 from nova.db.sqlalchemy.session import get_session
 from nova import exception
@@ -211,7 +210,6 @@ class Instance(BASE, NovaBase):
 #    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
 #    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
-#    project = relationship(Project, backref=backref('instances', order_by=id))
 
     launch_index = Column(Integer)
     key_name = Column(String(255))
@@ -738,47 +736,6 @@ class FloatingIp(BASE, NovaBase):
     interface = Column(String(255))
 
 
-class AuthToken(BASE, NovaBase):
-    """Represents an authorization token for all API transactions.
-
-    Fields are a string representing the actual token and a user id for
-    mapping to the actual user
-
-    """
-    __tablename__ = 'auth_tokens'
-    token_hash = Column(String(255), primary_key=True)
-    user_id = Column(String(255))
-    server_management_url = Column(String(255))
-    storage_url = Column(String(255))
-    cdn_management_url = Column(String(255))
-
-
-class User(BASE, NovaBase):
-    """Represents a user."""
-    __tablename__ = 'users'
-    id = Column(String(255), primary_key=True)
-
-    name = Column(String(255))
-    access_key = Column(String(255))
-    secret_key = Column(String(255))
-
-    is_admin = Column(Boolean)
-
-
-class Project(BASE, NovaBase):
-    """Represents a project."""
-    __tablename__ = 'projects'
-    id = Column(String(255), primary_key=True)
-    name = Column(String(255))
-    description = Column(String(255))
-
-    project_manager = Column(String(255), ForeignKey(User.id))
-
-    members = relationship(User,
-                           secondary='user_project_association',
-                           backref='projects')
-
-
 class DNSDomain(BASE, NovaBase):
     """Represents a DNS domain with availability zone or project info."""
     __tablename__ = 'dns_domains'
@@ -786,44 +743,6 @@ class DNSDomain(BASE, NovaBase):
     scope = Column(String(255))
     availability_zone = Column(String(255))
     project_id = Column(String(255))
-    project = relationship(Project,
-                           primaryjoin=project_id == Project.id,
-                           foreign_keys=[Project.id],
-                           uselist=False)
-
-
-class UserProjectRoleAssociation(BASE, NovaBase):
-    __tablename__ = 'user_project_role_association'
-    user_id = Column(String(255), primary_key=True)
-    user = relationship(User,
-                        primaryjoin=user_id == User.id,
-                        foreign_keys=[User.id],
-                        uselist=False)
-
-    project_id = Column(String(255), primary_key=True)
-    project = relationship(Project,
-                           primaryjoin=project_id == Project.id,
-                           foreign_keys=[Project.id],
-                           uselist=False)
-
-    role = Column(String(255), primary_key=True)
-    ForeignKeyConstraint(['user_id',
-                          'project_id'],
-                         ['user_project_association.user_id',
-                          'user_project_association.project_id'])
-
-
-class UserRoleAssociation(BASE, NovaBase):
-    __tablename__ = 'user_role_association'
-    user_id = Column(String(255), ForeignKey('users.id'), primary_key=True)
-    user = relationship(User, backref='roles')
-    role = Column(String(255), primary_key=True)
-
-
-class UserProjectAssociation(BASE, NovaBase):
-    __tablename__ = 'user_project_association'
-    user_id = Column(String(255), ForeignKey(User.id), primary_key=True)
-    project_id = Column(String(255), ForeignKey(Project.id), primary_key=True)
 
 
 class ConsolePool(BASE, NovaBase):
