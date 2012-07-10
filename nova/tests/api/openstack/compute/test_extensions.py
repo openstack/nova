@@ -151,7 +151,6 @@ class ExtensionControllerTest(ExtensionTestCase):
     def setUp(self):
         super(ExtensionControllerTest, self).setUp()
         self.ext_list = [
-            "Accounts",
             "AdminActions",
             "Aggregates",
             "Certificates",
@@ -182,7 +181,6 @@ class ExtensionControllerTest(ExtensionTestCase):
             "ServerDiagnostics",
             "ServerStartStop",
             "SimpleTenantUsage",
-            "Users",
             "VirtualInterfaces",
             "Volumes",
             "VolumeTypes",
