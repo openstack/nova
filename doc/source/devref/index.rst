@@ -71,7 +71,6 @@ Module Reference
    xensmvolume
    compute
    network
-   auth
    api
    scheduler
    fakes
