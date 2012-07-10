@@ -129,6 +129,8 @@ class NovaException(Exception):
 
     """
     message = _("An unknown exception occurred.")
+    code = 500
+    headers = {}
     safe = False
 
     def __init__(self, message=None, **kwargs):
@@ -995,6 +997,8 @@ class WillNotSchedule(NovaException):
 
 class QuotaError(NovaException):
     message = _("Quota exceeded") + ": code=%(code)s"
+    code = 413
+    headers = {'Retry-After': 0}
     safe = True
 
 
