@@ -20,7 +20,6 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 
-flags.DECLARE('auth_driver', 'nova.auth.manager')
 flags.DECLARE('compute_scheduler_driver', 'nova.scheduler.multi')
 flags.DECLARE('fake_network', 'nova.network.manager')
 flags.DECLARE('iscsi_num_targets', 'nova.volume.driver')
@@ -32,7 +31,6 @@ flags.DECLARE('volume_driver', 'nova.volume.manager')
 
 def set_defaults(conf):
     conf.set_default('api_paste_config', '$state_path/etc/nova/api-paste.ini')
-    conf.set_default('auth_driver', 'nova.auth.dbdriver.DbDriver')
     conf.set_default('compute_driver', 'nova.virt.fake.FakeDriver')
     conf.set_default('connection_type', 'fake')
     conf.set_default('fake_network', True)
