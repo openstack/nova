@@ -738,6 +738,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             except exception.DiskNotFound as exc:
                 LOG.warn(_('Ignoring DiskNotFound: %s') % exc,
                          instance=instance)
+            except exception.VolumeNotFound as exc:
+                LOG.warn(_('Ignoring VolumeNotFound: %s') % exc,
+                         instance=instance)
 
         self._notify_about_instance_usage(context, instance, "shutdown.end")
 
