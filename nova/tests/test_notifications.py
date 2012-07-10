@@ -40,13 +40,15 @@ flags.DECLARE('stub_network', 'nova.compute.manager')
 class NotificationsTestCase(test.TestCase):
 
     def setUp(self):
+        super(NotificationsTestCase, self).setUp()
+
+        self.net_info = fake_network.fake_get_instance_nw_info(self.stubs, 1,
+                                                        1, spectacular=True)
 
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1,
-                spectacular=True)
+            return self.net_info
 
-        super(NotificationsTestCase, self).setUp()
         self.stubs.Set(nova.network.API, 'get_instance_nw_info',
                 fake_get_nw_info)
 
@@ -198,3 +200,9 @@ class NotificationsTestCase(test.TestCase):
         # service name should default to 'compute'
         notif = test_notifier.NOTIFICATIONS[0]
         self.assertEquals('compute.someotherhost', notif['publisher_id'])
+
+    def test_payload_has_fixed_ip_labels(self):
+        usage = notifications.usage_from_instance(self.context, self.instance,
+                                                  self.net_info, None)
+        self.assertTrue("fixed_ips" in usage)
+        self.assertEquals(usage["fixed_ips"][0]["label"], "test1")

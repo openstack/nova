@@ -269,7 +269,12 @@ def usage_from_instance(context, instance_ref, network_info,
         )
 
     if network_info is not None:
-        usage_info['fixed_ips'] = network_info.fixed_ips()
+        fixed_ips = []
+        for vif in network_info:
+            for ip in vif.fixed_ips():
+                ip["label"] = vif["network"]["label"]
+                fixed_ips.append(ip)
+        usage_info['fixed_ips'] = fixed_ips
 
     # add image metadata
     image_meta_props = image_meta(system_metadata)
