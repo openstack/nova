@@ -606,11 +606,11 @@ def create_kernel_image(context, session, instance, image_id, user_id,
         args = {}
         args['cached-image'] = image_id
         args['new-image-uuid'] = str(uuid.uuid4())
-        filename = session.call_plugin(
-                'kernel', 'create_kernel_ramdisk', args)
+        filename = session.call_plugin('kernel', 'create_kernel_ramdisk', args)
 
     if filename == "":
-        return _fetch_image(context, session, instance, image_id, image_type)
+        return _fetch_disk_image(context, session, instance, image_id,
+                                 image_type)
     else:
         vdi_type = ImageType.to_string(image_type)
         return {vdi_type: dict(uuid=None, file=filename)}
@@ -638,8 +638,7 @@ def _create_cached_image(context, session, instance, image_id, image_type):
 
     root_vdi_ref = find_cached_image(session, image_id, sr_ref)
     if root_vdi_ref is None:
-        vdis = _fetch_image(context, session, instance, image_id,
-                                   image_type)
+        vdis = _fetch_image(context, session, instance, image_id, image_type)
         root_vdi = vdis['root']
         root_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                            root_vdi['uuid'])
@@ -750,7 +749,7 @@ def _fetch_image(context, session, instance, image_id, image_type):
     for vdi_type, vdi in vdis.iteritems():
         vdi_uuid = vdi['uuid']
         LOG.debug(_("Fetched VDIs of type '%(vdi_type)s' with UUID"
-                    "  '%(vdi_uuid)s'"),
+                    " '%(vdi_uuid)s'"),
                   locals(), instance=instance)
 
     return vdis
