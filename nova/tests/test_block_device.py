@@ -85,3 +85,9 @@ class BlockDeviceTestCase(test.TestCase):
     def test_strip_dev(self):
         self.assertEqual(block_device.strip_dev('/dev/sda'), 'sda')
         self.assertEqual(block_device.strip_dev('sda'), 'sda')
+
+    def test_strip_prefix(self):
+        self.assertEqual(block_device.strip_prefix('/dev/sda'), 'a')
+        self.assertEqual(block_device.strip_prefix('a'), 'a')
+        self.assertEqual(block_device.strip_prefix('xvda'), 'a')
+        self.assertEqual(block_device.strip_prefix('vda'), 'a')
