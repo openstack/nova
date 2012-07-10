@@ -91,4 +91,16 @@ class Mount(mount.Mount):
         # root users don't need a specific unmnt_dev()
         # but ordinary users do
         utils.execute('fusermount', '-u', self.mount_dir, run_as_root=True)
+
+        # Unfortunately FUSE has an issue where it doesn't wait
+        # for processes associated with the mount to terminate.
+        # Therefore we do this manually here.  Note later versions
+        # of guestmount have the --pid-file option to help with this.
+        # Here we check every .2 seconds whether guestmount is finished
+        # but do this for at most 10 seconds.
+        wait_cmd = 'until ! ps -C guestmount -o args= | grep -qF "%s"; '
+        wait_cmd += 'do sleep .2; done'
+        wait_cmd %= self.mount_dir
+        utils.execute('timeout', '10s', 'sh', '-c', wait_cmd)
+
         self.mounted = False
