@@ -1828,8 +1828,7 @@ class KeypairAPI(base.Base):
         # NOTE: check for existing keypairs of same name
         try:
             self.db.key_pair_get(context, user_id, key_name)
-            msg = _("Key pair '%s' already exists.") % key_name
-            raise exception.KeyPairExists(explanation=msg)
+            raise exception.KeyPairExists(key_name=key_name)
         except exception.NotFound:
             pass
 
