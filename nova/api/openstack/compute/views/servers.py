@@ -104,7 +104,6 @@ class ViewBuilder(common.ViewBuilder):
                 "addresses": self._get_addresses(request, instance),
                 "accessIPv4": instance.get("access_ip_v4") or "",
                 "accessIPv6": instance.get("access_ip_v6") or "",
-                "key_name": instance.get("key_name") or "",
                 "config_drive": instance.get("config_drive"),
                 "links": self._get_links(request,
                                          instance["uuid"],
