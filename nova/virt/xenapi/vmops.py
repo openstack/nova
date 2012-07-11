@@ -601,37 +601,20 @@ class VMOps(object):
            Glance.
 
         """
-        template_vm_ref = None
+        vm_ref = self._get_vm_opaque_ref(instance)
+        label = "%s-snapshot" % instance.name
+        template_vm_ref, template_vdi_uuids = vm_utils.create_snapshot(
+                self._session, instance, vm_ref, label)
+
         try:
-            _snapshot_info = self._create_snapshot(instance)
-            template_vm_ref, template_vdi_uuids = _snapshot_info
-            # call plugin to ship snapshot off to glance
-            vm_utils.upload_image(context,
-                    self._session, instance, template_vdi_uuids, image_id)
+            vm_utils.upload_image(context, self._session, instance,
+                                  template_vdi_uuids, image_id)
         finally:
-            if template_vm_ref:
-                self._destroy(instance, template_vm_ref,
-                              destroy_kernel_ramdisk=False)
+            self._destroy(instance, template_vm_ref,
+                          destroy_kernel_ramdisk=False)
 
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
-
-    def _create_snapshot(self, instance):
-        #TODO(sirp): Add quiesce and VSS locking support when Windows support
-        # is added
-
-        LOG.debug(_("Starting snapshot for VM"), instance=instance)
-        vm_ref = self._get_vm_opaque_ref(instance)
-
-        label = "%s-snapshot" % instance.name
-        try:
-            template_vm_ref, template_vdi_uuids = vm_utils.create_snapshot(
-                    self._session, instance, vm_ref, label)
-            return template_vm_ref, template_vdi_uuids
-        except self._session.XenAPI.Failure, exc:
-            LOG.error(_("Unable to Snapshot instance: %(exc)s"), locals(),
-                      instance=instance)
-            raise
 
     def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path):
         instance_uuid = instance['uuid']
@@ -693,8 +676,10 @@ class VMOps(object):
         template_vdi_uuids = template_vm_ref = None
         try:
             # 1. Create Snapshot
-            _snapshot_info = self._create_snapshot(instance)
-            template_vm_ref, template_vdi_uuids = _snapshot_info
+            label = "%s-snapshot" % instance.name
+            template_vm_ref, template_vdi_uuids = vm_utils.create_snapshot(
+                    self._session, instance, vm_ref, label)
+
             self._update_instance_progress(context, instance,
                                            step=1,
                                            total_steps=RESIZE_TOTAL_STEPS)
