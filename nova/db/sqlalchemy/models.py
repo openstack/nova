@@ -1043,3 +1043,17 @@ class InstanceIdMapping(BASE, NovaBase):
     __tablename__ = 'instance_id_mappings'
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     uuid = Column(String(36), nullable=False)
+
+
+class TaskLog(BASE, NovaBase):
+    """Audit log for background periodic tasks"""
+    __tablename__ = 'task_log'
+    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
+    task_name = Column(String(255), nullable=False)
+    state = Column(String(255), nullable=False)
+    host = Column(String(255))
+    period_beginning = Column(String(255), default=timeutils.utcnow)
+    period_ending = Column(String(255), default=timeutils.utcnow)
+    message = Column(String(255), nullable=False)
+    task_items = Column(Integer(), default=0)
+    errors = Column(Integer(), default=0)

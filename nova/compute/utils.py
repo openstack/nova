@@ -23,7 +23,7 @@ from nova.network import model as network_model
 from nova import notifications
 from nova.openstack.common import log
 from nova.openstack.common.notifier import api as notifier_api
-
+from nova import utils
 
 FLAGS = flags.FLAGS
 LOG = log.getLogger(__name__)
@@ -108,3 +108,81 @@ def get_nw_info_for_instance(instance):
     info_cache = instance['info_cache'] or {}
     cached_nwinfo = info_cache.get('network_info') or []
     return network_model.NetworkInfo.hydrate(cached_nwinfo)
+
+
+def has_audit_been_run(context, host, timestamp=None):
+    begin, end = utils.last_completed_audit_period(before=timestamp)
+    task_log = db.task_log_get(context, "instance_usage_audit",
+                               begin, end, host)
+    if task_log:
+        return True
+    else:
+        return False
+
+
+def start_instance_usage_audit(context, begin, end, host, num_instances):
+    db.task_log_begin_task(context, "instance_usage_audit", begin, end, host,
+                           num_instances, "Instance usage audit started...")
+
+
+def finish_instance_usage_audit(context, begin, end, host, errors, message):
+    db.task_log_end_task(context, "instance_usage_audit", begin, end, host,
+                         errors, message)
+
+
+def get_audit_task_logs(context, begin=None, end=None, before=None):
+    """Returns a full log for all instance usage audit tasks on all computes.
+
+    :param begin: datetime beginning of audit period to get logs for,
+        Defaults to the beginning of the most recently completed
+        audit period prior to the 'before' date.
+    :param end: datetime ending of audit period to get logs for,
+        Defaults to the ending of the most recently completed
+        audit period prior to the 'before' date.
+    :param before: By default we look for the audit period most recently
+        completed before this datetime. Has no effect if both begin and end
+        are specified.
+    """
+    defbegin, defend = utils.last_completed_audit_period(before=before)
+    if begin is None:
+        begin = defbegin
+    if end is None:
+        end = defend
+    task_logs = db.task_log_get_all(context, "instance_usage_audit",
+                                    begin, end)
+    services = db.service_get_all_by_topic(context, "compute")
+    hosts = set(serv['host'] for serv in services)
+    seen_hosts = set()
+    done_hosts = set()
+    running_hosts = set()
+    total_errors = 0
+    total_items = 0
+    for tlog in task_logs:
+        seen_hosts.add(tlog['host'])
+        if tlog['state'] == "DONE":
+            done_hosts.add(tlog['host'])
+        if tlog['state'] == "RUNNING":
+            running_hosts.add(tlog['host'])
+        total_errors += tlog['errors']
+        total_items += tlog['task_items']
+    log = dict((tl['host'], dict(state=tl['state'],
+                              instances=tl['task_items'],
+                              errors=tl['errors'],
+                              message=tl['message']))
+              for tl in task_logs)
+    missing_hosts = hosts - seen_hosts
+    overall_status = "%s hosts done. %s errors." % (
+                'ALL' if len(done_hosts) == len(hosts)
+                else "%s of %s" % (len(done_hosts), len(hosts)),
+                total_errors)
+    return dict(period_beginning=str(begin),
+                period_ending=str(end),
+                num_hosts=len(hosts),
+                num_hosts_done=len(done_hosts),
+                num_hosts_running=len(running_hosts),
+                num_hosts_not_run=len(missing_hosts),
+                hosts_not_run=list(missing_hosts),
+                total_instances=total_items,
+                total_errors=total_errors,
+                overall_status=overall_status,
+                log=log)

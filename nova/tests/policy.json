@@ -98,6 +98,7 @@
     "compute_extension:floating_ips": [],
     "compute_extension:hosts": [],
     "compute_extension:hypervisors": [],
+    "compute_extension:instance_usage_audit_log": [],
     "compute_extension:keypairs": [],
     "compute_extension:multinic": [],
     "compute_extension:networks": [],

@@ -1100,6 +1100,14 @@ class CouldNotFetchImage(NovaException):
     message = _("Could not fetch image %(image_id)s")
 
 
+class TaskAlreadyRunning(NovaException):
+    message = _("Task %(task_name) is already running on host %(host)")
+
+
+class TaskNotRunning(NovaException):
+    message = _("Task %(task_name) is not running on host %(host)")
+
+
 def get_context_from_function_and_args(function, args, kwargs):
     """Find an arg of type RequestContext and return it.
 

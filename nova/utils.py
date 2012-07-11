@@ -299,7 +299,7 @@ EASIER_PASSWORD_SYMBOLS = ('23456789',  # Removed: 0, 1
                            'ABCDEFGHJKLMNPQRSTUVWXYZ')  # Removed: I, O
 
 
-def last_completed_audit_period(unit=None):
+def last_completed_audit_period(unit=None, before=None):
     """This method gives you the most recently *completed* audit period.
 
     arguments:
@@ -311,6 +311,8 @@ def last_completed_audit_period(unit=None):
                     like so:  'day@18'  This will begin the period at 18:00
                     UTC.  'month@15' starts a monthly period on the 15th,
                     and year@3 begins a yearly one on March 1st.
+            before: Give the audit period most recently completed before
+                    <timestamp>. Defaults to now.
 
 
     returns:  2 tuple of datetimes (begin, end)
@@ -324,7 +326,10 @@ def last_completed_audit_period(unit=None):
         unit, offset = unit.split("@", 1)
         offset = int(offset)
 
-    rightnow = timeutils.utcnow()
+    if before is not None:
+        rightnow = before
+    else:
+        rightnow = timeutils.utcnow()
     if unit not in ('month', 'day', 'year', 'hour'):
         raise ValueError('Time period must be hour, day, month or year')
     if unit == 'month':
