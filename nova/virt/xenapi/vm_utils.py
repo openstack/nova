@@ -1865,7 +1865,7 @@ def _mounted_processing(device, key, net, metadata):
                     # for xenapi, we don't 'inject' admin_password here,
                     # it's handled at instance startup time
                     disk.inject_data_into_fs(tmpdir,
-                                             key, net, None, metadata,
+                                             key, net, metadata, None,
                                              utils.execute)
             finally:
                 utils.execute('umount', dev_path, run_as_root=True)
