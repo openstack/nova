@@ -1,0 +1,35 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2012 IBM
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+from nova.compute import power_state
+
+POWERVM_NOSTATE = ''
+POWERVM_RUNNING = 'Running'
+POWERVM_SHUTDOWN = 'Not Activated'
+POWERVM_POWER_STATE = {
+    POWERVM_NOSTATE: power_state.NOSTATE,
+    POWERVM_RUNNING: power_state.RUNNING,
+    POWERVM_SHUTDOWN: power_state.SHUTDOWN,
+}
+
+POWERVM_CPU_INFO = ('ppc64', 'powervm', '3940')
+POWERVM_HYPERVISOR_TYPE = 'powervm'
+POWERVM_HYPERVISOR_VERSION = '7.1'
+
+POWERVM_MIN_MEM = 512
+POWERVM_MAX_MEM = 1024
+POWERVM_MAX_CPUS = 1
+POWERVM_MIN_CPUS = 1
