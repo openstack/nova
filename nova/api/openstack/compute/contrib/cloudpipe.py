@@ -19,7 +19,6 @@ import os
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import utils as compute_utils
@@ -58,7 +57,6 @@ class CloudpipeController(object):
     def __init__(self):
         self.compute_api = compute.API()
         self.network_api = network.API()
-        self.auth_manager = manager.AuthManager()
         self.cloudpipe = pipelib.CloudPipe()
         self.setup()
 

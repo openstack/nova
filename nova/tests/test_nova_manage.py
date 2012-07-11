@@ -20,7 +20,6 @@ import os
 import StringIO
 import sys
 
-import nova.auth.manager
 from nova import context
 from nova import db
 from nova import test

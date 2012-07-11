@@ -28,8 +28,6 @@ class TestNoAuthMiddleware(test.TestCase):
     def setUp(self):
         super(TestNoAuthMiddleware, self).setUp()
         self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
-        fakes.FakeAuthManager.clear_fakes()
-        fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_networking(self.stubs)
 
