@@ -89,10 +89,10 @@ def _untranslate_volume_summary_view(context, vol):
     d['snapshot_id'] = vol.snapshot_id
 
     d['vol_metadata'] = []
-    for k, v in vol.metadata:
+    for key, value in vol.metadata.items():
         item = {}
-        item['key'] = k
-        item['value'] = v
+        item['key'] = key
+        item['value'] = value
         d['vol_metadata'].append(item)
 
     return d
