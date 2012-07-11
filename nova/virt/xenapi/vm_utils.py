@@ -47,6 +47,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk import api as disk
+from nova.virt import driver
 from nova.virt.xenapi import volume_utils
 
 
