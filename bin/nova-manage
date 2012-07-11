@@ -366,8 +366,11 @@ class FloatingIpCommands(object):
     def delete(self, ip_range):
         """Deletes floating ips by range"""
         for address in self.address_to_hosts(ip_range):
-            db.floating_ip_destroy(context.get_admin_context(),
-                                   str(address))
+            try:
+                db.floating_ip_destroy(context.get_admin_context(),
+                                       str(address))
+            except exception.FloatingIpNotFoundForAddress as ex:
+                print "Warning: %s" % ex
 
     @args('--host', dest="host", metavar='<host>', help='Host')
     def list(self, host=None):
