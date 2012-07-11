@@ -58,3 +58,9 @@ class TestNovaKeystoneContextMiddleware(test.TestCase):
         response = self.request.get_response(self.middleware)
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(self.context.user_id, 'testuserid')
+
+    def test_invalid_service_catalog(self):
+        self.request.headers['X_USER'] = 'testuser'
+        self.request.headers['X_SERVICE_CATALOG'] = "bad json"
+        response = self.request.get_response(self.middleware)
+        self.assertEqual(response.status, '500 Internal Server Error')
