@@ -343,7 +343,13 @@ class FloatingIpCommands(object):
         try:
             return [netaddr.IPAddress(addresses)]
         except ValueError:
-            return netaddr.IPNetwork(addresses).iter_hosts()
+            net = netaddr.IPNetwork(addresses)
+            if net.size < 4:
+                reason = _("/%s should be specified as single address(es) "
+                           "not in cidr format") % net.prefixlen
+                raise exception.InvalidInput(reason=reason)
+            else:
+                return net.iter_hosts()
 
     @args('--ip_range', dest="ip_range", metavar='<range>', help='IP range')
     @args('--pool', dest="pool", metavar='<pool>', help='Optional pool')
