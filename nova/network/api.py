@@ -86,6 +86,12 @@ class API(base.Base):
                         {'method': 'get_network',
                          'args': {'network_uuid': network_uuid}})
 
+    def create(self, context, **kwargs):
+        return rpc.call(context,
+                        FLAGS.network_topic,
+                        {'method': 'create_networks',
+                         'args': kwargs})
+
     def delete(self, context, network_uuid):
         return rpc.call(context,
                         FLAGS.network_topic,
