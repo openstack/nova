@@ -1051,11 +1051,13 @@ class VMOps(object):
     def suspend(self, instance):
         """Suspend the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
+        self._acquire_bootlock(vm_ref)
         self._session.call_xenapi('VM.suspend', vm_ref)
 
     def resume(self, instance):
         """Resume the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
+        self._release_bootlock(vm_ref)
         self._session.call_xenapi('VM.resume', vm_ref, False, True)
 
     def rescue(self, context, instance, network_info, image_meta):
