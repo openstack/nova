@@ -52,6 +52,7 @@ class ComputeRpcAPITestCase(test.TestCase):
         rpcapi = rpcapi_class()
         expected_retval = 'foo' if method == 'call' else None
 
+        expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
         expected_msg = rpcapi.make_msg(method, **kwargs)
         if 'host_param' in expected_msg['args']:
             host_param = expected_msg['args']['host_param']
@@ -70,7 +71,7 @@ class ComputeRpcAPITestCase(test.TestCase):
                 expected_msg['args']['instance_name'] = instance['name']
             else:
                 expected_msg['args']['instance_uuid'] = instance['uuid']
-        expected_msg['version'] = rpcapi.RPC_API_VERSION
+        expected_msg['version'] = expected_version
 
         cast_and_call = ['confirm_resize', 'stop_instance']
         if rpc_method == 'call' and method in cast_and_call:
@@ -282,7 +283,8 @@ class ComputeRpcAPITestCase(test.TestCase):
                 enabled='enabled', host='host')
 
     def test_get_host_uptime(self):
-        self._test_compute_api('get_host_uptime', 'call', host='host')
+        self._test_compute_api('get_host_uptime', 'call', host='host',
+                version='1.1')
 
     def test_snapshot_instance(self):
         self._test_compute_api('snapshot_instance', 'cast',

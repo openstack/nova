@@ -57,11 +57,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.1 - Adds get_host_uptime()
     '''
 
-    RPC_API_VERSION = '1.1'
+    BASE_RPC_API_VERSION = '1.0'
 
     def __init__(self):
-        super(ComputeAPI, self).__init__(topic=FLAGS.compute_topic,
-                                         default_version=self.RPC_API_VERSION)
+        super(ComputeAPI, self).__init__(
+                topic=FLAGS.compute_topic,
+                default_version=self.BASE_RPC_API_VERSION)
 
     def add_aggregate_host(self, ctxt, aggregate_id, host_param, host):
         '''Add aggregate host.
@@ -316,7 +317,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def get_host_uptime(self, ctxt, host):
         topic = _compute_topic(self.topic, ctxt, host, None)
-        return self.call(ctxt, self.make_msg('get_host_uptime'), topic)
+        return self.call(ctxt, self.make_msg('get_host_uptime'), topic,
+                version='1.1')
 
     def snapshot_instance(self, ctxt, instance, image_id, image_type,
             backup_type, rotation):
@@ -371,11 +373,12 @@ class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.0 - Initial version.
     '''
 
-    RPC_API_VERSION = '1.0'
+    BASE_RPC_API_VERSION = '1.0'
 
     def __init__(self):
-        super(SecurityGroupAPI, self).__init__(topic=FLAGS.compute_topic,
-                                         default_version=self.RPC_API_VERSION)
+        super(SecurityGroupAPI, self).__init__(
+                topic=FLAGS.compute_topic,
+                default_version=self.BASE_RPC_API_VERSION)
 
     def refresh_security_group_rules(self, ctxt, security_group_id, host):
         self.cast(ctxt, self.make_msg('refresh_security_group_rules',

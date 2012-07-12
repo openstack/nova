@@ -40,7 +40,7 @@ class ConsoleRpcAPITestCase(test.TestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = console_rpcapi.ConsoleAPI()
         expected_msg = rpcapi.make_msg(method, **kwargs)
-        expected_msg['version'] = rpcapi.RPC_API_VERSION
+        expected_msg['version'] = rpcapi.BASE_RPC_API_VERSION
 
         self.cast_ctxt = None
         self.cast_topic = None

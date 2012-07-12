@@ -33,11 +33,12 @@ class ConsoleAuthAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.0 - Initial version.
     '''
 
-    RPC_API_VERSION = '1.0'
+    BASE_RPC_API_VERSION = '1.0'
 
     def __init__(self):
-        super(ConsoleAuthAPI, self).__init__(topic=FLAGS.consoleauth_topic,
-                                      default_version=self.RPC_API_VERSION)
+        super(ConsoleAuthAPI, self).__init__(
+                topic=FLAGS.consoleauth_topic,
+                default_version=self.BASE_RPC_API_VERSION)
 
     def authorize_console(self, ctxt, token, console_type, host, port,
                           internal_access_path):
