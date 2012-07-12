@@ -846,7 +846,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :returns: True if the reboot succeeded
         """
-        dom = self._lookup_by_name(instance.name)
+        dom = self._lookup_by_name(instance["name"])
         (state, _max_mem, _mem, _cpus, _t) = dom.info()
         state = LIBVIRT_POWER_STATE[state]
         # NOTE(vish): This check allows us to reboot an instance that
@@ -1291,10 +1291,10 @@ class LibvirtDriver(driver.ComputeDriver):
             swap_device = self.default_third_device
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral0',
-                                   os_type=instance.os_type)
+                                   os_type=instance["os_type"])
             fname = "ephemeral_%s_%s_%s" % ("0",
                                             ephemeral_gb,
-                                            instance.os_type)
+                                            instance["os_type"])
             size = ephemeral_gb * 1024 * 1024 * 1024
             image('disk.local').cache(fn=fn,
                                       fname=fname,
@@ -1306,11 +1306,11 @@ class LibvirtDriver(driver.ComputeDriver):
         for eph in driver.block_device_info_get_ephemerals(block_device_info):
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral%d' % eph['num'],
-                                   os_type=instance.os_type)
+                                   os_type=instance["os_type"])
             size = eph['size'] * 1024 * 1024 * 1024
             fname = "ephemeral_%s_%s_%s" % (eph['num'],
                                             eph['size'],
-                                            instance.os_type)
+                                            instance["os_type"])
             image(_get_eph_disk(eph)).cache(fn=fn,
                                             fname=fname,
                                             size=size,
@@ -2286,7 +2286,7 @@ class LibvirtDriver(driver.ComputeDriver):
             timeout_count.pop()
             if len(timeout_count) == 0:
                 msg = _('Timeout migrating for %s. nwfilter not found.')
-                raise exception.NovaException(msg % instance_ref.name)
+                raise exception.NovaException(msg % instance_ref["name"])
             time.sleep(1)
 
     def live_migration(self, ctxt, instance_ref, dest,
@@ -2339,7 +2339,7 @@ class LibvirtDriver(driver.ComputeDriver):
             flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
             logical_sum = reduce(lambda x, y: x | y, flagvals)
 
-            dom = self._conn.lookupByName(instance_ref.name)
+            dom = self._conn.lookupByName(instance_ref["name"])
             dom.migrateToURI(FLAGS.live_migration_uri % dest,
                              logical_sum,
                              None,
@@ -2454,9 +2454,9 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         # Define migrated instance, otherwise, suspend/destroy does not work.
         dom_list = self._conn.listDefinedDomains()
-        if instance_ref.name not in dom_list:
+        if instance_ref["name"] not in dom_list:
             instance_dir = os.path.join(FLAGS.instances_path,
-                                        instance_ref.name)
+                                        instance_ref["name"])
             xml_path = os.path.join(instance_dir, 'libvirt.xml')
             # In case of block migration, destination does not have
             # libvirt.xml
@@ -2468,7 +2468,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # libvirt.xml should be made by to_xml(), but libvirt
             # does not accept to_xml() result, since uuid is not
             # included in to_xml() result.
-            dom = self._lookup_by_name(instance_ref.name)
+            dom = self._lookup_by_name(instance_ref["name"])
             self._conn.defineXML(dom.XMLDesc(0))
 
     def get_instance_disk_info(self, instance_name):
