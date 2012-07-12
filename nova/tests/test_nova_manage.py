@@ -34,7 +34,7 @@ TOPDIR = os.path.normpath(os.path.join(
 NOVA_MANAGE_PATH = os.path.join(TOPDIR, 'bin', 'nova-manage')
 
 sys.dont_write_bytecode = True
-nova_manage = imp.load_source('nova_manage.py', NOVA_MANAGE_PATH)
+nova_manage = imp.load_source('nova_manage', NOVA_MANAGE_PATH)
 sys.dont_write_bytecode = False
 
 
