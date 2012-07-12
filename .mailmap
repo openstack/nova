@@ -1,27 +1,22 @@
 # Format is:
 # <preferred e-mail> <other e-mail 1>
 # <preferred e-mail> <other e-mail 2>
+<Armando.Migliaccio@eu.citrix.com> <amigliaccio@internap.com>
+<Armando.Migliaccio@eu.citrix.com> <armando.migliaccio@citrix.com>
 <aaron.lee@rackspace.com> <wwkeyboard@gmail.com>
+<anotherjesse@gmail.com> <jesse@aire.local>
 <anotherjesse@gmail.com> <jesse@dancelamb>
 <anotherjesse@gmail.com> <jesse@gigantor.local>
 <anotherjesse@gmail.com> <jesse@ubuntu>
-<anotherjesse@gmail.com> <jesse@aire.local>
 <ant@openstack.org> <amesserl@rackspace.com>
-<Armando.Migliaccio@eu.citrix.com> <armando.migliaccio@citrix.com>
-<Armando.Migliaccio@eu.citrix.com> <amigliaccio@internap.com>
-<brian.elliott@rackspace.com> <bdelliott@gmail.com>
-<brian.lamar@rackspace.com> <brian.lamar@gmail.com>
 <brian.waldon@rackspace.com> <bcwaldon@gmail.com>
 <bschott@isi.edu> <bfschott@gmail.com>
 <cbehrens@codestud.com> <chris.behrens@rackspace.com>
-<cbehrens@codestud.com> <cbehrens+github@codestud.com>
 <chiradeep@cloud.com> <chiradeep@chiradeep-lt2>
-<code@term.ie> <github@anarkystic.com>
-<code@term.ie> <termie@preciousroy.local>
 <corywright@gmail.com> <cory.wright@rackspace.com>
-<dan@nicira.com> <danwent@dan-xs3-cs>
 <dan@nicira.com> <danwent@gmail.com>
-<Dave.Walker@canonical.com> <DaveWalker@ubuntu.com>
+<dave.walker@canonical.com> <Dave.Walker@Canonical.com>
+<dave.walker@canonical.com> <DaveWalker@ubuntu.com>
 <derekh@redhat.com> <higginsd@gmail.com>
 <devin.carlen@gmail.com> <devcamcar@illian.local>
 <doug.hellmann@dreamhost.com> <doug.hellmann@gmail.com>
@@ -29,56 +24,94 @@
 <edouard1.thuleau@orange.com> <thuleau@gmail.com>
 <ewan.mellor@citrix.com> <emellor@silver>
 <ghe@debian.org> <ghe.rivero@gmail.com>
+<ilyaalekseyev@acm.org> <ialekseev@griddynamics.com>
+<ilyaalekseyev@acm.org> <ilya@oscloud.ru>
 <itoumsn@nttdata.co.jp> <itoumsn@shayol>
-<jake@ansolabs.com> <jake@markupisart.com>
 <jake@ansolabs.com> <admin@jakedahn.com>
+<jake@ansolabs.com> <jake@markupisart.com>
 <jaypipes@gmail.com> <jpipes@serialcoder>
-<jeblair@hp.com> <james.blair@rackspace.com>
 <jeblair@hp.com> <corvus@inaugust.com>
+<jeblair@hp.com> <james.blair@rackspace.com>
+<jhtran@att.com> <jtran@attinteractive.com>
 <jmckenty@gmail.com> <jmckenty@joshua-mckentys-macbook-pro.local>
 <jmckenty@gmail.com> <jmckenty@yyj-dhcp171.corp.flock.com>
 <jmckenty@gmail.com> <joshua.mckenty@nasa.gov>
 <johannes.erdfelt@rackspace.com> <johannes@compute3.221.st>
 <josh@jk0.org> <josh.kearney@rackspace.com>
 <justin@fathomdb.com> <justinsb@justinsb-desktop>
-<justin@fathomdb.com> <superstack@superstack.org>
+<kshileev@gmail.com> <kshileev@griddynamics.com>
 <lorin@nimbisservices.com> <lorin@isi.edu>
-<masumotok@nttdata.co.jp> <masumotok@nttdata.co.jp>
-<masumotok@nttdata.co.jp> <root@openstack2-api>
-<matt.dietz@rackspace.com> <matthewdietz@Matthew-Dietzs-MacBook-Pro.local>
-<matt.dietz@rackspace.com> <mdietz@openstack>
 <mikal@stillhq.com> <michael.still@canonical.com>
 <mordred@inaugust.com> <mordred@hudson>
 <naveedm9@gmail.com> <naveed.massjouni@rackspace.com>
+<paul@openstack.org> <paul.voccio@rackspace.com>
+<paul@openstack.org> <paul@substation9.com>
+<paul@openstack.org> <pvoccio@castor.local>
+<rconradharris@gmail.com> <rick.harris@rackspace.com>
+<reldan@oscloud.ru> <enugaev@griddynamics.com>
+<rlane@wikimedia.org> <laner@controller>
 <rnirmal@gmail.com> <nirmal.ranganathan@rackspace.com>
 <rnirmal@gmail.com> <nirmal.ranganathan@rackspace.coom>
-<paul@openstack.org> <paul.voccio@rackspace.com>
-<paul@openstack.org> <pvoccio@castor.local>
-<paul@openstack.org> <paul@substation9.com>
-<rconradharris@gmail.com> <rick.harris@rackspace.com>
-<rlane@wikimedia.org> <laner@controller>
 <sandy.walsh@rackspace.com> <sandy@sandywalsh.com>
-<sleepsonthefloor@gmail.com> <root@tonbuntu>
 <soren.hansen@rackspace.com> <soren@linux2go.dk>
-<soren@linux2go.dk> <sorhanse@cisco.com>
+<sorenhansen@rackspace.com> <sorhanse@cisco.com>
 <throughnothing@gmail.com> <will.wolf@rackspace.com>
 <tim.simpson@rackspace.com> <tim.simpson4@gmail.com>
 <todd@ansolabs.com> <todd@lapex>
 <todd@ansolabs.com> <todd@rubidine.com>
 <todd@ansolabs.com> <xtoddx@gmail.com>
 <trey.morris@rackspace.com> <treyemorris@gmail.com>
-<tushar.vitthal.patil@gmail.com> <tpatil@vertex.co.in>
-<ueno.nachi@lab.ntt.co.jp> <nati.ueno@gmail.com>
-<ueno.nachi@lab.ntt.co.jp> <nova@u4>
-<ueno.nachi@lab.ntt.co.jp> <openstack@lab.ntt.co.jp>
-<vishvananda@gmail.com> <root@mirror.nasanebula.net>
-<vishvananda@gmail.com> <root@ubuntu>
-<vishvananda@gmail.com> <vishvananda@yahoo.com>
-<ilyaalekseyev@acm.org> <ialekseev@griddynamics.com>
-<ilyaalekseyev@acm.org> <ilya@oscloud.ru>
-<reldan@oscloud.ru> <enugaev@griddynamics.com>
-<kshileev@gmail.com> <kshileev@griddynamics.com>
-<nsokolov@griddynamics.com> <nsokolov@griddynamics.net>
 <troy.toman@rackspace.com> <ttcl@mac.com>
+<tushar.vitthal.patil@gmail.com> <tpatil@vertex.co.in>
+<vishvananda@gmail.com> <vishvananda@yahoo.com>
 <zulcss@ubuntu.com> <chuck.short@canonical.com>
-<jhtran@att.com> <jtran@attinteractive.com>
+Alvaro Lopez Garcia <aloga@ifca.unican.es> Alvaro Lopez <aloga@ifca.unican.es>
+Andrew Bogott <abogott@wikimedia.org> Andrew Bogott <ABogott@WikiMedia.org>
+Andy Smith <code@term.ie> Andy Smith <termie@preciousroy.local>
+Andy Smith <code@term.ie> andy <github@anarkystic.com>
+Andy Smith <code@term.ie> termie <code@term.ie>
+Andy Smith <code@term.ie> termie <github@anarkystic.com>
+Anne Gentle <anne@openstack.org> annegentle <anne@openstack.org>
+Anthony Young <sleepsonthefloor@gmail.com> <root@tonbuntu>
+Anthony Young <sleepsonthefloor@gmail.com> Sleepsonthefloor <sleepsonthefloor@gmail.com>
+Arvind Somya <asomya@cisco.com> <asomya@cisco.com>
+Arvind Somya <asomya@cisco.com> Arvind Somya asomya@cisco.com <>
+Brad McConnell <bmcconne@rackspace.com> Brad McConnell bmcconne@rackspace.com <>
+Brian Lamar <brian.lamar@rackspace.com> <brian.lamar@gmail.com>
+Brian Lamar <brian.lamar@rackspace.com> brian-lamar <brian.lamar@rackspace.com>
+Dan Wendlandt <dan@nicira.com> danwent <dan@nicira.com>
+Dan Wendlandt <dan@nicira.com> danwent <danwent@dan-xs3-cs>
+Dan Wendlandt <dan@nicira.com> danwent@gmail.com <>
+Dan Wendlandt <dan@nicira.com> danwent@gmail.com <dan@nicira.com>
+Jake Dahn <jake@ansolabs.com> jakedahn <jake@ansolabs.com>
+Jason Koelker <jason@koelker.net> Jason Kölker <jason@koelker.net>
+Jay Pipes <jaypipes@gmail.com> jaypipes@gmail.com <>
+Joel Moore <joelbm24@gmail.com> Joel Moore joelbm24@gmail.com <>
+John Griffith <john.griffith@solidfire.com> john-griffith <john.griffith@solidfire.com>
+John Tran <jtran@attinteractive.com> John Tran <jhtran@att.com>
+Justin Santa Barbara <justin@fathomdb.com> <justin@fathomdb.com>
+Justin Santa Barbara <justin@fathomdb.com> Justin SB <justin@fathomdb.com>
+Justin Santa Barbara <justin@fathomdb.com> Superstack <superstack@superstack.org>
+Kei Masumoto <masumotok@nttdata.co.jp> <root@openstack2-api>
+Kei Masumoto <masumotok@nttdata.co.jp> Kei masumoto <masumotok@nttdata.co.jp>
+Kei Masumoto <masumotok@nttdata.co.jp> masumotok <masumotok@nttdata.co.jp>
+Matt Dietz <matt.dietz@rackspace.com> <matthewdietz@Matthew-Dietzs-MacBook-Pro.local>
+Matt Dietz <matt.dietz@rackspace.com> Cerberus <matt.dietz@rackspace.com>
+Matt Dietz <matt.dietz@rackspace.com> Matthew Dietz <matt.dietz@rackspace.com>
+Matt Dietz <matt.dietz@rackspace.com> matt.dietz@rackspace.com <>
+Matt Dietz <matt.dietz@rackspace.com> mdietz <mdietz@openstack>
+NTT PF Lab. <ueno.nachi@lab.ntt.co.jp> <nati.ueno@gmail.com>
+NTT PF Lab. <ueno.nachi@lab.ntt.co.jp> <openstack@lab.ntt.co.jp>
+NTT PF Lab. <ueno.nachi@lab.ntt.co.jp> Nachi Ueno <ueno.nachi@lab.ntt.co.jp>
+NTT PF Lab. <ueno.nachi@lab.ntt.co.jp> nova <nova@u4>
+Nikolay Sokolov <nsokolov@griddynamics.com> Nickolay Sokolov <nsokolov@griddynamics.net>
+Paul Voccio <paul@openstack.org> paul@openstack.org <>
+Philip Knouff <philip.knouff@mailtrust.com> Phlip Knouff <philip.knouff@mailtrust.com>
+Renuka Apte <renuka.apte@citrix.com> renukaapte <renuka.apte@citrix.com>
+Sandy Walsh <sandy.walsh@rackspace.com> SandyWalsh <sandy.walsh@rackspace.com>
+Sateesh Chodapuneedi <sateesh.chodapuneedi@citrix.com> sateesh <sateesh.chodapuneedi@citrix.com>
+Vishvananda Ishaya <vishvananda@gmail.com> <root@mirror.nasanebula.net>
+Vishvananda Ishaya <vishvananda@gmail.com> <root@ubuntu>
+Vivek YS <vivek.ys@gmail.com> Vivek YS vivek.ys@gmail.com <>
+Zhongyue Luo <lzyeval@gmail.com> lzyeval <lzyeval@gmail.com>
+Édouard Thuleau <edouard1.thuleau@orange.com> Thuleau Édouard <thuleau@gmail.com>
