@@ -395,9 +395,9 @@ class LibvirtDriver(driver.ComputeDriver):
     def instance_exists(self, instance_id):
         """Efficient override of base instance_exists method."""
         try:
-            self._conn.lookupByName(instance_id)
+            self._lookup_by_name(instance_id)
             return True
-        except libvirt.libvirtError:
+        except exception.NovaException:
             return False
 
     # TODO(Shrews): Remove when libvirt Bugzilla bug # 836647 is fixed.
@@ -883,7 +883,7 @@ class LibvirtDriver(driver.ComputeDriver):
         existing domain.
         """
 
-        virt_dom = self._conn.lookupByName(instance['name'])
+        virt_dom = self._lookup_by_name(instance['name'])
         # NOTE(itoumsn): Use XML delived from the running instance.
         if not xml:
             xml = virt_dom.XMLDesc(0)
@@ -952,7 +952,7 @@ class LibvirtDriver(driver.ComputeDriver):
     @exception.wrap_exception()
     def resume_state_on_host_boot(self, context, instance, network_info):
         """resume guest state when a host is booted"""
-        virt_dom = self._conn.lookupByName(instance['name'])
+        virt_dom = self._lookup_by_name(instance['name'])
         xml = virt_dom.XMLDesc(0)
         self._create_domain_and_network(xml, instance, network_info)
 
@@ -967,7 +967,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        virt_dom = self._conn.lookupByName(instance['name'])
+        virt_dom = self._lookup_by_name(instance['name'])
         unrescue_xml = virt_dom.XMLDesc(0)
         unrescue_xml_path = os.path.join(FLAGS.instances_path,
                                          instance['name'],
@@ -994,7 +994,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                          instance['name'],
                                          'unrescue.xml')
         xml = libvirt_utils.load_file(unrescue_xml_path)
-        virt_dom = self._conn.lookupByName(instance['name'])
+        virt_dom = self._lookup_by_name(instance['name'])
         self._destroy(instance)
         self._create_domain(xml, virt_dom)
         libvirt_utils.file_delete(unrescue_xml_path)
@@ -2339,7 +2339,7 @@ class LibvirtDriver(driver.ComputeDriver):
             flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
             logical_sum = reduce(lambda x, y: x | y, flagvals)
 
-            dom = self._conn.lookupByName(instance_ref["name"])
+            dom = self._lookup_by_name(instance_ref["name"])
             dom.migrateToURI(FLAGS.live_migration_uri % dest,
                              logical_sum,
                              None,
