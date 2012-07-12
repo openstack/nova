@@ -337,7 +337,8 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def live_migration(self, ctxt, instance_ref, dest,
-                       post_method, recover_method, block_migration=False):
+                       post_method, recover_method, block_migration=False,
+                       migrate_data=None):
         """Live migration of an instance to another host.
 
         :params ctxt: security context
@@ -352,6 +353,8 @@ class ComputeDriver(object):
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
         :params block_migration: if true, migrate VM disk.
+        :params migrate_data: implementation specific params.
+
         """
         raise NotImplementedError()
 
