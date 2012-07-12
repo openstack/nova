@@ -1903,7 +1903,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                   '%(num_networks)s. Network size is %(network_size)s') %
                   kwargs)
 
-        NetworkManager.create_networks(self, context, vpn=True, **kwargs)
+        return NetworkManager.create_networks(
+            self, context, vpn=True, **kwargs)
 
     def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
