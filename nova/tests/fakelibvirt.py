@@ -424,6 +424,19 @@ class Domain(object):
         self._snapshots[name] = snapshot
         return snapshot
 
+    def vcpus(self):
+        vcpus = ([], [])
+        for i in range(0, self._def['vcpu']):
+            vcpus[0].append((i, 1, 120405L, i))
+            vcpus[1].append((True, True, True, True))
+        return vcpus
+
+    def memoryStats(self):
+        return {}
+
+    def maxMemory(self):
+        return self._def['memory']
+
 
 class DomainSnapshot(object):
     def __init__(self, name, domain):
