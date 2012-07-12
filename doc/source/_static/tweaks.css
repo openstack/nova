@@ -1,218 +1,94 @@
-ul.todo_list {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
+body {
+  background: #fff url(../_static/header_bg.jpg) top left no-repeat;
 }
 
-ul.todo_list li {
-    display: block;
-    margin: 0;
-    padding: 7px 0;
-    border-top: 1px solid #eee;
+#header {
+  width: 950px;
+  margin: 0 auto;
+  height: 102px;
 }
 
-ul.todo_list li p {
-    display: inline;
+#header h1#logo {
+  background: url(../_static/openstack_logo.png) top left no-repeat;
+  display: block;
+  float: left;
+  text-indent: -9999px;
+  width: 175px;
+  height: 55px;
 }
 
-ul.todo_list li p.link {
-    font-weight: bold;
+#navigation {
+  background: url(../_static/header-line.gif) repeat-x 0 bottom;
+  display: block;
+  float: left;
+  margin: 27px 0 0 25px;
+  padding: 0;
 }
 
-ul.todo_list li p.details {
-    font-style: italic;
+#navigation li{
+  float: left;
+  display: block;
+  margin-right: 25px;
 }
 
-ul.todo_list li {
+#navigation li a {
+  display: block;
+  font-weight: normal;
+  text-decoration: none;
+  background-position: 50% 0;
+  padding: 20px 0 5px;
+  color: #353535;
+  font-size: 14px;
 }
 
-div.admonition {
-    border: 1px solid #8F1000;
+#navigation li a.current, #navigation li a.section {
+  border-bottom: 3px solid #cf2f19;
+  color: #cf2f19;
 }
 
-div.admonition p.admonition-title {
-    background-color: #8F1000;
-    border-bottom: 1px solid #8E8E8E;
+div.related {
+  background-color: #cde2f8;
+  border: 1px solid #b0d3f8;
 }
 
-a {
-	color: #CF2F19;
+div.related a {
+  color: #4078ba;
+  text-shadow: none;
 }
 
-div.related ul li a {
-	color: #CF2F19;
+div.sphinxsidebarwrapper {
+  padding-top: 0;
 }
 
-div.sphinxsidebar h4 {
-	background-color:#8E8E8E;
-	border:1px solid #255E6E;
-	color:white;
-	font-size:1em;
-	margin:1em 0 0.5em;
-	padding:0.1em 0 0.1em 0.5em;
+pre {
+  color: #555;
 }
 
-em {
-    font-style: normal;
+div.documentwrapper h1, div.documentwrapper h2, div.documentwrapper h3, div.documentwrapper h4, div.documentwrapper h5, div.documentwrapper h6 {
+  font-family: 'PT Sans', sans-serif !important;
+  color: #264D69;
+  border-bottom: 1px dotted #C5E2EA;
+  padding: 0;
+  background: none;
+  padding-bottom: 5px;
 }
 
-table.docutils {
-	font-size: 11px;
+div.documentwrapper h3 {
+  color: #CF2F19;
 }
 
-.tweet_list li {
-    font-size: 0.9em;
-    border-bottom: 1px solid #eee;
-    padding: 5px 0;
+a.headerlink {
+  color: #fff !important;
+  margin-left: 5px;
+  background: #CF2F19 !important;
 }
 
-.tweet_list li .tweet_avatar {
-    float: left;
+div.body {
+  margin-top: -25px;
+  margin-left: 230px;
 }
 
-/* ------------------------------------------
-PURE CSS SPEECH BUBBLES
-by Nicolas Gallagher
-- http://nicolasgallagher.com/pure-css-speech-bubbles/
-
-http://nicolasgallagher.com
-http://twitter.com/necolas
-
-Created: 02 March 2010
-Version: 1.1 (21 October 2010)
-
-Dual licensed under MIT and GNU GPLv2 © Nicolas Gallagher
------------------------------------------- */
-/* THE SPEECH BUBBLE
-------------------------------------------------------------------------------------------------------------------------------- */
-
-/* THE SPEECH BUBBLE
-------------------------------------------------------------------------------------------------------------------------------- */
-
-.triangle-border {
-	position:relative;
-	padding:15px;
-	margin:1em 0 3em;
-	border:5px solid #BC1518;
-	color:#333;
-	background:#fff;
-
-	/* css3 */
-	-moz-border-radius:10px;
-	-webkit-border-radius:10px;
-	border-radius:10px;
+div.document {
+  width: 960px;
+  margin: 0 auto;
 }
-
-/* Variant : for left positioned triangle
------------------------------------------- */
-
-.triangle-border.left {
-	margin-left:30px;
-}
-
-/* Variant : for right positioned triangle
------------------------------------------- */
-
-.triangle-border.right {
-	margin-right:30px;
-}
-
-/* THE TRIANGLE
-------------------------------------------------------------------------------------------------------------------------------- */
-
-.triangle-border:before {
-	content:"";
-	display:block; /* reduce the damage in FF3.0 */
-	position:absolute;
-	bottom:-40px; /* value = - border-top-width - border-bottom-width */
-	left:40px; /* controls horizontal position */
-	width:0;
-	height:0;
-	border:20px solid transparent;
-	border-top-color:#BC1518;
-}
-
-/* creates the smaller  triangle */
-.triangle-border:after {
-	content:"";
-	display:block; /* reduce the damage in FF3.0 */
-	position:absolute;
-	bottom:-26px; /* value = - border-top-width - border-bottom-width */
-	left:47px; /* value = (:before left) + (:before border-left) - (:after border-left) */
-	width:0;
-	height:0;
-	border:13px solid transparent;
-	border-top-color:#fff;
-}
-
-/* Variant : top
------------------------------------------- */
-
-/* creates the larger triangle */
-.triangle-border.top:before {
-	top:-40px; /* value = - border-top-width - border-bottom-width */
-	right:40px; /* controls horizontal position */
-	bottom:auto;
-	left:auto;
-	border:20px solid transparent;
-	border-bottom-color:#BC1518;
-}
-
-/* creates the smaller  triangle */
-.triangle-border.top:after {
-	top:-26px; /* value = - border-top-width - border-bottom-width */
-	right:47px; /* value = (:before right) + (:before border-right) - (:after border-right) */
-	bottom:auto;
-	left:auto;
-	border:13px solid transparent;
-	border-bottom-color:#fff;
-}
-
-/* Variant : left
------------------------------------------- */
-
-/* creates the larger triangle */
-.triangle-border.left:before {
-	top:10px; /* controls vertical position */
-	left:-30px; /* value = - border-left-width - border-right-width */
-	bottom:auto;
-	border-width:15px 30px 15px 0;
-	border-style:solid;
-	border-color:transparent #BC1518;
-}
-
-/* creates the smaller  triangle */
-.triangle-border.left:after {
-	top:16px; /* value = (:before top) + (:before border-top) - (:after border-top) */
-	left:-21px; /* value = - border-left-width - border-right-width */
-	bottom:auto;
-	border-width:9px 21px 9px 0;
-	border-style:solid;
-	border-color:transparent #fff;
-}
-
-/* Variant : right
------------------------------------------- */
-
-/* creates the larger triangle */
-.triangle-border.right:before {
-	top:10px; /* controls vertical position */
-	right:-30px; /* value = - border-left-width - border-right-width */
-	bottom:auto;
-    left:auto;
-	border-width:15px 0 15px 30px;
-	border-style:solid;
-	border-color:transparent #BC1518;
-}
-
-/* creates the smaller  triangle */
-.triangle-border.right:after {
-	top:16px; /* value = (:before top) + (:before border-top) - (:after border-top) */
-	right:-21px; /* value = - border-left-width - border-right-width */
-	bottom:auto;
-    left:auto;
-	border-width:9px 0 9px 21px;
-	border-style:solid;
-	border-color:transparent #fff;
-}
-
