@@ -174,6 +174,7 @@ def fake_network(network_id, ipv6=None):
              'broadcast': '192.168.%d.255' % network_id,
              'dns1': '192.168.%d.3' % network_id,
              'dns2': '192.168.%d.4' % network_id,
+             'dns3': '192.168.%d.3' % network_id,
              'vlan': None,
              'host': None,
              'project_id': 'fake_project',
