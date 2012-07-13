@@ -29,7 +29,8 @@ from nova import quota
 QUOTAS = quota.QUOTAS
 
 
-authorize = extensions.extension_authorizer('compute', 'quotas')
+authorize_update = extensions.extension_authorizer('compute', 'quotas:update')
+authorize_show = extensions.extension_authorizer('compute', 'quotas:show')
 
 
 class QuotaTemplate(xmlutil.TemplateBuilder):
@@ -73,7 +74,7 @@ class QuotaSetsController(object):
     @wsgi.serializers(xml=QuotaTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize_show(context)
         try:
             sqlalchemy_api.authorize_project_context(context, id)
             return self._format_quota_set(id, self._get_quotas(context, id))
@@ -83,7 +84,7 @@ class QuotaSetsController(object):
     @wsgi.serializers(xml=QuotaTemplate)
     def update(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize_update(context)
         project_id = id
         for key in body['quota_set'].keys():
             if key in QUOTAS:
@@ -100,7 +101,7 @@ class QuotaSetsController(object):
     @wsgi.serializers(xml=QuotaTemplate)
     def defaults(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        authorize_show(context)
         return self._format_quota_set(id, QUOTAS.get_defaults(context))
 
 
