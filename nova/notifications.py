@@ -86,7 +86,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
 
 def _send_instance_update_notification(context, instance, old_vm_state,
         old_task_state, new_vm_state, new_task_state, service=None, host=None):
-    """Send 'compute.instance.exists' notification to inform observers
+    """Send 'compute.instance.update' notification to inform observers
     about instance state changes"""
 
     payload = usage_from_instance(context, instance, None, None)
