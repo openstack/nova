@@ -174,7 +174,7 @@ class FloatingIPController(object):
                 msg = _("No more floating ips in pool %s.") % pool
             else:
                 msg = _("No more floating ips available.")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPRequestEntityTooLarge(explanation=msg)
 
         return _translate_floating_ip_view(ip)
 
