@@ -14,6 +14,7 @@
 #    under the License.
 
 from nova.openstack.common import cfg
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 

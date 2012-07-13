@@ -24,6 +24,7 @@ import json
 import logging
 
 from nova.openstack.common import cfg
+from nova.openstack.common.gettextutils import _
 
 
 matchmaker_opts = [
