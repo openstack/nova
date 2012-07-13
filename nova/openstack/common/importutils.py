@@ -20,6 +20,7 @@ Import related utilities and helper functions.
 """
 
 import sys
+import traceback
 
 
 def import_class(import_str):
@@ -30,7 +31,8 @@ def import_class(import_str):
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError), exc:
         raise ImportError('Class %s cannot be found (%s)' %
-                          (class_str, str(exc)))
+                          (class_str,
+                           traceback.format_exception(*sys.exc_info())))
 
 
 def import_object(import_str, *args, **kwargs):
