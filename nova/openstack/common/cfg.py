@@ -42,8 +42,8 @@ Options can be strings, integers, floats, booleans, lists or 'multi strings'::
     osapi_compute_extension_opt = cfg.MultiStrOpt('osapi_compute_extension',
                                                   default=DEFAULT_EXTENSIONS)
 
-Option schemas are registered with with the config manager at runtime, but
-before the option is referenced::
+Option schemas are registered with the config manager at runtime, but before
+the option is referenced::
 
     class ExtensionManager(object):
 
