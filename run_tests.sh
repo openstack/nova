@@ -107,7 +107,7 @@ function run_pep8 {
   #                when running on devstack.
   # NOTE(lzyeval): Avoid selecting *.pyc files to reduce pep8 check-up time
   #                when running on devstack.
-  srcfiles=`find nova -type f -name "*.py"`
+  srcfiles=`find nova -type f -name "*.py" ! -wholename "nova\/openstack*"`
   srcfiles+=" `find bin -type f ! -name "nova.conf*" ! -name "*api-paste.ini*"`"
   srcfiles+=" `find tools -type f -name "*.py"`"
   srcfiles+=" setup.py"
