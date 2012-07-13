@@ -99,7 +99,12 @@ class NovaKeystoneContext(wsgi.Middleware):
 
         service_catalog = None
         if req.headers.get('X_SERVICE_CATALOG') is not None:
-            service_catalog = json.loads(req.headers.get('X_SERVICE_CATALOG'))
+            try:
+                catalog_header = req.headers.get('X_SERVICE_CATALOG')
+                service_catalog = json.loads(catalog_header)
+            except ValueError:
+                raise webob.exc.HTTPInternalServerError(
+                          _('Invalid service catalog json.'))
 
         ctx = context.RequestContext(user_id,
                                      project_id,
