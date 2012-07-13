@@ -178,12 +178,16 @@ def _get_git_post_version():
 
 def write_git_changelog():
     """Write a changelog based on the git changelog."""
-    if os.path.isdir('.git'):
-        git_log_cmd = 'git log --stat'
-        changelog = _run_shell_command(git_log_cmd)
-        mailmap = parse_mailmap()
-        with open("ChangeLog", "w") as changelog_file:
-            changelog_file.write(canonicalize_emails(changelog, mailmap))
+    new_changelog = 'ChangeLog'
+    if not os.getenv('SKIP_WRITE_GIT_CHANGELOG'):
+        if os.path.isdir('.git'):
+            git_log_cmd = 'git log --stat'
+            changelog = _run_shell_command(git_log_cmd)
+            mailmap = parse_mailmap()
+            with open(new_changelog, "w") as changelog_file:
+                changelog_file.write(canonicalize_emails(changelog, mailmap))
+    else:
+        open(new_changelog, 'w').close()
 
 
 def generate_authors():
@@ -191,17 +195,21 @@ def generate_authors():
     jenkins_email = 'jenkins@review.openstack.org'
     old_authors = 'AUTHORS.in'
     new_authors = 'AUTHORS'
-    if os.path.isdir('.git'):
-        # don't include jenkins email address in AUTHORS file
-        git_log_cmd = ("git log --format='%aN <%aE>' | sort -u | "
-                       "grep -v " + jenkins_email)
-        changelog = _run_shell_command(git_log_cmd)
-        mailmap = parse_mailmap()
-        with open(new_authors, 'w') as new_authors_fh:
-            new_authors_fh.write(canonicalize_emails(changelog, mailmap))
-            if os.path.exists(old_authors):
-                with open(old_authors, "r") as old_authors_fh:
-                    new_authors_fh.write('\n' + old_authors_fh.read())
+    if not os.getenv('SKIP_GENERATE_AUTHORS'):
+        if os.path.isdir('.git'):
+            # don't include jenkins email address in AUTHORS file
+            git_log_cmd = ("git log --format='%aN <%aE>' | sort -u | "
+                           "grep -v " + jenkins_email)
+            changelog = _run_shell_command(git_log_cmd)
+            mailmap = parse_mailmap()
+            with open(new_authors, 'w') as new_authors_fh:
+                new_authors_fh.write(canonicalize_emails(changelog, mailmap))
+                if os.path.exists(old_authors):
+                    with open(old_authors, "r") as old_authors_fh:
+                        new_authors_fh.write('\n' + old_authors_fh.read())
+    else:
+        open(new_authors, 'w').close()
+
 
 _rst_template = """%(heading)s
 %(underline)s
