@@ -414,6 +414,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.get_admin_context()
         self.flags(instances_path='')
+        self.flags(libvirt_snapshots_directory='')
         self.call_libvirt_dependant_setup = False
         libvirt_driver.libvirt_utils = fake_libvirt_utils
 
