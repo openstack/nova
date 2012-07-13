@@ -41,7 +41,7 @@ class CertRpcAPITestCase(test.TestCase):
         rpcapi = cert_rpcapi.CertAPI()
         expected_retval = 'foo'
         expected_msg = rpcapi.make_msg(method, **kwargs)
-        expected_msg['version'] = rpcapi.RPC_API_VERSION
+        expected_msg['version'] = rpcapi.BASE_RPC_API_VERSION
 
         self.call_ctxt = None
         self.call_topic = None

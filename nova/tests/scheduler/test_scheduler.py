@@ -476,21 +476,21 @@ class SchedulerTestCase(test.TestCase):
         rpc.call(self.context, 'dest_queue',
                 {'method': 'create_shared_storage_test_file',
                  'args': {},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None
-                ).AndReturn(tmp_filename)
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                None).AndReturn(tmp_filename)
         rpc.queue_get_for(self.context, FLAGS.compute_topic,
                 instance['host']).AndReturn('src_queue')
         rpc.call(self.context, 'src_queue',
                 {'method': 'check_shared_storage_test_file',
                  'args': {'filename': tmp_filename},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None
-                ).AndReturn(check_result)
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                None).AndReturn(check_result)
         rpc.queue_get_for(self.context, FLAGS.compute_topic,
                 dest).AndReturn('dest_queue')
         rpc.cast(self.context, 'dest_queue',
                 {'method': 'cleanup_shared_storage_test_file',
                  'args': {'filename': tmp_filename},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
     def test_live_migration_all_checks_pass(self):
         """Test live migration when all checks pass."""
@@ -535,7 +535,7 @@ class SchedulerTestCase(test.TestCase):
             'args': {
                 'instance_name': instance['name'],
             },
-            'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION,
+            'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION,
         }
         instance_disk_info = [{'disk_size': 1024 * (1024 ** 3)}]
         rpc.call(self.context,
@@ -560,8 +560,8 @@ class SchedulerTestCase(test.TestCase):
         rpc.call(self.context, 'dest_queue',
                 {'method': 'compare_cpu',
                  'args': {'cpu_info': 'fake_cpu_info'},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None
-                ).AndReturn(True)
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                None).AndReturn(True)
 
         db.instance_update_and_get_original(self.context, instance['id'],
                 {"task_state": task_states.MIGRATING}).AndReturn(
@@ -746,7 +746,7 @@ class SchedulerTestCase(test.TestCase):
             'args': {
                 'instance_name': instance['name'],
             },
-            'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION,
+            'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION,
         }
         instance_disk_info = [{'disk_size': 1024 * (1024 ** 3)}]
         rpc.call(self.context,
@@ -926,8 +926,8 @@ class SchedulerTestCase(test.TestCase):
         rpc.call(self.context, 'dest_queue',
                 {'method': 'compare_cpu',
                  'args': {'cpu_info': 'fake_cpu_info'},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None
-                ).AndRaise(rpc_common.RemoteError())
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                None).AndRaise(rpc_common.RemoteError())
 
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.RemoteError,

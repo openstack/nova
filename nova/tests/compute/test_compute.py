@@ -1452,7 +1452,7 @@ class ComputeTestCase(BaseTestCase):
                   "args": {'instance_id': inst_ref['id'],
                            'block_migration': True,
                            'disk': None},
-                  "version": compute_rpcapi.ComputeAPI.RPC_API_VERSION
+                  "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION
                  }, None).AndRaise(rpc.common.RemoteError('', '', ''))
 
         # mocks for rollback
@@ -1464,7 +1464,8 @@ class ComputeTestCase(BaseTestCase):
                 {"method": "remove_volume_connection",
                  "args": {'instance_id': inst_ref['id'],
                           'volume_id': volume_id},
-                 "version": compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None)
+                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                None)
         rpc.cast(c, topic, {"method": "rollback_live_migration_at_destination",
                             "args": {'instance_id': inst_ref['id']}})
 
@@ -1497,7 +1498,8 @@ class ComputeTestCase(BaseTestCase):
                  "args": {'instance_id': instance_id,
                           'block_migration': False,
                           'disk': None},
-                 "version": compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None)
+                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                None)
 
         # start test
         self.mox.ReplayAll()
@@ -1536,7 +1538,8 @@ class ComputeTestCase(BaseTestCase):
         rpc.call(c, rpc.queue_get_for(c, FLAGS.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
              "args": {'instance_id': i_ref['id'], 'block_migration': False},
-             "version": compute_rpcapi.ComputeAPI.RPC_API_VERSION}, None)
+             "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+            None)
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
         self.compute.driver.unplug_vifs(i_ref, [])
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
@@ -3514,7 +3517,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc_msg1 = {'method': 'get_vnc_console',
                     'args': {'instance_uuid': fake_instance['uuid'],
                              'console_type': fake_console_type},
-                   'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}
+                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
         rpc_msg2 = {'method': 'authorize_console',
                     'args': fake_connect_info,
                     'version': '1.0'}
@@ -3541,7 +3544,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc_msg = {'method': 'get_console_output',
                    'args': {'instance_uuid': fake_instance['uuid'],
                             'tail_length': fake_tail_length},
-                   'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION}
+                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
                 rpc_msg, None).AndReturn(fake_console_output)
 
@@ -4055,7 +4058,7 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.assertEqual(call_info['msg'],
                 {'method': 'set_host_enabled',
                  'args': {'enabled': 'fake_enabled'},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
     def test_get_host_uptime(self):
         ctxt = context.RequestContext('fake', 'fake')
@@ -4068,7 +4071,7 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.assertEqual(call_info['msg'],
                 {'method': 'get_host_uptime',
                  'args': {},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
+                 'version': '1.1'})
 
     def test_host_power_action(self):
         ctxt = context.RequestContext('fake', 'fake')
@@ -4080,7 +4083,8 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.assertEqual(call_info['msg'],
                 {'method': 'host_power_action',
                  'args': {'action': 'fake_action'},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
+                 'version':
+                 compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
     def test_set_host_maintenance(self):
         ctxt = context.RequestContext('fake', 'fake')
@@ -4092,7 +4096,7 @@ class ComputeHostAPITestCase(BaseTestCase):
         self.assertEqual(call_info['msg'],
                 {'method': 'host_maintenance_mode',
                  'args': {'host': 'fake_host', 'mode': 'fake_mode'},
-                 'version': compute_rpcapi.ComputeAPI.RPC_API_VERSION})
+                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
 
 class KeypairAPITestCase(BaseTestCase):

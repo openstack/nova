@@ -33,11 +33,12 @@ class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.0 - Initial version.
     '''
 
-    RPC_API_VERSION = '1.0'
+    BASE_RPC_API_VERSION = '1.0'
 
     def __init__(self):
-        super(CertAPI, self).__init__(topic=FLAGS.cert_topic,
-                                      default_version=self.RPC_API_VERSION)
+        super(CertAPI, self).__init__(
+                topic=FLAGS.cert_topic,
+                default_version=self.BASE_RPC_API_VERSION)
 
     def revoke_certs_by_user(self, ctxt, user_id):
         return self.call(ctxt, self.make_msg('revoke_certs_by_user',
