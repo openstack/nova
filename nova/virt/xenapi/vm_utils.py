@@ -98,6 +98,7 @@ SECTOR_SIZE = 512
 MBR_SIZE_SECTORS = 63
 MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
 KERNEL_DIR = '/boot/guest'
+MAX_VDI_CHAIN_SIZE = 16
 
 
 class ImageType(object):
@@ -471,7 +472,7 @@ def snapshot_attached_here(session, instance, vm_ref, label):
     LOG.debug(_("Starting snapshot for VM"), instance=instance)
 
     try:
-        template_vm_ref, template_vdi_uuids = _create_snapshot(
+        template_vm_ref, vdi_uuids = _create_snapshot(
                 session, instance, vm_ref, label)
     except session.XenAPI.Failure, exc:
         LOG.error(_("Unable to Snapshot instance: %(exc)s"), locals(),
@@ -479,7 +480,7 @@ def snapshot_attached_here(session, instance, vm_ref, label):
         raise
 
     try:
-        yield template_vdi_uuids
+        yield vdi_uuids
     finally:
         _destroy_snapshot(session, instance, template_vm_ref)
 
@@ -505,10 +506,10 @@ def _create_snapshot(session, instance, vm_ref, label):
     parent_uuid, base_uuid = _wait_for_vhd_coalesce(
             session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
 
-    template_vdi_uuids = {'base': base_uuid,
-                          'image': parent_uuid,
-                          'snap': template_vdi_uuid}
-    return template_vm_ref, template_vdi_uuids
+    vdi_uuids = [vdi_rec['uuid'] for vdi_rec in
+                 _walk_vdi_chain(session, template_vdi_uuid)]
+
+    return template_vm_ref, vdi_uuids
 
 
 def _destroy_snapshot(session, instance, vm_ref):
@@ -908,8 +909,9 @@ def _fetch_vhd_image(context, session, instance, image_id):
     # which does not have the `uuid` module. To work around this,
     # we generate the uuids here (under Python 2.6+) and
     # pass them as arguments
+    uuid_stack = [str(uuid.uuid4()) for i in xrange(MAX_VDI_CHAIN_SIZE)]
     params = {'image_id': image_id,
-              'uuid_stack': [str(uuid.uuid4()) for i in xrange(3)],
+              'uuid_stack': uuid_stack,
               'sr_path': get_sr_path(session),
               'auth_token': getattr(context, 'auth_token', None)}
 

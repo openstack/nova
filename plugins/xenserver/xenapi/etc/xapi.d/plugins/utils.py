@@ -102,186 +102,160 @@ def cleanup_staging_area(staging_path):
         shutil.rmtree(staging_path)
 
 
+def _handle_old_style_images(staging_path):
+    """Rename files to conform to new image format, if needed.
+
+    Old-Style:
+
+        snap.vhd -> image.vhd -> base.vhd
+
+    New-Style:
+
+        0.vhd -> 1.vhd -> ... (n-1).vhd
+
+    The New-Style format has the benefit of being able to support a VDI chain
+    of arbitrary length.
+    """
+    file_num = 0
+    for filename in ('snap.vhd', 'image.vhd', 'base.vhd'):
+        path = os.path.join(staging_path, filename)
+        if os.path.exists(path):
+            os.rename(path, os.path.join(staging_path, "%d.vhd" % file_num))
+            file_num += 1
+
+
+def _assert_vhd_not_hidden(path):
+    """Sanity check to ensure that only appropriate VHDs are marked as hidden.
+
+    If this flag is incorrectly set, then when we move the VHD into the SR, it
+    will be deleted out from under us.
+    """
+    query_cmd = "vhd-util query -n %(path)s -f" % locals()
+    query_proc = make_subprocess(query_cmd, stdout=True, stderr=True)
+    out, err = finish_subprocess(query_proc, query_cmd)
+
+    for line in out.splitlines():
+        if line.startswith('hidden'):
+            value = line.split(':')[1].strip()
+            if value == "1":
+                raise Exception(
+                    "VHD %(path)s is marked as hidden without child" %
+                    locals())
+
+
+def _validate_vdi_chain(vdi_path):
+    """
+    This check ensures that the parent pointers on the VHDs are valid
+    before we move the VDI chain to the SR. This is *very* important
+    because a bad parent pointer will corrupt the SR causing a cascade of
+    failures.
+    """
+    def get_parent_path(path):
+        query_cmd = "vhd-util query -n %(path)s -p" % locals()
+        query_proc = make_subprocess(query_cmd, stdout=True, stderr=True)
+        out, err = finish_subprocess(
+                query_proc, query_cmd, ok_exit_codes=[0, 22])
+        first_line = out.splitlines()[0].strip()
+        if first_line.endswith(".vhd"):
+            return first_line
+        elif 'has no parent' in first_line:
+            return None
+        elif 'query failed' in first_line:
+            raise Exception("VDI '%(path)s' not present which breaks"
+                            " the VDI chain, bailing out" % locals())
+        else:
+            raise Exception("Unexpected output '%(out)s' from vhd-util" %
+                            locals())
+
+    cur_path = vdi_path
+    while cur_path:
+        cur_path = get_parent_path(cur_path)
+
+
 def import_vhds(sr_path, staging_path, uuid_stack):
-    """Import the VHDs found in the staging path.
+    """Move VHDs from staging area into the SR.
 
-    We cannot extract VHDs directly into the SR since they don't yet have
-    UUIDs, aren't properly associated with each other, and would be subject to
-    a race-condition of one-file being present and the other not being
-    downloaded yet.
+    The staging area is necessary because we need to perform some fixups
+    (assigning UUIDs, relinking the VHD chain) before moving into the SR,
+    otherwise the SR manager process could potentially delete the VHDs out from
+    under us.
 
-    To avoid these we problems, we use a staging area to fixup the VHDs before
-    moving them into the SR. The steps involved are:
-
-        1. Extracting tarball into staging area (done prior to this call)
-
-        2. Renaming VHDs to use UUIDs ('snap.vhd' -> 'ffff-aaaa-...vhd')
-
-        3. Linking VHDs together if there's a snap.vhd
-
-        4. Pseudo-atomically moving the images into the SR. (It's not really
-           atomic because it takes place as multiple os.rename operations;
-           however, the chances of an SR.scan occuring between the rename()s
-           invocations is so small that we can safely ignore it)
-
-    Returns: A dict of the VDIs imported. For example:
+    Returns: A dict of imported VHDs:
 
         {'root': {'uuid': 'ffff-aaaa'},
          'swap': {'uuid': 'ffff-bbbb'}}
     """
-    def rename_with_uuid(orig_path):
-        """Rename VHD using UUID so that it will be recognized by SR on a
-        subsequent scan.
-
-        Since Python2.4 doesn't have the `uuid` module, we pass a stack of
-        pre-computed UUIDs from the compute worker.
-        """
-        orig_dirname = os.path.dirname(orig_path)
-        uuid = uuid_stack.pop()
-        new_path = os.path.join(orig_dirname, "%s.vhd" % uuid)
-        os.rename(orig_path, new_path)
-        return new_path, uuid
-
-    def link_vhds(child_path, parent_path):
-        """Use vhd-util to associate the snapshot VHD with its base_copy.
-
-        This needs to be done before we move both VHDs into the SR to prevent
-        the base_copy from being DOA (deleted-on-arrival).
-        """
-        modify_cmd = ("vhd-util modify -n %(child_path)s -p %(parent_path)s"
-                      % locals())
-        modify_proc = make_subprocess(modify_cmd, stderr=True)
-        finish_subprocess(modify_proc, modify_cmd)
-
-    def move_into_sr(orig_path):
-        """Move a file into the SR"""
-        filename = os.path.basename(orig_path)
-        new_path = os.path.join(sr_path, filename)
-        os.rename(orig_path, new_path)
-        return new_path
-
-    def assert_vhd_not_hidden(path):
-        """
-        This is a sanity check on the image; if a snap.vhd isn't
-        present, then the image.vhd better not be marked 'hidden' or it will
-        be deleted when moved into the SR.
-        """
-        query_cmd = "vhd-util query -n %(path)s -f" % locals()
-        query_proc = make_subprocess(query_cmd, stdout=True, stderr=True)
-        out, err = finish_subprocess(query_proc, query_cmd)
-
-        for line in out.splitlines():
-            if line.startswith('hidden'):
-                value = line.split(':')[1].strip()
-                if value == "1":
-                    raise Exception(
-                        "VHD %(path)s is marked as hidden without child" %
-                        locals())
-
-    def prepare_if_exists(staging_path, vhd_name, parent_path=None):
-        """
-        Check for existance of a particular VHD in the staging path and
-        preparing it for moving into the SR.
-
-        Returns: Tuple of (Path to move into the SR, VDI_UUID)
-                 None, if the vhd_name doesn't exist in the staging path
-
-        If the VHD exists, we will do the following:
-            1. Rename it with a UUID.
-            2. If parent_path exists, we'll link up the VHDs.
-        """
-        orig_path = os.path.join(staging_path, vhd_name)
-        if not os.path.exists(orig_path):
-            return None
-        new_path, vdi_uuid = rename_with_uuid(orig_path)
-        if parent_path:
-            # NOTE(sirp): this step is necessary so that an SR scan won't
-            # delete the base_copy out from under us (since it would be
-            # orphaned)
-            link_vhds(new_path, parent_path)
-        return (new_path, vdi_uuid)
-
-    def validate_vdi_chain(vdi_path):
-        """
-        This check ensures that the parent pointers on the VHDs are valid
-        before we move the VDI chain to the SR. This is *very* important
-        because a bad parent pointer will corrupt the SR causing a cascade of
-        failures.
-        """
-        def get_parent_path(path):
-            query_cmd = "vhd-util query -n %(path)s -p" % locals()
-            query_proc = make_subprocess(query_cmd, stdout=True, stderr=True)
-            out, err = finish_subprocess(
-                    query_proc, query_cmd, ok_exit_codes=[0, 22])
-            first_line = out.splitlines()[0].strip()
-            if first_line.endswith(".vhd"):
-                return first_line
-            elif 'has no parent' in first_line:
-                return None
-            elif 'query failed' in first_line:
-                raise Exception("VDI '%(path)s' not present which breaks"
-                                " the VDI chain, bailing out" % locals())
-            else:
-                raise Exception("Unexpected output '%(out)s' from vhd-util" %
-                                locals())
-
-        cur_path = vdi_path
-        while cur_path:
-            cur_path = get_parent_path(cur_path)
+    _handle_old_style_images(staging_path)
 
     imported_vhds = {}
-    paths_to_move = []
+    files_to_move = []
 
-    image_parent = None
-    base_info = prepare_if_exists(staging_path, 'base.vhd')
-    if base_info:
-        paths_to_move.append(base_info[0])
-        image_parent = base_info[0]
+    # Collect sequenced VHDs and assign UUIDs to them
+    seq_num = 0
+    while True:
+        orig_vhd_path = os.path.join(staging_path, "%d.vhd" % seq_num)
+        if not os.path.exists(orig_vhd_path):
+            break
 
-    image_info = prepare_if_exists(staging_path, 'image.vhd', image_parent)
-    if not image_info:
-        raise Exception("Invalid image: image.vhd not present")
+        # Rename (0, 1 .. N).vhd -> aaaa-bbbb-cccc-dddd.vhd
+        vhd_uuid = uuid_stack.pop()
+        vhd_path = os.path.join(staging_path, "%s.vhd" % vhd_uuid)
+        os.rename(orig_vhd_path, vhd_path)
 
-    paths_to_move.insert(0, image_info[0])
+        if seq_num == 0:
+            leaf_vhd_path = vhd_path
+            leaf_vhd_uuid = vhd_uuid
 
-    snap_info = prepare_if_exists(staging_path, 'snap.vhd',
-            image_info[0])
-    if snap_info:
-        validate_vdi_chain(snap_info[0])
-        # NOTE(sirp): this is an insert rather than an append since the
-        # 'snapshot' vhd needs to be copied into the SR before the base copy.
-        # If it doesn't, then there is a possibliity that snapwatchd will
-        # delete the base_copy since it is an unreferenced parent.
-        paths_to_move.insert(0, snap_info[0])
-        # We return this snap as the VDI instead of image.vhd
-        imported_vhds['root'] = dict(uuid=snap_info[1])
-    else:
-        validate_vdi_chain(image_info[0])
-        assert_vhd_not_hidden(image_info[0])
-        # If there's no snap, we return the image.vhd UUID
-        imported_vhds['root'] = dict(uuid=image_info[1])
+        files_to_move.append(vhd_path)
+        seq_num += 1
 
-    swap_info = prepare_if_exists(staging_path, 'swap.vhd')
-    if swap_info:
-        assert_vhd_not_hidden(swap_info[0])
-        paths_to_move.append(swap_info[0])
-        imported_vhds['swap'] = dict(uuid=swap_info[1])
+    # Re-link VHDs, in reverse order, from base-copy -> leaf
+    parent_path = None
+    for vhd_path in reversed(files_to_move):
+        if parent_path:
+            # Link to parent
+            modify_cmd = ("vhd-util modify -n %(vhd_path)s"
+                          " -p %(parent_path)s" % locals())
+            modify_proc = make_subprocess(modify_cmd, stderr=True)
+            finish_subprocess(modify_proc, modify_cmd)
 
-    for path in paths_to_move:
-        move_into_sr(path)
+        parent_path = vhd_path
+
+    # Sanity check the leaf VHD
+    _assert_vhd_not_hidden(leaf_vhd_path)
+    _validate_vdi_chain(leaf_vhd_path)
+
+    imported_vhds["root"] = {"uuid": leaf_vhd_uuid}
+
+    # Handle swap file if present
+    orig_swap_path = os.path.join(staging_path, "swap.vhd")
+    if os.path.exists(orig_swap_path):
+        # Rename swap.vhd -> aaaa-bbbb-cccc-dddd.vhd
+        vhd_uuid = uuid_stack.pop()
+        swap_path = os.path.join(staging_path, "%s.vhd" % vhd_uuid)
+        os.rename(orig_swap_path, swap_path)
+
+        _assert_vhd_not_hidden(swap_path)
+
+        imported_vhds["swap"] = {"uuid": vhd_uuid}
+        files_to_move.append(swap_path)
+
+    # Move files into SR
+    for orig_path in files_to_move:
+        new_path = os.path.join(sr_path, os.path.basename(orig_path))
+        os.rename(orig_path, new_path)
 
     return imported_vhds
 
 
 def prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
-    """Hard-link VHDs into staging area with appropriate filename
-    ('snap' or 'image.vhd')
-    """
-    for name, uuid in vdi_uuids.items():
-        if uuid:
-            source = os.path.join(sr_path, "%s.vhd" % uuid)
-            link_name = os.path.join(staging_path, "%s.vhd" % name)
-            os.link(source, link_name)
+    """Hard-link VHDs into staging area."""
+    seq_num = 0
+    for vdi_uuid in vdi_uuids:
+        source = os.path.join(sr_path, "%s.vhd" % vdi_uuid)
+        link_name = os.path.join(staging_path, "%d.vhd" % seq_num)
+        os.link(source, link_name)
+        seq_num += 1
 
 
 def create_tarball(fileobj, path, callback=None):
