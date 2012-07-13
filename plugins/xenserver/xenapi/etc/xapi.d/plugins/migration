@@ -105,7 +105,8 @@ def transfer_vhd(session, args):
     vhd_path = "%s.vhd" % vdi_uuid
 
     source_path = "%s/%s" % (sr_path, vhd_path)
-    dest_path = '%s:/images/instance%s/' % (host, instance_uuid)
+    dest_user = 'root'
+    dest_path = '%s@%s:/images/instance%s/' % (dest_user, host, instance_uuid)
 
     logging.debug("Preparing to transmit %s to %s" % (source_path,
             dest_path))
