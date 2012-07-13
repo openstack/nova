@@ -229,7 +229,7 @@ class _DiskImage(object):
 
 def inject_data(image,
                 key=None, net=None, metadata=None, admin_password=None,
-                partition=None, use_cow=False):
+                files=None, partition=None, use_cow=False):
     """Injects a ssh key and optionally net data into a disk image.
 
     it will mount the image as a fully partitioned disk and attempt to inject
@@ -242,21 +242,7 @@ def inject_data(image,
     if img.mount():
         try:
             inject_data_into_fs(img.mount_dir,
-                                key, net, metadata, admin_password,
-                                utils.execute)
-        finally:
-            img.umount()
-    else:
-        raise exception.NovaException(img.errors)
-
-
-def inject_files(image, files, partition=None, use_cow=False):
-    """Injects arbitrary files into a disk image"""
-    img = _DiskImage(image=image, partition=partition, use_cow=use_cow)
-    if img.mount():
-        try:
-            for (path, contents) in files:
-                _inject_file_into_fs(img.mount_dir, path, contents)
+                                key, net, metadata, admin_password, files)
         finally:
             img.umount()
     else:
@@ -297,19 +283,22 @@ def destroy_container(img):
         LOG.exception(_('Failed to unmount container filesystem: %s'), exn)
 
 
-def inject_data_into_fs(fs, key, net, metadata, admin_password, execute):
+def inject_data_into_fs(fs, key, net, metadata, admin_password, files):
     """Injects data into a filesystem already mounted by the caller.
     Virt connections can call this directly if they mount their fs
     in a different way to inject_data
     """
     if key:
-        _inject_key_into_fs(key, fs, execute=execute)
+        _inject_key_into_fs(key, fs)
     if net:
-        _inject_net_into_fs(net, fs, execute=execute)
+        _inject_net_into_fs(net, fs)
     if metadata:
-        _inject_metadata_into_fs(metadata, fs, execute=execute)
+        _inject_metadata_into_fs(metadata, fs)
     if admin_password:
-        _inject_admin_password_into_fs(admin_password, fs, execute=execute)
+        _inject_admin_password_into_fs(admin_password, fs)
+    if files:
+        for (path, contents) in files:
+            _inject_file_into_fs(fs, path, contents)
 
 
 def _join_and_check_path_within_fs(fs, *args):
@@ -342,12 +331,12 @@ def _inject_file_into_fs(fs, path, contents, append=False):
     utils.execute('tee', *args, **kwargs)
 
 
-def _inject_metadata_into_fs(metadata, fs, execute=None):
+def _inject_metadata_into_fs(metadata, fs):
     metadata = dict([(m.key, m.value) for m in metadata])
     _inject_file_into_fs(fs, 'meta.js', jsonutils.dumps(metadata))
 
 
-def _inject_key_into_fs(key, fs, execute=None):
+def _inject_key_into_fs(key, fs):
     """Add the given public ssh key to root's authorized_keys.
 
     key is an ssh key string.
@@ -371,7 +360,7 @@ def _inject_key_into_fs(key, fs, execute=None):
     _inject_file_into_fs(fs, keyfile, key_data, append=True)
 
 
-def _inject_net_into_fs(net, fs, execute=None):
+def _inject_net_into_fs(net, fs):
     """Inject /etc/network/interfaces into the filesystem rooted at fs.
 
     net is the contents of /etc/network/interfaces.
@@ -385,7 +374,7 @@ def _inject_net_into_fs(net, fs, execute=None):
     _inject_file_into_fs(fs, netfile, net)
 
 
-def _inject_admin_password_into_fs(admin_passwd, fs, execute=None):
+def _inject_admin_password_into_fs(admin_passwd, fs):
     """Set the root password to admin_passwd
 
     admin_password is a root password

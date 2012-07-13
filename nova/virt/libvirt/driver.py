@@ -1063,12 +1063,6 @@ class LibvirtDriver(driver.ComputeDriver):
         fp.write(data)
         return fpath
 
-    def _inject_files(self, instance, files, partition):
-        disk_path = self.image_backend.image(instance['name'],
-                                             'disk').path
-        disk.inject_files(disk_path, files, partition=partition,
-                          use_cow=FLAGS.use_cow_images)
-
     @exception.wrap_exception()
     def get_console_output(self, instance):
         virt_dom = self._lookup_by_name(instance['name'])
@@ -1401,11 +1395,13 @@ class LibvirtDriver(driver.ComputeDriver):
         metadata = instance.get('metadata')
 
         if FLAGS.libvirt_inject_password:
-            admin_password = instance.get('admin_pass')
+            admin_pass = instance.get('admin_pass')
         else:
-            admin_password = None
+            admin_pass = None
 
-        if any((key, net, metadata, admin_password)):
+        files = instance.get('injected_files')
+
+        if any((key, net, metadata, admin_pass, files)):
             if config_drive:  # Should be True or None by now.
                 injection_path = raw('disk.config').path
                 img_id = 'config-drive'
@@ -1413,13 +1409,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 injection_path = image('disk').path
                 img_id = instance.image_ref
 
-            for injection in ('metadata', 'key', 'net', 'admin_password'):
+            for injection in ('metadata', 'key', 'net', 'admin_pass', 'files'):
                 if locals()[injection]:
                     LOG.info(_('Injecting %(injection)s into image'
                                ' %(img_id)s'), locals(), instance=instance)
             try:
                 disk.inject_data(injection_path,
-                                 key, net, metadata, admin_password,
+                                 key, net, metadata, admin_pass, files,
                                  partition=target_partition,
                                  use_cow=FLAGS.use_cow_images)
 
@@ -1436,11 +1432,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if FLAGS.libvirt_type == 'uml':
             libvirt_utils.chown(basepath('disk'), 'root')
-
-        files_to_inject = instance.get('injected_files')
-        if files_to_inject:
-            self._inject_files(instance, files_to_inject,
-                               partition=target_partition)
 
     @staticmethod
     def _volume_in_mapping(mount_device, block_device_info):
