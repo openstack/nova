@@ -435,7 +435,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             tcpip_data = ast.literal_eval(xenstore_value)
             self.assertEquals(tcpip_data,
                               {'broadcast': '192.168.1.255',
-                               'dns': ['192.168.1.3', '192.168.1.4'],
+                               'dns': ['192.168.1.4', '192.168.1.3'],
                                'gateway': '192.168.1.1',
                                'gateway_v6': 'fe80::def',
                                'ip6s': [{'enabled': '1',

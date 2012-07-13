@@ -1265,7 +1265,7 @@ class VMOps(object):
             info_dict['routes'] = routes
 
         if dns:
-            info_dict['dns'] = dns
+            info_dict['dns'] = list(set(dns))
 
         return info_dict
 
