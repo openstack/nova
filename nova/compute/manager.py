@@ -1907,9 +1907,10 @@ class ComputeManager(manager.SchedulerDependentManager):
     def create_shared_storage_test_file(self, context):
         """Makes tmpfile under FLAGS.instance_path.
 
-        This method enables compute nodes to recognize that they mounts
-        same shared storage. (create|check|creanup)_shared_storage_test_file()
-        is a pair.
+        This method creates a temporary file that acts as an indicator to
+        other compute nodes that utilize the same shared storage as this node.
+        (create|check|cleanup)_shared_storage_test_file() are a set and should
+        be run together.
 
         :param context: security context
         :returns: tmpfile name(basename)
@@ -1950,7 +1951,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         os.remove(tmp_file)
 
     def get_instance_disk_info(self, context, instance_name):
-        """Getting infomation of instance's current disk.
+        """Get information about instance's current disk.
 
         Implementation nova.virt.libvirt.connection.
 
