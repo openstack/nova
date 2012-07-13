@@ -340,32 +340,6 @@ class TestGlanceImageService(test.TestCase):
         num_images = len(self.service.detail(self.context))
         self.assertEquals(1, num_images)
 
-    def test_delete_not_by_owner(self):
-        # this test is only relevant for deprecated auth mode
-        self.flags(auth_strategy='deprecated')
-
-        fixture = self._make_fixture(name='test image')
-        properties = {'project_id': 'proj1'}
-        fixture['properties'] = properties
-
-        num_images = len(self.service.detail(self.context))
-        self.assertEquals(0, num_images)
-
-        image_id = self.service.create(self.context, fixture)['id']
-        num_images = len(self.service.detail(self.context))
-        self.assertEquals(1, num_images)
-
-        proj_id = self.context.project_id
-        self.context.project_id = 'proj2'
-
-        self.assertRaises(exception.NotAuthorized, self.service.delete,
-                          self.context, image_id)
-
-        self.context.project_id = proj_id
-
-        num_images = len(self.service.detail(self.context))
-        self.assertEquals(1, num_images)
-
     def test_show_passes_through_to_client(self):
         fixture = self._make_fixture(name='image1', is_public=True)
         image_id = self.service.create(self.context, fixture)['id']
