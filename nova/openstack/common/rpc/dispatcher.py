@@ -40,6 +40,45 @@ The conversion over to a versioned API must be done on both the client side and
 server side of the API at the same time.  However, as the code stands today,
 there can be both versioned and unversioned APIs implemented in the same code
 base.
+
+
+EXAMPLES:
+
+Nova was the first project to use versioned rpc APIs.  Consider the compute rpc
+API as an example.  The client side is in nova/compute/rpcapi.py and the server
+side is in nova/compute/manager.py.
+
+
+Example 1) Adding a new method.
+
+Adding a new method is a backwards compatible change.  It should be added to
+nova/compute/manager.py, and RPC_API_VERSION should be bumped from X.Y to
+X.Y+1.  On the client side, the new method in nova/compute/rpcapi.py should
+have a specific version specified to indicate the minimum API version that must
+be implemented for the method to be supported.  For example:
+
+    def get_host_uptime(self, ctxt, host):
+        topic = _compute_topic(self.topic, ctxt, host, None)
+        return self.call(ctxt, self.make_msg('get_host_uptime'), topic,
+                version='1.1')
+
+In this case, version '1.1' is the first version that supported the
+get_host_uptime() method.
+
+
+Example 2) Adding a new parameter.
+
+Adding a new parameter to an rpc method can be made backwards compatible.  The
+RPC_API_VERSION on the server side (nova/compute/manager.py) should be bumped.
+The implementation of the method must not expect the parameter to be present.
+
+    def some_remote_method(self, arg1, arg2, newarg=None):
+        # The code needs to deal with newarg=None for cases
+        # where an older client sends a message without it.
+        pass
+
+On the client side, the same changes should be made as in example 1.  The
+minimum version that supports the new parameter should be specified.
 """
 
 from nova.openstack.common.rpc import common as rpc_common
