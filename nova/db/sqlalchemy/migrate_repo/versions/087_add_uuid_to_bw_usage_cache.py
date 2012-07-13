@@ -53,6 +53,6 @@ def downgrade(migrate_engine):
         Column('last_refreshed', DateTime(timezone=False)),
         Column('bw_in', BigInteger()),
         Column('bw_out', BigInteger()),
-        useexisting=True)
+        extend_existing=True)
 
     bw_usage_cache.drop_column('uuid')
