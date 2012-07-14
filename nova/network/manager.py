@@ -1632,7 +1632,10 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     @wrap_check_policy
     def get_all_networks(self, context):
-        networks = self.db.network_get_all(context)
+        try:
+            networks = self.db.network_get_all(context)
+        except exception.NoNetworksFound:
+            return []
         return [dict(network.iteritems()) for network in networks]
 
     @wrap_check_policy
