@@ -16,6 +16,7 @@
 
 from nova.openstack.common import cfg
 from nova.openstack.common import context as req_context
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import rpc
 

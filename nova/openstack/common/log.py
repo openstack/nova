@@ -41,6 +41,7 @@ import sys
 import traceback
 
 from nova.openstack.common import cfg
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import local
 from nova.openstack.common import notifier

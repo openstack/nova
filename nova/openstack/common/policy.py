@@ -21,6 +21,7 @@ import logging
 import urllib
 import urllib2
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 
 
