@@ -47,7 +47,7 @@ rpc_opts = [
                help='Seconds to wait before a cast expires (TTL). '
                     'Only supported by impl_zmq.'),
     cfg.ListOpt('allowed_rpc_exception_modules',
-                default=['openstack.common.exception', 'nova.exception'],
+                default=['nova.openstack.common.exception', 'nova.exception'],
                 help='Modules of exceptions that are permitted to be recreated'
                      'upon receiving exception data from an rpc call.'),
     cfg.StrOpt('control_exchange',
