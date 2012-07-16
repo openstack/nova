@@ -68,6 +68,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
+from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import utils
 from nova.virt import driver
@@ -233,7 +234,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.1'
+    RPC_API_VERSION = '1.2'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1891,66 +1892,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         except exception.NotFound:
             pass
 
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def compare_cpu(self, context, cpu_info):
-        """Checks that the host cpu is compatible with a cpu given by xml.
-
-        :param context: security context
-        :param cpu_info: json string obtained from virConnect.getCapabilities
-        :returns: See driver.compare_cpu
-
-        """
-        return self.driver.compare_cpu(cpu_info)
-
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def create_shared_storage_test_file(self, context):
-        """Makes tmpfile under FLAGS.instance_path.
-
-        This method creates a temporary file that acts as an indicator to
-        other compute nodes that utilize the same shared storage as this node.
-        (create|check|cleanup)_shared_storage_test_file() are a set and should
-        be run together.
-
-        :param context: security context
-        :returns: tmpfile name(basename)
-
-        """
-        dirpath = FLAGS.instances_path
-        fd, tmp_file = tempfile.mkstemp(dir=dirpath)
-        LOG.debug(_("Creating tmpfile %s to notify to other "
-                    "compute nodes that they should mount "
-                    "the same storage.") % tmp_file)
-        os.close(fd)
-        return os.path.basename(tmp_file)
-
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def check_shared_storage_test_file(self, context, filename):
-        """Confirms existence of the tmpfile under FLAGS.instances_path.
-           Cannot confirm tmpfile return False.
-
-        :param context: security context
-        :param filename: confirm existence of FLAGS.instances_path/thisfile
-
-        """
-        tmp_file = os.path.join(FLAGS.instances_path, filename)
-        if not os.path.exists(tmp_file):
-            return False
-        else:
-            return True
-
-    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def cleanup_shared_storage_test_file(self, context, filename):
-        """Removes existence of the tmpfile under FLAGS.instances_path.
-
-        :param context: security context
-        :param filename: remove existence of FLAGS.instances_path/thisfile
-
-        """
-        tmp_file = os.path.join(FLAGS.instances_path, filename)
-        os.remove(tmp_file)
-
     def get_instance_disk_info(self, context, instance_name):
-        """Get information about instance's current disk.
+        """Getting infomation of instance's current disk.
 
         Implementation nova.virt.libvirt.connection.
 
@@ -1959,6 +1902,62 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         return self.driver.get_instance_disk_info(instance_name)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def compare_cpu(self, context, cpu_info):
+        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def create_shared_storage_test_file(self, context):
+        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def check_shared_storage_test_file(self, context, filename):
+        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def cleanup_shared_storage_test_file(self, context, filename):
+        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def check_can_live_migrate_destination(self, ctxt, instance_id,
+                                           block_migration=False,
+                                           disk_over_commit=False):
+        """Check if it is possible to execute live migration.
+
+        This runs checks on the destination host, and then calls
+        back to the source host to check the results.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param block_migration: if true, prepare for block migration
+        :param disk_over_commit: if true, allow disk over commit
+        """
+        instance_ref = self.db.instance_get(ctxt, instance_id)
+        dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
+            instance_ref, block_migration, disk_over_commit)
+        try:
+            self.compute_rpcapi.check_can_live_migrate_source(ctxt,
+                    instance_ref, dest_check_data)
+        finally:
+            self.driver.check_can_live_migrate_destination_cleanup(ctxt,
+                    dest_check_data)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def check_can_live_migrate_source(self, ctxt, instance_id,
+                                      dest_check_data):
+        """Check if it is possible to execute live migration.
+
+        This checks if the live migration can succeed, based on the
+        results from check_can_live_migrate_destination.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param dest_check_data: result of check_can_live_migrate_destination
+        """
+        instance_ref = self.db.instance_get(ctxt, instance_id)
+        self.driver.check_can_live_migrate_source(ctxt, instance_ref,
+                                                  dest_check_data)
 
     def pre_live_migration(self, context, instance_id,
                            block_migration=False, disk=None):
@@ -1978,40 +1977,21 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not block_device_info['block_device_mapping']:
             LOG.info(_('Instance has no volume.'), instance=instance_ref)
 
-        self.driver.pre_live_migration(block_device_info)
-
-        # NOTE(tr3buchet): setup networks on destination host
-        self.network_api.setup_networks_on_host(context, instance_ref,
-                                                         self.host)
-
-        # Bridge settings.
-        # Call this method prior to ensure_filtering_rules_for_instance,
-        # since bridge is not set up, ensure_filtering_rules_for instance
-        # fails.
-        #
-        # Retry operation is necessary because continuously request comes,
-        # concorrent request occurs to iptables, then it complains.
         network_info = self._get_instance_nw_info(context, instance_ref)
 
         # TODO(tr3buchet): figure out how on the earth this is necessary
         fixed_ips = network_info.fixed_ips()
         if not fixed_ips:
-            raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+            raise exception.FixedIpNotFoundForInstance(
+                                       instance_id=instance_id)
 
-        max_retry = FLAGS.live_migration_retry_count
-        for cnt in range(max_retry):
-            try:
-                self.driver.plug_vifs(instance_ref,
-                                      self._legacy_nw_info(network_info))
-                break
-            except exception.ProcessExecutionError:
-                if cnt == max_retry - 1:
-                    raise
-                else:
-                    LOG.warn(_("plug_vifs() failed %(cnt)d."
-                               "Retry up to %(max_retry)d for %(hostname)s.")
-                               % locals(), instance=instance_ref)
-                    time.sleep(1)
+        self.driver.pre_live_migration(context, instance_ref,
+                                       block_device_info,
+                                       self._legacy_nw_info(network_info))
+
+        # NOTE(tr3buchet): setup networks on destination host
+        self.network_api.setup_networks_on_host(context, instance_ref,
+                                                         self.host)
 
         # Creating filters to hypervisors and firewalls.
         # An example is that nova-instance-instance-xxx,
@@ -2082,12 +2062,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         and mainly updating database record.
 
         :param ctxt: security context
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance_ref: nova.db.sqlalchemy.models.Instance
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
 
         """
-
         LOG.info(_('post_live_migration() is started..'),
                  instance=instance_ref)
 
@@ -2160,8 +2139,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "This error can be safely ignored."),
                  instance=instance_ref)
 
-    def post_live_migration_at_destination(self, context,
-                                instance_id, block_migration=False):
+    def post_live_migration_at_destination(self, context, instance_id,
+                                           block_migration=False):
         """Post operations for live migration .
 
         :param context: security context
@@ -2203,7 +2182,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Recovers Instance/volume state from migrating -> running.
 
         :param context: security context
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance_ref: nova.db.sqlalchemy.models.Instance
         :param dest:
             This method is called from live migration src host.
             This param specifies destination host.

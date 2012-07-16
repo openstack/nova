@@ -21,6 +21,7 @@ Client side of the compute RPC API.
 from nova import exception
 from nova import flags
 from nova.openstack.common import rpc
+from nova.openstack.common.rpc import common as rpc_common
 import nova.openstack.common.rpc.proxy
 
 
@@ -55,6 +56,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
         1.0 - Initial version.
         1.1 - Adds get_host_uptime()
+        1.2 - Adds check_can_live_migrate_[destination|source]
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -88,19 +90,33 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 mountpoint=mountpoint),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
+    def check_can_live_migrate_destination(self, ctxt, instance, destination,
+            block_migration, disk_over_commit):
+        self.call(ctxt, self.make_msg('check_can_live_migrate_destination',
+                           instance_id=instance['id'],
+                           block_migration=block_migration,
+                           disk_over_commit=disk_over_commit),
+                  topic=_compute_topic(self.topic, ctxt, destination, None),
+                  version='1.2')
+
+    def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
+        self.call(ctxt, self.make_msg('check_can_live_migrate_source',
+                           instance_id=instance['id'],
+                           dest_check_data=dest_check_data),
+                  topic=_compute_topic(self.topic, ctxt, None, instance),
+                  version='1.2')
+
     def check_shared_storage_test_file(self, ctxt, filename, host):
-        return self.call(ctxt, self.make_msg('check_shared_storage_test_file',
-                filename=filename),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
 
     def cleanup_shared_storage_test_file(self, ctxt, filename, host):
-        self.cast(ctxt, self.make_msg('cleanup_shared_storage_test_file',
-                filename=filename),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
 
     def compare_cpu(self, ctxt, cpu_info, host):
-        return self.call(ctxt, self.make_msg('compare_cpu', cpu_info=cpu_info),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
+
+    def create_shared_storage_test_file(self, ctxt, host):
+        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
 
     def confirm_resize(self, ctxt, instance, migration_id, host,
             cast=True):
@@ -108,11 +124,6 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         return rpc_method(ctxt, self.make_msg('confirm_resize',
                 instance_uuid=instance['uuid'], migration_id=migration_id),
                 topic=_compute_topic(self.topic, ctxt, host, instance))
-
-    def create_shared_storage_test_file(self, ctxt, host):
-        return self.call(ctxt,
-                self.make_msg('create_shared_storage_test_file'),
-                topic=_compute_topic(self.topic, ctxt, host, None))
 
     def detach_volume(self, ctxt, instance, volume_id):
         self.cast(ctxt, self.make_msg('detach_volume',

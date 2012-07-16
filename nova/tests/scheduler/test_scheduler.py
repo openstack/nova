@@ -28,6 +28,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import notifications
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
@@ -440,23 +441,32 @@ class SchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_common_check')
+        self.mox.StubOutWithMock(self.driver.compute_rpcapi,
+                                 'check_can_live_migrate_destination')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
+        self.mox.StubOutWithMock(notifications, 'send_update')
 
         dest = 'fake_host2'
         block_migration = False
         disk_over_commit = False
         instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
 
         self.driver._live_migration_src_check(self.context, instance)
-        self.driver._live_migration_dest_check(self.context, instance,
-                dest, block_migration, disk_over_commit)
+        self.driver._live_migration_dest_check(self.context, instance, dest)
         self.driver._live_migration_common_check(self.context, instance,
-                dest, block_migration, disk_over_commit)
-        db.instance_update_and_get_original(self.context, instance['id'],
+                                                 dest)
+        self.driver.compute_rpcapi.check_can_live_migrate_destination(
+               self.context, instance, dest, block_migration, disk_over_commit)
+        db.instance_update_and_get_original(self.context, instance_uuid,
                 {"task_state": task_states.MIGRATING}).AndReturn(
                         (instance, instance))
+        notifications.send_update(self.context, instance, instance,
+                                  service="scheduler")
 
         driver.cast_to_compute_host(self.context, instance['host'],
                 'live_migration', update_db=False,
@@ -469,38 +479,13 @@ class SchedulerTestCase(test.TestCase):
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
 
-    def _check_shared_storage(self, dest, instance, check_result):
-        tmp_filename = 'test-filename'
-        rpc.queue_get_for(self.context, FLAGS.compute_topic,
-                dest).AndReturn('dest_queue')
-        rpc.call(self.context, 'dest_queue',
-                {'method': 'create_shared_storage_test_file',
-                 'args': {},
-                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-                None).AndReturn(tmp_filename)
-        rpc.queue_get_for(self.context, FLAGS.compute_topic,
-                instance['host']).AndReturn('src_queue')
-        rpc.call(self.context, 'src_queue',
-                {'method': 'check_shared_storage_test_file',
-                 'args': {'filename': tmp_filename},
-                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-                None).AndReturn(check_result)
-        rpc.queue_get_for(self.context, FLAGS.compute_topic,
-                dest).AndReturn('dest_queue')
-        rpc.cast(self.context, 'dest_queue',
-                {'method': 'cleanup_shared_storage_test_file',
-                 'args': {'filename': tmp_filename},
-                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
-
     def test_live_migration_all_checks_pass(self):
         """Test live migration when all checks pass."""
 
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(utils, 'service_is_up')
         self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(self.driver, '_get_compute_info')
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
         self.mox.StubOutWithMock(rpc, 'call')
         self.mox.StubOutWithMock(rpc, 'cast')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
@@ -510,8 +495,12 @@ class SchedulerTestCase(test.TestCase):
         block_migration = True
         disk_over_commit = True
         instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
+        instance_id = instance['id']
+        instance_uuid = instance['uuid']
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
 
+        # Source checks
         db.service_get_all_compute_by_host(self.context,
                 instance['host']).AndReturn(['fake_service2'])
         utils.service_is_up('fake_service2').AndReturn(True)
@@ -521,60 +510,42 @@ class SchedulerTestCase(test.TestCase):
                 dest).AndReturn(['fake_service3'])
         utils.service_is_up('fake_service3').AndReturn(True)
         # assert_compute_node_has_enough_memory()
-        self.driver._get_compute_info(self.context, dest,
-                'memory_mb').AndReturn(2048)
+        db.service_get_all_compute_by_host(self.context, dest).AndReturn(
+                [{'compute_node': [{'memory_mb': 2048,
+                                    'hypervisor_version': 1}]}])
         db.instance_get_all_by_host(self.context, dest).AndReturn(
                 [dict(memory_mb=256), dict(memory_mb=512)])
-        # assert_compute_node_has_enough_disk()
-        self.driver._get_compute_info(self.context, dest,
-                'disk_available_least').AndReturn(1025)
-        rpc.queue_get_for(self.context, FLAGS.compute_topic,
-                instance['host']).AndReturn('src_queue1')
-        instance_disk_info_msg = {
-            'method': 'get_instance_disk_info',
-            'args': {
-                'instance_name': instance['name'],
-            },
-            'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION,
-        }
-        instance_disk_info = [{'disk_size': 1024 * (1024 ** 3)}]
-        rpc.call(self.context,
-                 'src_queue1',
-                 instance_disk_info_msg,
-                 None).AndReturn(jsonutils.dumps(instance_disk_info))
 
-        # Common checks (shared storage ok, same hypervisor, etc)
-        self._check_shared_storage(dest, instance, False)
-
+        # Common checks (same hypervisor, etc)
         db.service_get_all_compute_by_host(self.context, dest).AndReturn(
                 [{'compute_node': [{'hypervisor_type': 'xen',
                                     'hypervisor_version': 1}]}])
-        # newer hypervisor version for src
         db.service_get_all_compute_by_host(self.context,
             instance['host']).AndReturn(
                     [{'compute_node': [{'hypervisor_type': 'xen',
                                         'hypervisor_version': 1,
                                         'cpu_info': 'fake_cpu_info'}]}])
-        rpc.queue_get_for(self.context, FLAGS.compute_topic,
-                dest).AndReturn('dest_queue')
-        rpc.call(self.context, 'dest_queue',
-                {'method': 'compare_cpu',
-                 'args': {'cpu_info': 'fake_cpu_info'},
-                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-                None).AndReturn(True)
 
-        db.instance_update_and_get_original(self.context, instance['id'],
+        rpc.call(self.context, "compute.fake_host2",
+                   {"method": 'check_can_live_migrate_destination',
+                    "args": {'instance_id': instance_id,
+                             'block_migration': block_migration,
+                             'disk_over_commit': disk_over_commit},
+                    "version": "1.2"},
+                 None)
+
+        db.instance_update_and_get_original(self.context, instance_uuid,
                 {"task_state": task_states.MIGRATING}).AndReturn(
                         (instance, instance))
 
         driver.cast_to_compute_host(self.context, instance['host'],
                 'live_migration', update_db=False,
-                instance_id=instance['id'], dest=dest,
+                instance_id=instance_id, dest=dest,
                 block_migration=block_migration)
 
         self.mox.ReplayAll()
         result = self.driver.schedule_live_migration(self.context,
-                instance_id=instance['id'], dest=dest,
+                instance_id=instance_id, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
         self.assertEqual(result, None)
@@ -587,16 +558,43 @@ class SchedulerTestCase(test.TestCase):
         dest = 'fake_host2'
         block_migration = False
         instance = self._live_migration_instance()
+        instance_id = instance['id']
         instance['power_state'] = power_state.NOSTATE
 
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
 
         self.mox.ReplayAll()
 
         self.assertRaises(exception.InstanceNotRunning,
             self.driver.schedule_live_migration, self.context,
-                    instance_id=instance['id'], dest=dest,
+                    instance_id=instance_id, dest=dest,
                     block_migration=block_migration)
+
+    def test_live_migration_compute_src_not_exist(self):
+        """Raise exception when src compute node is does not exist."""
+
+        self.mox.StubOutWithMock(db, 'instance_get')
+        self.mox.StubOutWithMock(utils, 'service_is_up')
+        self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
+
+        dest = 'fake_host2'
+        block_migration = False
+        instance = self._live_migration_instance()
+        instance_id = instance['id']
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
+
+        # Compute down
+        db.service_get_all_compute_by_host(self.context,
+                instance['host']).AndRaise(
+                                       exception.NotFound())
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.ComputeServiceUnavailable,
+                self.driver.schedule_live_migration, self.context,
+                instance_id=instance_id, dest=dest,
+                block_migration=block_migration)
 
     def test_live_migration_compute_src_not_alive(self):
         """Raise exception when src compute node is not alive."""
@@ -608,7 +606,9 @@ class SchedulerTestCase(test.TestCase):
         dest = 'fake_host2'
         block_migration = False
         instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
+        instance_id = instance['id']
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
 
         # Compute down
         db.service_get_all_compute_by_host(self.context,
@@ -618,7 +618,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.ComputeServiceUnavailable,
                 self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
+                instance_id=instance_id, dest=dest,
                 block_migration=block_migration)
 
     def test_live_migration_compute_dest_not_alive(self):
@@ -632,7 +632,9 @@ class SchedulerTestCase(test.TestCase):
         dest = 'fake_host2'
         block_migration = False
         instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
+        instance_id = instance['id']
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
 
         self.driver._live_migration_src_check(self.context, instance)
         db.service_get_all_compute_by_host(self.context,
@@ -643,7 +645,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.ComputeServiceUnavailable,
                 self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
+                instance_id=instance_id, dest=dest,
                 block_migration=block_migration)
 
     def test_live_migration_dest_check_service_same_host(self):
@@ -657,10 +659,12 @@ class SchedulerTestCase(test.TestCase):
         block_migration = False
         disk_over_commit = False
         instance = self._live_migration_instance()
+        instance_id = instance['id']
         # make dest same as src
         dest = instance['host']
 
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
 
         self.driver._live_migration_src_check(self.context, instance)
         db.service_get_all_compute_by_host(self.context,
@@ -670,7 +674,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.UnableToMigrateToSelf,
                 self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
+                instance_id=instance_id, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=False)
 
@@ -688,138 +692,29 @@ class SchedulerTestCase(test.TestCase):
         block_migration = False
         disk_over_commit = False
         instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
+        instance_id = instance['id']
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
 
         self.driver._live_migration_src_check(self.context, instance)
         db.service_get_all_compute_by_host(self.context,
                 dest).AndReturn(['fake_service3'])
         utils.service_is_up('fake_service3').AndReturn(True)
 
-        self.driver._get_compute_info(self.context, dest,
-                'memory_mb').AndReturn(2048)
+        self.driver._get_compute_info(self.context, dest).AndReturn(
+                                                       {'memory_mb': 2048})
         db.instance_get_all_by_host(self.context, dest).AndReturn(
                 [dict(memory_mb=1024), dict(memory_mb=512)])
 
         self.mox.ReplayAll()
         self.assertRaises(exception.MigrationError,
                 self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
-                block_migration=block_migration,
-                disk_over_commit=disk_over_commit)
-
-    def test_block_migration_dest_check_service_lack_disk(self):
-        """Confirms exception raises when dest doesn't have enough disk."""
-
-        self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
-        self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-        self.mox.StubOutWithMock(utils, 'service_is_up')
-        self.mox.StubOutWithMock(self.driver,
-                'assert_compute_node_has_enough_memory')
-        self.mox.StubOutWithMock(self.driver, '_get_compute_info')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
-        self.mox.StubOutWithMock(rpc, 'call')
-
-        dest = 'fake_host2'
-        block_migration = True
-        disk_over_commit = True
-        instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
-
-        self.driver._live_migration_src_check(self.context, instance)
-        db.service_get_all_compute_by_host(self.context,
-                dest).AndReturn(['fake_service3'])
-        utils.service_is_up('fake_service3').AndReturn(True)
-
-        # Enough memory
-        self.driver.assert_compute_node_has_enough_memory(self.context,
-                instance, dest)
-
-        # Not enough disk
-        self.driver._get_compute_info(self.context, dest,
-                'disk_available_least').AndReturn(1023)
-        rpc.queue_get_for(self.context, FLAGS.compute_topic,
-                instance['host']).AndReturn('src_queue')
-        instance_disk_info_msg = {
-            'method': 'get_instance_disk_info',
-            'args': {
-                'instance_name': instance['name'],
-            },
-            'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION,
-        }
-        instance_disk_info = [{'disk_size': 1024 * (1024 ** 3)}]
-        rpc.call(self.context,
-                 'src_queue',
-                 instance_disk_info_msg,
-                 None).AndReturn(jsonutils.dumps(instance_disk_info))
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.MigrationError,
-                self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
-                block_migration=block_migration,
-                disk_over_commit=disk_over_commit)
-
-    def test_live_migration_different_shared_storage_raises(self):
-        """Src and dest must have same shared storage for live migration"""
-
-        self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
-        self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
-        self.mox.StubOutWithMock(rpc, 'call')
-        self.mox.StubOutWithMock(rpc, 'cast')
-
-        dest = 'fake_host2'
-        block_migration = False
-        disk_over_commit = False
-        instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
-
-        self.driver._live_migration_src_check(self.context, instance)
-        self.driver._live_migration_dest_check(self.context, instance,
-                dest, block_migration, disk_over_commit)
-
-        self._check_shared_storage(dest, instance, False)
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InvalidSharedStorage,
-                self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
-                block_migration=block_migration,
-                disk_over_commit=disk_over_commit)
-
-    def test_live_migration_same_shared_storage_okay(self):
-        """live migration works with same src and dest shared storage"""
-
-        self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
-        self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
-        self.mox.StubOutWithMock(rpc, 'call')
-        self.mox.StubOutWithMock(rpc, 'cast')
-
-        dest = 'fake_host2'
-        block_migration = False
-        disk_over_commit = False
-        instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
-
-        self.driver._live_migration_src_check(self.context, instance)
-        self.driver._live_migration_dest_check(self.context, instance,
-                dest, block_migration, disk_over_commit)
-
-        self._check_shared_storage(dest, instance, False)
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InvalidSharedStorage,
-                self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
+                instance_id=instance_id, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_different_hypervisor_type_raises(self):
+        """Confirm live_migration to hypervisor of different type raises"""
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
@@ -832,18 +727,16 @@ class SchedulerTestCase(test.TestCase):
         block_migration = False
         disk_over_commit = False
         instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
+        instance_id = instance['id']
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
 
         self.driver._live_migration_src_check(self.context, instance)
-        self.driver._live_migration_dest_check(self.context, instance,
-                dest, block_migration, disk_over_commit)
-
-        self._check_shared_storage(dest, instance, True)
+        self.driver._live_migration_dest_check(self.context, instance, dest)
 
         db.service_get_all_compute_by_host(self.context, dest).AndReturn(
                 [{'compute_node': [{'hypervisor_type': 'xen',
                                     'hypervisor_version': 1}]}])
-        # different hypervisor type
         db.service_get_all_compute_by_host(self.context,
             instance['host']).AndReturn(
                     [{'compute_node': [{'hypervisor_type': 'not-xen',
@@ -852,11 +745,12 @@ class SchedulerTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.InvalidHypervisorType,
                 self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
+                instance_id=instance_id, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
 
     def test_live_migration_dest_hypervisor_version_older_raises(self):
+        """Confirm live migration to older hypervisor raises"""
         self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
         self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
@@ -869,18 +763,16 @@ class SchedulerTestCase(test.TestCase):
         block_migration = False
         disk_over_commit = False
         instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
+        instance_id = instance['id']
+        db.instance_get(self.context,
+                        instance_id).AndReturn(instance)
 
         self.driver._live_migration_src_check(self.context, instance)
-        self.driver._live_migration_dest_check(self.context, instance,
-                dest, block_migration, disk_over_commit)
-
-        self._check_shared_storage(dest, instance, True)
+        self.driver._live_migration_dest_check(self.context, instance, dest)
 
         db.service_get_all_compute_by_host(self.context, dest).AndReturn(
                 [{'compute_node': [{'hypervisor_type': 'xen',
                                     'hypervisor_version': 1}]}])
-        # newer hypervisor version for src
         db.service_get_all_compute_by_host(self.context,
             instance['host']).AndReturn(
                     [{'compute_node': [{'hypervisor_type': 'xen',
@@ -888,52 +780,9 @@ class SchedulerTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.DestinationHypervisorTooOld,
                 self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
+                instance_id=instance_id, dest=dest,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
-
-    def test_live_migration_dest_host_incompatable_cpu_raises(self):
-        self.mox.StubOutWithMock(db, 'instance_get')
-        self.mox.StubOutWithMock(self.driver, '_live_migration_src_check')
-        self.mox.StubOutWithMock(self.driver, '_live_migration_dest_check')
-        self.mox.StubOutWithMock(rpc, 'queue_get_for')
-        self.mox.StubOutWithMock(rpc, 'call')
-        self.mox.StubOutWithMock(rpc, 'cast')
-        self.mox.StubOutWithMock(db, 'service_get_all_compute_by_host')
-
-        dest = 'fake_host2'
-        block_migration = False
-        disk_over_commit = False
-        instance = self._live_migration_instance()
-        db.instance_get(self.context, instance['id']).AndReturn(instance)
-
-        self.driver._live_migration_src_check(self.context, instance)
-        self.driver._live_migration_dest_check(self.context, instance,
-                dest, block_migration, disk_over_commit)
-
-        self._check_shared_storage(dest, instance, True)
-
-        db.service_get_all_compute_by_host(self.context, dest).AndReturn(
-                [{'compute_node': [{'hypervisor_type': 'xen',
-                                    'hypervisor_version': 1}]}])
-        db.service_get_all_compute_by_host(self.context,
-            instance['host']).AndReturn(
-                    [{'compute_node': [{'hypervisor_type': 'xen',
-                                        'hypervisor_version': 1,
-                                        'cpu_info': 'fake_cpu_info'}]}])
-        rpc.queue_get_for(self.context, FLAGS.compute_topic,
-                dest).AndReturn('dest_queue')
-        rpc.call(self.context, 'dest_queue',
-                {'method': 'compare_cpu',
-                 'args': {'cpu_info': 'fake_cpu_info'},
-                 'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
-                None).AndRaise(rpc_common.RemoteError())
-
-        self.mox.ReplayAll()
-        self.assertRaises(rpc_common.RemoteError,
-                self.driver.schedule_live_migration, self.context,
-                instance_id=instance['id'], dest=dest,
-                block_migration=block_migration)
 
 
 class SchedulerDriverBaseTestCase(SchedulerTestCase):

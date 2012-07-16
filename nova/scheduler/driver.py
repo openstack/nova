@@ -212,36 +212,30 @@ class Scheduler(object):
             The host where instance is running currently.
             Then scheduler send request that host.
         """
-        # Whether instance exists and is running.
+        # Check we can do live migration
         instance_ref = db.instance_get(context, instance_id)
-
-        # Checking instance.
         self._live_migration_src_check(context, instance_ref)
+        self._live_migration_dest_check(context, instance_ref, dest)
+        self._live_migration_common_check(context, instance_ref, dest)
+        self.compute_rpcapi.check_can_live_migrate_destination(context,
+                instance_ref, dest, block_migration, disk_over_commit)
 
-        # Checking destination host.
-        self._live_migration_dest_check(context, instance_ref,
-                                        dest, block_migration,
-                                        disk_over_commit)
-        # Common checking.
-        self._live_migration_common_check(context, instance_ref,
-                                          dest, block_migration,
-                                          disk_over_commit)
-
-        # Changing instance_state.
+        # Change instance_state
         values = {"task_state": task_states.MIGRATING}
 
         # update instance state and notify
         (old_ref, new_instance_ref) = db.instance_update_and_get_original(
-                context, instance_id, values)
+                context, instance_ref['uuid'], values)
         notifications.send_update(context, old_ref, new_instance_ref,
                 service="scheduler")
 
+        # Perform migration
         src = instance_ref['host']
         cast_to_compute_host(context, src, 'live_migration',
-                update_db=False,
-                instance_id=instance_id,
-                dest=dest,
-                block_migration=block_migration)
+                             update_db=False,
+                             instance_id=instance_id,
+                             dest=dest,
+                             block_migration=block_migration)
 
     def _live_migration_src_check(self, context, instance_ref):
         """Live migration check routine (for src host).
@@ -250,7 +244,7 @@ class Scheduler(object):
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
 
         """
-
+        # TODO(johngar) why is this not in the API layer?
         # Checking instance is running.
         if instance_ref['power_state'] != power_state.RUNNING:
             raise exception.InstanceNotRunning(
@@ -258,22 +252,21 @@ class Scheduler(object):
 
         # Checking src host exists and compute node
         src = instance_ref['host']
-        services = db.service_get_all_compute_by_host(context, src)
+        try:
+            services = db.service_get_all_compute_by_host(context, src)
+        except exception.NotFound:
+            raise exception.ComputeServiceUnavailable(host=src)
 
         # Checking src host is alive.
         if not utils.service_is_up(services[0]):
             raise exception.ComputeServiceUnavailable(host=src)
 
-    def _live_migration_dest_check(self, context, instance_ref, dest,
-                                   block_migration, disk_over_commit):
+    def _live_migration_dest_check(self, context, instance_ref, dest):
         """Live migration check routine (for destination host).
 
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest: destination host
-        :param block_migration: if true, block_migration.
-        :param disk_over_commit: if True, consider real(not virtual)
-                                 disk size.
         """
 
         # Checking dest exists and compute node.
@@ -291,15 +284,11 @@ class Scheduler(object):
             raise exception.UnableToMigrateToSelf(
                     instance_id=instance_ref['uuid'], host=dest)
 
-        # Checking dst host still has enough capacities.
-        self.assert_compute_node_has_enough_resources(context,
-                                                      instance_ref,
-                                                      dest,
-                                                      block_migration,
-                                                      disk_over_commit)
+        # Check memory requirements
+        self._assert_compute_node_has_enough_memory(context,
+                                                   instance_ref, dest)
 
-    def _live_migration_common_check(self, context, instance_ref, dest,
-                                     block_migration, disk_over_commit):
+    def _live_migration_common_check(self, context, instance_ref, dest):
         """Live migration common check routine.
 
         Below checkings are followed by
@@ -308,38 +297,10 @@ class Scheduler(object):
         :param context: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest: destination host
-        :param block_migration: if true, block_migration.
-        :param disk_over_commit: if True, consider real(not virtual)
-                                 disk size.
-
         """
-
-        # Checking shared storage connectivity
-        # if block migration, instances_paths should not be on shared storage.
-        shared = self.mounted_on_same_shared_storage(context, instance_ref,
-                                                     dest)
-        if block_migration:
-            if shared:
-                reason = _("Block migration can not be used "
-                           "with shared storage.")
-                raise exception.InvalidSharedStorage(reason=reason, path=dest)
-
-        elif not shared:
-            reason = _("Live migration can not be used "
-                       "without shared storage.")
-            raise exception.InvalidSharedStorage(reason=reason, path=dest)
-
-        # Checking destination host exists.
-        dservice_refs = db.service_get_all_compute_by_host(context, dest)
-        dservice_ref = dservice_refs[0]['compute_node'][0]
-
-        # Checking original host( where instance was launched at) exists.
-        try:
-            oservice_refs = db.service_get_all_compute_by_host(context,
-                                           instance_ref['host'])
-        except exception.NotFound:
-            raise exception.SourceHostUnavailable()
-        oservice_ref = oservice_refs[0]['compute_node'][0]
+        dservice_ref = self._get_compute_info(context, dest)
+        src = instance_ref['host']
+        oservice_ref = self._get_compute_info(context, src)
 
         # Checking hypervisor is same.
         orig_hypervisor = oservice_ref['hypervisor_type']
@@ -353,40 +314,7 @@ class Scheduler(object):
         if orig_hypervisor > dest_hypervisor:
             raise exception.DestinationHypervisorTooOld()
 
-        # Checking cpuinfo.
-        try:
-            self.compute_rpcapi.compare_cpu(context, oservice_ref['cpu_info'],
-                                            dest)
-
-        except exception.InvalidCPUInfo:
-            src = instance_ref['host']
-            LOG.exception(_("host %(dest)s is not compatible with "
-                                "original host %(src)s.") % locals())
-            raise
-
-    def assert_compute_node_has_enough_resources(self, context, instance_ref,
-                                                 dest, block_migration,
-                                                 disk_over_commit):
-
-        """Checks if destination host has enough resource for live migration.
-
-        :param context: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance object
-        :param dest: destination host
-        :param block_migration: if true, block_migration.
-        :param disk_over_commit: if True, consider real(not virtual)
-                                 disk size.
-
-        """
-        self.assert_compute_node_has_enough_memory(context,
-                                                   instance_ref, dest)
-        if not block_migration:
-            return
-        self.assert_compute_node_has_enough_disk(context,
-                                                 instance_ref, dest,
-                                                 disk_over_commit)
-
-    def assert_compute_node_has_enough_memory(self, context,
+    def _assert_compute_node_has_enough_memory(self, context,
                                               instance_ref, dest):
         """Checks if destination host has enough memory for live migration.
 
@@ -397,7 +325,7 @@ class Scheduler(object):
 
         """
         # Getting total available memory of host
-        avail = self._get_compute_info(context, dest, 'memory_mb')
+        avail = self._get_compute_info(context, dest)['memory_mb']
 
         # Getting total used memory and disk of host
         # It should be sum of memories that are assigned as max value,
@@ -414,54 +342,7 @@ class Scheduler(object):
                        "instance:%(mem_inst)s)")
             raise exception.MigrationError(reason=reason % locals())
 
-    def assert_compute_node_has_enough_disk(self, context, instance_ref, dest,
-                                            disk_over_commit):
-        """Checks if destination host has enough disk for block migration.
-
-        :param context: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance object
-        :param dest: destination host
-        :param disk_over_commit: if True, consider real(not virtual)
-                                 disk size.
-
-        """
-
-        # Libvirt supports qcow2 disk format,which is usually compressed
-        # on compute nodes.
-        # Real disk image (compressed) may enlarged to "virtual disk size",
-        # that is specified as the maximum disk size.
-        # (See qemu-img -f path-to-disk)
-        # Scheduler recognizes destination host still has enough disk space
-        # if real disk size < available disk size
-        # if disk_over_commit is True,
-        #  otherwise virtual disk size < available disk size.
-
-        # Getting total available disk of host
-        available_gb = self._get_compute_info(context,
-                                              dest, 'disk_available_least')
-        available = available_gb * (1024 ** 3)
-
-        # Getting necessary disk size
-        ret = self.compute_rpcapi.get_instance_disk_info(context, instance_ref)
-        disk_infos = jsonutils.loads(ret)
-
-        necessary = 0
-        if disk_over_commit:
-            for info in disk_infos:
-                necessary += int(info['disk_size'])
-        else:
-            for info in disk_infos:
-                necessary += int(info['virt_disk_size'])
-
-        # Check that available disk > necessary disk
-        if (available - necessary) < 0:
-            instance_uuid = instance_ref['uuid']
-            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
-                       "Lack of disk(host:%(available)s "
-                       "<= instance:%(necessary)s)")
-            raise exception.MigrationError(reason=reason % locals())
-
-    def _get_compute_info(self, context, host, key):
+    def _get_compute_info(self, context, host):
         """get compute node's information specified by key
 
         :param context: security context
@@ -471,33 +352,4 @@ class Scheduler(object):
 
         """
         compute_node_ref = db.service_get_all_compute_by_host(context, host)
-        compute_node_ref = compute_node_ref[0]['compute_node'][0]
-        return compute_node_ref[key]
-
-    def mounted_on_same_shared_storage(self, context, instance_ref, dest):
-        """Check if the src and dest host mount same shared storage.
-
-        At first, dest host creates temp file, and src host can see
-        it if they mounts same shared storage. Then src host erase it.
-
-        :param context: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance object
-        :param dest: destination host
-
-        """
-
-        src = instance_ref['host']
-
-        filename = self.compute_rpcapi.create_shared_storage_test_file(context,
-                dest)
-
-        try:
-            # make sure existence at src host.
-            ret = self.compute_rpcapi.check_shared_storage_test_file(context,
-                    filename, src)
-
-        finally:
-            self.compute_rpcapi.cleanup_shared_storage_test_file(context,
-                    filename, dest)
-
-        return ret
+        return compute_node_ref[0]['compute_node'][0]
