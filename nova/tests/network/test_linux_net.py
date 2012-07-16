@@ -373,6 +373,7 @@ class LinuxNetworkTestCase(test.TestCase):
                 "bridge_interface": "base_interface",
                 "vlan": "fake"
         }
+        self.flags(vlan_interface="")
         driver.plug(network, "fakemac")
         self.assertEqual(info['passed_interface'], "base_interface")
         self.flags(vlan_interface="override_interface")

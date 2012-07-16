@@ -171,13 +171,13 @@ class NetworkCommandsTestCase(test.TestCase):
                        fake_create_networks)
         self.commands.create(
                             label='Test',
-                            fixed_range_v4='10.2.0.0/24',
+                            cidr='10.2.0.0/24',
                             num_networks=1,
                             network_size=256,
                             multi_host='F',
                             vlan_start=200,
                             vpn_start=2000,
-                            fixed_range_v6='fd00:2::/120',
+                            cidr_v6='fd00:2::/120',
                             gateway='10.2.0.1',
                             gateway_v6='fd00:2::22',
                             bridge='br200',

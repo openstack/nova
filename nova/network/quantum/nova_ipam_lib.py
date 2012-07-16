@@ -59,7 +59,7 @@ class QuantumNovaIPAMLib(object):
         """
         admin_context = context.elevated()
         subnet_size = len(netaddr.IPNetwork(cidr))
-        networks = manager.FlatManager.create_networks(self.net_manager,
+        networks = manager.FlatManager._do_create_networks(self.net_manager,
                     admin_context, label, cidr,
                     False, 1, subnet_size, cidr_v6, gateway,
                     gateway_v6, quantum_net_id, None, dns1, dns2,
