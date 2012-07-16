@@ -28,6 +28,9 @@ CHUNK_SIZE = 8192
 def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False):
     """Make a subprocess according to the given command-line string
     """
+    # NOTE(dprince): shlex python 2.4 doesn't like unicode so we
+    # explicitly convert to ascii
+    cmdline = cmdline.encode('ascii')
     logging.info("Running cmd '%s'" % cmdline)
     kwargs = {}
     kwargs['stdout'] = stdout and subprocess.PIPE or None
@@ -248,9 +251,8 @@ def import_vhds(sr_path, staging_path, uuid_stack):
     return imported_vhds
 
 
-def prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
+def prepare_staging_area(sr_path, staging_path, vdi_uuids, seq_num=0):
     """Hard-link VHDs into staging area."""
-    seq_num = 0
     for vdi_uuid in vdi_uuids:
         source = os.path.join(sr_path, "%s.vhd" % vdi_uuid)
         link_name = os.path.join(staging_path, "%d.vhd" % seq_num)
