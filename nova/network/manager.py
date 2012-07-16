@@ -1907,9 +1907,13 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         return address
 
     @wrap_check_policy
-    def add_network_to_project(self, context, project_id):
+    def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force adds another network to a project."""
-        self.db.network_associate(context, project_id, force=True)
+        if network_uuid is not None:
+            network_id = self.get_network(context, network_uuid)['id']
+        else:
+            network_id = None
+        self.db.network_associate(context, project_id, network_id, force=True)
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
                                    requested_networks=None):
