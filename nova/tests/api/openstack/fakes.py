@@ -494,7 +494,7 @@ def stub_volume(id, **kwargs):
         'name': 'vol name',
         'display_name': 'displayname',
         'display_description': 'displaydesc',
-        'created_at': datetime.datetime(1, 1, 1, 1, 1, 1),
+        'created_at': datetime.datetime(1999, 1, 1, 1, 1, 1),
         'snapshot_id': None,
         'volume_type_id': 'fakevoltype',
         'volume_metadata': [],

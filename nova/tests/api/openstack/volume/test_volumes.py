@@ -60,8 +60,8 @@ class VolumeApiTest(test.TestCase):
                                'snapshot_id': None,
                                'metadata': {},
                                'id': '1',
-                               'created_at': datetime.datetime(1, 1, 1,
-                                                              1, 1, 1),
+                               'created_at': datetime.datetime(1999, 1, 1,
+                                                               1, 1, 1),
                                'size': 100}}
         self.assertEqual(res_dict, expected)
 
@@ -88,8 +88,8 @@ class VolumeApiTest(test.TestCase):
                                  'snapshot_id': None,
                                  'metadata': {},
                                  'id': '1',
-                                 'created_at': datetime.datetime(1, 1, 1,
-                                                                1, 1, 1),
+                                 'created_at': datetime.datetime(1999, 1, 1,
+                                                                 1, 1, 1),
                                  'size': 1}]}
         self.maxDiff = None
         self.assertEqual(res_dict, expected)
@@ -109,8 +109,8 @@ class VolumeApiTest(test.TestCase):
                                  'snapshot_id': None,
                                  'metadata': {},
                                  'id': '1',
-                                 'created_at': datetime.datetime(1, 1, 1,
-                                                                1, 1, 1),
+                                 'created_at': datetime.datetime(1999, 1, 1,
+                                                                 1, 1, 1),
                                  'size': 1}]}
         self.assertEqual(res_dict, expected)
 
@@ -129,8 +129,8 @@ class VolumeApiTest(test.TestCase):
                                'snapshot_id': None,
                                'metadata': {},
                                'id': '1',
-                               'created_at': datetime.datetime(1, 1, 1,
-                                                              1, 1, 1),
+                               'created_at': datetime.datetime(1999, 1, 1,
+                                                               1, 1, 1),
                                'size': 1}}
         self.assertEqual(res_dict, expected)
 
@@ -151,8 +151,8 @@ class VolumeApiTest(test.TestCase):
                                'snapshot_id': None,
                                'metadata': {},
                                'id': '1',
-                               'created_at': datetime.datetime(1, 1, 1,
-                                                              1, 1, 1),
+                               'created_at': datetime.datetime(1999, 1, 1,
+                                                               1, 1, 1),
                                'size': 1}}
         self.assertEqual(res_dict, expected)
 
