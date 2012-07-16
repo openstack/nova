@@ -3485,6 +3485,9 @@ class LibvirtDriverTestCase(test.TestCase):
                       'local_gb': 10, 'backing_file': '/base/disk.local'}]
         disk_info_text = jsonutils.dumps(disk_info)
 
+        def fake_can_resize_fs(path, size, use_cow=False):
+            return False
+
         def fake_extend(path, size):
             pass
 
@@ -3513,6 +3516,8 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.flags(use_cow_images=True)
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
+        self.stubs.Set(libvirt_driver.disk, 'can_resize_fs',
+                       fake_can_resize_fs)
         self.stubs.Set(self.libvirtconnection, 'to_xml', fake_to_xml)
         self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(self.libvirtconnection, '_create_image',

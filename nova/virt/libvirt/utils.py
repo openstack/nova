@@ -180,17 +180,35 @@ def get_disk_backing_file(path):
     return backing_file
 
 
-def copy_image(src, dest):
-    """Copy a disk image
+def copy_image(src, dest, host=None):
+    """Copy a disk image to an existing directory
 
     :param src: Source image
     :param dest: Destination path
+    :param host: Remote host
     """
-    # We shell out to cp because that will intelligently copy
-    # sparse files.  I.E. holes will not be written to DEST,
-    # rather recreated efficiently.  In addition, since
-    # coreutils 8.11, holes can be read efficiently too.
-    execute('cp', src, dest)
+
+    if not host:
+        # We shell out to cp because that will intelligently copy
+        # sparse files.  I.E. holes will not be written to DEST,
+        # rather recreated efficiently.  In addition, since
+        # coreutils 8.11, holes can be read efficiently too.
+        execute('cp', src, dest)
+    else:
+        dest = "%s:%s" % (host, dest)
+        # Try rsync first as that can compress and create sparse dest files.
+        # Note however that rsync currently doesn't read sparse files
+        # efficiently: https://bugzilla.samba.org/show_bug.cgi?id=8918
+        # At least network traffic is mitigated with compression.
+        try:
+            # Do a relatively light weight test first, so that we
+            # can fall back to scp, without having run out of space
+            # on the destination for example.
+            execute('rsync', '--sparse', '--compress', '--dry-run', src, dest)
+        except exception.ProcessExecutionError:
+            execute('scp', src, dest)
+        else:
+            execute('rsync', '--sparse', '--compress', src, dest)
 
 
 def mkfs(fs, path, label=None):
