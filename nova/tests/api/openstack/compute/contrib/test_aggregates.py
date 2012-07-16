@@ -23,7 +23,6 @@ from nova import exception
 from nova.openstack.common import log as logging
 from nova import test
 
-
 LOG = logging.getLogger(__name__)
 AGGREGATE_LIST = [
         {"name": "aggregate1", "id": "1", "availability_zone": "nova1"},
@@ -225,16 +224,6 @@ class AggregateTestCase(test.TestCase):
                                                               "host1"}})
 
         self.assertEqual(aggregate["aggregate"], AGGREGATE)
-
-    def test_add_host_with_already_added_to_another_aggregate(self):
-        def stub_add_host_to_aggregate(context, aggregate, host):
-            raise exception.AggregateHostConflict()
-        self.stubs.Set(self.controller.api, "add_host_to_aggregate",
-                       stub_add_host_to_aggregate)
-
-        self.assertRaises(exc.HTTPConflict, self.controller.action,
-                          self.req, "duplicate_aggregate",
-                          body={"add_host": {"host": "host1"}})
 
     def test_add_host_with_already_added_host(self):
         def stub_add_host_to_aggregate(context, aggregate, host):

@@ -18,8 +18,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Handles all requests relating to compute resources (e.g. guest vms,
-networking and storage of vms, and compute hosts on which they run)."""
+"""Handles all requests relating to compute resources (e.g. guest VMs,
+networking and storage of VMs, and compute hosts on which they run)."""
 
 import functools
 import re
@@ -28,7 +28,6 @@ import time
 import urllib
 
 from nova import block_device
-from nova.compute import aggregate_states
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -1709,7 +1708,7 @@ class AggregateAPI(base.Base):
         return self._get_aggregate_info(context, aggregate)
 
     def get_aggregate_list(self, context):
-        """Get all the aggregates for this zone."""
+        """Get all the aggregates."""
         aggregates = self.db.aggregate_get_all(context)
         return [self._get_aggregate_info(context, a) for a in aggregates]
 
@@ -1723,11 +1722,6 @@ class AggregateAPI(base.Base):
 
         If a key is set to None, it gets removed from the aggregate metadata.
         """
-        # As a first release of the host aggregates blueprint, this call is
-        # pretty dumb, in the sense that interacts only with the model.
-        # In later releasses, updating metadata may trigger virt actions like
-        # the setup of shared storage, or more generally changes to the
-        # underlying hypervisor pools.
         for key in metadata.keys():
             if not metadata[key]:
                 try:
@@ -1752,52 +1746,26 @@ class AggregateAPI(base.Base):
         """Adds the host to an aggregate."""
         # validates the host; ComputeHostNotFound is raised if invalid
         service = self.db.service_get_all_compute_by_host(context, host)[0]
-        # add host, and reflects action in the aggregate operational state
         aggregate = self.db.aggregate_get(context, aggregate_id)
-        if aggregate.operational_state in [aggregate_states.CREATED,
-                                           aggregate_states.ACTIVE]:
-            if service.availability_zone != aggregate.availability_zone:
-                raise exception.InvalidAggregateAction(
-                        action='add host',
-                        aggregate_id=aggregate_id,
-                        reason='availibility zone mismatch')
-            self.db.aggregate_host_add(context, aggregate_id, host)
-            if aggregate.operational_state == aggregate_states.CREATED:
-                values = {'operational_state': aggregate_states.CHANGING}
-                self.db.aggregate_update(context, aggregate_id, values)
-            self.compute_rpcapi.add_aggregate_host(context,
-                    aggregate_id=aggregate_id, host_param=host, host=host)
-            return self.get_aggregate(context, aggregate_id)
-        else:
-            invalid = {aggregate_states.CHANGING: 'setup in progress',
-                       aggregate_states.DISMISSED: 'aggregate deleted',
-                       aggregate_states.ERROR: 'aggregate in error', }
-            if aggregate.operational_state in invalid.keys():
-                raise exception.InvalidAggregateAction(
-                        action='add host',
-                        aggregate_id=aggregate_id,
-                        reason=invalid[aggregate.operational_state])
+        if service.availability_zone != aggregate.availability_zone:
+            raise exception.InvalidAggregateAction(
+                    action='add host',
+                    aggregate_id=aggregate_id,
+                    reason='availability zone mismatch')
+        self.db.aggregate_host_add(context, aggregate_id, host)
+        #NOTE(jogo): Send message to host to support resource pools
+        self.compute_rpcapi.add_aggregate_host(context,
+                aggregate_id=aggregate_id, host_param=host, host=host)
+        return self.get_aggregate(context, aggregate_id)
 
     def remove_host_from_aggregate(self, context, aggregate_id, host):
         """Removes host from the aggregate."""
         # validates the host; ComputeHostNotFound is raised if invalid
         service = self.db.service_get_all_compute_by_host(context, host)[0]
-        aggregate = self.db.aggregate_get(context, aggregate_id)
-        if aggregate.operational_state in [aggregate_states.ACTIVE,
-                                           aggregate_states.ERROR]:
-            self.db.aggregate_host_delete(context, aggregate_id, host)
-            self.compute_rpcapi.remove_aggregate_host(context,
-                    aggregate_id=aggregate_id, host_param=host, host=host)
-            return self.get_aggregate(context, aggregate_id)
-        else:
-            invalid = {aggregate_states.CREATED: 'no hosts to remove',
-                       aggregate_states.CHANGING: 'setup in progress',
-                       aggregate_states.DISMISSED: 'aggregate deleted', }
-            if aggregate.operational_state in invalid.keys():
-                raise exception.InvalidAggregateAction(
-                        action='remove host',
-                        aggregate_id=aggregate_id,
-                        reason=invalid[aggregate.operational_state])
+        self.db.aggregate_host_delete(context, aggregate_id, host)
+        self.compute_rpcapi.remove_aggregate_host(context,
+                aggregate_id=aggregate_id, host_param=host, host=host)
+        return self.get_aggregate(context, aggregate_id)
 
     def _get_aggregate_info(self, context, aggregate):
         """Builds a dictionary with aggregate props, metadata and hosts."""

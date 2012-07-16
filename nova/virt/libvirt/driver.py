@@ -2798,6 +2798,20 @@ class LibvirtDriver(driver.ComputeDriver):
             pass
         return output
 
+    def add_to_aggregate(self, context, aggregate, host, **kwargs):
+        """Add a compute host to an aggregate."""
+        #NOTE(jogo) Currently only used for XenAPI-Pool
+        pass
+
+    def remove_from_aggregate(self, context, aggregate, host, **kwargs):
+        """Remove a compute host from an aggregate."""
+        pass
+
+    def undo_aggregate_operation(self, context, op, aggregate_id,
+                                  host, set_error=True):
+        """only used for Resource Pools"""
+        pass
+
 
 class HostState(object):
     """Manages information about the compute node through libvirt"""

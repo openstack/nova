@@ -629,10 +629,16 @@ class ComputeDriver(object):
 
     def add_to_aggregate(self, context, aggregate, host, **kwargs):
         """Add a compute host to an aggregate."""
+        #NOTE(jogo) Currently only used for XenAPI-Pool
         raise NotImplementedError()
 
     def remove_from_aggregate(self, context, aggregate, host, **kwargs):
         """Remove a compute host from an aggregate."""
+        raise NotImplementedError()
+
+    def undo_aggregate_operation(self, context, op, aggregate_id,
+                                  host, set_error=True):
+        """Undo for  Resource Pools"""
         raise NotImplementedError()
 
     def get_volume_connector(self, instance):

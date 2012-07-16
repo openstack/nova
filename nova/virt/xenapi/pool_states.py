@@ -15,26 +15,26 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Possible states for host aggregates.
+"""Possible states for xen resource pools.
 
-An aggregate may be 'created', in which case the admin has triggered its
+A pool may be 'created', in which case the admin has triggered its
 creation, but the underlying hypervisor pool has not actually being set up
-yet. An aggregate may be 'changing', meaning that the underlying hypervisor
-pool is being setup. An aggregate may be 'active', in which case the underlying
-hypervisor pool is up and running. An aggregate may be 'dismissed' when it has
-no hosts and it has been deleted. An aggregate may be in 'error' in all other
+yet. An pool may be 'changing', meaning that the underlying hypervisor
+pool is being setup. An pool may be 'active', in which case the underlying
+hypervisor pool is up and running. An pool may be 'dismissed' when it has
+no hosts and it has been deleted. An pool may be in 'error' in all other
 cases.
-A 'created' aggregate becomes 'changing' during the first request of
+A 'created' pool becomes 'changing' during the first request of
 adding a host. During a 'changing' status no other requests will be accepted;
 this is to allow the hypervisor layer to instantiate the underlying pool
 without any potential race condition that may incur in master/slave-based
-configurations. The aggregate goes into the 'active' state when the underlying
+configurations. The pool goes into the 'active' state when the underlying
 pool has been correctly instantiated.
 All other operations (e.g. add/remove hosts) that succeed will keep the
-aggregate in the 'active' state. If a number of continuous requests fail,
-an 'active' aggregate goes into an 'error' state. To recover from such a state,
+pool in the 'active' state. If a number of continuous requests fail,
+an 'active' pool goes into an 'error' state. To recover from such a state,
 admin intervention is required. Currently an error state is irreversible,
-that is, in order to recover from it an aggregate must be deleted.
+that is, in order to recover from it an pool must be deleted.
 """
 
 CREATED = 'created'
@@ -42,3 +42,7 @@ CHANGING = 'changing'
 ACTIVE = 'active'
 ERROR = 'error'
 DISMISSED = 'dismissed'
+
+# Metadata keys
+KEY = 'operational_state'
+POOL_FLAG = 'hypervisor_pool'

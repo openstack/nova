@@ -1057,10 +1057,6 @@ class AggregateMetadataNotFound(NotFound):
                 "key %(metadata_key)s.")
 
 
-class AggregateHostConflict(Duplicate):
-    message = _("Host %(host)s already member of another aggregate.")
-
-
 class AggregateHostExists(Duplicate):
     message = _("Aggregate %(aggregate_id)s already has host %(host)s.")
 

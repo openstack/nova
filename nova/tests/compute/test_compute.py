@@ -27,7 +27,6 @@ import mox
 
 import nova
 from nova import compute
-from nova.compute import aggregate_states
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import manager as compute_manager
@@ -867,7 +866,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_run_instance_usage_notification(self):
-        """Ensure run instance generates apropriate usage notification"""
+        """Ensure run instance generates appropriate usage notification"""
         inst_ref = self._create_fake_instance()
         instance_uuid = inst_ref['uuid']
         self.compute.run_instance(self.context, instance_uuid)
@@ -896,7 +895,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_terminate_usage_notification(self):
-        """Ensure terminate_instance generates apropriate usage notification"""
+        """Ensure terminate_instance generates correct usage notification"""
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
@@ -3646,7 +3645,7 @@ def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
     return values
 
 
-class ComputeAPIAggrTestCase(test.TestCase):
+class ComputeAPIAggrTestCase(BaseTestCase):
     """This is for unit coverage of aggregate-related methods
     defined in nova.compute.api."""
 
@@ -3664,6 +3663,7 @@ class ComputeAPIAggrTestCase(test.TestCase):
                           self.context, 'fake_aggr', 'fake_avail_zone')
 
     def test_update_aggregate_metadata(self):
+        """Ensure metadata can be updated"""
         _create_service_entries(self.context, {'fake_zone': ['fake_host']})
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
@@ -3684,8 +3684,8 @@ class ComputeAPIAggrTestCase(test.TestCase):
         self.api.delete_aggregate(self.context, aggr['id'])
         expected = db.aggregate_get(self.context.elevated(read_deleted='yes'),
                                     aggr['id'])
-        self.assertNotEqual(aggr['operational_state'],
-                            expected['operational_state'])
+        self.assertRaises(exception.AggregateNotFound,
+                          self.api.delete_aggregate, self.context, aggr['id'])
 
     def test_delete_non_empty_aggregate(self):
         """Ensure InvalidAggregateAction is raised when non empty aggregate."""
@@ -3706,7 +3706,7 @@ class ComputeAPIAggrTestCase(test.TestCase):
                                          'fake_aggregate', fake_zone)
         aggr = self.api.add_host_to_aggregate(self.context,
                                               aggr['id'], fake_host)
-        self.assertEqual(aggr['operational_state'], aggregate_states.CHANGING)
+        self.assertEqual(len(aggr['hosts']), 1)
 
     def test_add_host_to_aggregate_multiple(self):
         """Ensure we can add multiple hosts to an aggregate."""
@@ -3714,57 +3714,10 @@ class ComputeAPIAggrTestCase(test.TestCase):
         fake_zone = values.keys()[0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
-        # let's mock the fact that the aggregate is active already!
-        status = {'operational_state': aggregate_states.ACTIVE}
-        db.aggregate_update(self.context, aggr['id'], status)
         for host in values[fake_zone]:
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr['id'], host)
         self.assertEqual(len(aggr['hosts']), len(values[fake_zone]))
-        self.assertEqual(aggr['operational_state'],
-                         aggregate_states.ACTIVE)
-
-    def test_add_host_to_aggregate_invalid_changing_status(self):
-        """Ensure InvalidAggregateAction is raised when adding host while
-        aggregate is not ready."""
-        values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
-        aggr = self.api.create_aggregate(self.context,
-                                         'fake_aggregate', fake_zone)
-        aggr = self.api.add_host_to_aggregate(self.context,
-                                              aggr['id'], fake_host)
-        self.assertEqual(aggr['operational_state'],
-                             aggregate_states.CHANGING)
-        self.assertRaises(exception.InvalidAggregateAction,
-                          self.api.add_host_to_aggregate, self.context,
-                          aggr['id'], fake_host)
-
-    def test_add_host_to_aggregate_invalid_dismissed_status(self):
-        """Ensure InvalidAggregateAction is raised when aggregate is
-        deleted."""
-        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
-        aggr = self.api.create_aggregate(self.context,
-                                         'fake_aggregate', 'fake_zone')
-        # let's mock the fact that the aggregate is dismissed!
-        status = {'operational_state': aggregate_states.DISMISSED}
-        db.aggregate_update(self.context, aggr['id'], status)
-        self.assertRaises(exception.InvalidAggregateAction,
-                          self.api.add_host_to_aggregate, self.context,
-                          aggr['id'], 'fake_host')
-
-    def test_add_host_to_aggregate_invalid_error_status(self):
-        """Ensure InvalidAggregateAction is raised when aggregate is
-        in error."""
-        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
-        aggr = self.api.create_aggregate(self.context,
-                                         'fake_aggregate', 'fake_zone')
-        # let's mock the fact that the aggregate is in error!
-        status = {'operational_state': aggregate_states.ERROR}
-        db.aggregate_update(self.context, aggr['id'], status)
-        self.assertRaises(exception.InvalidAggregateAction,
-                          self.api.add_host_to_aggregate, self.context,
-                          aggr['id'], 'fake_host')
 
     def test_add_host_to_aggregate_zones_mismatch(self):
         """Ensure InvalidAggregateAction is raised when zones don't match."""
@@ -3791,9 +3744,6 @@ class ComputeAPIAggrTestCase(test.TestCase):
         fake_zone = values.keys()[0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
-        # let's mock the fact that the aggregate is active already!
-        status = {'operational_state': aggregate_states.ACTIVE}
-        db.aggregate_update(self.context, aggr['id'], status)
         for host in values[fake_zone]:
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr['id'], host)
@@ -3801,55 +3751,6 @@ class ComputeAPIAggrTestCase(test.TestCase):
                                                        aggr['id'],
                                                        values[fake_zone][0])
         self.assertEqual(len(aggr['hosts']) - 1, len(expected['hosts']))
-        self.assertEqual(expected['operational_state'],
-                         aggregate_states.ACTIVE)
-
-    def test_remove_host_from_aggregate_error(self):
-        """Ensure we can remove a host from an aggregate even if in error."""
-        values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        aggr = self.api.create_aggregate(self.context,
-                                         'fake_aggregate', fake_zone)
-        # let's mock the fact that the aggregate is ready!
-        status = {'operational_state': aggregate_states.ACTIVE}
-        db.aggregate_update(self.context, aggr['id'], status)
-        for host in values[fake_zone]:
-            aggr = self.api.add_host_to_aggregate(self.context,
-                                                  aggr['id'], host)
-        # let's mock the fact that the aggregate is in error!
-        status = {'operational_state': aggregate_states.ERROR}
-        expected = self.api.remove_host_from_aggregate(self.context,
-                                                       aggr['id'],
-                                                       values[fake_zone][0])
-        self.assertEqual(len(aggr['hosts']) - 1, len(expected['hosts']))
-        self.assertEqual(expected['operational_state'],
-                         aggregate_states.ACTIVE)
-
-    def test_remove_host_from_aggregate_invalid_dismissed_status(self):
-        """Ensure InvalidAggregateAction is raised when aggregate is
-        deleted."""
-        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
-        aggr = self.api.create_aggregate(self.context,
-                                         'fake_aggregate', 'fake_zone')
-        # let's mock the fact that the aggregate is dismissed!
-        status = {'operational_state': aggregate_states.DISMISSED}
-        db.aggregate_update(self.context, aggr['id'], status)
-        self.assertRaises(exception.InvalidAggregateAction,
-                          self.api.remove_host_from_aggregate, self.context,
-                          aggr['id'], 'fake_host')
-
-    def test_remove_host_from_aggregate_invalid_changing_status(self):
-        """Ensure InvalidAggregateAction is raised when aggregate is
-        changing."""
-        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
-        aggr = self.api.create_aggregate(self.context,
-                                         'fake_aggregate', 'fake_zone')
-        # let's mock the fact that the aggregate is changing!
-        status = {'operational_state': aggregate_states.CHANGING}
-        db.aggregate_update(self.context, aggr['id'], status)
-        self.assertRaises(exception.InvalidAggregateAction,
-                          self.api.remove_host_from_aggregate, self.context,
-                          aggr['id'], 'fake_host')
 
     def test_remove_host_from_aggregate_raise_not_found(self):
         """Ensure ComputeHostNotFound is raised when removing invalid host."""
@@ -3869,7 +3770,7 @@ class ComputeAggrTestCase(BaseTestCase):
         super(ComputeAggrTestCase, self).setUp()
         self.context = context.get_admin_context()
         values = {'name': 'test_aggr',
-                  'availability_zone': 'test_zone', }
+                  'availability_zone': 'test_zone'}
         self.aggr = db.aggregate_create(self.context, values)
 
     def test_add_aggregate_host(self):
@@ -3882,24 +3783,6 @@ class ComputeAggrTestCase(BaseTestCase):
         self.compute.add_aggregate_host(self.context, self.aggr.id, "host")
         self.assertTrue(fake_driver_add_to_aggregate.called)
 
-    def test_add_aggregate_host_raise_err(self):
-        """Ensure the undo operation works correctly on add."""
-        def fake_driver_add_to_aggregate(context, aggregate, host):
-            raise exception.AggregateError
-        self.stubs.Set(self.compute.driver, "add_to_aggregate",
-                       fake_driver_add_to_aggregate)
-
-        state = {'operational_state': aggregate_states.ACTIVE}
-        db.aggregate_update(self.context, self.aggr.id, state)
-        db.aggregate_host_add(self.context, self.aggr.id, 'fake_host')
-
-        self.assertRaises(exception.AggregateError,
-                          self.compute.add_aggregate_host,
-                          self.context, self.aggr.id, "fake_host")
-        excepted = db.aggregate_get(self.context, self.aggr.id)
-        self.assertEqual(excepted.operational_state, aggregate_states.ERROR)
-        self.assertEqual(excepted.hosts, [])
-
     def test_remove_aggregate_host(self):
         def fake_driver_remove_from_aggregate(context, aggregate, host):
             fake_driver_remove_from_aggregate.called = True
@@ -3910,23 +3793,6 @@ class ComputeAggrTestCase(BaseTestCase):
 
         self.compute.remove_aggregate_host(self.context, self.aggr.id, "host")
         self.assertTrue(fake_driver_remove_from_aggregate.called)
-
-    def test_remove_aggregate_host_raise_err(self):
-        """Ensure the undo operation works correctly on remove."""
-        def fake_driver_remove_from_aggregate(context, aggregate, host):
-            raise exception.AggregateError
-        self.stubs.Set(self.compute.driver, "remove_from_aggregate",
-                       fake_driver_remove_from_aggregate)
-
-        state = {'operational_state': aggregate_states.ACTIVE}
-        db.aggregate_update(self.context, self.aggr.id, state)
-
-        self.assertRaises(exception.AggregateError,
-                          self.compute.remove_aggregate_host,
-                          self.context, self.aggr.id, "fake_host")
-        excepted = db.aggregate_get(self.context, self.aggr.id)
-        self.assertEqual(excepted.operational_state, aggregate_states.ERROR)
-        self.assertEqual(excepted.hosts, ['fake_host'])
 
 
 class ComputePolicyTestCase(BaseTestCase):
