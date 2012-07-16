@@ -254,26 +254,6 @@ def remove_version_from_href(href):
     return urlparse.urlunsplit(parsed_url)
 
 
-def get_version_from_href(href):
-    """Returns the api version in the href.
-
-    Returns the api version in the href.
-    If no version is found, '2' is returned
-
-    Given: 'http://www.nova.com/123'
-    Returns: '2'
-
-    Given: 'http://www.nova.com/v1.1'
-    Returns: '1.1'
-
-    """
-    try:
-        expression = r'/v([0-9]+|[0-9]+\.[0-9]+)(/|$)'
-        return re.findall(expression, href)[0][0]
-    except IndexError:
-        return '2'
-
-
 def check_img_metadata_properties_quota(context, metadata):
     if metadata is None:
         return
