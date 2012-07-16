@@ -19,16 +19,13 @@ Tests dealing with HTTP rate-limiting.
 
 import httplib
 import StringIO
-import unittest
 from xml.dom import minidom
 
 from lxml import etree
-import stubout
 import webob
 
 from nova.api.openstack.compute import limits
 from nova.api.openstack.compute import views
-from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.context
 from nova.openstack.common import jsonutils
@@ -123,6 +120,10 @@ class LimitsControllerTest(BaseLimitTestSuite):
             'ram': 512,
             'instances': 5,
             'cores': 21,
+            'gigabytes': 512,
+            'volumes': 5,
+            'key_pairs': 10,
+            'floating_ips': 10,
         }
         response = request.get_response(self.controller)
         expected = {
@@ -167,6 +168,10 @@ class LimitsControllerTest(BaseLimitTestSuite):
                     "maxTotalRAMSize": 512,
                     "maxTotalInstances": 5,
                     "maxTotalCores": 21,
+                    "maxTotalVolumeGigabytes": 512,
+                    "maxTotalVolumes": 5,
+                    "maxTotalKeypairs": 10,
+                    "maxTotalFloatingIps": 10,
                     },
             },
         }
