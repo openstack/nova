@@ -39,7 +39,7 @@ class SecurityGroupHandlerBase(object):
         raise NotImplementedError()
 
     def trigger_security_group_create_refresh(self, context, group):
-        '''Called when a rule is added to a security_group.
+        '''Called when a security group is created
 
         :param context: the security context.
         :param group: the new group added. group is a dictionary that contains
@@ -48,7 +48,7 @@ class SecurityGroupHandlerBase(object):
 
     def trigger_security_group_destroy_refresh(self, context,
                                                security_group_id):
-        '''Called when a rule is added to a security_group.
+        '''Called when a security group is deleted
 
         :param context: the security context.
         :param security_group_id: the security group identifier.'''
