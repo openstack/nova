@@ -344,10 +344,10 @@ class ComputeTestCase(BaseTestCase):
                           self.context, instance_uuid=instance_uuid)
         #check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.BLOCK_DEVICE_MAPPING})
+                            'task_state': None})
         self.compute.periodic_tasks(context.get_admin_context())
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.BLOCK_DEVICE_MAPPING})
+                            'task_state': None})
 
     def test_run_instance_spawn_fail(self):
         """ spawn failure test.
@@ -362,10 +362,10 @@ class ComputeTestCase(BaseTestCase):
                           self.context, instance_uuid=instance_uuid)
         #check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.SPAWNING})
+                            'task_state': None})
         self.compute.periodic_tasks(context.get_admin_context())
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.SPAWNING})
+                            'task_state': None})
 
     def test_can_terminate_on_error_state(self):
         """Make sure that the instance can be terminated in ERROR state"""
@@ -713,7 +713,7 @@ class ComputeTestCase(BaseTestCase):
         exc = exception.NotAuthorized(_('Internal error'))
         self._do_test_set_admin_password_driver_error(exc,
                                                 vm_states.ERROR,
-                                                task_states.UPDATING_PASSWORD)
+                                                None)
 
     def test_set_admin_password_driver_not_implemented(self):
         """
@@ -1126,6 +1126,56 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
+
+    def _test_state_revert(self, operation, pre_task_state):
+        instance = self._create_fake_instance()
+        self.compute.run_instance(self.context, instance=instance)
+
+        # The API would have set task_state, so do that here to test
+        # that the state gets reverted on failure
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": pre_task_state})
+
+        raised = False
+        try:
+            ret_val = getattr(self.compute, operation)(self.context,
+                                                       instance=instance)
+        except Exception:
+            raised = True
+        self.assertTrue(raised)
+
+        # Fetch the instance's task_state and make sure it went to None
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertEqual(instance["task_state"], None)
+
+    def test_state_revert(self):
+        """ensure that task_state is reverted after a failed operation"""
+        actions = [
+            ("reboot_instance", task_states.REBOOTING),
+            ("stop_instance", task_states.STOPPING),
+            ("start_instance", task_states.STARTING),
+            ("terminate_instance", task_states.DELETING),
+            ("power_off_instance", task_states.POWERING_OFF),
+            ("power_on_instance", task_states.POWERING_ON),
+            ("rebuild_instance", task_states.REBUILDING),
+            ("set_admin_password", task_states.UPDATING_PASSWORD),
+            ("rescue_instance", task_states.RESCUING),
+            ("unrescue_instance", task_states.UNRESCUING),
+            ("revert_resize", task_states.RESIZE_REVERTING),
+            ("prep_resize", task_states.RESIZE_PREP),
+            ("resize_instance", task_states.RESIZE_PREP),
+            ("pause_instance", task_states.PAUSING),
+            ("unpause_instance", task_states.UNPAUSING),
+            ("suspend_instance", task_states.SUSPENDING),
+            ("resume_instance", task_states.RESUMING),
+            ]
+
+        def _get_an_exception(*args, **kwargs):
+            raise Exception("This fails every single time!")
+
+        self.stubs.Set(self.compute, "_get_lock", _get_an_exception)
+        for operation, pre_state in actions:
+            self._test_state_revert(operation, pre_state)
 
     def _ensure_quota_reservations_committed(self):
         """Mock up commit of quota reservations"""

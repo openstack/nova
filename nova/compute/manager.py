@@ -188,6 +188,30 @@ def checks_instance_lock(function):
     return decorated_function
 
 
+def reverts_task_state(function):
+    """Decorator to revert task_state on failure"""
+
+    @functools.wraps(function)
+    def decorated_function(self, context, *args, **kwargs):
+        instance = kwargs.get('instance', None)
+        if instance:
+            instance_uuid = instance['uuid']
+        else:
+            instance_uuid = kwargs['instance_uuid']
+
+        try:
+            function(self, context, *args, **kwargs)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                try:
+                    self._instance_update(context, instance_uuid,
+                                          task_state=None)
+                except Exception:
+                    pass
+
+    return decorated_function
+
+
 def wrap_instance_fault(function):
     """Wraps a method to catch exceptions related to instances.
 
@@ -800,6 +824,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return {'block_device_mapping': block_device_mapping}
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @wrap_instance_fault
     def run_instance(self, context, request_spec=None,
                      filter_properties=None, requested_networks=None,
@@ -893,6 +918,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 system_metadata=system_meta)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def terminate_instance(self, context, instance=None, instance_uuid=None):
@@ -917,6 +943,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         do_terminate_instance(instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def stop_instance(self, context, instance=None, instance_uuid=None):
@@ -928,6 +955,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 final_state=vm_states.STOPPED)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def start_instance(self, context, instance=None, instance_uuid=None):
@@ -938,6 +966,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                instance_uuid=instance_uuid)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def power_off_instance(self, context, instance=None, instance_uuid=None,
@@ -956,6 +985,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "power_off.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def power_on_instance(self, context, instance=None, instance_uuid=None):
@@ -973,6 +1003,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "power_on.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def rebuild_instance(self, context, orig_image_ref,
@@ -1061,6 +1092,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     extra_usage_info=extra_usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def reboot_instance(self, context, instance=None, instance_uuid=None,
@@ -1106,6 +1138,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, "reboot.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @wrap_instance_fault
     def snapshot_instance(self, context, image_id,
                           image_type='snapshot', backup_type=None,
@@ -1145,11 +1178,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
 
-        try:
-            self.driver.snapshot(context, instance, image_id)
-        finally:
-            self._instance_update(context, instance['uuid'],
-                                  task_state=None)
+        self.driver.snapshot(context, instance, image_id)
 
         if image_type == 'snapshot' and rotation:
             raise exception.ImageRotationNotAllowed()
@@ -1213,6 +1242,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 image_service.delete(context, image_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def set_admin_password(self, context, instance=None, instance_uuid=None,
@@ -1281,6 +1311,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     continue
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def inject_file(self, context, path, file_contents, instance_uuid=None,
@@ -1301,6 +1332,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.inject_file(instance, path, file_contents)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def rescue_instance(self, context, instance=None, instance_uuid=None,
@@ -1334,6 +1366,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               power_state=current_power_state)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def unrescue_instance(self, context, instance=None, instance_uuid=None):
@@ -1358,6 +1391,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               power_state=current_power_state)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def change_instance_metadata(self, context, diff, instance=None,
@@ -1400,6 +1434,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._quota_commit(context, reservations)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def revert_resize(self, context, migration_id, instance=None,
@@ -1428,6 +1463,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     reservations)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def finish_revert_resize(self, context, migration_id, instance_uuid=None,
@@ -1489,6 +1525,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             QUOTAS.rollback(context, reservations)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def prep_resize(self, context, image, instance=None, instance_uuid=None,
@@ -1548,6 +1585,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 extra_usage_info=extra_usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def resize_instance(self, context, migration_id, image, instance=None,
@@ -1643,6 +1681,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def finish_resize(self, context, migration_id, disk_info, image,
@@ -1670,6 +1709,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._set_instance_error_state(context, instance['uuid'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def add_fixed_ip_to_instance(self, context, network_id, instance=None,
@@ -1694,6 +1734,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "create_ip.end", network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def remove_fixed_ip_from_instance(self, context, address, instance=None,
@@ -1719,6 +1760,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "delete_ip.end", network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def pause_instance(self, context, instance=None, instance_uuid=None):
@@ -1738,6 +1780,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               task_state=None)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def unpause_instance(self, context, instance=None, instance_uuid=None):
@@ -1790,6 +1833,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             return self.driver.get_diagnostics(instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def suspend_instance(self, context, instance=None, instance_uuid=None):
@@ -1812,6 +1856,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, 'suspend')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def resume_instance(self, context, instance=None, instance_uuid=None):
@@ -1872,6 +1917,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                   instance=instance)
         return instance['locked']
 
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def reset_network(self, context, instance=None, instance_uuid=None):
@@ -1977,6 +2023,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return connection_info
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def attach_volume(self, context, volume_id, mountpoint, instance_uuid=None,
@@ -2046,6 +2093,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   mp)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @reverts_task_state
     @checks_instance_lock
     @wrap_instance_fault
     def detach_volume(self, context, volume_id, instance_uuid=None,
