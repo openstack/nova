@@ -146,7 +146,7 @@ class FilterScheduler(driver.Scheduler):
         return self.options.get_configuration()
 
     def populate_filter_properties(self, request_spec, filter_properties):
-        """Stuff things into filter_properties.  Can be overriden in a
+        """Stuff things into filter_properties.  Can be overridden in a
         subclass to add more data.
         """
         pass
