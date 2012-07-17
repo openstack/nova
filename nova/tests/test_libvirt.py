@@ -1825,11 +1825,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(os.path, "getsize")
         os.path.getsize('/test/disk').AndReturn((10737418240))
-
-        self.mox.StubOutWithMock(utils, "execute")
-        utils.execute('qemu-img', 'info',
-                      '/test/disk.local').AndReturn((ret, ''))
-
         os.path.getsize('/test/disk.local').AndReturn((21474836480))
 
         self.mox.ReplayAll()
@@ -3189,8 +3184,7 @@ class LibvirtUtilsTestCase(test.TestCase):
 
     def test_get_disk_size(self):
         self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('qemu-img',
-                      'info',
+        utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
                       '/some/path').AndReturn(('''image: 00000001
 file format: raw
 virtual size: 4.4M (4592640 bytes)
@@ -3346,15 +3340,13 @@ disk size: 4.4M''', ''))
 
         def fake_execute(*args, **kwargs):
             if with_actual_path:
-                return ("some\n"
-                        "output\n"
+                return ("some: output\n"
                         "backing file: /foo/bar/baz (actual path: /a/b/c)\n"
-                        "...\n"), ''
+                        "...: ...\n"), ''
             else:
-                return ("some\n"
-                        "output\n"
+                return ("some: output\n"
                         "backing file: /foo/bar/baz\n"
-                        "...\n"), ''
+                        "...: ...\n"), ''
 
         self.stubs.Set(utils, 'execute', fake_execute)
 

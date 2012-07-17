@@ -43,6 +43,23 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(image_opts)
 
 
+def qemu_img_info(path):
+    """Return a dict containing the parsed output from qemu-img info."""
+
+    out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
+                             'qemu-img', 'info', path)
+
+    # output of qemu-img is 'field: value'
+    data = {}
+    for line in out.splitlines():
+        field, val = line.split(':', 1)
+        if val[0] == " ":
+            val = val[1:]
+        data[field] = val
+
+    return data
+
+
 def fetch(context, image_href, path, _user_id, _project_id):
     # TODO(vish): Improve context handling and add owner and auth data
     #             when it is added to glance.  Right now there is no
@@ -59,33 +76,17 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
     path_tmp = "%s.part" % path
     metadata = fetch(context, image_href, path_tmp, user_id, project_id)
 
-    def _qemu_img_info(path):
-
-        out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
-            'qemu-img', 'info', path)
-
-        # output of qemu-img is 'field: value'
-        # the fields of interest are 'file format' and 'backing file'
-        data = {}
-        for line in out.splitlines():
-            (field, val) = line.split(':', 1)
-            if val[0] == " ":
-                val = val[1:]
-            data[field] = val
-
-        return(data)
-
     with utils.remove_path_on_error(path_tmp):
-        data = _qemu_img_info(path_tmp)
+        data = qemu_img_info(path_tmp)
 
-        fmt = data.get("file format")
+        fmt = data.get('file format')
         if fmt is None:
             raise exception.ImageUnacceptable(
                 reason=_("'qemu-img info' parsing failed."),
                 image_id=image_href)
 
-        if "backing file" in data:
-            backing_file = data['backing file']
+        backing_file = data.get('backing file')
+        if backing_file is not None:
             raise exception.ImageUnacceptable(image_id=image_href,
                 reason=_("fmt=%(fmt)s backed by: %(backing_file)s") % locals())
 
@@ -96,11 +97,11 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
                 out, err = utils.execute('qemu-img', 'convert', '-O', 'raw',
                                          path_tmp, staged)
 
-                data = _qemu_img_info(staged)
-                if data.get('file format', None) != "raw":
+                data = qemu_img_info(staged)
+                if data.get('file format') != "raw":
                     raise exception.ImageUnacceptable(image_id=image_href,
                         reason=_("Converted to raw, but format is now %s") %
-                        data.get('file format', None))
+                        data.get('file format'))
 
                 os.rename(staged, path)
 
