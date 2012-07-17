@@ -282,7 +282,6 @@ class Constraint(object):
         self.conditions = conditions
 
     def apply(self, model, query):
-        clauses = []
         for key, condition in self.conditions.iteritems():
             for clause in condition.clauses(getattr(model, key)):
                 query = query.filter(clause)
