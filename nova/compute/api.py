@@ -1633,6 +1633,15 @@ class API(base.Base):
         return self.db.block_device_mapping_get_all_by_instance(context,
                 instance['uuid'])
 
+    def is_volume_backed_instance(self, context, instance, bdms):
+        bdms = bdms or self.get_instance_bdms(context, instance)
+        for bdm in bdms:
+            if (block_device.strip_dev(bdm.device_name) ==
+                block_device.strip_dev(instance['root_device_name'])):
+                return True
+        else:
+            return False
+
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def live_migrate(self, context, instance, block_migration,
                      disk_over_commit, host):
