@@ -46,7 +46,8 @@ host_manager_opts = [
                 default=[
                   'AvailabilityZoneFilter',
                   'RamFilter',
-                  'ComputeFilter'
+                  'ComputeFilter',
+                  'ComputeCapabilitiesFilter'
                   ],
                 help='Which filter class names to use for filtering hosts '
                       'when not specified in the request.'),
