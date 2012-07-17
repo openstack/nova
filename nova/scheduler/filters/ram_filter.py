@@ -39,5 +39,11 @@ class RamFilter(filters.BaseHostFilter):
         free_ram_mb = host_state.free_ram_mb
         total_usable_ram_mb = host_state.total_usable_ram_mb
         used_ram_mb = total_usable_ram_mb - free_ram_mb
-        return (total_usable_ram_mb * FLAGS.ram_allocation_ratio -
-                used_ram_mb >= requested_ram)
+        usable_ram = (total_usable_ram_mb * FLAGS.ram_allocation_ratio -
+                used_ram_mb)
+        if not usable_ram >= requested_ram:
+            LOG.debug(_("%(host_state)s does not have %(requested_ram)s MB "
+                    "usable ram, it only has %(usable_ram)s MB usable ram."),
+                    locals())
+            return False
+        return True
