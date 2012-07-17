@@ -17,7 +17,6 @@
 """vm_vdi_cleaner.py - List or clean orphaned VDIs/instances on XenServer."""
 
 import doctest
-import optparse
 import os
 import sys
 import XenAPI
@@ -34,7 +33,7 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import timeutils
-from nova.virt.xenapi import connection as xenapi_conn
+from nova.virt.xenapi import driver as xenapi_driver
 
 
 CONF = cfg.CONF
@@ -286,7 +285,7 @@ def main():
         raise Exception("`zombie_instance_updated_at_window` has to be longer"
                 " than `resize_confirm_window`.")
 
-    xenapi = xenapi_conn.XenAPIDriver()
+    xenapi = xenapi_driver.XenAPIDriver()
 
     if command == "list-vdis":
         if CONF.verbose:
