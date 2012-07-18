@@ -122,11 +122,11 @@ class API(base.Base):
 
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Add a fixed ip to the instance from specified network."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Remove a fixed ip from the instance."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def validate_networks(self, context, requested_networks):
         """Validate that the tenant has the requested networks."""
@@ -172,69 +172,69 @@ class API(base.Base):
                               floating_address, fixed_address,
                               affect_auto_assigned=False):
         """Associate a floating ip with a fixed ip."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_all(self, context):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get(self, context, network_uuid):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def delete(self, context, network_uuid):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def disassociate(self, context, network_uuid):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_fixed_ip(self, context, id):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_fixed_ip_by_address(self, context, address):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_floating_ip(self, context, id):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_floating_ip_pools(self, context):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_floating_ip_by_address(self, context, address):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_floating_ips_by_project(self, context):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_instance_id_by_floating_address(self, context, address):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_vifs_by_instance(self, context, instance):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_vif_by_mac_address(self, context, mac_address):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def allocate_floating_ip(self, context, pool=None):
         """Add a floating ip to a project from a pool."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
         """Remove a floating ip with the given address from a project."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @refresh_cache
     def disassociate_floating_ip(self, context, instance, address,
                                  affect_auto_assigned=False):
         """Disassociate a floating ip from the fixed ip
         it is associated with."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def add_network_to_project(self, context, project_id):
         """Force add a network to the project."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def _build_network_info_model(self, context, instance, networks=None):
         search_opts = {'tenant_id': instance['project_id'],
@@ -309,36 +309,36 @@ class API(base.Base):
 
         These can be used to create DNS entries for floating ips.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def add_dns_entry(self, context, address, name, dns_type, domain):
         """Create specified DNS entry for address."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def modify_dns_entry(self, context, name, address, domain):
         """Create specified DNS entry for address."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def delete_dns_entry(self, context, name, domain):
         """Delete the specified dns entry."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def delete_dns_domain(self, context, domain):
         """Delete the specified dns domain."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_dns_entries_by_address(self, context, address, domain):
         """Get entries for address and domain."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_dns_entries_by_name(self, context, name, domain):
         """Get entries for name and domain."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def create_private_dns_domain(self, context, domain, availability_zone):
         """Create a private DNS domain with nova availability zone."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def create_public_dns_domain(self, context, domain, project=None):
         """Create a private DNS domain with optional nova project."""
-        raise NotImplemented()
+        raise NotImplementedError()
