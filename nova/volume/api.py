@@ -80,11 +80,29 @@ class API(base.Base):
         else:
             snapshot_id = None
 
-        if quota.allowed_volumes(context, 1, size) < 1:
+        result = quota.allowed_volumes(context, 1, size)
+
+        overs = result['overs']
+        usages = result['usages']
+        quotas = result['quotas']
+        allowed = result['allowed']
+
+        if allowed['volumes'] < 1:
             pid = context.project_id
-            LOG.warn(_("Quota exceeded for %(pid)s, tried to create"
-                    " %(size)sG volume") % locals())
-            raise exception.QuotaError(code="VolumeSizeTooLarge")
+            if 'gigabytes' in overs:
+                consumed = usages['gigabytes']
+                limit = quotas['gigabytes']
+                LOG.warn(_("Quota exceeded for %(pid)s, tried to create "
+                           "%(size)sG volume (%(consumed)dG of %(limit)dG "
+                           "already consumed)") % locals())
+                code = "VolumeSizeTooLarge"
+            elif 'volumes' in overs:
+                consumed = usages['volumes']
+                LOG.warn(_("Quota exceeded for %(pid)s, tried to create "
+                           "volume (%(consumed)d volumes already consumed)")
+                           % locals())
+                code = "VolumeLimitExceeded"
+            raise exception.QuotaError(code=code)
 
         if availability_zone is None:
             availability_zone = FLAGS.storage_availability_zone
