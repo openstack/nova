@@ -243,6 +243,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not compute_driver:
             compute_driver = FLAGS.compute_driver
 
+        LOG.info(_("Loading compute driver '%s'") % compute_driver)
         try:
             self.driver = utils.check_isinstance(
                     importutils.import_object_ns('nova.virt', compute_driver),
