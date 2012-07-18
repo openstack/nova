@@ -20,6 +20,7 @@
 import webob
 import webob.exc
 
+from nova.api.openstack.compute import servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
@@ -28,6 +29,7 @@ from nova import exception
 
 
 authorize = extensions.extension_authorizer('compute', 'keypairs')
+soft_authorize = extensions.soft_extension_authorizer('compute', 'keypairs')
 
 
 class KeypairTemplate(xmlutil.TemplateBuilder):
@@ -125,6 +127,51 @@ class KeypairController(object):
         return {'keypairs': rval}
 
 
+class ServerKeyNameTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('server')
+        root.set('key_name', 'key_name')
+        return xmlutil.SlaveTemplate(root, 1)
+
+
+class ServersKeyNameTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('servers')
+        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
+        elem.set('key_name', 'key_name')
+        return xmlutil.SlaveTemplate(root, 1)
+
+
+class Controller(servers.Controller):
+
+    def _add_key_name(self, req, servers):
+        for server in servers:
+            db_server = req.get_db_instance(server['id'])
+            # server['id'] is guaranteed to be in the cache due to
+            # the core API adding it in its 'show'/'detail' methods.
+            server['key_name'] = db_server['key_name']
+
+    def _show(self, req, resp_obj):
+        if 'server' in resp_obj.obj:
+            resp_obj.attach(xml=ServerKeyNameTemplate())
+            server = resp_obj.obj['server']
+            self._add_key_name(req, [server])
+
+    @wsgi.extends
+    def show(self, req, resp_obj, id):
+        context = req.environ['nova.context']
+        if soft_authorize(context):
+            self._show(req, resp_obj)
+
+    @wsgi.extends
+    def detail(self, req, resp_obj):
+        context = req.environ['nova.context']
+        if 'servers' in resp_obj.obj and authorize(context):
+            resp_obj.attach(xml=ServersKeyNameTemplate())
+            servers = resp_obj.obj['servers']
+            self._add_key_name(req, servers)
+
+
 class Keypairs(extensions.ExtensionDescriptor):
     """Keypair Support"""
 
@@ -139,6 +186,10 @@ class Keypairs(extensions.ExtensionDescriptor):
         res = extensions.ResourceExtension(
                 'os-keypairs',
                 KeypairController())
-
         resources.append(res)
         return resources
+
+    def get_controller_extensions(self):
+        controller = Controller()
+        extension = extensions.ControllerExtension(self, 'servers', controller)
+        return [extension]

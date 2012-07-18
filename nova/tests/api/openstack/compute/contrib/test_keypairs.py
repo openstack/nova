@@ -56,8 +56,10 @@ class KeypairsTest(test.TestCase):
 
     def setUp(self):
         super(KeypairsTest, self).setUp()
+        self.Controller = keypairs.Controller()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
+
         self.stubs.Set(db, "key_pair_get_all_by_user",
                        db_key_pair_get_all_by_user)
         self.stubs.Set(db, "key_pair_create",
@@ -255,6 +257,28 @@ class KeypairsTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         print res
         self.assertEqual(res.status_int, 404)
+
+    def test_show(self):
+        self.stubs.Set(db, 'instance_get',
+                        fakes.fake_instance_get())
+        req = webob.Request.blank('/v2/fake/servers/1')
+        req.headers['Content-Type'] = 'application/json'
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEquals(response.status_int, 200)
+        res_dict = jsonutils.loads(response.body)
+        self.assertTrue('key_name' in res_dict['server'])
+        self.assertEquals(res_dict['server']['key_name'], '')
+
+    def test_detail_servers(self):
+        self.stubs.Set(db, 'instance_get',
+                        fakes.fake_instance_get())
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
+        res = req.get_response(fakes.wsgi_app())
+        server_dicts = jsonutils.loads(res.body)['servers']
+
+        for server_dict in server_dicts:
+            self.asserTrue('key_name' in server_dict)
+            self.assertEquals(server_dict['key_name'], '')
 
 
 class KeypairsXMLSerializerTest(test.TestCase):

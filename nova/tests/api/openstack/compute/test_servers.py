@@ -173,7 +173,6 @@ class ServersControllerTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
-                "key_name": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -241,7 +240,6 @@ class ServersControllerTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
-                "key_name": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -312,7 +310,6 @@ class ServersControllerTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
-                "key_name": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -2983,7 +2980,6 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
-                "key_name": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3052,7 +3048,6 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
-                "key_name": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3197,7 +3192,6 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
-                "key_name": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3257,7 +3251,6 @@ class ServersViewBuilderTest(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
-                "key_name": "",
                 "status": "BUILD",
                 "hostId": '',
                 "image": {
@@ -3321,7 +3314,6 @@ class ServersViewBuilderTest(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
-                "key_name": "",
                 "status": "BUILD",
                 "hostId": '',
                 "image": {
@@ -3391,7 +3383,6 @@ class ServersViewBuilderTest(test.TestCase):
                 "accessIPv4": "",
                 "accessIPv6": "",
                 "hostId": '',
-                "key_name": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -3536,7 +3527,6 @@ class ServerXMLSerializationTest(test.TestCase):
                 "name": "test_server",
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
-                "key_name": '',
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "fead::1234",
                 "image": {
