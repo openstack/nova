@@ -1011,8 +1011,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         current_power_state = self._get_power_state(context, instance_ref)
         self._instance_update(context,
                               instance_ref['uuid'],
-                              power_state=current_power_state,
-                              vm_state=vm_states.ACTIVE)
+                              power_state=current_power_state)
 
         LOG.audit(_('instance snapshotting'), context=context,
                   instance_uuid=instance_uuid)
