@@ -283,24 +283,6 @@ class MiscFunctionsTest(test.TestCase):
         expected = 'abc123'
         self.assertEqual(actual, expected)
 
-    def test_get_version_from_href(self):
-        fixture = 'http://www.testsite.com/v1.1/images'
-        expected = '1.1'
-        actual = common.get_version_from_href(fixture)
-        self.assertEqual(actual, expected)
-
-    def test_get_version_from_href_2(self):
-        fixture = 'http://www.testsite.com/v1.1'
-        expected = '1.1'
-        actual = common.get_version_from_href(fixture)
-        self.assertEqual(actual, expected)
-
-    def test_get_version_from_href_default(self):
-        fixture = 'http://www.testsite.com/images'
-        expected = '2'
-        actual = common.get_version_from_href(fixture)
-        self.assertEqual(actual, expected)
-
     def test_raise_http_conflict_for_instance_invalid_state(self):
         # Correct args
         exc = exception.InstanceInvalidState(attr='fake_attr',
