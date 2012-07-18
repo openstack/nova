@@ -20,6 +20,7 @@ import webob
 from nova.api.openstack.compute.contrib import floating_ip_dns
 from nova import context
 from nova import db
+from nova import exception
 from nova import network
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -204,14 +205,10 @@ class FloatingIpDNSTest(test.TestCase):
         self.assertEqual(entry['domain_entry']['availability_zone'], 'zone1')
 
     def test_delete_entry(self):
-        self.called = False
-        self.deleted_domain = ""
-        self.deleted_name = ""
+        calls = []
 
         def network_delete_dns_entry(fakeself, context, name, domain):
-            self.called = True
-            self.deleted_domain = domain
-            self.deleted_name = name
+            calls.append((name, domain))
 
         self.stubs.Set(network.api.API, "delete_dns_entry",
                        network_delete_dns_entry)
@@ -219,31 +216,51 @@ class FloatingIpDNSTest(test.TestCase):
         req = fakes.HTTPRequest.blank(
               '/v2/123/os-floating-ip-dns/%s/entries/%s' %
               (_quote_domain(domain), name))
-        entries = self.entry_controller.delete(req, _quote_domain(domain),
-                                               name)
+        res = self.entry_controller.delete(req, _quote_domain(domain), name)
 
-        self.assertTrue(self.called)
-        self.assertEquals(self.deleted_domain, domain)
-        self.assertEquals(self.deleted_name, name)
+        self.assertEqual(202, res.status_int)
+        self.assertEqual([(name, domain)], calls)
+
+    def test_delete_entry_notfound(self):
+        def delete_dns_entry_notfound(fakeself, context, name, domain):
+            raise exception.NotFound
+
+        self.stubs.Set(network.api.API, "delete_dns_entry",
+                       delete_dns_entry_notfound)
+
+        req = fakes.HTTPRequest.blank(
+              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
+              (_quote_domain(domain), name))
+        self.assertRaises(webob.exc.HTTPNotFound,
+            self.entry_controller.delete, req, _quote_domain(domain), name)
 
     def test_delete_domain(self):
-        self.called = False
-        self.deleted_domain = ""
-        self.deleted_name = ""
+        calls = []
 
         def network_delete_dns_domain(fakeself, context, fqdomain):
-            self.called = True
-            self.deleted_domain = fqdomain
+            calls.append(fqdomain)
 
         self.stubs.Set(network.api.API, "delete_dns_domain",
                        network_delete_dns_domain)
 
         req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
                                       _quote_domain(domain))
-        entries = self.domain_controller.delete(req, _quote_domain(domain))
+        res = self.domain_controller.delete(req, _quote_domain(domain))
 
-        self.assertTrue(self.called)
-        self.assertEquals(self.deleted_domain, domain)
+        self.assertEqual(202, res.status_int)
+        self.assertEqual([domain], calls)
+
+    def test_delete_domain_notfound(self):
+        def delete_dns_domain_notfound(fakeself, context, fqdomain):
+            raise exception.NotFound
+
+        self.stubs.Set(network.api.API, "delete_dns_domain",
+                       delete_dns_domain_notfound)
+
+        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
+                                      _quote_domain(domain))
+        self.assertRaises(webob.exc.HTTPNotFound,
+            self.domain_controller.delete, req, _quote_domain(domain))
 
     def test_modify(self):
         body = {'dns_entry':
