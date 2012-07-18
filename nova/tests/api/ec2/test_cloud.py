@@ -2171,13 +2171,58 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1}
         ec2_instance_id = self._run_instance(**kwargs)
 
-        # TODO(yamahata): s3._s3_create() can't be tested easily by unit test
-        #                 as there is no unit test for s3.create()
-        ## result = self.cloud.create_image(self.context, ec2_instance_id,
-        ##                                  no_reboot=True)
-        ## ec2_image_id = result['imageId']
-        ## created_image = self.cloud.describe_images(self.context,
-        ##                                            [ec2_image_id])
+        def fake_show(meh, context, id):
+            bdm = [dict(snapshot_id=snapshots[0],
+                        volume_size=1,
+                        device_name='vda',
+                        delete_on_termination=False)]
+            props = dict(kernel_id='cedef40a-ed67-4d10-800e-17455edce175',
+                         ramdisk_id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                         block_device_mapping=bdm)
+            return dict(id=id,
+                        properties=props,
+                        container_format='ami',
+                        status='active',
+                        is_public=True)
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+
+        def fake_block_device_mapping_get_all_by_instance(context, inst_id):
+            class BDM(object):
+                def __init__(self):
+                    self.no_device = None
+                    self.values = dict(snapshot_id=snapshots[0],
+                                       volume_id=volumes[0],
+                                       virtual_name=None,
+                                       volume_size=1,
+                                       device_name='vda',
+                                       delete_on_termination=False)
+
+                def __getattr__(self, name):
+                    return self.values.get(name)
+
+                def __getitem__(self, key):
+                    return self.values.get(key)
+
+            return [BDM()]
+
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fake_block_device_mapping_get_all_by_instance)
+
+        result = self.cloud.create_image(self.context, ec2_instance_id,
+                                         no_reboot=True)
+        ec2_ids = [result['imageId']]
+        created_image = self.cloud.describe_images(self.context,
+                                                   ec2_ids)['imagesSet'][0]
+
+        self.assertTrue('blockDeviceMapping' in created_image)
+        bdm = created_image['blockDeviceMapping'][0]
+        self.assertEquals(bdm.get('deviceName'), 'vda')
+        self.assertTrue('ebs' in bdm)
+        self.assertEquals(bdm['ebs'].get('snapshotId'),
+                          'snap-%08x' % snapshots[0])
+        self.assertEquals(created_image.get('kernelId'), 'aki-00000001')
+        self.assertEquals(created_image.get('ramdiskId'), 'ari-00000002')
 
         self.cloud.terminate_instances(self.context, [ec2_instance_id])
         for vol in volumes:
