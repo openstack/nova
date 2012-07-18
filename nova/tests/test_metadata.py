@@ -211,6 +211,18 @@ class MetadataTestCase(test.TestCase):
         self.assertTrue(re.match('aki-[0-9a-f]{8}',
                                  data['meta-data']['kernel-id']))
 
+    def test_check_version(self):
+        inst = copy(self.instance)
+        md = fake_InstanceMetadata(self.stubs, inst)
+
+        self.assertTrue(md._check_version('1.0', '2009-04-04'))
+        self.assertFalse(md._check_version('2009-04-04', '1.0'))
+
+        self.assertFalse(md._check_version('2009-04-04', '2008-09-01'))
+        self.assertTrue(md._check_version('2008-09-01', '2009-04-04'))
+
+        self.assertTrue(md._check_version('2009-04-04', '2009-04-04'))
+
 
 class MetadataHandlerTestCase(test.TestCase):
     """Test that metadata is returning proper values."""
