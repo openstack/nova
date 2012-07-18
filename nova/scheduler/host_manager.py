@@ -226,7 +226,6 @@ class HostManager(object):
         knows about. Each dict contains the host_name and the service
         for that host.
         """
-        all_hosts = self.service_states.keys()
         ret = []
         for host in self.service_states:
             for svc in self.service_states[host]:
