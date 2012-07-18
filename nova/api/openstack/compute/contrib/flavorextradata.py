@@ -38,7 +38,7 @@ class FlavorextradataController(wsgi.Controller):
     def _get_flavor_refs(self):
         """Return a dictionary mapping flavorid to flavor_ref."""
 
-        flavor_refs = instance_types.get_all_types(inactive=True)
+        flavor_refs = instance_types.get_all_types()
         rval = {}
         for name, obj in flavor_refs.iteritems():
             rval[obj['flavorid']] = obj
