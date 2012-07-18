@@ -1007,9 +1007,10 @@ class ComputeTestCase(BaseTestCase):
 
     def test_get_lock(self):
         instance = self._create_fake_instance()
-        self.assertFalse(self.compute.get_lock(self.context, instance['uuid']))
+        self.assertFalse(self.compute._get_lock(self.context,
+                                                instance['uuid']))
         db.instance_update(self.context, instance['uuid'], {'locked': True})
-        self.assertTrue(self.compute.get_lock(self.context, instance['uuid']))
+        self.assertTrue(self.compute._get_lock(self.context, instance['uuid']))
 
     def test_lock(self):
         """ensure locked instance cannot be changed"""
