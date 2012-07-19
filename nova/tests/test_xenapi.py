@@ -2050,3 +2050,112 @@ class VmUtilsTestCase(test.TestCase):
                         auto_disk_config='auto disk config',
                         os_type='os type')
         self.assertEquals(expected, actual)
+
+
+class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
+    """Unit tests for live_migration."""
+    def setUp(self):
+        super(XenAPILiveMigrateTestCase, self).setUp()
+        self.flags(xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',
+                   firewall_driver='nova.virt.xenapi.firewall.'
+                                   'Dom0IptablesFirewallDriver',
+                   host='host')
+        db_fakes.stub_out_db_instance_api(self.stubs)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.context = context.get_admin_context()
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
+    def test_live_migration_calls_vmops(self):
+        def fake_live_migrate(context, instance_ref, dest, post_method,
+                              recover_method, block_migration):
+            fake_live_migrate.called = True
+        self.stubs.Set(self.conn._vmops, "live_migrate", fake_live_migrate)
+
+        self.conn.live_migration(None, None, None, None, None)
+        self.assertTrue(fake_live_migrate.called)
+
+    def test_pre_live_migration(self):
+        # ensure method is present
+        self.conn.pre_live_migration(None, None, None, None)
+
+    def test_post_live_migration_at_destination(self):
+        # ensure method is present
+        self.conn.post_live_migration_at_destination(None, None, None, None)
+
+    def test_check_can_live_migrate_raises_on_block_migrate(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.check_can_live_migrate_destination,
+                          None, None, True, None)
+
+    def test_check_can_live_migrate_works(self):
+        class fake_aggregate:
+            def __init__(self):
+                self.metadetails = {"host": "test_host_uuid"}
+
+        def fake_aggregate_get_by_host(context, host):
+            self.assertEqual(FLAGS.host, host)
+            return fake_aggregate()
+
+        self.stubs.Set(db, "aggregate_get_by_host",
+                fake_aggregate_get_by_host)
+        self.conn.check_can_live_migrate_destination(self.context,
+                {'host': 'host'}, False, False)
+
+    def test_check_can_live_migrate_fails(self):
+        class fake_aggregate:
+            def __init__(self):
+                self.metadetails = {"dest_other": "test_host_uuid"}
+
+        def fake_aggregate_get_by_host(context, host):
+            self.assertEqual(FLAGS.host, host)
+            return fake_aggregate()
+
+        self.stubs.Set(db, "aggregate_get_by_host",
+                      fake_aggregate_get_by_host)
+        self.assertRaises(exception.MigrationError,
+                          self.conn.check_can_live_migrate_destination,
+                          self.context, {'host': 'host'}, None, None)
+
+    def test_live_migration(self):
+        def fake_get_vm_opaque_ref(instance):
+            return "fake_vm"
+        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
+                       fake_get_vm_opaque_ref)
+
+        def fake_get_host_opaque_ref(context, destination_hostname):
+            return "fake_host"
+        self.stubs.Set(self.conn._vmops, "_get_host_opaque_ref",
+                       fake_get_host_opaque_ref)
+
+        def post_method(context, instance, destination_hostname,
+                        block_migration):
+            post_method.called = True
+
+        self.conn.live_migration(self.conn, None, None, post_method, None)
+
+        self.assertTrue(post_method.called, "post_method.called")
+
+    def test_live_migration_on_failure(self):
+        def fake_get_vm_opaque_ref(instance):
+            return "fake_vm"
+        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
+                       fake_get_vm_opaque_ref)
+
+        def fake_get_host_opaque_ref(context, destination_hostname):
+            return "fake_host"
+        self.stubs.Set(self.conn._vmops, "_get_host_opaque_ref",
+                       fake_get_host_opaque_ref)
+
+        def fake_call_xenapi(*args):
+            raise NotImplementedError()
+        self.stubs.Set(self.conn._vmops._session, "call_xenapi",
+                       fake_call_xenapi)
+
+        def recover_method(context, instance, destination_hostname,
+                        block_migration):
+            recover_method.called = True
+
+        self.assertRaises(NotImplementedError, self.conn.live_migration,
+                          self.conn, None, None, None, recover_method)
+        self.assertTrue(recover_method.called, "recover_method.called")
