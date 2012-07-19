@@ -1025,8 +1025,7 @@ class LibvirtConnTestCase(test.TestCase):
                                 expect_ramdisk=False, rescue=instance_data)
 
     def test_xml_uuid(self):
-        instance_data = dict(self.test_instance)
-        self._check_xml_and_uuid(instance_data)
+        self._check_xml_and_uuid({"disk_format": "raw"})
 
     def test_lxc_container_and_uri(self):
         instance_data = dict(self.test_instance)
