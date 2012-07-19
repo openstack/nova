@@ -28,7 +28,7 @@ class BaseHostFilter(object):
     """Base class for host filters."""
 
     def host_passes(self, host_state, filter_properties):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def _full_name(self):
         """module.classname of the filter."""
