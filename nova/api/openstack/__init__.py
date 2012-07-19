@@ -37,18 +37,21 @@ LOG = logging.getLogger(__name__)
 class FaultWrapper(base_wsgi.Middleware):
     """Calls down the middleware stack, making exceptions into faults."""
 
-    def __init__(self, application):
-        self.status_to_type = {}
-        for clazz in utils.walk_class_hierarchy(webob.exc.HTTPError):
-            self.status_to_type[clazz.code] = clazz
-        super(FaultWrapper, self).__init__(application)
+    _status_to_type = {}
+
+    @staticmethod
+    def status_to_type(status):
+        if not FaultWrapper._status_to_type:
+            for clazz in utils.walk_class_hierarchy(webob.exc.HTTPError):
+                FaultWrapper._status_to_type[clazz.code] = clazz
+        return FaultWrapper._status_to_type.get(
+                                  status, webob.exc.HTTPInternalServerError)()
 
     def _error(self, inner, req, headers=None, status=500, safe=False):
         LOG.exception(_("Caught error: %s"), unicode(inner))
         msg_dict = dict(url=req.url, status=status)
         LOG.info(_("%(url)s returned with HTTP %(status)d") % msg_dict)
-        outer = self.status_to_type.get(status,
-                                        webob.exc.HTTPInternalServerError)()
+        outer = self.status_to_type(status)
         if headers:
             outer.headers = headers
         # NOTE(johannes): We leave the explanation empty here on
