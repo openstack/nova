@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Tests For Distributed Scheduler.
+Tests For Filter Scheduler.
 """
 
 import mox
@@ -32,7 +32,7 @@ def fake_filter_hosts(hosts, filter_properties):
 
 
 class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
-    """Test case for Distributed Scheduler."""
+    """Test case for Filter Scheduler."""
 
     driver_cls = filter_scheduler.FilterScheduler
 
