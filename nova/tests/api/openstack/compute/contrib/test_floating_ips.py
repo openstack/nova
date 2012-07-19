@@ -228,7 +228,7 @@ class FloatingIpTest(test.TestCase):
         self.stubs.Set(rpc, "call", fake_call)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips')
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+        self.assertRaises(exception.NoMoreFloatingIps,
                           self.controller.create,
                           req)
 
