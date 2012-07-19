@@ -509,7 +509,7 @@ class NativeSecurityGroupAPI(compute.api.SecurityGroupAPI):
 
     @staticmethod
     def raise_over_quota(msg):
-        raise exc.HTTPBadRequest(explanation=msg)
+        raise exception.SecurityGroupLimitExceeded(msg)
 
     @staticmethod
     def raise_not_found(msg):
