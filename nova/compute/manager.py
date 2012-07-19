@@ -463,9 +463,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
             self._check_instance_not_already_created(context, instance)
             image_meta = self._check_image_size(context, instance)
+            extra_usage_info = {"image_name": image_meta['name']}
             self._start_building(context, instance)
             self._notify_about_instance_usage(
-                    context, instance, "create.start")
+                    context, instance, "create.start",
+                    extra_usage_info=extra_usage_info)
             network_info = self._allocate_network(context, instance,
                                                   requested_networks)
             try:
@@ -487,8 +489,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                     self._update_access_ip(context, instance, network_info)
 
                 self._notify_about_instance_usage(context, instance,
-                        "create.end", network_info=network_info)
-
+                        "create.end", network_info=network_info,
+                        extra_usage_info=extra_usage_info)
         except exception.InstanceNotFound:
             LOG.warn(_("Instance not found."), instance_uuid=instance_uuid)
         except Exception as e:
@@ -959,6 +961,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
+        image_meta = _get_image_meta(context, image_ref)
+
         # This instance.exists message should contain the original
         # image_ref, not the new one.  Since the DB has been updated
         # to point to the new one... we have to override it.
@@ -968,8 +972,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 current_period=True, extra_usage_info=extra_usage_info)
 
         # This message should contain the new image_ref
+        extra_usage_info = {'image_name': image_meta['name']}
         self._notify_about_instance_usage(context, instance,
-                "rebuild.start")
+                "rebuild.start", extra_usage_info=extra_usage_info)
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
@@ -998,8 +1003,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.admin_pass = kwargs.get('new_pass',
                 utils.generate_password(FLAGS.password_length))
 
-        image_meta = _get_image_meta(context, image_ref)
-
         self.driver.spawn(context, instance, image_meta,
                           self._legacy_nw_info(network_info), device_info)
 
@@ -1012,7 +1015,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          launched_at=timeutils.utcnow())
 
         self._notify_about_instance_usage(context, instance, "rebuild.end",
-                                          network_info=network_info)
+                                          network_info=network_info,
+                                          extra_usage_info=extra_usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock

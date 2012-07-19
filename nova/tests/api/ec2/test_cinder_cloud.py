@@ -86,6 +86,7 @@ class CinderCloudTestCase(test.TestCase):
 
         def fake_show(meh, context, id):
             return {'id': id,
+                    'name': 'fake_name',
                     'container_format': 'ami',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -518,6 +519,7 @@ class CinderCloudTestCase(test.TestCase):
             {'device_name': '/dev/sdc4', 'no_device': True}]
         image1 = {
             'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+            'name': 'fake_name',
             'properties': {
                 'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                 'type': 'machine',
@@ -532,6 +534,7 @@ class CinderCloudTestCase(test.TestCase):
                                   'snapshot_id': 01234567}]
         image2 = {
             'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+            'name': 'fake_name',
             'properties': {
                 'kernel_id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                 'type': 'machine',
