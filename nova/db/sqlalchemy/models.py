@@ -462,14 +462,6 @@ class Reservation(BASE, NovaBase):
     uuid = Column(String(36), nullable=False)
 
     usage_id = Column(Integer, ForeignKey('quota_usages.id'), nullable=False)
-    # NOTE(dprince): Force innerjoin below for lockmode update on PostgreSQL
-    usage = relationship(QuotaUsage,
-                         backref=backref('reservations'),
-                         foreign_keys=usage_id,
-                         innerjoin=True,
-                         primaryjoin='and_('
-                              'Reservation.usage_id == QuotaUsage.id,'
-                              'Reservation.deleted == False)')
 
     project_id = Column(String(255), index=True)
     resource = Column(String(255))

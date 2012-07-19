@@ -2458,18 +2458,14 @@ def quota_usage_get_all_by_project(context, project_id):
 
 @require_admin_context
 def quota_usage_create(context, project_id, resource, in_use, reserved,
-                       until_refresh, session=None, save=True):
+                       until_refresh, session=None):
     quota_usage_ref = models.QuotaUsage()
     quota_usage_ref.project_id = project_id
     quota_usage_ref.resource = resource
     quota_usage_ref.in_use = in_use
     quota_usage_ref.reserved = reserved
     quota_usage_ref.until_refresh = until_refresh
-
-    # Allow us to hold the save operation until later; keeps the
-    # transaction in quota_reserve() from breaking too early
-    if save:
-        quota_usage_ref.save(session=session)
+    quota_usage_ref.save(session=session)
 
     return quota_usage_ref
 
@@ -2540,7 +2536,7 @@ def reservation_create(context, uuid, usage, project_id, resource, delta,
                        expire, session=None):
     reservation_ref = models.Reservation()
     reservation_ref.uuid = uuid
-    reservation_ref.usage = usage
+    reservation_ref.usage_id = usage['id']
     reservation_ref.project_id = project_id
     reservation_ref.resource = resource
     reservation_ref.delta = delta
@@ -2560,13 +2556,17 @@ def reservation_destroy(context, uuid):
 ###################
 
 
-def _get_quota_usages(context, session, keys):
+# NOTE(johannes): The quota code uses SQL locking to ensure races don't
+# cause under or over counting of resources. To avoid deadlocks, this
+# code always acquires the lock on quota_usages before acquiring the lock
+# on reservations.
+
+def _get_quota_usages(context, session):
     # Broken out for testability
     rows = model_query(context, models.QuotaUsage,
                        read_deleted="no",
                        session=session).\
                    filter_by(project_id=context.project_id).\
-                   filter(models.QuotaUsage.resource.in_(keys)).\
                    with_lockmode('update').\
                    all()
     return dict((row.resource, row) for row in rows)
@@ -2579,7 +2579,7 @@ def quota_reserve(context, resources, quotas, deltas, expire,
     session = get_session()
     with session.begin():
         # Get the current usages
-        usages = _get_quota_usages(context, session, deltas.keys())
+        usages = _get_quota_usages(context, session)
 
         # Handle usage refresh
         work = set(deltas.keys())
@@ -2589,14 +2589,12 @@ def quota_reserve(context, resources, quotas, deltas, expire,
             # Do we need to refresh the usage?
             refresh = False
             if resource not in usages:
-                # Note we're inhibiting save...
                 usages[resource] = quota_usage_create(elevated,
                                                       context.project_id,
                                                       resource,
                                                       0, 0,
                                                       until_refresh or None,
-                                                      session=session,
-                                                      save=False)
+                                                      session=session)
                 refresh = True
             elif usages[resource].in_use < 0:
                 # Negative in_use count indicates a desync, so try to
@@ -2619,14 +2617,12 @@ def quota_reserve(context, resources, quotas, deltas, expire,
                 for res, in_use in updates.items():
                     # Make sure we have a destination for the usage!
                     if res not in usages:
-                        # Note we're inhibiting save...
                         usages[res] = quota_usage_create(elevated,
                                                          context.project_id,
                                                          res,
                                                          0, 0,
                                                          until_refresh or None,
-                                                         session=session,
-                                                         save=False)
+                                                         session=session)
 
                     # Update the usage
                     usages[res].in_use = in_use
@@ -2715,7 +2711,6 @@ def _quota_reservations(session, context, reservations):
     return model_query(context, models.Reservation,
                        read_deleted="no",
                        session=session).\
-                   options(joinedload('usage')).\
                    filter(models.Reservation.uuid.in_(reservations)).\
                    with_lockmode('update').\
                    all()
@@ -2725,25 +2720,35 @@ def _quota_reservations(session, context, reservations):
 def reservation_commit(context, reservations):
     session = get_session()
     with session.begin():
-        for reservation in _quota_reservations(session, context, reservations):
-            if reservation.delta >= 0:
-                reservation.usage.reserved -= reservation.delta
-            reservation.usage.in_use += reservation.delta
+        usages = _get_quota_usages(context, session)
 
-            reservation.usage.save(session=session)
+        for reservation in _quota_reservations(session, context, reservations):
+            usage = usages[reservation.resource]
+            if reservation.delta >= 0:
+                usage.reserved -= reservation.delta
+            usage.in_use += reservation.delta
+
             reservation.delete(session=session)
+
+        for usage in usages.values():
+            usage.save(session=session)
 
 
 @require_context
 def reservation_rollback(context, reservations):
     session = get_session()
     with session.begin():
+        usages = _get_quota_usages(context, session)
+
         for reservation in _quota_reservations(session, context, reservations):
+            usage = usages[reservation.resource]
             if reservation.delta >= 0:
-                reservation.usage.reserved -= reservation.delta
-                reservation.usage.save(session=session)
+                usage.reserved -= reservation.delta
 
             reservation.delete(session=session)
+
+        for usage in usages.values():
+            usage.save(session=session)
 
 
 @require_admin_context

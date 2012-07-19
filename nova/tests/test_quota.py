@@ -1404,7 +1404,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         def fake_get_session():
             return FakeSession()
 
-        def fake_get_quota_usages(context, session, keys):
+        def fake_get_quota_usages(context, session):
             return self.usages.copy()
 
         def fake_quota_usage_create(context, project_id, resource, in_use,
