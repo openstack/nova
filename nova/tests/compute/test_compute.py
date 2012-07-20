@@ -492,8 +492,10 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.pause_instance(self.context, instance_uuid)
-        self.compute.unpause_instance(self.context, instance_uuid)
+        self.compute.pause_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
+        self.compute.unpause_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_suspend(self):
@@ -2544,7 +2546,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.assertEqual(instance['task_state'], None)
 
-        self.compute.pause_instance(self.context, instance_uuid)
+        self.compute.pause_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         # set the state that the instance gets when pause finishes
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'vm_state': vm_states.PAUSED})

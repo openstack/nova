@@ -60,6 +60,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.2 - Adds check_can_live_migrate_[destination|source]
         1.3 - Adds change_instance_metadata()
         1.4 - Remove instance_uuid, add instance argument to reboot_instance()
+        1.5 - Remove instance_uuid, add instance argument to pause_instance(),
+              unpause_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -211,9 +213,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 _compute_topic(self.topic, ctxt, host, None))
 
     def pause_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('pause_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.5')
 
     def power_off_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('power_off_instance',
@@ -361,9 +365,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def unpause_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('unpause_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.5')
 
     def unrescue_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('unrescue_instance',

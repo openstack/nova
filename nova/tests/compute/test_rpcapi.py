@@ -48,7 +48,9 @@ class ComputeRpcAPITestCase(test.TestCase):
     def _test_compute_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
 
-        methods_with_instance = ['reboot_instance']
+        methods_with_instance = [
+            'pause_instance', 'reboot_instance', 'unpause_instance'
+        ]
 
         if 'rpcapi_class' in kwargs:
             rpcapi_class = kwargs['rpcapi_class']
@@ -202,7 +204,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_pause_instance(self):
         self._test_compute_api('pause_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.5')
 
     def test_power_off_instance(self):
         self._test_compute_api('power_off_instance', 'cast',
@@ -316,7 +318,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_unpause_instance(self):
         self._test_compute_api('unpause_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.5')
 
     def test_unrescue_instance(self):
         self._test_compute_api('unrescue_instance', 'cast',
