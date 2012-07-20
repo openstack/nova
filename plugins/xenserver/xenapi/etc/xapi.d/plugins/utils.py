@@ -175,6 +175,24 @@ def _validate_vdi_chain(vdi_path):
         cur_path = get_parent_path(cur_path)
 
 
+def _validate_sequenced_vhds(staging_path):
+    """This check ensures that the VHDs in the staging area are sequenced
+    properly from 0 to n-1 with no gaps.
+    """
+    seq_num = 0
+    filenames = os.listdir(staging_path)
+    for filename in filenames:
+        if not filename.endswith('.vhd'):
+            continue
+
+        vhd_path = os.path.join(staging_path, "%d.vhd" % seq_num)
+        if not os.path.exists(vhd_path):
+            raise Exception("Corrupt image. Expected seq number: %d. Files: %s"
+                            % (seq_num, filenames))
+
+        seq_num += 1
+
+
 def import_vhds(sr_path, staging_path, uuid_stack):
     """Move VHDs from staging area into the SR.
 
@@ -189,6 +207,7 @@ def import_vhds(sr_path, staging_path, uuid_stack):
          'swap': {'uuid': 'ffff-bbbb'}}
     """
     _handle_old_style_images(staging_path)
+    _validate_sequenced_vhds(staging_path)
 
     imported_vhds = {}
     files_to_move = []
