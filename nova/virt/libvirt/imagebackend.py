@@ -50,15 +50,14 @@ FLAGS.register_opts(__imagebackend_opts)
 class Image(object):
     __metaclass__ = abc.ABCMeta
 
-    @abc.abstractmethod
-    def __init__(self, instance, name, suffix):
+    def __init__(self, source_type, driver_format):
         """Image initialization.
 
-        :instance: Instance name.
-        :name: Image name.
-        :suffix: Suffix for image name.
+        :source_type: block or file
+        :driver_format: raw or qcow2
         """
-        pass
+        self.source_type = source_type
+        self.driver_format = driver_format
 
     @abc.abstractmethod
     def create_image(self, prepare_template, base, size, *args, **kwargs):
@@ -73,13 +72,23 @@ class Image(object):
         """
         pass
 
-    @abc.abstractmethod
-    def libvirt_info(self, device_type):
+    def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
+        :disk_dev: Disk bus device name
+        :disk_bus: Disk bus type
         :device_type: Device type for this image.
+        :cache_mode: Caching mode for this image
         """
-        pass
+        info = config.LibvirtConfigGuestDisk()
+        info.source_type = self.source_type
+        info.source_device = device_type
+        info.target_bus = disk_bus
+        info.target_dev = disk_dev
+        info.driver_cache = cache_mode
+        info.driver_format = self.driver_format
+        info.source_path = self.path
+        return info
 
     def cache(self, fn, fname, size=None, *args, **kwargs):
         """Creates image from template.
@@ -109,19 +118,11 @@ class Image(object):
 
 
 class Raw(Image):
-    def __init__(self, instance, name, suffix):
-        if not suffix:
-            suffix = ''
-        self.path = os.path.join(FLAGS.instances_path,
-                                 instance, name + suffix)
+    def __init__(self, instance, name):
+        super(Raw, self).__init__("file", "raw")
 
-    def libvirt_info(self, device_type):
-        info = config.LibvirtConfigGuestDisk()
-        info.source_type = 'file'
-        info.source_device = device_type
-        info.driver_format = 'raw'
-        info.source_path = self.path
-        return info
+        self.path = os.path.join(FLAGS.instances_path,
+                                 instance, name)
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @utils.synchronized(base)
@@ -140,14 +141,12 @@ class Raw(Image):
                 copy_raw_image(base, self.path, size)
 
 
-class Qcow2(Raw):
-    def libvirt_info(self, device_type):
-        info = config.LibvirtConfigGuestDisk()
-        info.source_type = 'file'
-        info.source_device = device_type
-        info.driver_format = 'qcow2'
-        info.source_path = self.path
-        return info
+class Qcow2(Image):
+    def __init__(self, instance, name):
+        super(Qcow2, self).__init__("file", "qcow2")
+
+        self.path = os.path.join(FLAGS.instances_path,
+                                 instance, name)
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @utils.synchronized(base)
@@ -172,24 +171,16 @@ class Lvm(Image):
     def escape(fname):
         return fname.replace('_', '__')
 
-    def libvirt_info(self, device_type):
-        info = config.LibvirtConfigGuestDisk()
-        info.source_type = 'block'
-        info.source_device = device_type
-        info.driver_format = 'raw'
-        info.source_path = self.path
-        return info
+    def __init__(self, instance, name):
+        super(Lvm, self).__init__("block", "raw")
 
-    def __init__(self, instance, name, suffix):
-        if not suffix:
-            suffix = ''
         if not FLAGS.libvirt_images_volume_group:
             raise RuntimeError(_('You should specify'
                                ' libvirt_images_volume_group'
                                ' flag to use LVM images.'))
         self.vg = FLAGS.libvirt_images_volume_group
         self.lv = '%s_%s' % (self.escape(instance),
-                             self.escape(name + suffix))
+                             self.escape(name))
         self.path = os.path.join('/dev', self.vg, self.lv)
         self.sparse = FLAGS.libvirt_sparse_logical_volumes
 
@@ -238,12 +229,11 @@ class Backend(object):
         }
 
     def image(self, instance, name,
-              suffix=None, image_type=None):
+              image_type=None):
         """Constructs image for selected backend
 
         :instance: Instance name.
         :name: Image name.
-        :suffix: Suffix for image name (optional).
         :image_type: Image type.
         Optional, is FLAGS.libvirt_images_type by default.
         """
@@ -252,4 +242,4 @@ class Backend(object):
         image = self.BACKEND.get(image_type)
         if not image:
             raise RuntimeError(_('Unknown image_type=%s') % image_type)
-        return image(instance, name, suffix)
+        return image(instance, name)

@@ -25,10 +25,10 @@ class Backend(object):
     def __init__(self, use_cow):
         pass
 
-    def image(self, instance, name, suffix='', image_type=''):
+    def image(self, instance, name, image_type=''):
         class FakeImage(imagebackend.Image):
-            def __init__(self, instance, name, suffix=''):
-                self.path = os.path.join(instance, name + suffix)
+            def __init__(self, instance, name):
+                self.path = os.path.join(instance, name)
 
             def create_image(self, prepare_template, base,
                               size, *args, **kwargs):
@@ -37,12 +37,16 @@ class Backend(object):
             def cache(self, fn, fname, size=None, *args, **kwargs):
                 pass
 
-            def libvirt_info(self, device_type):
+            def libvirt_info(self, disk_bus, disk_dev,
+                             device_type, cache_mode):
                 info = config.LibvirtConfigGuestDisk()
                 info.source_type = 'file'
                 info.source_device = device_type
+                info.target_bus = disk_bus
+                info.target_dev = disk_dev
+                info.driver_cache = cache_mode
                 info.driver_format = 'raw'
                 info.source_path = self.path
                 return info
 
-        return FakeImage(instance, name, suffix)
+        return FakeImage(instance, name)
