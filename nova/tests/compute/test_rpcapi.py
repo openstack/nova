@@ -20,7 +20,9 @@ Unit Tests for nova.compute.rpcapi
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
+from nova import db
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova import test
 
@@ -31,16 +33,17 @@ FLAGS = flags.FLAGS
 class ComputeRpcAPITestCase(test.TestCase):
 
     def setUp(self):
-        self.fake_instance = {
-            'uuid': 'fake_uuid',
-            'host': 'fake_host',
-            'name': 'fake_name',
-            'id': 'fake_id',
-        }
+        self.context = context.get_admin_context()
+        inst = db.instance_create(self.context, {'host': 'fake_host',
+                                                 'instance_type_id': 1})
+        self.fake_instance = jsonutils.to_primitive(inst)
         super(ComputeRpcAPITestCase, self).setUp()
 
     def tearDown(self):
         super(ComputeRpcAPITestCase, self).tearDown()
+
+    def test_serialized_instance_has_name(self):
+        self.assertTrue('name' in self.fake_instance)
 
     def _test_compute_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
