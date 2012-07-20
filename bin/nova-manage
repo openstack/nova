@@ -542,16 +542,24 @@ class NetworkCommands(object):
                           _('VlanID'),
                           _('project'),
                           _("uuid"))
-        for network in db.network_get_all(context.get_admin_context()):
-            print _fmt % (network.id,
-                          network.cidr,
-                          network.cidr_v6,
-                          network.dhcp_start,
-                          network.dns1,
-                          network.dns2,
-                          network.vlan,
-                          network.project_id,
-                          network.uuid)
+        try:
+            # Since network_get_all can throw exception.NoNetworksFound
+            # for this command to show a nice result, this exception
+            # should be caught and handled as such.
+            networks = db.network_get_all(context.get_admin_context())
+        except exception.NoNetworksFound:
+            print _('No networks found')
+        else:
+            for network in networks:
+                print _fmt % (network.id,
+                              network.cidr,
+                              network.cidr_v6,
+                              network.dhcp_start,
+                              network.dns1,
+                              network.dns2,
+                              network.vlan,
+                              network.project_id,
+                              network.uuid)
 
     def quantum_list(self):
         """List all created networks with Quantum-relevant fields"""
