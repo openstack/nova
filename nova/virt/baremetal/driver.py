@@ -243,7 +243,7 @@ class BareMetalDriver(driver.ComputeDriver):
                 LOG.debug(_("Key is injected but instance is not running yet"),
                           instance=instance)
                 (old_ref, new_ref) = db.instance_update_and_get_original(
-                        context, instance['id'],
+                        context, instance['uuid'],
                         {'vm_state': vm_states.BUILDING})
                 notifications.send_update(context, old_ref, new_ref)
 
@@ -252,7 +252,7 @@ class BareMetalDriver(driver.ComputeDriver):
                     LOG.debug(_('instance %s: booted'), instance['name'],
                               instance=instance)
                     (old_ref, new_ref) = db.instance_update_and_get_original(
-                            context, instance['id'],
+                            context, instance['uuid'],
                             {'vm_state': vm_states.ACTIVE})
                     notifications.send_update(context, old_ref, new_ref)
 
@@ -267,7 +267,7 @@ class BareMetalDriver(driver.ComputeDriver):
                 LOG.exception(_("Baremetal assignment is overcommitted."),
                           instance=instance)
                 (old_ref, new_ref) = db.instance_update_and_get_original(
-                        context, instance['id'],
+                        context, instance['uuid'],
                         {'vm_state': vm_states.ERROR,
                          'power_state': power_state.FAILED})
                 notifications.send_update(context, old_ref, new_ref)
@@ -463,7 +463,6 @@ class BareMetalDriver(driver.ComputeDriver):
 
             injection_path = basepath('root')
             img_id = inst.image_ref
-            disable_auto_fsck = True
 
             for injection in ('metadata', 'key', 'net'):
                 if locals()[injection]:
@@ -473,8 +472,7 @@ class BareMetalDriver(driver.ComputeDriver):
             try:
                 disk.inject_data(injection_path, key, net, metadata,
                                  partition=target_partition,
-                                 use_cow=False,  # FLAGS.use_cow_images,
-                                 disable_auto_fsck=disable_auto_fsck)
+                                 use_cow=False)  # FLAGS.use_cow_images
 
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
@@ -698,12 +696,6 @@ class BareMetalDriver(driver.ComputeDriver):
                'hypervisor_version': self.get_hypervisor_version(),
                'cpu_info': self.get_cpu_info(),
                'cpu_arch': FLAGS.cpu_arch,
-               'xpu_arch': FLAGS.xpu_arch,
-               'xpus': FLAGS.xpus,
-               'xpu_info': FLAGS.xpu_info,
-               'net_arch': FLAGS.net_arch,
-               'net_info': FLAGS.net_info,
-               'net_mbps': FLAGS.net_mbps,
                'service_id': service_ref['id']}
 
         compute_node_ref = service_ref['compute_node']
@@ -769,12 +761,6 @@ class HostState(object):
         data["vcpus_used"] = self.connection.get_vcpu_used()
         data["cpu_info"] = self.connection.get_cpu_info()
         data["cpu_arch"] = FLAGS.cpu_arch
-        data["xpus"] = FLAGS.xpus
-        data["xpu_arch"] = FLAGS.xpu_arch
-        data["xpu_info"] = FLAGS.xpu_info
-        data["net_arch"] = FLAGS.net_arch
-        data["net_info"] = FLAGS.net_info
-        data["net_mbps"] = FLAGS.net_mbps
         data["disk_total"] = self.connection.get_local_gb_total()
         data["disk_used"] = self.connection.get_local_gb_used()
         data["disk_available"] = data["disk_total"] - data["disk_used"]
