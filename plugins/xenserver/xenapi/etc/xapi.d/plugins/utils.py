@@ -25,6 +25,16 @@ import tempfile
 CHUNK_SIZE = 8192
 
 
+def _link(src, dst):
+    logging.info("Hard-linking file '%s' -> '%s'" % (src, dst))
+    os.link(src, dst)
+
+
+def _rename(src, dst):
+    logging.info("Renaming file '%s' -> '%s'" % (src, dst))
+    os.rename(src, dst)
+
+
 def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False):
     """Make a subprocess according to the given command-line string
     """
@@ -123,7 +133,7 @@ def _handle_old_style_images(staging_path):
     for filename in ('snap.vhd', 'image.vhd', 'base.vhd'):
         path = os.path.join(staging_path, filename)
         if os.path.exists(path):
-            os.rename(path, os.path.join(staging_path, "%d.vhd" % file_num))
+            _rename(path, os.path.join(staging_path, "%d.vhd" % file_num))
             file_num += 1
 
 
@@ -203,7 +213,7 @@ def import_vhds(sr_path, staging_path, uuid_stack):
         # Rename (0, 1 .. N).vhd -> aaaa-bbbb-cccc-dddd.vhd
         vhd_uuid = uuid_stack.pop()
         vhd_path = os.path.join(staging_path, "%s.vhd" % vhd_uuid)
-        os.rename(orig_vhd_path, vhd_path)
+        _rename(orig_vhd_path, vhd_path)
 
         if seq_num == 0:
             leaf_vhd_path = vhd_path
@@ -236,7 +246,7 @@ def import_vhds(sr_path, staging_path, uuid_stack):
         # Rename swap.vhd -> aaaa-bbbb-cccc-dddd.vhd
         vhd_uuid = uuid_stack.pop()
         swap_path = os.path.join(staging_path, "%s.vhd" % vhd_uuid)
-        os.rename(orig_swap_path, swap_path)
+        _rename(orig_swap_path, swap_path)
 
         _assert_vhd_not_hidden(swap_path)
 
@@ -246,7 +256,7 @@ def import_vhds(sr_path, staging_path, uuid_stack):
     # Move files into SR
     for orig_path in files_to_move:
         new_path = os.path.join(sr_path, os.path.basename(orig_path))
-        os.rename(orig_path, new_path)
+        _rename(orig_path, new_path)
 
     return imported_vhds
 
@@ -256,7 +266,7 @@ def prepare_staging_area(sr_path, staging_path, vdi_uuids, seq_num=0):
     for vdi_uuid in vdi_uuids:
         source = os.path.join(sr_path, "%s.vhd" % vdi_uuid)
         link_name = os.path.join(staging_path, "%d.vhd" % seq_num)
-        os.link(source, link_name)
+        _link(source, link_name)
         seq_num += 1
 
 
