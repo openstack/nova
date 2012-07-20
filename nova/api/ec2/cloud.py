@@ -1303,8 +1303,10 @@ class CloudController(object):
         properties = image['properties']
         root_device_name = block_device.properties_root_device_name(properties)
         root_device_type = 'instance-store'
+
         for bdm in properties.get('block_device_mapping', []):
-            if (bdm.get('device_name') == root_device_name and
+            if (block_device.strip_dev(bdm.get('device_name')) ==
+                block_device.strip_dev(root_device_name) and
                 ('snapshot_id' in bdm or 'volume_id' in bdm) and
                 not bdm.get('no_device')):
                 root_device_type = 'ebs'

@@ -2178,6 +2178,7 @@ class CloudTestCase(test.TestCase):
                         delete_on_termination=False)]
             props = dict(kernel_id='cedef40a-ed67-4d10-800e-17455edce175',
                          ramdisk_id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                         root_device_name='/dev/vda',
                          block_device_mapping=bdm)
             return dict(id=id,
                         properties=props,
@@ -2223,6 +2224,7 @@ class CloudTestCase(test.TestCase):
                           'snap-%08x' % snapshots[0])
         self.assertEquals(created_image.get('kernelId'), 'aki-00000001')
         self.assertEquals(created_image.get('ramdiskId'), 'ari-00000002')
+        self.assertEquals(created_image.get('rootDeviceType'), 'ebs')
 
         self.cloud.terminate_instances(self.context, [ec2_instance_id])
         for vol in volumes:
