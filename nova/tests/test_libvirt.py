@@ -861,19 +861,19 @@ class LibvirtConnTestCase(test.TestCase):
     def test_xml_disk_bus_virtio(self):
         self._check_xml_and_disk_bus({"disk_format": "raw"},
                                      None,
-                                     (("disk", "virtio"),))
+                                     (("disk", "virtio", "vda"),))
 
     def test_xml_disk_bus_ide(self):
         self._check_xml_and_disk_bus({"disk_format": "iso"},
                                      None,
-                                     (("cdrom", "ide"),))
+                                     (("cdrom", "ide", "hda"),))
 
     def test_xml_disk_bus_ide_and_virtio(self):
-        swap = {'device_name': '/dev/sdb',
+        swap = {'device_name': '/dev/vdc',
                 'swap_size': 1}
         ephemerals = [{'num': 0,
                        'virtual_name': 'ephemeral0',
-                       'device_name': '/dev/sdc1',
+                       'device_name': '/dev/vdb',
                        'size': 1}]
         block_device_info = {
                 'swap': swap,
@@ -881,9 +881,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         self._check_xml_and_disk_bus({"disk_format": "iso"},
                                      block_device_info,
-                                     (("cdrom", "ide"),
-                                      ("disk", "virtio"),
-                                      ("disk", "virtio")))
+                                     (("cdrom", "ide", "hda"),
+                                      ("disk", "virtio", "vdb"),
+                                      ("disk", "virtio", "vdc")))
 
     def test_list_instances(self):
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
@@ -1332,12 +1332,15 @@ class LibvirtConnTestCase(test.TestCase):
         for i in range(len(wantConfig)):
             want_device_type = wantConfig[i][0]
             want_device_bus = wantConfig[i][1]
+            want_device_dev = wantConfig[i][2]
 
             got_device_type = got_disks[i].get('device')
             got_device_bus = got_disk_targets[i].get('bus')
+            got_device_dev = got_disk_targets[i].get('dev')
 
             self.assertEqual(got_device_type, want_device_type)
             self.assertEqual(got_device_bus, want_device_bus)
+            self.assertEqual(got_device_dev, want_device_dev)
 
     def _check_xml_and_uuid(self, image_meta):
         user_context = context.RequestContext(self.user_id, self.project_id)

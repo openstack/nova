@@ -1651,6 +1651,7 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             if image_meta and image_meta.get('disk_format') == 'iso':
                 root_device_type = 'cdrom'
+                root_device = 'hda'
             else:
                 root_device_type = 'disk'
 
