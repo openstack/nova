@@ -651,6 +651,7 @@ class FloatingIpNotFoundForHost(FloatingIpNotFound):
 
 class NoMoreFloatingIps(FloatingIpNotFound):
     message = _("Zero floating ips available.")
+    safe = True
 
 
 class FloatingIpAssociated(NovaException):
