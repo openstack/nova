@@ -80,7 +80,7 @@ class SolidFireVolumeTestCase(test.TestCase):
             return result
 
         else:
-            LOG.error('Crap, unimplemented API call in Fake:%s' % method)
+            LOG.error('Unimplemented API call in Fake:%s' % method)
 
     def fake_issue_api_request_fails(obj, method, params):
         return {'error': {
