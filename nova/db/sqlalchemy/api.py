@@ -956,7 +956,7 @@ def dnsdomain_list(context):
     session = get_session()
     records = model_query(context, models.DNSDomain,
                   session=session, read_deleted="no").\
-                  with_lockmode('update').all()
+                  all()
     domains = []
     for record in records:
         domains.append(record.domain)
