@@ -1218,7 +1218,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         def image(fname, image_type=FLAGS.libvirt_images_type):
             return self.image_backend.image(instance['name'],
-                                            fname, suffix, image_type)
+                                            fname + suffix, image_type)
 
         def raw(fname):
             return image(fname, image_type='raw')
@@ -1654,9 +1654,9 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 root_device_type = 'disk'
 
-            def disk_info(name, suffix=''):
+            def disk_info(name):
                 image = self.image_backend.image(instance['name'],
-                                                 name, suffix)
+                                                 name)
                 return image.libvirt_info(root_device_type)
 
             if FLAGS.libvirt_type == "uml":
@@ -1667,7 +1667,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 ephemeral_disk_bus = "virtio"
 
             if rescue:
-                diskrescue = disk_info('disk', '.rescue')
+                diskrescue = disk_info('disk.rescue')
                 diskrescue.driver_cache = self.disk_cachemode
                 diskrescue.target_dev = self.default_root_device
                 diskrescue.target_bus = ephemeral_disk_bus

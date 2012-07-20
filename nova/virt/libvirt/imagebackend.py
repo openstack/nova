@@ -51,12 +51,11 @@ class Image(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def __init__(self, instance, name, suffix):
+    def __init__(self, instance, name):
         """Image initialization.
 
         :instance: Instance name.
         :name: Image name.
-        :suffix: Suffix for image name.
         """
         pass
 
@@ -109,11 +108,9 @@ class Image(object):
 
 
 class Raw(Image):
-    def __init__(self, instance, name, suffix):
-        if not suffix:
-            suffix = ''
+    def __init__(self, instance, name):
         self.path = os.path.join(FLAGS.instances_path,
-                                 instance, name + suffix)
+                                 instance, name)
 
     def libvirt_info(self, device_type):
         info = config.LibvirtConfigGuestDisk()
@@ -180,16 +177,14 @@ class Lvm(Image):
         info.source_path = self.path
         return info
 
-    def __init__(self, instance, name, suffix):
-        if not suffix:
-            suffix = ''
+    def __init__(self, instance, name):
         if not FLAGS.libvirt_images_volume_group:
             raise RuntimeError(_('You should specify'
                                ' libvirt_images_volume_group'
                                ' flag to use LVM images.'))
         self.vg = FLAGS.libvirt_images_volume_group
         self.lv = '%s_%s' % (self.escape(instance),
-                             self.escape(name + suffix))
+                             self.escape(name))
         self.path = os.path.join('/dev', self.vg, self.lv)
         self.sparse = FLAGS.libvirt_sparse_logical_volumes
 
@@ -238,12 +233,11 @@ class Backend(object):
         }
 
     def image(self, instance, name,
-              suffix=None, image_type=None):
+              image_type=None):
         """Constructs image for selected backend
 
         :instance: Instance name.
         :name: Image name.
-        :suffix: Suffix for image name (optional).
         :image_type: Image type.
         Optional, is FLAGS.libvirt_images_type by default.
         """
@@ -252,4 +246,4 @@ class Backend(object):
         image = self.BACKEND.get(image_type)
         if not image:
             raise RuntimeError(_('Unknown image_type=%s') % image_type)
-        return image(instance, name, suffix)
+        return image(instance, name)

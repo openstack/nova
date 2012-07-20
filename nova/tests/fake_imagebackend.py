@@ -25,10 +25,10 @@ class Backend(object):
     def __init__(self, use_cow):
         pass
 
-    def image(self, instance, name, suffix='', image_type=''):
+    def image(self, instance, name, image_type=''):
         class FakeImage(imagebackend.Image):
-            def __init__(self, instance, name, suffix=''):
-                self.path = os.path.join(instance, name + suffix)
+            def __init__(self, instance, name):
+                self.path = os.path.join(instance, name)
 
             def create_image(self, prepare_template, base,
                               size, *args, **kwargs):
@@ -45,4 +45,4 @@ class Backend(object):
                 info.source_path = self.path
                 return info
 
-        return FakeImage(instance, name, suffix)
+        return FakeImage(instance, name)
