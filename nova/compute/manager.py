@@ -297,7 +297,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.6'
+    RPC_API_VERSION = '1.7'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1885,14 +1885,16 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def get_console_output(self, context, instance_uuid, tail_length=None):
+    def get_console_output(self, context, instance=None, instance_uuid=None,
+                           tail_length=None):
         """Send the console output for the given instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
         LOG.audit(_("Get console output"), context=context,
-                  instance=instance_ref)
-        output = self.driver.get_console_output(instance_ref)
+                  instance=instance)
+        output = self.driver.get_console_output(instance)
 
         if tail_length is not None:
             output = self._tail_log(output, tail_length)

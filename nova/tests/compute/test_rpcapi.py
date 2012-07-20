@@ -49,8 +49,8 @@ class ComputeRpcAPITestCase(test.TestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
 
         methods_with_instance = [
-            'pause_instance', 'reboot_instance', 'suspend_instance',
-            'unpause_instance'
+            'get_console_output', 'pause_instance', 'reboot_instance',
+            'suspend_instance', 'unpause_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -161,7 +161,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_get_console_output(self):
         self._test_compute_api('get_console_output', 'call',
-                instance=self.fake_instance, tail_length='tl')
+                instance=self.fake_instance, tail_length='tl', version='1.7')
 
     def test_get_console_pool_info(self):
         self._test_compute_api('get_console_pool_info', 'call',

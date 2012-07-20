@@ -63,6 +63,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.5 - Remove instance_uuid, add instance argument to pause_instance(),
               unpause_instance()
         1.6 - Remove instance_uuid, add instance argument to suspend_instance()
+        1.7 - Remove instance_uuid, add instance argument to
+              get_console_output()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -149,9 +151,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, host, None))
 
     def get_console_output(self, ctxt, instance, tail_length):
+        instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('get_console_output',
-                instance_uuid=instance['uuid'], tail_length=tail_length),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, tail_length=tail_length),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.7')
 
     def get_console_pool_info(self, ctxt, console_type, host):
         return self.call(ctxt, self.make_msg('get_console_pool_info',

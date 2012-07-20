@@ -769,7 +769,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
 
         output = self.compute.get_console_output(self.context,
-                                                  instance['uuid'])
+                instance=jsonutils.to_primitive(instance))
         self.assertEqual(output, 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
         self.compute.terminate_instance(self.context, instance['uuid'])
 
@@ -779,8 +779,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
 
         output = self.compute.get_console_output(self.context,
-                                                instance['uuid'],
-                                                tail_length=2)
+                instance=jsonutils.to_primitive(instance), tail_length=2)
         self.assertEqual(output, 'ANOTHER\nLAST LINE')
         self.compute.terminate_instance(self.context, instance['uuid'])
 
@@ -3678,9 +3677,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
 
         rpc_msg = {'method': 'get_console_output',
-                   'args': {'instance_uuid': fake_instance['uuid'],
+                   'args': {'instance': fake_instance,
                             'tail_length': fake_tail_length},
-                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
+                   'version': '1.7'}
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
                 rpc_msg, None).AndReturn(fake_console_output)
 
