@@ -70,6 +70,7 @@ from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import driver
 from nova import volume
@@ -260,6 +261,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._last_info_cache_heal = 0
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
+        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -471,21 +473,89 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance = self._spawn(context, instance, image_meta,
                                        network_info, block_device_info,
                                        injected_files, admin_password)
+            except exception.InstanceNotFound:
+                raise  # the instance got deleted during the spawn
             except Exception:
-                with excutils.save_and_reraise_exception():
-                    self._deallocate_network(context, instance)
+                # try to re-schedule instance:
+                self._reschedule_or_reraise(context, instance,
+                        requested_networks, admin_password, injected_files,
+                        is_first_time, **kwargs)
+            else:
+                # Spawn success:
+                if (is_first_time and not instance['access_ip_v4']
+                                  and not instance['access_ip_v6']):
+                    self._update_access_ip(context, instance, network_info)
 
-            if (is_first_time and not instance['access_ip_v4']
-                              and not instance['access_ip_v6']):
-                self._update_access_ip(context, instance, network_info)
+                self._notify_about_instance_usage(context, instance,
+                        "create.end", network_info=network_info)
 
-            self._notify_about_instance_usage(
-                    context, instance, "create.end", network_info=network_info)
         except exception.InstanceNotFound:
             LOG.warn(_("Instance not found."), instance_uuid=instance_uuid)
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 self._set_instance_error_state(context, instance_uuid)
+
+    def _reschedule_or_reraise(self, context, instance, *args, **kwargs):
+        """Try to re-schedule the build or re-raise the original build error to
+        error out the instance.
+        """
+        type_, value, tb = sys.exc_info()  # save original exception
+        rescheduled = False
+        instance_uuid = instance['uuid']
+
+        def _log_original_error():
+            LOG.error(_('Build error: %s') %
+                    traceback.format_exception(type_, value, tb),
+                    instance_uuid=instance_uuid)
+
+        try:
+            self._deallocate_network(context, instance)
+        except Exception:
+            # do not attempt retry if network de-allocation occurs:
+            _log_original_error()
+            raise
+
+        try:
+            rescheduled = self._reschedule(context, instance_uuid, *args,
+                  **kwargs)
+        except Exception:
+            rescheduled = False
+            LOG.exception(_("Error trying to reschedule"),
+                    instance_uuid=instance_uuid)
+
+        if rescheduled:
+            # log the original build error
+            _log_original_error()
+        else:
+            # not re-scheduling
+            raise type_, value, tb
+
+    def _reschedule(self, context, instance_uuid, requested_networks,
+            admin_password, injected_files, is_first_time, **kwargs):
+
+        filter_properties = kwargs.get('filter_properties', {})
+        retry = filter_properties.get('retry', None)
+        if not retry:
+            # no retry information, do not reschedule.
+            LOG.debug(_("Retry info not present, will not reschedule"),
+                    instance_uuid=instance_uuid)
+            return
+
+        request_spec = kwargs.get('request_spec', None)
+        if not request_spec:
+            LOG.debug(_("No request spec, will not reschedule"),
+                    instance_uuid=instance_uuid)
+            return
+
+        request_spec['num_instances'] = 1
+
+        LOG.debug(_("Re-scheduling instance: attempt %d"),
+                retry['num_attempts'], instance_uuid=instance_uuid)
+        self.scheduler_rpcapi.run_instance(context, FLAGS.compute_topic,
+                request_spec, admin_password, injected_files,
+                requested_networks, is_first_time, filter_properties,
+                reservations=None, call=False)
+        return True
 
     @manager.periodic_task
     def _check_instance_build_time(self, context):

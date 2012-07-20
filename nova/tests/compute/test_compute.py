@@ -20,6 +20,7 @@
 
 import copy
 import datetime
+import functools
 import sys
 import time
 
@@ -102,6 +103,11 @@ def nop_report_driver_status(self):
     pass
 
 
+class FakeSchedulerAPI(object):
+    def run_instance(self, *args, **kwargs):
+        pass
+
+
 class BaseTestCase(test.TestCase):
 
     def setUp(self):
@@ -128,6 +134,9 @@ class BaseTestCase(test.TestCase):
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
         self.stubs.Set(rpc, 'call', rpc_call_wrapper)
         self.stubs.Set(rpc, 'cast', rpc_cast_wrapper)
+
+        fake_rpcapi = FakeSchedulerAPI()
+        self.stubs.Set(self.compute, 'scheduler_rpcapi', fake_rpcapi)
 
     def tearDown(self):
         fake_image.FakeImageService_reset()
@@ -4291,3 +4300,100 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         self.assertNotRaises(exception.FlavorNotFound,
             self.compute_api.resize, self.context, instance, None,
             exc_msg="Disabled flavors can be migrated to")
+
+
+class ComputeReschedulingTestCase(BaseTestCase):
+    """Tests related to re-scheduling build requests"""
+
+    def setUp(self):
+        super(ComputeReschedulingTestCase, self).setUp()
+
+        self._reschedule = self._reschedule_partial()
+
+    def _reschedule_partial(self):
+        uuid = "12-34-56-78-90"
+
+        requested_networks = None
+        admin_password = None
+        injected_files = None
+        is_first_time = False
+
+        return functools.partial(self.compute._reschedule, self.context, uuid,
+                requested_networks, admin_password, injected_files,
+                is_first_time)
+
+    def test_reschedule_no_filter_properties(self):
+        """no filter_properties will disable re-scheduling"""
+        self.assertFalse(self._reschedule())
+
+    def test_reschedule_no_retry_info(self):
+        """no retry info will also disable re-scheduling"""
+        filter_properties = {}
+        self.assertFalse(self._reschedule(filter_properties=filter_properties))
+
+    def test_reschedule_no_request_spec(self):
+        """no request spec will also disable re-scheduling"""
+        retry = dict(num_attempts=1)
+        filter_properties = dict(retry=retry)
+        self.assertFalse(self._reschedule(filter_properties=filter_properties))
+
+    def test_reschedule_success(self):
+        retry = dict(num_attempts=1)
+        filter_properties = dict(retry=retry)
+        request_spec = {'num_instances': 42}
+        self.assertTrue(self._reschedule(filter_properties=filter_properties,
+            request_spec=request_spec))
+        self.assertEqual(1, request_spec['num_instances'])
+
+
+class ThatsNoOrdinaryRabbitException(Exception):
+    pass
+
+
+class ComputeReschedulingExceptionTestCase(BaseTestCase):
+    """Tests for re-scheduling exception handling logic"""
+
+    def setUp(self):
+        super(ComputeReschedulingExceptionTestCase, self).setUp()
+
+        # cause _spawn to raise an exception to test the exception logic:
+        def exploding_spawn(*args, **kwargs):
+            raise ThatsNoOrdinaryRabbitException()
+        self.stubs.Set(self.compute, '_spawn',
+                exploding_spawn)
+
+        self.instance_uuid = self._create_fake_instance()['uuid']
+
+    def test_exception_with_rescheduling_disabled(self):
+        """Spawn fails and re-scheduling is disabled."""
+        # this won't be re-scheduled:
+        self.assertRaises(ThatsNoOrdinaryRabbitException,
+                self.compute._run_instance, self.context, self.instance_uuid)
+
+    def test_exception_with_rescheduling_enabled(self):
+        """Spawn fails and re-scheduling is enabled.  Original exception
+        should *not* be re-raised.
+        """
+        # provide the expected status so that this one will be re-scheduled:
+        retry = dict(num_attempts=1)
+        filter_properties = dict(retry=retry)
+        request_spec = dict(num_attempts=1)
+        self.assertNotRaises(ThatsNoOrdinaryRabbitException,
+                self.compute._run_instance, self.context, self.instance_uuid,
+                filter_properties=filter_properties, request_spec=request_spec)
+
+    def test_exception_context_cleared(self):
+        """Test with no rescheduling and an additional exception occurs
+        clearing the original build error's exception context.
+        """
+        # clears the original exception context:
+        class FleshWoundException(Exception):
+            pass
+
+        def reschedule_explode(*args, **kwargs):
+            raise FleshWoundException()
+        self.stubs.Set(self.compute, '_reschedule', reschedule_explode)
+
+        # the original exception should now be raised:
+        self.assertRaises(ThatsNoOrdinaryRabbitException,
+                self.compute._run_instance, self.context, self.instance_uuid)

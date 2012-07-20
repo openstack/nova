@@ -59,7 +59,6 @@ class FilterScheduler(driver.Scheduler):
 
         Returns a list of the instances created.
         """
-
         elevated = context.elevated()
         num_instances = request_spec.get('num_instances', 1)
         LOG.debug(_("Attempting to build %(num_instances)d instance(s)") %
@@ -69,15 +68,16 @@ class FilterScheduler(driver.Scheduler):
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
+        filter_properties = kwargs.pop('filter_properties', {})
         weighted_hosts = self._schedule(context, "compute", request_spec,
-                                        *args, **kwargs)
+                filter_properties, *args, **kwargs)
 
         if not weighted_hosts:
             raise exception.NoValidHost(reason="")
 
         # NOTE(comstud): Make sure we do not pass this through.  It
         # contains an instance of RpcContext that cannot be serialized.
-        kwargs.pop('filter_properties', None)
+        filter_properties.pop('context', None)
 
         instances = []
         for num in xrange(num_instances):
@@ -86,9 +86,14 @@ class FilterScheduler(driver.Scheduler):
             weighted_host = weighted_hosts.pop(0)
 
             request_spec['instance_properties']['launch_index'] = num
+
             instance = self._provision_resource(elevated, weighted_host,
                                                 request_spec, reservations,
-                                                kwargs)
+                                                filter_properties, kwargs)
+            # scrub retry host list in case we're scheduling multiple
+            # instances:
+            retry = filter_properties.get('retry', {})
+            retry['hosts'] = []
 
             if instance:
                 instances.append(instance)
@@ -120,10 +125,13 @@ class FilterScheduler(driver.Scheduler):
                 'prep_resize', **kwargs)
 
     def _provision_resource(self, context, weighted_host, request_spec,
-            reservations, kwargs):
+            reservations, filter_properties, kwargs):
         """Create the requested resource in this Zone."""
         instance = self.create_instance_db_entry(context, request_spec,
                                                  reservations)
+
+        # Add a retry entry for the selected compute host:
+        self._add_retry_host(filter_properties, weighted_host.host_state.host)
 
         payload = dict(request_spec=request_spec,
                        weighted_host=weighted_host.to_dict(),
@@ -133,13 +141,28 @@ class FilterScheduler(driver.Scheduler):
                         payload)
 
         driver.cast_to_compute_host(context, weighted_host.host_state.host,
-                'run_instance', instance_uuid=instance['uuid'], **kwargs)
+                'run_instance', instance_uuid=instance['uuid'],
+                request_spec=request_spec, filter_properties=filter_properties,
+                **kwargs)
         inst = driver.encode_instance(instance, local=True)
+
         # So if another instance is created, create_instance_db_entry will
         # actually create a new entry, instead of assume it's been created
         # already
         del request_spec['instance_properties']['uuid']
+
         return inst
+
+    def _add_retry_host(self, filter_properties, host):
+        """Add a retry entry for the selected computep host.  In the event that
+        the request gets re-scheduled, this entry will signal that the given
+        host has already been tried.
+        """
+        retry = filter_properties.get('retry', None)
+        if not retry:
+            return
+        hosts = retry['hosts']
+        hosts.append(host)
 
     def _get_configuration_options(self):
         """Fetch options dictionary. Broken out for testing."""
@@ -151,7 +174,41 @@ class FilterScheduler(driver.Scheduler):
         """
         pass
 
-    def _schedule(self, context, topic, request_spec, *args, **kwargs):
+    def _max_attempts(self):
+        max_attempts = FLAGS.scheduler_max_attempts
+        if max_attempts < 1:
+            raise exception.NovaException(_("Invalid value for "
+                "'scheduler_max_attempts', must be >= 1"))
+        return max_attempts
+
+    def _populate_retry(self, filter_properties, instance_properties):
+        """Populate filter properties with history of retries for this
+        request. If maximum retries is exceeded, raise NoValidHost.
+        """
+        max_attempts = self._max_attempts()
+        retry = filter_properties.pop('retry', {})
+
+        if max_attempts == 1:
+            # re-scheduling is disabled.
+            return
+
+        # retry is enabled, update attempt count:
+        if retry:
+            retry['num_attempts'] += 1
+        else:
+            retry = {
+                'num_attempts': 1,
+                'hosts': []  # list of compute hosts tried
+            }
+        filter_properties['retry'] = retry
+
+        if retry['num_attempts'] > max_attempts:
+            uuid = instance_properties.get('uuid', None)
+            msg = _("Exceeded max scheduling attempts %d ") % max_attempts
+            raise exception.NoValidHost(msg, instance_uuid=uuid)
+
+    def _schedule(self, context, topic, request_spec, filter_properties, *args,
+            **kwargs):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
@@ -166,7 +223,9 @@ class FilterScheduler(driver.Scheduler):
         cost_functions = self.get_cost_functions()
         config_options = self._get_configuration_options()
 
-        filter_properties = kwargs.get('filter_properties', {})
+        # check retry policy:
+        self._populate_retry(filter_properties, instance_properties)
+
         filter_properties.update({'context': context,
                                   'request_spec': request_spec,
                                   'config_options': config_options,
