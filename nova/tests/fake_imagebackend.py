@@ -37,10 +37,11 @@ class Backend(object):
             def cache(self, fn, fname, size=None, *args, **kwargs):
                 pass
 
-            def libvirt_info(self, device_type):
+            def libvirt_info(self, device_type, cache_mode):
                 info = config.LibvirtConfigGuestDisk()
                 info.source_type = 'file'
                 info.source_device = device_type
+                info.driver_cache = cache_mode
                 info.driver_format = 'raw'
                 info.source_path = self.path
                 return info

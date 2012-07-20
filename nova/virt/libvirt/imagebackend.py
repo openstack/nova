@@ -73,10 +73,11 @@ class Image(object):
         pass
 
     @abc.abstractmethod
-    def libvirt_info(self, device_type):
+    def libvirt_info(self, device_type, cache_mode):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
         :device_type: Device type for this image.
+        :cache_mode: Caching mode for this image
         """
         pass
 
@@ -112,10 +113,11 @@ class Raw(Image):
         self.path = os.path.join(FLAGS.instances_path,
                                  instance, name)
 
-    def libvirt_info(self, device_type):
+    def libvirt_info(self, device_type, cache_mode):
         info = config.LibvirtConfigGuestDisk()
         info.source_type = 'file'
         info.source_device = device_type
+        info.driver_cache = cache_mode
         info.driver_format = 'raw'
         info.source_path = self.path
         return info
@@ -138,10 +140,11 @@ class Raw(Image):
 
 
 class Qcow2(Raw):
-    def libvirt_info(self, device_type):
+    def libvirt_info(self, device_type, cache_mode):
         info = config.LibvirtConfigGuestDisk()
         info.source_type = 'file'
         info.source_device = device_type
+        info.driver_cache = cache_mode
         info.driver_format = 'qcow2'
         info.source_path = self.path
         return info
@@ -169,10 +172,11 @@ class Lvm(Image):
     def escape(fname):
         return fname.replace('_', '__')
 
-    def libvirt_info(self, device_type):
+    def libvirt_info(self, device_type, cache_mode):
         info = config.LibvirtConfigGuestDisk()
         info.source_type = 'block'
         info.source_device = device_type
+        info.driver_cache = cache_mode
         info.driver_format = 'raw'
         info.source_path = self.path
         return info
