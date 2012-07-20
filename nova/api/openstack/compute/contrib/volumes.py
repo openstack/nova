@@ -220,8 +220,11 @@ class VolumeController(object):
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
         retval = _translate_volume_detail_view(context, dict(new_volume))
+        result = {'volume': retval}
 
-        return {'volume': retval}
+        location = '%s/%s' % (req.url, new_volume['id'])
+
+        return wsgi.ResponseObject(result, headers=dict(location=location))
 
 
 def _translate_attachment_detail_view(volume_id, instance_uuid, mountpoint):
