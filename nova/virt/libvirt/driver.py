@@ -1655,40 +1655,44 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 root_device_type = 'disk'
 
-            def disk_info(name, device_type="disk"):
+            if FLAGS.libvirt_type == "uml":
+                default_disk_bus = "uml"
+            elif FLAGS.libvirt_type == "xen":
+                default_disk_bus = "xen"
+            else:
+                default_disk_bus = "virtio"
+
+            def disk_info(name, disk_dev, disk_bus=default_disk_bus,
+                          device_type="disk"):
                 image = self.image_backend.image(instance['name'],
                                                  name)
-                return image.libvirt_info(device_type,
+                return image.libvirt_info(disk_bus,
+                                          disk_dev,
+                                          device_type,
                                           self.disk_cachemode)
 
-            if FLAGS.libvirt_type == "uml":
-                ephemeral_disk_bus = "uml"
-            elif FLAGS.libvirt_type == "xen":
-                ephemeral_disk_bus = "xen"
-            else:
-                ephemeral_disk_bus = "virtio"
-
             if rescue:
-                diskrescue = disk_info('disk.rescue', root_device_type)
-                diskrescue.target_dev = self.default_root_device
-                diskrescue.target_bus = ephemeral_disk_bus
+                diskrescue = disk_info('disk.rescue',
+                                       self.default_root_device,
+                                       device_type=root_device_type)
                 guest.add_device(diskrescue)
 
-                diskos = disk_info('disk')
-                diskos.target_dev = self.default_second_device
-                diskos.target_bus = ephemeral_disk_bus
+                diskos = disk_info('disk',
+                                   self.default_second_device)
                 guest.add_device(diskos)
             else:
                 ebs_root = self._volume_in_mapping(self.default_root_device,
                                                    block_device_info)
 
                 if not ebs_root:
-                    diskos = disk_info('disk', root_device_type)
-                    diskos.target_dev = root_device
                     if root_device_type == "cdrom":
-                        diskos.target_bus = "ide"
+                        bus = "ide"
                     else:
-                        diskos.target_bus = ephemeral_disk_bus
+                        bus = default_disk_bus
+                    diskos = disk_info('disk',
+                                       root_device,
+                                       bus,
+                                       root_device_type)
                     guest.add_device(diskos)
 
                 ephemeral_device = None
@@ -1701,9 +1705,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         ephemeral_device = self.default_second_device
 
                 if ephemeral_device is not None:
-                    disklocal = disk_info('disk.local')
-                    disklocal.target_dev = ephemeral_device
-                    disklocal.target_bus = ephemeral_disk_bus
+                    disklocal = disk_info('disk.local', ephemeral_device)
                     guest.add_device(disklocal)
 
                 if ephemeral_device is not None:
@@ -1717,25 +1719,21 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 for eph in driver.block_device_info_get_ephemerals(
                     block_device_info):
-                    diskeph = disk_info(_get_eph_disk(eph))
-                    diskeph.target_dev = block_device.strip_dev(
-                        eph['device_name'])
-                    diskeph.target_bus = ephemeral_disk_bus
+                    diskeph = disk_info(_get_eph_disk(eph),
+                                        block_device.strip_dev(
+                            eph['device_name']))
                     guest.add_device(diskeph)
 
                 swap = driver.block_device_info_get_swap(block_device_info)
                 if driver.swap_is_usable(swap):
-                    diskswap = disk_info('disk.swap')
-                    diskswap.target_dev = block_device.strip_dev(
-                        swap['device_name'])
-                    diskswap.target_bus = ephemeral_disk_bus
+                    diskswap = disk_info('disk.swap',
+                                         block_device.strip_dev(
+                            swap['device_name']))
                     guest.add_device(diskswap)
                 elif (inst_type['swap'] > 0 and
                       not self._volume_in_mapping(swap_device,
                                                   block_device_info)):
-                    diskswap = disk_info('disk.swap')
-                    diskswap.target_dev = swap_device
-                    diskswap.target_bus = ephemeral_disk_bus
+                    diskswap = disk_info('disk.swap', swap_device)
                     guest.add_device(diskswap)
                     db.instance_update(
                         nova_context.get_admin_context(), instance['uuid'],
@@ -1758,7 +1756,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                       instance['name'],
                                                       "disk.config")
                 diskconfig.target_dev = self.default_last_device
-                diskconfig.target_bus = ephemeral_disk_bus
+                diskconfig.target_bus = default_disk_bus
                 guest.add_device(diskconfig)
 
         for (network, mapping) in network_info:

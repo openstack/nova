@@ -73,9 +73,11 @@ class Image(object):
         pass
 
     @abc.abstractmethod
-    def libvirt_info(self, device_type, cache_mode):
+    def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
+        :disk_dev: Disk bus device name
+        :disk_bus: Disk bus type
         :device_type: Device type for this image.
         :cache_mode: Caching mode for this image
         """
@@ -113,10 +115,12 @@ class Raw(Image):
         self.path = os.path.join(FLAGS.instances_path,
                                  instance, name)
 
-    def libvirt_info(self, device_type, cache_mode):
+    def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode):
         info = config.LibvirtConfigGuestDisk()
         info.source_type = 'file'
         info.source_device = device_type
+        info.target_bus = disk_bus
+        info.target_dev = disk_dev
         info.driver_cache = cache_mode
         info.driver_format = 'raw'
         info.source_path = self.path
@@ -140,10 +144,12 @@ class Raw(Image):
 
 
 class Qcow2(Raw):
-    def libvirt_info(self, device_type, cache_mode):
+    def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode):
         info = config.LibvirtConfigGuestDisk()
         info.source_type = 'file'
         info.source_device = device_type
+        info.target_bus = disk_bus
+        info.target_dev = disk_dev
         info.driver_cache = cache_mode
         info.driver_format = 'qcow2'
         info.source_path = self.path
@@ -172,10 +178,12 @@ class Lvm(Image):
     def escape(fname):
         return fname.replace('_', '__')
 
-    def libvirt_info(self, device_type, cache_mode):
+    def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode):
         info = config.LibvirtConfigGuestDisk()
         info.source_type = 'block'
         info.source_device = device_type
+        info.target_bus = disk_bus
+        info.target_dev = disk_dev
         info.driver_cache = cache_mode
         info.driver_format = 'raw'
         info.source_path = self.path
