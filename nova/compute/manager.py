@@ -2378,10 +2378,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 compute_utils.start_instance_usage_audit(context,
                                               begin, end,
                                               self.host, num_instances)
-                for instance_ref in instances:
+                for instance in instances:
                     try:
                         compute_utils.notify_usage_exists(
-                            context, instance_ref,
+                            context, instance,
                             ignore_missing_network_data=False)
                         successes += 1
                     except Exception:
