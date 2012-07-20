@@ -1654,10 +1654,10 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 root_device_type = 'disk'
 
-            def disk_info(name):
+            def disk_info(name, device_type="disk"):
                 image = self.image_backend.image(instance['name'],
                                                  name)
-                return image.libvirt_info(root_device_type,
+                return image.libvirt_info(device_type,
                                           self.disk_cachemode)
 
             if FLAGS.libvirt_type == "uml":
@@ -1668,7 +1668,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 ephemeral_disk_bus = "virtio"
 
             if rescue:
-                diskrescue = disk_info('disk.rescue')
+                diskrescue = disk_info('disk.rescue', root_device_type)
                 diskrescue.target_dev = self.default_root_device
                 diskrescue.target_bus = ephemeral_disk_bus
                 guest.add_device(diskrescue)
@@ -1682,7 +1682,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                    block_device_info)
 
                 if not ebs_root:
-                    diskos = disk_info('disk')
+                    diskos = disk_info('disk', root_device_type)
                     diskos.target_dev = root_device
                     if root_device_type == "cdrom":
                         diskos.target_bus = "ide"

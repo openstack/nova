@@ -860,11 +860,30 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_xml_disk_bus_virtio(self):
         self._check_xml_and_disk_bus({"disk_format": "raw"},
-                                     "disk", "virtio")
+                                     None,
+                                     (("disk", "virtio"),))
 
     def test_xml_disk_bus_ide(self):
         self._check_xml_and_disk_bus({"disk_format": "iso"},
-                                     "cdrom", "ide")
+                                     None,
+                                     (("cdrom", "ide"),))
+
+    def test_xml_disk_bus_ide_and_virtio(self):
+        swap = {'device_name': '/dev/sdb',
+                'swap_size': 1}
+        ephemerals = [{'num': 0,
+                       'virtual_name': 'ephemeral0',
+                       'device_name': '/dev/sdc1',
+                       'size': 1}]
+        block_device_info = {
+                'swap': swap,
+                'ephemerals': ephemerals}
+
+        self._check_xml_and_disk_bus({"disk_format": "iso"},
+                                     block_device_info,
+                                     (("cdrom", "ide"),
+                                      ("disk", "virtio"),
+                                      ("disk", "virtio")))
 
     def test_list_instances(self):
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
@@ -1295,18 +1314,30 @@ class LibvirtConnTestCase(test.TestCase):
         for disk in disks:
             self.assertEqual(disk.get("cache"), "writethrough")
 
-    def _check_xml_and_disk_bus(self, image_meta, device_type, bus):
+    def _check_xml_and_disk_bus(self, image_meta,
+                                block_device_info, wantConfig):
         user_context = context.RequestContext(self.user_id, self.project_id)
         instance_ref = db.instance_create(user_context, self.test_instance)
         network_info = _fake_network_info(self.stubs, 1)
 
-        xml = libvirt_driver.LibvirtDriver(True).to_xml(instance_ref,
-                                                        network_info,
-                                                        image_meta)
+        xml = libvirt_driver.LibvirtDriver(True).to_xml(
+            instance_ref,
+            network_info,
+            image_meta,
+            block_device_info=block_device_info)
         tree = etree.fromstring(xml)
-        self.assertEqual(tree.find('./devices/disk').get('device'),
-                         device_type)
-        self.assertEqual(tree.find('./devices/disk/target').get('bus'), bus)
+
+        got_disks = tree.findall('./devices/disk')
+        got_disk_targets = tree.findall('./devices/disk/target')
+        for i in range(len(wantConfig)):
+            want_device_type = wantConfig[i][0]
+            want_device_bus = wantConfig[i][1]
+
+            got_device_type = got_disks[i].get('device')
+            got_device_bus = got_disk_targets[i].get('bus')
+
+            self.assertEqual(got_device_type, want_device_type)
+            self.assertEqual(got_device_bus, want_device_bus)
 
     def _check_xml_and_uuid(self, image_meta):
         user_context = context.RequestContext(self.user_id, self.project_id)
