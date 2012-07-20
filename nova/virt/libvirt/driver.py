@@ -1688,15 +1688,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     diskos.target_dev = root_device
                     if root_device_type == "cdrom":
                         diskos.target_bus = "ide"
-                        # NOTE(jk0): Only attach the ISO as a separate drive if
-                        # the appropriate metadata is set on the image.
-                        image_properties = image_meta.get("properties", {})
-                        if "separate_attach" in image_properties:
-                            separate_disk = disk_info("disk")
-                            separate_disk.driver_cache = self.disk_cachemode
-                            separate_disk.target_dev = self.default_root_device
-                            separate_disk.target_bus = ephemeral_disk_bus
-                            guest.add_device(separate_disk)
                     else:
                         diskos.target_bus = "virtio"
                     guest.add_device(diskos)
