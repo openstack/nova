@@ -195,10 +195,6 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('inject_network_info', 'cast',
                 instance=self.fake_instance)
 
-    def test_lock_instance(self):
-        self._test_compute_api('lock_instance', 'cast',
-                instance=self.fake_instance)
-
     def test_post_live_migration_at_destination(self):
         self._test_compute_api('post_live_migration_at_destination', 'call',
                 instance=self.fake_instance, block_migration='block_migration',
@@ -316,10 +312,6 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_terminate_instance(self):
         self._test_compute_api('terminate_instance', 'cast',
-                instance=self.fake_instance)
-
-    def test_unlock_instance(self):
-        self._test_compute_api('unlock_instance', 'cast',
                 instance=self.fake_instance)
 
     def test_unpause_instance(self):

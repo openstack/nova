@@ -130,6 +130,15 @@ class API(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         super(API, self).__init__(**kwargs)
 
+    def _instance_update(self, context, instance_uuid, **kwargs):
+        """Update an instance in the database using kwargs as value."""
+
+        (old_ref, instance_ref) = self.db.instance_update_and_get_original(
+                context, instance_uuid, kwargs)
+        notifications.send_update(context, old_ref, instance_ref)
+
+        return instance_ref
+
     def _check_injected_file_quota(self, context, injected_files):
         """Enforce quota limits on injected files.
 
@@ -1531,12 +1540,18 @@ class API(base.Base):
     @wrap_check_policy
     def lock(self, context, instance):
         """Lock the given instance."""
-        self.compute_rpcapi.lock_instance(context, instance=instance)
+        context = context.elevated()
+        instance_uuid = instance['uuid']
+        LOG.debug(_('Locking'), context=context, instance_uuid=instance_uuid)
+        self._instance_update(context, instance_uuid, locked=True)
 
     @wrap_check_policy
     def unlock(self, context, instance):
         """Unlock the given instance."""
-        self.compute_rpcapi.unlock_instance(context, instance=instance)
+        context = context.elevated()
+        instance_uuid = instance['uuid']
+        LOG.debug(_('Unlocking'), context=context, instance_uuid=instance_uuid)
+        self._instance_update(context, instance_uuid, locked=False)
 
     @wrap_check_policy
     def get_lock(self, context, instance):

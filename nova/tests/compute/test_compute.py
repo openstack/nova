@@ -213,6 +213,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_get_nw_info)
         self.stubs.Set(nova.network.API, 'allocate_for_instance',
                        fake_get_nw_info)
+        self.compute_api = compute.API()
 
     def tearDown(self):
         super(ComputeTestCase, self).tearDown()
@@ -1038,13 +1039,13 @@ class ComputeTestCase(BaseTestCase):
                                                    is_admin=False)
 
         # decorator should return False (fail) with locked nonadmin context
-        self.compute.lock_instance(self.context, instance_uuid)
+        self.compute_api.lock(self.context, instance)
         ret_val = self.compute.reboot_instance(non_admin_context,
                 instance=jsonutils.to_primitive(instance))
         self.assertEqual(ret_val, False)
 
         # decorator should return None (success) with unlocked nonadmin context
-        self.compute.unlock_instance(self.context, instance_uuid)
+        self.compute_api.unlock(self.context, instance)
         ret_val = self.compute.reboot_instance(non_admin_context,
                 instance=jsonutils.to_primitive(instance))
         self.assertEqual(ret_val, None)

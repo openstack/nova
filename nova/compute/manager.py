@@ -1821,7 +1821,12 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def lock_instance(self, context, instance_uuid):
-        """Lock the given instance."""
+        """Lock the given instance.
+
+        This isn't actually used in the current code.  The same thing is now
+        done directly in nova.compute.api.  This must stay here for backwards
+        compatibility of the rpc API.
+        """
         context = context.elevated()
 
         LOG.debug(_('Locking'), context=context, instance_uuid=instance_uuid)
@@ -1830,7 +1835,12 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def unlock_instance(self, context, instance_uuid):
-        """Unlock the given instance."""
+        """Unlock the given instance.
+
+        This isn't actually used in the current code.  The same thing is now
+        done directly in nova.compute.api.  This must stay here for backwards
+        compatibility of the rpc API.
+        """
         context = context.elevated()
 
         LOG.debug(_('Unlocking'), context=context, instance_uuid=instance_uuid)

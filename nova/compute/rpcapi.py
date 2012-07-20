@@ -203,11 +203,6 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid']),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def lock_instance(self, ctxt, instance):
-        self.cast(ctxt, self.make_msg('lock_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
-
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
         return self.call(ctxt,
@@ -362,11 +357,6 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def terminate_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('terminate_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
-
-    def unlock_instance(self, ctxt, instance):
-        self.cast(ctxt, self.make_msg('unlock_instance',
                 instance_uuid=instance['uuid']),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
