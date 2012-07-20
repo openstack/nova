@@ -567,12 +567,16 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
 
     glance_host, glance_port = glance.pick_glance_api_server()
 
+    # TODO(sirp): this inherit-image-property code should probably go in
+    # nova/compute/manager so it can be shared across hypervisors
     sys_meta = db.instance_system_metadata_get(context, instance['uuid'])
     properties = {}
     prefix = 'image_'
     for key, value in sys_meta.iteritems():
         if key.startswith(prefix):
             key = key[len(prefix):]
+        if key in FLAGS.non_inheritable_image_properties:
+            continue
         properties[key] = value
     properties['auto_disk_config'] = instance.auto_disk_config
     properties['os_type'] = instance.os_type or FLAGS.default_os_type
