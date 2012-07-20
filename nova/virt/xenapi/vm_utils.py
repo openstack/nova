@@ -1501,47 +1501,30 @@ def _get_all_vdis_in_sr(session, sr_ref):
             continue
 
 
-#TODO(sirp): This code comes from XS5.6 pluginlib.py, we should refactor to
-# use that implmenetation
-def _get_vhd_parent(session, vdi_rec):
-    """
-    Returns the VHD parent of the given VDI record, as a (ref, rec) pair.
-    Returns None if we're at the root of the tree.
-    """
-    if 'vhd-parent' in vdi_rec['sm_config']:
-        parent_uuid = vdi_rec['sm_config']['vhd-parent']
-        parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
-        parent_rec = session.call_xenapi("VDI.get_record", parent_ref)
-        vdi_uuid = vdi_rec['uuid']
-        LOG.debug(_("VHD %(vdi_uuid)s has parent %(parent_ref)s") % locals())
-        return parent_ref, parent_rec
-    else:
-        return None
-
-
 def _get_vhd_parent_uuid(session, vdi_ref):
     vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
-    ret = _get_vhd_parent(session, vdi_rec)
-    if ret:
-        _parent_ref, parent_rec = ret
-        return parent_rec["uuid"]
-    else:
+
+    if 'vhd-parent' not in vdi_rec['sm_config']:
         return None
+
+    parent_uuid = vdi_rec['sm_config']['vhd-parent']
+    vdi_uuid = vdi_rec['uuid']
+    LOG.debug(_("VHD %(vdi_uuid)s has parent %(parent_uuid)s") % locals())
+    return parent_uuid
 
 
 def _walk_vdi_chain(session, vdi_uuid):
     """Yield vdi_recs for each element in a VDI chain"""
-    # TODO(jk0): perhaps make _get_vhd_parent use this
     while True:
         vdi_ref = session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         yield vdi_rec
 
-        parent_uuid = vdi_rec['sm_config'].get('vhd-parent')
-        if parent_uuid:
-            vdi_uuid = parent_uuid
-        else:
+        parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
+        if not parent_uuid:
             break
+
+        vdi_uuid = parent_uuid
 
 
 def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
