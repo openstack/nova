@@ -40,6 +40,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common import policy as common_policy
@@ -539,8 +540,9 @@ class ComputeTestCase(BaseTestCase):
                            {'task_state': task_states.REBOOTING})
 
         reboot_type = "SOFT"
-        self.compute.reboot_instance(self.context, instance['uuid'],
-                                     reboot_type)
+        self.compute.reboot_instance(self.context,
+                                     instance=jsonutils.to_primitive(instance),
+                                     reboot_type=reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
@@ -556,8 +558,9 @@ class ComputeTestCase(BaseTestCase):
                            {'task_state': task_states.REBOOTING_HARD})
 
         reboot_type = "HARD"
-        self.compute.reboot_instance(self.context, instance['uuid'],
-                                     reboot_type)
+        self.compute.reboot_instance(self.context,
+                                     instance=jsonutils.to_primitive(instance),
+                                     reboot_type=reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
@@ -1018,7 +1021,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_get_lock(self):
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.assertFalse(self.compute._get_lock(self.context,
                                                 instance['uuid']))
         db.instance_update(self.context, instance['uuid'], {'locked': True})
@@ -1037,13 +1040,13 @@ class ComputeTestCase(BaseTestCase):
         # decorator should return False (fail) with locked nonadmin context
         self.compute.lock_instance(self.context, instance_uuid)
         ret_val = self.compute.reboot_instance(non_admin_context,
-                                               instance_uuid)
+                instance=jsonutils.to_primitive(instance))
         self.assertEqual(ret_val, False)
 
         # decorator should return None (success) with unlocked nonadmin context
         self.compute.unlock_instance(self.context, instance_uuid)
         ret_val = self.compute.reboot_instance(non_admin_context,
-                                               instance_uuid)
+                instance=jsonutils.to_primitive(instance))
         self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_uuid)

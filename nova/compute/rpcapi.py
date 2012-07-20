@@ -20,6 +20,7 @@ Client side of the compute RPC API.
 
 from nova import exception
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 import nova.openstack.common.rpc.proxy
@@ -58,6 +59,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.1 - Adds get_host_uptime()
         1.2 - Adds check_can_live_migrate_[destination|source]
         1.3 - Adds change_instance_metadata()
+        1.4 - Remove instance_uuid, add instance argument to reboot_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -235,9 +237,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 disk=disk), _compute_topic(self.topic, ctxt, host, None))
 
     def reboot_instance(self, ctxt, instance, reboot_type):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('reboot_instance',
-                instance_uuid=instance['uuid'], reboot_type=reboot_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, reboot_type=reboot_type),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.4')
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref):

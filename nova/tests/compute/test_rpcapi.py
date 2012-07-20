@@ -47,6 +47,9 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def _test_compute_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
+
+        methods_with_instance = ['reboot_instance']
+
         if 'rpcapi_class' in kwargs:
             rpcapi_class = kwargs['rpcapi_class']
             del kwargs['rpcapi_class']
@@ -65,7 +68,8 @@ class ComputeRpcAPITestCase(test.TestCase):
             del expected_msg['args']['host']
         if 'destination' in expected_msg['args']:
             del expected_msg['args']['destination']
-        if 'instance' in expected_msg['args']:
+        if 'instance' in expected_msg['args'] and (method not in
+                                                   methods_with_instance):
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
             if method in ['rollback_live_migration_at_destination',
@@ -219,7 +223,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_reboot_instance(self):
         self._test_compute_api('reboot_instance', 'cast',
-                instance=self.fake_instance, reboot_type='type')
+                instance=self.fake_instance, reboot_type='type', version='1.4')
 
     def test_rebuild_instance(self):
         self._test_compute_api('rebuild_instance', 'cast',
