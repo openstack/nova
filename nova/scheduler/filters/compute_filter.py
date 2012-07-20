@@ -1,4 +1,4 @@
-# Copyright (c) 2011 OpenStack, LLC.
+# Copyright (c) 2012 OpenStack, LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -22,24 +22,10 @@ LOG = logging.getLogger(__name__)
 
 
 class ComputeFilter(filters.BaseHostFilter):
-    """HostFilter hard-coded to work with InstanceType records."""
-
-    def _satisfies_extra_specs(self, capabilities, instance_type):
-        """Check that the capabilities provided by the compute service
-        satisfy the extra specs associated with the instance type"""
-        if 'extra_specs' not in instance_type:
-            return True
-
-        # NOTE(lorinh): For now, we are just checking exact matching on the
-        # values. Later on, we want to handle numerical
-        # values so we can represent things like number of GPU cards
-        for key, value in instance_type['extra_specs'].iteritems():
-            if capabilities.get(key, None) != value:
-                return False
-        return True
+    """Filter on active Compute nodes"""
 
     def host_passes(self, host_state, filter_properties):
-        """Return a list of hosts that can create instance_type."""
+        """Returns True for only active compute nodes"""
         instance_type = filter_properties.get('instance_type')
         if host_state.topic != 'compute' or not instance_type:
             return True
@@ -51,10 +37,7 @@ class ComputeFilter(filters.BaseHostFilter):
                     "heard from in a while"), locals())
             return False
         if not capabilities.get("enabled", True):
-            LOG.debug(_("%(host_state)s is disabled via capabs"), locals())
-            return False
-        if not self._satisfies_extra_specs(capabilities, instance_type):
-            LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements"), locals())
+            LOG.debug(_("%(host_state)s is disabled via capabilities"),
+                    locals())
             return False
         return True
