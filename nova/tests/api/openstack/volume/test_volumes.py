@@ -19,6 +19,7 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.volume import volumes
+from nova import exception
 from nova import flags
 from nova.openstack.common import timeutils
 from nova import test
@@ -64,6 +65,18 @@ class VolumeApiTest(test.TestCase):
                                                                1, 1, 1),
                                'size': 100}}
         self.assertEqual(res_dict, expected)
+
+    def test_volume_creation_fails_with_bad_size(self):
+        vol = {"size": '',
+               "display_name": "Volume Test Name",
+               "display_description": "Volume Test Desc",
+               "availability_zone": "zone1:host1"}
+        body = {"volume": vol}
+        req = fakes.HTTPRequest.blank('/v1/volumes')
+        self.assertRaises(exception.InvalidInput,
+                          self.controller.create,
+                          req,
+                          body)
 
     def test_volume_create_no_body(self):
         body = {}

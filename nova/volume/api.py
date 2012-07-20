@@ -80,6 +80,9 @@ class API(base.Base):
         else:
             snapshot_id = None
 
+        if not isinstance(size, int) or size <= 0:
+            msg = _('Volume size must be an integer and greater than 0')
+            raise exception.InvalidInput(reason=msg)
         try:
             reservations = QUOTAS.reserve(context, volumes=1, gigabytes=size)
         except exception.OverQuota as e:
