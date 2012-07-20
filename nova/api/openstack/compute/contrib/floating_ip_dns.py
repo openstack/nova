@@ -162,28 +162,21 @@ class FloatingIPDNSDomainController(object):
             raise webob.exc.HTTPUnprocessableEntity()
         project = entry.get('project', None)
         av_zone = entry.get('availability_zone', None)
-        if (not scope or
+        if (scope not in ('private', 'public') or
             project and av_zone or
             scope == 'private' and project or
             scope == 'public' and av_zone):
             raise webob.exc.HTTPUnprocessableEntity()
-        try:
-            if scope == 'private':
-                self.network_api.create_private_dns_domain(context,
-                                                           fqdomain,
-                                                           av_zone)
-                return _translate_domain_entry_view({'domain': fqdomain,
-                                                   'scope': scope,
-                                             'availability_zone': av_zone})
-            else:
-                self.network_api.create_public_dns_domain(context,
-                                                          fqdomain,
-                                                          project)
-                return _translate_domain_entry_view({'domain': fqdomain,
-                                                   'scope': 'public',
-                                                   'project': project})
-        except exception.NotAuthorized or exception.AdminRequired:
-            return webob.Response(status_int=403)
+        if scope == 'private':
+            create_dns_domain = self.network_api.create_private_dns_domain
+            area_name, area = 'availability_zone', av_zone
+        else:
+            create_dns_domain = self.network_api.create_public_dns_domain
+            area_name, area = 'project', project
+        create_dns_domain(context, fqdomain, area)
+        return _translate_domain_entry_view({'domain': fqdomain,
+                                             'scope': scope,
+                                             area_name: area})
 
     def delete(self, req, id):
         """Delete the domain identified by id. """
@@ -194,12 +187,10 @@ class FloatingIPDNSDomainController(object):
         # Delete the whole domain
         try:
             self.network_api.delete_dns_domain(context, domain)
-        except exception.NotAuthorized or exception.AdminRequired:
-            return webob.Response(status_int=403)
-        except exception.NotFound:
-            return webob.Response(status_int=404)
+        except exception.NotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=unicode(e))
 
-        return webob.Response(status_int=200)
+        return webob.Response(status_int=202)
 
 
 class FloatingIPDNSEntryController(object):
@@ -280,10 +271,10 @@ class FloatingIPDNSEntryController(object):
 
         try:
             self.network_api.delete_dns_entry(context, name, domain)
-        except exception.NotFound:
-            return webob.Response(status_int=404)
+        except exception.NotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=unicode(e))
 
-        return webob.Response(status_int=200)
+        return webob.Response(status_int=202)
 
 
 class Floating_ip_dns(extensions.ExtensionDescriptor):
