@@ -166,6 +166,10 @@ mkfs: CommandFilter, /sbin/mkfs, root
 # nova/virt/libvirt/utils.py: 'qemu-img'
 qemu-img: CommandFilter, /usr/bin/qemu-img, root
 
+# nova/virt/disk/api.py: 'readlink', '-e'
+readlink: CommandFilter, /bin/readlink, root
+readlink_usr: CommandFilter, /usr/bin/readlink, root
+
 # nova/virt/disk/api.py: 'touch', target
 touch: CommandFilter, /usr/bin/touch, root
 
