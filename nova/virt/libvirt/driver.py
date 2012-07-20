@@ -1688,7 +1688,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     if root_device_type == "cdrom":
                         diskos.target_bus = "ide"
                     else:
-                        diskos.target_bus = "virtio"
+                        diskos.target_bus = ephemeral_disk_bus
                     guest.add_device(diskos)
 
                 ephemeral_device = None
