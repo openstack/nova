@@ -503,7 +503,8 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.suspend_instance(self.context, instance_uuid)
+        self.compute.suspend_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         self.compute.resume_instance(self.context, instance_uuid)
         self.compute.terminate_instance(self.context, instance_uuid)
 

@@ -297,7 +297,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.5'
+    RPC_API_VERSION = '1.6'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1783,22 +1783,23 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def suspend_instance(self, context, instance_uuid):
+    def suspend_instance(self, context, instance=None, instance_uuid=None):
         """Suspend the given instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        LOG.audit(_('Suspending'), context=context, instance=instance_ref)
-        self.driver.suspend(instance_ref)
+        LOG.audit(_('Suspending'), context=context, instance=instance)
+        self.driver.suspend(instance)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_ref['uuid'],
+                              instance['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.SUSPENDED,
                               task_state=None)
 
-        self._notify_about_instance_usage(context, instance_ref, 'suspend')
+        self._notify_about_instance_usage(context, instance, 'suspend')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
