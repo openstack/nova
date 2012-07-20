@@ -2761,7 +2761,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self.power_off(instance)
 
         # copy disks to destination
-        # if disk type is qcow2, convert to raw then send to dest.
         # rename instance dir to +_resize at first for using
         # shared storage for instance dir (eg. NFS).
         same_host = (dest == self.get_host_ip_addr())
@@ -2770,28 +2769,29 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             utils.execute('mv', inst_base, inst_base_resize)
             if same_host:
+                dest = None
                 utils.execute('mkdir', '-p', inst_base)
             else:
                 utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
             for info in disk_info:
                 # assume inst_base == dirname(info['path'])
-                to_path = "%s:%s" % (dest, info['path'])
-                fname = os.path.basename(info['path'])
+                img_path = info['path']
+                fname = os.path.basename(img_path)
                 from_path = os.path.join(inst_base_resize, fname)
-                if info['type'] == 'qcow2':
+                if info['type'] == 'qcow2' and info['backing_file']:
                     tmp_path = from_path + "_rbase"
+                    # merge backing file
                     utils.execute('qemu-img', 'convert', '-f', 'qcow2',
-                                  '-O', 'raw', from_path, tmp_path)
+                                  '-O', 'qcow2', from_path, tmp_path)
+
                     if same_host:
-                        utils.execute('mv', tmp_path, info['path'])
+                        utils.execute('mv', tmp_path, img_path)
                     else:
-                        utils.execute('scp', tmp_path, to_path)
+                        libvirt_utils.copy_image(tmp_path, img_path, host=dest)
                         utils.execute('rm', '-f', tmp_path)
-                else:  # raw
-                    if same_host:
-                        utils.execute('cp', from_path, info['path'])
-                    else:
-                        utils.execute('scp', from_path, to_path)
+
+                else:  # raw or qcow2 with no backing file
+                    libvirt_utils.copy_image(from_path, img_path, host=dest)
         except Exception, e:
             try:
                 if os.path.exists(inst_base_resize):
@@ -2826,12 +2826,28 @@ class LibvirtDriver(driver.ComputeDriver):
         for info in disk_info:
             fname = os.path.basename(info['path'])
             if fname == 'disk':
-                disk.extend(info['path'],
-                            instance['root_gb'] * 1024 * 1024 * 1024)
+                size = instance['root_gb']
             elif fname == 'disk.local':
-                disk.extend(info['path'],
-                            instance['ephemeral_gb'] * 1024 * 1024 * 1024)
-            if FLAGS.use_cow_images:
+                size = instance['ephemeral_gb']
+            else:
+                size = 0
+            size *= 1024 * 1024 * 1024
+
+            # If we have a non partitioned image that we can extend
+            # then ensure we're in 'raw' format so we can extend file system.
+            fmt = info['type']
+            if (size and fmt == 'qcow2' and
+                disk.can_resize_fs(info['path'], size, use_cow=True)):
+                path_raw = info['path'] + '_raw'
+                utils.execute('qemu-img', 'convert', '-f', 'qcow2',
+                              '-O', 'raw', info['path'], path_raw)
+                utils.execute('mv', path_raw, info['path'])
+                fmt = 'raw'
+
+            if size:
+                disk.extend(info['path'], size)
+
+            if fmt == 'raw' and FLAGS.use_cow_images:
                 # back to qcow2 (no backing_file though) so that snapshot
                 # will be available
                 path_qcow = info['path'] + '_qcow'

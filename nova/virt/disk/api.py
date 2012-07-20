@@ -124,6 +124,31 @@ def extend(image, size):
     resize2fs(image)
 
 
+def can_resize_fs(image, size, use_cow=False):
+    """Check whether we can resize contained file system."""
+
+    # Check that we're increasing the size
+    virt_size = get_image_virtual_size(image)
+    if virt_size >= size:
+        return False
+
+    # Check the image is unpartitioned
+    if use_cow:
+        # Try to mount an unpartitioned qcow2 image
+        try:
+            inject_data(image, use_cow=True)
+        except exception.NovaException:
+            return False
+    else:
+        # For raw, we can directly inspect the file system
+        try:
+            utils.execute('e2label', image)
+        except exception.ProcessExecutionError:
+            return False
+
+    return True
+
+
 def bind(src, target, instance_name):
     """Bind device to a filesytem"""
     if src:
