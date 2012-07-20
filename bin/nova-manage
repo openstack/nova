@@ -282,24 +282,43 @@ class FixedIpCommands(object):
                                               _('IP address'),
                                               _('hostname'),
                                               _('host'))
+
+        all_networks = {}
+        try:
+            # use network_get_all to retrieve all existing networks
+            # this is to ensure that IPs associated with deleted networks
+            # will not throw exceptions.
+            for network in db.network_get_all(context.get_admin_context()):
+                all_networks[network.id] = network
+        except exception.NoNetworksFound:
+            # do not have any networks, so even if there are IPs, these
+            # IPs should have been deleted ones, so return.
+            print _('No fixed IP found.')
+            return
+
+        has_ip = False
         for fixed_ip in fixed_ips:
             hostname = None
             host = None
             mac_address = None
-            network = db.network_get(context.get_admin_context(),
-                                     fixed_ip['network_id'])
-            if fixed_ip['instance_id']:
-                instance = instances_by_id.get(fixed_ip['instance_id'])
-                if instance:
-                    hostname = instance['hostname']
-                    host = instance['host']
-                else:
-                    print ('WARNING: fixed ip %s allocated to missing'
-                           ' instance' % str(fixed_ip['address']))
-            print "%-18s\t%-15s\t%-15s\t%s" % (
-                    network['cidr'],
-                    fixed_ip['address'],
-                    hostname, host)
+            network = all_networks.get(fixed_ip['network_id'])
+            if network:
+                has_ip = True
+                if fixed_ip['instance_id']:
+                    instance = instances_by_id.get(fixed_ip['instance_id'])
+                    if instance:
+                        hostname = instance['hostname']
+                        host = instance['host']
+                    else:
+                        print _('WARNING: fixed ip %s allocated to missing'
+                                ' instance') % str(fixed_ip['address'])
+                print "%-18s\t%-15s\t%-15s\t%s" % (
+                        network['cidr'],
+                        fixed_ip['address'],
+                        hostname, host)
+
+        if not has_ip:
+            print _('No fixed IP found.')
 
     @args('--address', dest="address", metavar='<ip address>',
           help='IP address')
