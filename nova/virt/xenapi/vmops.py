@@ -1149,7 +1149,7 @@ class VMOps(object):
                         for vrec in vm_rec['VIFs']]:
                 vif_map[vif['device']] = vif['MAC']
             name = vm_rec['name_label']
-            if vm_rec["is_a_template"] or vm_rec["is_control_domain"]:
+            if 'nova_uuid' not in vm_rec['other_config']:
                 continue
             vifs_bw = bw.setdefault(name, {})
             for key, val in data.iteritems():
