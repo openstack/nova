@@ -612,7 +612,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 'linux' != igroup_info['initiator-group-os-type'][0]):
                 continue
             igroup_name = igroup_info['initiator-group-name'][0]
-            if not igroup_name.startswith(IGROUP_PREFIX):
+            if not igroup_name.startswith(self.IGROUP_PREFIX):
                 continue
             initiators = igroup_info['initiators'][0]['initiator-info']
             for initiator in initiators:
@@ -626,7 +626,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         the given iSCSI initiator. The group will only have 1 member and will
         be named "openstack-${initiator_name}".
         """
-        igroup_name = IGROUP_PREFIX + initiator_name
+        igroup_name = self.IGROUP_PREFIX + initiator_name
         request = self.client.factory.create('Request')
         request.Name = 'igroup-create'
         igroup_create_xml = (
