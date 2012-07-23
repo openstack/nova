@@ -1732,7 +1732,6 @@ class LibvirtConnTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_ref['uuid'])
 
     def test_pre_live_migration_works_correctly_mocked(self):
-        """Confirms pre_block_migration works correctly."""
         # Creating testdata
         vol = {'block_device_mapping': [
                   {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
@@ -1764,7 +1763,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(result, None)
 
     def test_pre_block_migration_works_correctly(self):
-        """Confirms pre_block_migration works correctly."""
         # Replace instances_path since this testcase creates tmpfile
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
@@ -1788,7 +1786,6 @@ class LibvirtConnTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_ref['uuid'])
 
     def test_get_instance_disk_info_works_correctly(self):
-        """Confirms pre_block_migration works correctly."""
         # Test data
         instance_ref = db.instance_create(self.context, self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
