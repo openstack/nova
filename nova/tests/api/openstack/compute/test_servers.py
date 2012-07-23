@@ -200,7 +200,6 @@ class ServersControllerTest(test.TestCase):
                 "metadata": {
                     "seq": "1",
                 },
-                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -267,7 +266,6 @@ class ServersControllerTest(test.TestCase):
                 "metadata": {
                     "seq": "1",
                 },
-                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -337,7 +335,6 @@ class ServersControllerTest(test.TestCase):
                 "metadata": {
                     "seq": "1",
                 },
-                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3005,7 +3002,6 @@ class ServersViewBuilderTest(test.TestCase):
                     ]
                 },
                 "metadata": {},
-                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3073,7 +3069,6 @@ class ServersViewBuilderTest(test.TestCase):
                     ]
                 },
                 "metadata": {},
-                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3217,7 +3212,6 @@ class ServersViewBuilderTest(test.TestCase):
                     ]
                 },
                 "metadata": {},
-                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
@@ -3278,7 +3272,6 @@ class ServersViewBuilderTest(test.TestCase):
                     ]
                 },
                 "metadata": {},
-                "config_drive": None,
                 "accessIPv4": "1.2.3.4",
                 "accessIPv6": "",
                 "links": [
@@ -3341,7 +3334,6 @@ class ServersViewBuilderTest(test.TestCase):
                     ]
                 },
                 "metadata": {},
-                "config_drive": None,
                 "accessIPv4": "",
                 "accessIPv6": "fead::1234",
                 "links": [
@@ -3408,7 +3400,6 @@ class ServersViewBuilderTest(test.TestCase):
                     ]
                 },
                 "metadata": {"Open": "Stack"},
-                "config_drive": None,
                 "links": [
                     {
                         "rel": "self",
