@@ -589,7 +589,8 @@ class XenAPISession(object):
         url = self._create_first_session(url, user, pw, exception)
         self._populate_session_pool(url, user, pw, exception)
         self.host_uuid = self._get_host_uuid()
-        self.product_version = self._get_product_version()
+        self.product_version, self.product_brand = \
+            self._get_product_version_and_brand()
 
     def _create_first_session(self, url, user, pw, exception):
         try:
@@ -631,13 +632,16 @@ class XenAPISession(object):
                 host_ref = session.xenapi.session.get_this_host(session.handle)
                 return session.xenapi.host.get_uuid(host_ref)
 
-    def _get_product_version(self):
-        """Return a tuple of (major, minor, rev) for the host version"""
+    def _get_product_version_and_brand(self):
+        """Return a tuple of (major, minor, rev) for the host version and
+        a string of the product brand"""
         host = self.get_xenapi_host()
         software_version = self.call_xenapi('host.get_software_version',
                                             host)
-        product_version = software_version['product_version']
-        return tuple(int(part) for part in product_version.split('.'))
+        product_version = tuple(int(part) for part in
+                                software_version['product_version'].split('.'))
+        product_brand = software_version['product_brand']
+        return product_version, product_brand
 
     def get_session_id(self):
         """Return a string session_id.  Used for vnc consoles."""

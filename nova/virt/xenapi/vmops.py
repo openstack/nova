@@ -790,13 +790,24 @@ class VMOps(object):
             vdi_uuid = root_vdi['uuid']
             LOG.debug(_("Resizing up VDI %(vdi_uuid)s from %(old_gb)dGB to "
                         "%(new_gb)dGB"), locals(), instance=instance)
-            if self._session.product_version[0] > 5:
-                resize_func_name = 'VDI.resize'
-            else:
-                resize_func_name = 'VDI.resize_online'
+            resize_func_name = self.check_resize_func_name()
             self._session.call_xenapi(resize_func_name, root_vdi['ref'],
                     str(new_disk_size))
             LOG.debug(_("Resize complete"), instance=instance)
+
+    def check_resize_func_name(self):
+        """Check the function name used to resize an instance based
+        on product_brand  and product_version."""
+        if ((self._session.product_brand == 'XCP' and
+             (self._session.product_version[0] == 1 and
+              self._session.product_version[1] > 1)) or
+            (self._session.product_brand == 'XCP' and
+             self._session.product_version[0] > 1) or
+            (self._session.product_brand is 'XenServer' and
+             self._session.product_version[0] > 5)):
+            return 'VDI.resize'
+        else:
+            return 'VDI.resize_online'
 
     def reboot(self, instance, reboot_type):
         """Reboot VM instance."""

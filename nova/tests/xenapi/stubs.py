@@ -53,12 +53,13 @@ def stubout_instance_snapshot(stubs):
     stubs.Set(vm_utils, '_wait_for_vhd_coalesce', fake_wait_for_vhd_coalesce)
 
 
-def stubout_session(stubs, cls, product_version=(5, 6, 2), **opt_args):
+def stubout_session(stubs, cls, product_version=(5, 6, 2),
+                    product_brand='XenServer', **opt_args):
     """Stubs out methods from XenAPISession"""
     stubs.Set(xenapi_conn.XenAPISession, '_create_session',
               lambda s, url: cls(url, **opt_args))
-    stubs.Set(xenapi_conn.XenAPISession, '_get_product_version',
-              lambda s: product_version)
+    stubs.Set(xenapi_conn.XenAPISession, '_get_product_version_and_brand',
+              lambda s: (product_version, product_brand))
 
 
 def stubout_get_this_vm_uuid(stubs):
