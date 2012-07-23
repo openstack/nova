@@ -282,10 +282,11 @@ class FloatingIPActionController(wsgi.Controller):
         instance = get_instance_by_floating_ip_addr(self, context, address)
 
         # disassociate if associated
-        if floating_ip.get('fixed_ip_id'):
+        if instance and floating_ip.get('fixed_ip_id'):
             disassociate_floating_ip(self, context, instance, address)
-
-        return webob.Response(status_int=202)
+            return webob.Response(status_int=202)
+        else:
+            return webob.Response(status_int=404)
 
 
 class Floating_ips(extensions.ExtensionDescriptor):
