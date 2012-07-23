@@ -1342,14 +1342,13 @@ class NetworkManager(manager.SchedulerDependentManager):
         subnets_v4 = []
         subnets_v6 = []
 
-        subnet_bits = int(math.ceil(math.log(network_size, 2)))
-
         if kwargs.get('ipam'):
             if cidr_v6:
                 subnets_v6 = [netaddr.IPNetwork(cidr_v6)]
             if cidr:
                 subnets_v4 = [netaddr.IPNetwork(cidr)]
         else:
+            subnet_bits = int(math.ceil(math.log(network_size, 2)))
             if cidr_v6:
                 fixed_net_v6 = netaddr.IPNetwork(cidr_v6)
                 prefixlen_v6 = 128 - subnet_bits
