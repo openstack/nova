@@ -232,6 +232,11 @@ def compute_node_utilization_set(context, host, free_ram_mb=None,
     return IMPL.compute_node_utilization_set(context, host, free_ram_mb,
                                              free_disk_gb, work, vms)
 
+
+def compute_node_statistics(context):
+    return IMPL.compute_node_statistics(context)
+
+
 ###################
 
 

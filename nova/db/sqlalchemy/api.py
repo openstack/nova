@@ -630,6 +630,30 @@ def compute_node_utilization_set(context, host, free_ram_mb=None,
     return compute_node
 
 
+def compute_node_statistics(context):
+    """Compute statistics over all compute nodes."""
+    result = model_query(context,
+                         func.count(models.ComputeNode.id),
+                         func.sum(models.ComputeNode.vcpus),
+                         func.sum(models.ComputeNode.memory_mb),
+                         func.sum(models.ComputeNode.local_gb),
+                         func.sum(models.ComputeNode.vcpus_used),
+                         func.sum(models.ComputeNode.memory_mb_used),
+                         func.sum(models.ComputeNode.local_gb_used),
+                         func.sum(models.ComputeNode.free_ram_mb),
+                         func.sum(models.ComputeNode.free_disk_gb),
+                         func.sum(models.ComputeNode.current_workload),
+                         func.sum(models.ComputeNode.running_vms),
+                         func.sum(models.ComputeNode.disk_available_least),
+                         read_deleted="no").first()
+
+    # Build a dict of the info--making no assumptions about result
+    fields = ('count', 'vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
+              'memory_mb_used', 'local_gb_used', 'free_ram_mb', 'free_disk_gb',
+              'current_workload', 'running_vms', 'disk_available_least')
+    return dict((field, result[idx] or 0) for idx, field in enumerate(fields))
+
+
 ###################
 
 

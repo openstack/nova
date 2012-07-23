@@ -104,6 +104,26 @@ class HypervisorServersTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
+class HypervisorStatisticsTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('hypervisor_statistics',
+                                       selector='hypervisor_statistics')
+        root.set('count')
+        root.set('vcpus')
+        root.set('memory_mb')
+        root.set('local_gb')
+        root.set('vcpus_used')
+        root.set('memory_mb_used')
+        root.set('local_gb_used')
+        root.set('free_ram_mb')
+        root.set('free_disk_gb')
+        root.set('current_workload')
+        root.set('running_vms')
+        root.set('disk_available_least')
+
+        return xmlutil.MasterTemplate(root, 1)
+
+
 class HypervisorsController(object):
     """The Hypervisors API controller for the OpenStack API."""
 
@@ -211,6 +231,13 @@ class HypervisorsController(object):
             msg = _("No hypervisor matching '%s' could be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
 
+    @wsgi.serializers(xml=HypervisorStatisticsTemplate)
+    def statistics(self, req):
+        context = req.environ['nova.context']
+        authorize(context)
+        stats = db.compute_node_statistics(context)
+        return dict(hypervisor_statistics=stats)
+
 
 class Hypervisors(extensions.ExtensionDescriptor):
     """Admin-only hypervisor administration"""
@@ -223,7 +250,8 @@ class Hypervisors(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = [extensions.ResourceExtension('os-hypervisors',
                 HypervisorsController(),
-                collection_actions={'detail': 'GET'},
+                collection_actions={'detail': 'GET',
+                                    'statistics': 'GET'},
                 member_actions={'uptime': 'GET',
                                 'search': 'GET',
                                 'servers': 'GET'})]

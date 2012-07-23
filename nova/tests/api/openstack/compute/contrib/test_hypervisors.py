@@ -94,6 +94,32 @@ def fake_compute_node_get(context, compute_id):
     raise exception.ComputeHostNotFound
 
 
+def fake_compute_node_statistics(context):
+    result = dict(
+        count=0,
+        vcpus=0,
+        memory_mb=0,
+        local_gb=0,
+        vcpus_used=0,
+        memory_mb_used=0,
+        local_gb_used=0,
+        free_ram_mb=0,
+        free_disk_gb=0,
+        current_workload=0,
+        running_vms=0,
+        disk_available_least=0,
+        )
+
+    for hyper in TEST_HYPERS:
+        for key in result:
+            if key == 'count':
+                result[key] += 1
+            else:
+                result[key] += hyper[key]
+
+    return result
+
+
 def fake_instance_get_all_by_host(context, host):
     results = []
     for inst in TEST_SERVERS:
@@ -113,6 +139,8 @@ class HypervisorsTest(test.TestCase):
                        fake_compute_node_search_by_hypervisor)
         self.stubs.Set(db, 'compute_node_get',
                        fake_compute_node_get)
+        self.stubs.Set(db, 'compute_node_statistics',
+                       fake_compute_node_statistics)
         self.stubs.Set(db, 'instance_get_all_by_host',
                        fake_instance_get_all_by_host)
 
@@ -285,11 +313,27 @@ class HypervisorsTest(test.TestCase):
                             dict(name="inst2", uuid="uuid2"),
                             dict(name="inst4", uuid="uuid4")])]))
 
+    def test_statistics(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/statistics')
+        result = self.controller.statistics(req)
+
+        self.assertEqual(result, dict(hypervisor_statistics=dict(
+                    count=2,
+                    vcpus=8,
+                    memory_mb=20 * 1024,
+                    local_gb=500,
+                    vcpus_used=4,
+                    memory_mb_used=10 * 1024,
+                    local_gb_used=250,
+                    free_ram_mb=10 * 1024,
+                    free_disk_gb=250,
+                    current_workload=4,
+                    running_vms=4,
+                    disk_available_least=200)))
+
 
 class HypervisorsSerializersTest(test.TestCase):
     def compare_to_exemplar(self, exemplar, hyper):
-        self.assertEqual('hypervisor', hyper.tag)
-
         # Check attributes
         for key, value in exemplar.items():
             if key in ('service', 'servers'):
@@ -332,6 +376,7 @@ class HypervisorsSerializersTest(test.TestCase):
         self.assertEqual('hypervisors', tree.tag)
         self.assertEqual(len(exemplar['hypervisors']), len(tree))
         for idx, hyper in enumerate(tree):
+            self.assertEqual('hypervisor', hyper.tag)
             self.compare_to_exemplar(exemplar['hypervisors'][idx], hyper)
 
     def test_detail_serializer(self):
@@ -377,6 +422,7 @@ class HypervisorsSerializersTest(test.TestCase):
         self.assertEqual('hypervisors', tree.tag)
         self.assertEqual(len(exemplar['hypervisors']), len(tree))
         for idx, hyper in enumerate(tree):
+            self.assertEqual('hypervisor', hyper.tag)
             self.compare_to_exemplar(exemplar['hypervisors'][idx], hyper)
 
     def test_show_serializer(self):
@@ -402,6 +448,7 @@ class HypervisorsSerializersTest(test.TestCase):
         text = serializer.serialize(exemplar)
         tree = etree.fromstring(text)
 
+        self.assertEqual('hypervisor', tree.tag)
         self.compare_to_exemplar(exemplar['hypervisor'], tree)
 
     def test_uptime_serializer(self):
@@ -413,6 +460,7 @@ class HypervisorsSerializersTest(test.TestCase):
         text = serializer.serialize(exemplar)
         tree = etree.fromstring(text)
 
+        self.assertEqual('hypervisor', tree.tag)
         self.compare_to_exemplar(exemplar['hypervisor'], tree)
 
     def test_servers_serializer(self):
@@ -438,4 +486,26 @@ class HypervisorsSerializersTest(test.TestCase):
         self.assertEqual('hypervisors', tree.tag)
         self.assertEqual(len(exemplar['hypervisors']), len(tree))
         for idx, hyper in enumerate(tree):
+            self.assertEqual('hypervisor', hyper.tag)
             self.compare_to_exemplar(exemplar['hypervisors'][idx], hyper)
+
+    def test_statistics_serializer(self):
+        serializer = hypervisors.HypervisorStatisticsTemplate()
+        exemplar = dict(hypervisor_statistics=dict(
+                count=2,
+                vcpus=8,
+                memory_mb=20 * 1024,
+                local_gb=500,
+                vcpus_used=4,
+                memory_mb_used=10 * 1024,
+                local_gb_used=250,
+                free_ram_mb=10 * 1024,
+                free_disk_gb=250,
+                current_workload=4,
+                running_vms=4,
+                disk_available_least=200))
+        text = serializer.serialize(exemplar)
+        tree = etree.fromstring(text)
+
+        self.assertEqual('hypervisor_statistics', tree.tag)
+        self.compare_to_exemplar(exemplar['hypervisor_statistics'], tree)
