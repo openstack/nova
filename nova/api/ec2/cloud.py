@@ -1578,7 +1578,7 @@ class CloudController(object):
         ec2_id = ec2utils.glance_id_to_ec2_id(context, new_image['id'])
 
         if restart_instance:
-            self.compute_api.start(context, instance_id=instance_id)
+            self.compute_api.start(context, instance)
 
         return {'imageId': ec2_id}
 
