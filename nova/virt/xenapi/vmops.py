@@ -279,14 +279,14 @@ class VMOps(object):
 
             if instance.kernel_id:
                 vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, instance.kernel_id, instance.user_id,
-                        instance.project_id, vm_utils.ImageType.KERNEL)
+                        instance, instance.kernel_id,
+                        vm_utils.ImageType.KERNEL)
                 kernel_file = vdis['kernel'].get('file')
 
             if instance.ramdisk_id:
                 vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, instance.ramdisk_id, instance.user_id,
-                        instance.project_id, vm_utils.ImageType.RAMDISK)
+                        instance, instance.ramdisk_id,
+                        vm_utils.ImageType.RAMDISK)
                 ramdisk_file = vdis['ramdisk'].get('file')
 
             def undo_create_kernel_ramdisk():

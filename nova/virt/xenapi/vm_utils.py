@@ -711,8 +711,7 @@ def generate_ephemeral(session, instance, vm_ref, userdevice, size_gb):
                    size_gb * 1024, FLAGS.default_ephemeral_format)
 
 
-def create_kernel_image(context, session, instance, image_id, user_id,
-                        project_id, image_type):
+def create_kernel_image(context, session, instance, image_id, image_type):
     """Creates kernel/ramdisk file from the image stored in the cache.
     If the image is not present in the cache, it streams it from glance.
 
