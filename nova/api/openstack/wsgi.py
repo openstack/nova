@@ -140,10 +140,15 @@ class Request(webob.Request):
         if not "Content-Type" in self.headers:
             return None
 
-        allowed_types = SUPPORTED_CONTENT_TYPES
         content_type = self.content_type
 
-        if content_type not in allowed_types:
+        # NOTE(markmc): text/plain is the default for eventlet and
+        # other webservers which use mimetools.Message.gettype()
+        # whereas twisted defaults to ''.
+        if not content_type or content_type == 'text/plain':
+            return None
+
+        if content_type not in SUPPORTED_CONTENT_TYPES:
             raise exception.InvalidContentType(content_type=content_type)
 
         return content_type
