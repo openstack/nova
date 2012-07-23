@@ -99,6 +99,10 @@ def stub_nw_info(stubs):
     return get_nw_info_for_instance
 
 
+def get_instance_by_floating_ip_addr(self, context, address):
+    return None
+
+
 class FloatingIpTest(test.TestCase):
     floating_ip = "10.10.10.10"
 
@@ -129,6 +133,8 @@ class FloatingIpTest(test.TestCase):
                        network_api_release)
         self.stubs.Set(network.api.API, "disassociate_floating_ip",
                        network_api_disassociate)
+        self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
+                       get_instance_by_floating_ip_addr)
         self.stubs.Set(compute_utils, "get_nw_info_for_instance",
                        stub_nw_info(self.stubs))
 
@@ -274,6 +280,13 @@ class FloatingIpTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         self.manager._remove_floating_ip(req, 'test_inst', body)
+
+    def test_floating_ip_disassociate_missing(self):
+        body = dict(removeFloatingIp=dict(address='10.10.10.10'))
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        rsp = self.manager._remove_floating_ip(req, 'test_inst', body)
+        self.assertTrue(rsp.status_int == 404)
 
 # these are a few bad param tests
 
