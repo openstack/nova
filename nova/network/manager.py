@@ -1873,11 +1873,6 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
         self._setup_network_on_host(context, network)
         return address
 
-    @wrap_check_policy
-    def add_network_to_project(self, context, project_id):
-        """Force adds another network to a project."""
-        self.db.network_associate(context, project_id, force=True)
-
     def _get_networks_for_instance(self, context, instance_id, project_id,
                                    requested_networks=None):
         """Determine which networks an instance should connect to."""
