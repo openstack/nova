@@ -487,10 +487,8 @@ def snapshot_attached_here(session, instance, vm_ref, label):
 
 def _create_snapshot(session, instance, vm_ref, label):
     """Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
-    Snapshot VHD"""
-    LOG.debug(_("Snapshotting with label '%(label)s'"), locals(),
-              instance=instance)
-
+    Snapshot VHD
+    """
     vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
 
     original_parent_uuid = _get_vhd_parent_uuid(session, vm_vdi_ref)
@@ -499,8 +497,8 @@ def _create_snapshot(session, instance, vm_ref, label):
     template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
     template_vdi_uuid = template_vdi_rec["uuid"]
 
-    LOG.debug(_('Created snapshot %(template_vm_ref)s'), locals(),
-              instance=instance)
+    LOG.debug(_("Created snapshot %(template_vdi_uuid)s with label"
+                " '%(label)s'"), locals(), instance=instance)
 
     sr_ref = vm_vdi_rec["SR"]
     parent_uuid, base_uuid = _wait_for_vhd_coalesce(
