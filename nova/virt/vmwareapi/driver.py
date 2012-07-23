@@ -54,24 +54,28 @@ vmwareapi_opts = [
     cfg.StrOpt('vmwareapi_host_ip',
                default=None,
                help='URL for connection to VMWare ESX host.Required if '
-                    'connection_type is vmwareapi.'),
+                    'compute_driver is vmwareapi.VMWareESXDriver.'),
     cfg.StrOpt('vmwareapi_host_username',
                default=None,
                help='Username for connection to VMWare ESX host. '
-                    'Used only if connection_type is vmwareapi.'),
+                    'Used only if compute_driver is '
+                    'vmwareapi.VMWareESXDriver.'),
     cfg.StrOpt('vmwareapi_host_password',
                default=None,
                help='Password for connection to VMWare ESX host. '
-                    'Used only if connection_type is vmwareapi.'),
+                    'Used only if compute_driver is '
+                    'vmwareapi.VMWareESXDriver.'),
     cfg.FloatOpt('vmwareapi_task_poll_interval',
                  default=5.0,
                  help='The interval used for polling of remote tasks. '
-                       'Used only if connection_type is vmwareapi'),
+                       'Used only if compute_driver is '
+                       'vmwareapi.VMWareESXDriver.'),
     cfg.IntOpt('vmwareapi_api_retry_count',
                default=10,
                help='The number of times we retry on failures, e.g., '
                     'socket error, etc. '
-                    'Used only if connection_type is vmwareapi'),
+                    'Used only if compute_driver is '
+                    'vmwareapi.VMWareESXDriver.'),
     cfg.StrOpt('vmwareapi_vlan_interface',
                default='vmnic0',
                help='Physical ethernet adapter name for vlan networking'),
@@ -107,7 +111,7 @@ class VMWareESXDriver(driver.ComputeDriver):
             raise Exception(_("Must specify vmwareapi_host_ip,"
                               "vmwareapi_host_username "
                               "and vmwareapi_host_password to use"
-                              "connection_type=vmwareapi"))
+                              "compute_driver=vmwareapi.VMWareESXDriver"))
 
         session = VMWareAPISession(host_ip, host_username, host_password,
                                    api_retry_count, scheme=scheme)
