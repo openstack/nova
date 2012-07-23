@@ -168,7 +168,6 @@
     "network:get_fixed_ip": [],
     "network:add_fixed_ip_to_instance": [],
     "network:remove_fixed_ip_from_instance": [],
-    "network:add_network_to_project": [],
     "network:get_instance_nw_info": [],
 
     "network:get_dns_domains": [],
