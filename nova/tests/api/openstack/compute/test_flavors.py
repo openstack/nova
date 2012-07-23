@@ -195,6 +195,34 @@ class FlavorsTest(test.TestCase):
         }
         self.assertEqual(flavor, expected)
 
+    def test_get_flavor_list_with_marker(self):
+        self.maxDiff = None
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors?limit=1&marker=1')
+        flavor = self.controller.index(req)
+        expected = {
+            "flavors": [
+                {
+                    "id": "2",
+                    "name": "flavor 2",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "http://localhost/v2/fake/flavors/2",
+                        },
+                        {
+                            "rel": "bookmark",
+                            "href": "http://localhost/fake/flavors/2",
+                        },
+                    ],
+                },
+            ],
+            'flavors_links': [
+                {'href': 'http://localhost/v2/fake/flavors?limit=1&marker=2',
+               'rel': 'next'}
+            ]
+        }
+        self.assertDictMatch(flavor, expected)
+
     def test_get_flavor_detail_with_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail?limit=1')
         response = self.controller.index(req)
