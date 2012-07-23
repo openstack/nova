@@ -304,7 +304,7 @@ class FixedIpCommands(object):
             network = all_networks.get(fixed_ip['network_id'])
             if network:
                 has_ip = True
-                if fixed_ip['instance_id']:
+                if fixed_ip.get('instance_id'):
                     instance = instances_by_id.get(fixed_ip['instance_id'])
                     if instance:
                         hostname = instance['hostname']
