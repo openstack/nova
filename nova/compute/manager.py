@@ -235,7 +235,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
         instances = self.db.instance_get_all_by_host(context, self.host)
-        for instance in instances:
+        for count, instance in enumerate(instances):
             instance_uuid = instance['uuid']
             db_state = instance['power_state']
             drv_state = self._get_power_state(context, instance)
@@ -247,6 +247,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                         '%(db_state)s.'), locals(), instance=instance)
 
             net_info = compute_utils.get_nw_info_for_instance(instance)
+
+            # We're calling plug_vifs to ensure bridge and iptables
+            # filters are present, calling it once is enough.
+            if count == 0:
+                legacy_net_info = self._legacy_nw_info(net_info)
+                self.driver.plug_vifs(instance, legacy_net_info)
+
             if ((expect_running and FLAGS.resume_guests_state_on_host_boot) or
                 FLAGS.start_guests_on_host_boot):
                 LOG.info(_('Rebooting instance after nova-compute restart.'),
