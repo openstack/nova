@@ -501,6 +501,11 @@ def _create_snapshot(session, instance, vm_ref, label):
                 " '%(label)s'"), locals(), instance=instance)
 
     sr_ref = vm_vdi_rec["SR"]
+
+    # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
+    # matches the underlying VHDs.
+    _scan_sr(session, sr_ref)
+
     parent_uuid, base_uuid = _wait_for_vhd_coalesce(
             session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
 
