@@ -651,7 +651,8 @@ def compute_node_statistics(context):
     fields = ('count', 'vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
               'memory_mb_used', 'local_gb_used', 'free_ram_mb', 'free_disk_gb',
               'current_workload', 'running_vms', 'disk_available_least')
-    return dict((field, result[idx] or 0) for idx, field in enumerate(fields))
+    return dict((field, int(result[idx] or 0))
+                for idx, field in enumerate(fields))
 
 
 ###################
