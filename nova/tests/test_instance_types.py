@@ -145,7 +145,7 @@ class InstanceTypeTestCase(test.TestCase):
                           'name two', 256, 1, 120, 200, flavorid)
 
     def test_will_not_destroy_with_no_name(self):
-        """Ensure destroy sad path of no name raises error"""
+        """Ensure destroy said path of no name raises error"""
         self.assertRaises(exception.InstanceTypeNotFoundByName,
                           instance_types.destroy, None)
 
@@ -193,6 +193,55 @@ class InstanceTypeTestCase(test.TestCase):
         flavorid = default_instance_type['flavorid']
         fetched = instance_types.get_instance_type_by_flavor_id(flavorid)
         self.assertEqual(default_instance_type, fetched)
+
+    def test_can_read_deleted_types_using_flavor_id(self):
+        """Ensure deleted instance types can be read when querying flavor_id"""
+        inst_type_name = "test"
+        inst_type_flavor_id = "test1"
+
+        inst_type = instance_types.create(inst_type_name, 256, 1, 120, 100,
+                inst_type_flavor_id)
+        self.assertEqual(inst_type_name, inst_type["name"])
+
+        # NOTE(jk0): The deleted flavor will show up here because the context
+        # in get_instance_type_by_flavor_id() is set to use read_deleted by
+        # default.
+        instance_types.destroy(inst_type["name"])
+        deleted_inst_type = instance_types.get_instance_type_by_flavor_id(
+                inst_type_flavor_id)
+        self.assertEqual(inst_type_name, deleted_inst_type["name"])
+
+    def test_read_deleted_false_converting_flavorid(self):
+        """
+        Ensure deleted instance types are not returned when not needed (for
+        example when creating a server and attempting to translate from
+        flavorid to instance_type_id.
+        """
+        instance_types.create("instance_type1", 256, 1, 120, 100, "test1")
+        instance_types.destroy("instance_type1")
+        instance_types.create("instance_type1_redo", 256, 1, 120, 100, "test1")
+
+        instance_type = instance_types.get_instance_type_by_flavor_id(
+                "test1", read_deleted="no")
+        self.assertEqual("instance_type1_redo", instance_type["name"])
+
+    def test_will_list_deleted_type_for_active_instance(self):
+        """Ensure deleted instance types with active instances can be read"""
+        ctxt = context.get_admin_context()
+        inst_type = instance_types.create("test", 256, 1, 120, 100, "test1")
+
+        instance_params = {"instance_type_id": inst_type["id"]}
+        instance = db.instance_create(ctxt, instance_params)
+
+        # NOTE(jk0): Delete the instance type and reload the instance from the
+        # DB. The instance_type object will still be available to the active
+        # instance, otherwise being None.
+        instance_types.destroy(inst_type["name"])
+        instance = db.instance_get_by_uuid(ctxt, instance["uuid"])
+
+        self.assertRaises(exception.InstanceTypeNotFound,
+                instance_types.get_instance_type, inst_type["name"])
+        self.assertTrue(instance["instance_type"])
 
 
 class InstanceTypeFilteringTest(test.TestCase):

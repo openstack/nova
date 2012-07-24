@@ -129,10 +129,10 @@ def get_instance_type_by_name(name):
 
 # TODO(termie): flavor-specific code should probably be in the API that uses
 #               flavors.
-def get_instance_type_by_flavor_id(flavorid):
+def get_instance_type_by_flavor_id(flavorid, read_deleted="yes"):
     """Retrieve instance type by flavorid.
 
     :raises: FlavorNotFound
     """
-    ctxt = context.get_admin_context()
+    ctxt = context.get_admin_context(read_deleted=read_deleted)
     return db.instance_type_get_by_flavor_id(ctxt, flavorid)
