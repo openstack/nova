@@ -471,28 +471,32 @@ def get_vdi_for_vm_safely(session, vm_ref):
 def snapshot_attached_here(session, instance, vm_ref, label):
     LOG.debug(_("Starting snapshot for VM"), instance=instance)
 
-    try:
-        template_vm_ref, vdi_uuids = _create_snapshot(
-                session, instance, vm_ref, label)
-    except session.XenAPI.Failure, exc:
-        LOG.error(_("Unable to Snapshot instance: %(exc)s"), locals(),
-                  instance=instance)
-        raise
+    # Memorize the original_parent_uuid so we can poll for coalesce
+    vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+    original_parent_uuid = _get_vhd_parent_uuid(session, vm_vdi_ref)
+
+    template_vm_ref, template_vdi_uuid = _create_snapshot(
+            session, instance, vm_ref, label)
 
     try:
+        sr_ref = vm_vdi_rec["SR"]
+
+        # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
+        # matches the underlying VHDs.
+        _scan_sr(session, sr_ref)
+
+        parent_uuid, base_uuid = _wait_for_vhd_coalesce(
+                session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
+
+        vdi_uuids = [vdi_rec['uuid'] for vdi_rec in
+                     _walk_vdi_chain(session, template_vdi_uuid)]
+
         yield vdi_uuids
     finally:
         _destroy_snapshot(session, instance, template_vm_ref)
 
 
 def _create_snapshot(session, instance, vm_ref, label):
-    """Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
-    Snapshot VHD
-    """
-    vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
-
-    original_parent_uuid = _get_vhd_parent_uuid(session, vm_vdi_ref)
-
     template_vm_ref = session.call_xenapi('VM.snapshot', vm_ref, label)
     template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
     template_vdi_uuid = template_vdi_rec["uuid"]
@@ -500,19 +504,7 @@ def _create_snapshot(session, instance, vm_ref, label):
     LOG.debug(_("Created snapshot %(template_vdi_uuid)s with label"
                 " '%(label)s'"), locals(), instance=instance)
 
-    sr_ref = vm_vdi_rec["SR"]
-
-    # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
-    # matches the underlying VHDs.
-    _scan_sr(session, sr_ref)
-
-    parent_uuid, base_uuid = _wait_for_vhd_coalesce(
-            session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
-
-    vdi_uuids = [vdi_rec['uuid'] for vdi_rec in
-                 _walk_vdi_chain(session, template_vdi_uuid)]
-
-    return template_vm_ref, vdi_uuids
+    return template_vm_ref, template_vdi_uuid
 
 
 def _destroy_snapshot(session, instance, vm_ref):
