@@ -45,6 +45,11 @@ def upgrade(migrate_engine):
     if dialect.startswith('sqlite'):
         aggregate_hosts.drop_column('host')
         aggregate_hosts.create_column(Column('host', String(255)))
+    elif dialect.startswith('postgres'):
+        ucon = UniqueConstraint('host',
+                                name='aggregate_hosts_host_key',
+                                table=aggregate_hosts)
+        ucon.drop()
     else:
         col = aggregate_hosts.c.host
         UniqueConstraint(col, name='host').drop()
