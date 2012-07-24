@@ -225,7 +225,7 @@ class RPCAllocateFixedIP(object):
 
     def deallocate_fixed_ip(self, context, address, host, **kwargs):
         """Call the superclass deallocate_fixed_ip if i'm the correct host
-        otherwise cast to the correct host"""
+        otherwise call to the correct host"""
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
         network = self._get_network_by_id(context, fixed_ip['network_id'])
 
@@ -238,7 +238,7 @@ class RPCAllocateFixedIP(object):
             topic = self.db.queue_get_for(context, FLAGS.network_topic, host)
             args = {'address': address,
                     'host': host}
-            rpc.cast(context, topic,
+            rpc.call(context, topic,
                      {'method': 'deallocate_fixed_ip',
                       'args': args})
         else:
@@ -469,7 +469,7 @@ class FloatingIP(object):
                                         fixed_address, interface)
         else:
             # send to correct host
-            rpc.cast(context,
+            rpc.call(context,
                      self.db.queue_get_for(context, FLAGS.network_topic, host),
                      {'method': '_associate_floating_ip',
                       'args': {'floating_address': floating_address,
@@ -534,7 +534,7 @@ class FloatingIP(object):
             self._disassociate_floating_ip(context, address, interface)
         else:
             # send to correct host
-            rpc.cast(context,
+            rpc.call(context,
                      self.db.queue_get_for(context, FLAGS.network_topic, host),
                      {'method': '_disassociate_floating_ip',
                       'args': {'address': address,
