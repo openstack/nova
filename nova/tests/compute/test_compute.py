@@ -126,6 +126,7 @@ class BaseTestCase(test.TestCase):
 
         def fake_show(meh, context, id):
             return {'id': id, 'min_disk': None, 'min_ram': None,
+                    'name': 'fake_name',
                     'properties': {'kernel_id': 'fake_kernel_id',
                                    'ramdisk_id': 'fake_ramdisk_id',
                                    'something_else': 'meow'}}
@@ -883,12 +884,14 @@ class ComputeTestCase(BaseTestCase):
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['event_type'], 'compute.instance.create.start')
+        self.assertEquals(msg['payload']['image_name'], 'fake_name')
         # The last event is the one with the sugar in it.
         msg = test_notifier.NOTIFICATIONS[1]
         self.assertEquals(msg['priority'], 'INFO')
         self.assertEquals(msg['event_type'], 'compute.instance.create.end')
         payload = msg['payload']
         self.assertEquals(payload['tenant_id'], self.project_id)
+        self.assertEquals(payload['image_name'], 'fake_name')
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], inst_ref.uuid)
         self.assertEquals(payload['instance_type'], 'm1.tiny')
@@ -1125,11 +1128,13 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(msg['event_type'],
                           'compute.instance.rebuild.start')
         self.assertEquals(msg['payload']['image_ref_url'], new_image_ref_url)
+        self.assertEquals(msg['payload']['image_name'], 'fake_name')
         msg = test_notifier.NOTIFICATIONS[2]
         self.assertEquals(msg['event_type'],
                           'compute.instance.rebuild.end')
         self.assertEquals(msg['priority'], 'INFO')
         payload = msg['payload']
+        self.assertEquals(payload['image_name'], 'fake_name')
         self.assertEquals(payload['tenant_id'], self.project_id)
         self.assertEquals(payload['user_id'], self.user_id)
         self.assertEquals(payload['instance_id'], inst_ref['uuid'])
@@ -2126,6 +2131,7 @@ class ComputeAPITestCase(BaseTestCase):
                                    security_group_api=self.security_group_api)
         self.fake_image = {
             'id': 1,
+            'name': 'fake_name',
             'properties': {'kernel_id': 'fake_kernel_id',
                            'ramdisk_id': 'fake_ramdisk_id'},
         }
@@ -2192,6 +2198,7 @@ class ComputeAPITestCase(BaseTestCase):
             img = copy.copy(self.fake_image)
             img['min_ram'] = 2
             img['min_disk'] = 2
+            img['name'] = 'fake_name'
             return img
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 
@@ -2237,7 +2244,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(sys_metadata,
                     {'image_kernel_id': 'fake_kernel_id',
                      'image_ramdisk_id': 'fake_ramdisk_id',
-                     'image_something_else': 'meow'})
+                     'image_something_else': 'meow', })
         finally:
             db.instance_destroy(self.context, ref[0]['uuid'])
 
@@ -2609,9 +2616,9 @@ class ComputeAPITestCase(BaseTestCase):
                 instance_uuid)
         self.assertEqual(sys_metadata,
                 {'image_kernel_id': 'fake_kernel_id',
-                 'image_ramdisk_id': 'fake_ramdisk_id',
-                 'image_something_else': 'meow',
-                 'preserved': 'preserve this!'})
+                'image_ramdisk_id': 'fake_ramdisk_id',
+                'image_something_else': 'meow',
+                'preserved': 'preserve this!'})
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_reboot_soft(self):

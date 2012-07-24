@@ -97,6 +97,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show(meh, context, id):
             return {'id': id,
+                    'name': 'fake_name',
                     'container_format': 'ami',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1124,6 +1125,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_detail(meh, context, **kwargs):
             return [{'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                     'name': 'fake_name',
                      'container_format': 'ami',
                      'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1191,6 +1193,7 @@ class CloudTestCase(test.TestCase):
             {'device_name': '/dev/sdc4', 'no_device': True}]
         image1 = {
             'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+            'name': 'fake_name',
             'properties': {
                 'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                 'type': 'machine',
@@ -1205,6 +1208,7 @@ class CloudTestCase(test.TestCase):
                                   'snapshot_id': 01234567}]
         image2 = {
             'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+            'name': 'fake_name',
             'properties': {
                 'kernel_id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                 'type': 'machine',
@@ -1314,6 +1318,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show(meh, context, id):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1363,6 +1368,7 @@ class CloudTestCase(test.TestCase):
 
         fake_metadata = {
             'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+            'name': 'fake_name',
             'container_format': 'ami',
             'properties': {
                 'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1403,6 +1409,7 @@ class CloudTestCase(test.TestCase):
             # NOTE(vish): We are mocking s3 so make sure we have converted
             #             to ids instead of uuids.
             return {'id': 1,
+            'name': 'fake_name',
             'container_format': 'ami',
             'properties': {
                 'kernel_id': 1,
@@ -1635,6 +1642,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show(self, context, id):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'type': 'machine'},
@@ -1668,6 +1676,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show(self, context, id):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'type': 'machine'},
@@ -1701,6 +1710,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show_no_state(self, context, id):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1719,6 +1729,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show_decrypt(self, context, id):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
                     'container_format': 'ami',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1738,6 +1749,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show_stat_active(self, context, id):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
                     'container_format': 'ami',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -2483,6 +2495,7 @@ class CloudTestCase(test.TestCase):
 
             return {
                 'id': id_,
+                'name': 'fake_name',
                 'properties': prop_base,
                 'container_format': 'ami',
                 'status': 'active'}
