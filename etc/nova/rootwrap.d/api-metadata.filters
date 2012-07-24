@@ -1,0 +1,17 @@
+# nova-rootwrap command filters for api-metadata nodes
+# This is needed on nova-api hosts running with "metadata" in enabled_apis
+# or when running nova-api-metadata
+# This file should be owned by (and only-writeable by) the root user
+
+[Filters]
+# nova/network/linux_net.py: 'ip[6]tables-save' % (cmd, '-t', ...
+iptables-save: CommandFilter, /sbin/iptables-save, root
+iptables-save_usr: CommandFilter, /usr/sbin/iptables-save, root
+ip6tables-save: CommandFilter, /sbin/ip6tables-save, root
+ip6tables-save_usr: CommandFilter, /usr/sbin/ip6tables-save, root
+
+# nova/network/linux_net.py: 'ip[6]tables-restore' % (cmd,)
+iptables-restore: CommandFilter, /sbin/iptables-restore, root
+iptables-restore_usr: CommandFilter, /usr/sbin/iptables-restore, root
+ip6tables-restore: CommandFilter, /sbin/ip6tables-restore, root
+ip6tables-restore_usr: CommandFilter, /usr/sbin/ip6tables-restore, root
