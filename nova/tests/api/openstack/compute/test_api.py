@@ -144,21 +144,37 @@ class APITest(test.TestCase):
     def test_unsafe_exceptions_are_not_described_in_faults(self):
         self._do_test_exception_safety_reflected_in_faults(False)
 
-    def _do_test_exception_mapping(self, exception_type):
+    def _do_test_exception_mapping(self, exception_type, msg):
         @webob.dec.wsgify
         def fail(req):
-            raise exception_type('too many used')
+            raise exception_type(msg)
 
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/').get_response(api)
-        self.assertTrue('too many used' in resp.body, resp.body)
+        self.assertTrue(msg in resp.body, resp.body)
         self.assertEqual(resp.status_int, exception_type.code, resp.body)
-        for (key, value) in exception_type.headers.iteritems():
-            self.assertTrue(key in resp.headers)
-            self.assertEquals(resp.headers[key], value)
+
+        if hasattr(exception_type, 'headers'):
+            for (key, value) in exception_type.headers.iteritems():
+                self.assertTrue(key in resp.headers)
+                self.assertEquals(resp.headers[key], value)
 
     def test_quota_error_mapping(self):
-        self._do_test_exception_mapping(exception.QuotaError)
+        self._do_test_exception_mapping(exception.QuotaError, 'too many used')
+
+    def test_non_nova_notfound_exception_mapping(self):
+        class ExceptionWithCode(Exception):
+            code = 404
+
+        self._do_test_exception_mapping(ExceptionWithCode,
+                                        'NotFound')
+
+    def test_non_nova_exception_mapping(self):
+        class ExceptionWithCode(Exception):
+            code = 417
+
+        self._do_test_exception_mapping(ExceptionWithCode,
+                                        'Expectation failed')
 
     def test_request_id_in_response(self):
         req = webob.Request.blank('/')

@@ -25,7 +25,6 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
-from nova import exception
 from nova.openstack.common import log as logging
 from nova import utils
 from nova import wsgi as base_wsgi
@@ -47,8 +46,13 @@ class FaultWrapper(base_wsgi.Middleware):
         return FaultWrapper._status_to_type.get(
                                   status, webob.exc.HTTPInternalServerError)()
 
-    def _error(self, inner, req, headers=None, status=500, safe=False):
+    def _error(self, inner, req):
         LOG.exception(_("Caught error: %s"), unicode(inner))
+
+        safe = getattr(inner, 'safe', False)
+        headers = getattr(inner, 'headers', None)
+        status = getattr(inner, 'code', 500)
+
         msg_dict = dict(url=req.url, status=status)
         LOG.info(_("%(url)s returned with HTTP %(status)d") % msg_dict)
         outer = self.status_to_type(status)
@@ -70,8 +74,6 @@ class FaultWrapper(base_wsgi.Middleware):
     def __call__(self, req):
         try:
             return req.get_response(self.application)
-        except exception.NovaException as ex:
-            return self._error(ex, req, ex.headers, ex.code, ex.safe)
         except Exception as ex:
             return self._error(ex, req)
 
