@@ -1336,6 +1336,12 @@ class CloudTestCase(test.TestCase):
         result = describe_image_attribute(self.context, 'ami-00000001',
                                           'launchPermission')
         self.assertEqual([{'group': 'all'}], result['launchPermission'])
+        result = describe_image_attribute(self.context, 'ami-00000001',
+                                          'kernel')
+        self.assertEqual('aki-00000001', result['kernel']['value'])
+        result = describe_image_attribute(self.context, 'ami-00000001',
+                                          'ramdisk')
+        self.assertEqual('ari-00000001', result['ramdisk']['value'])
 
     def test_describe_image_attribute_root_device_name(self):
         describe_image_attribute = self.cloud.describe_image_attribute

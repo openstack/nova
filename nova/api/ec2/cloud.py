@@ -1389,10 +1389,26 @@ class CloudController(object):
             if result['rootDeviceName'] is None:
                 result['rootDeviceName'] = block_device.DEFAULT_ROOT_DEV_NAME
 
+        def _kernel_attribute(image, result):
+            kernel_id = image['properties'].get('kernel_id')
+            if kernel_id:
+                result['kernel'] = {
+                    'value': ec2utils.image_ec2_id(kernel_id, 'aki')
+                }
+
+        def _ramdisk_attribute(image, result):
+            ramdisk_id = image['properties'].get('ramdisk_id')
+            if ramdisk_id:
+                result['ramdisk'] = {
+                    'value': ec2utils.image_ec2_id(ramdisk_id, 'ari')
+                }
+
         supported_attributes = {
             'blockDeviceMapping': _block_device_mapping_attribute,
             'launchPermission': _launch_permission_attribute,
             'rootDeviceName': _root_device_name_attribute,
+            'kernel': _kernel_attribute,
+            'ramdisk': _ramdisk_attribute,
             }
 
         fn = supported_attributes.get(attribute)
