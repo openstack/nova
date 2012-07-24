@@ -25,6 +25,7 @@ import inspect
 import logging
 import os
 import re
+import subprocess
 import sys
 import tokenize
 import warnings
@@ -39,8 +40,9 @@ logging.disable('LOG')
 #N3xx imports
 #N4xx docstrings
 #N5xx dictionaries/lists
-#N6xx Calling methods
+#N6xx calling methods
 #N7xx localization
+#N8xx git commit messages
 
 IMPORT_EXCEPTIONS = ['sqlalchemy', 'migrate', 'nova.db.sqlalchemy.session']
 DOCSTRING_TRIPLE = ['"""', "'''"]
@@ -375,9 +377,35 @@ def add_nova():
         if args and name.startswith("nova"):
             exec("pep8.%s = %s" % (name, name))
 
+
+def once_git_check_commit_title():
+    """Check git commit messages.
+
+    nova HACKING recommends not referencing a bug or blueprint in first line,
+    it should provide an accurate description of the change
+    N801
+    """
+    #Get title of most recent commit
+    title = subprocess.check_output('git log --pretty=%s -1', shell=True)
+    #From https://github.com/openstack/openstack-ci-puppet
+    #       /blob/master/modules/gerrit/manifests/init.pp#L74
+    #Changeid|bug|blueprint
+    git_keywords = (r'(I[0-9a-f]{8,40})|'
+                    '([Bb]ug|[Ll][Pp])[\s\#:]*(\d+)|'
+                    '([Bb]lue[Pp]rint|[Bb][Pp])[\s\#:]*([A-Za-z0-9\\-]+)')
+    GIT_REGEX = re.compile(git_keywords)
+
+    #NOTE(jogo) if match regex but over 3 words, acceptable title
+    if GIT_REGEX.search(title) is not None and len(title.split()) <= 3:
+        print ("N801: git commit title ('%s') should provide an accurate "
+               "description of the change, not just a reference to a bug "
+               "or blueprint" % title.strip())
+
 if __name__ == "__main__":
     #include nova path
     sys.path.append(os.getcwd())
+    #Run once tests (not per line)
+    once_git_check_commit_title()
     #NOVA error codes start with an N
     pep8.ERRORCODE_REGEX = re.compile(r'[EWN]\d{3}')
     add_nova()
