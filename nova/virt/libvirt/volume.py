@@ -25,6 +25,7 @@ from nova import flags
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.libvirt import config
+from nova.virt.libvirt import utils as virtutils
 
 LOG = logging.getLogger(__name__)
 FLAGS = flags.FLAGS
@@ -36,15 +37,11 @@ class LibvirtVolumeDriver(object):
     def __init__(self, connection):
         self.connection = connection
 
-    def _pick_volume_driver(self):
-        hypervisor_type = self.connection.get_hypervisor_type().lower()
-        return "phy" if hypervisor_type == "xen" else "qemu"
-
     def connect_volume(self, connection_info, mount_device):
         """Connect the volume. Returns xml for libvirt."""
         conf = config.LibvirtConfigGuestDisk()
         conf.source_type = "block"
-        conf.driver_name = self._pick_volume_driver()
+        conf.driver_name = virtutils.pick_disk_driver_name(is_block_dev=True)
         conf.driver_format = "raw"
         conf.driver_cache = "none"
         conf.source_path = connection_info['data']['device_path']
@@ -79,7 +76,7 @@ class LibvirtNetVolumeDriver(LibvirtVolumeDriver):
     def connect_volume(self, connection_info, mount_device):
         conf = config.LibvirtConfigGuestDisk()
         conf.source_type = "network"
-        conf.driver_name = self._pick_volume_driver()
+        conf.driver_name = virtutils.pick_disk_driver_name(is_block_dev=False)
         conf.driver_format = "raw"
         conf.driver_cache = "none"
         conf.source_protocol = connection_info['driver_volume_type']
