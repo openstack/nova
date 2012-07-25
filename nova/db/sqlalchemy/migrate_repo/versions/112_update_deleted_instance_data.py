@@ -36,6 +36,8 @@ def upgrade(migrate_engine):
         table = Table(table_name, meta, autoload=True)
 
         for instance in instance_list:
+            if not instance['deleted_at']:
+                continue
             table.update(
                 (and_(table.c.deleted == True,
                       table.c.instance_uuid == instance['uuid'],
