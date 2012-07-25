@@ -74,6 +74,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                check_can_live_migrate_source()
         1.12 - Remove instance_uuid, add instance argument to confirm_resize()
         1.13 - Remove instance_uuid, add instance argument to detach_volume()
+        1.14 - Remove instance_uuid, add instance argument to finish_resize()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -147,10 +148,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def finish_resize(self, ctxt, instance, migration_id, image, disk_info,
             host):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('finish_resize',
-                instance_uuid=instance['uuid'], migration_id=migration_id,
+                instance=instance_p, migration_id=migration_id,
                 image=image, disk_info=disk_info),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='1.14')
 
     def finish_revert_resize(self, ctxt, instance, migration_id, host):
         self.cast(ctxt, self.make_msg('finish_revert_resize',

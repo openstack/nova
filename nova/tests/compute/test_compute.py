@@ -1064,13 +1064,14 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
 
         context = self.context.elevated()
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.prep_resize(context, instance['uuid'], 1, {},
                                  filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
-        self.compute.finish_resize(context, instance['uuid'],
-                                   int(migration_ref['id']), {}, {})
+        self.compute.finish_resize(context,
+                migration_id=int(migration_ref['id']),
+                disk_info={}, image={}, instance=instance)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_finish_resize_handles_error(self):
@@ -1085,15 +1086,15 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'finish_migration', throw_up)
 
         context = self.context.elevated()
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.prep_resize(context, instance['uuid'], 1, {},
                                  filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
 
         self.assertRaises(test.TestingException, self.compute.finish_resize,
-                          context, instance['uuid'],
-                          int(migration_ref['id']), {}, {})
+                          context, migration_id=int(migration_ref['id']),
+                          disk_info={}, image={}, instance=instance)
 
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
@@ -1160,7 +1161,7 @@ class ComputeTestCase(BaseTestCase):
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
         old_type_id = instance_types.get_instance_type_by_name(
                                                 'm1.tiny')['id']
@@ -1179,8 +1180,9 @@ class ComputeTestCase(BaseTestCase):
         timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
-        self.compute.finish_resize(context, instance['uuid'],
-                                   int(migration_ref['id']), {}, {})
+        self.compute.finish_resize(context,
+                migration_id=int(migration_ref['id']), disk_info={}, image={},
+                instance=instance)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -1337,8 +1339,9 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.resize_instance(context, inst_ref['uuid'],
                 migration_ref['id'], {})
-        self.compute.finish_resize(context, inst_ref['uuid'],
-                    int(migration_ref['id']), {}, {})
+        self.compute.finish_resize(context,
+                    migration_id=int(migration_ref['id']), disk_info={},
+                    image={}, instance=jsonutils.to_primitive(inst_ref))
 
         # Prove that the instance size is now the new size
         inst_ref = db.instance_get_by_uuid(context, instance['uuid'])
