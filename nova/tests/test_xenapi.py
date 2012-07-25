@@ -952,7 +952,27 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize", fake_vdi_resize)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
-                              product_version=(6, 0, 0))
+                              product_version=(6, 0, 0),
+                              product_brand='XenServer')
+        conn = xenapi_conn.XenAPIDriver(False)
+        vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
+        vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
+        conn._vmops._resize_instance(instance,
+                                     {'uuid': vdi_uuid, 'ref': vdi_ref})
+        self.assertEqual(called['resize'], True)
+
+        def test_resize_xcp(self):
+            instance = db.instance_create(self.context, self.instance_values)
+            called = {'resize': False}
+
+            def fake_vdi_resize(*args, **kwargs):
+                called['resize'] = True
+
+                self.stubs.Set(stubs.FakeSessionForVMTests,
+                               "VDI_resize", fake_vdi_resize)
+                stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
+                                      product_version=(1, 4, 99),
+                                      product_brand='XCP')
         conn = xenapi_conn.XenAPIDriver(False)
         vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
         vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
@@ -1011,6 +1031,9 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
         self.stubs.Set(vmops.VMOps, 'finish_revert_migration',
                        fake_finish_revert_migration)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
+                              product_version=(4, 0, 0),
+                              product_brand='XenServer')
 
         conn = xenapi_conn.XenAPIDriver(False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
@@ -1043,6 +1066,9 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.stubs.Set(vmops.VMOps, '_start', fake_vm_start)
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        "VDI_resize_online", fake_vdi_resize)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
+                              product_version=(4, 0, 0),
+                              product_brand='XenServer')
 
         conn = xenapi_conn.XenAPIDriver(False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,
