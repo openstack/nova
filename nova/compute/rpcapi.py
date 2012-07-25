@@ -68,6 +68,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.8 - Remove instance_uuid, add instance argument to
               add_fixed_ip_to_instance()
         1.9 - Remove instance_uuid, add instance argument to attach_volume()
+        1.10 - Remove instance_id, add instance argument to
+               check_can_live_migrate_destination()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -107,12 +109,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
             block_migration, disk_over_commit):
+        instance_p = jsonutils.to_primitive(instance)
         self.call(ctxt, self.make_msg('check_can_live_migrate_destination',
-                           instance_id=instance['id'],
+                           instance=instance_p,
                            block_migration=block_migration,
                            disk_over_commit=disk_over_commit),
                   topic=_compute_topic(self.topic, ctxt, destination, None),
-                  version='1.2')
+                  version='1.10')
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         self.call(ctxt, self.make_msg('check_can_live_migrate_source',

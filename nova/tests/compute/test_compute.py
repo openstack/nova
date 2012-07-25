@@ -1425,11 +1425,11 @@ class ComputeTestCase(BaseTestCase):
     def test_check_can_live_migrate_destination_works_correctly(self):
         """Confirm check_can_live_migrate_destination works on positive path"""
         context = self.context.elevated()
-        inst_ref = self._create_fake_instance({'host': 'fake_host_2'})
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance(
+                                          {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
         dest = "fake_host_1"
 
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
@@ -1437,7 +1437,6 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination_cleanup')
 
-        db.instance_get(context, inst_id).AndReturn(inst_ref)
         dest_check_data = {"test": "data"}
         self.compute.driver.check_can_live_migrate_destination(context,
                 inst_ref, True, False).AndReturn(dest_check_data)
@@ -1447,37 +1446,38 @@ class ComputeTestCase(BaseTestCase):
                 context, dest_check_data)
 
         self.mox.ReplayAll()
-        self.compute.check_can_live_migrate_destination(context, inst_id,
-                                                        True, False)
+        self.compute.check_can_live_migrate_destination(context,
+                block_migration=True, disk_over_commit=False,
+                instance=inst_ref)
 
     def test_check_can_live_migrate_destination_fails_dest_check(self):
         """Confirm check_can_live_migrate_destination works on positive path"""
         context = self.context.elevated()
-        inst_ref = self._create_fake_instance({'host': 'fake_host_2'})
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance(
+                                          {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
         dest = "fake_host_1"
 
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination')
 
-        db.instance_get(context, inst_id).AndReturn(inst_ref)
         self.compute.driver.check_can_live_migrate_destination(context,
                 inst_ref, True, False).AndRaise(exception.Invalid())
 
         self.mox.ReplayAll()
         self.assertRaises(exception.Invalid,
                           self.compute.check_can_live_migrate_destination,
-                          context, inst_id, True, False)
+                          context, block_migration=True,
+                          disk_over_commit=False, instance=inst_ref)
 
     def test_check_can_live_migrate_destination_fails_source(self):
         """Confirm check_can_live_migrate_destination works on positive path"""
         context = self.context.elevated()
-        inst_ref = self._create_fake_instance({'host': 'fake_host_2'})
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance(
+                                          {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
         dest = "fake_host_1"
 
-        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
@@ -1485,7 +1485,6 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_destination_cleanup')
 
-        db.instance_get(context, inst_id).AndReturn(inst_ref)
         dest_check_data = {"test": "data"}
         self.compute.driver.check_can_live_migrate_destination(context,
                 inst_ref, True, False).AndReturn(dest_check_data)
@@ -1497,7 +1496,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.Invalid,
                           self.compute.check_can_live_migrate_destination,
-                          context, inst_id, True, False)
+                          context, block_migration=True,
+                          disk_over_commit=False, instance=inst_ref)
 
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
         """Confirm raising exception if instance doesn't have fixed_ip."""
