@@ -606,7 +606,7 @@ class TestLockCleanup(test.TestCase):
 
     def _get_sentinel_name(self, hostname, pid, thread='MainThread'):
         return os.path.join(FLAGS.lock_path,
-                            '%s.%s-%d' % (hostname, thread, pid))
+                            '%s-%s.%d' % (hostname, thread, pid))
 
     def _create_sentinel(self, hostname, pid, thread='MainThread'):
         name = self._get_sentinel_name(hostname, pid, thread)
