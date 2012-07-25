@@ -720,7 +720,7 @@ def floating_ip_get(context, id):
 def floating_ip_get_pools(context):
     session = get_session()
     pools = []
-    for result in session.query(models.FloatingIp.pool).distinct():
+    for result in model_query(context, models.FloatingIp.pool).distinct():
         pools.append({'name': result[0]})
     return pools
 
