@@ -24,7 +24,7 @@ from nova import manager
 from nova.openstack.common import cfg
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.virt import vmwareapi_conn
+from nova.virt.vmwareapi import driver as vmwareapi_conn
 
 
 LOG = logging.getLogger(__name__)
