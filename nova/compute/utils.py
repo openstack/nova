@@ -96,7 +96,7 @@ def notify_about_instance_usage(context, instance, event_suffix,
     if not extra_usage_info:
         extra_usage_info = {}
 
-    usage_info = notifications.usage_from_instance(context, instance,
+    usage_info = notifications.info_from_instance(context, instance,
             network_info, system_metadata, **extra_usage_info)
 
     notifier_api.notify(context, 'compute.%s' % host,

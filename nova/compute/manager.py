@@ -642,6 +642,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         update_info['access_ip_v6'] = ip['address']
         if update_info:
             self.db.instance_update(context, instance.uuid, update_info)
+            notifications.send_update(context, instance, instance)
 
     def _check_instance_not_already_created(self, context, instance):
         """Ensure an instance with the same name is not already present."""

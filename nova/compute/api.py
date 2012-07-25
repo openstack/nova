@@ -1169,7 +1169,7 @@ class API(base.Base):
 
         notifications.send_update_with_states(context, instance, old_vm_state,
                 instance["vm_state"], old_task_state, instance["task_state"],
-                service="api")
+                service="api", verify_states=True)
 
         properties = {
             'instance_uuid': instance_uuid,
