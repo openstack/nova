@@ -297,7 +297,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.11'
+    RPC_API_VERSION = '1.12'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1399,25 +1399,27 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def confirm_resize(self, context, instance_uuid, migration_id):
+    def confirm_resize(self, context, migration_id, instance_uuid=None,
+                       instance=None):
         """Destroys the source instance."""
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get_by_uuid(context,
-                migration_ref.instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context,
+                    migration_ref.instance_uuid)
 
-        self._notify_about_instance_usage(context, instance_ref,
+        self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
 
         # NOTE(tr3buchet): tear down networks on source host
-        self.network_api.setup_networks_on_host(context, instance_ref,
+        self.network_api.setup_networks_on_host(context, instance,
                              migration_ref['source_compute'], teardown=True)
 
-        network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.confirm_migration(migration_ref, instance_ref,
+        network_info = self._get_instance_nw_info(context, instance)
+        self.driver.confirm_migration(migration_ref, instance,
                                       self._legacy_nw_info(network_info))
 
         self._notify_about_instance_usage(
-            context, instance_ref, "resize.confirm.end",
+            context, instance, "resize.confirm.end",
             network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())

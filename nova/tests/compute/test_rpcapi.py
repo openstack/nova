@@ -51,7 +51,8 @@ class ComputeRpcAPITestCase(test.TestCase):
         methods_with_instance = [
             'add_fixed_ip_to_instance', 'attach_volume',
             'check_can_live_migrate_destination',
-            'check_can_live_migrate_source', 'get_console_output',
+            'check_can_live_migrate_source', 'confirm_resize',
+            'get_console_output',
             'pause_instance', 'reboot_instance', 'suspend_instance',
             'unpause_instance'
         ]
@@ -145,11 +146,13 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_confirm_resize_cast(self):
         self._test_compute_api('confirm_resize', 'cast',
-                instance=self.fake_instance, migration_id='id', host='host')
+                instance=self.fake_instance, migration_id='id', host='host',
+                version='1.12')
 
     def test_confirm_resize_call(self):
         self._test_compute_api('confirm_resize', 'call',
-                instance=self.fake_instance, migration_id='id', host='host')
+                instance=self.fake_instance, migration_id='id', host='host',
+                version='1.12')
 
     def test_detach_volume(self):
         self._test_compute_api('detach_volume', 'cast',
