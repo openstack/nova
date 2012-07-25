@@ -849,6 +849,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             'root_gb': 20,
             'instance_type_id': '3',  # m1.large
             'os_type': 'linux',
+            'vm_mode': 'hvm',
             'architecture': 'x86-64'}
         instance = db.instance_create(self.context, instance_values)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs,

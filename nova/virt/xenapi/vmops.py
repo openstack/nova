@@ -31,6 +31,7 @@ import netaddr
 
 from nova.compute import api as compute
 from nova.compute import power_state
+from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -381,21 +382,20 @@ class VMOps(object):
 
         disk_image_type = vm_utils.determine_disk_image_type(image_meta)
 
-        vm_mode = instance.vm_mode and instance.vm_mode.lower()
-        if vm_mode == 'pv':
+        mode = vm_mode.get_from_instance(instance)
+        if mode == vm_mode.XEN:
             use_pv_kernel = True
-        elif vm_mode in ('hv', 'hvm'):
+        elif mode == vm_mode.HVM:
             use_pv_kernel = False
-            vm_mode = 'hvm'  # Normalize
         else:
             use_pv_kernel = vm_utils.determine_is_pv(self._session,
                     vdis['root']['ref'], disk_image_type, instance.os_type)
-            vm_mode = use_pv_kernel and 'pv' or 'hvm'
+            mode = use_pv_kernel and vm_mode.XEN or vm_mode.HVM
 
-        if instance.vm_mode != vm_mode:
+        if instance.vm_mode != mode:
             # Update database with normalized (or determined) value
             db.instance_update(nova_context.get_admin_context(),
-                               instance['uuid'], {'vm_mode': vm_mode})
+                               instance['uuid'], {'vm_mode': mode})
 
         vm_ref = vm_utils.create_vm(
             self._session, instance, kernel_file, ramdisk_file,

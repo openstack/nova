@@ -57,6 +57,7 @@ from xml.dom import minidom
 from nova import block_device
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import db
 from nova import exception
@@ -1712,19 +1713,19 @@ class LibvirtDriver(driver.ComputeDriver):
                 {'root_device_name': '/dev/' + self.default_root_device})
 
         if FLAGS.libvirt_type == "lxc":
-            guest.os_type = "exe"
+            guest.os_type = vm_mode.EXE
             guest.os_init_path = "/sbin/init"
             guest.os_cmdline = "console=ttyS0"
         elif FLAGS.libvirt_type == "uml":
-            guest.os_type = "uml"
+            guest.os_type = vm_mode.UML
             guest.os_kernel = "/usr/bin/linux"
             guest.os_root = root_device_name or "/dev/ubda"
         else:
             if FLAGS.libvirt_type == "xen":
-                guest.os_type = "linux"
+                guest.os_type = vm_mode.XEN
                 guest.os_root = root_device_name or "/dev/xvda"
             else:
-                guest.os_type = "hvm"
+                guest.os_type = vm_mode.HVM
 
             if rescue:
                 if rescue.get('kernel_id'):
