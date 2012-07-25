@@ -824,8 +824,7 @@ class API(base.Base):
         return dict(instance_ref.iteritems())
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
-                                    vm_states.ERROR])
+    @check_instance_state(vm_state=None, task_state=None)
     def soft_delete(self, context, instance):
         """Terminate an instance."""
         LOG.debug(_('Going to try to soft delete instance'),
