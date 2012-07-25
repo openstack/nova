@@ -297,7 +297,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.8'
+    RPC_API_VERSION = '1.9'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1961,15 +1961,17 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def attach_volume(self, context, instance_uuid, volume_id, mountpoint):
+    def attach_volume(self, context, volume_id, mountpoint, instance_uuid=None,
+                      instance=None):
         """Attach a volume to an instance."""
         volume = self.volume_api.get(context, volume_id)
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         LOG.audit(_('Attaching volume %(volume_id)s to %(mountpoint)s'),
-                  locals(), context=context, instance=instance_ref)
+                  locals(), context=context, instance=instance)
         try:
-            connector = self.driver.get_volume_connector(instance_ref)
+            connector = self.driver.get_volume_connector(instance)
             connection_info = self.volume_api.initialize_connection(context,
                                                                     volume,
                                                                     connector)
@@ -1978,28 +1980,28 @@ class ComputeManager(manager.SchedulerDependentManager):
                 msg = _("Failed to connect to volume %(volume_id)s "
                         "while attaching at %(mountpoint)s")
                 LOG.exception(msg % locals(), context=context,
-                              instance=instance_ref)
+                              instance=instance)
                 self.volume_api.unreserve_volume(context, volume)
         try:
             self.driver.attach_volume(connection_info,
-                                      instance_ref['name'],
+                                      instance['name'],
                                       mountpoint)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
                 msg = _("Failed to attach volume %(volume_id)s "
                         "at %(mountpoint)s")
                 LOG.exception(msg % locals(), context=context,
-                              instance=instance_ref)
+                              instance=instance)
                 self.volume_api.terminate_connection(context,
                                                      volume,
                                                      connector)
 
         self.volume_api.attach(context,
                                volume,
-                               instance_ref['uuid'],
+                               instance['uuid'],
                                mountpoint)
         values = {
-            'instance_uuid': instance_ref['uuid'],
+            'instance_uuid': instance['uuid'],
             'connection_info': jsonutils.dumps(connection_info),
             'device_name': mountpoint,
             'delete_on_termination': False,

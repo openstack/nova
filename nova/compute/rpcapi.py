@@ -67,6 +67,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
               get_console_output()
         1.8 - Remove instance_uuid, add instance argument to
               add_fixed_ip_to_instance()
+        1.9 - Remove instance_uuid, add instance argument to attach_volume()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -97,10 +98,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.8')
 
     def attach_volume(self, ctxt, instance, volume_id, mountpoint):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('attach_volume',
-                instance_uuid=instance['uuid'], volume_id=volume_id,
+                instance=instance_p, volume_id=volume_id,
                 mountpoint=mountpoint),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.9')
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
             block_migration, disk_over_commit):
