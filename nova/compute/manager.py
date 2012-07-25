@@ -297,7 +297,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.10'
+    RPC_API_VERSION = '1.11'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2119,19 +2119,22 @@ class ComputeManager(manager.SchedulerDependentManager):
                     dest_check_data)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def check_can_live_migrate_source(self, ctxt, instance_id,
-                                      dest_check_data):
+    def check_can_live_migrate_source(self, ctxt, dest_check_data,
+                                      instance_id=None, instance=None):
         """Check if it is possible to execute live migration.
 
         This checks if the live migration can succeed, based on the
         results from check_can_live_migrate_destination.
 
         :param context: security context
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance: dict of instance data
+        :param instance_id: (deprecated and only supplied if no instance passed
+                             in) nova.db.sqlalchemy.models.Instance.Id
         :param dest_check_data: result of check_can_live_migrate_destination
         """
-        instance_ref = self.db.instance_get(ctxt, instance_id)
-        self.driver.check_can_live_migrate_source(ctxt, instance_ref,
+        if not instance:
+            instance = self.db.instance_get(ctxt, instance_id)
+        self.driver.check_can_live_migrate_source(ctxt, instance,
                                                   dest_check_data)
 
     def pre_live_migration(self, context, instance_id,
