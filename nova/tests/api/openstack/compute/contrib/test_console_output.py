@@ -74,6 +74,27 @@ class ConsoleOutputExtensionTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(output, {'output': '2\n3\n4'})
 
+    def test_get_console_output_with_length_as_str(self):
+        body = {'os-getConsoleOutput': {'length': '3'}}
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        output = jsonutils.loads(res.body)
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(output, {'output': '2\n3\n4'})
+
+    def test_get_console_output_with_non_integer_length(self):
+        body = {'os-getConsoleOutput': {'length': 'NaN'}}
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        output = jsonutils.loads(res.body)
+        self.assertEqual(res.status_int, 400)
+
     def test_get_text_console_no_instance(self):
         self.stubs.Set(compute.API, 'get', fake_get_not_found)
         body = {'os-getConsoleOutput': {}}
