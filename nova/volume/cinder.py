@@ -59,7 +59,6 @@ def cinderclient(context):
 def _untranslate_volume_summary_view(context, vol):
     """Maps keys for volumes summary view."""
     d = {}
-
     d['id'] = vol.id
     d['status'] = vol.status
     d['size'] = vol.size
@@ -88,12 +87,12 @@ def _untranslate_volume_summary_view(context, vol):
     d['volume_type_id'] = vol.volume_type
     d['snapshot_id'] = vol.snapshot_id
 
-    d['vol_metadata'] = []
+    d['volume_metadata'] = []
     for key, value in vol.metadata.items():
         item = {}
         item['key'] = key
         item['value'] = value
-        d['vol_metadata'].append(item)
+        d['volume_metadata'].append(item)
 
     return d
 
@@ -170,13 +169,18 @@ class API(base.Base):
                  volumes.terminate_connection(volume['id'], connector)
 
     def create(self, context, size, name, description, snapshot=None,
-                     volume_type=None, metadata=None, availability_zone=None):
+               volume_type=None, metadata=None, availability_zone=None):
 
-        item = cinderclient(context).volumes.create(size, snapshot,
-                                                    name, description,
-                                                    volume_type)
+        item = cinderclient(context).volumes.create(size,
+                                                    snapshot,
+                                                    name,
+                                                    description,
+                                                    volume_type,
+                                                    context.user_id,
+                                                    context.project_id,
+                                                    availability_zone,
+                                                    metadata)
 
-        volume = _untranslate_volume_summary_view(context, item)
         return _untranslate_volume_summary_view(context, item)
 
     def delete(self, context, volume):
