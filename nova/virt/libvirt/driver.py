@@ -47,6 +47,7 @@ import multiprocessing
 import os
 import shutil
 import sys
+import tempfile
 import uuid
 
 from eventlet import greenthread
