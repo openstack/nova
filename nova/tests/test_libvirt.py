@@ -800,6 +800,19 @@ class LibvirtConnTestCase(test.TestCase):
         self._check_xml_and_uri(instance_data,
                                 expect_kernel=False, expect_ramdisk=False)
 
+    def test_xml_and_uri_no_ramdisk_no_kernel_xen_hvm(self):
+        instance_data = dict(self.test_instance)
+        instance_data.update({'vm_mode': vm_mode.HVM})
+        self._check_xml_and_uri(instance_data, expect_kernel=False,
+                                expect_ramdisk=False, expect_xen_hvm=True)
+
+    def test_xml_and_uri_no_ramdisk_no_kernel_xen_pv(self):
+        instance_data = dict(self.test_instance)
+        instance_data.update({'vm_mode': vm_mode.XEN})
+        self._check_xml_and_uri(instance_data, expect_kernel=False,
+                                expect_ramdisk=False, expect_xen_hvm=False,
+                                xen_only=True)
+
     def test_xml_and_uri_no_ramdisk(self):
         instance_data = dict(self.test_instance)
         instance_data['kernel_id'] = 'aki-deadbeef'
@@ -1356,7 +1369,7 @@ class LibvirtConnTestCase(test.TestCase):
                          instance_ref['uuid'])
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
-                           rescue=None):
+                           rescue=None, expect_xen_hvm=False, xen_only=False):
         user_context = context.RequestContext(self.user_id, self.project_id)
         instance_ref = db.instance_create(user_context, instance)
         network_ref = db.project_get_networks(context.get_admin_context(),
@@ -1379,10 +1392,22 @@ class LibvirtConnTestCase(test.TestCase):
                         'xen': ('xen:///',
                              [(lambda t: t.find('.').get('type'), 'xen'),
                               (lambda t: t.find('./os/type').text,
-                               vm_mode.XEN)]),
-                              }
+                               vm_mode.XEN)])}
 
-        for hypervisor_type in ['qemu', 'kvm', 'xen']:
+        if expect_xen_hvm or xen_only:
+            hypervisors_to_check = ['xen']
+        else:
+            hypervisors_to_check = ['qemu', 'kvm', 'xen']
+
+        if expect_xen_hvm:
+            type_uri_map = {}
+            type_uri_map['xen'] = ('xen:///',
+                                   [(lambda t: t.find('.').get('type'),
+                                       'xen'),
+                                    (lambda t: t.find('./os/type').text,
+                                        vm_mode.HVM)])
+
+        for hypervisor_type in hypervisors_to_check:
             check_list = type_uri_map[hypervisor_type][1]
 
             if rescue:

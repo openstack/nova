@@ -556,7 +556,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               </devices>
             </domain>""")
 
-    def test_config_xen(self):
+    def test_config_xen_pv(self):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "xen"
         obj.memory = 1024 * 1024 * 100
@@ -588,6 +588,47 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 <type>linux</type>
                 <kernel>/tmp/vmlinuz</kernel>
                 <initrd>/tmp/ramdisk</initrd>
+                <cmdline>console=xvc0</cmdline>
+                <root>root=xvda</root>
+              </os>
+              <devices>
+                <disk type="file" device="disk">
+                  <source file="/tmp/img"/>
+                  <target bus="xen" dev="/dev/xvda"/>
+                </disk>
+              </devices>
+            </domain>""")
+
+    def test_config_xen_hvm(self):
+        obj = config.LibvirtConfigGuest()
+        obj.virt_type = "xen"
+        obj.memory = 1024 * 1024 * 100
+        obj.vcpus = 2
+        obj.name = "demo"
+        obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
+        obj.os_type = "hvm"
+        obj.os_loader = '/usr/lib/xen/boot/hvmloader'
+        obj.os_root = "root=xvda"
+        obj.os_cmdline = "console=xvc0"
+
+        disk = config.LibvirtConfigGuestDisk()
+        disk.source_type = "file"
+        disk.source_path = "/tmp/img"
+        disk.target_dev = "/dev/xvda"
+        disk.target_bus = "xen"
+
+        obj.add_device(disk)
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <domain type="xen">
+              <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
+              <name>demo</name>
+              <memory>104857600</memory>
+              <vcpu>2</vcpu>
+              <os>
+                <type>hvm</type>
+                <loader>/usr/lib/xen/boot/hvmloader</loader>
                 <cmdline>console=xvc0</cmdline>
                 <root>root=xvda</root>
               </os>
