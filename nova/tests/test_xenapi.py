@@ -33,6 +33,7 @@ from nova import exception
 from nova import flags
 from nova.image import glance
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
@@ -284,6 +285,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         stubs.stubout_image_service_download(self.stubs)
         stubs.stubout_stream_disk(self.stubs)
 
+        def fake_inject_instance_metadata(self, instance, vm):
+            pass
+        self.stubs.Set(vmops.VMOps, 'inject_instance_metadata',
+                       fake_inject_instance_metadata)
+
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
         fake_image.FakeImageService_reset()
@@ -511,6 +517,12 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                     hostname="test", architecture="x86-64", instance_id=1,
                     check_injection=False,
                     create_record=True, empty_dns=False):
+        # Fake out inject_instance_metadata
+        def fake_inject_instance_metadata(self, instance, vm):
+            pass
+        self.stubs.Set(vmops.VMOps, 'inject_instance_metadata',
+                       fake_inject_instance_metadata)
+
         if create_record:
             instance_values = {'id': instance_id,
                       'project_id': self.project_id,
@@ -942,6 +954,11 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         fake_utils.stub_out_utils_execute(self.stubs)
         stubs.stub_out_migration_methods(self.stubs)
         stubs.stubout_get_this_vm_uuid(self.stubs)
+
+        def fake_inject_instance_metadata(self, instance, vm):
+            pass
+        self.stubs.Set(vmops.VMOps, 'inject_instance_metadata',
+                       fake_inject_instance_metadata)
 
     def test_resize_xenserver_6(self):
         instance = db.instance_create(self.context, self.instance_values)
@@ -2186,3 +2203,203 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
         self.assertRaises(NotImplementedError, self.conn.live_migration,
                           self.conn, None, None, None, recover_method)
         self.assertTrue(recover_method.called, "recover_method.called")
+
+
+class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
+    def setUp(self):
+        super(XenAPIInjectMetadataTestCase, self).setUp()
+        self.flags(xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',
+                   firewall_driver='nova.virt.xenapi.firewall.'
+                                   'Dom0IptablesFirewallDriver')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(False)
+
+        self.xenstore = dict(persist={}, ephem={})
+
+        def fake_get_vm_opaque_ref(inst, instance):
+            self.assertEqual(instance, 'instance')
+            return 'vm_ref'
+
+        def fake_add_to_param_xenstore(inst, vm_ref, key, val):
+            self.assertEqual(vm_ref, 'vm_ref')
+            self.xenstore['persist'][key] = val
+
+        def fake_remove_from_param_xenstore(inst, vm_ref, key):
+            self.assertEqual(vm_ref, 'vm_ref')
+            if key in self.xenstore['persist']:
+                del self.xenstore['persist'][key]
+
+        def fake_write_to_xenstore(inst, instance, path, value, vm_ref=None):
+            self.assertEqual(instance, 'instance')
+            self.assertEqual(vm_ref, 'vm_ref')
+            self.xenstore['ephem'][path] = jsonutils.dumps(value)
+
+        def fake_delete_from_xenstore(inst, instance, path, vm_ref=None):
+            self.assertEqual(instance, 'instance')
+            self.assertEqual(vm_ref, 'vm_ref')
+            if path in self.xenstore['ephem']:
+                del self.xenstore['ephem'][path]
+
+        self.stubs.Set(vmops.VMOps, '_get_vm_opaque_ref',
+                       fake_get_vm_opaque_ref)
+        self.stubs.Set(vmops.VMOps, '_add_to_param_xenstore',
+                       fake_add_to_param_xenstore)
+        self.stubs.Set(vmops.VMOps, '_remove_from_param_xenstore',
+                       fake_remove_from_param_xenstore)
+        self.stubs.Set(vmops.VMOps, '_write_to_xenstore',
+                       fake_write_to_xenstore)
+        self.stubs.Set(vmops.VMOps, '_delete_from_xenstore',
+                       fake_delete_from_xenstore)
+
+    def test_inject_instance_metadata(self):
+        class FakeMetaItem(object):
+            def __init__(self, key, value):
+                self.key = key
+                self.value = value
+
+        instance = dict(metadata=[FakeMetaItem("a", 1),
+                                  FakeMetaItem("b", 2),
+                                  FakeMetaItem("c", 3)],
+                        system_metadata=[FakeMetaItem("sys_a", 1),
+                                         FakeMetaItem("sys_b", 2),
+                                         FakeMetaItem("sys_c", 3)])
+        self.conn._vmops.inject_instance_metadata(instance, 'vm_ref')
+
+        self.assertEqual(self.xenstore, {
+                'persist': {
+                    'vm-data/user-metadata/a': '1',
+                    'vm-data/user-metadata/b': '2',
+                    'vm-data/user-metadata/c': '3',
+                    'vm-data/system-metadata/sys_a': '1',
+                    'vm-data/system-metadata/sys_b': '2',
+                    'vm-data/system-metadata/sys_c': '3',
+                    },
+                'ephem': {},
+                })
+
+    def test_change_instance_metadata_add(self):
+        diff = dict(d=['+', 4])
+        self.xenstore = {
+            'persist': {
+                'vm-data/user-metadata/a': '1',
+                'vm-data/user-metadata/b': '2',
+                'vm-data/user-metadata/c': '3',
+                'vm-data/system-metadata/sys_a': '1',
+                'vm-data/system-metadata/sys_b': '2',
+                'vm-data/system-metadata/sys_c': '3',
+                },
+            'ephem': {
+                'vm-data/user-metadata/a': '1',
+                'vm-data/user-metadata/b': '2',
+                'vm-data/user-metadata/c': '3',
+                'vm-data/system-metadata/sys_a': '1',
+                'vm-data/system-metadata/sys_b': '2',
+                'vm-data/system-metadata/sys_c': '3',
+                },
+            }
+
+        self.conn._vmops.change_instance_metadata('instance', diff)
+
+        self.assertEqual(self.xenstore, {
+                'persist': {
+                    'vm-data/user-metadata/a': '1',
+                    'vm-data/user-metadata/b': '2',
+                    'vm-data/user-metadata/c': '3',
+                    'vm-data/user-metadata/d': '4',
+                    'vm-data/system-metadata/sys_a': '1',
+                    'vm-data/system-metadata/sys_b': '2',
+                    'vm-data/system-metadata/sys_c': '3',
+                    },
+                'ephem': {
+                    'vm-data/user-metadata/a': '1',
+                    'vm-data/user-metadata/b': '2',
+                    'vm-data/user-metadata/c': '3',
+                    'vm-data/user-metadata/d': '4',
+                    'vm-data/system-metadata/sys_a': '1',
+                    'vm-data/system-metadata/sys_b': '2',
+                    'vm-data/system-metadata/sys_c': '3',
+                    },
+                })
+
+    def test_change_instance_metadata_update(self):
+        diff = dict(b=['+', 4])
+        self.xenstore = {
+            'persist': {
+                'vm-data/user-metadata/a': '1',
+                'vm-data/user-metadata/b': '2',
+                'vm-data/user-metadata/c': '3',
+                'vm-data/system-metadata/sys_a': '1',
+                'vm-data/system-metadata/sys_b': '2',
+                'vm-data/system-metadata/sys_c': '3',
+                },
+            'ephem': {
+                'vm-data/user-metadata/a': '1',
+                'vm-data/user-metadata/b': '2',
+                'vm-data/user-metadata/c': '3',
+                'vm-data/system-metadata/sys_a': '1',
+                'vm-data/system-metadata/sys_b': '2',
+                'vm-data/system-metadata/sys_c': '3',
+                },
+            }
+
+        self.conn._vmops.change_instance_metadata('instance', diff)
+
+        self.assertEqual(self.xenstore, {
+                'persist': {
+                    'vm-data/user-metadata/a': '1',
+                    'vm-data/user-metadata/b': '4',
+                    'vm-data/user-metadata/c': '3',
+                    'vm-data/system-metadata/sys_a': '1',
+                    'vm-data/system-metadata/sys_b': '2',
+                    'vm-data/system-metadata/sys_c': '3',
+                    },
+                'ephem': {
+                    'vm-data/user-metadata/a': '1',
+                    'vm-data/user-metadata/b': '4',
+                    'vm-data/user-metadata/c': '3',
+                    'vm-data/system-metadata/sys_a': '1',
+                    'vm-data/system-metadata/sys_b': '2',
+                    'vm-data/system-metadata/sys_c': '3',
+                    },
+                })
+
+    def test_change_instance_metadata_delete(self):
+        diff = dict(b=['-'])
+        self.xenstore = {
+            'persist': {
+                'vm-data/user-metadata/a': '1',
+                'vm-data/user-metadata/b': '2',
+                'vm-data/user-metadata/c': '3',
+                'vm-data/system-metadata/sys_a': '1',
+                'vm-data/system-metadata/sys_b': '2',
+                'vm-data/system-metadata/sys_c': '3',
+                },
+            'ephem': {
+                'vm-data/user-metadata/a': '1',
+                'vm-data/user-metadata/b': '2',
+                'vm-data/user-metadata/c': '3',
+                'vm-data/system-metadata/sys_a': '1',
+                'vm-data/system-metadata/sys_b': '2',
+                'vm-data/system-metadata/sys_c': '3',
+                },
+            }
+
+        self.conn._vmops.change_instance_metadata('instance', diff)
+
+        self.assertEqual(self.xenstore, {
+                'persist': {
+                    'vm-data/user-metadata/a': '1',
+                    'vm-data/user-metadata/c': '3',
+                    'vm-data/system-metadata/sys_a': '1',
+                    'vm-data/system-metadata/sys_b': '2',
+                    'vm-data/system-metadata/sys_c': '3',
+                    },
+                'ephem': {
+                    'vm-data/user-metadata/a': '1',
+                    'vm-data/user-metadata/c': '3',
+                    'vm-data/system-metadata/sys_a': '1',
+                    'vm-data/system-metadata/sys_b': '2',
+                    'vm-data/system-metadata/sys_c': '3',
+                    },
+                })

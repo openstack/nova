@@ -415,6 +415,8 @@ class VMOps(object):
         hostname = self._generate_hostname(instance)
         self.inject_hostname(instance, vm_ref, hostname)
 
+        self.inject_instance_metadata(instance, vm_ref)
+
         return vm_ref
 
     def _attach_disks(self, instance, disk_image_type, vm_ref, vdis):
@@ -840,6 +842,44 @@ class VMOps(object):
         """Write a file to the VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         agent.inject_file(self._session, instance, vm_ref, path, contents)
+
+    def inject_instance_metadata(self, instance, vm_ref):
+        """Inject instance metadata into xenstore."""
+        def store_meta(topdir, data_list):
+            for item in data_list:
+                key = item.key
+                value = item.value or ''
+                self._add_to_param_xenstore(vm_ref, '%s/%s' % (topdir, key),
+                                            jsonutils.dumps(value))
+
+        # Store user metadata
+        store_meta('vm-data/user-metadata', instance['metadata'])
+
+        # Store system metadata
+        store_meta('vm-data/system-metadata', instance['system_metadata'])
+
+    def change_instance_metadata(self, instance, diff):
+        """Apply changes to instance metadata to xenstore."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        for key, change in diff.items():
+            location = 'vm-data/user-metadata/%s' % key
+            if change[0] == '-':
+                self._remove_from_param_xenstore(vm_ref, location)
+                try:
+                    self._delete_from_xenstore(instance, location,
+                                               vm_ref=vm_ref)
+                except KeyError:
+                    # catch KeyError for domid if instance isn't running
+                    pass
+            elif change[0] == '+':
+                self._add_to_param_xenstore(vm_ref, location,
+                                            jsonutils.dumps(change[1]))
+                try:
+                    self._write_to_xenstore(instance, location, change[1],
+                                            vm_ref=vm_ref)
+                except KeyError:
+                    # catch KeyError for domid if instance isn't running
+                    pass
 
     def _find_root_vdi_ref(self, vm_ref):
         """Find and return the root vdi ref for a VM."""
@@ -1327,6 +1367,15 @@ class VMOps(object):
         return self._make_plugin_call('xenstore.py', 'write_record', instance,
                                       vm_ref=vm_ref, path=path,
                                       value=jsonutils.dumps(value))
+
+    def _delete_from_xenstore(self, instance, path, vm_ref=None):
+        """
+        Deletes the value from the xenstore record for the given VM at
+        the specified location.  A XenAPIPlugin.PluginError will be
+        raised if any error is encountered in the delete process.
+        """
+        return self._make_plugin_call('xenstore.py', 'delete_record', instance,
+                                      vm_ref=vm_ref, path=path)
 
     def _make_plugin_call(self, plugin, method, instance, vm_ref=None,
                           **addl_args):

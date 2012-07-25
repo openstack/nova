@@ -57,6 +57,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.0 - Initial version.
         1.1 - Adds get_host_uptime()
         1.2 - Adds check_can_live_migrate_[destination|source]
+        1.3 - Adds change_instance_metadata()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -374,6 +375,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.cast(ctxt, self.make_msg('unrescue_instance',
                 instance_uuid=instance['uuid']),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
+
+    def change_instance_metadata(self, ctxt, instance, diff):
+        self.cast(ctxt, self.make_msg('change_instance_metadata',
+                  instance_uuid=instance['uuid'], diff=diff),
+                  topic=_compute_topic(self.topic, ctxt, None, instance),
+                  version='1.3')
 
 
 class SecurityGroupAPI(nova.openstack.common.rpc.proxy.RpcProxy):
