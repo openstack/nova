@@ -65,6 +65,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.6 - Remove instance_uuid, add instance argument to suspend_instance()
         1.7 - Remove instance_uuid, add instance argument to
               get_console_output()
+        1.8 - Remove instance_uuid, add instance argument to
+              add_fixed_ip_to_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -88,9 +90,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, host, None))
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('add_fixed_ip_to_instance',
-                instance_uuid=instance['uuid'], network_id=network_id),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, network_id=network_id),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.8')
 
     def attach_volume(self, ctxt, instance, volume_id, mountpoint):
         self.cast(ctxt, self.make_msg('attach_volume',

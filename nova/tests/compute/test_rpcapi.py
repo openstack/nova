@@ -49,8 +49,8 @@ class ComputeRpcAPITestCase(test.TestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
 
         methods_with_instance = [
-            'get_console_output', 'pause_instance', 'reboot_instance',
-            'suspend_instance', 'unpause_instance'
+            'add_fixed_ip_to_instance', 'get_console_output', 'pause_instance',
+            'reboot_instance', 'suspend_instance', 'unpause_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -122,7 +122,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_add_fixed_ip_to_instance(self):
         self._test_compute_api('add_fixed_ip_to_instance', 'cast',
-                instance=self.fake_instance, network_id='id')
+                instance=self.fake_instance, network_id='id', version='1.8')
 
     def test_attach_volume(self):
         self._test_compute_api('attach_volume', 'cast',

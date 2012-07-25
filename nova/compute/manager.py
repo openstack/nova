@@ -297,7 +297,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.7'
+    RPC_API_VERSION = '1.8'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1666,26 +1666,28 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def add_fixed_ip_to_instance(self, context, instance_uuid, network_id):
+    def add_fixed_ip_to_instance(self, context, network_id, instance=None,
+                                 instance_uuid=None):
         """Calls network_api to add new fixed_ip to instance
         then injects the new network info and resets instance networking.
 
         """
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         self._notify_about_instance_usage(
-                context, instance_ref, "create_ip.start")
+                context, instance, "create_ip.start")
 
-        instance_id = instance_ref['id']
+        instance_id = instance['id']
         self.network_api.add_fixed_ip_to_instance(context,
-                                                  instance_ref,
+                                                  instance,
                                                   network_id)
 
         network_info = self.inject_network_info(context,
-                                                instance_ref['uuid'])
-        self.reset_network(context, instance_ref['uuid'])
+                                                instance['uuid'])
+        self.reset_network(context, instance['uuid'])
 
         self._notify_about_instance_usage(
-            context, instance_ref, "create_ip.end", network_info=network_info)
+            context, instance, "create_ip.end", network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
