@@ -515,18 +515,68 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(_get_fake_aggr_metadata(), expected.metadetails)
 
     def test_aggregate_get_by_host(self):
-        """Ensure we can get an aggregate by host."""
+        """Ensure we can get aggregates by host."""
         ctxt = context.get_admin_context()
-        r1 = _create_aggregate_with_hosts(context=ctxt)
-        r2 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org')
-        self.assertEqual(r1.id, r2.id)
+        values = {'name': 'fake_aggregate2',
+            'availability_zone': 'fake_avail_zone', }
+        a1 = _create_aggregate_with_hosts(context=ctxt)
+        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
+        r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org')
+        self.assertEqual([a1.id, a2.id], [x.id for x in r1])
+
+    def test_aggregate_get_by_host_with_key(self):
+        """Ensure we can get aggregates by host."""
+        ctxt = context.get_admin_context()
+        values = {'name': 'fake_aggregate2',
+            'availability_zone': 'fake_avail_zone', }
+        a1 = _create_aggregate_with_hosts(context=ctxt,
+                                          metadata={'goodkey': 'good'})
+        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
+        # filter result by key
+        r1 = db.aggregate_get_by_host(ctxt, 'foo.openstack.org', key='goodkey')
+        self.assertEqual([a1.id], [x.id for x in r1])
+
+    def test_aggregate_metdata_get_by_host(self):
+        """Ensure we can get aggregates by host."""
+        ctxt = context.get_admin_context()
+        values = {'name': 'fake_aggregate2',
+            'availability_zone': 'fake_avail_zone', }
+        values2 = {'name': 'fake_aggregate3',
+            'availability_zone': 'fake_avail_zone', }
+        a1 = _create_aggregate_with_hosts(context=ctxt)
+        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
+        a3 = _create_aggregate_with_hosts(context=ctxt, values=values2,
+                hosts=['bar.openstack.org'], metadata={'badkey': 'bad'})
+        r1 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org')
+        self.assertEqual(r1['fake_key1'], set(['fake_value1']))
+        self.assertFalse('badkey' in r1)
+
+    def test_aggregate_metdata_get_by_host_with_key(self):
+        """Ensure we can get aggregates by host."""
+        ctxt = context.get_admin_context()
+        values = {'name': 'fake_aggregate2',
+            'availability_zone': 'fake_avail_zone', }
+        values2 = {'name': 'fake_aggregate3',
+            'availability_zone': 'fake_avail_zone', }
+        a1 = _create_aggregate_with_hosts(context=ctxt)
+        a2 = _create_aggregate_with_hosts(context=ctxt, values=values)
+        a3 = _create_aggregate_with_hosts(context=ctxt, values=values2,
+                hosts=['foo.openstack.org'], metadata={'good': 'value'})
+        r1 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org',
+                                               key='good')
+        self.assertEqual(r1['good'], set(['value']))
+        self.assertFalse('fake_key1' in r1)
+        # Delete metadata
+        db.aggregate_metadata_delete(ctxt, a3.id, 'good')
+        r2 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org',
+                                               key='good')
+        self.assertFalse('good' in r2)
 
     def test_aggregate_get_by_host_not_found(self):
         """Ensure AggregateHostNotFound is raised with unknown host."""
         ctxt = context.get_admin_context()
         _create_aggregate_with_hosts(context=ctxt)
-        self.assertRaises(exception.AggregateHostNotFound,
-                          db.aggregate_get_by_host, ctxt, 'unknown_host')
+        self.assertEqual([], db.aggregate_get_by_host(ctxt, 'unknown_host'))
 
     def test_aggregate_delete_raise_not_found(self):
         """Ensure AggregateNotFound is raised when deleting an aggregate."""

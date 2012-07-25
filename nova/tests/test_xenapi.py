@@ -2149,9 +2149,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
             def __init__(self):
                 self.metadetails = {"host": "test_host_uuid"}
 
-        def fake_aggregate_get_by_host(context, host):
+        def fake_aggregate_get_by_host(context, host, key=None):
             self.assertEqual(FLAGS.host, host)
-            return fake_aggregate()
+            return [fake_aggregate()]
 
         self.stubs.Set(db, "aggregate_get_by_host",
                 fake_aggregate_get_by_host)
@@ -2163,9 +2163,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
             def __init__(self):
                 self.metadetails = {"dest_other": "test_host_uuid"}
 
-        def fake_aggregate_get_by_host(context, host):
+        def fake_aggregate_get_by_host(context, host, key=None):
             self.assertEqual(FLAGS.host, host)
-            return fake_aggregate()
+            return [fake_aggregate()]
 
         self.stubs.Set(db, "aggregate_get_by_host",
                       fake_aggregate_get_by_host)

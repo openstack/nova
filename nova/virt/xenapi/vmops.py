@@ -44,6 +44,7 @@ from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import firewall
+from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 
@@ -1450,7 +1451,10 @@ class VMOps(object):
                                                network_info=network_info)
 
     def _get_host_uuid_from_aggregate(self, context, hostname):
-        current_aggregate = db.aggregate_get_by_host(context, FLAGS.host)
+        current_aggregate = db.aggregate_get_by_host(context, FLAGS.host,
+               key=pool_states.POOL_FLAG)[0]
+        if not current_aggregate:
+            raise exception.AggregateHostNotFound(host=FLAGS.host)
         try:
             return current_aggregate.metadetails[hostname]
         except KeyError:

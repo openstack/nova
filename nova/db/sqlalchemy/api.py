@@ -19,6 +19,7 @@
 
 """Implementation of SQLAlchemy backend."""
 
+from collections import defaultdict
 import copy
 import datetime
 import functools
@@ -4926,16 +4927,30 @@ def aggregate_get(context, aggregate_id):
 
 
 @require_admin_context
-def aggregate_get_by_host(context, host):
-    aggregate_host = _aggregate_get_query(context,
-                                          models.AggregateHost,
-                                          models.AggregateHost.host,
-                                          host).first()
+def aggregate_get_by_host(context, host, key=None):
+    query = model_query(context, models.Aggregate).join(
+            "_hosts").filter(models.AggregateHost.host == host)
 
-    if not aggregate_host:
-        raise exception.AggregateHostNotFound(host=host)
+    if key:
+        query = query.join("_metadata").filter(
+        models.AggregateMetadata.key == key)
+    return query.all()
 
-    return aggregate_get(context, aggregate_host.aggregate_id)
+
+@require_admin_context
+def aggregate_metadata_get_by_host(context, host, key=None):
+    query = model_query(context, models.Aggregate).join(
+            "_hosts").filter(models.AggregateHost.host == host).join(
+            "_metadata")
+
+    if key:
+        query = query.filter(models.AggregateMetadata.key == key)
+    rows = query.all()
+    metadata = defaultdict(set)
+    for agg in rows:
+        for kv in agg._metadata:
+            metadata[kv['key']].add(kv['value'])
+    return metadata
 
 
 @require_admin_context
