@@ -75,6 +75,3 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         self.fanout_cast(ctxt, self.make_msg('update_service_capabilities',
                 service_name=service_name, host=host,
                 capabilities=capabilities))
-
-    def get_host_list(self, ctxt):
-        return self.call(ctxt, self.make_msg('get_host_list'))

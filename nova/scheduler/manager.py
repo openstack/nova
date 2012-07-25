@@ -67,14 +67,6 @@ class SchedulerManager(manager.Manager):
         # the rpc API as well, and the version should be updated accordingly.
         return functools.partial(self._schedule, key)
 
-    def get_host_list(self, context):
-        """Get a list of hosts from the HostManager."""
-        return self.driver.get_host_list()
-
-    def get_service_capabilities(self, context):
-        """Get the normalized set of capabilities for this zone."""
-        return self.driver.get_service_capabilities()
-
     def update_service_capabilities(self, context, service_name=None,
             host=None, capabilities=None, **kwargs):
         """Process a capability update from a service node."""
