@@ -127,18 +127,6 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                   topic=_compute_topic(self.topic, ctxt, None, instance),
                   version='1.11')
 
-    def check_shared_storage_test_file(self, ctxt, filename, host):
-        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
-
-    def cleanup_shared_storage_test_file(self, ctxt, filename, host):
-        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
-
-    def compare_cpu(self, ctxt, cpu_info, host):
-        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
-
-    def create_shared_storage_test_file(self, ctxt, host):
-        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
-
     def confirm_resize(self, ctxt, instance, migration_id, host,
             cast=True):
         rpc_method = self.cast if cast else self.call
