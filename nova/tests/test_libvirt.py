@@ -32,6 +32,7 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
+from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -508,7 +509,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.acpi, True)
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
         self.assertEquals(cfg.vcpus, 1)
-        self.assertEquals(cfg.os_type, "hvm")
+        self.assertEquals(cfg.os_type, vm_mode.HVM)
         self.assertEquals(cfg.os_boot_dev, "hd")
         self.assertEquals(cfg.os_root, None)
         self.assertEquals(len(cfg.devices), 7)
@@ -552,7 +553,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.acpi, True)
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
         self.assertEquals(cfg.vcpus, 1)
-        self.assertEquals(cfg.os_type, "hvm")
+        self.assertEquals(cfg.os_type, vm_mode.HVM)
         self.assertEquals(cfg.os_boot_dev, "hd")
         self.assertEquals(cfg.os_root, None)
         self.assertEquals(len(cfg.devices), 8)
@@ -1363,18 +1364,22 @@ class LibvirtConnTestCase(test.TestCase):
 
         type_uri_map = {'qemu': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'qemu'),
-                              (lambda t: t.find('./os/type').text, 'hvm'),
+                              (lambda t: t.find('./os/type').text,
+                               vm_mode.HVM),
                               (lambda t: t.find('./devices/emulator'), None)]),
                         'kvm': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'kvm'),
-                              (lambda t: t.find('./os/type').text, 'hvm'),
+                              (lambda t: t.find('./os/type').text,
+                               vm_mode.HVM),
                               (lambda t: t.find('./devices/emulator'), None)]),
                         'uml': ('uml:///system',
                              [(lambda t: t.find('.').get('type'), 'uml'),
-                              (lambda t: t.find('./os/type').text, 'uml')]),
+                              (lambda t: t.find('./os/type').text,
+                               vm_mode.UML)]),
                         'xen': ('xen:///',
                              [(lambda t: t.find('.').get('type'), 'xen'),
-                              (lambda t: t.find('./os/type').text, 'linux')]),
+                              (lambda t: t.find('./os/type').text,
+                               vm_mode.XEN)]),
                               }
 
         for hypervisor_type in ['qemu', 'kvm', 'xen']:
@@ -2149,12 +2154,12 @@ class LibvirtConnTestCase(test.TestCase):
             caps.host.cpu = cpu
 
             guest = config.LibvirtConfigGuest()
-            guest.ostype = "hvm"
+            guest.ostype = vm_mode.HVM
             guest.arch = "x86_64"
             caps.guests.append(guest)
 
             guest = config.LibvirtConfigGuest()
-            guest.ostype = "hvm"
+            guest.ostype = vm_mode.HVM
             guest.arch = "i686"
             caps.guests.append(guest)
 
