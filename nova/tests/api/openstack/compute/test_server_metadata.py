@@ -18,6 +18,7 @@
 import webob
 
 from nova.api.openstack.compute import server_metadata
+from nova.compute import rpcapi as compute_rpcapi
 import nova.db
 from nova import exception
 from nova import flags
@@ -85,6 +86,10 @@ def return_server_nonexistant(context, server_id):
     raise exception.InstanceNotFound()
 
 
+def fake_change_instance_metadata(self, context, instance, diff):
+    pass
+
+
 class ServerMetaDataTest(test.TestCase):
 
     def setUp(self):
@@ -96,6 +101,9 @@ class ServerMetaDataTest(test.TestCase):
 
         self.stubs.Set(nova.db, 'instance_metadata_get',
                        return_server_metadata)
+
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
+                       fake_change_instance_metadata)
 
         self.controller = server_metadata.Controller()
         self.uuid = str(utils.gen_uuid())

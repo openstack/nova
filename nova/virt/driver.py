@@ -528,6 +528,17 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def change_instance_metadata(self, context, instance, diff):
+        """
+        Applies a diff to the instance metadata.
+
+        This is an optional driver method which is used to publish
+        changes to the instance's metadata to the hypervisor.  If the
+        hypervisor has no means of publishing the instance metadata to
+        the instance, then this method should not be implemented.
+        """
+        pass
+
     def agent_update(self, instance, url, md5hash):
         """
         Update agent on the specified instance.

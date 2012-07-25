@@ -235,7 +235,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.2'
+    RPC_API_VERSION = '1.3'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1323,6 +1323,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                               vm_state=vm_states.ACTIVE,
                               task_state=None,
                               power_state=current_power_state)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    @checks_instance_lock
+    @wrap_instance_fault
+    def change_instance_metadata(self, context, instance_uuid, diff):
+        """Update the metadata published to the instance."""
+        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        LOG.debug(_("Changing instance metadata according to %(diff)r") %
+                  locals(), instance=instance_ref)
+        self.driver.change_instance_metadata(context, instance_ref, diff)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock

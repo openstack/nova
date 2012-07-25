@@ -214,6 +214,10 @@ class XenAPIDriver(driver.ComputeDriver):
         """
         self._vmops.inject_file(instance, b64_path, b64_contents)
 
+    def change_instance_metadata(self, context, instance, diff):
+        """Apply a diff to the instance metadata."""
+        self._vmops.change_instance_metadata(instance, diff)
+
     def destroy(self, instance, network_info, block_device_info=None):
         """Destroy VM instance"""
         self._vmops.destroy(instance, network_info, block_device_info)

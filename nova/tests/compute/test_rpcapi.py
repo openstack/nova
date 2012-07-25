@@ -322,3 +322,8 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_unrescue_instance(self):
         self._test_compute_api('unrescue_instance', 'cast',
                 instance=self.fake_instance)
+
+    def test_change_instance_metadata(self):
+        self._test_compute_api('change_instance_metadata', 'cast',
+                instance=self.fake_instance, diff={},
+                version='1.3')

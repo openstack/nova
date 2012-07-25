@@ -1595,6 +1595,9 @@ class API(base.Base):
     def delete_instance_metadata(self, context, instance, key):
         """Delete the given metadata item from an instance."""
         self.db.instance_metadata_delete(context, instance['uuid'], key)
+        self.compute_rpcapi.change_instance_metadata(context,
+                                                     instance=instance,
+                                                     diff={key: ['-']})
 
     @wrap_check_policy
     def update_instance_metadata(self, context, instance,
@@ -1605,15 +1608,20 @@ class API(base.Base):
         `metadata` argument will be deleted.
 
         """
+        orig = self.get_instance_metadata(context, instance)
         if delete:
             _metadata = metadata
         else:
-            _metadata = self.get_instance_metadata(context, instance)
+            _metadata = orig.copy()
             _metadata.update(metadata)
 
         self._check_metadata_properties_quota(context, _metadata)
         self.db.instance_metadata_update(context, instance['uuid'],
                                          _metadata, True)
+        diff = utils.diff_dict(orig, _metadata)
+        self.compute_rpcapi.change_instance_metadata(context,
+                                                     instance=instance,
+                                                     diff=diff)
         return _metadata
 
     def get_instance_faults(self, context, instances):

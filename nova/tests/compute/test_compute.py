@@ -3339,7 +3339,13 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(c, instance4['uuid'])
 
     def test_instance_metadata(self):
-        """Test searching instances by state"""
+        meta_changes = [None]
+
+        def fake_change_instance_metadata(inst, ctxt, instance, diff):
+            meta_changes[0] = diff
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
+                       fake_change_instance_metadata)
+
         _context = context.get_admin_context()
         instance = self._create_fake_instance({'metadata': {'key1': 'value1'}})
 
@@ -3350,16 +3356,23 @@ class ComputeAPITestCase(BaseTestCase):
                                                   {'key2': 'value2'})
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, {'key1': 'value1', 'key2': 'value2'})
+        self.assertEqual(meta_changes, [{'key2': ['+', 'value2']}])
 
         new_metadata = {'key2': 'bah', 'key3': 'value3'}
         self.compute_api.update_instance_metadata(_context, instance,
                                                   new_metadata, delete=True)
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, new_metadata)
+        self.assertEqual(meta_changes, [{
+                    'key1': ['-'],
+                    'key2': ['+', 'bah'],
+                    'key3': ['+', 'value3'],
+                    }])
 
         self.compute_api.delete_instance_metadata(_context, instance, 'key2')
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, {'key3': 'value3'})
+        self.assertEqual(meta_changes, [{'key2': ['-']}])
 
         db.instance_destroy(_context, instance['uuid'])
 
