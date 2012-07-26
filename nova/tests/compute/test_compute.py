@@ -682,10 +682,10 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.virt.fake.FakeDriver, 'inject_file',
                        fake_driver_inject_file)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
-        self.compute.inject_file(self.context, instance['uuid'], "/tmp/test",
-                "File Contents")
+        self.compute.inject_file(self.context, "/tmp/test",
+                "File Contents", instance=instance)
         self.assertTrue(called['inject'])
         self.compute.terminate_instance(self.context, instance['uuid'])
 
