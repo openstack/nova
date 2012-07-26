@@ -268,3 +268,83 @@ class NetworkCommandsTestCase(test.TestCase):
         self._test_modify_base(update_value={'project_id': None, 'host': None},
                                project=None, host=None, dis_project=True,
                                dis_host=True)
+
+
+class InstanceTypeCommandsTestCase(test.TestCase):
+    def setUp(self):
+        super(InstanceTypeCommandsTestCase, self).setUp()
+
+        values = dict(name="test.small",
+                      memory_mb=220,
+                      vcpus=1,
+                      root_gb=16,
+                      ephemeral_gb=32,
+                      flavorid=105)
+        ref = db.instance_type_create(context.get_admin_context(),
+                                      values)
+        self.instance_type_name = ref["name"]
+        self.instance_type_id = ref["id"]
+        self.set_key = nova_manage.InstanceTypeCommands().set_key
+        self.unset_key = nova_manage.InstanceTypeCommands().unset_key
+
+    def tearDown(self):
+        db.instance_type_destroy(context.get_admin_context(),
+                                 "test.small")
+        super(InstanceTypeCommandsTestCase, self).tearDown()
+
+    def _test_extra_specs_empty(self):
+        empty_specs = {}
+        actual_specs = db.instance_type_extra_specs_get(
+                              context.get_admin_context(),
+                              self.instance_type_id)
+        self.assertEquals(empty_specs, actual_specs)
+
+    def test_extra_specs_set_unset(self):
+        expected_specs = {'k1': 'v1'}
+
+        self._test_extra_specs_empty()
+
+        self.set_key(self.instance_type_name, "k1", "v1")
+        actual_specs = db.instance_type_extra_specs_get(
+                              context.get_admin_context(),
+                              self.instance_type_id)
+        self.assertEquals(expected_specs, actual_specs)
+
+        self.unset_key(self.instance_type_name, "k1")
+        self._test_extra_specs_empty()
+
+    def test_extra_specs_update(self):
+        expected_specs = {'k1': 'v1'}
+        updated_specs = {'k1': 'v2'}
+
+        self._test_extra_specs_empty()
+
+        self.set_key(self.instance_type_name, "k1", "v1")
+        actual_specs = db.instance_type_extra_specs_get(
+                              context.get_admin_context(),
+                              self.instance_type_id)
+        self.assertEquals(expected_specs, actual_specs)
+
+        self.set_key(self.instance_type_name, "k1", "v2")
+        actual_specs = db.instance_type_extra_specs_get(
+                              context.get_admin_context(),
+                              self.instance_type_id)
+        self.assertEquals(updated_specs, actual_specs)
+
+        self.unset_key(self.instance_type_name, "k1")
+
+    def test_extra_specs_multiple(self):
+        two_items_extra_specs = {'k1': 'v1',
+                                'k3': 'v3'}
+
+        self._test_extra_specs_empty()
+
+        self.set_key(self.instance_type_name, "k1", "v1")
+        self.set_key(self.instance_type_name, "k3", "v3")
+        actual_specs = db.instance_type_extra_specs_get(
+                              context.get_admin_context(),
+                              self.instance_type_id)
+        self.assertEquals(two_items_extra_specs, actual_specs)
+
+        self.unset_key(self.instance_type_name, "k1")
+        self.unset_key(self.instance_type_name, "k3")
