@@ -1796,7 +1796,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
         LOG.audit(_('Suspending'), context=context, instance=instance)
-        self.driver.suspend(instance)
+        with self.error_out_instance_on_exception(context, instance['uuid']):
+            self.driver.suspend(instance)
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,

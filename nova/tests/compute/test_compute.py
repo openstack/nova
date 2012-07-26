@@ -508,6 +508,23 @@ class ComputeTestCase(BaseTestCase):
         self.compute.resume_instance(self.context, instance_uuid)
         self.compute.terminate_instance(self.context, instance_uuid)
 
+    def test_suspend_error(self):
+        """Ensure vm_state is ERROR when suspend error occurs"""
+        def fake(*args, **kwargs):
+            raise test.TestingException()
+        self.stubs.Set(self.compute.driver, 'suspend', fake)
+
+        instance = self._create_fake_instance()
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance_uuid)
+        self.assertRaises(test.TestingException,
+                          self.compute.suspend_instance,
+                          self.context,
+                          instance=jsonutils.to_primitive(instance))
+        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        self.assertEqual(instance['vm_state'], vm_states.ERROR)
+        self.compute.terminate_instance(self.context, instance_uuid)
+
     def test_rebuild(self):
         """Ensure instance can be rebuilt"""
         instance = self._create_fake_instance()
