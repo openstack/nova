@@ -76,11 +76,17 @@ class NovaBase(object):
         return getattr(self, key, default)
 
     def __iter__(self):
-        self._i = iter(object_mapper(self).columns)
+        columns = dict(object_mapper(self).columns).keys()
+        # NOTE(russellb): Allow models to specify other keys that can be looked
+        # up, beyond the actual db columns.  An example would be the 'name'
+        # property for an Instance.
+        if hasattr(self, '_extra_keys'):
+            columns.extend(self._extra_keys())
+        self._i = iter(columns)
         return self
 
     def next(self):
-        n = self._i.next().name
+        n = self._i.next()
         return n, getattr(self, n)
 
     def update(self, values):
@@ -183,12 +189,15 @@ class Instance(BASE, NovaBase):
         except TypeError:
             # Support templates like "uuid-%(uuid)s", etc.
             info = {}
-            for key, value in self.iteritems():
+            # NOTE(russellb): Don't use self.iteritems() here, as it will
+            # result in infinite recursion on the name property.
+            for column in iter(object_mapper(self).columns):
+                key = column.name
                 # prevent recursion if someone specifies %(name)s
                 # %(name)s will not be valid.
                 if key == 'name':
                     continue
-                info[key] = value
+                info[key] = self[key]
             try:
                 base_name = FLAGS.instance_name_template % info
             except KeyError:
@@ -196,6 +205,9 @@ class Instance(BASE, NovaBase):
         if getattr(self, '_rescue', False):
             base_name += "-rescue"
         return base_name
+
+    def _extra_keys(self):
+        return ['name']
 
     user_id = Column(String(255))
     project_id = Column(String(255))

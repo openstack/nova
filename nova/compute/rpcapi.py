@@ -20,6 +20,7 @@ Client side of the compute RPC API.
 
 from nova import exception
 from nova import flags
+from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 import nova.openstack.common.rpc.proxy
@@ -58,6 +59,15 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.1 - Adds get_host_uptime()
         1.2 - Adds check_can_live_migrate_[destination|source]
         1.3 - Adds change_instance_metadata()
+        1.4 - Remove instance_uuid, add instance argument to reboot_instance()
+        1.5 - Remove instance_uuid, add instance argument to pause_instance(),
+              unpause_instance()
+        1.6 - Remove instance_uuid, add instance argument to suspend_instance()
+        1.7 - Remove instance_uuid, add instance argument to
+              get_console_output()
+        1.8 - Remove instance_uuid, add instance argument to
+              add_fixed_ip_to_instance()
+        1.9 - Remove instance_uuid, add instance argument to attach_volume()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -81,15 +91,19 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, host, None))
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('add_fixed_ip_to_instance',
-                instance_uuid=instance['uuid'], network_id=network_id),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, network_id=network_id),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.8')
 
     def attach_volume(self, ctxt, instance, volume_id, mountpoint):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('attach_volume',
-                instance_uuid=instance['uuid'], volume_id=volume_id,
+                instance=instance_p, volume_id=volume_id,
                 mountpoint=mountpoint),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.9')
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
             block_migration, disk_over_commit):
@@ -144,9 +158,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, host, None))
 
     def get_console_output(self, ctxt, instance, tail_length):
+        instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('get_console_output',
-                instance_uuid=instance['uuid'], tail_length=tail_length),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, tail_length=tail_length),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.7')
 
     def get_console_pool_info(self, ctxt, console_type, host):
         return self.call(ctxt, self.make_msg('get_console_pool_info',
@@ -201,11 +217,6 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance_uuid=instance['uuid']),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def lock_instance(self, ctxt, instance):
-        self.cast(ctxt, self.make_msg('lock_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
-
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
         return self.call(ctxt,
@@ -214,9 +225,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 _compute_topic(self.topic, ctxt, host, None))
 
     def pause_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('pause_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.5')
 
     def power_off_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('power_off_instance',
@@ -235,9 +248,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 disk=disk), _compute_topic(self.topic, ctxt, host, None))
 
     def reboot_instance(self, ctxt, instance, reboot_type):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('reboot_instance',
-                instance_uuid=instance['uuid'], reboot_type=reboot_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, reboot_type=reboot_type),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.4')
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref):
@@ -352,24 +367,23 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
     def suspend_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('suspend_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.6')
 
     def terminate_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('terminate_instance',
                 instance_uuid=instance['uuid']),
                 topic=_compute_topic(self.topic, ctxt, None, instance))
 
-    def unlock_instance(self, ctxt, instance):
-        self.cast(ctxt, self.make_msg('unlock_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
-
     def unpause_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('unpause_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.5')
 
     def unrescue_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('unrescue_instance',

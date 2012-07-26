@@ -40,6 +40,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import test_notifier
 from nova.openstack.common import policy as common_policy
@@ -212,6 +213,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_get_nw_info)
         self.stubs.Set(nova.network.API, 'allocate_for_instance',
                        fake_get_nw_info)
+        self.compute_api = compute.API()
 
     def tearDown(self):
         super(ComputeTestCase, self).tearDown()
@@ -490,8 +492,10 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.pause_instance(self.context, instance_uuid)
-        self.compute.unpause_instance(self.context, instance_uuid)
+        self.compute.pause_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
+        self.compute.unpause_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_suspend(self):
@@ -499,7 +503,8 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance()
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.suspend_instance(self.context, instance_uuid)
+        self.compute.suspend_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         self.compute.resume_instance(self.context, instance_uuid)
         self.compute.terminate_instance(self.context, instance_uuid)
 
@@ -539,8 +544,9 @@ class ComputeTestCase(BaseTestCase):
                            {'task_state': task_states.REBOOTING})
 
         reboot_type = "SOFT"
-        self.compute.reboot_instance(self.context, instance['uuid'],
-                                     reboot_type)
+        self.compute.reboot_instance(self.context,
+                                     instance=jsonutils.to_primitive(instance),
+                                     reboot_type=reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
@@ -556,8 +562,9 @@ class ComputeTestCase(BaseTestCase):
                            {'task_state': task_states.REBOOTING_HARD})
 
         reboot_type = "HARD"
-        self.compute.reboot_instance(self.context, instance['uuid'],
-                                     reboot_type)
+        self.compute.reboot_instance(self.context,
+                                     instance=jsonutils.to_primitive(instance),
+                                     reboot_type=reboot_type)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
@@ -762,7 +769,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
 
         output = self.compute.get_console_output(self.context,
-                                                  instance['uuid'])
+                instance=jsonutils.to_primitive(instance))
         self.assertEqual(output, 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
         self.compute.terminate_instance(self.context, instance['uuid'])
 
@@ -772,8 +779,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
 
         output = self.compute.get_console_output(self.context,
-                                                instance['uuid'],
-                                                tail_length=2)
+                instance=jsonutils.to_primitive(instance), tail_length=2)
         self.assertEqual(output, 'ANOTHER\nLAST LINE')
         self.compute.terminate_instance(self.context, instance['uuid'])
 
@@ -844,11 +850,12 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        'reset_network', dummy)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
-        self.compute.add_fixed_ip_to_instance(self.context, instance_uuid, 1)
+        self.compute.add_fixed_ip_to_instance(self.context, network_id=1,
+                instance=instance)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context, instance_uuid)
@@ -1018,7 +1025,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_get_lock(self):
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.assertFalse(self.compute._get_lock(self.context,
                                                 instance['uuid']))
         db.instance_update(self.context, instance['uuid'], {'locked': True})
@@ -1035,15 +1042,15 @@ class ComputeTestCase(BaseTestCase):
                                                    is_admin=False)
 
         # decorator should return False (fail) with locked nonadmin context
-        self.compute.lock_instance(self.context, instance_uuid)
+        self.compute_api.lock(self.context, instance)
         ret_val = self.compute.reboot_instance(non_admin_context,
-                                               instance_uuid)
+                instance=jsonutils.to_primitive(instance))
         self.assertEqual(ret_val, False)
 
         # decorator should return None (success) with unlocked nonadmin context
-        self.compute.unlock_instance(self.context, instance_uuid)
+        self.compute_api.unlock(self.context, instance)
         ret_val = self.compute.reboot_instance(non_admin_context,
-                                               instance_uuid)
+                instance=jsonutils.to_primitive(instance))
         self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_uuid)
@@ -2540,7 +2547,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.assertEqual(instance['task_state'], None)
 
-        self.compute.pause_instance(self.context, instance_uuid)
+        self.compute.pause_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         # set the state that the instance gets when pause finishes
         instance = db.instance_update(self.context, instance['uuid'],
                                       {'vm_state': vm_states.PAUSED})
@@ -3670,9 +3678,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
 
         rpc_msg = {'method': 'get_console_output',
-                   'args': {'instance_uuid': fake_instance['uuid'],
+                   'args': {'instance': fake_instance,
                             'tail_length': fake_tail_length},
-                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
+                   'version': '1.7'}
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
                 rpc_msg, None).AndReturn(fake_console_output)
 

@@ -297,7 +297,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.3'
+    RPC_API_VERSION = '1.9'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1090,18 +1090,19 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def reboot_instance(self, context, instance_uuid, reboot_type="SOFT"):
+    def reboot_instance(self, context, instance=None, instance_uuid=None,
+                        reboot_type="SOFT"):
         """Reboot an instance on this host."""
         LOG.audit(_("Rebooting instance"), context=context,
                   instance_uuid=instance_uuid)
         context = context.elevated()
-        instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
 
         current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context,
-                              instance_uuid,
+        self._instance_update(context, instance['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE)
 
@@ -1125,8 +1126,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # Fall through and reset task_state to None
 
         current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context,
-                              instance_uuid,
+        self._instance_update(context, instance['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
@@ -1666,26 +1666,28 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def add_fixed_ip_to_instance(self, context, instance_uuid, network_id):
+    def add_fixed_ip_to_instance(self, context, network_id, instance=None,
+                                 instance_uuid=None):
         """Calls network_api to add new fixed_ip to instance
         then injects the new network info and resets instance networking.
 
         """
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         self._notify_about_instance_usage(
-                context, instance_ref, "create_ip.start")
+                context, instance, "create_ip.start")
 
-        instance_id = instance_ref['id']
+        instance_id = instance['id']
         self.network_api.add_fixed_ip_to_instance(context,
-                                                  instance_ref,
+                                                  instance,
                                                   network_id)
 
         network_info = self.inject_network_info(context,
-                                                instance_ref['uuid'])
-        self.reset_network(context, instance_ref['uuid'])
+                                                instance['uuid'])
+        self.reset_network(context, instance['uuid'])
 
         self._notify_about_instance_usage(
-            context, instance_ref, "create_ip.end", network_info=network_info)
+            context, instance, "create_ip.end", network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1713,17 +1715,18 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def pause_instance(self, context, instance_uuid):
+    def pause_instance(self, context, instance=None, instance_uuid=None):
         """Pause an instance on this host."""
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        LOG.audit(_('Pausing'), context=context, instance=instance_ref)
-        self.driver.pause(instance_ref)
+        LOG.audit(_('Pausing'), context=context, instance=instance)
+        self.driver.pause(instance)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_ref['uuid'],
+                              instance['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.PAUSED,
                               task_state=None)
@@ -1731,17 +1734,18 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def unpause_instance(self, context, instance_uuid):
+    def unpause_instance(self, context, instance=None, instance_uuid=None):
         """Unpause a paused instance on this host."""
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        LOG.audit(_('Unpausing'), context=context, instance=instance_ref)
-        self.driver.unpause(instance_ref)
+        LOG.audit(_('Unpausing'), context=context, instance=instance)
+        self.driver.unpause(instance)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_ref['uuid'],
+                              instance['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
@@ -1781,22 +1785,23 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def suspend_instance(self, context, instance_uuid):
+    def suspend_instance(self, context, instance=None, instance_uuid=None):
         """Suspend the given instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        LOG.audit(_('Suspending'), context=context, instance=instance_ref)
-        self.driver.suspend(instance_ref)
+        LOG.audit(_('Suspending'), context=context, instance=instance)
+        self.driver.suspend(instance)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_ref['uuid'],
+                              instance['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.SUSPENDED,
                               task_state=None)
 
-        self._notify_about_instance_usage(context, instance_ref, 'suspend')
+        self._notify_about_instance_usage(context, instance, 'suspend')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1821,7 +1826,12 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def lock_instance(self, context, instance_uuid):
-        """Lock the given instance."""
+        """Lock the given instance.
+
+        This isn't actually used in the current code.  The same thing is now
+        done directly in nova.compute.api.  This must stay here for backwards
+        compatibility of the rpc API.
+        """
         context = context.elevated()
 
         LOG.debug(_('Locking'), context=context, instance_uuid=instance_uuid)
@@ -1830,7 +1840,12 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
     def unlock_instance(self, context, instance_uuid):
-        """Unlock the given instance."""
+        """Unlock the given instance.
+
+        This isn't actually used in the current code.  The same thing is now
+        done directly in nova.compute.api.  This must stay here for backwards
+        compatibility of the rpc API.
+        """
         context = context.elevated()
 
         LOG.debug(_('Unlocking'), context=context, instance_uuid=instance_uuid)
@@ -1872,14 +1887,16 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def get_console_output(self, context, instance_uuid, tail_length=None):
+    def get_console_output(self, context, instance=None, instance_uuid=None,
+                           tail_length=None):
         """Send the console output for the given instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
         LOG.audit(_("Get console output"), context=context,
-                  instance=instance_ref)
-        output = self.driver.get_console_output(instance_ref)
+                  instance=instance)
+        output = self.driver.get_console_output(instance)
 
         if tail_length is not None:
             output = self._tail_log(output, tail_length)
@@ -1944,15 +1961,17 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def attach_volume(self, context, instance_uuid, volume_id, mountpoint):
+    def attach_volume(self, context, volume_id, mountpoint, instance_uuid=None,
+                      instance=None):
         """Attach a volume to an instance."""
         volume = self.volume_api.get(context, volume_id)
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         LOG.audit(_('Attaching volume %(volume_id)s to %(mountpoint)s'),
-                  locals(), context=context, instance=instance_ref)
+                  locals(), context=context, instance=instance)
         try:
-            connector = self.driver.get_volume_connector(instance_ref)
+            connector = self.driver.get_volume_connector(instance)
             connection_info = self.volume_api.initialize_connection(context,
                                                                     volume,
                                                                     connector)
@@ -1961,28 +1980,28 @@ class ComputeManager(manager.SchedulerDependentManager):
                 msg = _("Failed to connect to volume %(volume_id)s "
                         "while attaching at %(mountpoint)s")
                 LOG.exception(msg % locals(), context=context,
-                              instance=instance_ref)
+                              instance=instance)
                 self.volume_api.unreserve_volume(context, volume)
         try:
             self.driver.attach_volume(connection_info,
-                                      instance_ref['name'],
+                                      instance['name'],
                                       mountpoint)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
                 msg = _("Failed to attach volume %(volume_id)s "
                         "at %(mountpoint)s")
                 LOG.exception(msg % locals(), context=context,
-                              instance=instance_ref)
+                              instance=instance)
                 self.volume_api.terminate_connection(context,
                                                      volume,
                                                      connector)
 
         self.volume_api.attach(context,
                                volume,
-                               instance_ref['uuid'],
+                               instance['uuid'],
                                mountpoint)
         values = {
-            'instance_uuid': instance_ref['uuid'],
+            'instance_uuid': instance['uuid'],
             'connection_info': jsonutils.dumps(connection_info),
             'device_name': mountpoint,
             'delete_on_termination': False,
