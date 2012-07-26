@@ -44,8 +44,7 @@ def cinderclient(context):
     sc = service_catalog.ServiceCatalog(compat_catalog)
     url = sc.url_for(service_type='volume', service_name='cinder')
 
-    LOG.debug('cinderclient connection created using token "%s" and url "%s"' %
-              (context.auth_token, url))
+    LOG.debug(_('Cinderclient connection created using URL: %s') % url)
 
     c = cinder_client.Client(context.user_id,
                              context.auth_token,
