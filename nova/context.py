@@ -45,7 +45,7 @@ class RequestContext(object):
                  roles=None, remote_address=None, timestamp=None,
                  request_id=None, auth_token=None, overwrite=True,
                  quota_class=None, user_name=None, project_name=None,
-                 service_catalog=None, **kwargs):
+                 service_catalog=None, instance_lock_checked=False, **kwargs):
         """
         :param read_deleted: 'no' indicates deleted records are hidden, 'yes'
             indicates deleted records are visible, 'only' indicates that
@@ -81,6 +81,7 @@ class RequestContext(object):
         self.request_id = request_id
         self.auth_token = auth_token
         self.service_catalog = service_catalog
+        self.instance_lock_checked = instance_lock_checked
 
         # NOTE(markmc): this attribute is currently only used by the
         # rs_limits turnstile pre-processor.
@@ -123,7 +124,8 @@ class RequestContext(object):
                 'quota_class': self.quota_class,
                 'user_name': self.user_name,
                 'service_catalog': self.service_catalog,
-                'project_name': self.project_name}
+                'project_name': self.project_name,
+                'instance_lock_checked': self.instance_lock_checked}
 
     @classmethod
     def from_dict(cls, values):

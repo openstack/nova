@@ -94,6 +94,21 @@ def check_instance_state(vm_state=None, task_state=(None,)):
     return outer
 
 
+def check_instance_lock(function):
+    @functools.wraps(function)
+    def inner(self, context, instance, *args, **kwargs):
+        if instance['locked'] and not context.is_admin:
+            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+        # NOTE(danms): at this point, we have verified that either
+        # theinstance is not locked, or the user is suffiently endowed
+        # that it doesn't matter. While the following statement may be
+        # interpreted as the "the instance is not locked", it actually
+        # refers to the whole condition.
+        context.instance_lock_checked = True
+        return function(self, context, instance, *args, **kwargs)
+    return inner
+
+
 def policy_decorator(scope):
     """Check corresponding policy prior of wrapped method to execution"""
     def outer(func):
@@ -838,6 +853,7 @@ class API(base.Base):
         return dict(instance_ref.iteritems())
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=None, task_state=None)
     def soft_delete(self, context, instance):
         """Terminate an instance."""
@@ -915,6 +931,7 @@ class API(base.Base):
 
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=None, task_state=None)
     def delete(self, context, instance):
         """Terminate an instance."""
@@ -926,6 +943,7 @@ class API(base.Base):
         self._delete(context, instance)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SOFT_DELETED])
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
@@ -943,12 +961,14 @@ class API(base.Base):
                         deleted_at=None)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SOFT_DELETED])
     def force_delete(self, context, instance):
         """Force delete a previously deleted (but not reclaimed) instance."""
         self._delete(context, instance)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED,
                                     vm_states.ERROR, vm_states.STOPPED],
                           task_state=[None])
@@ -965,6 +985,7 @@ class API(base.Base):
         self.compute_rpcapi.stop_instance(context, instance, cast=do_cast)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.STOPPED])
     def start(self, context, instance):
         """Start an instance."""
@@ -1223,6 +1244,7 @@ class API(base.Base):
         return min_ram, min_disk
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.RESCUED],
                           task_state=[None])
@@ -1244,6 +1266,7 @@ class API(base.Base):
         return image_service.show(context, image_id)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
                           task_state=[None])
     def rebuild(self, context, instance, image_href, admin_password, **kwargs):
@@ -1309,6 +1332,7 @@ class API(base.Base):
                 image_ref=image_href, orig_image_ref=orig_image_ref)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.RESIZED])
     def revert_resize(self, context, instance):
         """Reverts a resize, deleting the 'new' instance in the process."""
@@ -1331,6 +1355,7 @@ class API(base.Base):
                                  {'status': 'reverted'})
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.RESIZED])
     def confirm_resize(self, context, instance):
         """Confirms a migration/resize and deletes the 'old' instance."""
@@ -1354,6 +1379,7 @@ class API(base.Base):
                 {'status': 'confirmed'})
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
                           task_state=[None])
     def resize(self, context, instance, flavor_id=None, **kwargs):
@@ -1427,18 +1453,21 @@ class API(base.Base):
         self.scheduler_rpcapi.prep_resize(context, **args)
 
     @wrap_check_policy
+    @check_instance_lock
     def add_fixed_ip(self, context, instance, network_id):
         """Add fixed_ip from specified network to given instance."""
         self.compute_rpcapi.add_fixed_ip_to_instance(context,
                 instance=instance, network_id=network_id)
 
     @wrap_check_policy
+    @check_instance_lock
     def remove_fixed_ip(self, context, instance, address):
         """Remove fixed_ip from specified network to given instance."""
         self.compute_rpcapi.remove_fixed_ip_from_instance(context,
                 instance=instance, address=address)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED])
     def pause(self, context, instance):
         """Pause the given instance."""
@@ -1449,6 +1478,7 @@ class API(base.Base):
         self.compute_rpcapi.pause_instance(context, instance=instance)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.PAUSED])
     def unpause(self, context, instance):
         """Unpause the given instance."""
@@ -1464,6 +1494,7 @@ class API(base.Base):
         return self.compute_rpcapi.get_diagnostics(context, instance=instance)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED])
     def suspend(self, context, instance):
         """Suspend the given instance."""
@@ -1474,6 +1505,7 @@ class API(base.Base):
         self.compute_rpcapi.suspend_instance(context, instance=instance)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SUSPENDED])
     def resume(self, context, instance):
         """Resume the given instance."""
@@ -1484,6 +1516,7 @@ class API(base.Base):
         self.compute_rpcapi.resume_instance(context, instance=instance)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
@@ -1496,6 +1529,7 @@ class API(base.Base):
                 rescue_password=rescue_password)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.RESCUED])
     def unrescue(self, context, instance):
         """Unrescue the given instance."""
@@ -1506,6 +1540,7 @@ class API(base.Base):
         self.compute_rpcapi.unrescue_instance(context, instance=instance)
 
     @wrap_check_policy
+    @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def set_admin_password(self, context, instance, password=None):
         """Set the root/admin password for the given instance."""
@@ -1518,6 +1553,7 @@ class API(base.Base):
                                                new_pass=password)
 
     @wrap_check_policy
+    @check_instance_lock
     def inject_file(self, context, instance, path, file_contents):
         """Write a file to the given instance."""
         self.compute_rpcapi.inject_file(context, instance=instance, path=path,
@@ -1563,16 +1599,19 @@ class API(base.Base):
         return self.get(context, instance['uuid'])['locked']
 
     @wrap_check_policy
+    @check_instance_lock
     def reset_network(self, context, instance):
         """Reset networking on the instance."""
         self.compute_rpcapi.reset_network(context, instance=instance)
 
     @wrap_check_policy
+    @check_instance_lock
     def inject_network_info(self, context, instance):
         """Inject network info for the instance."""
         self.compute_rpcapi.inject_network_info(context, instance=instance)
 
     @wrap_check_policy
+    @check_instance_lock
     def attach_volume(self, context, instance, volume_id, device):
         """Attach an existing volume to an existing instance."""
         if not re.match("^/dev/x{0,1}[a-z]d[a-z]+$", device):
@@ -1582,6 +1621,17 @@ class API(base.Base):
         self.volume_api.reserve_volume(context, volume)
         self.compute_rpcapi.attach_volume(context, instance=instance,
                 volume_id=volume_id, mountpoint=device)
+
+    @check_instance_lock
+    def _detach_volume(self, context, instance, volume_id):
+        check_policy(context, 'detach_volume', instance)
+
+        volume = self.volume_api.get(context, volume_id)
+        self.volume_api.check_detach(context, volume)
+
+        self.compute_rpcapi.detach_volume(context, instance=instance,
+                volume_id=volume_id)
+        return instance
 
     # FIXME(comstud): I wonder if API should pull in the instance from
     # the volume ID via volume API and pass it and the volume object here
@@ -1593,15 +1643,7 @@ class API(base.Base):
                                                 instance_uuid)
         if not instance:
             raise exception.VolumeUnattached(volume_id=volume_id)
-
-        check_policy(context, 'detach_volume', instance)
-
-        volume = self.volume_api.get(context, volume_id)
-        self.volume_api.check_detach(context, volume)
-
-        self.compute_rpcapi.detach_volume(context, instance=instance,
-                volume_id=volume_id)
-        return instance
+        self._detach_volume(context, instance, volume_id)
 
     @wrap_check_policy
     def get_instance_metadata(self, context, instance):
@@ -1610,6 +1652,7 @@ class API(base.Base):
         return dict(rv.iteritems())
 
     @wrap_check_policy
+    @check_instance_lock
     def delete_instance_metadata(self, context, instance, key):
         """Delete the given metadata item from an instance."""
         self.db.instance_metadata_delete(context, instance['uuid'], key)
@@ -1618,6 +1661,7 @@ class API(base.Base):
                                                      diff={key: ['-']})
 
     @wrap_check_policy
+    @check_instance_lock
     def update_instance_metadata(self, context, instance,
                                  metadata, delete=False):
         """Updates or creates instance metadata.
