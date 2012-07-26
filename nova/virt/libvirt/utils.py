@@ -152,10 +152,9 @@ def get_disk_size(path):
     :returns: Size (in bytes) of the given disk image as it would be seen
               by a virtual machine.
     """
-    out, err = execute('qemu-img', 'info', path)
-    size = [i.split('(')[1].split()[0] for i in out.split('\n')
-        if i.strip().find('virtual size') >= 0]
-    return int(size[0])
+    size = images.qemu_img_info(path)['virtual size']
+    size = size.split('(')[1].split()[0]
+    return int(size)
 
 
 def get_disk_backing_file(path):
@@ -164,17 +163,11 @@ def get_disk_backing_file(path):
     :param path: Path to the disk image
     :returns: a path to the image's backing store
     """
-    out, err = execute('qemu-img', 'info', path)
-    backing_file = None
+    backing_file = images.qemu_img_info(path).get('backing file')
 
-    for line in out.split('\n'):
-        if line.startswith('backing file: '):
-            if 'actual path: ' in line:
-                backing_file = line.split('actual path: ')[1][:-1]
-            else:
-                backing_file = line.split('backing file: ')[1]
-            break
     if backing_file:
+        if 'actual path: ' in backing_file:
+            backing_file = backing_file.split('actual path: ')[1][:-1]
         backing_file = os.path.basename(backing_file)
 
     return backing_file
