@@ -1041,17 +1041,24 @@ class ComputeTestCase(BaseTestCase):
                                                    None,
                                                    is_admin=False)
 
-        # decorator should return False (fail) with locked nonadmin context
-        self.compute_api.lock(self.context, instance)
-        ret_val = self.compute.reboot_instance(non_admin_context,
-                instance=jsonutils.to_primitive(instance))
-        self.assertEqual(ret_val, False)
+        def check_task_state(task_state):
+            instance = db.instance_get_by_uuid(self.context, instance_uuid)
+            self.assertEqual(instance['task_state'], task_state)
 
-        # decorator should return None (success) with unlocked nonadmin context
-        self.compute_api.unlock(self.context, instance)
-        ret_val = self.compute.reboot_instance(non_admin_context,
+        db.instance_update(self.context, instance_uuid,
+                           {'task_state': task_states.REBOOTING})
+
+        # should fail with locked nonadmin context, task_state won't be cleared
+        self.compute_api.lock(self.context, instance)
+        self.compute.reboot_instance(non_admin_context,
                 instance=jsonutils.to_primitive(instance))
-        self.assertEqual(ret_val, None)
+        check_task_state(task_states.REBOOTING)
+
+        # should succeed with unlocked nonadmin context, task_state cleared
+        self.compute_api.unlock(self.context, instance)
+        self.compute.reboot_instance(non_admin_context,
+                instance=jsonutils.to_primitive(instance))
+        check_task_state(None)
 
         self.compute.terminate_instance(self.context, instance_uuid)
 
