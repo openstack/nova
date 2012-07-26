@@ -386,7 +386,13 @@ def once_git_check_commit_title():
     N801
     """
     #Get title of most recent commit
-    title = subprocess.check_output('git log --pretty=%s -1', shell=True)
+
+    subp = subprocess.Popen(['git', 'log', '--pretty=%s', '-1'],
+            stdout=subprocess.PIPE)
+    title = subp.communicate()[0]
+    if subp.returncode:
+        raise Exception("git log failed with code %s" % subp.returncode)
+
     #From https://github.com/openstack/openstack-ci-puppet
     #       /blob/master/modules/gerrit/manifests/init.pp#L74
     #Changeid|bug|blueprint
