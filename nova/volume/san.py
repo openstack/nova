@@ -620,7 +620,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
                 'data': {
                     'target_discovered': True,
                     'target_iqn': 'iqn.2010-10.org.openstack:volume-00000001',
-                    'target_portal': '127.0.0.0.1:3260',
+                    'target_portal': '127.0.0.1:3260',
                     'volume_id': 1,
                 }
             }
