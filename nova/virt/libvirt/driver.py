@@ -631,15 +631,18 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 virt_dom.attachDevice(conf.to_xml())
             except Exception, ex:
-                self.volume_driver_method('disconnect_volume',
-                                           connection_info,
-                                           mount_device)
-
                 if isinstance(ex, libvirt.libvirtError):
                     errcode = ex.get_error_code()
                     if errcode == libvirt.VIR_ERR_OPERATION_FAILED:
+                        self.volume_driver_method('disconnect_volume',
+                                                  connection_info,
+                                                  mount_device)
                         raise exception.DeviceIsBusy(device=mount_device)
-                raise
+
+                with excutils.save_and_reraise_exception():
+                    self.volume_driver_method('disconnect_volume',
+                                               connection_info,
+                                               mount_device)
 
         # TODO(danms) once libvirt has support for LXC hotplug,
         # replace this re-define with use of the
