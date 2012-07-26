@@ -55,8 +55,9 @@ class ComputeRpcAPITestCase(test.TestCase):
             'detach_volume', 'finish_resize', 'finish_revert_resize',
             'get_console_output', 'get_diagnostics', 'get_vnc_console',
             'inject_file', 'inject_network_info', 'pause_instance',
-            'post_live_migration_at_destination', 'reboot_instance',
-            'suspend_instance', 'unpause_instance'
+            'post_live_migration_at_destination', 'power_off_instance',
+            'reboot_instance', 'stop_instance', 'suspend_instance',
+            'unpause_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -214,7 +215,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_power_off_instance(self):
         self._test_compute_api('power_off_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.21')
 
     def test_power_on_instance(self):
         self._test_compute_api('power_on_instance', 'cast',
@@ -308,11 +309,11 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_stop_instance_cast(self):
         self._test_compute_api('stop_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.21')
 
     def test_stop_instance_call(self):
         self._test_compute_api('stop_instance', 'call',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.21')
 
     def test_suspend_instance(self):
         self._test_compute_api('suspend_instance', 'cast',

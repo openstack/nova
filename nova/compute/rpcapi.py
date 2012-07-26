@@ -84,6 +84,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                inject_network_info()
         1.20 - Remove instance_id, add instance argument to
                post_live_migration_at_destination()
+        1.21 - Remove instance_uuid, add instance argument to
+               power_off_instance() and stop_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -251,9 +253,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.20')
 
     def power_off_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('power_off_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.21')
 
     def power_on_instance(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('power_on_instance',
@@ -381,9 +385,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def stop_instance(self, ctxt, instance, cast=True):
         rpc_method = self.cast if cast else self.call
+        instance_p = jsonutils.to_primitive(instance)
         return rpc_method(ctxt, self.make_msg('stop_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.21')
 
     def suspend_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
