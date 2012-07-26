@@ -50,14 +50,16 @@ FLAGS.register_opts(__imagebackend_opts)
 class Image(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, source_type, driver_format):
+    def __init__(self, source_type, driver_format, is_block_dev=False):
         """Image initialization.
 
         :source_type: block or file
         :driver_format: raw or qcow2
+        :is_block_dev:
         """
         self.source_type = source_type
         self.driver_format = driver_format
+        self.is_block_dev = is_block_dev
 
     @abc.abstractmethod
     def create_image(self, prepare_template, base, size, *args, **kwargs):
@@ -87,6 +89,8 @@ class Image(object):
         info.target_dev = disk_dev
         info.driver_cache = cache_mode
         info.driver_format = self.driver_format
+        driver_name = libvirt_utils.pick_disk_driver_name(self.is_block_dev)
+        info.driver_name = driver_name
         info.source_path = self.path
         return info
 
@@ -119,7 +123,7 @@ class Image(object):
 
 class Raw(Image):
     def __init__(self, instance, name):
-        super(Raw, self).__init__("file", "raw")
+        super(Raw, self).__init__("file", "raw", is_block_dev=False)
 
         self.path = os.path.join(FLAGS.instances_path,
                                  instance, name)
@@ -143,7 +147,7 @@ class Raw(Image):
 
 class Qcow2(Image):
     def __init__(self, instance, name):
-        super(Qcow2, self).__init__("file", "qcow2")
+        super(Qcow2, self).__init__("file", "qcow2", is_block_dev=False)
 
         self.path = os.path.join(FLAGS.instances_path,
                                  instance, name)
@@ -172,7 +176,7 @@ class Lvm(Image):
         return fname.replace('_', '__')
 
     def __init__(self, instance, name):
-        super(Lvm, self).__init__("block", "raw")
+        super(Lvm, self).__init__("block", "raw", is_block_dev=True)
 
         if not FLAGS.libvirt_images_volume_group:
             raise RuntimeError(_('You should specify'

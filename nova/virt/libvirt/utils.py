@@ -145,6 +145,31 @@ def remove_logical_volumes(*paths):
         execute(*lvremove, attempts=3, run_as_root=True)
 
 
+def pick_disk_driver_name(is_block_dev=False):
+    """Pick the libvirt primary backend driver name
+
+    If the hypervisor supports multiple backend drivers, then the name
+    attribute selects the primary backend driver name, while the optional
+    type attribute provides the sub-type.  For example, xen supports a name
+    of "tap", "tap2", "phy", or "file", with a type of "aio" or "qcow2",
+    while qemu only supports a name of "qemu", but multiple types including
+    "raw", "bochs", "qcow2", and "qed".
+
+    :param is_block_dev:
+    :returns: driver_name or None
+    """
+    if FLAGS.libvirt_type == "xen":
+        if is_block_dev:
+            return "phy"
+        else:
+            return "tap"
+    elif FLAGS.libvirt_type in ('kvm', 'qemu'):
+        return "qemu"
+    else:
+        # UML doesn't want a driver_name set
+        return None
+
+
 def get_disk_size(path):
     """Get the (virtual) size of a disk image
 

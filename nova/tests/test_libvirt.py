@@ -3184,6 +3184,19 @@ class LibvirtUtilsTestCase(test.TestCase):
         self.mox.ReplayAll()
         libvirt_utils.create_cow_image('/some/path', '/the/new/cow')
 
+    def test_pick_disk_driver_name(self):
+        type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
+                    'qemu': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
+                    'xen': ([True, 'phy'], [False, 'tap'], [None, 'tap']),
+                    'uml': ([True, None], [False, None], [None, None]),
+                    'lxc': ([True, None], [False, None], [None, None])}
+
+        for (libvirt_type, checks) in type_map.iteritems():
+            self.flags(libvirt_type=libvirt_type)
+            for (is_block_dev, expected_result) in checks:
+                result = libvirt_utils.pick_disk_driver_name(is_block_dev)
+                self.assertEquals(result, expected_result)
+
     def test_get_disk_size(self):
         self.mox.StubOutWithMock(utils, 'execute')
         utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
