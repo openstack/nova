@@ -20,7 +20,6 @@ import ast
 import contextlib
 import cPickle as pickle
 import functools
-import mox
 import os
 import re
 
@@ -31,7 +30,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova.image import glance
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -2053,8 +2051,6 @@ class VmUtilsTestCase(test.TestCase):
     def test_upload_image(self):
         """Ensure image properties include instance system metadata
            as well as few local settings."""
-        def fake_pick_glance_api_server():
-            return ("host", 80)
 
         def fake_instance_system_metadata_get(context, uuid):
             return dict(image_a=1, image_b=2, image_c='c', d='d')
@@ -2076,8 +2072,6 @@ class VmUtilsTestCase(test.TestCase):
         def fake_dumps(thing):
             return thing
 
-        self.stubs.Set(glance, "pick_glance_api_server",
-                                                   fake_pick_glance_api_server)
         self.stubs.Set(db, "instance_system_metadata_get",
                                              fake_instance_system_metadata_get)
         self.stubs.Set(vm_utils, "get_sr_path", fake_get_sr_path)

@@ -200,7 +200,8 @@ class VirtualInterfaceMacAddressException(NovaException):
 
 
 class GlanceConnectionFailed(NovaException):
-    message = _("Connection to glance failed") + ": %(reason)s"
+    message = _("Connection to glance host %(host)s:%(port)s failed: "
+        "%(reason)s")
 
 
 class MelangeConnectionFailed(NovaException):
