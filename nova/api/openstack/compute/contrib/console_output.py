@@ -49,8 +49,8 @@ class ConsoleOutputController(wsgi.Controller):
         try:
             length = body['os-getConsoleOutput'].get('length')
         except (TypeError, KeyError):
-            raise webob.exc.HTTPBadRequest(_('os-getConsoleOutput malformed or '
-                                             'missing from request body'))
+            raise webob.exc.HTTPBadRequest(_('os-getConsoleOutput malformed '
+                                             'or missing from request body'))
 
         if length is not None:
             try:
@@ -71,6 +71,7 @@ class ConsoleOutputController(wsgi.Controller):
         output = remove_re.sub('', output)
 
         return {'output': output}
+
 
 class Console_output(extensions.ExtensionDescriptor):
     """Console log output support, with tailing ability."""
