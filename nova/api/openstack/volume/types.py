@@ -20,6 +20,7 @@
 from webob import exc
 
 from nova.api.openstack import wsgi
+from nova.api.openstack.volume.views import types as views_types
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova.volume import volume_types
@@ -48,14 +49,17 @@ class VolumeTypesTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class VolumeTypesController(object):
+class VolumeTypesController(wsgi.Controller):
     """ The volume types API controller for the OpenStack API """
+
+    _view_builder_class = views_types.ViewBuilder
 
     @wsgi.serializers(xml=VolumeTypesTemplate)
     def index(self, req):
         """ Returns the list of volume types """
         context = req.environ['nova.context']
-        return {'volume_types': volume_types.get_all_types(context).values()}
+        vol_types = volume_types.get_all_types(context).values()
+        return self._view_builder.index(req, vol_types)
 
     @wsgi.serializers(xml=VolumeTypeTemplate)
     def show(self, req, id):
@@ -69,7 +73,7 @@ class VolumeTypesController(object):
 
         # TODO(bcwaldon): remove str cast once we use uuids
         vol_type['id'] = str(vol_type['id'])
-        return {'volume_type': vol_type}
+        return self._view_builder.show(req, vol_type)
 
 
 def create_resource():
