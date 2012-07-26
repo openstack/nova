@@ -100,6 +100,3 @@ class SchedulerRpcAPITestCase(test.TestCase):
         self._test_scheduler_api('update_service_capabilities',
                 rpc_method='fanout_cast', service_name='fake_name',
                 host='fake_host', capabilities='fake_capabilities')
-
-    def test_get_host_list(self):
-        self._test_scheduler_api('get_host_list', rpc_method='call')
