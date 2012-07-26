@@ -75,6 +75,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.12 - Remove instance_uuid, add instance argument to confirm_resize()
         1.13 - Remove instance_uuid, add instance argument to detach_volume()
         1.14 - Remove instance_uuid, add instance argument to finish_resize()
+        1.15 - Remove instance_uuid, add instance argument to
+               finish_revert_resize()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -156,9 +158,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.14')
 
     def finish_revert_resize(self, ctxt, instance, migration_id, host):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('finish_revert_resize',
-                instance_uuid=instance['uuid'], migration_id=migration_id),
-                topic=_compute_topic(self.topic, ctxt, host, None))
+                instance=instance_p, migration_id=migration_id),
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='1.15')
 
     def get_console_output(self, ctxt, instance, tail_length):
         instance_p = jsonutils.to_primitive(instance)

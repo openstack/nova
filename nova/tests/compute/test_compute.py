@@ -1376,8 +1376,9 @@ class ComputeTestCase(BaseTestCase):
         # Finally, revert and confirm the old flavor has been applied
         self.compute.revert_resize(context, inst_ref['uuid'],
                 migration_ref['id'])
-        self.compute.finish_revert_resize(context, inst_ref['uuid'],
-                migration_ref['id'])
+        self.compute.finish_revert_resize(context,
+                migration_id=migration_ref['id'],
+                instance=jsonutils.to_primitive(inst_ref))
 
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
