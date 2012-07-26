@@ -79,8 +79,13 @@ def noop_cost_fn(host_state, weighing_properties):
 
 
 def compute_fill_first_cost_fn(host_state, weighing_properties):
-    """More free ram = higher weight. So servers will less free
-    ram will be preferred."""
+    """More free ram = higher weight. So servers with less free
+    ram will be preferred.
+
+    Note: the weight for this function in default configuration
+    is -1.0. With a -1.0 this function runs in reverse, so systems
+    with the most free memory will be preferred.
+    """
     return host_state.free_ram_mb
 
 
