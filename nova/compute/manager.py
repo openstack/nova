@@ -298,7 +298,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.13'
+    RPC_API_VERSION = '1.14'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1592,7 +1592,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance_ref, "resize.end",
                                           network_info=network_info)
 
-    def _finish_resize(self, context, instance_ref, migration_ref, disk_info,
+    def _finish_resize(self, context, instance, migration_ref, disk_info,
                        image):
         resize_instance = False
         old_instance_type_id = migration_ref['old_instance_type_id']
@@ -1600,9 +1600,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         if old_instance_type_id != new_instance_type_id:
             instance_type = instance_types.get_instance_type(
                     new_instance_type_id)
-            instance_ref = self._instance_update(
+            instance = self._instance_update(
                     context,
-                    instance_ref.uuid,
+                    instance['uuid'],
                     instance_type_id=instance_type['id'],
                     memory_mb=instance_type['memory_mb'],
                     vcpus=instance_type['vcpus'],
@@ -1611,42 +1611,42 @@ class ComputeManager(manager.SchedulerDependentManager):
             resize_instance = True
 
         # NOTE(tr3buchet): setup networks on destination host
-        self.network_api.setup_networks_on_host(context, instance_ref,
+        self.network_api.setup_networks_on_host(context, instance,
                                                 migration_ref['dest_compute'])
 
-        network_info = self._get_instance_nw_info(context, instance_ref)
+        network_info = self._get_instance_nw_info(context, instance)
 
-        self._instance_update(context, instance_ref.uuid,
+        self._instance_update(context, instance['uuid'],
                               task_state=task_states.RESIZE_FINISH)
 
         self._notify_about_instance_usage(
-            context, instance_ref, "finish_resize.start",
+            context, instance, "finish_resize.start",
             network_info=network_info)
 
-        self.driver.finish_migration(context, migration_ref, instance_ref,
+        self.driver.finish_migration(context, migration_ref, instance,
                                      disk_info,
                                      self._legacy_nw_info(network_info),
                                      image, resize_instance)
 
-        instance_ref = self._instance_update(context,
-                                          instance_ref.uuid,
-                                          vm_state=vm_states.RESIZED,
-                                          host=migration_ref['dest_compute'],
-                                          launched_at=timeutils.utcnow(),
-                                          task_state=None)
+        instance = self._instance_update(context,
+                                         instance['uuid'],
+                                         vm_state=vm_states.RESIZED,
+                                         host=migration_ref['dest_compute'],
+                                         launched_at=timeutils.utcnow(),
+                                         task_state=None)
 
         self.db.migration_update(context, migration_ref.id,
                                  {'status': 'finished'})
 
         self._notify_about_instance_usage(
-            context, instance_ref, "finish_resize.end",
+            context, instance, "finish_resize.end",
             network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def finish_resize(self, context, instance_uuid, migration_id, disk_info,
-                      image):
+    def finish_resize(self, context, migration_id, disk_info, image,
+                      instance_uuid=None, instance=None):
         """Completes the migration process.
 
         Sets up the newly transferred disk and turns on the instance at its
@@ -1654,17 +1654,18 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get_by_uuid(context,
-                migration_ref.instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context,
+                    migration_ref.instance_uuid)
 
         try:
-            self._finish_resize(context, instance_ref, migration_ref,
+            self._finish_resize(context, instance, migration_ref,
                                 disk_info, image)
         except Exception, error:
             with excutils.save_and_reraise_exception():
                 LOG.error(_('%s. Setting instance vm_state to ERROR') % error,
-                          instance=instance_ref)
-                self._set_instance_error_state(context, instance_ref.uuid)
+                          instance=instance)
+                self._set_instance_error_state(context, instance['uuid'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
