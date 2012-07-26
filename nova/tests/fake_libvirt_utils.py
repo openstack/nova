@@ -35,10 +35,6 @@ def create_cow_image(backing_file, path):
     pass
 
 
-def get_disk_size(path):
-    return disk_sizes.get(path, 1024 * 1024 * 20)
-
-
 def get_disk_backing_file(path):
     return disk_backing_files.get(path, None)
 

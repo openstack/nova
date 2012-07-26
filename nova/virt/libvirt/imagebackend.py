@@ -191,7 +191,7 @@ class Lvm(Image):
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @utils.synchronized(base)
         def create_lvm_image(base, size):
-            base_size = libvirt_utils.get_disk_size(base)
+            base_size = disk.get_disk_size(base)
             resize = size > base_size
             size = size if resize else base_size
             libvirt_utils.create_lvm_image(self.vg, self.lv,
