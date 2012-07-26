@@ -156,6 +156,28 @@ def _assert_vhd_not_hidden(path):
                     locals())
 
 
+def _validate_footer_timestamp(vdi_path):
+    """
+    This check ensures that the timestamps listed in the VHD footer aren't in
+    the future.  This can occur during a migration if the clocks on the the two
+    Dom0's are out-of-sync. This would corrupt the SR if it were imported, so
+    generate an exception to bail.
+    """
+    check_cmd = "vhd-util check -n %(vdi_path)s -p" % locals()
+    check_proc = make_subprocess(check_cmd, stdout=True, stderr=True)
+    out, err = finish_subprocess(
+            check_proc, check_cmd, ok_exit_codes=[0, 22])
+    first_line = out.splitlines()[0].strip()
+
+    if 'primary footer invalid' in first_line:
+        raise Exception("VDI '%(vdi_path)s' has timestamp in the future,"
+                        " ensure source and destination host machines have"
+                        " time set correctly" % locals())
+    elif check_proc.returncode != 0:
+        raise Exception("Unexpected output '%(out)s' from vhd-util" %
+                        locals())
+
+
 def _validate_vdi_chain(vdi_path):
     """
     This check ensures that the parent pointers on the VHDs are valid
@@ -169,6 +191,7 @@ def _validate_vdi_chain(vdi_path):
         out, err = finish_subprocess(
                 query_proc, query_cmd, ok_exit_codes=[0, 22])
         first_line = out.splitlines()[0].strip()
+
         if first_line.endswith(".vhd"):
             return first_line
         elif 'has no parent' in first_line:
@@ -182,6 +205,7 @@ def _validate_vdi_chain(vdi_path):
 
     cur_path = vdi_path
     while cur_path:
+        _validate_footer_timestamp(cur_path)
         cur_path = get_parent_path(cur_path)
 
 
