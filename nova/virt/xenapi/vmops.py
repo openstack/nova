@@ -1089,8 +1089,12 @@ class VMOps(object):
 
     def power_off(self, instance):
         """Power off the specified instance."""
-        vm_ref = self._get_vm_opaque_ref(instance)
-        vm_utils.shutdown_vm(self._session, instance, vm_ref, hard=True)
+        try:
+            vm_ref = self._get_vm_opaque_ref(instance)
+            vm_utils.shutdown_vm(self._session, instance, vm_ref, hard=True)
+        except exception.NotFound:
+            LOG.warning(_("VM is not present, skipping power off..."),
+                        instance=instance)
 
     def power_on(self, instance):
         """Power on the specified instance."""
