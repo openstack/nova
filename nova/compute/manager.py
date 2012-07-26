@@ -298,7 +298,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.16'
+    RPC_API_VERSION = '1.17'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1926,12 +1926,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def get_vnc_console(self, context, instance_uuid, console_type):
+    def get_vnc_console(self, context, console_type, instance_uuid=None,
+                        instance=None):
         """Return connection information for a vnc console."""
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        LOG.debug(_("Getting vnc console"), instance=instance_ref)
+        LOG.debug(_("Getting vnc console"), instance=instance)
         token = str(utils.gen_uuid())
 
         if console_type == 'novnc':
@@ -1945,7 +1947,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # Retrieve connect info from driver, and then decorate with our
         # access info token
-        connect_info = self.driver.get_vnc_console(instance_ref)
+        connect_info = self.driver.get_vnc_console(instance)
         connect_info['token'] = token
         connect_info['access_url'] = access_url
 
