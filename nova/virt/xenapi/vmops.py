@@ -799,17 +799,18 @@ class VMOps(object):
 
     def check_resize_func_name(self):
         """Check the function name used to resize an instance based
-        on product_brand  and product_version."""
-        if ((self._session.product_brand == 'XCP' and
-             (self._session.product_version[0] == 1 and
-              self._session.product_version[1] > 1)) or
-            (self._session.product_brand == 'XCP' and
-             self._session.product_version[0] > 1) or
-            (self._session.product_brand is 'XenServer' and
-             self._session.product_version[0] > 5)):
+        on product_brand and product_version."""
+        if (self._session.product_brand == 'XCP' and
+            ((self._session.product_version[0] == 1 and
+              self._session.product_version[1] > 1) or
+             self._session.product_version[0] > 1)):
             return 'VDI.resize'
-        else:
-            return 'VDI.resize_online'
+
+        if (self._session.product_brand == 'XenServer' and
+             self._session.product_version[0] > 5):
+            return 'VDI.resize'
+
+        return 'VDI.resize_online'
 
     def reboot(self, instance, reboot_type):
         """Reboot VM instance."""
