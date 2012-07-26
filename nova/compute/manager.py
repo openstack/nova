@@ -2079,6 +2079,9 @@ class ComputeManager(manager.SchedulerDependentManager):
     def get_instance_disk_info(self, context, instance_name):
         """Getting infomation of instance's current disk.
 
+        DEPRECATED: This method is no longer used by any current code, but it
+        is left here to provide backwards compatibility in the rpcapi.
+
         Implementation nova.virt.libvirt.connection.
 
         :param context: security context
