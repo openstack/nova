@@ -36,6 +36,7 @@ terminating it.
 
 import contextlib
 import functools
+import inspect
 import os
 import socket
 import sys
@@ -165,14 +166,17 @@ def publisher_id(host=None):
 
 def checks_instance_lock(function):
     """Decorator to prevent action against locked instances for non-admins."""
-    @functools.wraps(function)
-    def decorated_function(self, context, instance_uuid, *args, **kwargs):
-        LOG.info(_("check_instance_lock: decorating: |%s|"), function,
-                 context=context, instance_uuid=instance_uuid)
-        LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|")
-                 % locals(), context=context, instance_uuid=instance_uuid)
+
+    # NOTE(russellb): There are two versions of the checks_instance_lock
+    # decorator.  This function is the core code for it.  This just serves
+    # as a transition from when every function expected a context
+    # and instance_uuid as positional arguments to where everything is a kwarg,
+    # and the function may get either an instance_uuid or an instance.
+    def _checks_instance_lock_core(self, cb, context, instance_uuid,
+                                   *args, **kwargs):
         locked = self._get_lock(context, instance_uuid)
         admin = context.is_admin
+
         LOG.info(_("check_instance_lock: locked: |%s|"), locked,
                  context=context, instance_uuid=instance_uuid)
         LOG.info(_("check_instance_lock: admin: |%s|"), admin,
@@ -180,15 +184,39 @@ def checks_instance_lock(function):
 
         # if admin or unlocked call function otherwise log error
         if admin or not locked:
-            LOG.info(_("check_instance_lock: executing: |%s|"), function,
-                     context=context, instance_uuid=instance_uuid)
-            function(self, context, instance_uuid, *args, **kwargs)
+            cb(self, context, *args, **kwargs)
         else:
-            LOG.error(_("check_instance_lock: not executing |%s|"),
-                      function, context=context, instance_uuid=instance_uuid)
             return False
 
-    return decorated_function
+    @functools.wraps(function)
+    def decorated_function(self, context, instance_uuid, *args, **kwargs):
+
+        def _cb(self, context, *args, **kwargs):
+            function(self, context, instance_uuid, *args, **kwargs)
+
+        return _checks_instance_lock_core(self, _cb, context, instance_uuid,
+                                          *args, **kwargs)
+
+    @functools.wraps(function)
+    def decorated_function_new(self, context, *args, **kwargs):
+        try:
+            instance_uuid = kwargs['instance_uuid']
+        except KeyError:
+            instance_uuid = kwargs['instance']['uuid']
+
+        def _cb(self, context, *args, **kwargs):
+            function(self, context, *args, **kwargs)
+
+        return _checks_instance_lock_core(self, _cb, context, instance_uuid,
+                                          *args, **kwargs)
+
+    expected_args = ['context', 'instance_uuid']
+    argspec = inspect.getargspec(function)
+
+    if expected_args == argspec.args[1:len(expected_args) + 1]:
+        return decorated_function
+    else:
+        return decorated_function_new
 
 
 def wrap_instance_fault(function):
@@ -197,10 +225,16 @@ def wrap_instance_fault(function):
     This decorator wraps a method to catch any exceptions having to do with
     an instance that may get thrown. It then logs an instance fault in the db.
     """
-    @functools.wraps(function)
-    def decorated_function(self, context, instance_uuid, *args, **kwargs):
+
+    # NOTE(russellb): There are two versions of the wrap_instance_fault
+    # decorator.  This function is the core code for it.  This just serves
+    # as a transition from when every function expected a context
+    # and instance_uuid as positional arguments to where everything is a kwarg,
+    # and the function may get either an instance_uuid or an instance.
+    def _wrap_instance_fault_core(self, cb, context, instance_uuid,
+                                  *args, **kwargs):
         try:
-            return function(self, context, instance_uuid, *args, **kwargs)
+            return cb(self, context, *args, **kwargs)
         except exception.InstanceNotFound:
             raise
         except Exception, e:
@@ -208,7 +242,35 @@ def wrap_instance_fault(function):
                 self.add_instance_fault_from_exc(context, instance_uuid, e,
                                                  sys.exc_info())
 
-    return decorated_function
+    @functools.wraps(function)
+    def decorated_function(self, context, instance_uuid, *args, **kwargs):
+
+        def _cb(self, context, *args, **_kwargs):
+            return function(self, context, instance_uuid, *args, **kwargs)
+
+        return _wrap_instance_fault_core(self, _cb, context, instance_uuid,
+                                         *args, **kwargs)
+
+    @functools.wraps(function)
+    def decorated_function_new(self, context, *args, **kwargs):
+        if 'instance_uuid' in kwargs:
+            instance_uuid = kwargs['instance_uuid']
+        else:
+            instance_uuid = kwargs['instance']['uuid']
+
+        def _cb(self, context, *args, **kwargs):
+            return function(self, context, *args, **kwargs)
+
+        return _wrap_instance_fault_core(self, _cb, context, instance_uuid,
+                                         *args, **kwargs)
+
+    expected_args = ['context', 'instance_uuid']
+    argspec = inspect.getargspec(function)
+
+    if expected_args == argspec.args[1:len(expected_args) + 1]:
+        return decorated_function
+    else:
+        return decorated_function_new
 
 
 def _get_image_meta(context, image_ref):
