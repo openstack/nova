@@ -295,7 +295,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.22'
+    RPC_API_VERSION = '1.23'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2159,7 +2159,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.check_can_live_migrate_source(ctxt, instance,
                                                   dest_check_data)
 
-    def pre_live_migration(self, context, instance_id,
+    def pre_live_migration(self, context, instance=None, instance_id=None,
                            block_migration=False, disk=None):
         """Preparations for live migration at dest host.
 
@@ -2168,16 +2168,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param block_migration: if true, prepare for block migration
 
         """
-        # Getting instance info
-        instance_ref = self.db.instance_get(context, instance_id)
+        if not instance:
+            # Getting instance info
+            instance = self.db.instance_get(context, instance_id)
 
         # If any volume is mounted, prepare here.
         block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance_ref['uuid'])
+                            context, instance['uuid'])
         if not block_device_info['block_device_mapping']:
-            LOG.info(_('Instance has no volume.'), instance=instance_ref)
+            LOG.info(_('Instance has no volume.'), instance=instance)
 
-        network_info = self._get_instance_nw_info(context, instance_ref)
+        network_info = self._get_instance_nw_info(context, instance)
 
         # TODO(tr3buchet): figure out how on the earth this is necessary
         fixed_ips = network_info.fixed_ips()
@@ -2185,12 +2186,12 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.FixedIpNotFoundForInstance(
                                        instance_id=instance_id)
 
-        self.driver.pre_live_migration(context, instance_ref,
+        self.driver.pre_live_migration(context, instance,
                                        block_device_info,
                                        self._legacy_nw_info(network_info))
 
         # NOTE(tr3buchet): setup networks on destination host
-        self.network_api.setup_networks_on_host(context, instance_ref,
+        self.network_api.setup_networks_on_host(context, instance,
                                                          self.host)
 
         # Creating filters to hypervisors and firewalls.
@@ -2199,14 +2200,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         # This nwfilter is necessary on the destination host.
         # In addition, this method is creating filtering rule
         # onto destination host.
-        self.driver.ensure_filtering_rules_for_instance(instance_ref,
+        self.driver.ensure_filtering_rules_for_instance(instance,
                                             self._legacy_nw_info(network_info))
 
         # Preparation for block migration
         if block_migration:
-            self.driver.pre_block_migration(context,
-                                            instance_ref,
-                                            disk)
+            self.driver.pre_block_migration(context, instance, disk)
 
     def live_migration(self, context, instance_id,
                        dest, block_migration=False):
