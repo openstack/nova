@@ -50,7 +50,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
         methods_with_instance = [
             'add_fixed_ip_to_instance', 'attach_volume',
-            'check_can_live_migrate_destination', 'get_console_output',
+            'check_can_live_migrate_destination',
+            'check_can_live_migrate_source', 'get_console_output',
             'pause_instance', 'reboot_instance', 'suspend_instance',
             'unpause_instance'
         ]
@@ -139,7 +140,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_check_can_live_migrate_source(self):
         self._test_compute_api('check_can_live_migrate_source', 'call',
-                version='1.2', instance=self.fake_instance,
+                version='1.11', instance=self.fake_instance,
                 dest_check_data={"test": "data"})
 
     def test_confirm_resize_cast(self):

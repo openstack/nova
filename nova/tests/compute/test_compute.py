@@ -1404,7 +1404,8 @@ class ComputeTestCase(BaseTestCase):
     def test_check_can_live_migrate_source_works_correctly(self):
         """Confirm check_can_live_migrate_source works on positive path"""
         context = self.context.elevated()
-        inst_ref = self._create_fake_instance({'host': 'fake_host_2'})
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance(
+                                          {'host': 'fake_host_2'}))
         inst_id = inst_ref["id"]
         dest = "fake_host_1"
 
@@ -1413,14 +1414,13 @@ class ComputeTestCase(BaseTestCase):
                                  'check_can_live_migrate_source')
 
         dest_check_data = {"test": "data"}
-        db.instance_get(context, inst_id).AndReturn(inst_ref)
         self.compute.driver.check_can_live_migrate_source(context,
                                                           inst_ref,
                                                           dest_check_data)
 
         self.mox.ReplayAll()
-        self.compute.check_can_live_migrate_source(context, inst_id,
-                                                   dest_check_data)
+        self.compute.check_can_live_migrate_source(context,
+                dest_check_data=dest_check_data, instance=inst_ref)
 
     def test_check_can_live_migrate_destination_works_correctly(self):
         """Confirm check_can_live_migrate_destination works on positive path"""

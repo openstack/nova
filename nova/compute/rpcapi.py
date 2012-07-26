@@ -70,6 +70,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.9 - Remove instance_uuid, add instance argument to attach_volume()
         1.10 - Remove instance_id, add instance argument to
                check_can_live_migrate_destination()
+        1.11 - Remove instance_id, add instance argument to
+               check_can_live_migrate_source()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -118,23 +120,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                   version='1.10')
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
+        instance_p = jsonutils.to_primitive(instance)
         self.call(ctxt, self.make_msg('check_can_live_migrate_source',
-                           instance_id=instance['id'],
+                           instance=instance_p,
                            dest_check_data=dest_check_data),
                   topic=_compute_topic(self.topic, ctxt, None, instance),
-                  version='1.2')
-
-    def check_shared_storage_test_file(self, ctxt, filename, host):
-        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
-
-    def cleanup_shared_storage_test_file(self, ctxt, filename, host):
-        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
-
-    def compare_cpu(self, ctxt, cpu_info, host):
-        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
-
-    def create_shared_storage_test_file(self, ctxt, host):
-        raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
+                  version='1.11')
 
     def confirm_resize(self, ctxt, instance, migration_id, host,
             cast=True):
