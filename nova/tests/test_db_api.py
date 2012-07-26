@@ -334,14 +334,14 @@ class DbApiTestCase(test.TestCase):
         values = {'address': 'baz',
                   'network_id': 1,
                   'allocated': True,
-                  'instance_id': instance['id'],
+                  'instance_uuid': instance['uuid'],
                   'virtual_interface_id': vif['id']}
         fixed_address = db.fixed_ip_create(ctxt, values)
         data = db.network_get_associated_fixed_ips(ctxt, 1)
         self.assertEqual(len(data), 1)
         record = data[0]
         self.assertEqual(record['address'], fixed_address)
-        self.assertEqual(record['instance_id'], instance['id'])
+        self.assertEqual(record['instance_uuid'], instance['uuid'])
         self.assertEqual(record['network_id'], 1)
         self.assertEqual(record['instance_created'], instance['created_at'])
         self.assertEqual(record['instance_updated'], instance['updated_at'])
@@ -360,25 +360,25 @@ class DbApiTestCase(test.TestCase):
         new = time = timeout + datetime.timedelta(seconds=5)
         # should deallocate
         values = {'allocated': False,
-                  'instance_id': instance['id'],
+                  'instance_uuid': instance['uuid'],
                   'network_id': net['id'],
                   'updated_at': old}
         db.fixed_ip_create(ctxt, values)
         # still allocated
         values = {'allocated': True,
-                  'instance_id': instance['id'],
+                  'instance_uuid': instance['uuid'],
                   'network_id': net['id'],
                   'updated_at': old}
         db.fixed_ip_create(ctxt, values)
         # wrong network
         values = {'allocated': False,
-                  'instance_id': instance['id'],
+                  'instance_uuid': instance['uuid'],
                   'network_id': None,
                   'updated_at': old}
         db.fixed_ip_create(ctxt, values)
         # too new
         values = {'allocated': False,
-                  'instance_id': instance['id'],
+                  'instance_uuid': instance['uuid'],
                   'network_id': None,
                   'updated_at': new}
         db.fixed_ip_create(ctxt, values)
@@ -830,27 +830,27 @@ class TestIpAllocation(test.TestCase):
     def test_fixed_ip_associate_fails_if_ip_not_in_network(self):
         self.assertRaises(exception.FixedIpNotFoundForNetwork,
                           db.fixed_ip_associate,
-                          self.ctxt, None, None)
+                          self.ctxt, None, self.instance.uuid)
 
     def test_fixed_ip_associate_fails_if_ip_in_use(self):
-        address = self.create_fixed_ip(instance_id=self.instance.id)
+        address = self.create_fixed_ip(instance_uuid=self.instance.uuid)
         self.assertRaises(exception.FixedIpAlreadyInUse,
                           db.fixed_ip_associate,
-                          self.ctxt, address, self.instance.id)
+                          self.ctxt, address, self.instance.uuid)
 
     def test_fixed_ip_associate_succeeds(self):
         address = self.create_fixed_ip(network_id=self.network.id)
-        db.fixed_ip_associate(self.ctxt, address, self.instance.id,
+        db.fixed_ip_associate(self.ctxt, address, self.instance.uuid,
                               network_id=self.network.id)
         fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
-        self.assertEqual(fixed_ip.instance_id, self.instance.id)
+        self.assertEqual(fixed_ip.instance_uuid, self.instance.uuid)
 
     def test_fixed_ip_associate_succeeds_and_sets_network(self):
         address = self.create_fixed_ip()
-        db.fixed_ip_associate(self.ctxt, address, self.instance.id,
+        db.fixed_ip_associate(self.ctxt, address, self.instance.uuid,
                               network_id=self.network.id)
         fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
-        self.assertEqual(fixed_ip.instance_id, self.instance.id)
+        self.assertEqual(fixed_ip.instance_uuid, self.instance.uuid)
         self.assertEqual(fixed_ip.network_id, self.network.id)
 
 

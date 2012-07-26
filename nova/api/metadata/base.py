@@ -214,7 +214,7 @@ def get_metadata_by_address(address):
     ctxt = context.get_admin_context()
     fixed_ip = network.API().get_fixed_ip_by_address(ctxt, address)
 
-    instance = db.instance_get(ctxt, fixed_ip['instance_id'])
+    instance = db.instance_get_by_uuid(ctxt, fixed_ip['instance_uuid'])
     return InstanceMetadata(instance, address)
 
 

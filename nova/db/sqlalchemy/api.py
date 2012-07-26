@@ -993,12 +993,15 @@ def dnsdomain_list(context):
 
 
 @require_admin_context
-def fixed_ip_associate(context, address, instance_id, network_id=None,
+def fixed_ip_associate(context, address, instance_uuid, network_id=None,
                        reserved=False):
     """Keyword arguments:
     reserved -- should be a boolean value(True or False), exact value will be
     used to filter on the fixed ip address
     """
+    if not utils.is_uuid_like(instance_uuid):
+        raise exception.InvalidUUID(uuid=instance_uuid)
+
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
@@ -1015,18 +1018,22 @@ def fixed_ip_associate(context, address, instance_id, network_id=None,
         if fixed_ip_ref is None:
             raise exception.FixedIpNotFoundForNetwork(address=address,
                                             network_id=network_id)
-        if fixed_ip_ref.instance_id:
+        if fixed_ip_ref.instance_uuid:
             raise exception.FixedIpAlreadyInUse(address=address)
 
         if not fixed_ip_ref.network_id:
             fixed_ip_ref.network_id = network_id
-        fixed_ip_ref.instance_id = instance_id
+        fixed_ip_ref.instance_uuid = instance_uuid
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
 
 @require_admin_context
-def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
+def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
+                            host=None):
+    if not utils.is_uuid_like(instance_uuid):
+        raise exception.InvalidUUID(uuid=instance_uuid)
+
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
@@ -1035,7 +1042,7 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
                                    read_deleted="no").\
                                filter(network_or_none).\
                                filter_by(reserved=False).\
-                               filter_by(instance_id=None).\
+                               filter_by(instance_uuid=None).\
                                filter_by(host=None).\
                                with_lockmode('update').\
                                first()
@@ -1047,8 +1054,8 @@ def fixed_ip_associate_pool(context, network_id, instance_id=None, host=None):
         if fixed_ip_ref['network_id'] is None:
             fixed_ip_ref['network'] = network_id
 
-        if instance_id:
-            fixed_ip_ref['instance_id'] = instance_id
+        if instance_uuid:
+            fixed_ip_ref['instance_uuid'] = instance_uuid
 
         if host:
             fixed_ip_ref['host'] = host
@@ -1081,7 +1088,7 @@ def fixed_ip_disassociate(context, address):
         fixed_ip_ref = fixed_ip_get_by_address(context,
                                                address,
                                                session=session)
-        fixed_ip_ref['instance_id'] = None
+        fixed_ip_ref['instance_uuid'] = None
         fixed_ip_ref.save(session=session)
 
 
@@ -1102,7 +1109,8 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
                      join((models.Network,
                            models.Network.id == models.FixedIp.network_id)).\
                      join((models.Instance,
-                           models.Instance.id == models.FixedIp.instance_id)).\
+                           models.Instance.uuid == \
+                               models.FixedIp.instance_uuid)).\
                      filter(host_filter).\
                      all()
     fixed_ip_ids = [fip[0] for fip in result]
@@ -1110,7 +1118,7 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
         return 0
     result = model_query(context, models.FixedIp, session=session).\
                      filter(models.FixedIp.id.in_(fixed_ip_ids)).\
-                     update({'instance_id': None,
+                     update({'instance_uuid': None,
                              'leased': False,
                              'updated_at': timeutils.utcnow()},
                              synchronize_session='fetch')
@@ -1127,8 +1135,9 @@ def fixed_ip_get(context, id, session=None):
 
     # FIXME(sirp): shouldn't we just use project_only here to restrict the
     # results?
-    if is_user_context(context) and result['instance_id'] is not None:
-        instance = instance_get(context, result['instance_id'], session)
+    if is_user_context(context) and result['instance_uuid'] is not None:
+        instance = instance_get_by_uuid(context, result['instance_uuid'],
+                                        session)
         authorize_project_context(context, instance.project_id)
 
     return result
@@ -1155,21 +1164,25 @@ def fixed_ip_get_by_address(context, address, session=None):
 
     # NOTE(sirp): shouldn't we just use project_only here to restrict the
     # results?
-    if is_user_context(context) and result['instance_id'] is not None:
-        instance = instance_get(context, result['instance_id'], session)
+    if is_user_context(context) and result['instance_uuid'] is not None:
+        instance = instance_get_by_uuid(context, result['instance_uuid'],
+                                        session)
         authorize_project_context(context, instance.project_id)
 
     return result
 
 
 @require_context
-def fixed_ip_get_by_instance(context, instance_id):
+def fixed_ip_get_by_instance(context, instance_uuid):
+    if not utils.is_uuid_like(instance_uuid):
+        raise exception.InvalidUUID(uuid=instance_uuid)
+
     result = model_query(context, models.FixedIp, read_deleted="no").\
-                 filter_by(instance_id=instance_id).\
+                 filter_by(instance_uuid=instance_uuid).\
                  all()
 
     if not result:
-        raise exception.FixedIpNotFoundForInstance(instance_id=instance_id)
+        raise exception.FixedIpNotFoundForInstance(instance_uuid=instance_uuid)
 
     return result
 
@@ -1671,9 +1684,12 @@ def instance_get_all_by_reservation(context, reservation_id):
 #                go away
 @require_context
 def instance_get_floating_address(context, instance_id):
-    fixed_ips = fixed_ip_get_by_instance(context, instance_id)
+    instance = instance_get(context, instance_id)
+    fixed_ips = fixed_ip_get_by_instance(context, instance['uuid'])
+
     if not fixed_ips:
         return None
+
     # NOTE(tr3buchet): this only gets the first fixed_ip
     # won't find floating ips associated with other fixed_ips
     floating_ips = floating_ip_get_by_fixed_address(context,
@@ -2136,11 +2152,11 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
     vif_and = and_(models.VirtualInterface.id ==
                    models.FixedIp.virtual_interface_id,
                    models.VirtualInterface.deleted == False)
-    inst_and = and_(models.Instance.id == models.FixedIp.instance_id,
+    inst_and = and_(models.Instance.uuid == models.FixedIp.instance_uuid,
                     models.Instance.deleted == False)
     session = get_session()
     query = session.query(models.FixedIp.address,
-                          models.FixedIp.instance_id,
+                          models.FixedIp.instance_uuid,
                           models.FixedIp.network_id,
                           models.FixedIp.virtual_interface_id,
                           models.VirtualInterface.address,
@@ -2152,7 +2168,7 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
                           filter(models.FixedIp.allocated == True).\
                           join((models.VirtualInterface, vif_and)).\
                           join((models.Instance, inst_and)).\
-                          filter(models.FixedIp.instance_id != None).\
+                          filter(models.FixedIp.instance_uuid != None).\
                           filter(models.FixedIp.virtual_interface_id != None)
     if host:
         query = query.filter(models.Instance.host == host)
@@ -2161,7 +2177,7 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
     for datum in result:
         cleaned = {}
         cleaned['address'] = datum[0]
-        cleaned['instance_id'] = datum[1]
+        cleaned['instance_uuid'] = datum[1]
         cleaned['network_id'] = datum[2]
         cleaned['vif_id'] = datum[3]
         cleaned['vif_address'] = datum[4]

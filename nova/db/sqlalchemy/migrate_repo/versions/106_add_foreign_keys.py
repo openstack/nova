@@ -64,5 +64,5 @@ def downgrade(migrate_engine):
                 columns=[t.c.instance_uuid],
                 refcolumns=[instances.c.uuid]).drop()
         except Exception:
-            LOG.error(_("foreign key constraint couldn't be created"))
+            LOG.error(_("foreign key constraint couldn't be dropped"))
             raise

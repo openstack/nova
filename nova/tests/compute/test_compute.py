@@ -1671,7 +1671,7 @@ class ComputeTestCase(BaseTestCase):
                             'power_state': power_state.PAUSED})
         v_ref = db.volume_create(c, {'size': 1, 'instance_id': inst_id})
         fix_addr = db.fixed_ip_create(c, {'address': '1.1.1.1',
-                                          'instance_id': inst_id})
+                                          'instance_uuid': inst_ref['uuid']})
         fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
         db.floating_ip_create(c, {'address': flo_addr,
                                   'fixed_ip_id': fix_ref['id']})
