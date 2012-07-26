@@ -56,8 +56,8 @@ class ComputeRpcAPITestCase(test.TestCase):
             'get_console_output', 'get_diagnostics', 'get_vnc_console',
             'inject_file', 'inject_network_info', 'pause_instance',
             'post_live_migration_at_destination', 'power_off_instance',
-            'reboot_instance', 'stop_instance', 'suspend_instance',
-            'unpause_instance'
+            'power_on_instance', 'reboot_instance', 'start_instance',
+            'stop_instance', 'suspend_instance', 'unpause_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -219,7 +219,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_power_on_instance(self):
         self._test_compute_api('power_on_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.22')
 
     def test_pre_live_migration(self):
         self._test_compute_api('pre_live_migration', 'call',
@@ -305,7 +305,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_start_instance(self):
         self._test_compute_api('start_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.22')
 
     def test_stop_instance_cast(self):
         self._test_compute_api('stop_instance', 'cast',
