@@ -298,7 +298,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.15'
+    RPC_API_VERSION = '1.16'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1777,14 +1777,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def get_diagnostics(self, context, instance_uuid):
+    def get_diagnostics(self, context, instance_uuid=None, instance=None):
         """Retrieve diagnostics for an instance on this host."""
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        current_power_state = self._get_power_state(context, instance_ref)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        current_power_state = self._get_power_state(context, instance)
         if current_power_state == power_state.RUNNING:
             LOG.audit(_("Retrieving diagnostics"), context=context,
-                      instance=instance_ref)
-            return self.driver.get_diagnostics(instance_ref)
+                      instance=instance)
+            return self.driver.get_diagnostics(instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
