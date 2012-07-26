@@ -28,7 +28,7 @@ class SolidFireVolumeTestCase(test.TestCase):
         super(SolidFireVolumeTestCase, self).setUp()
 
     def fake_issue_api_request(obj, method, params):
-        if method is 'GetClusterInfo':
+        if method == 'GetClusterInfo':
             LOG.info('Called Fake GetClusterInfo...')
             results = {'result': {'clusterInfo':
                           {'name': 'fake-cluster',
@@ -39,11 +39,11 @@ class SolidFireVolumeTestCase(test.TestCase):
                            'attributes': {}}}}
             return results
 
-        elif method is 'AddAccount':
+        elif method == 'AddAccount':
             LOG.info('Called Fake AddAccount...')
             return {'result': {'accountID': 25}, 'id': 1}
 
-        elif method is 'GetAccountByName':
+        elif method == 'GetAccountByName':
             LOG.info('Called Fake GetAccountByName...')
             results = {'result': {'account': {
                        'accountID': 25,
@@ -56,15 +56,15 @@ class SolidFireVolumeTestCase(test.TestCase):
                    "id": 1}
             return results
 
-        elif method is 'CreateVolume':
+        elif method == 'CreateVolume':
             LOG.info('Called Fake CreateVolume...')
             return {'result': {'volumeID': 5}, 'id': 1}
 
-        elif method is 'DeleteVolume':
+        elif method == 'DeleteVolume':
             LOG.info('Called Fake DeleteVolume...')
             return {'result': {}, 'id': 1}
 
-        elif method is 'ListVolumesForAccount':
+        elif method == 'ListVolumesForAccount':
             LOG.info('Called Fake ListVolumesForAccount...')
             result = {'result': {'volumes': [{
                                            'volumeID': '5',
