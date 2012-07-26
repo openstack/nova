@@ -35,6 +35,7 @@ from nova import flags
 from nova.openstack.common import cfg
 from nova.openstack.common import log as logging
 from nova.volume import driver
+from nova.volume import volume_types
 
 LOG = logging.getLogger(__name__)
 
@@ -56,7 +57,12 @@ netapp_opts = [
                help='Port number for the DFM server'),
     cfg.StrOpt('netapp_storage_service',
                default=None,
-               help='Storage service to use for provisioning'),
+               help=('Storage service to use for provisioning '
+                    '(when volume_type=None)')),
+    cfg.StrOpt('netapp_storage_service_prefix',
+               default=None,
+               help=('Prefix of storage service name to use for '
+                    'provisioning (volume_type name will be appended)')),
     cfg.StrOpt('netapp_vfiler',
                default=None,
                help='Vfiler to use for provisioning'),
@@ -66,69 +72,200 @@ FLAGS = flags.FLAGS
 FLAGS.register_opts(netapp_opts)
 
 
+class DfmDataset(object):
+    def __init__(self, id, name, project, type):
+        self.id = id
+        self.name = name
+        self.project = project
+        self.type = type
+
+
+class DfmLun(object):
+    def __init__(self, dataset, lunpath, id):
+        self.dataset = dataset
+        self.lunpath = lunpath
+        self.id = id
+
+
 class NetAppISCSIDriver(driver.ISCSIDriver):
     """NetApp iSCSI volume driver."""
 
+    IGROUP_PREFIX = 'openstack-'
+    DATASET_PREFIX = 'OpenStack_'
+    DATASET_METADATA_PROJECT_KEY = 'OpenStackProject'
+    DATASET_METADATA_VOL_TYPE_KEY = 'OpenStackVolType'
+
     def __init__(self, *args, **kwargs):
         super(NetAppISCSIDriver, self).__init__(*args, **kwargs)
+        self.discovered_luns = []
+        self.discovered_datasets = []
+        self.lun_table = {}
 
     def _check_fail(self, request, response):
+        """Utility routine to handle checking ZAPI failures."""
         if 'failed' == response.Status:
             name = request.Name
             reason = response.Reason
-            msg = _('API %(name)sfailed: %(reason)s')
+            msg = _('API %(name)s failed: %(reason)s')
             raise exception.NovaException(msg % locals())
 
-    def _create_client(self, wsdl_url, login, password, hostname, port):
-        """
-        Instantiate a "suds" client to make web services calls to the
+    def _create_client(self, **kwargs):
+        """Instantiate a web services client.
+
+        This method creates a "suds" client to make web services calls to the
         DFM server. Note that the WSDL file is quite large and may take
         a few seconds to parse.
         """
-        self.client = client.Client(wsdl_url,
-                                    username=login,
-                                    password=password)
-        soap_url = 'http://%s:%s/apis/soap/v1' % (hostname, port)
+        wsdl_url = kwargs['wsdl_url']
+        LOG.debug(_('Using WSDL: %s') % wsdl_url)
+        if kwargs['cache']:
+            self.client = client.Client(wsdl_url, username=kwargs['login'],
+                                        password=kwargs['password'])
+        else:
+            self.client = client.Client(wsdl_url, username=kwargs['login'],
+                                        password=kwargs['password'],
+                                        cache=None)
+        soap_url = 'http://%s:%s/apis/soap/v1' % (kwargs['hostname'],
+                                                  kwargs['port'])
+        LOG.debug(_('Using DFM server: %s') % soap_url)
         self.client.set_options(location=soap_url)
 
     def _set_storage_service(self, storage_service):
-        """Set the storage service to use for provisioning"""
+        """Set the storage service to use for provisioning."""
+        LOG.debug(_('Using storage service: %s') % storage_service)
         self.storage_service = storage_service
 
+    def _set_storage_service_prefix(self, storage_service_prefix):
+        """Set the storage service prefix to use for provisioning."""
+        LOG.debug(_('Using storage service prefix: %s') %
+                  storage_service_prefix)
+        self.storage_service_prefix = storage_service_prefix
+
     def _set_vfiler(self, vfiler):
-        """Set the vfiler to use for provisioning"""
+        """Set the vfiler to use for provisioning."""
+        LOG.debug(_('Using vfiler: %s') % vfiler)
         self.vfiler = vfiler
 
     def _check_flags(self):
         """Ensure that the flags we care about are set."""
         required_flags = ['netapp_wsdl_url', 'netapp_login', 'netapp_password',
-                'netapp_server_hostname', 'netapp_server_port',
-                'netapp_storage_service']
+                'netapp_server_hostname', 'netapp_server_port']
         for flag in required_flags:
             if not getattr(FLAGS, flag, None):
                 raise exception.NovaException(_('%s is not set') % flag)
+        if not (FLAGS.netapp_storage_service or
+                FLAGS.netapp_storage_service_prefix):
+            raise exception.NovaException(_('Either netapp_storage_service or '
+                'netapp_storage_service_prefix must be set'))
 
     def do_setup(self, context):
-        """
+        """Setup the NetApp Volume driver.
+
         Called one time by the manager after the driver is loaded.
         Validate the flags we care about and setup the suds (web services)
         client.
         """
         self._check_flags()
-        self._create_client(FLAGS.netapp_wsdl_url, FLAGS.netapp_login,
-            FLAGS.netapp_password, FLAGS.netapp_server_hostname,
-            FLAGS.netapp_server_port)
+        self._create_client(wsdl_url=FLAGS.netapp_wsdl_url,
+            login=FLAGS.netapp_login, password=FLAGS.netapp_password,
+            hostname=FLAGS.netapp_server_hostname,
+            port=FLAGS.netapp_server_port, cache=True)
         self._set_storage_service(FLAGS.netapp_storage_service)
-        if FLAGS.netapp_vfiler:
-            self._set_vfiler(FLAGS.netapp_vfiler)
+        self._set_storage_service_prefix(FLAGS.netapp_storage_service_prefix)
+        self._set_vfiler(FLAGS.netapp_vfiler)
 
     def check_for_setup_error(self):
-        """Invoke a web services API to make sure we can talk to the server."""
-        res = self.client.service.DfmAbout()
+        """Check that the driver is working and can communicate.
+
+        Invoke a web services API to make sure we can talk to the server.
+        Also perform the discovery of datasets and LUNs from DFM.
+        """
+        self.client.service.DfmAbout()
         LOG.debug(_("Connected to DFM server"))
+        self._discover_luns()
+
+    def _get_datasets(self):
+        """Get the list of datasets from DFM."""
+        server = self.client.service
+        res = server.DatasetListInfoIterStart(IncludeMetadata=True)
+        tag = res.Tag
+        datasets = []
+        try:
+            while True:
+                res = server.DatasetListInfoIterNext(Tag=tag, Maximum=100)
+                if not res.Datasets:
+                    break
+                datasets.extend(res.Datasets.DatasetInfo)
+        finally:
+            server.DatasetListInfoIterEnd(Tag=tag)
+        return datasets
+
+    def _discover_dataset_luns(self, dataset, volume):
+        """Discover all of the LUNs in a dataset."""
+        server = self.client.service
+        res = server.DatasetMemberListInfoIterStart(
+                DatasetNameOrId=dataset.id,
+                IncludeExportsInfo=True,
+                IncludeIndirect=True,
+                MemberType='lun_path')
+        tag = res.Tag
+        suffix = None
+        if volume:
+            suffix = '/' + volume
+        try:
+            while True:
+                res = server.DatasetMemberListInfoIterNext(Tag=tag,
+                                                           Maximum=100)
+                if (not hasattr(res, 'DatasetMembers') or
+                            not res.DatasetMembers):
+                    break
+                for member in res.DatasetMembers.DatasetMemberInfo:
+                    if suffix and not member.MemberName.endswith(suffix):
+                        continue
+                    # MemberName is the full LUN path in this format:
+                    # host:/volume/qtree/lun
+                    lun = DfmLun(dataset, member.MemberName, member.MemberId)
+                    self.discovered_luns.append(lun)
+        finally:
+            server.DatasetMemberListInfoIterEnd(Tag=tag)
+
+    def _discover_luns(self):
+        """Discover the LUNs from DFM.
+
+        Discover all of the OpenStack-created datasets and LUNs in the DFM
+        database.
+        """
+        datasets = self._get_datasets()
+        self.discovered_datasets = []
+        self.discovered_luns = []
+        for dataset in datasets:
+            if not dataset.DatasetName.startswith(self.DATASET_PREFIX):
+                continue
+            if (not hasattr(dataset, 'DatasetMetadata') or
+                    not dataset.DatasetMetadata):
+                continue
+            project = None
+            type = None
+            for field in dataset.DatasetMetadata.DfmMetadataField:
+                if field.FieldName == self.DATASET_METADATA_PROJECT_KEY:
+                    project = field.FieldValue
+                elif field.FieldName == self.DATASET_METADATA_VOL_TYPE_KEY:
+                    type = field.FieldValue
+            if not project:
+                continue
+            ds = DfmDataset(dataset.DatasetId, dataset.DatasetName,
+                            project, type)
+            self.discovered_datasets.append(ds)
+            self._discover_dataset_luns(ds, None)
+        dataset_count = len(self.discovered_datasets)
+        lun_count = len(self.discovered_luns)
+        msg = _("Discovered %(dataset_count)s datasets and %(lun_count)s LUNs")
+        LOG.debug(msg % locals())
+        self.lun_table = {}
 
     def _get_job_progress(self, job_id):
-        """
+        """Get progress of one running DFM job.
+
         Obtain the latest progress report for the job and return the
         list of progress events.
         """
@@ -148,7 +285,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         return event_list
 
     def _wait_for_job(self, job_id):
-        """
+        """Wait until a job terminates.
+
         Poll the job until it completes or an error is detected. Return the
         final list of progress events if it completes successfully.
         """
@@ -162,64 +300,85 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                     return events
             time.sleep(5)
 
-    def _dataset_name(self, project):
-        """Return the dataset name for a given project """
-        _project = string.replace(string.replace(project, ' ', '_'), '-', '_')
-        return 'OpenStack_' + _project
+    def _dataset_name(self, project, ss_type):
+        """Return the dataset name for a given project and volume type."""
+        _project = project.replace(' ', '_').replace('-', '_')
+        dataset_name = self.DATASET_PREFIX + _project
+        if not ss_type:
+            return dataset_name
+        _type = ss_type.replace(' ', '_').replace('-', '_')
+        return dataset_name + '_' + _type
 
-    def _does_dataset_exist(self, dataset_name):
-        """Check if a dataset already exists"""
-        server = self.client.service
-        try:
-            res = server.DatasetListInfoIterStart(ObjectNameOrId=dataset_name)
-            tag = res.Tag
-        except suds.WebFault:
-            return False
-        try:
-            res = server.DatasetListInfoIterNext(Tag=tag, Maximum=1)
-            if hasattr(res, 'Datasets') and res.Datasets.DatasetInfo:
-                return True
-        finally:
-            server.DatasetListInfoIterEnd(Tag=tag)
-        return False
+    def _get_dataset(self, dataset_name):
+        """Lookup a dataset by name in the list of discovered datasets."""
+        for dataset in self.discovered_datasets:
+            if dataset.name == dataset_name:
+                return dataset
+        return None
 
-    def _create_dataset(self, dataset_name):
+    def _create_dataset(self, dataset_name, project, ss_type):
+        """Create a new dataset using the storage service.
+
+        The export settings are set to create iSCSI LUNs aligned for Linux.
+        Returns the ID of the new dataset.
         """
-        Create a new dataset using the storage service. The export settings are
-        set to create iSCSI LUNs aligned for Linux.
-        """
-        server = self.client.service
+        if ss_type and not self.storage_service_prefix:
+            msg = _('Attempt to use volume_type without specifying '
+                'netapp_storage_service_prefix flag.')
+            raise exception.NovaException(msg)
+        if not (ss_type or self.storage_service):
+            msg = _('You must set the netapp_storage_service flag in order to '
+                'create volumes with no volume_type.')
+            raise exception.NovaException(msg)
+        storage_service = self.storage_service
+        if ss_type:
+            storage_service = self.storage_service_prefix + ss_type
 
-        lunmap = self.client.factory.create('DatasetLunMappingInfo')
+        factory = self.client.factory
+
+        lunmap = factory.create('DatasetLunMappingInfo')
         lunmap.IgroupOsType = 'linux'
-        export = self.client.factory.create('DatasetExportInfo')
+        export = factory.create('DatasetExportInfo')
         export.DatasetExportProtocol = 'iscsi'
         export.DatasetLunMappingInfo = lunmap
-        detail = self.client.factory.create('StorageSetInfo')
+        detail = factory.create('StorageSetInfo')
         detail.DpNodeName = 'Primary data'
         detail.DatasetExportInfo = export
-        if hasattr(self, 'vfiler'):
+        if hasattr(self, 'vfiler') and self.vfiler:
             detail.ServerNameOrId = self.vfiler
-        details = self.client.factory.create('ArrayOfStorageSetInfo')
+        details = factory.create('ArrayOfStorageSetInfo')
         details.StorageSetInfo = [detail]
+        field1 = factory.create('DfmMetadataField')
+        field1.FieldName = self.DATASET_METADATA_PROJECT_KEY
+        field1.FieldValue = project
+        field2 = factory.create('DfmMetadataField')
+        field2.FieldName = self.DATASET_METADATA_VOL_TYPE_KEY
+        field2.FieldValue = ss_type
+        metadata = factory.create('ArrayOfDfmMetadataField')
+        metadata.DfmMetadataField = [field1, field2]
 
-        server.StorageServiceDatasetProvision(
-                StorageServiceNameOrId=self.storage_service,
+        res = self.client.service.StorageServiceDatasetProvision(
+                StorageServiceNameOrId=storage_service,
                 DatasetName=dataset_name,
                 AssumeConfirmation=True,
-                StorageSetDetails=details)
+                StorageSetDetails=details,
+                DatasetMetadata=metadata)
 
-    def _provision(self, name, description, project, size):
-        """
-        Provision a LUN through provisioning manager. The LUN will be created
-        inside a dataset associated with the project. If the dataset doesn't
-        already exist, we create it using the storage service specified in the
-        nova conf.
-        """
+        ds = DfmDataset(res.DatasetId, dataset_name, project, ss_type)
+        self.discovered_datasets.append(ds)
+        return ds
 
-        dataset_name = self._dataset_name(project)
-        if not self._does_dataset_exist(dataset_name):
-            self._create_dataset(dataset_name)
+    def _provision(self, name, description, project, ss_type, size):
+        """Provision a LUN through provisioning manager.
+
+        The LUN will be created inside a dataset associated with the project.
+        If the dataset doesn't already exist, we create it using the storage
+        service specified in the nova conf.
+        """
+        dataset_name = self._dataset_name(project, ss_type)
+        dataset = self._get_dataset(dataset_name)
+        if not dataset:
+            dataset = self._create_dataset(dataset_name, project, ss_type)
 
         info = self.client.factory.create('ProvisionMemberRequestInfo')
         info.Name = name
@@ -229,7 +388,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         info.MaximumSnapshotSpace = 2 * long(size)
 
         server = self.client.service
-        lock_id = server.DatasetEditBegin(DatasetNameOrId=dataset_name)
+        lock_id = server.DatasetEditBegin(DatasetNameOrId=dataset.id)
         try:
             server.DatasetProvisionMember(EditLockId=lock_id,
                                           ProvisionMemberRequestInfo=info)
@@ -241,37 +400,48 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             raise exception.NovaException(msg)
 
         lun_id = None
+        lunpath = None
 
         for info in res.JobIds.JobInfo:
             events = self._wait_for_job(info.JobId)
             for event in events:
                 if event.EventType != 'lun-create':
                     continue
+                lunpath = event.ProgressLunInfo.LunName
                 lun_id = event.ProgressLunInfo.LunPathId
 
         if not lun_id:
             msg = _('No LUN was created by the provision job')
             raise exception.NovaException(msg)
 
+        lun = DfmLun(dataset, lunpath, lun_id)
+        self.discovered_luns.append(lun)
+        self.lun_table[name] = lun
+
+    def _get_ss_type(self, volume):
+        """Get the storage service type for a volume."""
+        id = volume['volume_type_id']
+        if not id:
+            return None
+        volume_type = volume_types.get_volume_type(None, id)
+        if not volume_type:
+            return None
+        return volume_type['name']
+
     def _remove_destroy(self, name, project):
-        """
+        """Remove the LUN from the dataset, also destroying it.
+
         Remove the LUN from the dataset and destroy the actual LUN on the
         storage system.
         """
-        lun_id = self._get_lun_id(name, project)
-        if not lun_id:
-            msg = _("Failed to find LUN ID for volume %s") % (name)
-            raise exception.NovaException(msg)
-
+        lun = self._lookup_lun_for_volume(name, project)
         member = self.client.factory.create('DatasetMemberParameter')
-        member.ObjectNameOrId = lun_id
+        member.ObjectNameOrId = lun.id
         members = self.client.factory.create('ArrayOfDatasetMemberParameter')
         members.DatasetMemberParameter = [member]
 
-        dataset_name = self._dataset_name(project)
-
         server = self.client.service
-        lock_id = server.DatasetEditBegin(DatasetNameOrId=dataset_name)
+        lock_id = server.DatasetEditBegin(DatasetNameOrId=lun.dataset.id)
         try:
             server.DatasetRemoveMember(EditLockId=lock_id, Destroy=True,
                                        DatasetMemberParameters=members)
@@ -283,13 +453,14 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             raise exception.NovaException(msg)
 
     def create_volume(self, volume):
-        """Driver entry point for creating a new volume"""
+        """Driver entry point for creating a new volume."""
         default_size = '104857600'  # 100 MB
         gigabytes = 1073741824L  # 2^30
         name = volume['name']
         project = volume['project_id']
         display_name = volume['display_name']
         display_description = volume['display_description']
+        description = None
         if display_name:
             if display_description:
                 description = display_name + "\n" + display_description
@@ -301,52 +472,35 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             size = default_size
         else:
             size = str(int(volume['size']) * gigabytes)
-        self._provision(name, description, project, size)
+        ss_type = self._get_ss_type(volume)
+        self._provision(name, description, project, ss_type, size)
+
+    def _lookup_lun_for_volume(self, name, project):
+        """Lookup the LUN that corresponds to the give volume.
+
+        Initial lookups involve a table scan of all of the discovered LUNs,
+        but later lookups are done instantly from the hashtable.
+        """
+        if name in self.lun_table:
+            return self.lun_table[name]
+        lunpath_suffix = '/' + name
+        for lun in self.discovered_luns:
+            if lun.dataset.project != project:
+                continue
+            if lun.lunpath.endswith(lunpath_suffix):
+                self.lun_table[name] = lun
+                return lun
+        msg = _("No entry in LUN table for volume %s")
+        raise exception.NovaException(msg % (name))
 
     def delete_volume(self, volume):
-        """Driver entry point for destroying existing volumes"""
+        """Driver entry point for destroying existing volumes."""
         name = volume['name']
         project = volume['project_id']
         self._remove_destroy(name, project)
 
-    def _get_lun_id(self, name, project):
-        """
-        Given the name of a volume, find the DFM (OnCommand) ID of the LUN
-        corresponding to that volume. Currently we do this by enumerating
-        all of the LUNs in the dataset and matching the names against the
-        OpenStack volume name.
-
-        This could become a performance bottleneck in very large installations
-        in which case possible options for mitigating the problem are:
-        1) Store the LUN ID alongside the volume in the nova DB (if possible)
-        2) Cache the list of LUNs in the dataset in driver memory
-        3) Store the volume to LUN ID mappings in a local file
-        """
-        dataset_name = self._dataset_name(project)
-
-        server = self.client.service
-        res = server.DatasetMemberListInfoIterStart(
-                DatasetNameOrId=dataset_name,
-                IncludeExportsInfo=True,
-                IncludeIndirect=True,
-                MemberType='lun_path')
-        tag = res.Tag
-        suffix = '/' + name
-        try:
-            while True:
-                res = server.DatasetMemberListInfoIterNext(Tag=tag,
-                                                           Maximum=100)
-                if (not hasattr(res, 'DatasetMembers') or
-                            not res.DatasetMembers):
-                    break
-                for member in res.DatasetMembers.DatasetMemberInfo:
-                    if member.MemberName.endswith(suffix):
-                        return member.MemberId
-        finally:
-            server.DatasetMemberListInfoIterEnd(Tag=tag)
-
     def _get_lun_details(self, lun_id):
-        """Given the ID of a LUN, get the details about that LUN"""
+        """Given the ID of a LUN, get the details about that LUN."""
         server = self.client.service
         res = server.LunListInfoIterStart(ObjectNameOrId=lun_id)
         tag = res.Tag
@@ -356,11 +510,13 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 return res.Luns.LunInfo[0]
         finally:
             server.LunListInfoIterEnd(Tag=tag)
+        msg = _('Failed to get LUN details for LUN ID %s')
+        raise exception.NovaException(msg % lun_id)
 
     def _get_host_details(self, host_id):
-        """
-        Given the ID of a host (storage system), get the details about that
-        host.
+        """Given the ID of a host, get the details about it.
+
+        A "host" is a storage system here.
         """
         server = self.client.service
         res = server.HostListInfoIterStart(ObjectNameOrId=host_id)
@@ -371,9 +527,11 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 return res.Hosts.HostInfo[0]
         finally:
             server.HostListInfoIterEnd(Tag=tag)
+        msg = _('Failed to get host details for host ID %s')
+        raise exception.NovaException(msg % host_id)
 
     def _get_iqn_for_host(self, host_id):
-        """Get the iSCSI Target Name for a storage system"""
+        """Get the iSCSI Target Name for a storage system."""
         request = self.client.factory.create('Request')
         request.Name = 'iscsi-node-get-name'
         response = self.client.service.ApiProxy(Target=host_id,
@@ -382,7 +540,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         return response.Results['node-name'][0]
 
     def _api_elem_is_empty(self, elem):
-        """
+        """Return true if the API element should be considered empty.
+
         Helper routine to figure out if a list returned from a proxy API
         is empty. This is necessary because the API proxy produces nasty
         looking XML.
@@ -399,7 +558,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         return False
 
     def _get_target_portal_for_host(self, host_id, host_address):
-        """
+        """Get iSCSI target portal for a storage system.
+
         Get the iSCSI Target Portal details for a particular IP address
         on a storage system.
         """
@@ -422,7 +582,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         return portal
 
     def _get_export(self, volume):
-        """
+        """Get the iSCSI export details for a volume.
+
         Looks up the LUN in DFM based on the volume and project name, then get
         the LUN's ID. We store that value in the database instead of the iSCSI
         details because we will not have the true iSCSI details until masking
@@ -430,33 +591,28 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         """
         name = volume['name']
         project = volume['project_id']
-        lun_id = self._get_lun_id(name, project)
-        if not lun_id:
-            msg = _("Failed to find LUN ID for volume %s")
-            raise exception.NovaException(msg % name)
-        return {'provider_location': lun_id}
+        lun = self._lookup_lun_for_volume(name, project)
+        return {'provider_location': lun.id}
 
     def ensure_export(self, context, volume):
-        """
-        Driver entry point to get the iSCSI details about an existing volume
-        """
+        """Driver entry point to get the export info for an existing volume."""
         return self._get_export(volume)
 
     def create_export(self, context, volume):
-        """
-        Driver entry point to get the iSCSI details about a new volume
-        """
+        """Driver entry point to get the export info for a new volume."""
         return self._get_export(volume)
 
     def remove_export(self, context, volume):
-        """
+        """Driver exntry point to remove an export for a volume.
+
         Since exporting is idempotent in this driver, we have nothing
         to do for unexporting.
         """
         pass
 
     def _find_igroup_for_initiator(self, host_id, initiator_name):
-        """
+        """Get the igroup for an initiator.
+
         Look for an existing igroup (initiator group) on the storage system
         containing a given iSCSI initiator and return the name of the igroup.
         """
@@ -474,7 +630,7 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
                 'linux' != igroup_info['initiator-group-os-type'][0]):
                 continue
             igroup_name = igroup_info['initiator-group-name'][0]
-            if not igroup_name.startswith('openstack-'):
+            if not igroup_name.startswith(self.IGROUP_PREFIX):
                 continue
             initiators = igroup_info['initiators'][0]['initiator-info']
             for initiator in initiators:
@@ -483,12 +639,13 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         return None
 
     def _create_igroup(self, host_id, initiator_name):
-        """
+        """Create a new igroup.
+
         Create a new igroup (initiator group) on the storage system to hold
         the given iSCSI initiator. The group will only have 1 member and will
         be named "openstack-${initiator_name}".
         """
-        igroup_name = 'openstack-' + initiator_name
+        igroup_name = self.IGROUP_PREFIX + initiator_name
         request = self.client.factory.create('Request')
         request.Name = 'igroup-create'
         igroup_create_xml = (
@@ -511,7 +668,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         return igroup_name
 
     def _get_lun_mappping(self, host_id, lunpath, igroup_name):
-        """
+        """Get the mapping between a LUN and an igroup.
+
         Check if a given LUN is already mapped to the given igroup (initiator
         group). If the LUN is mapped, also return the LUN number for the
         mapping.
@@ -532,7 +690,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         return {'mapped': False}
 
     def _map_initiator(self, host_id, lunpath, igroup_name):
-        """
+        """Map a LUN to an igroup.
+
         Map the given LUN to the given igroup (initiator group). Return the LUN
         number that the LUN was mapped to (the filer will choose the lowest
         available number).
@@ -559,7 +718,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         self._check_fail(request, response)
 
     def _ensure_initiator_mapped(self, host_id, lunpath, initiator_name):
-        """
+        """Ensure that a LUN is mapped to a particular initiator.
+
         Check if a LUN is mapped to a given initiator already and create
         the mapping if it is not. A new igroup will be created if needed.
         Returns the LUN number for the mapping between the LUN and initiator
@@ -576,7 +736,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         return self._map_initiator(host_id, lunpath, igroup_name)
 
     def _ensure_initiator_unmapped(self, host_id, lunpath, initiator_name):
-        """
+        """Ensure that a LUN is not mapped to a particular initiator.
+
         Check if a LUN is mapped to a given initiator and remove the
         mapping if it is. This does not destroy the igroup.
         """
@@ -590,7 +751,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             self._unmap_initiator(host_id, lunpath, igroup_name)
 
     def initialize_connection(self, volume, connector):
-        """
+        """Driver entry point to attach a volume to an instance.
+
         Do the LUN masking on the storage system so the initiator can access
         the LUN on the target. Also return the iSCSI properties so the
         initiator can find the LUN. This implementation does not call
@@ -605,17 +767,9 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             msg = _("No LUN ID for volume %s")
             raise exception.NovaException(msg % volume['name'])
         lun = self._get_lun_details(lun_id)
-        if not lun:
-            msg = _('Failed to get LUN details for LUN ID %s')
-            raise exception.NovaException(msg % lun_id)
         lun_num = self._ensure_initiator_mapped(lun.HostId, lun.LunPath,
                                                 initiator_name)
-
         host = self._get_host_details(lun.HostId)
-        if not host:
-            msg = _('Failed to get host details for host ID %s')
-            raise exception.NovaException(msg % lun.HostId)
-
         portal = self._get_target_portal_for_host(host.HostId,
                                                   host.HostAddress)
         if not portal:
@@ -649,7 +803,8 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
         }
 
     def terminate_connection(self, volume, connector):
-        """
+        """Driver entry point to unattach a volume from an instance.
+
         Unmask the LUN on the storage system so the given intiator can no
         longer access it.
         """
@@ -659,20 +814,184 @@ class NetAppISCSIDriver(driver.ISCSIDriver):
             msg = _('No LUN ID for volume %s')
             raise exception.NovaException(msg % (volume['name']))
         lun = self._get_lun_details(lun_id)
-        if not lun:
-            msg = _('Failed to get LUN details for LUN ID %s')
-            raise exception.NovaException(msg % (lun_id))
         self._ensure_initiator_unmapped(lun.HostId, lun.LunPath,
                                         initiator_name)
 
-    def create_volume_from_snapshot(self, volume, snapshot):
-        raise NotImplementedError()
+    def _is_clone_done(self, host_id, clone_op_id, volume_uuid):
+        """Check the status of a clone operation.
+
+        Return True if done, False otherwise.
+        """
+        request = self.client.factory.create('Request')
+        request.Name = 'clone-list-status'
+        clone_list_status_xml = (
+            '<clone-id><clone-id-info>'
+            '<clone-op-id>%s</clone-op-id>'
+            '<volume-uuid>%s</volume-uuid>'
+            '</clone-id-info></clone-id>')
+        request.Args = text.Raw(clone_list_status_xml % (clone_op_id,
+                                                          volume_uuid))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+        status = response.Results['status']
+        if self._api_elem_is_empty(status):
+            return False
+        ops_info = status[0]['ops-info'][0]
+        state = ops_info['clone-state'][0]
+        return 'completed' == state
+
+    def _clone_lun(self, host_id, src_path, dest_path, snap):
+        """Create a clone of a NetApp LUN.
+
+        The clone initially consumes no space and is not space reserved.
+        """
+        request = self.client.factory.create('Request')
+        request.Name = 'clone-start'
+        clone_start_xml = (
+            '<source-path>%s</source-path><no-snap>%s</no-snap>'
+            '<destination-path>%s</destination-path>')
+        if snap:
+            no_snap = 'false'
+        else:
+            no_snap = 'true'
+        request.Args = text.Raw(clone_start_xml % (src_path, no_snap,
+                                                    dest_path))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+        clone_id = response.Results['clone-id'][0]
+        clone_id_info = clone_id['clone-id-info'][0]
+        clone_op_id = clone_id_info['clone-op-id'][0]
+        volume_uuid = clone_id_info['volume-uuid'][0]
+        while not self._is_clone_done(host_id, clone_op_id, volume_uuid):
+            time.sleep(5)
+
+    def _refresh_dfm_luns(self, host_id):
+        """Refresh the LUN list for one filer in DFM."""
+        server = self.client.service
+        server.DfmObjectRefresh(ObjectNameOrId=host_id, ChildType='lun_path')
+        while True:
+            time.sleep(15)
+            res = server.DfmMonitorTimestampList(HostNameOrId=host_id)
+            for timestamp in res.DfmMonitoringTimestamp:
+                if 'lun' != timestamp.MonitorName:
+                    continue
+                if timestamp.LastMonitoringTimestamp:
+                    return
+
+    def _destroy_lun(self, host_id, lun_path):
+        """Destroy a LUN on the filer."""
+        request = self.client.factory.create('Request')
+        request.Name = 'lun-offline'
+        path_xml = '<path>%s</path>'
+        request.Args = text.Raw(path_xml % lun_path)
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+        request = self.client.factory.create('Request')
+        request.Name = 'lun-destroy'
+        request.Args = text.Raw(path_xml % lun_path)
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+
+    def _resize_volume(self, host_id, vol_name, new_size):
+        """Resize the volume by the amount requested."""
+        request = self.client.factory.create('Request')
+        request.Name = 'volume-size'
+        volume_size_xml = (
+            '<volume>%s</volume><new-size>%s</new-size>')
+        request.Args = text.Raw(volume_size_xml % (vol_name, new_size))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
+
+    def _create_qtree(self, host_id, vol_name, qtree_name):
+        """Create a qtree the filer."""
+        request = self.client.factory.create('Request')
+        request.Name = 'qtree-create'
+        qtree_create_xml = (
+            '<mode>0755</mode><volume>%s</volume><qtree>%s</qtree>')
+        request.Args = text.Raw(qtree_create_xml % (vol_name, qtree_name))
+        response = self.client.service.ApiProxy(Target=host_id,
+                                                Request=request)
+        self._check_fail(request, response)
 
     def create_snapshot(self, snapshot):
-        raise NotImplementedError()
+        """Driver entry point for creating a snapshot.
+
+        This driver implements snapshots by using efficient single-file
+        (LUN) cloning.
+        """
+        vol_name = snapshot['volume_name']
+        snapshot_name = snapshot['name']
+        project = snapshot['project_id']
+        lun = self._lookup_lun_for_volume(vol_name, project)
+        lun_id = lun.id
+        lun = self._get_lun_details(lun_id)
+        extra_gb = snapshot['volume_size']
+        new_size = '+%dg' % extra_gb
+        self._resize_volume(lun.HostId, lun.VolumeName, new_size)
+        # LunPath is the partial LUN path in this format: volume/qtree/lun
+        lun_path = str(lun.LunPath)
+        lun_name = lun_path[lun_path.rfind('/') + 1:]
+        qtree_path = '/vol/%s/%s' % (lun.VolumeName, lun.QtreeName)
+        src_path = '%s/%s' % (qtree_path, lun_name)
+        dest_path = '%s/%s' % (qtree_path, snapshot_name)
+        self._clone_lun(lun.HostId, src_path, dest_path, True)
 
     def delete_snapshot(self, snapshot):
-        raise NotImplementedError()
+        """Driver entry point for deleting a snapshot."""
+        vol_name = snapshot['volume_name']
+        snapshot_name = snapshot['name']
+        project = snapshot['project_id']
+        lun = self._lookup_lun_for_volume(vol_name, project)
+        lun_id = lun.id
+        lun = self._get_lun_details(lun_id)
+        lun_path = '/vol/%s/%s/%s' % (lun.VolumeName, lun.QtreeName,
+                                      snapshot_name)
+        self._destroy_lun(lun.HostId, lun_path)
+        extra_gb = snapshot['volume_size']
+        new_size = '-%dg' % extra_gb
+        self._resize_volume(lun.HostId, lun.VolumeName, new_size)
+
+    def create_volume_from_snapshot(self, volume, snapshot):
+        """Driver entry point for creating a new volume from a snapshot.
+
+        Many would call this "cloning" and in fact we use cloning to implement
+        this feature.
+        """
+        vol_size = volume['size']
+        snap_size = snapshot['volume_size']
+        if vol_size != snap_size:
+            msg = _('Cannot create volume of size %(vol_size)s from '
+                'snapshot of size %(snap_size)s')
+            raise exception.NovaException(msg % locals())
+        vol_name = snapshot['volume_name']
+        snapshot_name = snapshot['name']
+        project = snapshot['project_id']
+        lun = self._lookup_lun_for_volume(vol_name, project)
+        lun_id = lun.id
+        dataset = lun.dataset
+        old_type = dataset.type
+        new_type = self._get_ss_type(volume)
+        if new_type != old_type:
+            msg = _('Cannot create volume of type %(new_type)s from '
+                'snapshot of type %(old_type)s')
+            raise exception.NovaException(msg % locals())
+        lun = self._get_lun_details(lun_id)
+        extra_gb = vol_size
+        new_size = '+%dg' % extra_gb
+        self._resize_volume(lun.HostId, lun.VolumeName, new_size)
+        clone_name = volume['name']
+        self._create_qtree(lun.HostId, lun.VolumeName, clone_name)
+        src_path = '/vol/%s/%s/%s' % (lun.VolumeName, lun.QtreeName,
+                                      snapshot_name)
+        dest_path = '/vol/%s/%s/%s' % (lun.VolumeName, clone_name, clone_name)
+        self._clone_lun(lun.HostId, src_path, dest_path, False)
+        self._refresh_dfm_luns(lun.HostId)
+        self._discover_dataset_luns(dataset, clone_name)
 
     def check_for_export(self, context, volume_id):
         raise NotImplementedError()

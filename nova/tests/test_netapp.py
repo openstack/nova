@@ -397,6 +397,12 @@ WSDL_TYPES = """<types>
             type="na:DatasetMemberParameter"/>
     </xsd:sequence>
 </xsd:complexType>
+<xsd:complexType name="ArrayOfDfmMetadataField">
+    <xsd:sequence>
+        <xsd:element maxOccurs="unbounded" name="DfmMetadataField"
+            type="na:DfmMetadataField"/>
+    </xsd:sequence>
+</xsd:complexType>
 <xsd:complexType name="ArrayOfDpJobProgressEventInfo">
     <xsd:sequence>
         <xsd:element maxOccurs="unbounded" name="DpJobProgressEventInfo"
@@ -438,6 +444,8 @@ WSDL_TYPES = """<types>
 <xsd:complexType name="DatasetInfo">
     <xsd:all>
         <xsd:element name="DatasetId" type="na:ObjId"/>
+        <xsd:element name="DatasetName" type="na:ObjName"/>
+        <xsd:element name="DatasetMetadata" type="na:ArrayOfDfmMetadataField"/>
     </xsd:all>
 </xsd:complexType>
 <xsd:complexType name="DatasetLunMappingInfo">
@@ -454,6 +462,12 @@ WSDL_TYPES = """<types>
 <xsd:complexType name="DatasetMemberParameter">
     <xsd:all>
         <xsd:element name="ObjectNameOrId" type="na:ObjNameOrId"/>
+    </xsd:all>
+</xsd:complexType>
+<xsd:complexType name="DfmMetadataField">
+    <xsd:all>
+        <xsd:element name="FieldName" type="xsd:string"/>
+        <xsd:element name="FieldValue" type="xsd:string"/>
     </xsd:all>
 </xsd:complexType>
 <xsd:complexType name="DpJobProgressEventInfo">
@@ -503,6 +517,7 @@ WSDL_TYPES = """<types>
 <xsd:complexType name="ProgressLunInfo">
     <xsd:all>
         <xsd:element name="LunPathId" type="na:ObjId"/>
+        <xsd:element name="LunName" type="na:ObjName"/>
     </xsd:all>
 </xsd:complexType>
 <xsd:complexType name="ProvisionMemberRequestInfo">
@@ -642,19 +657,43 @@ class FakeDfmServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         global iter_count
         global iter_table
         if 'DatasetListInfoIterStart' == api:
+            iter_name = 'dataset_%s' % iter_count
+            iter_count = iter_count + 1
+            iter_table[iter_name] = 0
             body = """<na:DatasetListInfoIterStartResult>
                     <na:Records>1</na:Records>
-                    <na:Tag>dataset</na:Tag>
-                </na:DatasetListInfoIterStartResult>"""
+                    <na:Tag>%s</na:Tag>
+                </na:DatasetListInfoIterStartResult>""" % iter_name
         elif 'DatasetListInfoIterNext' == api:
-            body = """<na:DatasetListInfoIterNextResult>
-                    <na:Datasets>
-                        <na:DatasetInfo>
-                            <na:DatasetId>0</na:DatasetId>
-                        </na:DatasetInfo>
-                    </na:Datasets>
-                    <na:Records>1</na:Records>
-                </na:DatasetListInfoIterNextResult>"""
+            tags = body.xpath('na:DatasetListInfoIterNext/na:Tag',
+                              namespaces=nsmap)
+            iter_name = tags[0].text
+            if iter_table[iter_name]:
+                body = """<na:DatasetListInfoIterNextResult>
+                        <na:Datasets></na:Datasets>
+                        <na:Records>0</na:Records>
+                    </na:DatasetListInfoIterNextResult>"""
+            else:
+                iter_table[iter_name] = 1
+                body = """<na:DatasetListInfoIterNextResult>
+                        <na:Datasets>
+                            <na:DatasetInfo>
+                                <na:DatasetId>0</na:DatasetId>
+                                <na:DatasetMetadata>
+                                    <na:DfmMetadataField>
+                                  <na:FieldName>OpenStackProject</na:FieldName>
+                                        <na:FieldValue>testproj</na:FieldValue>
+                                    </na:DfmMetadataField>
+                                    <na:DfmMetadataField>
+                                  <na:FieldName>OpenStackVolType</na:FieldName>
+                                        <na:FieldValue></na:FieldValue>
+                                    </na:DfmMetadataField>
+                                </na:DatasetMetadata>
+                            <na:DatasetName>OpenStack_testproj</na:DatasetName>
+                            </na:DatasetInfo>
+                        </na:Datasets>
+                        <na:Records>1</na:Records>
+                    </na:DatasetListInfoIterNextResult>"""
         elif 'DatasetListInfoIterEnd' == api:
             body = """<na:DatasetListInfoIterEndResult/>"""
         elif 'DatasetEditBegin' == api:
@@ -692,6 +731,8 @@ class FakeDfmServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 body = """<na:DpJobProgressEventListIterNextResult/>"""
             else:
                 iter_table[iter_name] = 1
+                name = ('filer:/OpenStack_testproj/volume-00000001/'
+                        'volume-00000001')
                 body = """<na:DpJobProgressEventListIterNextResult>
                         <na:ProgressEvents>
                             <na:DpJobProgressEventInfo>
@@ -699,6 +740,7 @@ class FakeDfmServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                 <na:EventType>lun-create</na:EventType>
                                 <na:ProgressLunInfo>
                                     <na:LunPathId>0</na:LunPathId>
+                                    <na:LunName>%s</na:LunName>
                                  </na:ProgressLunInfo>
                             </na:DpJobProgressEventInfo>
                             <na:DpJobProgressEventInfo>
@@ -707,25 +749,39 @@ class FakeDfmServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                             </na:DpJobProgressEventInfo>
                         </na:ProgressEvents>
                         <na:Records>2</na:Records>
-                    </na:DpJobProgressEventListIterNextResult>"""
+                    </na:DpJobProgressEventListIterNextResult>""" % name
         elif 'DpJobProgressEventListIterEnd' == api:
             body = """<na:DpJobProgressEventListIterEndResult/>"""
         elif 'DatasetMemberListInfoIterStart' == api:
+            iter_name = 'datasetmember_%s' % iter_count
+            iter_count = iter_count + 1
+            iter_table[iter_name] = 0
             body = """<na:DatasetMemberListInfoIterStartResult>
                     <na:Records>1</na:Records>
-                    <na:Tag>dataset-member</na:Tag>
-                </na:DatasetMemberListInfoIterStartResult>"""
+                    <na:Tag>%s</na:Tag>
+                </na:DatasetMemberListInfoIterStartResult>""" % iter_name
         elif 'DatasetMemberListInfoIterNext' == api:
-            name = 'filer:/OpenStack_testproj/volume-00000001/volume-00000001'
-            body = """<na:DatasetMemberListInfoIterNextResult>
-                    <na:DatasetMembers>
-                        <na:DatasetMemberInfo>
-                            <na:MemberId>0</na:MemberId>
-                            <na:MemberName>%s</na:MemberName>
-                        </na:DatasetMemberInfo>
-                    </na:DatasetMembers>
-                    <na:Records>1</na:Records>
-                </na:DatasetMemberListInfoIterNextResult>""" % name
+            tags = body.xpath('na:DatasetMemberListInfoIterNext/na:Tag',
+                              namespaces=nsmap)
+            iter_name = tags[0].text
+            if iter_table[iter_name]:
+                body = """<na:DatasetMemberListInfoIterNextResult>
+                        <na:DatasetMembers></na:DatasetMembers>
+                        <na:Records>0</na:Records>
+                    </na:DatasetMemberListInfoIterNextResult>"""
+            else:
+                iter_table[iter_name] = 1
+                name = ('filer:/OpenStack_testproj/volume-00000001/'
+                        'volume-00000001')
+                body = """<na:DatasetMemberListInfoIterNextResult>
+                        <na:DatasetMembers>
+                            <na:DatasetMemberInfo>
+                                <na:MemberId>0</na:MemberId>
+                                <na:MemberName>%s</na:MemberName>
+                            </na:DatasetMemberInfo>
+                        </na:DatasetMembers>
+                        <na:Records>1</na:Records>
+                    </na:DatasetMemberListInfoIterNextResult>""" % name
         elif 'DatasetMemberListInfoIterEnd' == api:
             body = """<na:DatasetMemberListInfoIterEndResult/>"""
         elif 'HostListInfoIterStart' == api:
@@ -889,9 +945,11 @@ class FakeHTTPConnection(object):
 
 class NetAppDriverTestCase(test.TestCase):
     """Test case for NetAppISCSIDriver"""
-    STORAGE_SERVICE = 'Thin Provisioned Space for VMFS Datastores'
+    STORAGE_SERVICE = 'Openstack Service'
+    STORAGE_SERVICE_PREFIX = 'Openstack Service-'
     PROJECT_ID = 'testproj'
     VOLUME_NAME = 'volume-00000001'
+    VOLUME_TYPE = ''
     VOLUME_SIZE = 2147483648L  # 2 GB
     INITIATOR = 'iqn.1993-08.org.debian:01:23456789'
 
@@ -899,22 +957,27 @@ class NetAppDriverTestCase(test.TestCase):
         super(NetAppDriverTestCase, self).setUp()
         driver = netapp.NetAppISCSIDriver()
         self.stubs.Set(httplib, 'HTTPConnection', FakeHTTPConnection)
-        driver._create_client('http://localhost:8088/dfm.wsdl',
-                              'root', 'password', 'localhost', 8088)
+        driver._create_client(wsdl_url='http://localhost:8088/dfm.wsdl',
+                              login='root', password='password',
+                              hostname='localhost', port=8088, cache=False)
         driver._set_storage_service(self.STORAGE_SERVICE)
+        driver._set_storage_service_prefix(self.STORAGE_SERVICE_PREFIX)
+        driver._set_vfiler('')
         self.driver = driver
 
     def test_connect(self):
         self.driver.check_for_setup_error()
 
     def test_create_destroy(self):
+        self.driver._discover_luns()
         self.driver._provision(self.VOLUME_NAME, None, self.PROJECT_ID,
-                               self.VOLUME_SIZE)
+                               self.VOLUME_TYPE, self.VOLUME_SIZE)
         self.driver._remove_destroy(self.VOLUME_NAME, self.PROJECT_ID)
 
     def test_map_unmap(self):
+        self.driver._discover_luns()
         self.driver._provision(self.VOLUME_NAME, None, self.PROJECT_ID,
-                               self.VOLUME_SIZE)
+                               self.VOLUME_TYPE, self.VOLUME_SIZE)
         volume = {'name': self.VOLUME_NAME, 'project_id': self.PROJECT_ID,
             'id': 0, 'provider_auth': None}
         updates = self.driver._get_export(volume)
