@@ -450,7 +450,7 @@ class SchedulerTestCase(test.TestCase):
         dest = 'fake_host2'
         block_migration = True
         disk_over_commit = True
-        instance = self._live_migration_instance()
+        instance = jsonutils.to_primitive(self._live_migration_instance())
         instance_id = instance['id']
         instance_uuid = instance['uuid']
         db.instance_get(self.context,
@@ -484,10 +484,10 @@ class SchedulerTestCase(test.TestCase):
 
         rpc.call(self.context, "compute.fake_host2",
                    {"method": 'check_can_live_migrate_destination',
-                    "args": {'instance_id': instance_id,
+                    "args": {'instance': instance,
                              'block_migration': block_migration,
                              'disk_over_commit': disk_over_commit},
-                    "version": "1.2"},
+                    "version": "1.10"},
                  None)
 
         db.instance_update_and_get_original(self.context, instance_uuid,

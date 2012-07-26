@@ -49,7 +49,8 @@ class ComputeRpcAPITestCase(test.TestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
 
         methods_with_instance = [
-            'add_fixed_ip_to_instance', 'attach_volume', 'get_console_output',
+            'add_fixed_ip_to_instance', 'attach_volume',
+            'check_can_live_migrate_destination', 'get_console_output',
             'pause_instance', 'reboot_instance', 'suspend_instance',
             'unpause_instance'
         ]
@@ -132,8 +133,9 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_check_can_live_migrate_destination(self):
         self._test_compute_api('check_can_live_migrate_destination', 'call',
-                version='1.2', instance=self.fake_instance, destination='dest',
-                block_migration=True, disk_over_commit=True)
+                version='1.10', instance=self.fake_instance,
+                destination='dest', block_migration=True,
+                disk_over_commit=True)
 
     def test_check_can_live_migrate_source(self):
         self._test_compute_api('check_can_live_migrate_source', 'call',

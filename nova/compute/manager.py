@@ -297,7 +297,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.9'
+    RPC_API_VERSION = '1.10'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2092,25 +2092,28 @@ class ComputeManager(manager.SchedulerDependentManager):
         raise rpc_common.RPCException(message=_('Deprecated from version 1.2'))
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def check_can_live_migrate_destination(self, ctxt, instance_id,
-                                           block_migration=False,
-                                           disk_over_commit=False):
+    def check_can_live_migrate_destination(self, ctxt, block_migration=False,
+                                           disk_over_commit=False,
+                                           instance_id=None, instance=None):
         """Check if it is possible to execute live migration.
 
         This runs checks on the destination host, and then calls
         back to the source host to check the results.
 
         :param context: security context
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance: dict of instance data
+        :param instance_id: (deprecated and only supplied if no instance passed
+                             in) nova.db.sqlalchemy.models.Instance.Id
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
         """
-        instance_ref = self.db.instance_get(ctxt, instance_id)
+        if not instance:
+            instance = self.db.instance_get(ctxt, instance_id)
         dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
-            instance_ref, block_migration, disk_over_commit)
+            instance, block_migration, disk_over_commit)
         try:
             self.compute_rpcapi.check_can_live_migrate_source(ctxt,
-                    instance_ref, dest_check_data)
+                    instance, dest_check_data)
         finally:
             self.driver.check_can_live_migrate_destination_cleanup(ctxt,
                     dest_check_data)
