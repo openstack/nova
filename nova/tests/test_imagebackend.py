@@ -238,7 +238,7 @@ class LvmTestCase(_ImageTestCase):
         fn = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(self.disk, 'resize2fs')
         self.mox.StubOutWithMock(self.libvirt_utils, 'create_lvm_image')
-        self.mox.StubOutWithMock(self.libvirt_utils, 'get_disk_size')
+        self.mox.StubOutWithMock(self.disk, 'get_disk_size')
         self.mox.StubOutWithMock(self.utils, 'execute')
         return fn
 
@@ -249,7 +249,7 @@ class LvmTestCase(_ImageTestCase):
                                             self.LV,
                                             self.TEMPLATE_SIZE,
                                             sparse=sparse)
-        self.libvirt_utils.get_disk_size(self.TEMPLATE_PATH
+        self.disk.get_disk_size(self.TEMPLATE_PATH
                                          ).AndReturn(self.TEMPLATE_SIZE)
         cmd = ('dd', 'if=%s' % self.TEMPLATE_PATH,
                'of=%s' % self.PATH, 'bs=4M')
@@ -279,7 +279,7 @@ class LvmTestCase(_ImageTestCase):
         fn(target=self.TEMPLATE_PATH)
         self.libvirt_utils.create_lvm_image(self.VG, self.LV,
                                             self.SIZE, sparse=sparse)
-        self.libvirt_utils.get_disk_size(self.TEMPLATE_PATH
+        self.disk.get_disk_size(self.TEMPLATE_PATH
                                          ).AndReturn(self.TEMPLATE_SIZE)
         cmd = ('dd', 'if=%s' % self.TEMPLATE_PATH,
                'of=%s' % self.PATH, 'bs=4M')
@@ -321,7 +321,7 @@ class LvmTestCase(_ImageTestCase):
                                             self.SIZE,
                                             sparse=False
                                             ).AndRaise(RuntimeError())
-        self.libvirt_utils.get_disk_size(self.TEMPLATE_PATH
+        self.disk.get_disk_size(self.TEMPLATE_PATH
                                          ).AndReturn(self.TEMPLATE_SIZE)
         self.mox.StubOutWithMock(self.libvirt_utils, 'remove_logical_volumes')
         self.libvirt_utils.remove_logical_volumes(self.PATH)

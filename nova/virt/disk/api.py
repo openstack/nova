@@ -39,7 +39,7 @@ from nova import utils
 from nova.virt.disk import guestfs
 from nova.virt.disk import loop
 from nova.virt.disk import nbd
-from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt import images
 
 
 LOG = logging.getLogger(__name__)
@@ -103,9 +103,21 @@ def resize2fs(image, check_exit_code=False):
     utils.execute('resize2fs', image, check_exit_code=check_exit_code)
 
 
+def get_disk_size(path):
+    """Get the (virtual) size of a disk image
+
+    :param path: Path to the disk image
+    :returns: Size (in bytes) of the given disk image as it would be seen
+              by a virtual machine.
+    """
+    size = images.qemu_img_info(path)['virtual size']
+    size = size.split('(')[1].split()[0]
+    return int(size)
+
+
 def extend(image, size):
     """Increase image to size"""
-    virt_size = libvirt_utils.get_disk_size(image)
+    virt_size = get_disk_size(image)
     if virt_size >= size:
         return
     utils.execute('qemu-img', 'resize', image, size)
@@ -117,7 +129,7 @@ def can_resize_fs(image, size, use_cow=False):
     """Check whether we can resize contained file system."""
 
     # Check that we're increasing the size
-    virt_size = libvirt_utils.get_disk_size(image)
+    virt_size = get_disk_size(image)
     if virt_size >= size:
         return False
 

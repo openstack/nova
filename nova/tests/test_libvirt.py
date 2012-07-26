@@ -46,6 +46,7 @@ from nova.tests import fake_libvirt_utils
 from nova.tests import fake_network
 import nova.tests.image.fake
 from nova import utils
+from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import firewall as base_firewall
 from nova.virt import images
@@ -1803,13 +1804,6 @@ class LibvirtConnTestCase(test.TestCase):
                     "<target dev='vdb' bus='virtio'/></disk>"
                     "</devices></domain>")
 
-        ret = ("image: /test/disk\n"
-               "file format: raw\n"
-               "virtual size: 20G (21474836480 bytes)\n"
-               "disk size: 3.1G\n"
-               "cluster_size: 2097152\n"
-               "backing file: /test/dummy (actual path: /backing/file)\n")
-
         # Preparing mocks
         vdmock = self.mox.CreateMock(libvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
@@ -1828,6 +1822,17 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.StubOutWithMock(os.path, "getsize")
         os.path.getsize('/test/disk').AndReturn((10737418240))
         os.path.getsize('/test/disk.local').AndReturn((21474836480))
+
+        ret = ("image: /test/disk\n"
+               "file format: raw\n"
+               "virtual size: 20G (21474836480 bytes)\n"
+               "disk size: 3.1G\n"
+               "cluster_size: 2097152\n"
+               "backing file: /test/dummy (actual path: /backing/file)\n")
+
+        self.mox.StubOutWithMock(utils, "execute")
+        utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
+                      '/test/disk.local').AndReturn((ret, ''))
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(False)
@@ -3207,7 +3212,7 @@ disk size: 4.4M''', ''))
 
         # Start test
         self.mox.ReplayAll()
-        self.assertEquals(libvirt_utils.get_disk_size('/some/path'), 4592640)
+        self.assertEquals(disk.get_disk_size('/some/path'), 4592640)
 
     def test_copy_image(self):
         dst_fd, dst_path = tempfile.mkstemp()

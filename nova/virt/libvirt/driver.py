@@ -2667,7 +2667,7 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_type = driver_nodes[cnt].get('type')
             if disk_type == "qcow2":
                 backing_file = libvirt_utils.get_disk_backing_file(path)
-                virt_size = libvirt_utils.get_disk_size(path)
+                virt_size = disk.get_disk_size(path)
             else:
                 backing_file = ""
                 virt_size = 0
