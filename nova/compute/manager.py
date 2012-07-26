@@ -186,6 +186,8 @@ def checks_instance_lock(function):
         if admin or not locked:
             cb(self, context, *args, **kwargs)
         else:
+            LOG.error(_("check_instance_lock: not executing |%s|"),
+                      function, context=context, instance_uuid=instance_uuid)
             return False
 
     @functools.wraps(function)
