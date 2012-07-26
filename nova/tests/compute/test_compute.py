@@ -699,10 +699,10 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.virt.fake.FakeDriver, 'inject_network_info',
                        fake_driver_inject_network)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.inject_network_info(self.context, instance_uuid)
+        self.compute.inject_network_info(self.context, instance=instance)
         self.assertTrue(called['inject'])
         self.compute.terminate_instance(self.context, instance_uuid)
 

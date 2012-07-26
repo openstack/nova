@@ -298,7 +298,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.18'
+    RPC_API_VERSION = '1.19'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1690,7 +1690,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                   instance,
                                                   network_id)
 
-        network_info = self._inject_network_info(context, instance['uuid'])
+        network_info = self._inject_network_info(context, instance=instance)
         self.reset_network(context, instance['uuid'])
 
         self._notify_about_instance_usage(
@@ -1712,7 +1712,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        instance_ref,
                                                        address)
 
-        network_info = self._inject_network_info(context, instance_ref['uuid'])
+        network_info = self._inject_network_info(context,
+                                                 instance=instance_ref)
         self.reset_network(context, instance_ref['uuid'])
 
         self._notify_about_instance_usage(
@@ -1878,9 +1879,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.debug(_('Reset network'), context=context, instance=instance)
         self.driver.reset_network(instance)
 
-    def _inject_network_info(self, context, instance_uuid):
+    def _inject_network_info(self, context, instance):
         """Inject network info for the given instance."""
-        instance = self.db.instance_get_by_uuid(context, instance_uuid)
         LOG.debug(_('Inject network info'), context=context, instance=instance)
 
         network_info = self._get_instance_nw_info(context, instance)
@@ -1893,9 +1893,11 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @checks_instance_lock
     @wrap_instance_fault
-    def inject_network_info(self, context, instance_uuid):
+    def inject_network_info(self, context, instance=None, instance_uuid=None):
         """Inject network info, but don't return the info."""
-        self._inject_network_info(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        self._inject_network_info(context, instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
