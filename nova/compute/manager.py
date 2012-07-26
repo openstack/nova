@@ -298,7 +298,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.19'
+    RPC_API_VERSION = '1.20'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2338,7 +2338,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "This error can be safely ignored."),
                  instance=instance_ref)
 
-    def post_live_migration_at_destination(self, context, instance_id,
+    def post_live_migration_at_destination(self, context, instance=None,
+                                           instance_id=None,
                                            block_migration=False):
         """Post operations for live migration .
 
@@ -2347,34 +2348,33 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param block_migration: if true, prepare for block migration
 
         """
-        instance_ref = self.db.instance_get(context, instance_id)
+        if not instance:
+            instance = self.db.instance_get(context, instance_id)
         LOG.info(_('Post operation of migraton started'),
-                 instance=instance_ref)
+                 instance=instance)
 
         # NOTE(tr3buchet): setup networks on destination host
         #                  this is called a second time because
         #                  multi_host does not create the bridge in
         #                  plug_vifs
-        self.network_api.setup_networks_on_host(context, instance_ref,
+        self.network_api.setup_networks_on_host(context, instance,
                                                          self.host)
 
-        network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.post_live_migration_at_destination(context, instance_ref,
+        network_info = self._get_instance_nw_info(context, instance)
+        self.driver.post_live_migration_at_destination(context, instance,
                                             self._legacy_nw_info(network_info),
                                             block_migration)
         # Restore instance state
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_ref['uuid'],
+                              instance['uuid'],
                               host=self.host,
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
 
         # NOTE(vish): this is necessary to update dhcp
-        self.network_api.setup_networks_on_host(context,
-                                                instance_ref,
-                                                self.host)
+        self.network_api.setup_networks_on_host(context, instance, self.host)
 
     def rollback_live_migration(self, context, instance_ref,
                                 dest, block_migration):

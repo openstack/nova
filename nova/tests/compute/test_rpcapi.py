@@ -54,9 +54,9 @@ class ComputeRpcAPITestCase(test.TestCase):
             'check_can_live_migrate_source', 'confirm_resize',
             'detach_volume', 'finish_resize', 'finish_revert_resize',
             'get_console_output', 'get_diagnostics', 'get_vnc_console',
-            'inject_file', 'inject_network_info',
-            'pause_instance', 'reboot_instance', 'suspend_instance',
-            'unpause_instance'
+            'inject_file', 'inject_network_info', 'pause_instance',
+            'post_live_migration_at_destination', 'reboot_instance',
+            'suspend_instance', 'unpause_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -82,10 +82,7 @@ class ComputeRpcAPITestCase(test.TestCase):
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
             if method in ['rollback_live_migration_at_destination',
-                          'pre_live_migration', 'remove_volume_connection',
-                          'post_live_migration_at_destination',
-                          'check_can_live_migrate_destination',
-                          'check_can_live_migrate_source']:
+                          'pre_live_migration', 'remove_volume_connection']:
                 expected_msg['args']['instance_id'] = instance['id']
             else:
                 expected_msg['args']['instance_uuid'] = instance['uuid']
@@ -209,7 +206,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_post_live_migration_at_destination(self):
         self._test_compute_api('post_live_migration_at_destination', 'call',
                 instance=self.fake_instance, block_migration='block_migration',
-                host='host')
+                host='host', version='1.20')
 
     def test_pause_instance(self):
         self._test_compute_api('pause_instance', 'cast',
