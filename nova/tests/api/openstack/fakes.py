@@ -262,7 +262,11 @@ def stub_out_glance_add_image(stubs, sent_to_glance):
 def stub_out_glance(stubs):
     def fake_get_remote_image_service():
         client = glance_stubs.StubGlanceClient(_make_image_fixtures())
-        return nova.image.glance.GlanceImageService(client)
+        client_wrapper = nova.image.glance.GlanceClientWrapper()
+        client_wrapper.host = 'fake_host'
+        client_wrapper.port = 9292
+        client_wrapper.client = client
+        return nova.image.glance.GlanceImageService(client=client_wrapper)
     stubs.Set(nova.image.glance,
               'get_default_image_service',
               fake_get_remote_image_service)

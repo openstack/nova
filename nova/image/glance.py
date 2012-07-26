@@ -20,6 +20,7 @@
 from __future__ import absolute_import
 
 import copy
+import itertools
 import random
 import sys
 import time
@@ -33,7 +34,6 @@ from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -68,87 +68,84 @@ def _create_glance_client(context, host, port):
     return glance.client.Client(host, port, **params)
 
 
-def pick_glance_api_server():
-    """Return which Glance API server to use for the request
-
-    This method provides a very primitive form of load-balancing suitable for
-    testing and sandbox environments. In production, it would be better to use
-    one IP and route that to a real load-balancer.
-
-        Returns (host, port)
+def get_api_servers():
     """
-    host_port = random.choice(FLAGS.glance_api_servers)
-    host, port_str = host_port.split(':')
-    port = int(port_str)
-    return host, port
-
-
-def _get_glance_client(context, image_href):
-    """Get the correct glance client and id for the given image_href.
-
-    The image_href param can be an href of the form
-    http://myglanceserver:9292/images/42, or just an int such as 42. If the
-    image_href is an int, then flags are used to create the default
-    glance client.
-
-    NOTE: Do not use this or glance.client directly, all other code
-    should be using GlanceImageService.
-
-    :param image_href: image ref/id for an image
-    :returns: a tuple of the form (glance_client, image_id)
-
+    Shuffle a list of FLAGS.glance_api_servers and return an iterator
+    that will cycle through the list, looping around to the beginning
+    if necessary.
     """
-    glance_host, glance_port = pick_glance_api_server()
+    api_servers = []
+    for api_server in FLAGS.glance_api_servers:
+        host, port_str = api_server.split(':')
+        api_servers.append((host, int(port_str)))
+    random.shuffle(api_servers)
+    return itertools.cycle(api_servers)
 
-    # check if this is an id
-    if '/' not in str(image_href):
-        glance_client = _create_glance_client(context,
-                                              glance_host,
-                                              glance_port)
-        return (glance_client, image_href)
 
-    else:
-        try:
-            (image_id, glance_host, glance_port) = _parse_image_ref(image_href)
-            glance_client = _create_glance_client(context,
-                                                  glance_host,
-                                                  glance_port)
-        except ValueError:
-            raise exception.InvalidImageRef(image_href=image_href)
+class GlanceClientWrapper(object):
+    """Glance client wrapper class that implements retries."""
 
-        return (glance_client, image_id)
+    def __init__(self, context=None, host=None, port=None):
+        if host is not None:
+            self._create_static_client(context, host, port)
+        else:
+            self.client = None
+        self.api_servers = None
+
+    def _create_static_client(self, context, host, port):
+        """Create a client that we'll use for every call."""
+        self.host = host
+        self.port = port
+        self.client = _create_glance_client(context, self.host, self.port)
+
+    def _create_onetime_client(self, context):
+        """Create a client that will be used for one call."""
+        if self.api_servers is None:
+            self.api_servers = get_api_servers()
+        self.host, self.port = self.api_servers.next()
+        return _create_glance_client(context, self.host, self.port)
+
+    def call(self, context, method, *args, **kwargs):
+        """
+        Call a glance client method.  If we get a connection error,
+        retry the request according to FLAGS.glance_num_retries.
+        """
+
+        retry_excs = (glance_exception.ClientConnectionError,
+                glance_exception.ServiceUnavailable)
+
+        num_attempts = 1 + FLAGS.glance_num_retries
+
+        for attempt in xrange(1, num_attempts + 1):
+            if self.client:
+                client = self.client
+            else:
+                client = self._create_onetime_client(context)
+            try:
+                return getattr(client, method)(*args, **kwargs)
+            except retry_excs as e:
+                host = self.host
+                port = self.port
+                extra = "retrying"
+                error_msg = _("Error contacting glance server "
+                        "'%(host)s:%(port)s' for '%(method)s', %(extra)s.")
+                if attempt == num_attempts:
+                    extra = 'done trying'
+                    LOG.exception(error_msg, locals())
+                    raise exception.GlanceConnectionFailed(
+                            host=host, port=port, reason=str(e))
+                LOG.exception(error_msg, locals())
+                time.sleep(1)
+        # Not reached
 
 
 class GlanceImageService(object):
     """Provides storage and retrieval of disk image objects within Glance."""
 
     def __init__(self, client=None):
+        if client is None:
+            client = GlanceClientWrapper()
         self._client = client
-
-    def _get_client(self, context):
-        # NOTE(sirp): we want to load balance each request across glance
-        # servers. Since GlanceImageService is a long-lived object, `client`
-        # is made to choose a new server each time via this property.
-        if self._client is not None:
-            return self._client
-        glance_host, glance_port = pick_glance_api_server()
-        return _create_glance_client(context, glance_host, glance_port)
-
-    def _call_retry(self, context, name, *args, **kwargs):
-        """Retry call to glance server if there is a connection error.
-        Suitable only for idempotent calls."""
-        for i in xrange(FLAGS.glance_num_retries + 1):
-            client = self._get_client(context)
-            try:
-                return getattr(client, name)(*args, **kwargs)
-            except glance_exception.ClientConnectionError as e:
-                LOG.exception(_('Connection error contacting glance'
-                                ' server, retrying'))
-
-                time.sleep(1)
-
-        raise exception.GlanceConnectionFailed(
-                reason=_('Maximum attempts reached'))
 
     def detail(self, context, **kwargs):
         """Calls out to Glance for a list of detailed image information."""
@@ -180,13 +177,12 @@ class GlanceImageService(object):
         # NOTE(vish): don't filter out private images
         kwargs['filters'].setdefault('is_public', 'none')
 
-        client = self._get_client(context)
-        return self._fetch_images(client.get_images_detailed, **kwargs)
+        return self._fetch_images(context, 'get_images_detailed', **kwargs)
 
-    def _fetch_images(self, fetch_func, **kwargs):
+    def _fetch_images(self, context, fetch_method, **kwargs):
         """Paginate through results from glance server"""
         try:
-            images = fetch_func(**kwargs)
+            images = self._client.call(context, fetch_method, **kwargs)
         except Exception:
             _reraise_translated_exception()
 
@@ -212,14 +208,14 @@ class GlanceImageService(object):
             # ignore missing limit, just proceed without it
             pass
 
-        for image in self._fetch_images(fetch_func, **kwargs):
+        for image in self._fetch_images(context, fetch_method, **kwargs):
             yield image
 
     def show(self, context, image_id):
         """Returns a dict with image data for the given opaque image id."""
         try:
-            image_meta = self._call_retry(context, 'get_image_meta',
-                                          image_id)
+            image_meta = self._client.call(context, 'get_image_meta',
+                    image_id)
         except Exception:
             _reraise_translated_image_exception(image_id)
 
@@ -232,8 +228,8 @@ class GlanceImageService(object):
     def download(self, context, image_id, data):
         """Calls out to Glance for metadata and data and writes data."""
         try:
-            image_meta, image_chunks = self._call_retry(context, 'get_image',
-                                                        image_id)
+            image_meta, image_chunks = self._client.call(context,
+                    'get_image', image_id)
         except Exception:
             _reraise_translated_image_exception(image_id)
 
@@ -253,8 +249,8 @@ class GlanceImageService(object):
         LOG.debug(_('Metadata after formatting for Glance %s'),
                   sent_service_image_meta)
 
-        recv_service_image_meta = self._get_client(context).add_image(
-            sent_service_image_meta, data)
+        recv_service_image_meta = self._client.call(context,
+                'add_image', sent_service_image_meta, data)
 
         # Translate Service -> Base
         base_image_meta = self._translate_from_glance(recv_service_image_meta)
@@ -271,10 +267,9 @@ class GlanceImageService(object):
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
         image_meta = self._translate_to_glance(image_meta)
-        client = self._get_client(context)
         try:
-            image_meta = client.update_image(image_id, image_meta, data,
-                                             features)
+            image_meta = self._client.call(context, 'update_image',
+                    image_id, image_meta, data, features)
         except Exception:
             _reraise_translated_image_exception(image_id)
 
@@ -289,9 +284,9 @@ class GlanceImageService(object):
 
         """
         # NOTE(vish): show is to check if image is available
-        image_meta = self.show(context, image_id)
+        self.show(context, image_id)
         try:
-            result = self._get_client(context).delete_image(image_id)
+            result = self._client.call(context, 'delete_image', image_id)
         except glance_exception.NotFound:
             raise exception.ImageNotFound(image_id=image_id)
         return result
@@ -480,12 +475,17 @@ def get_remote_image_service(context, image_href):
     # standalone image ID
     if '/' not in str(image_href):
         image_service = get_default_image_service()
-        image_id = image_href
-    else:
-        (glance_client, image_id) = _get_glance_client(context, image_href)
-        image_service = GlanceImageService(glance_client)
+        return image_service, image_href
 
-    return (image_service, image_id)
+    try:
+        (image_id, glance_host, glance_port) = _parse_image_ref(image_href)
+        glance_client = GlanceClientWrapper(context=context,
+                host=glance_host, port=glance_port)
+    except ValueError:
+        raise exception.InvalidImageRef(image_href=image_href)
+
+    image_service = GlanceImageService(client=glance_client)
+    return image_service, image_id
 
 
 def get_default_image_service():

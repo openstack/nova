@@ -560,7 +560,8 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
     LOG.debug(_("Asking xapi to upload %(vdi_uuids)s as"
                 " ID %(image_id)s"), locals(), instance=instance)
 
-    glance_host, glance_port = glance.pick_glance_api_server()
+    glance_api_servers = glance.get_api_servers()
+    glance_host, glance_port = glance_api_servers.next()
 
     # TODO(sirp): this inherit-image-property code should probably go in
     # nova/compute/manager so it can be shared across hypervisors
@@ -916,8 +917,10 @@ def _fetch_vhd_image(context, session, instance, image_id):
               'sr_path': get_sr_path(session),
               'auth_token': getattr(context, 'auth_token', None)}
 
+    glance_api_servers = glance.get_api_servers()
+
     def pick_glance(params):
-        glance_host, glance_port = glance.pick_glance_api_server()
+        glance_host, glance_port = glance_api_servers.next()
         params['glance_host'] = glance_host
         params['glance_port'] = glance_port
 
