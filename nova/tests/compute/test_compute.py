@@ -422,7 +422,7 @@ class ComputeTestCase(BaseTestCase):
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.stop_instance(self.context, instance=instance)
-        self.compute.start_instance(self.context, instance_uuid)
+        self.compute.start_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_rescue(self):
@@ -462,10 +462,10 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.virt.fake.FakeDriver, 'power_on',
                        fake_driver_power_on)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.power_on_instance(self.context, instance_uuid)
+        self.compute.power_on_instance(self.context, instance=instance)
         self.assertTrue(called['power_on'])
         self.compute.terminate_instance(self.context, instance_uuid)
 
