@@ -34,6 +34,7 @@ from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common.notifier import api as notifier
+from nova.openstack.common.rpc import common as rpc_common
 from nova import quota
 
 
@@ -66,6 +67,21 @@ class SchedulerManager(manager.Manager):
         # when changing the API of the scheduler drivers, as that changes
         # the rpc API as well, and the version should be updated accordingly.
         return functools.partial(self._schedule, key)
+
+    def get_host_list(self, context):
+        """Get a list of hosts from the HostManager.
+
+        Currently unused, but left for backwards compatibility.
+        """
+        raise rpc_common.RPCException(message=_('Deprecated in version 1.0'))
+
+    def get_service_capabilities(self, context):
+        """Get the normalized set of capabilities for this zone.
+
+        Has been unused since pre-essex, but remains for rpc API 1.X
+        completeness.
+        """
+        raise rpc_common.RPCException(message=_('Deprecated in version 1.0'))
 
     def update_service_capabilities(self, context, service_name=None,
             host=None, capabilities=None, **kwargs):
