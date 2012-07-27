@@ -196,7 +196,7 @@ class VMOps(object):
 
         # Remove the '-orig' suffix (which was added in case the resized VM
         # ends up on the source host, common during testing)
-        name_label = instance.name
+        name_label = instance['name']
         vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
 
         self._start(instance, vm_ref)
@@ -230,7 +230,7 @@ class VMOps(object):
                       block_device_info=None):
         disk_image_type = vm_utils.determine_disk_image_type(image_meta)
         vdis = vm_utils.get_vdis_for_instance(context, self._session,
-                                          instance, instance.image_ref,
+                                          instance, instance['image_ref'],
                                           disk_image_type,
                                           block_device_info=block_device_info)
         # Just get the VDI ref once
@@ -275,15 +275,15 @@ class VMOps(object):
             kernel_file = None
             ramdisk_file = None
 
-            if instance.kernel_id:
+            if instance['kernel_id']:
                 vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, instance.kernel_id,
+                        instance, instance['kernel_id'],
                         vm_utils.ImageType.KERNEL)
                 kernel_file = vdis['kernel'].get('file')
 
-            if instance.ramdisk_id:
+            if instance['ramdisk_id']:
                 vdis = vm_utils.create_kernel_image(context, self._session,
-                        instance, instance.ramdisk_id,
+                        instance, instance['ramdisk_id'],
                         vm_utils.ImageType.RAMDISK)
                 ramdisk_file = vdis['ramdisk'].get('file')
 
@@ -368,14 +368,14 @@ class VMOps(object):
     def _create_vm(self, context, instance, vdis, network_info, image_meta,
                    kernel_file=None, ramdisk_file=None):
         """Create VM instance."""
-        instance_name = instance.name
+        instance_name = instance['name']
         vm_ref = vm_utils.lookup(self._session, instance_name)
         if vm_ref is not None:
             raise exception.InstanceExists(name=instance_name)
 
         # Ensure enough free memory is available
         if not vm_utils.ensure_free_mem(self._session, instance):
-            raise exception.InsufficientFreeMemory(uuid=instance.uuid)
+            raise exception.InsufficientFreeMemory(uuid=instance['uuid'])
 
         disk_image_type = vm_utils.determine_disk_image_type(image_meta)
 
@@ -386,10 +386,10 @@ class VMOps(object):
             use_pv_kernel = False
         else:
             use_pv_kernel = vm_utils.determine_is_pv(self._session,
-                    vdis['root']['ref'], disk_image_type, instance.os_type)
+                    vdis['root']['ref'], disk_image_type, instance['os_type'])
             mode = use_pv_kernel and vm_mode.XEN or vm_mode.HVM
 
-        if instance.vm_mode != mode:
+        if instance['vm_mode'] != mode:
             # Update database with normalized (or determined) value
             db.instance_update(nova_context.get_admin_context(),
                                instance['uuid'], {'vm_mode': mode})
@@ -426,7 +426,7 @@ class VMOps(object):
 
             cd_vdi = vdis.pop('root')
             root_vdi = vm_utils.fetch_blank_disk(self._session,
-                                                 instance.instance_type_id)
+                                                 instance['instance_type_id'])
             vdis['root'] = root_vdi
 
             vm_utils.create_vbd(self._session, vm_ref, root_vdi['ref'],
@@ -437,11 +437,11 @@ class VMOps(object):
         else:
             root_vdi = vdis['root']
 
-            if instance.auto_disk_config:
+            if instance['auto_disk_config']:
                 LOG.debug(_("Auto configuring disk, attempting to "
                             "resize partition..."), instance=instance)
                 instance_type = db.instance_type_get(ctx,
-                        instance.instance_type_id)
+                        instance['instance_type_id'])
                 vm_utils.auto_configure_disk(self._session,
                                              root_vdi['ref'],
                                              instance_type['root_gb'])
@@ -452,7 +452,7 @@ class VMOps(object):
         # Attach (optional) swap disk
         swap_vdi = vdis.get('swap')
 
-        instance_type = db.instance_type_get(ctx, instance.instance_type_id)
+        instance_type = db.instance_type_get(ctx, instance['instance_type_id'])
         swap_mb = instance_type['swap']
         generate_swap = swap_mb and FLAGS.xenapi_generate_swap
         if generate_swap:
@@ -480,7 +480,7 @@ class VMOps(object):
 
         ctx = nova_context.get_admin_context()
         agent_build = db.agent_build_get_by_triple(ctx, 'xen',
-                              instance.os_type, instance.architecture)
+                              instance['os_type'], instance['architecture'])
         if agent_build:
             LOG.info(_('Latest agent build for %(hypervisor)s/%(os)s'
                        '/%(architecture)s is %(version)s') % agent_build)
@@ -488,8 +488,8 @@ class VMOps(object):
             LOG.info(_('No agent build found for %(hypervisor)s/%(os)s'
                        '/%(architecture)s') % {
                         'hypervisor': 'xen',
-                        'os': instance.os_type,
-                        'architecture': instance.architecture})
+                        'os': instance['os_type'],
+                        'architecture': instance['architecture']})
 
         # Wait for boot to finish
         LOG.debug(_('Waiting for instance state to become running'),
@@ -522,7 +522,7 @@ class VMOps(object):
         no_agent = version is None
 
         # Inject files, if necessary
-        injected_files = instance.injected_files
+        injected_files = instance['injected_files']
         if injected_files:
             # Check if this is a JSON-encoded string and convert if needed.
             if isinstance(injected_files, basestring):
@@ -533,13 +533,13 @@ class VMOps(object):
                                   injected_files, instance=instance)
                     injected_files = []
             # Inject any files, if specified
-            for path, contents in instance.injected_files:
+            for path, contents in instance['injected_files']:
                 LOG.debug(_("Injecting file path: '%s'") % path,
                           instance=instance)
                 agent.inject_file(self._session, instance, vm_ref,
                                   path, contents)
 
-        admin_password = instance.admin_pass
+        admin_password = instance['admin_pass']
         # Set admin password, if necessary
         if admin_password and not no_agent:
             LOG.debug(_("Setting admin password"), instance=instance)
@@ -551,7 +551,7 @@ class VMOps(object):
         agent.resetnetwork(self._session, instance, vm_ref)
 
         # Set VCPU weight
-        inst_type = db.instance_type_get(ctx, instance.instance_type_id)
+        inst_type = db.instance_type_get(ctx, instance['instance_type_id'])
         vcpu_weight = inst_type['vcpu_weight']
         if vcpu_weight is not None:
             LOG.debug(_("Setting VCPU weight"), instance=instance)
@@ -604,7 +604,7 @@ class VMOps(object):
 
         """
         vm_ref = self._get_vm_opaque_ref(instance)
-        label = "%s-snapshot" % instance.name
+        label = "%s-snapshot" % instance['name']
 
         with vm_utils.snapshot_attached_here(
                 self._session, instance, vm_ref, label) as vdi_uuids:
@@ -633,7 +633,7 @@ class VMOps(object):
             raise exception.MigrationError(reason=msg)
 
     def _get_orig_vm_name_label(self, instance):
-        return instance.name + '-orig'
+        return instance['name'] + '-orig'
 
     def _update_instance_progress(self, context, instance, step, total_steps):
         """Update instance progress percent to reflect current step number
@@ -696,7 +696,7 @@ class VMOps(object):
     def _migrate_disk_resizing_up(self, context, instance, dest, vm_ref,
                                   sr_path):
         # 1. Create Snapshot
-        label = "%s-snapshot" % instance.name
+        label = "%s-snapshot" % instance['name']
         with vm_utils.snapshot_attached_here(
                 self._session, instance, vm_ref, label) as vdi_uuids:
             self._update_instance_progress(context, instance,
@@ -772,7 +772,7 @@ class VMOps(object):
     def _resize_instance(self, instance, root_vdi):
         """Resize an instances root disk."""
 
-        new_disk_size = instance.root_gb * 1024 * 1024 * 1024
+        new_disk_size = instance['root_gb'] * 1024 * 1024 * 1024
         if not new_disk_size:
             return
 
@@ -782,7 +782,7 @@ class VMOps(object):
         virtual_size = int(virtual_size)
 
         old_gb = virtual_size / (1024 * 1024 * 1024)
-        new_gb = instance.root_gb
+        new_gb = instance['root_gb']
 
         if virtual_size < new_disk_size:
             # Resize up. Simple VDI resize will do the trick
@@ -948,13 +948,13 @@ class VMOps(object):
 
         """
         instance_uuid = instance['uuid']
-        if not instance.kernel_id and not instance.ramdisk_id:
+        if not instance['kernel_id'] and not instance['ramdisk_id']:
             # 1. No kernel or ramdisk
             LOG.debug(_("Using RAW or VHD, skipping kernel and ramdisk "
                         "deletion"), instance=instance)
             return
 
-        if not (instance.kernel_id and instance.ramdisk_id):
+        if not (instance['kernel_id'] and instance['ramdisk_id']):
             # 2. We only have kernel xor ramdisk
             raise exception.InstanceUnacceptable(instance_id=instance_uuid,
                reason=_("instance has a kernel or ramdisk but not both"))
@@ -998,7 +998,7 @@ class VMOps(object):
         vm_ref = vm_utils.lookup(self._session, instance['name'])
 
         rescue_vm_ref = vm_utils.lookup(self._session,
-                                        "%s-rescue" % instance.name)
+                                        "%s-rescue" % instance['name'])
         if rescue_vm_ref:
             self._destroy_rescue_instance(rescue_vm_ref, vm_ref)
 
@@ -1063,18 +1063,18 @@ class VMOps(object):
 
         """
         rescue_vm_ref = vm_utils.lookup(self._session,
-                                        "%s-rescue" % instance.name)
+                                        "%s-rescue" % instance['name'])
         if rescue_vm_ref:
             raise RuntimeError(_("Instance is already in Rescue Mode: %s")
-                               % instance.name)
+                               % instance['name'])
 
         vm_ref = self._get_vm_opaque_ref(instance)
         vm_utils.shutdown_vm(self._session, instance, vm_ref)
         self._acquire_bootlock(vm_ref)
         instance._rescue = True
         self.spawn(context, instance, image_meta, network_info)
-        # instance.name now has -rescue appended because of magic
-        rescue_vm_ref = vm_utils.lookup(self._session, instance.name)
+        # instance['name'] now has -rescue appended because of magic
+        rescue_vm_ref = vm_utils.lookup(self._session, instance['name'])
         vdi_ref = self._find_root_vdi_ref(vm_ref)
 
         rescue_vbd_ref = vm_utils.create_vbd(self._session, rescue_vm_ref,
@@ -1091,9 +1091,10 @@ class VMOps(object):
 
         """
         rescue_vm_ref = vm_utils.lookup(self._session,
-                                        "%s-rescue" % instance.name)
+                                        "%s-rescue" % instance['name'])
         if not rescue_vm_ref:
-            raise exception.InstanceNotInRescueMode(instance_id=instance.uuid)
+            raise exception.InstanceNotInRescueMode(
+                    instance_id=instance['uuid'])
 
         original_vm_ref = self._get_vm_opaque_ref(instance)
         instance._rescue = False
@@ -1316,7 +1317,7 @@ class VMOps(object):
         Generate the network info and make calls to place it into the
         xenstore and the xenstore param list.
         vm_ref can be passed in because it will sometimes be different than
-        what vm_utils.lookup(session, instance.name) will find (ex: rescue)
+        what vm_utils.lookup(session, instance['name']) will find (ex: rescue)
         """
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         LOG.debug(_("Injecting network info to xenstore"), instance=instance)
@@ -1370,7 +1371,7 @@ class VMOps(object):
 
     def inject_hostname(self, instance, vm_ref, hostname):
         """Inject the hostname of the instance into the xenstore."""
-        if instance.os_type == "windows":
+        if instance['os_type'] == "windows":
             # NOTE(jk0): Windows hostnames can only be <= 15 chars.
             hostname = hostname[:15]
 

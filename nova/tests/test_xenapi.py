@@ -2058,11 +2058,13 @@ class VmUtilsTestCase(test.TestCase):
         def fake_get_sr_path(session):
             return "foo"
 
-        class FakeInstance(object):
-            auto_disk_config = "auto disk config"
-            os_type = "os type"
+        class FakeInstance(dict):
+            def __init__(self):
+                super(FakeInstance, self).__init__({
+                        'auto_disk_config': 'auto disk config',
+                        'os_type': 'os type'})
 
-            def __getitem__(instance_self, item):
+            def __missing__(self, item):
                 return "whatever"
 
         class FakeSession(object):

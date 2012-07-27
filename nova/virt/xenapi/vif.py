@@ -46,7 +46,7 @@ class XenAPIBridgeDriver(XenVIFDriver):
 
     def plug(self, instance, vif, vm_ref=None, device=None):
         if not vm_ref:
-            vm_ref = vm_utils.lookup(self._session, instance.name)
+            vm_ref = vm_utils.lookup(self._session, instance['name'])
         if not device:
             device = 0
 
@@ -136,7 +136,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
 
     def plug(self, instance, vif, vm_ref=None, device=None):
         if not vm_ref:
-            vm_ref = vm_utils.lookup(self._session, instance.name)
+            vm_ref = vm_utils.lookup(self._session, instance['name'])
 
         if not device:
             device = 0

@@ -151,7 +151,7 @@ def create_vm(session, instance, kernel, ramdisk, use_pv_kernel=False):
 
         3. Using hardware virtualization
     """
-    inst_type_id = instance.instance_type_id
+    inst_type_id = instance['instance_type_id']
     instance_type = instance_types.get_instance_type(inst_type_id)
     mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
     vcpus = str(instance_type['vcpus'])
@@ -173,9 +173,9 @@ def create_vm(session, instance, kernel, ramdisk, use_pv_kernel=False):
         'memory_static_max': mem,
         'memory_target': mem,
         'name_description': '',
-        'name_label': instance.name,
+        'name_label': instance['name'],
         'other_config': {'allowvssprovider': str(False),
-                         'nova_uuid': str(instance.uuid)},
+                         'nova_uuid': str(instance['uuid'])},
         'PCI_bus': '',
         'platform': {'acpi': 'true', 'apic': 'true', 'pae': 'true',
                      'viridian': 'true', 'timeoffset': '0'},
@@ -197,7 +197,7 @@ def create_vm(session, instance, kernel, ramdisk, use_pv_kernel=False):
     # non-raw/raw with PV kernel/raw in HVM mode
     if use_pv_kernel:
         rec['platform']['nx'] = 'false'
-        if instance.kernel_id:
+        if instance['kernel_id']:
             # 1. Kernel explicitly passed in, use that
             rec['PV_args'] = 'root=/dev/xvda1'
             rec['PV_kernel'] = kernel
@@ -246,7 +246,7 @@ def shutdown_vm(session, instance, vm_ref, hard=True):
 
 
 def ensure_free_mem(session, instance):
-    inst_type_id = instance.instance_type_id
+    inst_type_id = instance['instance_type_id']
     instance_type = instance_types.get_instance_type(inst_type_id)
     mem = long(instance_type['memory_mb']) * 1024 * 1024
     host = session.get_xenapi_host()
@@ -574,8 +574,8 @@ def upload_image(context, session, instance, vdi_uuids, image_id):
         if key in FLAGS.non_inheritable_image_properties:
             continue
         properties[key] = value
-    properties['auto_disk_config'] = instance.auto_disk_config
-    properties['os_type'] = instance.os_type or FLAGS.default_os_type
+    properties['auto_disk_config'] = instance['auto_disk_config']
+    properties['os_type'] = instance['os_type'] or FLAGS.default_os_type
 
     params = {'vdi_uuids': vdi_uuids,
               'image_id': image_id,
@@ -695,7 +695,7 @@ def _generate_disk(session, instance, vm_ref, userdevice, name, size_mb,
 def generate_swap(session, instance, vm_ref, userdevice, swap_mb):
     # NOTE(jk0): We use a FAT32 filesystem for the Windows swap
     # partition because that is what parted supports.
-    is_windows = instance.os_type == "windows"
+    is_windows = instance['os_type'] == "windows"
     fs_type = "vfat" if is_windows else "linux-swap"
 
     _generate_disk(session, instance, vm_ref, userdevice, 'swap', swap_mb,
@@ -841,7 +841,7 @@ def create_image(context, session, instance, image_id, image_type):
     # Set the name label and description to easily identify what
     # instance and disk it's for
     for vdi_type, vdi in vdis.iteritems():
-        set_vdi_name(session, vdi['uuid'], instance.name, vdi_type)
+        set_vdi_name(session, vdi['uuid'], instance['name'], vdi_type)
 
     return vdis
 
@@ -936,7 +936,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
     root_vdi_uuid = vdis['root']['uuid']
 
     # Set the name-label to ease debugging
-    set_vdi_name(session, root_vdi_uuid, instance.name, 'root')
+    set_vdi_name(session, root_vdi_uuid, instance['name'], 'root')
 
     _check_vdi_size(context, session, instance, root_vdi_uuid)
     return vdis
@@ -2054,7 +2054,7 @@ def move_disks(session, instance, disk_info):
     # Set name-label so we can find if we need to clean up a failed
     # migration
     root_uuid = imported_vhds['root']['uuid']
-    set_vdi_name(session, root_uuid, instance.name, 'root')
+    set_vdi_name(session, root_uuid, instance['name'], 'root')
 
     root_vdi_ref = session.call_xenapi('VDI.get_by_uuid', root_uuid)
 
