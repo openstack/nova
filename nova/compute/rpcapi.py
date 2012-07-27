@@ -92,6 +92,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                pre_live_migration()
         1.24 - Remove instance_uuid, add instance argument to
                rebuild_instance()
+        1.25 - Remove instance_uuid, add instance argument to
+               remove_fixed_ip_from_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -326,9 +328,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, host, None))
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('remove_fixed_ip_from_instance',
-                instance_uuid=instance['uuid'], address=address),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, address=address),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.25')
 
     def remove_volume_connection(self, ctxt, instance, volume_id, host):
         return self.call(ctxt, self.make_msg('remove_volume_connection',
