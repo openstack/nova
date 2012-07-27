@@ -27,6 +27,7 @@ from nova import exception
 from nova import test
 from nova.api import openstack as openstack_api
 from nova.api.openstack import wsgi
+from nova.rpc import common as rpc_common
 from nova.tests.api.openstack import fakes
 
 
@@ -145,10 +146,10 @@ class APITest(test.TestCase):
     def test_unsafe_exceptions_are_not_described_in_faults(self):
         self._do_test_exception_safety_reflected_in_faults(False)
 
-    def _do_test_exception_mapping(self, exception_type):
+    def _do_test_exception_mapping(self, exception_value, exception_type):
         @webob.dec.wsgify
         def fail(req):
-            raise exception_type('too many used')
+            raise exception_value
 
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/').get_response(api)
@@ -158,8 +159,24 @@ class APITest(test.TestCase):
             self.assertTrue(key in resp.headers)
             self.assertEquals(resp.headers[key], value)
 
-    def test_quota_error_mapping(self):
-        self._do_test_exception_mapping(exception.QuotaError)
+    def test_local_quota_error_mapping(self):
+        exception_value = exception.QuotaError('too many used')
+        self._do_test_exception_mapping(exception_value, exception.QuotaError)
+
+    def test_remote_quota_error_mapping(self):
+        exception_value = rpc_common.RemoteError('QuotaError',
+                                                 'too many used')
+        self._do_test_exception_mapping(exception_value, exception.QuotaError)
+
+    def test_remote_unknown_error_mapping(self):
+        @webob.dec.wsgify
+        def fail(req):
+            raise rpc_common.RemoteError('UnknownError', 'whatevs')
+
+        api = self._wsgi_app(fail)
+        resp = webob.Request.blank('/').get_response(api)
+        self.assertFalse('whatevs' in resp.body, resp.body)
+        self.assertEqual(resp.status_int, 500, resp.body)
 
     def test_request_id_in_response(self):
         req = webob.Request.blank('/')

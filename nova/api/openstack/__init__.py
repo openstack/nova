@@ -25,6 +25,7 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
+from nova.rpc import common as rpc_common
 from nova import exception
 from nova import log as logging
 from nova import utils
@@ -47,8 +48,18 @@ class FaultWrapper(base_wsgi.Middleware):
         return FaultWrapper._status_to_type.get(
                                   status, webob.exc.HTTPInternalServerError)()
 
-    def _error(self, inner, req, headers=None, status=500, safe=False):
-        LOG.exception(_("Caught error: %s"), unicode(inner))
+    _name_to_type = {}
+
+    @staticmethod
+    def name_to_type(name):
+        if not FaultWrapper._name_to_type:
+            for clazz in utils.walk_class_hierarchy(exception.NovaException):
+                FaultWrapper._name_to_type[clazz.__name__] = clazz
+        return FaultWrapper._name_to_type.get(name)
+
+    def _error(self, req, class_name, explanation,
+               headers=None, status=500, safe=False):
+        LOG.exception(_("Caught error: %s"), explanation)
         msg_dict = dict(url=req.url, status=status)
         LOG.info(_("%(url)s returned with HTTP %(status)d") % msg_dict)
         outer = self.status_to_type(status)
@@ -62,18 +73,29 @@ class FaultWrapper(base_wsgi.Middleware):
         # inconsistent with the EC2 API to hide every exception,
         # including those that are safe to expose, see bug 1021373
         if safe:
-            outer.explanation = '%s: %s' % (inner.__class__.__name__,
-                                            unicode(inner))
+            outer.explanation = '%s: %s' % (class_name, explanation)
         return wsgi.Fault(outer)
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         try:
             return req.get_response(self.application)
-        except exception.NovaException as ex:
-            return self._error(ex, req, ex.headers, ex.code, ex.safe)
-        except Exception as ex:
-            return self._error(ex, req)
+        except rpc_common.RemoteError as e:
+            remote_exception_type = self.name_to_type(e.exc_type)
+            if remote_exception_type:
+                headers = remote_exception_type.headers
+                code = remote_exception_type.code
+                safe = remote_exception_type.safe
+            else:
+                headers = {}
+                code = 500
+                safe = False
+            return self._error(req, e.exc_type, e.value, headers, code, safe)
+        except exception.NovaException as e:
+            return self._error(req, e.__class__.__name__, unicode(e),
+                               e.headers, e.code, e.safe)
+        except Exception as e:
+            return self._error(req, e.__class__.__name__, unicode(e))
 
 
 class APIMapper(routes.Mapper):
