@@ -805,9 +805,16 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
 
+        # Try with the full instance
         console = self.compute.get_vnc_console(self.context, 'novnc',
                                                instance=instance)
         self.assert_(console)
+
+        # Also make sure it still works with just the instance UUID
+        console = self.compute.get_vnc_console(self.context, 'novnc',
+                                               instance_uuid=instance['uuid'])
+        self.assert_(console)
+
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_xvpvnc_vnc_console(self):

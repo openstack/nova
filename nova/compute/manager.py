@@ -172,8 +172,8 @@ def checks_instance_lock(function):
     # as a transition from when every function expected a context
     # and instance_uuid as positional arguments to where everything is a kwarg,
     # and the function may get either an instance_uuid or an instance.
-    def _checks_instance_lock_core(self, cb, context, instance_uuid,
-                                   *args, **kwargs):
+    def _checks_instance_lock_core(self, cb, context, *args, **kwargs):
+        instance_uuid = kwargs['instance_uuid']
         locked = self._get_lock(context, instance_uuid)
         admin = context.is_admin
 
@@ -193,23 +193,22 @@ def checks_instance_lock(function):
     def decorated_function(self, context, instance_uuid, *args, **kwargs):
 
         def _cb(self, context, *args, **kwargs):
+            instance_uuid = kwargs.pop('instance_uuid')
             function(self, context, instance_uuid, *args, **kwargs)
 
-        return _checks_instance_lock_core(self, _cb, context, instance_uuid,
-                                          *args, **kwargs)
+        kwargs['instance_uuid'] = instance_uuid
+
+        return _checks_instance_lock_core(self, _cb, context, *args, **kwargs)
 
     @functools.wraps(function)
     def decorated_function_new(self, context, *args, **kwargs):
-        try:
-            instance_uuid = kwargs['instance_uuid']
-        except KeyError:
-            instance_uuid = kwargs['instance']['uuid']
+        if 'instance_uuid' not in kwargs:
+            kwargs['instance_uuid'] = kwargs['instance']['uuid']
 
         def _cb(self, context, *args, **kwargs):
             function(self, context, *args, **kwargs)
 
-        return _checks_instance_lock_core(self, _cb, context, instance_uuid,
-                                          *args, **kwargs)
+        return _checks_instance_lock_core(self, _cb, context, *args, **kwargs)
 
     expected_args = ['context', 'instance_uuid']
     argspec = inspect.getargspec(function)
@@ -232,38 +231,36 @@ def wrap_instance_fault(function):
     # as a transition from when every function expected a context
     # and instance_uuid as positional arguments to where everything is a kwarg,
     # and the function may get either an instance_uuid or an instance.
-    def _wrap_instance_fault_core(self, cb, context, instance_uuid,
-                                  *args, **kwargs):
+    def _wrap_instance_fault_core(self, cb, context, *args, **kwargs):
         try:
             return cb(self, context, *args, **kwargs)
         except exception.InstanceNotFound:
             raise
         except Exception, e:
             with excutils.save_and_reraise_exception():
-                self.add_instance_fault_from_exc(context, instance_uuid, e,
-                                                 sys.exc_info())
+                self.add_instance_fault_from_exc(context,
+                        kwargs['instance_uuid'], e, sys.exc_info())
 
     @functools.wraps(function)
     def decorated_function(self, context, instance_uuid, *args, **kwargs):
 
-        def _cb(self, context, *args, **_kwargs):
+        def _cb(self, context, *args, **kwargs):
+            instance_uuid = kwargs.pop('instance_uuid')
             return function(self, context, instance_uuid, *args, **kwargs)
 
-        return _wrap_instance_fault_core(self, _cb, context, instance_uuid,
-                                         *args, **kwargs)
+        kwargs['instance_uuid'] = instance_uuid
+
+        return _wrap_instance_fault_core(self, _cb, context, *args, **kwargs)
 
     @functools.wraps(function)
     def decorated_function_new(self, context, *args, **kwargs):
-        if 'instance_uuid' in kwargs:
-            instance_uuid = kwargs['instance_uuid']
-        else:
-            instance_uuid = kwargs['instance']['uuid']
+        if 'instance_uuid' not in kwargs:
+            kwargs['instance_uuid'] = kwargs['instance']['uuid']
 
         def _cb(self, context, *args, **kwargs):
             return function(self, context, *args, **kwargs)
 
-        return _wrap_instance_fault_core(self, _cb, context, instance_uuid,
-                                         *args, **kwargs)
+        return _wrap_instance_fault_core(self, _cb, context, *args, **kwargs)
 
     expected_args = ['context', 'instance_uuid']
     argspec = inspect.getargspec(function)
