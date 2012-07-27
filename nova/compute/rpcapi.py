@@ -79,6 +79,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                finish_revert_resize()
         1.16 - Remove instance_uuid, add instance argument to get_diagnostics()
         1.17 - Remove instance_uuid, add instance argument to get_vnc_console()
+        1.18 - Remove instance_uuid, add instance argument to inject_file()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -215,10 +216,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 action=action), topic)
 
     def inject_file(self, ctxt, instance, path, file_contents):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('inject_file',
-                instance_uuid=instance['uuid'], path=path,
+                instance=instance, path=path,
                 file_contents=file_contents),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.18')
 
     def inject_network_info(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('inject_network_info',

@@ -54,6 +54,7 @@ class ComputeRpcAPITestCase(test.TestCase):
             'check_can_live_migrate_source', 'confirm_resize',
             'detach_volume', 'finish_resize', 'finish_revert_resize',
             'get_console_output', 'get_diagnostics', 'get_vnc_console',
+            'inject_file',
             'pause_instance', 'reboot_instance', 'suspend_instance',
             'unpause_instance'
         ]
@@ -198,7 +199,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_inject_file(self):
         self._test_compute_api('inject_file', 'cast',
-                instance=self.fake_instance, path='path', file_contents='fc')
+                instance=self.fake_instance, path='path', file_contents='fc',
+                version='1.18')
 
     def test_inject_network_info(self):
         self._test_compute_api('inject_network_info', 'cast',

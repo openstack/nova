@@ -298,7 +298,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.17'
+    RPC_API_VERSION = '1.18'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1302,20 +1302,22 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def inject_file(self, context, instance_uuid, path, file_contents):
+    def inject_file(self, context, path, file_contents, instance_uuid=None,
+                    instance=None):
         """Write a file to the specified path in an instance on this host."""
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        current_power_state = self._get_power_state(context, instance_ref)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        current_power_state = self._get_power_state(context, instance)
         expected_state = power_state.RUNNING
         if current_power_state != expected_state:
             LOG.warn(_('trying to inject a file into a non-running '
                     '(state: %(current_power_state)s '
                     'expected: %(expected_state)s)') % locals(),
-                     instance=instance_ref)
+                     instance=instance)
         LOG.audit(_('injecting file to %(path)s') % locals(),
-                    instance=instance_ref)
-        self.driver.inject_file(instance_ref, path, file_contents)
+                    instance=instance)
+        self.driver.inject_file(instance, path, file_contents)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
