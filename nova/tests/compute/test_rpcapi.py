@@ -58,7 +58,7 @@ class ComputeRpcAPITestCase(test.TestCase):
             'post_live_migration_at_destination', 'power_off_instance',
             'power_on_instance', 'pre_live_migration', 'reboot_instance',
             'rebuild_instance', 'remove_fixed_ip_from_instance',
-            'start_instance', 'stop_instance',
+            'remove_volume_connection', 'start_instance', 'stop_instance',
             'suspend_instance', 'unpause_instance'
         ]
 
@@ -84,8 +84,7 @@ class ComputeRpcAPITestCase(test.TestCase):
                                                    methods_with_instance):
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
-            if method in ['rollback_live_migration_at_destination',
-                          'remove_volume_connection']:
+            if method in ['rollback_live_migration_at_destination']:
                 expected_msg['args']['instance_id'] = instance['id']
             else:
                 expected_msg['args']['instance_uuid'] = instance['uuid']
@@ -262,7 +261,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_remove_volume_connection(self):
         self._test_compute_api('remove_volume_connection', 'call',
-                instance=self.fake_instance, volume_id='id', host='host')
+                instance=self.fake_instance, volume_id='id', host='host',
+                version='1.26')
 
     def test_rescue_instance(self):
         self._test_compute_api('rescue_instance', 'cast',

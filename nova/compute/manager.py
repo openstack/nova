@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.25'
+    RPC_API_VERSION = '1.26'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2047,19 +2047,21 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance_uuid, volume_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
-    def remove_volume_connection(self, context, instance_id, volume_id):
+    def remove_volume_connection(self, context, volume_id, instance=None,
+            instance_id=None):
         """Remove a volume connection using the volume api"""
         # NOTE(vish): We don't want to actually mark the volume
         #             detached, or delete the bdm, just remove the
         #             connection from this host.
         try:
-            instance_ref = self.db.instance_get(context, instance_id)
+            if not instance:
+                instance = self.db.instance_get(context, instance_id)
             bdm = self._get_instance_volume_bdm(context,
-                                                instance_ref['uuid'],
+                                                instance['uuid'],
                                                 volume_id)
-            self._detach_volume(context, instance_ref, bdm)
+            self._detach_volume(context, instance, bdm)
             volume = self.volume_api.get(context, volume_id)
-            connector = self.driver.get_volume_connector(instance_ref)
+            connector = self.driver.get_volume_connector(instance)
             self.volume_api.terminate_connection(context, volume, connector)
         except exception.NotFound:
             pass
