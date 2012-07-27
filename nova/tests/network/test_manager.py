@@ -1013,6 +1013,35 @@ class VlanNetworkTestCase(test.TestCase):
         self.flags(force_dhcp_release=True)
         self.network.deallocate_fixed_ip(context1, fix_addr, 'fake')
 
+    def test_fixed_ip_cleanup_fail(self):
+        """Verify IP is not deallocated if the security group refresh fails."""
+        def network_get(_context, network_id):
+            return networks[network_id]
+
+        self.stubs.Set(db, 'network_get', network_get)
+
+        context1 = context.RequestContext('user', 'project1')
+
+        instance = db.instance_create(context1,
+                {'project_id': 'project1'})
+
+        elevated = context1.elevated()
+        fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
+        values = {'allocated': True,
+                  'virtual_interface_id': 3}
+        db.fixed_ip_update(elevated, fix_addr, values)
+        fixed = db.fixed_ip_get_by_address(elevated, fix_addr)
+        network = db.network_get(elevated, fixed['network_id'])
+
+        db.instance_destroy(self.context.elevated(), instance['uuid'])
+        self.assertRaises(exception.InstanceNotFound,
+                                  self.network.deallocate_fixed_ip,
+                                  context1,
+                                  fix_addr,
+                                  'fake')
+        fixed = db.fixed_ip_get_by_address(elevated, fix_addr)
+        self.assertTrue(fixed['allocated'])
+
 
 class CommonNetworkTestCase(test.TestCase):
 
