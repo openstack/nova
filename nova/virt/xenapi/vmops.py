@@ -841,11 +841,30 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         agent.inject_file(self._session, instance, vm_ref, path, contents)
 
+    @staticmethod
+    def _sanitize_xenstore_key(key):
+        """
+        Xenstore only allows the following characters as keys:
+
+        ABCDEFGHIJKLMNOPQRSTUVWXYZ
+        abcdefghijklmnopqrstuvwxyz
+        0123456789-/_@
+
+        So convert the others to _
+
+        Also convert / to _, because that is somewhat like a path
+        separator.
+        """
+        allowed_chars = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                         "abcdefghijklmnopqrstuvwxyz"
+                         "0123456789-_@")
+        return ''.join([x in allowed_chars and x or '_' for x in key])
+
     def inject_instance_metadata(self, instance, vm_ref):
         """Inject instance metadata into xenstore."""
         def store_meta(topdir, data_list):
             for item in data_list:
-                key = item.key
+                key = self._sanitize_xenstore_key(item.key)
                 value = item.value or ''
                 self._add_to_param_xenstore(vm_ref, '%s/%s' % (topdir, key),
                                             jsonutils.dumps(value))
@@ -857,6 +876,7 @@ class VMOps(object):
         """Apply changes to instance metadata to xenstore."""
         vm_ref = self._get_vm_opaque_ref(instance)
         for key, change in diff.items():
+            key = self._sanitize_xenstore_key(key)
             location = 'vm-data/user-metadata/%s' % key
             if change[0] == '-':
                 self._remove_from_param_xenstore(vm_ref, location)
