@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.28'
+    RPC_API_VERSION = '1.29'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1532,53 +1532,55 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def resize_instance(self, context, instance_uuid, migration_id, image):
+    def resize_instance(self, context, migration_id, image, instance=None,
+                        instance_uuid=None):
         """Starts the migration of a running instance to another host."""
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get_by_uuid(context,
-                migration_ref.instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context,
+                    migration_ref.instance_uuid)
         instance_type_ref = self.db.instance_type_get(context,
                 migration_ref.new_instance_type_id)
 
         try:
-            network_info = self._get_instance_nw_info(context, instance_ref)
+            network_info = self._get_instance_nw_info(context, instance)
         except Exception, error:
             with excutils.save_and_reraise_exception():
                 msg = _('%s. Setting instance vm_state to ERROR')
                 LOG.error(msg % error)
-                self._set_instance_error_state(context, instance_uuid)
+                self._set_instance_error_state(context, instance['uuid'])
 
         self.db.migration_update(context,
                                  migration_id,
                                  {'status': 'migrating'})
 
-        self._instance_update(context, instance_uuid,
+        self._instance_update(context, instance['uuid'],
                               task_state=task_states.RESIZE_MIGRATING)
 
         self._notify_about_instance_usage(
-            context, instance_ref, "resize.start", network_info=network_info)
+            context, instance, "resize.start", network_info=network_info)
 
         try:
             disk_info = self.driver.migrate_disk_and_power_off(
-                    context, instance_ref, migration_ref['dest_host'],
+                    context, instance, migration_ref['dest_host'],
                     instance_type_ref, self._legacy_nw_info(network_info))
         except Exception, error:
             with excutils.save_and_reraise_exception():
                 LOG.error(_('%s. Setting instance vm_state to ERROR') % error,
-                          instance=instance_ref)
-                self._set_instance_error_state(context, instance_uuid)
+                          instance=instance)
+                self._set_instance_error_state(context, instance['uuid'])
 
         self.db.migration_update(context,
                                  migration_id,
                                  {'status': 'post-migrating'})
 
-        self._instance_update(context, instance_uuid,
+        self._instance_update(context, instance['uuid'],
                               task_state=task_states.RESIZE_MIGRATED)
 
-        self.compute_rpcapi.finish_resize(context, instance_ref, migration_id,
+        self.compute_rpcapi.finish_resize(context, instance, migration_id,
                 image, disk_info, migration_ref['dest_compute'])
 
-        self._notify_about_instance_usage(context, instance_ref, "resize.end",
+        self._notify_about_instance_usage(context, instance, "resize.end",
                                           network_info=network_info)
 
     def _finish_resize(self, context, instance, migration_ref, disk_info,
