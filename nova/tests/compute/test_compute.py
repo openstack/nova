@@ -1954,16 +1954,19 @@ class ComputeTestCase(BaseTestCase):
                       'task_state': None},
                      {'uuid': 'fake_uuid3', 'vm_state': vm_states.ACTIVE,
                       'task_state': task_states.REBOOTING},
-                     {'uuid': 'fake_uuid4', 'vm_state': vm_states.ACTIVE,
+                     {'uuid': 'fake_uuid4', 'vm_state': vm_states.RESIZED,
                       'task_state': None},
                      {'uuid': 'fake_uuid5', 'vm_state': vm_states.ACTIVE,
-                      'task_state': None}]
+                      'task_state': None},
+                     {'uuid': 'fake_uuid6', 'vm_state': vm_states.RESIZED,
+                      'task_state': 'deleting'}]
         expected_migration_status = {'fake_uuid1': 'confirmed',
                                      'noexist': 'error',
                                      'fake_uuid2': 'error',
                                      'fake_uuid3': 'error',
                                      'fake_uuid4': None,
-                                     'fake_uuid5': 'confirmed'}
+                                     'fake_uuid5': 'error',
+                                     'fake_uuid6': 'error'}
         migrations = []
         for i, instance in enumerate(instances, start=1):
             migrations.append({'id': i,
