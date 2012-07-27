@@ -1031,7 +1031,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
 @require_admin_context
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                             host=None):
-    if not utils.is_uuid_like(instance_uuid):
+    if instance_uuid and not utils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
     session = get_session()
