@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.27'
+    RPC_API_VERSION = '1.28'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1676,7 +1676,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                   network_id)
 
         network_info = self._inject_network_info(context, instance=instance)
-        self.reset_network(context, instance['uuid'])
+        self.reset_network(context, instance)
 
         self._notify_about_instance_usage(
             context, instance, "create_ip.end", network_info=network_info)
@@ -1701,7 +1701,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._inject_network_info(context,
                                                  instance=instance)
-        self.reset_network(context, instance['uuid'])
+        self.reset_network(context, instance)
 
         self._notify_about_instance_usage(
             context, instance, "delete_ip.end", network_info=network_info)
@@ -1860,9 +1860,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @checks_instance_lock
     @wrap_instance_fault
-    def reset_network(self, context, instance_uuid):
+    def reset_network(self, context, instance=None, instance_uuid=None):
         """Reset networking on the given instance."""
-        instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         LOG.debug(_('Reset network'), context=context, instance=instance)
         self.driver.reset_network(instance)
 

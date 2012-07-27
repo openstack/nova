@@ -707,19 +707,24 @@ class ComputeTestCase(BaseTestCase):
 
     def test_reset_network(self):
         """Ensure we can reset networking on an instance"""
-        called = {'reset': False}
+        called = {'count': 0}
 
         def fake_driver_reset_network(self, instance):
-            called['reset'] = True
+            called['count'] += 1
 
         self.stubs.Set(nova.virt.fake.FakeDriver, 'reset_network',
                        fake_driver_reset_network)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.reset_network(self.context, instance_uuid)
-        self.assertTrue(called['reset'])
+
+        # Make sure it works with both an instance and instance_uuid
+        self.compute.reset_network(self.context, instance=instance)
+        self.compute.reset_network(self.context, instance_uuid=instance_uuid)
+
+        self.assertEqual(called['count'], 2)
+
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_agent_update(self):
