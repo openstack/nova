@@ -21,6 +21,7 @@ APIRequest class
 """
 
 import datetime
+from lxml import etree
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
 
@@ -96,6 +97,9 @@ class APIRequest(object):
         xml.appendChild(response_el)
 
         response = xml.toxml()
+        root = etree.fromstring(response)
+        response = etree.tostring(root, pretty_print=True)
+
         xml.unlink()
 
         # Don't write private key to log
