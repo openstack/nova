@@ -1532,12 +1532,13 @@ class ComputeTestCase(BaseTestCase):
         """Confirm raising exception if instance doesn't have fixed_ip."""
         # creating instance testdata
         context = self.context.elevated()
-        inst_ref = self._create_fake_instance()
-        inst_id = inst_ref["id"]
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        inst_id = instance["id"]
 
         self.mox.ReplayAll()
         self.assertRaises(exception.FixedIpNotFoundForInstance,
-                          self.compute.pre_live_migration, context, inst_id)
+                          self.compute.pre_live_migration, context,
+                          instance=instance)
 
     def test_pre_live_migration_works_correctly(self):
         """Confirm setup_compute_volume is called when volume is mounted."""
@@ -1548,38 +1549,40 @@ class ComputeTestCase(BaseTestCase):
                        '_get_instance_nw_info', stupid)
 
         # creating instance testdata
-        inst_ref = self._create_fake_instance({'host': 'dummy'})
-        inst_id = inst_ref['id']
+        instance = jsonutils.to_primitive(self._create_fake_instance(
+                                          {'host': 'dummy'}))
+        inst_id = instance['id']
         c = context.get_admin_context()
         nw_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'pre_live_migration')
-        self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(inst_ref),
+        self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(instance),
                                                {'block_device_mapping': []},
                                                mox.IgnoreArg())
         self.mox.StubOutWithMock(self.compute.driver,
                                  'ensure_filtering_rules_for_instance')
         self.compute.driver.ensure_filtering_rules_for_instance(
-            mox.IsA(inst_ref), nw_info)
+            mox.IsA(instance), nw_info)
 
         # start test
         self.mox.ReplayAll()
-        ret = self.compute.pre_live_migration(c, inst_id)
+        ret = self.compute.pre_live_migration(c, instance=instance)
         self.assertEqual(ret, None)
 
         # cleanup
-        db.instance_destroy(c, inst_ref['uuid'])
+        db.instance_destroy(c, instance['uuid'])
 
     def test_live_migration_dest_raises_exception(self):
         """Confirm exception when pre_live_migration fails."""
         # creating instance testdata
-        inst_ref = self._create_fake_instance({'host': 'dummy'})
-        inst_uuid = inst_ref['uuid']
-        inst_id = inst_ref['id']
+        instance_ref = self._create_fake_instance({'host': 'dummy'})
+        instance = jsonutils.to_primitive(instance_ref)
+        inst_uuid = instance['uuid']
+        inst_id = instance['id']
 
         c = context.get_admin_context()
-        topic = rpc.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
+        topic = rpc.queue_get_for(c, FLAGS.compute_topic, instance['host'])
 
         # creating volume testdata
         volume_id = db.volume_create(c, {'size': 1})['id']
@@ -1595,12 +1598,12 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.driver,
                                  'get_instance_disk_info')
-        self.compute.driver.get_instance_disk_info(inst_ref.name)
+        self.compute.driver.get_instance_disk_info(instance['name'])
 
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
-        self.compute.compute_rpcapi.pre_live_migration(c, mox.IsA(inst_ref),
-            True, None, inst_ref['host']).AndRaise(
+        self.compute.compute_rpcapi.pre_live_migration(c,
+                mox.IsA(instance_ref), True, None, instance['host']).AndRaise(
                                         rpc.common.RemoteError('', '', ''))
 
         # mocks for rollback
@@ -1622,7 +1625,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.RemoteError,
                           self.compute.live_migration,
-                          c, inst_id, inst_ref['host'], True)
+                          c, inst_id, instance['host'], True)
 
         # cleanup
         for bdms in db.block_device_mapping_get_all_by_instance(
@@ -1635,24 +1638,26 @@ class ComputeTestCase(BaseTestCase):
         """Confirm live_migration() works as expected correctly."""
         # creating instance testdata
         c = context.get_admin_context()
-        inst_ref = self._create_fake_instance({'host': 'dummy'})
-        inst_uuid = inst_ref['uuid']
-        inst_id = inst_ref['id']
+        instance_ref = self._create_fake_instance({'host': 'dummy'})
+        inst_uuid = instance_ref['uuid']
+        inst_id = instance_ref['id']
+
+        instance = jsonutils.to_primitive(db.instance_get(c, inst_id))
 
         # create
         self.mox.StubOutWithMock(rpc, 'call')
-        topic = rpc.queue_get_for(c, FLAGS.compute_topic, inst_ref['host'])
+        topic = rpc.queue_get_for(c, FLAGS.compute_topic, instance['host'])
         rpc.call(c, topic,
                 {"method": "pre_live_migration",
-                 "args": {'instance_id': inst_id,
+                 "args": {'instance': instance,
                           'block_migration': False,
                           'disk': None},
-                 "version": compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION},
+                 "version": '1.23'},
                 None)
 
         # start test
         self.mox.ReplayAll()
-        ret = self.compute.live_migration(c, inst_id, inst_ref['host'])
+        ret = self.compute.live_migration(c, inst_id, instance['host'])
         self.assertEqual(ret, None)
 
         # cleanup

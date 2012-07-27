@@ -56,8 +56,9 @@ class ComputeRpcAPITestCase(test.TestCase):
             'get_console_output', 'get_diagnostics', 'get_vnc_console',
             'inject_file', 'inject_network_info', 'pause_instance',
             'post_live_migration_at_destination', 'power_off_instance',
-            'power_on_instance', 'reboot_instance', 'start_instance',
-            'stop_instance', 'suspend_instance', 'unpause_instance'
+            'power_on_instance', 'pre_live_migration', 'reboot_instance',
+            'start_instance', 'stop_instance', 'suspend_instance',
+            'unpause_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -83,7 +84,7 @@ class ComputeRpcAPITestCase(test.TestCase):
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
             if method in ['rollback_live_migration_at_destination',
-                          'pre_live_migration', 'remove_volume_connection']:
+                          'remove_volume_connection']:
                 expected_msg['args']['instance_id'] = instance['id']
             else:
                 expected_msg['args']['instance_uuid'] = instance['uuid']
@@ -224,7 +225,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_pre_live_migration(self):
         self._test_compute_api('pre_live_migration', 'call',
                 instance=self.fake_instance, block_migration='block_migration',
-                disk='disk', host='host')
+                disk='disk', host='host', version='1.23')
 
     def test_reboot_instance(self):
         self._test_compute_api('reboot_instance', 'cast',

@@ -88,6 +88,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                power_off_instance() and stop_instance()
         1.22 - Remove instance_uuid, add instance argument to
                power_on_instance() and start_instance()
+        1.23 - Remove instance_id, add instance argument to
+               pre_live_migration()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -270,9 +272,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host):
+        instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('pre_live_migration',
-                instance_id=instance['id'], block_migration=block_migration,
-                disk=disk), _compute_topic(self.topic, ctxt, host, None))
+                instance=instance_p, block_migration=block_migration,
+                disk=disk), _compute_topic(self.topic, ctxt, host, None),
+                version='1.23')
 
     def reboot_instance(self, ctxt, instance, reboot_type):
         instance_p = jsonutils.to_primitive(instance)
