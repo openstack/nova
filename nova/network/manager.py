@@ -497,7 +497,13 @@ class FloatingIP(object):
         self._floating_ip_owned_by_project(context, floating_ip)
 
         # disassociate any already associated
+        orig_instance_uuid = None
         if floating_ip['fixed_ip_id']:
+            # find previously associated instance
+            fixed_ip = self.db.fixed_ip_get(context,
+                                            floating_ip['fixed_ip_id'])
+            orig_instance_uuid = fixed_ip['instance_uuid']
+
             self.disassociate_floating_ip(context, floating_address)
 
         fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_address)
@@ -525,6 +531,8 @@ class FloatingIP(object):
                       'args': {'floating_address': floating_address,
                                'fixed_address': fixed_address,
                                'interface': interface}})
+
+        return orig_instance_uuid
 
     def _associate_floating_ip(self, context, floating_address, fixed_address,
                                interface):

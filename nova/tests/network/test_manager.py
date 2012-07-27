@@ -693,6 +693,12 @@ class VlanNetworkTestCase(test.TestCase):
         # raises because floating_ip is already associated to a fixed_ip
         self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake2)
         self.stubs.Set(self.network, 'disassociate_floating_ip', fake9)
+
+        def fake_fixed_ip_get(context, fixed_ip_id):
+            return {'instance_uuid': 'fake_uuid'}
+
+        self.stubs.Set(self.network.db, 'fixed_ip_get', fake_fixed_ip_get)
+
         self.assertRaises(test.TestingException,
                           self.network.associate_floating_ip,
                           ctxt,
