@@ -75,6 +75,9 @@ class NotificationsTestCase(test.TestCase):
         inst['instance_type_id'] = type_id
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0
+        inst['access_ip_v4'] = '1.2.3.4'
+        inst['access_ip_v6'] = 'feed:5eed'
+        inst['display_name'] = 'test_instance'
         if params:
             inst.update(params)
         return db.instance_create(self.context, inst)
@@ -83,9 +86,19 @@ class NotificationsTestCase(test.TestCase):
 
         # test config disable of the notifcations
         self.flags(notify_on_state_change=None)
+        self.flags(notify_on_any_change=False)
 
         old = copy.copy(self.instance)
         self.instance["vm_state"] = vm_states.ACTIVE
+
+        old_vm_state = old['vm_state']
+        new_vm_state = self.instance["vm_state"]
+        old_task_state = old['task_state']
+        new_task_state = self.instance["task_state"]
+
+        notifications.send_update_with_states(self.context, self.instance,
+                old_vm_state, new_vm_state, old_task_state, new_task_state,
+                verify_states=True)
 
         notifications.send_update(self.context, old, self.instance)
         self.assertEquals(0, len(test_notifier.NOTIFICATIONS))
@@ -99,7 +112,15 @@ class NotificationsTestCase(test.TestCase):
         old = copy.copy(self.instance)
         self.instance["task_state"] = task_states.SPAWNING
 
-        notifications.send_update(self.context, old, self.instance)
+        old_vm_state = old['vm_state']
+        new_vm_state = self.instance["vm_state"]
+        old_task_state = old['task_state']
+        new_task_state = self.instance["task_state"]
+
+        notifications.send_update_with_states(self.context, self.instance,
+                old_vm_state, new_vm_state, old_task_state, new_task_state,
+                verify_states=True)
+
         self.assertEquals(0, len(test_notifier.NOTIFICATIONS))
 
         # ok now enable task state notifcations and re-try
@@ -111,7 +132,15 @@ class NotificationsTestCase(test.TestCase):
     def test_send_no_notif(self):
 
         # test notification on send no initial vm state:
-        notifications.send_update(self.context, self.instance, self.instance)
+        old_vm_state = self.instance['vm_state']
+        new_vm_state = self.instance['vm_state']
+        old_task_state = self.instance['task_state']
+        new_task_state = self.instance['task_state']
+
+        notifications.send_update_with_states(self.context, self.instance,
+                old_vm_state, new_vm_state, old_task_state, new_task_state,
+                service="compute", host=None, verify_states=True)
+
         self.assertEquals(0, len(test_notifier.NOTIFICATIONS))
 
     def test_send_on_vm_change(self):
@@ -140,36 +169,49 @@ class NotificationsTestCase(test.TestCase):
 
         notifications.send_update_with_states(self.context, self.instance,
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
-                task_states.SPAWNING)
+                task_states.SPAWNING, verify_states=True)
         self.assertEquals(0, len(test_notifier.NOTIFICATIONS))
 
     def test_vm_update_with_states(self):
 
         notifications.send_update_with_states(self.context, self.instance,
                 vm_states.BUILDING, vm_states.ACTIVE, task_states.SPAWNING,
-                task_states.SPAWNING)
+                task_states.SPAWNING, verify_states=True)
         self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
         notif = test_notifier.NOTIFICATIONS[0]
         payload = notif["payload"]
+        access_ip_v4 = self.instance["access_ip_v4"]
+        access_ip_v6 = self.instance["access_ip_v6"]
+        display_name = self.instance["display_name"]
 
         self.assertEquals(vm_states.BUILDING, payload["old_state"])
         self.assertEquals(vm_states.ACTIVE, payload["state"])
         self.assertEquals(task_states.SPAWNING, payload["old_task_state"])
         self.assertEquals(task_states.SPAWNING, payload["new_task_state"])
+        self.assertEquals(payload["access_ip_v4"], access_ip_v4)
+        self.assertEquals(payload["access_ip_v6"], access_ip_v6)
+        self.assertEquals(payload["display_name"], display_name)
 
     def test_task_update_with_states(self):
+        self.flags(notify_on_state_change="vm_and_task_state")
 
         notifications.send_update_with_states(self.context, self.instance,
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
-                None)
+                None, verify_states=True)
         self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
         notif = test_notifier.NOTIFICATIONS[0]
         payload = notif["payload"]
+        access_ip_v4 = self.instance["access_ip_v4"]
+        access_ip_v6 = self.instance["access_ip_v6"]
+        display_name = self.instance["display_name"]
 
         self.assertEquals(vm_states.BUILDING, payload["old_state"])
         self.assertEquals(vm_states.BUILDING, payload["state"])
         self.assertEquals(task_states.SPAWNING, payload["old_task_state"])
         self.assertEquals(None, payload["new_task_state"])
+        self.assertEquals(payload["access_ip_v4"], access_ip_v4)
+        self.assertEquals(payload["access_ip_v6"], access_ip_v6)
+        self.assertEquals(payload["display_name"], display_name)
 
     def test_update_no_service_name(self):
         notifications.send_update_with_states(self.context, self.instance,
@@ -202,7 +244,27 @@ class NotificationsTestCase(test.TestCase):
         self.assertEquals('compute.someotherhost', notif['publisher_id'])
 
     def test_payload_has_fixed_ip_labels(self):
-        usage = notifications.usage_from_instance(self.context, self.instance,
+        info = notifications.info_from_instance(self.context, self.instance,
                                                   self.net_info, None)
-        self.assertTrue("fixed_ips" in usage)
-        self.assertEquals(usage["fixed_ips"][0]["label"], "test1")
+        self.assertTrue("fixed_ips" in info)
+        self.assertEquals(info["fixed_ips"][0]["label"], "test1")
+
+    def test_send_access_ip_update(self):
+        notifications.send_update(self.context, self.instance, self.instance)
+        self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
+        notif = test_notifier.NOTIFICATIONS[0]
+        payload = notif["payload"]
+        access_ip_v4 = self.instance["access_ip_v4"]
+        access_ip_v6 = self.instance["access_ip_v6"]
+
+        self.assertEquals(payload["access_ip_v4"], access_ip_v4)
+        self.assertEquals(payload["access_ip_v6"], access_ip_v6)
+
+    def test_send_name_update(self):
+        notifications.send_update(self.context, self.instance, self.instance)
+        self.assertEquals(1, len(test_notifier.NOTIFICATIONS))
+        notif = test_notifier.NOTIFICATIONS[0]
+        payload = notif["payload"]
+        display_name = self.instance["display_name"]
+
+        self.assertEquals(payload["display_name"], display_name)

@@ -40,56 +40,111 @@ notify_state_opt = cfg.StrOpt('notify_on_state_change', default=None,
          '"vm_and_task_state" for notifications on VM and task state '
          'changes.')
 
+notify_any_opt = cfg.BoolOpt('notify_on_any_change', default=False,
+    help='If set, send compute.instance.update notifications on instance '
+         'state changes.  Valid values are False for no notifications, '
+         'True for notifications on any instance changes.')
+
 FLAGS = flags.FLAGS
 FLAGS.register_opt(notify_state_opt)
+FLAGS.register_opt(notify_any_opt)
 
 
 def send_update(context, old_instance, new_instance, service=None, host=None):
-    """Send compute.instance.update notification to report changes
-    in vm state and (optionally) task state
+    """Send compute.instance.update notification to report any changes occurred
+    in that instance
     """
 
-    send_update_with_states(context, new_instance, old_instance["vm_state"],
-            new_instance["vm_state"], old_instance["task_state"],
-            new_instance["task_state"], service, host)
-
-
-def send_update_with_states(context, instance, old_vm_state, new_vm_state,
-        old_task_state, new_task_state, service=None, host=None):
-    """Send compute.instance.update notification to report changes
-    in vm state and (optionally) task state
-    """
-
-    if not FLAGS.notify_on_state_change:
-        # skip all this if state updates are disabled
+    if not FLAGS.notify_on_any_change and not FLAGS.notify_on_state_change:
+        # skip all this if updates are disabled
         return
 
-    fire_update = False
+    update_with_state_change = False
 
+    old_vm_state = old_instance["vm_state"]
+    new_vm_state = new_instance["vm_state"]
+    old_task_state = old_instance["task_state"],
+    new_task_state = new_instance["task_state"]
+
+    # we should check if we need to send a state change or a regular
+    # notification
     if old_vm_state != new_vm_state:
         # yes, the vm state is changing:
-        fire_update = True
-    elif (FLAGS.notify_on_state_change.lower() == "vm_and_task_state" and
-          old_task_state != new_task_state):
-        # yes, the task state is changing:
-        fire_update = True
+        update_with_state_change = True
+    elif FLAGS.notify_on_state_change:
+        if (FLAGS.notify_on_state_change.lower() == "vm_and_task_state" and
+            old_task_state != new_task_state):
+            # yes, the task state is changing:
+            update_with_state_change = True
 
-    if fire_update:
+    if update_with_state_change:
+        # send a notification with state changes
+        # value of verify_states need not be True as the check for states is
+        # already done here
+        send_update_with_states(context, new_instance, old_vm_state,
+                new_vm_state, old_task_state, new_task_state, service, host)
+
+    else:
         try:
-            _send_instance_update_notification(context, instance, old_vm_state,
-                    old_task_state, new_vm_state, new_task_state, service,
-                    host)
+            _send_instance_update_notification(context, new_instance,
+                    service=service, host=host)
         except Exception:
             LOG.exception(_("Failed to send state update notification"),
                     instance=instance)
 
 
-def _send_instance_update_notification(context, instance, old_vm_state,
-        old_task_state, new_vm_state, new_task_state, service=None, host=None):
+def send_update_with_states(context, instance, old_vm_state, new_vm_state,
+        old_task_state, new_task_state, service="compute", host=None,
+        verify_states=False):
+    """Send compute.instance.update notification to report changes if there
+    are any, in the instance
+    """
+
+    if not FLAGS.notify_on_state_change:
+        # skip all this if updates are disabled
+        return
+
+    fire_update = True
+    # send update notification by default
+
+    if verify_states:
+        # check whether we need to send notification related to state changes
+        fire_update = False
+        # do not send notification if the confitions for vm and(or) task state
+        # are not satisfied
+        if old_vm_state != new_vm_state:
+            # yes, the vm state is changing:
+            fire_update = True
+        elif FLAGS.notify_on_state_change:
+            if (FLAGS.notify_on_state_change.lower() == "vm_and_task_state" and
+                old_task_state != new_task_state):
+                # yes, the task state is changing:
+                fire_update = True
+
+    if fire_update:
+        # send either a state change or a regular notificaion
+        try:
+            _send_instance_update_notification(context, instance,
+                    old_vm_state=old_vm_state, old_task_state=old_task_state,
+                    new_vm_state=new_vm_state, new_task_state=new_task_state,
+                    service=service, host=host)
+        except Exception:
+            LOG.exception(_("Failed to send state update notification"),
+                    instance=instance)
+
+
+def _send_instance_update_notification(context, instance, old_vm_state=None,
+            old_task_state=None, new_vm_state=None, new_task_state=None,
+            service="compute", host=None):
     """Send 'compute.instance.update' notification to inform observers
     about instance state changes"""
 
-    payload = usage_from_instance(context, instance, None, None)
+    payload = info_from_instance(context, instance, None, None)
+
+    if not new_vm_state:
+        new_vm_state = instance["vm_state"]
+    if not new_task_state:
+        new_task_state = instance["task_state"]
 
     states_payload = {
         "old_state": old_vm_state,
@@ -108,11 +163,6 @@ def _send_instance_update_notification(context, instance, old_vm_state,
     # add bw usage info:
     bw = bandwidth_usage(instance, audit_start)
     payload["bandwidth"] = bw
-
-    # if the service name (e.g. api/scheduler/compute) is not provided, default
-    # to "compute"
-    if not service:
-        service = "compute"
 
     publisher_id = notifier_api.publisher_id(service, host)
 
@@ -194,9 +244,9 @@ def image_meta(system_metadata):
     return image_meta
 
 
-def usage_from_instance(context, instance_ref, network_info,
+def info_from_instance(context, instance_ref, network_info,
                 system_metadata, **kw):
-    """Get usage information for an instance which is common to all
+    """Get detailed instance information for an instance which is common to all
     notifications.
 
     :param network_info: network_info provided if not None
@@ -220,7 +270,7 @@ def usage_from_instance(context, instance_ref, network_info,
         except exception.NotFound:
             system_metadata = {}
 
-    usage_info = dict(
+    instance_info = dict(
         # Owner properties
         tenant_id=instance_ref['project_id'],
         user_id=instance_ref['user_id'],
@@ -266,6 +316,10 @@ def usage_from_instance(context, instance_ref, network_info,
         # Status properties
         state=instance_ref['vm_state'],
         state_description=null_safe_str(instance_ref.get('task_state')),
+
+        # accessIPs
+        access_ip_v4=instance_ref['access_ip_v4'],
+        access_ip_v6=instance_ref['access_ip_v6'],
         )
 
     if network_info is not None:
@@ -274,11 +328,11 @@ def usage_from_instance(context, instance_ref, network_info,
             for ip in vif.fixed_ips():
                 ip["label"] = vif["network"]["label"]
                 fixed_ips.append(ip)
-        usage_info['fixed_ips'] = fixed_ips
+        instance_info['fixed_ips'] = fixed_ips
 
     # add image metadata
     image_meta_props = image_meta(system_metadata)
-    usage_info["image_meta"] = image_meta_props
+    instance_info["image_meta"] = image_meta_props
 
-    usage_info.update(kw)
-    return usage_info
+    instance_info.update(kw)
+    return instance_info
