@@ -298,7 +298,7 @@ def _get_additional_capabilities():
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.14'
+    RPC_API_VERSION = '1.15'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1449,7 +1449,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def finish_revert_resize(self, context, instance_uuid, migration_id):
+    def finish_revert_resize(self, context, migration_id, instance_uuid=None,
+                             instance=None):
         """Finishes the second half of reverting a resize.
 
         Power back on the source instance and revert the resized attributes
@@ -1457,23 +1458,24 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get_by_uuid(context,
-                migration_ref.instance_uuid)
-        network_info = self._get_instance_nw_info(context, instance_ref)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context,
+                    migration_ref.instance_uuid)
+        network_info = self._get_instance_nw_info(context, instance)
 
         self._notify_about_instance_usage(
-                context, instance_ref, "resize.revert.start")
+                context, instance, "resize.revert.start")
 
         old_instance_type = migration_ref['old_instance_type_id']
         instance_type = instance_types.get_instance_type(old_instance_type)
 
-        self.driver.finish_revert_migration(instance_ref,
+        self.driver.finish_revert_migration(instance,
                                    self._legacy_nw_info(network_info))
 
         # Just roll back the record. There's no need to resize down since
         # the 'old' VM already has the preferred attributes
         self._instance_update(context,
-                              instance_ref['uuid'],
+                              instance['uuid'],
                               memory_mb=instance_type['memory_mb'],
                               host=migration_ref['source_compute'],
                               vcpus=instance_type['vcpus'],
@@ -1488,7 +1490,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 {'status': 'reverted'})
 
         self._notify_about_instance_usage(
-                context, instance_ref, "resize.revert.end")
+                context, instance, "resize.revert.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
