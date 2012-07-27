@@ -96,6 +96,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                remove_fixed_ip_from_instance()
         1.26 - Remove instance_id, add instance argument to
                remove_volume_connection()
+        1.27 - Remove instance_uuid, add instance argument to
+               rescue_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -344,10 +346,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.26')
 
     def rescue_instance(self, ctxt, instance, rescue_password):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('rescue_instance',
-                instance_uuid=instance['uuid'],
+                instance=instance_p,
                 rescue_password=rescue_password),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.27')
 
     def reset_network(self, ctxt, instance):
         self.cast(ctxt, self.make_msg('reset_network',
