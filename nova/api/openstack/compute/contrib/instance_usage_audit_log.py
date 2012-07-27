@@ -20,10 +20,11 @@ import datetime
 from webob import exc
 
 from nova.api.openstack import extensions
-from nova.compute import utils as compute_utils
 from nova import context as nova_context
+from nova import db
 from nova import exception
 from nova import flags
+from nova import utils
 
 FLAGS = flags.FLAGS
 
@@ -37,7 +38,7 @@ class InstanceUsageAuditLogController(object):
     def index(self, req):
         context = req.environ['nova.context']
         authorize(context)
-        task_log = compute_utils.get_audit_task_logs(context)
+        task_log = self._get_audit_task_logs(context)
         return {'instance_usage_audit_logs': task_log}
 
     def show(self, req, id):
@@ -53,9 +54,71 @@ class InstanceUsageAuditLogController(object):
         except ValueError:
             msg = _("Invalid timestamp for date %s") % id
             raise webob.exc.HTTPBadRequest(explanation=msg)
-        task_log = compute_utils.get_audit_task_logs(context,
+        task_log = self._get_audit_task_logs(context,
                                                      before=before_date)
         return {'instance_usage_audit_log': task_log}
+
+    def _get_audit_task_logs(self, context, begin=None, end=None,
+                             before=None):
+        """Returns a full log for all instance usage audit tasks on all
+           computes.
+
+        :param begin: datetime beginning of audit period to get logs for,
+            Defaults to the beginning of the most recently completed
+            audit period prior to the 'before' date.
+        :param end: datetime ending of audit period to get logs for,
+            Defaults to the ending of the most recently completed
+            audit period prior to the 'before' date.
+        :param before: By default we look for the audit period most recently
+            completed before this datetime. Has no effect if both begin and end
+            are specified.
+        """
+        defbegin, defend = utils.last_completed_audit_period(before=before)
+        if begin is None:
+            begin = defbegin
+        if end is None:
+            end = defend
+        task_logs = db.task_log_get_all(context, "instance_usage_audit",
+                                        begin, end)
+        # We do this this way to include disabled compute services,
+        # which can have instances on them. (mdragon)
+        services = [svc for svc in db.service_get_all(context)
+                    if svc['topic'] == 'compute']
+        hosts = set(serv['host'] for serv in services)
+        seen_hosts = set()
+        done_hosts = set()
+        running_hosts = set()
+        total_errors = 0
+        total_items = 0
+        for tlog in task_logs:
+            seen_hosts.add(tlog['host'])
+            if tlog['state'] == "DONE":
+                done_hosts.add(tlog['host'])
+            if tlog['state'] == "RUNNING":
+                running_hosts.add(tlog['host'])
+            total_errors += tlog['errors']
+            total_items += tlog['task_items']
+        log = dict((tl['host'], dict(state=tl['state'],
+                                  instances=tl['task_items'],
+                                  errors=tl['errors'],
+                                  message=tl['message']))
+                  for tl in task_logs)
+        missing_hosts = hosts - seen_hosts
+        overall_status = "%s hosts done. %s errors." % (
+                    'ALL' if len(done_hosts) == len(hosts)
+                    else "%s of %s" % (len(done_hosts), len(hosts)),
+                    total_errors)
+        return dict(period_beginning=str(begin),
+                    period_ending=str(end),
+                    num_hosts=len(hosts),
+                    num_hosts_done=len(done_hosts),
+                    num_hosts_running=len(running_hosts),
+                    num_hosts_not_run=len(missing_hosts),
+                    hosts_not_run=list(missing_hosts),
+                    total_instances=total_items,
+                    total_errors=total_errors,
+                    overall_status=overall_status,
+                    log=log)
 
 
 class Instance_usage_audit_log(extensions.ExtensionDescriptor):

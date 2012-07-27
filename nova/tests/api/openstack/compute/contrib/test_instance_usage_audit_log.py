@@ -27,8 +27,12 @@ from nova.tests.api.openstack import fakes
 from nova import utils
 
 
-TEST_COMPUTE_SERVICES = [dict(host=name) for name in
-                        "foo bar baz plonk".split()]
+TEST_COMPUTE_SERVICES = [dict(host='foo', topic='compute'),
+                         dict(host='bar', topic='compute'),
+                         dict(host='baz', topic='compute'),
+                         dict(host='plonk', topic='compute'),
+                         dict(host='wibble', topic='bogus'),
+                         ]
 
 
 begin1 = datetime.datetime(2012, 7, 4, 6, 0, 0)
@@ -79,8 +83,7 @@ TEST_LOGS3 = [
     ]
 
 
-def fake_service_get_all_by_topic(context, topic):
-    assert topic == "compute"
+def fake_service_get_all(context):
     return TEST_COMPUTE_SERVICES
 
 
@@ -117,8 +120,8 @@ class InstanceUsageAuditLogTest(test.TestCase):
 
         self.stubs.Set(utils, 'last_completed_audit_period',
                             fake_last_completed_audit_period)
-        self.stubs.Set(db, 'service_get_all_by_topic',
-                            fake_service_get_all_by_topic)
+        self.stubs.Set(db, 'service_get_all',
+                            fake_service_get_all)
         self.stubs.Set(db, 'task_log_get_all',
                             fake_task_log_get_all)
 
