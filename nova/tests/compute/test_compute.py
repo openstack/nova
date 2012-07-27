@@ -1658,9 +1658,9 @@ class ComputeTestCase(BaseTestCase):
 
         # creating testdata
         c = context.get_admin_context()
-        inst_ref = self._create_fake_instance({
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance({
                                 'state_description': 'migrating',
-                                'state': power_state.PAUSED})
+                                'state': power_state.PAUSED}))
         inst_uuid = inst_ref['uuid']
         inst_id = inst_ref['id']
 
@@ -1680,8 +1680,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, rpc.queue_get_for(c, FLAGS.compute_topic, dest),
             {"method": "post_live_migration_at_destination",
-             "args": {'instance_id': inst_id, 'block_migration': False},
-             "version": "1.0"}, None)
+             "args": {'instance': inst_ref, 'block_migration': False},
+             "version": "1.20"}, None)
         self.mox.StubOutWithMock(self.compute.driver, 'unplug_vifs')
         self.compute.driver.unplug_vifs(inst_ref, [])
         rpc.call(c, 'network', {'method': 'setup_networks_on_host',
