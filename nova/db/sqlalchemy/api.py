@@ -1483,7 +1483,6 @@ def _build_instance_get(context, session=None):
             options(joinedload_all('security_groups.rules')).\
             options(joinedload('info_cache')).\
             options(joinedload('metadata')).\
-            options(joinedload('system_metadata')).\
             options(joinedload('instance_type'))
 
 

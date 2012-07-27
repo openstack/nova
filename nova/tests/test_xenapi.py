@@ -2252,6 +2252,8 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                 self.key = key
                 self.value = value
 
+        # Add some system_metadata to ensure it doesn't get added
+        # to xenstore
         instance = dict(metadata=[FakeMetaItem("a", 1),
                                   FakeMetaItem("b", 2),
                                   FakeMetaItem("c", 3)],
@@ -2265,9 +2267,6 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                     'vm-data/user-metadata/a': '1',
                     'vm-data/user-metadata/b': '2',
                     'vm-data/user-metadata/c': '3',
-                    'vm-data/system-metadata/sys_a': '1',
-                    'vm-data/system-metadata/sys_b': '2',
-                    'vm-data/system-metadata/sys_c': '3',
                     },
                 'ephem': {},
                 })
@@ -2279,17 +2278,11 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                 'vm-data/user-metadata/a': '1',
                 'vm-data/user-metadata/b': '2',
                 'vm-data/user-metadata/c': '3',
-                'vm-data/system-metadata/sys_a': '1',
-                'vm-data/system-metadata/sys_b': '2',
-                'vm-data/system-metadata/sys_c': '3',
                 },
             'ephem': {
                 'vm-data/user-metadata/a': '1',
                 'vm-data/user-metadata/b': '2',
                 'vm-data/user-metadata/c': '3',
-                'vm-data/system-metadata/sys_a': '1',
-                'vm-data/system-metadata/sys_b': '2',
-                'vm-data/system-metadata/sys_c': '3',
                 },
             }
 
@@ -2301,18 +2294,12 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                     'vm-data/user-metadata/b': '2',
                     'vm-data/user-metadata/c': '3',
                     'vm-data/user-metadata/d': '4',
-                    'vm-data/system-metadata/sys_a': '1',
-                    'vm-data/system-metadata/sys_b': '2',
-                    'vm-data/system-metadata/sys_c': '3',
                     },
                 'ephem': {
                     'vm-data/user-metadata/a': '1',
                     'vm-data/user-metadata/b': '2',
                     'vm-data/user-metadata/c': '3',
                     'vm-data/user-metadata/d': '4',
-                    'vm-data/system-metadata/sys_a': '1',
-                    'vm-data/system-metadata/sys_b': '2',
-                    'vm-data/system-metadata/sys_c': '3',
                     },
                 })
 
@@ -2323,17 +2310,11 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                 'vm-data/user-metadata/a': '1',
                 'vm-data/user-metadata/b': '2',
                 'vm-data/user-metadata/c': '3',
-                'vm-data/system-metadata/sys_a': '1',
-                'vm-data/system-metadata/sys_b': '2',
-                'vm-data/system-metadata/sys_c': '3',
                 },
             'ephem': {
                 'vm-data/user-metadata/a': '1',
                 'vm-data/user-metadata/b': '2',
                 'vm-data/user-metadata/c': '3',
-                'vm-data/system-metadata/sys_a': '1',
-                'vm-data/system-metadata/sys_b': '2',
-                'vm-data/system-metadata/sys_c': '3',
                 },
             }
 
@@ -2344,17 +2325,11 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                     'vm-data/user-metadata/a': '1',
                     'vm-data/user-metadata/b': '4',
                     'vm-data/user-metadata/c': '3',
-                    'vm-data/system-metadata/sys_a': '1',
-                    'vm-data/system-metadata/sys_b': '2',
-                    'vm-data/system-metadata/sys_c': '3',
                     },
                 'ephem': {
                     'vm-data/user-metadata/a': '1',
                     'vm-data/user-metadata/b': '4',
                     'vm-data/user-metadata/c': '3',
-                    'vm-data/system-metadata/sys_a': '1',
-                    'vm-data/system-metadata/sys_b': '2',
-                    'vm-data/system-metadata/sys_c': '3',
                     },
                 })
 
@@ -2365,17 +2340,11 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                 'vm-data/user-metadata/a': '1',
                 'vm-data/user-metadata/b': '2',
                 'vm-data/user-metadata/c': '3',
-                'vm-data/system-metadata/sys_a': '1',
-                'vm-data/system-metadata/sys_b': '2',
-                'vm-data/system-metadata/sys_c': '3',
                 },
             'ephem': {
                 'vm-data/user-metadata/a': '1',
                 'vm-data/user-metadata/b': '2',
                 'vm-data/user-metadata/c': '3',
-                'vm-data/system-metadata/sys_a': '1',
-                'vm-data/system-metadata/sys_b': '2',
-                'vm-data/system-metadata/sys_c': '3',
                 },
             }
 
@@ -2385,15 +2354,9 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                 'persist': {
                     'vm-data/user-metadata/a': '1',
                     'vm-data/user-metadata/c': '3',
-                    'vm-data/system-metadata/sys_a': '1',
-                    'vm-data/system-metadata/sys_b': '2',
-                    'vm-data/system-metadata/sys_c': '3',
                     },
                 'ephem': {
                     'vm-data/user-metadata/a': '1',
                     'vm-data/user-metadata/c': '3',
-                    'vm-data/system-metadata/sys_a': '1',
-                    'vm-data/system-metadata/sys_b': '2',
-                    'vm-data/system-metadata/sys_c': '3',
                     },
                 })
