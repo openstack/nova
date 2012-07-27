@@ -1273,9 +1273,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Returns a fixed ip to the pool."""
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         vif_id = fixed_ip_ref['virtual_interface_id']
-        self.db.fixed_ip_update(context, address,
-                                {'allocated': False,
-                                 'virtual_interface_id': None})
         instance = self.db.instance_get_by_uuid(context,
                                                 fixed_ip_ref['instance_uuid'])
 
@@ -1311,6 +1308,10 @@ class NetworkManager(manager.SchedulerDependentManager):
             # NOTE(vish): This forces a packet so that the release_fixed_ip
             #             callback will get called by nova-dhcpbridge.
             self.driver.release_dhcp(dev, address, vif['address'])
+
+        self.db.fixed_ip_update(context, address,
+                                {'allocated': False,
+                                 'virtual_interface_id': None})
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
