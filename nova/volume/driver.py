@@ -274,9 +274,8 @@ class ISCSIDriver(VolumeDriver):
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
 
-        self.tgtadm.new_target(iscsi_name, iscsi_target, check_exit_code=False)
-        self.tgtadm.new_logicalunit(iscsi_target, 0, volume_path,
-                                    check_exit_code=False)
+        self.tgtadm.create_iscsi_target(iscsi_name, iscsi_target,
+                0, volume_path, check_exit_code=False)
 
     def _ensure_iscsi_targets(self, context, host):
         """Ensure that target ids have been created in datastore."""
@@ -297,8 +296,8 @@ class ISCSIDriver(VolumeDriver):
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
 
-        self.tgtadm.new_target(iscsi_name, iscsi_target)
-        self.tgtadm.new_logicalunit(iscsi_target, 0, volume_path)
+        self.tgtadm.create_iscsi_target(iscsi_name, iscsi_target,
+                0, volume_path)
 
         model_update = {}
         if FLAGS.iscsi_helper == 'tgtadm':
@@ -328,8 +327,7 @@ class ISCSIDriver(VolumeDriver):
                        "is presently exported for volume: %s"), volume['id'])
             return
 
-        self.tgtadm.delete_logicalunit(iscsi_target, 0)
-        self.tgtadm.delete_target(iscsi_target)
+        self.tgtadm.remove_iscsi_target(iscsi_target, 0, volume['id'])
 
     def _do_iscsi_discovery(self, volume):
         #TODO(justinsb): Deprecate discovery and use stored info

@@ -28,7 +28,8 @@ class TargetAdminTestCase(object):
         self.tid = 1
         self.target_name = 'iqn.2011-09.org.foo.bar:blaa'
         self.lun = 10
-        self.path = '/foo/bar/blaa'
+        self.path = '/foo'
+        self.vol_id = 'blaa'
 
         self.script_template = None
 
@@ -65,11 +66,10 @@ class TargetAdminTestCase(object):
     def run_commands(self):
         tgtadm = iscsi.get_target_admin()
         tgtadm.set_execute(self.fake_execute)
-        tgtadm.new_target(self.target_name, self.tid)
+        tgtadm.create_iscsi_target(self.target_name, self.tid,
+                self.lun, self.path)
         tgtadm.show_target(self.tid)
-        tgtadm.new_logicalunit(self.tid, self.lun, self.path)
-        tgtadm.delete_logicalunit(self.tid, self.lun)
-        tgtadm.delete_target(self.tid)
+        tgtadm.remove_iscsi_target(self.tid, self.lun, self.vol_id)
 
     def test_target_admin(self):
         self.clear_cmds()
@@ -83,22 +83,11 @@ class TgtAdmTestCase(test.TestCase, TargetAdminTestCase):
         super(TgtAdmTestCase, self).setUp()
         TargetAdminTestCase.setUp(self)
         self.flags(iscsi_helper='tgtadm')
+        self.flags(volumes_dir="./")
         self.script_template = "\n".join([
-        "tgtadm --op new --lld=iscsi --mode=target --tid=%(tid)s "
-                "--targetname=%(target_name)s",
-        "tgtadm --op bind --lld=iscsi --mode=target --initiator-address=ALL "
-                "--tid=%(tid)s",
-        "tgtadm --op show --lld=iscsi --mode=target --tid=%(tid)s",
-        "tgtadm --op new --lld=iscsi --mode=logicalunit --tid=%(tid)s "
-                "--lun=%(lun)d --backing-store=%(path)s",
-        "tgtadm --op delete --lld=iscsi --mode=logicalunit --tid=%(tid)s "
-                "--lun=%(lun)d",
-        "tgtadm --op delete --lld=iscsi --mode=target --tid=%(tid)s"])
-
-    def get_script_params(self):
-        params = super(TgtAdmTestCase, self).get_script_params()
-        params['lun'] += 1
-        return params
+        "/usr/sbin/tgt-admin --conf ./blaa --update blaa",
+        "tgtadm --op show --lld=iscsi --mode=target --tid=1",
+        "/usr/bin/tgt-admin --conf ./blaa --delete blaa"])
 
 
 class IetAdmTestCase(test.TestCase, TargetAdminTestCase):
@@ -109,8 +98,8 @@ class IetAdmTestCase(test.TestCase, TargetAdminTestCase):
         self.flags(iscsi_helper='ietadm')
         self.script_template = "\n".join([
         "ietadm --op new --tid=%(tid)s --params Name=%(target_name)s",
-        "ietadm --op show --tid=%(tid)s",
-        "ietadm --op new --tid=%(tid)s --lun=%(lun)d "
+        "ietadm --op new --tid=%(tid)s --lun=%(lun)s "
                 "--params Path=%(path)s,Type=fileio",
-        "ietadm --op delete --tid=%(tid)s --lun=%(lun)d",
-        "ietadm --op delete --tid=%(tid)s"])
+        "ietadm --op show --tid=%(tid)s",
+        "ietadm --op delete --tid=%(tid)s",
+        "ietadm --op delete --tid=%(tid)s --lun=%(lun)s"])
