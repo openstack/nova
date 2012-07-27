@@ -203,7 +203,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def get_vnc_console(self, ctxt, instance, console_type):
         instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('get_vnc_console',
-                instance=instance, console_type=console_type),
+                instance=instance_p, console_type=console_type),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='1.17')
 
@@ -228,7 +228,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def inject_file(self, ctxt, instance, path, file_contents):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('inject_file',
-                instance=instance, path=path,
+                instance=instance_p, path=path,
                 file_contents=file_contents),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='1.18')
@@ -236,7 +236,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def inject_network_info(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('inject_network_info',
-                instance=instance),
+                instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='1.19')
 
@@ -397,7 +397,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         rpc_method = self.cast if cast else self.call
         instance_p = jsonutils.to_primitive(instance)
         return rpc_method(ctxt, self.make_msg('stop_instance',
-                instance=instance),
+                instance=instance_p),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='1.21')
 
