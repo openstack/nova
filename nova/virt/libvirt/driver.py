@@ -1716,6 +1716,21 @@ class LibvirtDriver(driver.ComputeDriver):
                 nova_context.get_admin_context(), instance['uuid'],
                 {'root_device_name': '/dev/' + self.default_root_device})
 
+        guest.os_type = vm_mode.get_from_instance(instance)
+
+        if guest.os_type is None:
+            if FLAGS.libvirt_type == "lxc":
+                guest.os_type = vm_mode.EXE
+            elif FLAGS.libvirt_type == "uml":
+                guest.os_type = vm_mode.UML
+            elif FLAGS.libvirt_type == "xen":
+                guest.os_type = vm_mode.XEN
+            else:
+                guest.os_type = vm_mode.HVM
+
+        if FLAGS.libvirt_type == "xen" and guest.os_type == vm_mode.HVM:
+            guest.os_loader = '/usr/lib/xen/boot/hvmloader'
+
         if FLAGS.libvirt_type == "lxc":
             guest.os_type = vm_mode.EXE
             guest.os_init_path = "/sbin/init"
@@ -1726,7 +1741,6 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.os_root = root_device_name or "/dev/ubda"
         else:
             if FLAGS.libvirt_type == "xen":
-                guest.os_type = vm_mode.XEN
                 guest.os_root = root_device_name or "/dev/xvda"
             else:
                 guest.os_type = vm_mode.HVM
@@ -1811,7 +1825,7 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(consolepty)
 
         if FLAGS.vnc_enabled and FLAGS.libvirt_type not in ('lxc', 'uml'):
-            if FLAGS.use_usb_tablet:
+            if FLAGS.use_usb_tablet and guest.os_type == vm_mode.HVM:
                 tablet = config.LibvirtConfigGuestInput()
                 tablet.type = "tablet"
                 tablet.bus = "usb"
