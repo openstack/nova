@@ -703,7 +703,7 @@ class VirtualInterface(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     address = Column(String(255), unique=True)
     network_id = Column(Integer, nullable=False)
-    instance_id = Column(Integer, nullable=False)
+    instance_uuid = Column(String(36), nullable=False)
     uuid = Column(String(36))
 
 

@@ -127,7 +127,8 @@ class QuantumNovaIPAMLib(object):
         network = db.network_get_by_uuid(admin_context, quantum_net_id)
         address = None
         if network['cidr']:
-            instance = db.instance_get(context, vif_rec['instance_id'])
+            instance = db.instance_get_by_uuid(context,
+                                               vif_rec['instance_uuid'])
             address = db.fixed_ip_associate_pool(admin_context,
                                                  network['id'],
                                                  instance['uuid'])
@@ -213,7 +214,7 @@ class QuantumNovaIPAMLib(object):
         """
         admin_context = context.elevated()
         fixed_ips = db.fixed_ips_by_virtual_interface(admin_context,
-                                                         vif_ref['id'])
+                                                      vif_ref['id'])
         # NOTE(s0mik): Sets fixed-ip to deallocated, but leaves the entry
         # associated with the instance-id.  This prevents us from handing it
         # out again immediately, as allocating it to a new instance before

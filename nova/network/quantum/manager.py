@@ -357,7 +357,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             # TODO(tr3buchet): broken. Virtual interfaces require an integer
             #                  network ID and it is not nullable
             vif_rec = self.add_virtual_interface(context,
-                                                 instance_id,
+                                                 instance['uuid'],
                                                  network['id'],
                                                  project_id)
 
@@ -510,20 +510,20 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
             self.driver.update_dhcp_hostfile_with_text(interface_id, hosts)
             self.driver.restart_dhcp(context, interface_id, network_ref)
 
-    def add_virtual_interface(self, context, instance_id, network_id,
+    def add_virtual_interface(self, context, instance_uuid, network_id,
                               net_tenant_id):
         # If we're not using melange, use the default means...
         if FLAGS.use_melange_mac_generation:
-            return self._add_virtual_interface(context, instance_id,
+            return self._add_virtual_interface(context, instance_uuid,
                                                network_id, net_tenant_id)
 
         return super(QuantumManager, self).add_virtual_interface(context,
-                                                                 instance_id,
+                                                                 instance_uuid,
                                                                  network_id)
 
-    def _add_virtual_interface(self, context, instance_id, network_id,
+    def _add_virtual_interface(self, context, instance_uuid, network_id,
                                net_tenant_id):
-        vif = {'instance_id': instance_id,
+        vif = {'instance_uuid': instance_uuid,
                'network_id': network_id,
                'uuid': str(utils.gen_uuid())}
 
@@ -533,7 +533,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         #            this after Trey's refactorings...
         m_ipam = melange_ipam_lib.get_ipam_lib(self)
         vif['address'] = m_ipam.create_vif(vif['uuid'],
-                                           vif['instance_id'],
+                                           vif['instance_uuid'],
                                            net_tenant_id)
 
         return self.db.virtual_interface_create(context, vif)
@@ -553,7 +553,7 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
            in the future.
         """
         project_id = kwargs['project_id']
-        vifs = db.virtual_interface_get_by_instance(context, instance_id)
+        vifs = db.virtual_interface_get_by_instance(context, instance_uuid)
 
         net_tenant_dict = dict((net_id, tenant_id)
                                for (net_id, tenant_id)
@@ -592,8 +592,9 @@ class QuantumManager(manager.FloatingIP, manager.FlatManager):
         project_id = kwargs.pop('project_id', None)
 
         admin_context = context.elevated()
+        instance = db.instance_get(context, instance_id)
         vifs = db.virtual_interface_get_by_instance(admin_context,
-                                                    instance_id)
+                                                    instance['uuid'])
 
         for vif in vifs:
             network = db.network_get(admin_context, vif['network_id'])
