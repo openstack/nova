@@ -19,8 +19,8 @@
 
 from webob import exc
 
-from nova.api.openstack import wsgi
 from nova.api.openstack.volume.views import types as views_types
+from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova.volume import volume_types
