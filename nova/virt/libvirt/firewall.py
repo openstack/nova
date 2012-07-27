@@ -160,7 +160,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
     def unfilter_instance(self, instance, network_info):
         """Clear out the nwfilter rules."""
-        instance_name = instance.name
+        instance_name = instance['name']
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
@@ -219,7 +219,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             try:
                 self._conn.nwfilterLookupByName(instance_filter_name)
             except libvirt.libvirtError:
-                name = instance.name
+                name = instance['name']
                 LOG.debug(_('The nwfilter(%(instance_filter_name)s) for'
                             '%(name)s is not found.') % locals(),
                           instance=instance)

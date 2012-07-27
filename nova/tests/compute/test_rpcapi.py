@@ -57,8 +57,8 @@ class ComputeRpcAPITestCase(test.TestCase):
             'inject_file', 'inject_network_info', 'pause_instance',
             'post_live_migration_at_destination', 'power_off_instance',
             'power_on_instance', 'pre_live_migration', 'reboot_instance',
-            'start_instance', 'stop_instance', 'suspend_instance',
-            'unpause_instance'
+            'rebuild_instance', 'start_instance', 'stop_instance',
+            'suspend_instance', 'unpause_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -235,7 +235,7 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('rebuild_instance', 'cast',
                 instance=self.fake_instance, new_pass='pass',
                 injected_files='files', image_ref='ref',
-                orig_image_ref='orig_ref')
+                orig_image_ref='orig_ref', version='1.24')
 
     def refresh_provider_fw_rules(self):
         self._test_compute_api('refresh_provider_fw_rules', 'cast',

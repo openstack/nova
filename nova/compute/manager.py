@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.23'
+    RPC_API_VERSION = '1.24'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -974,41 +974,42 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def rebuild_instance(self, context, instance_uuid, orig_image_ref,
-            image_ref, **kwargs):
+    def rebuild_instance(self, context, orig_image_ref,
+            image_ref, instance=None, instance_uuid=None, **kwargs):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
         remakes the VM with given 'metadata' and 'personalities'.
 
         :param context: `nova.RequestContext` object
-        :param instance_uuid: Instance Identifier (UUID)
+        :param instance_uuid: (Deprecated) Instance Identifier (UUID)
+        :param instance: Instance dict
         :param orig_image_ref: Original image_ref before rebuild
         :param image_ref: New image_ref for rebuild
         :param injected_files: Files to inject
         :param new_pass: password to set on rebuilt instance
         """
+        context = context.elevated()
+
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+
         try:
-            self._rebuild_instance(context, instance_uuid, orig_image_ref,
+            self._rebuild_instance(context, instance, orig_image_ref,
                     image_ref, kwargs)
         except exception.ImageNotFound:
             LOG.error(_('Cannot rebuild instance because the given image does '
                         'not exist.'),
-                      context=context, instance_uuid=instance_uuid)
-            self._set_instance_error_state(context, instance_uuid)
+                      context=context, instance=instance)
+            self._set_instance_error_state(context, instance['uuid'])
         except Exception as exc:
             LOG.error(_('Cannot rebuild instance: %(exc)s'), locals(),
-                      context=context, instance_uuid=instance_uuid)
-            self._set_instance_error_state(context, instance_uuid)
+                      context=context, instance=instance)
+            self._set_instance_error_state(context, instance['uuid'])
 
-    def _rebuild_instance(self, context, instance_uuid, orig_image_ref,
+    def _rebuild_instance(self, context, instance, orig_image_ref,
             image_ref, kwargs):
-        context = context.elevated()
-
-        LOG.audit(_("Rebuilding instance"), context=context,
-                  instance_uuid=instance_uuid)
-
-        instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        LOG.audit(_("Rebuilding instance"), context=context, instance=instance)
 
         image_meta = _get_image_meta(context, image_ref)
 
@@ -1027,7 +1028,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_uuid,
+                              instance['uuid'],
                               power_state=current_power_state,
                               task_state=task_states.REBUILDING)
 
@@ -1035,7 +1036,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver.destroy(instance, self._legacy_nw_info(network_info))
 
         instance = self._instance_update(context,
-                              instance_uuid,
+                              instance['uuid'],
                               task_state=task_states.\
                               REBUILD_BLOCK_DEVICE_MAPPING)
 
@@ -1045,7 +1046,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         device_info = self._setup_block_device_mapping(context, instance)
 
         instance = self._instance_update(context,
-                                         instance_uuid,
+                                         instance['uuid'],
                                          task_state=task_states.\
                                          REBUILD_SPAWNING)
         # pull in new password here since the original password isn't in the db
@@ -1057,7 +1058,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         current_power_state = self._get_power_state(context, instance)
         instance = self._instance_update(context,
-                                         instance_uuid,
+                                         instance['uuid'],
                                          power_state=current_power_state,
                                          vm_state=vm_states.ACTIVE,
                                          task_state=None,

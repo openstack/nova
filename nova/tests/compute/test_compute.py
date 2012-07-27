@@ -526,13 +526,13 @@ class ComputeTestCase(BaseTestCase):
 
     def test_rebuild(self):
         """Ensure instance can be rebuilt"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         image_ref = instance['image_ref']
 
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.rebuild_instance(self.context, instance_uuid,
-                image_ref, image_ref)
+        self.compute.rebuild_instance(self.context, image_ref, image_ref,
+                instance=instance)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_rebuild_launch_time(self):
@@ -540,14 +540,14 @@ class ComputeTestCase(BaseTestCase):
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         image_ref = instance['image_ref']
 
         self.compute.run_instance(self.context, instance_uuid)
         timeutils.set_time_override(cur_time)
-        self.compute.rebuild_instance(self.context, instance_uuid,
-                image_ref, image_ref)
+        self.compute.rebuild_instance(self.context, image_ref, image_ref,
+                instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEquals(cur_time, instance['launched_at'])
         self.compute.terminate_instance(self.context, instance_uuid)
@@ -1143,7 +1143,10 @@ class ComputeTestCase(BaseTestCase):
 
         password = "new_password"
 
-        self.compute._rebuild_instance(self.context, inst_ref['uuid'],
+        instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
+
+        self.compute._rebuild_instance(self.context.elevated(),
+                jsonutils.to_primitive(instance),
                 image_ref, new_image_ref, dict(new_pass=password))
 
         instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
