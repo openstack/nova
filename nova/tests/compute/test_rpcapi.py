@@ -86,8 +86,6 @@ class ComputeRpcAPITestCase(test.TestCase):
                           'check_can_live_migrate_destination',
                           'check_can_live_migrate_source']:
                 expected_msg['args']['instance_id'] = instance['id']
-            elif method == 'get_instance_disk_info':
-                expected_msg['args']['instance_name'] = instance['name']
             else:
                 expected_msg['args']['instance_uuid'] = instance['uuid']
         expected_msg['version'] = expected_version
@@ -184,10 +182,6 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_get_diagnostics(self):
         self._test_compute_api('get_diagnostics', 'call',
                 instance=self.fake_instance, version='1.16')
-
-    def test_get_instance_disk_info(self):
-        self._test_compute_api('get_instance_disk_info', 'call',
-                instance=self.fake_instance)
 
     def test_get_vnc_console(self):
         self._test_compute_api('get_vnc_console', 'call',

@@ -188,11 +188,6 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='1.16')
 
-    def get_instance_disk_info(self, ctxt, instance):
-        return self.call(ctxt, self.make_msg('get_instance_disk_info',
-                instance_name=instance['name']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
-
     def get_vnc_console(self, ctxt, instance, console_type):
         return self.call(ctxt, self.make_msg('get_vnc_console',
                 instance_uuid=instance['uuid'], console_type=console_type),
