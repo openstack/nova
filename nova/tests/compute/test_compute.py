@@ -410,18 +410,18 @@ class ComputeTestCase(BaseTestCase):
 
     def test_stop(self):
         """Ensure instance can be stopped"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.stop_instance(self.context, instance_uuid)
+        self.compute.stop_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_start(self):
         """Ensure instance can be started"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.stop_instance(self.context, instance_uuid)
+        self.compute.stop_instance(self.context, instance=instance)
         self.compute.start_instance(self.context, instance_uuid)
         self.compute.terminate_instance(self.context, instance_uuid)
 
@@ -480,10 +480,10 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.virt.fake.FakeDriver, 'power_off',
                        fake_driver_power_off)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.power_off_instance(self.context, instance_uuid)
+        self.compute.power_off_instance(self.context, instance=instance)
         self.assertTrue(called['power_off'])
         self.compute.terminate_instance(self.context, instance_uuid)
 
@@ -2376,11 +2376,11 @@ class ComputeAPITestCase(BaseTestCase):
             db.instance_destroy(self.context, ref[0]['uuid'])
 
     def test_start(self):
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
 
-        self.compute.stop_instance(self.context, instance_uuid)
+        self.compute.stop_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['task_state'], None)
