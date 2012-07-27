@@ -454,7 +454,7 @@ class ResponseObject(object):
     optional.
     """
 
-    def __init__(self, obj, code=None, **serializers):
+    def __init__(self, obj, code=None, headers=None, **serializers):
         """Binds serializers with an object.
 
         Takes keyword arguments akin to the @serializer() decorator
@@ -467,7 +467,7 @@ class ResponseObject(object):
         self.serializers = serializers
         self._default_code = 200
         self._code = code
-        self._headers = {}
+        self._headers = headers or {}
         self.serializer = None
         self.media_type = None
 

@@ -48,7 +48,7 @@ class VolumeApiTest(test.TestCase):
                "availability_zone": "zone1:host1"}
         body = {"volume": vol}
         req = fakes.HTTPRequest.blank('/v1/volumes')
-        res_dict = self.controller.create(req, body)
+        res = self.controller.create(req, body)
         expected = {'volume': {'status': 'fakestatus',
                                'display_description': 'Volume Test Desc',
                                'availability_zone': 'zone1:host1',
@@ -64,7 +64,9 @@ class VolumeApiTest(test.TestCase):
                                'created_at': datetime.datetime(1999, 1, 1,
                                                                1, 1, 1),
                                'size': 100}}
-        self.assertEqual(res_dict, expected)
+        self.assertEqual(res.obj, expected)
+        self.assertEqual(res.code, 200)
+        self.assertTrue('location' in res.headers)
 
     def test_volume_creation_fails_with_bad_size(self):
         vol = {"size": '',

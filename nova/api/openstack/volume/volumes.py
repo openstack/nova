@@ -247,7 +247,11 @@ class VolumeController(object):
         #             a dict to avoid an error.
         retval = _translate_volume_detail_view(context, dict(new_volume))
 
-        return {'volume': retval}
+        result = {'volume': retval}
+
+        location = '%s/%s' % (req.url, new_volume['id'])
+
+        return wsgi.ResponseObject(result, headers=dict(location=location))
 
 
 def create_resource():
