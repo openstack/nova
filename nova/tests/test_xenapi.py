@@ -2256,7 +2256,10 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
         # to xenstore
         instance = dict(metadata=[FakeMetaItem("a", 1),
                                   FakeMetaItem("b", 2),
-                                  FakeMetaItem("c", 3)],
+                                  FakeMetaItem("c", 3),
+                                  # Check xenstore key sanitizing
+                                  FakeMetaItem("hi.there", 4),
+                                  FakeMetaItem("hi!t.e/e", 5)],
                         system_metadata=[FakeMetaItem("sys_a", 1),
                                          FakeMetaItem("sys_b", 2),
                                          FakeMetaItem("sys_c", 3)])
@@ -2267,12 +2270,15 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                     'vm-data/user-metadata/a': '1',
                     'vm-data/user-metadata/b': '2',
                     'vm-data/user-metadata/c': '3',
+                    'vm-data/user-metadata/hi_there': '4',
+                    'vm-data/user-metadata/hi_t_e_e': '5',
                     },
                 'ephem': {},
                 })
 
     def test_change_instance_metadata_add(self):
-        diff = dict(d=['+', 4])
+        # Test XenStore key sanitizing here, too.
+        diff = {'test.key': ['+', 4]}
         self.xenstore = {
             'persist': {
                 'vm-data/user-metadata/a': '1',
@@ -2293,13 +2299,13 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                     'vm-data/user-metadata/a': '1',
                     'vm-data/user-metadata/b': '2',
                     'vm-data/user-metadata/c': '3',
-                    'vm-data/user-metadata/d': '4',
+                    'vm-data/user-metadata/test_key': '4',
                     },
                 'ephem': {
                     'vm-data/user-metadata/a': '1',
                     'vm-data/user-metadata/b': '2',
                     'vm-data/user-metadata/c': '3',
-                    'vm-data/user-metadata/d': '4',
+                    'vm-data/user-metadata/test_key': '4',
                     },
                 })
 
