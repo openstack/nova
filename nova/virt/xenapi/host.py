@@ -78,7 +78,7 @@ class Host(object):
                     dest = _host_find(ctxt, self._session, host, host_ref)
                     (old_ref, new_ref) = db.instance_update_and_get_original(
                                     ctxt,
-                                    instance.id,
+                                    instance['uuid'],
                                     {'host': dest,
                                      'task_state': task_states.MIGRATING})
                     notifications.send_update(ctxt, old_ref, new_ref)
@@ -89,7 +89,7 @@ class Host(object):
 
                     (old_ref, new_ref) = db.instance_update_and_get_original(
                                 ctxt,
-                                instance.id,
+                                instance['uuid'],
                                 {'vm_state': vm_states.ACTIVE})
                     notifications.send_update(ctxt, old_ref, new_ref)
 
@@ -99,7 +99,7 @@ class Host(object):
                                   'from %(host)s' % locals())
                     (old_ref, new_ref) = db.instance_update_and_get_original(
                                 ctxt,
-                                instance.id,
+                                instance['uuid'],
                                 {'hosts': host,
                                  'vm_state': vm_states.ACTIVE})
                     notifications.send_update(ctxt, old_ref, new_ref)
