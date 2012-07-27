@@ -77,6 +77,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.14 - Remove instance_uuid, add instance argument to finish_resize()
         1.15 - Remove instance_uuid, add instance argument to
                finish_revert_resize()
+        1.16 - Remove instance_uuid, add instance argument to get_diagnostics()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -181,9 +182,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, host, None))
 
     def get_diagnostics(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('get_diagnostics',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.16')
 
     def get_instance_disk_info(self, ctxt, instance):
         return self.call(ctxt, self.make_msg('get_instance_disk_info',
