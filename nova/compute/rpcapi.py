@@ -78,6 +78,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.15 - Remove instance_uuid, add instance argument to
                finish_revert_resize()
         1.16 - Remove instance_uuid, add instance argument to get_diagnostics()
+        1.17 - Remove instance_uuid, add instance argument to get_vnc_console()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -189,9 +190,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.16')
 
     def get_vnc_console(self, ctxt, instance, console_type):
+        instance_p = jsonutils.to_primitive(instance)
         return self.call(ctxt, self.make_msg('get_vnc_console',
-                instance_uuid=instance['uuid'], console_type=console_type),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance, console_type=console_type),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.17')
 
     def host_maintenance_mode(self, ctxt, host_param, mode, host):
         '''Set host maintenance mode

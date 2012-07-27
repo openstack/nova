@@ -802,48 +802,42 @@ class ComputeTestCase(BaseTestCase):
 
     def test_novnc_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
 
-        console = self.compute.get_vnc_console(self.context,
-                                               instance['uuid'],
-                                               'novnc')
+        console = self.compute.get_vnc_console(self.context, 'novnc',
+                                               instance=instance)
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_xvpvnc_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
 
-        console = self.compute.get_vnc_console(self.context,
-                                               instance['uuid'],
-                                               'xvpvnc')
+        console = self.compute.get_vnc_console(self.context, 'xvpvnc',
+                                               instance=instance)
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_invalid_vnc_console_type(self):
         """Raise useful error if console type is an unrecognised string"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
-                          self.context,
-                          instance['uuid'],
-                          'invalid')
+                          self.context, 'invalid', instance=instance)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_missing_vnc_console_type(self):
         """Raise useful error is console type is None"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
-                          self.context,
-                          instance['uuid'],
-                          None)
+                          self.context, None, instance=instance)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_diagnostics(self):
@@ -3679,9 +3673,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.mox.StubOutWithMock(rpc, 'call')
 
         rpc_msg1 = {'method': 'get_vnc_console',
-                    'args': {'instance_uuid': fake_instance['uuid'],
+                    'args': {'instance': fake_instance,
                              'console_type': fake_console_type},
-                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
+                   'version': '1.17'}
         rpc_msg2 = {'method': 'authorize_console',
                     'args': fake_connect_info,
                     'version': '1.0'}

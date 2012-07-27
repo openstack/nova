@@ -53,7 +53,7 @@ class ComputeRpcAPITestCase(test.TestCase):
             'check_can_live_migrate_destination',
             'check_can_live_migrate_source', 'confirm_resize',
             'detach_volume', 'finish_resize', 'finish_revert_resize',
-            'get_console_output', 'get_diagnostics',
+            'get_console_output', 'get_diagnostics', 'get_vnc_console',
             'pause_instance', 'reboot_instance', 'suspend_instance',
             'unpause_instance'
         ]
@@ -185,7 +185,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_get_vnc_console(self):
         self._test_compute_api('get_vnc_console', 'call',
-                instance=self.fake_instance, console_type='type')
+                instance=self.fake_instance, console_type='type',
+                version='1.17')
 
     def test_host_maintenance_mode(self):
         self._test_compute_api('host_maintenance_mode', 'call',
