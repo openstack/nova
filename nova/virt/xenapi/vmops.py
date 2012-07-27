@@ -22,9 +22,7 @@ Management class for VM-related functions (spawn, reboot, etc).
 import cPickle as pickle
 import functools
 import itertools
-import os
 import time
-import uuid
 
 from eventlet import greenthread
 import netaddr
@@ -46,7 +44,6 @@ from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi import agent
 from nova.virt.xenapi import firewall
-from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 
@@ -855,9 +852,6 @@ class VMOps(object):
 
         # Store user metadata
         store_meta('vm-data/user-metadata', instance['metadata'])
-
-        # Store system metadata
-        store_meta('vm-data/system-metadata', instance['system_metadata'])
 
     def change_instance_metadata(self, instance, diff):
         """Apply changes to instance metadata to xenstore."""
