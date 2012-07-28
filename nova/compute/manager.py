@@ -2517,7 +2517,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                             instance=instance)
                     continue
                 if instance['vm_state'] != vm_states.RESIZED \
-                    and instance['task_state'] != None:
+                    or instance['task_state'] is not None:
                     state = instance['vm_state']
                     reason = _("In %(state)s vm_state, not RESIZED")
                     _set_migration_to_error(migration_id, reason % locals(),
