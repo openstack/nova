@@ -724,8 +724,10 @@ def restart_dhcp(context, dev, network_ref):
            '--pid-file=%s' % _dhcp_file(dev, 'pid'),
            '--listen-address=%s' % network_ref['dhcp_server'],
            '--except-interface=lo',
-           '--dhcp-range=%s,static,%ss' % (network_ref['dhcp_start'],
-                                           FLAGS.dhcp_lease_time),
+           '--dhcp-range=set:\'%s\',%s,static,%ss' %
+                         (network_ref['label'],
+                          network_ref['dhcp_start'],
+                          FLAGS.dhcp_lease_time),
            '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(network_ref['cidr'])),
            '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
            '--dhcp-script=%s' % FLAGS.dhcpbridge,
