@@ -986,7 +986,7 @@ def cleanup_file_locks():
         return
 
     hostname = socket.gethostname()
-    sentinel_re = hostname + r'\..*-(\d+$)'
+    sentinel_re = hostname + r'-.*\.(\d+$)'
     lockfile_re = r'nova-.*\.lock'
     files = os.listdir(FLAGS.lock_path)
 
