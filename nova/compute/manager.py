@@ -567,7 +567,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         except Exception:
             rescheduled = False
             LOG.exception(_("Error trying to reschedule"),
-                    instance_uuid=instance_uuid)
+                          instance_uuid=instance_uuid)
 
         if rescheduled:
             # log the original build error
@@ -584,19 +584,19 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not retry:
             # no retry information, do not reschedule.
             LOG.debug(_("Retry info not present, will not reschedule"),
-                    instance_uuid=instance_uuid)
+                      instance_uuid=instance_uuid)
             return
 
         request_spec = kwargs.get('request_spec', None)
         if not request_spec:
             LOG.debug(_("No request spec, will not reschedule"),
-                    instance_uuid=instance_uuid)
+                      instance_uuid=instance_uuid)
             return
 
         request_spec['num_instances'] = 1
 
         LOG.debug(_("Re-scheduling instance: attempt %d"),
-                retry['num_attempts'], instance_uuid=instance_uuid)
+                  retry['num_attempts'], instance_uuid=instance_uuid)
         self.scheduler_rpcapi.run_instance(context, FLAGS.compute_topic,
                 request_spec, admin_password, injected_files,
                 requested_networks, is_first_time, filter_properties,
@@ -2479,7 +2479,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             # force an update to the instance's info_cache
             self.network_api.get_instance_nw_info(context, instance)
             LOG.debug(_('Updated the info_cache for instance'),
-                    instance=instance)
+                      instance=instance)
         except Exception:
             # We don't care about any failures
             pass
@@ -2741,7 +2741,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                         # time and retried.
                         # For example, there might be another task scheduled.
                         LOG.exception(_("error during stop() in "
-                                        "sync_power_state."))
+                                        "sync_power_state."),
+                                      instance=db_instance)
                 elif vm_power_state in (power_state.PAUSED,
                                         power_state.SUSPENDED):
                     LOG.warn(_("Instance is paused or suspended "
@@ -2751,7 +2752,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                         self.compute_api.stop(context, db_instance)
                     except Exception:
                         LOG.exception(_("error during stop() in "
-                                        "sync_power_state."))
+                                        "sync_power_state."),
+                                      instance=db_instance)
             elif vm_state == vm_states.STOPPED:
                 if vm_power_state not in (power_state.NOSTATE,
                                           power_state.SHUTDOWN,
@@ -2764,7 +2766,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                         self.compute_api.stop(context, db_instance)
                     except Exception:
                         LOG.exception(_("error during stop() in "
-                                        "sync_power_state."))
+                                        "sync_power_state."),
+                                      instance=db_instance)
             elif vm_state in (vm_states.SOFT_DELETED,
                               vm_states.DELETED):
                 if vm_power_state not in (power_state.NOSTATE,
