@@ -5,6 +5,7 @@
 # nova/volume/iscsi.py: iscsi_helper '--op' ...
 ietadm: CommandFilter, /usr/sbin/ietadm, root
 tgtadm: CommandFilter, /usr/sbin/tgtadm, root
+tgt-admin: CommandFilter, /usr/sbin/tgt-admin, root
 
 # nova/volume/driver.py: 'vgs', '--noheadings', '-o', 'name'
 vgs: CommandFilter, /sbin/vgs, root
