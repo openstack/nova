@@ -1348,8 +1348,6 @@ class API(base.Base):
 
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
-        self.db.instance_update(context, instance['uuid'],
-                {'host': migration_ref['dest_compute'], })
 
     @wrap_check_policy
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],

@@ -2477,8 +2477,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @manager.periodic_task
     def _poll_unconfirmed_resizes(self, context):
         if FLAGS.resize_confirm_window > 0:
-            migrations = self.db.migration_get_all_unconfirmed(context,
-                    FLAGS.resize_confirm_window)
+            migrations = self.db.migration_get_unconfirmed_by_dest_compute(
+                    context, FLAGS.resize_confirm_window, FLAGS.host)
 
             migrations_info = dict(migration_count=len(migrations),
                     confirm_window=FLAGS.resize_confirm_window)
@@ -2516,10 +2516,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                     _set_migration_to_error(migration_id, reason % locals(),
                                             instance=instance)
                     continue
-                if instance['vm_state'] != vm_states.RESIZED \
-                    or instance['task_state'] is not None:
-                    state = instance['vm_state']
-                    reason = _("In %(state)s vm_state, not RESIZED")
+                vm_state = instance['vm_state']
+                task_state = instance['task_state']
+                if vm_state != vm_states.RESIZED or task_state is not None:
+                    reason = _("In states %(vm_state)s/%(task_state)s, not"
+                            "RESIZED/None")
                     _set_migration_to_error(migration_id, reason % locals(),
                                             instance=instance)
                     continue
