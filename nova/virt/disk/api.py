@@ -416,7 +416,9 @@ def _inject_key_into_fs(key, fs):
 
     _inject_file_into_fs(fs, keyfile, key_data, append=True)
 
-    _setup_selinux_for_keys(fs)
+    selinuxdir = _join_and_check_path_within_fs(fs, 'etc', 'selinux')
+    if os.path.exists(selinuxdir):
+        _setup_selinux_for_keys(fs)
 
 
 def _inject_net_into_fs(net, fs):
