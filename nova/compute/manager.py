@@ -2009,19 +2009,17 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _detach_volume(self, context, instance, bdm):
         """Do the actual driver detach using block device mapping."""
-        instance_name = instance['name']
-        instance_uuid = instance['uuid']
         mp = bdm['device_name']
         volume_id = bdm['volume_id']
 
         LOG.audit(_('Detach volume %(volume_id)s from mountpoint %(mp)s'),
                   locals(), context=context, instance=instance)
 
-        if instance_name not in self.driver.list_instances():
+        if instance['name'] not in self.driver.list_instances():
             LOG.warn(_('Detaching volume from unknown instance'),
                      context=context, instance=instance)
         self.driver.detach_volume(jsonutils.loads(bdm['connection_info']),
-                                  instance_name,
+                                  instance['name'],
                                   mp)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -2032,16 +2030,16 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Detach a volume from an instance."""
         if not instance:
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
-        else:
-            instance_uuid = instance['uuid']
-        bdm = self._get_instance_volume_bdm(context, instance_uuid, volume_id)
+
+        bdm = self._get_instance_volume_bdm(context, instance['uuid'],
+                                            volume_id)
         self._detach_volume(context, instance, bdm)
         volume = self.volume_api.get(context, volume_id)
         connector = self.driver.get_volume_connector(instance)
         self.volume_api.terminate_connection(context, volume, connector)
         self.volume_api.detach(context.elevated(), volume)
         self.db.block_device_mapping_destroy_by_instance_and_volume(
-            context, instance_uuid, volume_id)
+            context, instance['uuid'], volume_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def remove_volume_connection(self, context, instance_id, volume_id):
