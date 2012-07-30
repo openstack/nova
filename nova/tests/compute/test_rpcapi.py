@@ -60,7 +60,7 @@ class ComputeRpcAPITestCase(test.TestCase):
             'rebuild_instance', 'remove_fixed_ip_from_instance',
             'remove_volume_connection', 'rescue_instance', 'reset_network',
             'resize_instance', 'resume_instance', 'revert_resize',
-            'rollback_live_migration_at_destination',
+            'rollback_live_migration_at_destination', 'set_admin_password',
             'start_instance', 'stop_instance', 'suspend_instance',
             'unpause_instance'
         ]
@@ -294,7 +294,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'cast',
-                instance=self.fake_instance, new_pass='pw')
+                instance=self.fake_instance, new_pass='pw', version='1.33')
 
     def test_set_host_enabled(self):
         self._test_compute_api('set_host_enabled', 'call',

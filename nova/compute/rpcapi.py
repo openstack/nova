@@ -104,6 +104,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.31 - Remove instance_uuid, add instance argument to revert_resize()
         1.32 - Remove instance_id, add instance argument to
                rollback_live_migration_at_destination()
+        1.33 - Remove instance_uuid, add instance argument to
+               set_admin_password()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -395,9 +397,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             version='1.32')
 
     def set_admin_password(self, ctxt, instance, new_pass):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('set_admin_password',
-                instance_uuid=instance['uuid'], new_pass=new_pass),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, new_pass=new_pass),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.33')
 
     def set_host_enabled(self, ctxt, enabled, host):
         topic = _compute_topic(self.topic, ctxt, host, None)

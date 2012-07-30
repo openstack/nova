@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.32'
+    RPC_API_VERSION = '1.33'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1221,7 +1221,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def set_admin_password(self, context, instance_uuid, new_pass=None):
+    def set_admin_password(self, context, instance=None, instance_uuid=None,
+                           new_pass=None):
         """Set the root/admin password for an instance on this host.
 
         This is generally only called by API password resets after an
@@ -1234,43 +1235,44 @@ class ComputeManager(manager.SchedulerDependentManager):
             # Generate a random password
             new_pass = utils.generate_password(FLAGS.password_length)
 
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+
         max_tries = 10
 
         for i in xrange(max_tries):
-            instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-
-            current_power_state = self._get_power_state(context, instance_ref)
+            current_power_state = self._get_power_state(context, instance)
             expected_state = power_state.RUNNING
 
             if current_power_state != expected_state:
-                self._instance_update(context, instance_ref['uuid'],
+                self._instance_update(context, instance['uuid'],
                                       task_state=None)
                 _msg = _('Failed to set admin password. Instance %s is not'
-                         ' running') % instance_ref["uuid"]
+                         ' running') % instance["uuid"]
                 raise exception.Invalid(_msg)
             else:
                 try:
-                    self.driver.set_admin_password(instance_ref, new_pass)
-                    LOG.audit(_("Root password set"), instance=instance_ref)
+                    self.driver.set_admin_password(instance, new_pass)
+                    LOG.audit(_("Root password set"), instance=instance)
                     self._instance_update(context,
-                                          instance_ref['uuid'],
+                                          instance['uuid'],
                                           task_state=None)
                     break
                 except NotImplementedError:
                     # NOTE(dprince): if the driver doesn't implement
                     # set_admin_password we break to avoid a loop
                     LOG.warn(_('set_admin_password is not implemented '
-                             'by this driver.'), instance=instance_ref)
+                             'by this driver.'), instance=instance)
                     self._instance_update(context,
-                                          instance_ref['uuid'],
+                                          instance['uuid'],
                                           task_state=None)
                     break
                 except Exception, e:
                     # Catch all here because this could be anything.
-                    LOG.exception(e, instance=instance_ref)
+                    LOG.exception(e, instance=instance)
                     if i == max_tries - 1:
                         self._set_instance_error_state(context,
-                                                       instance_ref['uuid'])
+                                                       instance['uuid'])
                         # We create a new exception here so that we won't
                         # potentially reveal password information to the
                         # API caller.  The real exception is logged above

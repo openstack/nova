@@ -589,7 +589,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_set_admin_password(self):
         """Ensure instance can have its admin password set"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
         db.instance_update(self.context, instance['uuid'],
                            {'task_state': task_states.UPDATING_PASSWORD})
@@ -598,7 +598,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
         self.assertEqual(inst_ref['task_state'], task_states.UPDATING_PASSWORD)
 
-        self.compute.set_admin_password(self.context, instance['uuid'])
+        self.compute.set_admin_password(self.context, instance=instance)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
@@ -613,7 +613,8 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update(self.context, instance['uuid'], {
             "power_state": power_state.NOSTATE,
         })
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        instance = jsonutils.to_primitive(db.instance_get_by_uuid(
+                                          self.context, instance['uuid']))
 
         self.assertEqual(instance['power_state'], power_state.NOSTATE)
 
@@ -630,7 +631,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(exception.Invalid,
                           self.compute.set_admin_password,
                           self.context,
-                          instance['uuid'])
+                          instance=instance)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
     def test_set_admin_password_driver_error(self):
@@ -660,7 +661,8 @@ class ComputeTestCase(BaseTestCase):
         #so a new error is raised
         self.assertRaises(exception.NovaException,
                           self.compute.set_admin_password,
-                          self.context, instance['uuid'])
+                          self.context,
+                          instance=jsonutils.to_primitive(inst_ref))
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
