@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.30'
+    RPC_API_VERSION = '1.31'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1413,7 +1413,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def revert_resize(self, context, instance_uuid, migration_id):
+    def revert_resize(self, context, migration_id, instance=None,
+                      instance_uuid=None):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
@@ -1421,16 +1422,17 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get_by_uuid(context,
-                migration_ref.instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context,
+                    migration_ref.instance_uuid)
 
         # NOTE(tr3buchet): tear down networks on destination host
-        self.network_api.setup_networks_on_host(context, instance_ref,
-                                                         teardown=True)
+        self.network_api.setup_networks_on_host(context, instance,
+                                                teardown=True)
 
-        network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.destroy(instance_ref, self._legacy_nw_info(network_info))
-        self.compute_rpcapi.finish_revert_resize(context, instance_ref,
+        network_info = self._get_instance_nw_info(context, instance)
+        self.driver.destroy(instance, self._legacy_nw_info(network_info))
+        self.compute_rpcapi.finish_revert_resize(context, instance,
                 migration_ref['id'], migration_ref['source_compute'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
