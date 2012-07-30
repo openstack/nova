@@ -234,3 +234,9 @@ readable. Follow these guidelines:
   message: a blank line followed by a 'Change-Id'. This is important
   to correlate this commit with a specific review in Gerrit, and it
   should not be modified.
+
+For further information on constructing high quality commit messages,
+and how to split up commits into a series of changes, consult the
+project wiki:
+
+   http://wiki.openstack.org/GitCommitMessages
