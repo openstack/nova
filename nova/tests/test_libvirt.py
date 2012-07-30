@@ -3303,15 +3303,24 @@ disk size: 4.4M''', ''))
         self.mox.ReplayAll()
         libvirt_utils.chown('/some/path', 'soren')
 
-    def test_extract_snapshot(self):
+    def _do_test_extract_snapshot(self, dest_format='raw', out_format='raw'):
         self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'raw',
+        utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', out_format,
                       '-s', 'snap1', '/path/to/disk/image', '/extracted/snap')
 
         # Start test
         self.mox.ReplayAll()
         libvirt_utils.extract_snapshot('/path/to/disk/image', 'qcow2',
-                                       'snap1', '/extracted/snap', 'raw')
+                                       'snap1', '/extracted/snap', dest_format)
+
+    def test_extract_snapshot_raw(self):
+        self._do_test_extract_snapshot()
+
+    def test_extract_snapshot_iso(self):
+        self._do_test_extract_snapshot(dest_format='iso')
+
+    def test_extract_snapshot_qcow2(self):
+        self._do_test_extract_snapshot(dest_format='qcow2', out_format='qcow2')
 
     def test_load_file(self):
         dst_fd, dst_path = tempfile.mkstemp()
