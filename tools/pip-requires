@@ -14,7 +14,6 @@ PasteDeploy==1.5.0
 paste
 sqlalchemy-migrate>=0.7.2
 netaddr
-glance>=2011.3.1
 suds==0.4
 paramiko
 feedparser
@@ -23,3 +22,4 @@ iso8601>=0.1.4
 httplib2
 setuptools_git>=0.4
 python-quantumclient>=0.1,<0.2
+python-glanceclient<2

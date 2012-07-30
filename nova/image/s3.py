@@ -281,15 +281,13 @@ class S3ImageService(object):
 
             def _update_image_state(context, image_uuid, image_state):
                 metadata = {'properties': {'image_state': image_state}}
-                headers = {'x-glance-registry-purge-props': False}
-                self.service.update(context, image_uuid, metadata, None,
-                                    headers)
+                self.service.update(context, image_uuid, metadata,
+                                    purge_props=False)
 
             def _update_image_data(context, image_uuid, image_data):
                 metadata = {}
-                headers = {'x-glance-registry-purge-props': False}
                 self.service.update(context, image_uuid, metadata, image_data,
-                                    headers)
+                                    purge_props=False)
 
             _update_image_state(context, image_uuid, 'downloading')
 
@@ -354,8 +352,8 @@ class S3ImageService(object):
 
             metadata = {'status': 'active',
                         'properties': {'image_state': 'available'}}
-            headers = {'x-glance-registry-purge-props': False}
-            self.service.update(context, image_uuid, metadata, None, headers)
+            self.service.update(context, image_uuid, metadata,
+                    purge_props=False)
 
             shutil.rmtree(image_path)
 
