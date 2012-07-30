@@ -322,6 +322,9 @@ def extract_snapshot(disk_path, source_fmt, snapshot_name, out_path, dest_fmt):
     :param snapshot_name: Name of snapshot in disk image
     :param out_path: Desired path of extracted snapshot
     """
+    # NOTE(markmc): ISO is just raw to qemu-img
+    if dest_fmt == 'iso':
+        dest_fmt = 'raw'
     qemu_img_cmd = ('qemu-img',
                     'convert',
                     '-f',
