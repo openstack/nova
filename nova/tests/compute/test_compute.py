@@ -1,4 +1,4 @@
-# vim: tabstop=5 shiftwidth=4 softtabstop=4
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -1208,7 +1208,7 @@ class ComputeTestCase(BaseTestCase):
                 migration_id=int(migration_ref['id']), disk_info={}, image={},
                 instance=instance)
 
-        self.assertEquals(len(test_notifier.NOTIFICATIONS), 3)
+        self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
         self.assertEquals(msg['event_type'],
                           'compute.instance.finish_resize.start')

@@ -1572,6 +1572,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.compute_rpcapi.finish_resize(context, instance_ref, migration_id,
                 image, disk_info, migration_ref['dest_compute'])
 
+        self._notify_about_instance_usage(context, instance_ref, "resize.end",
+                                          network_info=network_info)
+
     def _finish_resize(self, context, instance, migration_ref, disk_info,
                        image):
         resize_instance = False
@@ -1646,17 +1649,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.error(_('%s. Setting instance vm_state to ERROR') % error,
                           instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
-
-        try:
-            network_info = self._get_instance_nw_info(context, instance)
-        except Exception, error:
-            with excutils.save_and_reraise_exception():
-                msg = _('%s. Setting instance vm_state to ERROR')
-                LOG.error(msg % error)
-                self._set_instance_error_state(context, instance_uuid)
-
-        self._notify_about_instance_usage(context, instance, "resize.end",
-                                          network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
