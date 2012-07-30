@@ -126,7 +126,7 @@ class API(base.Base):
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
         """Removes floating ip with address from a project. (deallocates)"""
-        rpc.cast(context,
+        rpc.call(context,
                  FLAGS.network_topic,
                  {'method': 'deallocate_floating_ip',
                   'args': {'address': address,
@@ -185,7 +185,7 @@ class API(base.Base):
         args['instance_id'] = instance['id']
         args['project_id'] = instance['project_id']
         args['host'] = instance['host']
-        rpc.cast(context, FLAGS.network_topic,
+        rpc.call(context, FLAGS.network_topic,
                  {'method': 'deallocate_for_instance',
                   'args': args})
 
@@ -194,7 +194,7 @@ class API(base.Base):
         args = {'instance_id': instance['id'],
                 'host': instance['host'],
                 'network_id': network_id}
-        rpc.cast(context, FLAGS.network_topic,
+        rpc.call(context, FLAGS.network_topic,
                  {'method': 'add_fixed_ip_to_instance',
                   'args': args})
 
@@ -204,13 +204,13 @@ class API(base.Base):
         args = {'instance_id': instance['id'],
                 'host': instance['host'],
                 'address': address}
-        rpc.cast(context, FLAGS.network_topic,
+        rpc.call(context, FLAGS.network_topic,
                  {'method': 'remove_fixed_ip_from_instance',
                   'args': args})
 
     def add_network_to_project(self, context, project_id):
         """Force adds another network to a project."""
-        rpc.cast(context, FLAGS.network_topic,
+        rpc.call(context, FLAGS.network_topic,
                  {'method': 'add_network_to_project',
                   'args': {'project_id': project_id}})
 
