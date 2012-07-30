@@ -223,12 +223,10 @@ def trycmd(*args, **kwargs):
         failed = False
     except exception.ProcessExecutionError, exn:
         out, err = '', str(exn)
-        LOG.debug(err)
         failed = True
 
     if not failed and discard_warnings and err:
         # Handle commands that output to stderr but otherwise succeed
-        LOG.debug(err)
         err = ''
 
     return out, err
