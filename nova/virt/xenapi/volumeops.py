@@ -184,6 +184,10 @@ class VolumeOps(object):
 
         try:
             self._session.call_xenapi("VBD.plug", vbd_ref)
+            # set osvol=True in other-config to indicate this is an
+            # attached nova (or cinder) volume
+            self._session.call_xenapi("VBD.add_to_other_config",
+                                      vbd_ref, 'osvol', "True")
         except self._session.XenAPI.Failure, exc:
             LOG.exception(exc)
             self.forget_sr(uuid)

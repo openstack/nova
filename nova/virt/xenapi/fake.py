@@ -412,6 +412,21 @@ class SessionBase(object):
         rec['currently_attached'] = False
         rec['device'] = ''
 
+    def VBD_add_to_other_config(self, _1, vbd_ref, key, value):
+        db_ref = _db_content['VBD'][vbd_ref]
+        if not 'other_config' in db_ref:
+            db_ref['other_config'] = {}
+        if key in db_ref['other_config']:
+            raise Failure(['MAP_DUPLICATE_KEY', 'VBD', 'other_config',
+                           vbd_ref, key])
+        db_ref['other_config'][key] = value
+
+    def VBD_get_other_config(self, _1, vbd_ref):
+        db_ref = _db_content['VBD'][vbd_ref]
+        if not 'other_config' in db_ref:
+            return {}
+        return db_ref['other_config']
+
     def PBD_create(self, _1, pbd_rec):
         pbd_ref = _create_object('PBD', pbd_rec)
         _db_content['PBD'][pbd_ref]['currently_attached'] = False

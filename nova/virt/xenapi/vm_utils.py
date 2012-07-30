@@ -1246,7 +1246,7 @@ def list_vms(session):
             yield vm_ref, vm_rec
 
 
-def lookup_vm_vdis(session, vm_ref, nodestroys=None):
+def lookup_vm_vdis(session, vm_ref):
     """Look for the VDIs that are attached to the VM"""
     # Firstly we get the VBDs, then the VDIs.
     # TODO(Armando): do we leave the read-only devices?
@@ -1259,11 +1259,13 @@ def lookup_vm_vdis(session, vm_ref, nodestroys=None):
                 # Test valid VDI
                 record = session.call_xenapi("VDI.get_record", vdi_ref)
                 LOG.debug(_('VDI %s is still available'), record['uuid'])
+                vbd_other_config = session.call_xenapi("VBD.get_other_config",
+                                                       vbd_ref)
+                if not vbd_other_config.get('osvol'):
+                    # This is not an attached volume
+                    vdi_refs.append(vdi_ref)
             except session.XenAPI.Failure, exc:
                 LOG.exception(exc)
-            else:
-                if not nodestroys or record['uuid'] not in nodestroys:
-                    vdi_refs.append(vdi_ref)
     return vdi_refs
 
 
