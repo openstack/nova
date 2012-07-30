@@ -219,6 +219,9 @@ def _validate_sequenced_vhds(staging_path):
         if not filename.endswith('.vhd'):
             continue
 
+        if filename == "swap.vhd":
+            continue
+
         vhd_path = os.path.join(staging_path, "%d.vhd" % seq_num)
         if not os.path.exists(vhd_path):
             raise Exception("Corrupt image. Expected seq number: %d. Files: %s"
