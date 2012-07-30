@@ -3674,7 +3674,8 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 
 
 @require_admin_context
-def migration_get_all_unconfirmed(context, confirm_window, session=None):
+def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
+        dest_compute, session=None):
     confirm_window = (timeutils.utcnow() -
                       datetime.timedelta(seconds=confirm_window))
 
@@ -3682,6 +3683,7 @@ def migration_get_all_unconfirmed(context, confirm_window, session=None):
                        read_deleted="yes").\
             filter(models.Migration.updated_at <= confirm_window).\
             filter_by(status="finished").\
+            filter_by(dest_compute=dest_compute).\
             all()
 
 

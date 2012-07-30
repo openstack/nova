@@ -81,26 +81,42 @@ class DbApiTestCase(test.TestCase):
         else:
             self.assertTrue(result[1].deleted)
 
-    def test_migration_get_all_unconfirmed(self):
+    def test_migration_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
 
         # Ensure no migrations are returned.
-        results = db.migration_get_all_unconfirmed(ctxt, 10)
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                'fake_host')
+        self.assertEqual(0, len(results))
+
+        # Ensure no migrations are returned.
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                'fake_host2')
+        self.assertEqual(0, len(results))
+
+        updated_at = datetime.datetime(2000, 01, 01, 12, 00, 00)
+        values = {"status": "finished", "updated_at": updated_at,
+                "dest_compute": "fake_host2"}
+        migration = db.migration_create(ctxt, values)
+
+        # Ensure different host is not returned
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                'fake_host')
         self.assertEqual(0, len(results))
 
         # Ensure one migration older than 10 seconds is returned.
-        updated_at = datetime.datetime(2000, 01, 01, 12, 00, 00)
-        values = {"status": "finished", "updated_at": updated_at}
-        migration = db.migration_create(ctxt, values)
-        results = db.migration_get_all_unconfirmed(ctxt, 10)
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                'fake_host2')
         self.assertEqual(1, len(results))
         db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
 
         # Ensure the new migration is not returned.
         updated_at = timeutils.utcnow()
-        values = {"status": "finished", "updated_at": updated_at}
+        values = {"status": "finished", "updated_at": updated_at,
+                "dest_compute": "fake_host2"}
         migration = db.migration_create(ctxt, values)
-        results = db.migration_get_all_unconfirmed(ctxt, 10)
+        results = db.migration_get_unconfirmed_by_dest_compute(ctxt, 10,
+                "fake_host2")
         self.assertEqual(0, len(results))
         db.migration_update(ctxt, migration.id, {"status": "CONFIRMED"})
 
