@@ -338,28 +338,12 @@ class GlanceImageService(object):
         return str(user_id) == str(context.user_id)
 
 
-# utility functions
 def _convert_timestamps_to_datetimes(image_meta):
     """Returns image with timestamp fields converted to datetime objects."""
     for attr in ['created_at', 'updated_at', 'deleted_at']:
         if image_meta.get(attr):
-            image_meta[attr] = _parse_glance_iso8601_timestamp(
-                image_meta[attr])
+            image_meta[attr] = timeutils.parse_isotime(image_meta[attr])
     return image_meta
-
-
-def _parse_glance_iso8601_timestamp(timestamp):
-    """Parse a subset of iso8601 timestamps into datetime objects."""
-    iso_formats = ['%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S']
-
-    for iso_format in iso_formats:
-        try:
-            return timeutils.parse_strtime(timestamp, iso_format)
-        except ValueError:
-            pass
-
-    raise ValueError(_('%(timestamp)s does not follow any of the '
-                       'signatures: %(iso_formats)s') % locals())
 
 
 # NOTE(bcwaldon): used to store non-string data in glance metadata

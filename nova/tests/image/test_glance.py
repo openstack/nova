@@ -88,7 +88,13 @@ class TestGlanceImageService(test.TestCase):
     """
     NOW_GLANCE_OLD_FORMAT = "2010-10-11T10:30:22"
     NOW_GLANCE_FORMAT = "2010-10-11T10:30:22.000000"
-    NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22)
+
+    class tzinfo(datetime.tzinfo):
+        @staticmethod
+        def utcoffset(*args, **kwargs):
+            return datetime.timedelta()
+
+    NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22, tzinfo=tzinfo())
 
     def setUp(self):
         super(TestGlanceImageService, self).setUp()
