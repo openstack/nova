@@ -90,6 +90,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                power_on_instance() and start_instance()
         1.23 - Remove instance_id, add instance argument to
                pre_live_migration()
+        1.24 - Remove instance_uuid, add instance argument to
+               rebuild_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -287,11 +289,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('rebuild_instance',
-                instance_uuid=instance['uuid'], new_pass=new_pass,
+                instance=instance_p, new_pass=new_pass,
                 injected_files=injected_files, image_ref=image_ref,
                 orig_image_ref=orig_image_ref),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.24')
 
     def refresh_provider_fw_rules(self, ctxt, host):
         self.cast(ctxt, self.make_msg('refresh_provider_fw_rules'),

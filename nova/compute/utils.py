@@ -56,7 +56,7 @@ def notify_usage_exists(context, instance_ref, current_period=False,
     if system_metadata is None:
         try:
             system_metadata = db.instance_system_metadata_get(
-                    context, instance_ref.uuid)
+                    context, instance_ref['uuid'])
         except exception.NotFound:
             system_metadata = {}
 
