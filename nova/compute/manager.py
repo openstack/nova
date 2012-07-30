@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.33'
+    RPC_API_VERSION = '1.34'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1116,13 +1116,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def snapshot_instance(self, context, instance_uuid, image_id,
+    def snapshot_instance(self, context, image_id,
                           image_type='snapshot', backup_type=None,
-                          rotation=None):
+                          rotation=None, instance=None, instance_uuid=None):
         """Snapshot an instance on this host.
 
         :param context: security context
-        :param instance_uuid: nova.db.sqlalchemy.models.Instance.Uuid
+        :param instance_uuid: (deprecated) db.sqlalchemy.models.Instance.Uuid
+        :param instance: an Instance dict
         :param image_id: glance.db.sqlalchemy.models.Image.Id
         :param image_type: snapshot | backup
         :param backup_type: daily | weekly
@@ -1130,18 +1131,20 @@ class ComputeManager(manager.SchedulerDependentManager):
             None if rotation shouldn't be used (as in the case of snapshots)
         """
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_ref['uuid'],
+                              instance['uuid'],
                               power_state=current_power_state)
 
         LOG.audit(_('instance snapshotting'), context=context,
                   instance_uuid=instance_uuid)
 
-        if instance_ref['power_state'] != power_state.RUNNING:
-            state = instance_ref['power_state']
+        if instance['power_state'] != power_state.RUNNING:
+            state = instance['power_state']
             running = power_state.RUNNING
             LOG.warn(_('trying to snapshot a non-running '
                        'instance: (state: %(state)s '
@@ -1149,12 +1152,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                      instance_uuid=instance_uuid)
 
         self._notify_about_instance_usage(
-                context, instance_ref, "snapshot.start")
+                context, instance, "snapshot.start")
 
         try:
-            self.driver.snapshot(context, instance_ref, image_id)
+            self.driver.snapshot(context, instance, image_id)
         finally:
-            self._instance_update(context, instance_ref['uuid'],
+            self._instance_update(context, instance['uuid'],
                                   task_state=None)
 
         if image_type == 'snapshot' and rotation:
@@ -1167,7 +1170,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.RotationRequiredForBackup()
 
         self._notify_about_instance_usage(
-                context, instance_ref, "snapshot.end")
+                context, instance, "snapshot.end")
 
     @wrap_instance_fault
     def rotate_backups(self, context, instance_uuid, backup_type, rotation):

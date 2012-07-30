@@ -749,11 +749,11 @@ class ComputeTestCase(BaseTestCase):
 
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         name = "myfakesnapshot"
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.snapshot_instance(self.context, instance_uuid, name)
+        self.compute.snapshot_instance(self.context, name, instance=instance)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_snapshot_fails(self):
@@ -763,11 +763,11 @@ class ComputeTestCase(BaseTestCase):
 
         self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
         self.assertRaises(test.TestingException,
                           self.compute.snapshot_instance,
-                          self.context, instance['uuid'], "failing_snapshot")
+                          self.context, "failing_snapshot", instance=instance)
         self._assert_state({'task_state': None})
         self.compute.terminate_instance(self.context, instance['uuid'])
 
