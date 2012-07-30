@@ -102,6 +102,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.29 - Remove instance_uuid, add instance argument to resize_instance()
         1.30 - Remove instance_uuid, add instance argument to resume_instance()
         1.31 - Remove instance_uuid, add instance argument to revert_resize()
+        1.32 - Remove instance_id, add instance argument to
+               rollback_live_migration_at_destination()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -386,9 +388,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.31')
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('rollback_live_migration_at_destination',
-            instance_id=instance['id']),
-            topic=_compute_topic(self.topic, ctxt, host, None))
+            instance=instance_p),
+            topic=_compute_topic(self.topic, ctxt, host, None),
+            version='1.32')
 
     def set_admin_password(self, ctxt, instance, new_pass):
         self.cast(ctxt, self.make_msg('set_admin_password',

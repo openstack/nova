@@ -1625,8 +1625,8 @@ class ComputeTestCase(BaseTestCase):
                  "version": "1.26"}, None)
         rpc.cast(c, topic,
                 {"method": "rollback_live_migration_at_destination",
-                 "args": {'instance_id': inst_id},
-                 "version": "1.0"})
+                 "args": {'instance': rpcinst},
+                 "version": "1.32"})
 
         # start test
         self.mox.ReplayAll()
