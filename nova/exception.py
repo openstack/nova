@@ -1090,6 +1090,11 @@ class VolumeTypeCreateFailed(NovaException):
                 "name %(name)s and specs %(extra_specs)s")
 
 
+class VolumeBackendAPIException(NovaException):
+    message = _("Bad or unexpected response from the storage volume "
+                "backend API: data=%(data)s")
+
+
 class InstanceTypeCreateFailed(NovaException):
     message = _("Unable to create instance type")
 
