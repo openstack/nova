@@ -888,13 +888,12 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        'reset_network', dummy)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 0)
-        self.compute.remove_fixed_ip_from_instance(self.context,
-                                                   instance_uuid,
-                                                   1)
+        self.compute.remove_fixed_ip_from_instance(self.context, 1,
+                                                   instance=instance)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context, instance_uuid)

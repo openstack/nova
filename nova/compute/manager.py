@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.24'
+    RPC_API_VERSION = '1.25'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1679,25 +1679,27 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def remove_fixed_ip_from_instance(self, context, instance_uuid, address):
+    def remove_fixed_ip_from_instance(self, context, address, instance=None,
+                                      instance_uuid=None):
         """Calls network_api to remove existing fixed_ip from instance
         by injecting the altered network info and resetting
         instance networking.
         """
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         self._notify_about_instance_usage(
-                context, instance_ref, "delete_ip.start")
+                context, instance, "delete_ip.start")
 
         self.network_api.remove_fixed_ip_from_instance(context,
-                                                       instance_ref,
+                                                       instance,
                                                        address)
 
         network_info = self._inject_network_info(context,
-                                                 instance=instance_ref)
-        self.reset_network(context, instance_ref['uuid'])
+                                                 instance=instance)
+        self.reset_network(context, instance['uuid'])
 
         self._notify_about_instance_usage(
-            context, instance_ref, "delete_ip.end", network_info=network_info)
+            context, instance, "delete_ip.end", network_info=network_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock

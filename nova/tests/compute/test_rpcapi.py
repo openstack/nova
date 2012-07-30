@@ -57,7 +57,8 @@ class ComputeRpcAPITestCase(test.TestCase):
             'inject_file', 'inject_network_info', 'pause_instance',
             'post_live_migration_at_destination', 'power_off_instance',
             'power_on_instance', 'pre_live_migration', 'reboot_instance',
-            'rebuild_instance', 'start_instance', 'stop_instance',
+            'rebuild_instance', 'remove_fixed_ip_from_instance',
+            'start_instance', 'stop_instance',
             'suspend_instance', 'unpause_instance'
         ]
 
@@ -257,7 +258,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_remove_fixed_ip_from_instance(self):
         self._test_compute_api('remove_fixed_ip_from_instance', 'cast',
-                instance=self.fake_instance, address='addr')
+                instance=self.fake_instance, address='addr', version='1.25')
 
     def test_remove_volume_connection(self):
         self._test_compute_api('remove_volume_connection', 'call',
