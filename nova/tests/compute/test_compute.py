@@ -499,12 +499,11 @@ class ComputeTestCase(BaseTestCase):
 
     def test_suspend(self):
         """ensure instance can be suspended and resumed"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.suspend_instance(self.context,
-                instance=jsonutils.to_primitive(instance))
-        self.compute.resume_instance(self.context, instance_uuid)
+        self.compute.suspend_instance(self.context, instance=instance)
+        self.compute.resume_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_suspend_error(self):

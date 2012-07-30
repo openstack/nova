@@ -59,8 +59,8 @@ class ComputeRpcAPITestCase(test.TestCase):
             'power_on_instance', 'pre_live_migration', 'reboot_instance',
             'rebuild_instance', 'remove_fixed_ip_from_instance',
             'remove_volume_connection', 'rescue_instance', 'reset_network',
-            'resize_instance', 'start_instance', 'stop_instance',
-            'suspend_instance', 'unpause_instance'
+            'resize_instance', 'resume_instance', 'start_instance',
+            'stop_instance', 'suspend_instance', 'unpause_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -281,7 +281,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_resume_instance(self):
         self._test_compute_api('resume_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.30')
 
     def test_revert_resize(self):
         self._test_compute_api('revert_resize', 'cast',

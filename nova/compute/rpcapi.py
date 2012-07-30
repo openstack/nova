@@ -100,6 +100,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                rescue_instance()
         1.28 - Remove instance_uuid, add instance argument to reset_network()
         1.29 - Remove instance_uuid, add instance argument to resize_instance()
+        1.30 - Remove instance_uuid, add instance argument to resume_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -370,9 +371,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 image=image), topic, version='1.29')
 
     def resume_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('resume_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.30')
 
     def revert_resize(self, ctxt, instance, migration_id, host):
         self.cast(ctxt, self.make_msg('revert_resize',
