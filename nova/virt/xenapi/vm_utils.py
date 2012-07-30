@@ -2,6 +2,7 @@
 
 # Copyright (c) 2010 Citrix Systems, Inc.
 # Copyright 2011 Piston Cloud Computing, Inc.
+# Copyright 2012 Openstack, LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -528,11 +529,6 @@ def snapshot_attached_here(session, instance, vm_ref, label):
 
     try:
         sr_ref = vm_vdi_rec["SR"]
-
-        # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
-        # matches the underlying VHDs.
-        _scan_sr(session, sr_ref)
-
         parent_uuid, base_uuid = _wait_for_vhd_coalesce(
                 session, instance, sr_ref, vm_vdi_ref, original_parent_uuid)
 
@@ -574,14 +570,73 @@ def get_sr_path(session):
     return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
 
-def find_cached_image(session, image_id, sr_ref):
-    """Returns the vdi-ref of the cached image."""
-    for vdi_ref, vdi_rec in _get_all_vdis_in_sr(session, sr_ref):
-        other_config = vdi_rec['other_config']
-        if image_id == other_config.get('image-id'):
-            return vdi_ref
+def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False):
+    """Destroy used or unused cached images.
 
-    return None
+    A cached image that is being used by at least one VM is said to be 'used'.
+
+    In the case of an 'unused' image, the cached image will be the only
+    descendent of the base-copy. So when we delete the cached-image, the
+    refcount will drop to zero and XenServer will automatically destroy the
+    base-copy for us.
+
+    The default behavior of this function is to destroy only 'unused' cached
+    images. To destroy all cached images, use the `all_cached=True` kwarg.
+    """
+    cached_images = _find_cached_images(session, sr_ref)
+    destroyed = set()
+
+    def destroy_cached_vdi(vdi_uuid, vdi_ref):
+        LOG.debug(_("Destroying cached VDI '%(vdi_uuid)s'"))
+        if not dry_run:
+            destroy_vdi(session, vdi_ref)
+        destroyed.add(vdi_uuid)
+
+    for vdi_ref in cached_images.values():
+        vdi_uuid = session.call_xenapi('VDI.get_uuid', vdi_ref)
+
+        if all_cached:
+            destroy_cached_vdi(vdi_uuid, vdi_ref)
+            continue
+
+        # Unused-Only: Search for siblings
+
+        # Chain length greater than two implies a VM must be holding a ref to
+        # the base-copy (otherwise it would have coalesced), so consider this
+        # cached image used.
+        chain = list(_walk_vdi_chain(session, vdi_uuid))
+        if len(chain) > 2:
+            continue
+        elif len(chain) == 2:
+            # Siblings imply cached image is used
+            root_vdi_rec = chain[-1]
+            children = _child_vhds(session, sr_ref, root_vdi_rec['uuid'])
+            if len(children) > 1:
+                continue
+
+        destroy_cached_vdi(vdi_uuid, vdi_ref)
+
+    return destroyed
+
+
+def _find_cached_images(session, sr_ref):
+    """Return a dict(uuid=vdi_ref) representing all cached images."""
+    cached_images = {}
+    for vdi_ref, vdi_rec in _get_all_vdis_in_sr(session, sr_ref):
+        try:
+            image_id = vdi_rec['other_config']['image-id']
+        except KeyError:
+            continue
+
+        cached_images[image_id] = vdi_ref
+
+    return cached_images
+
+
+def _find_cached_image(session, image_id, sr_ref):
+    """Returns the vdi-ref of the cached image."""
+    cached_images = _find_cached_images(session, sr_ref)
+    return cached_images.get(image_id)
 
 
 def upload_image(context, session, instance, vdi_uuids, image_id):
@@ -789,7 +844,7 @@ def _create_cached_image(context, session, instance, name_label,
                       "type %(sr_type)s. Ignoring the cow flag.")
                       % locals())
 
-    root_vdi_ref = find_cached_image(session, image_id, sr_ref)
+    root_vdi_ref = _find_cached_image(session, image_id, sr_ref)
     if root_vdi_ref is None:
         vdis = _fetch_image(context, session, instance, name_label,
                             image_id, image_type)
@@ -1554,6 +1609,7 @@ def _get_vhd_parent_uuid(session, vdi_ref):
 
 def _walk_vdi_chain(session, vdi_uuid):
     """Yield vdi_recs for each element in a VDI chain"""
+    scan_default_sr(session)
     while True:
         vdi_ref = session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
@@ -1564,6 +1620,27 @@ def _walk_vdi_chain(session, vdi_uuid):
             break
 
         vdi_uuid = parent_uuid
+
+
+def _child_vhds(session, sr_ref, vdi_uuid):
+    """Return the immediate children of a given VHD.
+
+    This is not recursive, only the immediate children are returned.
+    """
+    children = set()
+    for ref, rec in _get_all_vdis_in_sr(session, sr_ref):
+        rec_uuid = rec['uuid']
+
+        if rec_uuid == vdi_uuid:
+            continue
+
+        parent_uuid = _get_vhd_parent_uuid(session, ref)
+        if parent_uuid != vdi_uuid:
+            continue
+
+        children.add(rec_uuid)
+
+    return children
 
 
 def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
@@ -1603,6 +1680,10 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
         parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
         base_uuid = _get_vhd_parent_uuid(session, parent_ref)
         return parent_uuid, base_uuid
+
+    # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
+    # matches the underlying VHDs.
+    _scan_sr(session, sr_ref)
 
     max_attempts = FLAGS.xenapi_vhd_coalesce_max_attempts
     for i in xrange(max_attempts):
