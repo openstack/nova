@@ -108,14 +108,6 @@ class FakeImageServiceTestCase(test.TestCase):
                           self.context,
                           '34')
 
-    def test_delete_all(self):
-        self.image_service.create(self.context, {'id': '32', 'foo': 'bar'})
-        self.image_service.create(self.context, {'id': '33', 'foo': 'bar'})
-        self.image_service.create(self.context, {'id': '34', 'foo': 'bar'})
-        self.image_service.delete_all()
-        index = self.image_service.detail(self.context)
-        self.assertEquals(len(index), 0)
-
     def test_create_then_get(self):
         blob = 'some data'
         s1 = StringIO.StringIO(blob)

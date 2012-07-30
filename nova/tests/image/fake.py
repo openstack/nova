@@ -221,9 +221,6 @@ class _FakeImageService(object):
         if not removed:
             raise exception.ImageNotFound(image_id=image_id)
 
-    def delete_all(self):
-        """Clears out all images."""
-        self.images.clear()
 
 _fakeImageService = _FakeImageService()
 
