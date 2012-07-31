@@ -115,7 +115,7 @@ class TgtAdm(TargetAdmin):
                 f.write(volume_conf)
                 f.close()
 
-            self._execute('/usr/sbin/tgt-admin', '--conf %s' % volume_path,
+            self._execute('tgt-admin', '--conf %s' % volume_path,
                         '--update %s' % vol_id, run_as_root=True)
 
         except Exception as ex:
@@ -128,7 +128,7 @@ class TgtAdm(TargetAdmin):
             LOG.info(_('Removing volume: %s') % vol_id)
             volume_path = os.path.join(FLAGS.volumes_dir, vol_id)
             if os.path.isfile(volume_path):
-                self._execute('/usr/bin/tgt-admin', '--conf %s' % volume_path,
+                self._execute('tgt-admin', '--conf %s' % volume_path,
                     '--delete %s' % vol_id, run_as_root_root=True)
                 os.unlink(volume_path)
         except Exception as ex:
