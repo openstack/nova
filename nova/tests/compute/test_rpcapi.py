@@ -50,7 +50,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
         methods_with_instance = [
             'add_fixed_ip_to_instance', 'attach_volume',
-            'check_can_live_migrate_destination',
+            'change_instance_metadata', 'check_can_live_migrate_destination',
             'check_can_live_migrate_source', 'confirm_resize',
             'detach_volume', 'finish_resize', 'finish_revert_resize',
             'get_console_output', 'get_diagnostics', 'get_vnc_console',
@@ -131,6 +131,11 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('attach_volume', 'cast',
                 instance=self.fake_instance, volume_id='id', mountpoint='mp',
                 version='1.9')
+
+    def test_change_instance_metadata(self):
+        self._test_compute_api('change_instance_metadata', 'cast',
+                instance=self.fake_instance, diff={},
+                version='1.36')
 
     def test_check_can_live_migrate_destination(self):
         self._test_compute_api('check_can_live_migrate_destination', 'call',
@@ -337,8 +342,3 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_unrescue_instance(self):
         self._test_compute_api('unrescue_instance', 'cast',
                 instance=self.fake_instance, version='1.35')
-
-    def test_change_instance_metadata(self):
-        self._test_compute_api('change_instance_metadata', 'cast',
-                instance=self.fake_instance, diff={},
-                version='1.3')
