@@ -108,6 +108,8 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                set_admin_password()
         1.34 - Remove instance_uuid, add instance argument to
                snapshot_instance()
+        1.35 - Remove instance_uuid, add instance argument to
+               unrescue_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -460,9 +462,11 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.5')
 
     def unrescue_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('unrescue_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.35')
 
     def change_instance_metadata(self, ctxt, instance, diff):
         self.cast(ctxt, self.make_msg('change_instance_metadata',

@@ -444,10 +444,20 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
+
+        # Make sure these methods work with both instance and instance_uuid
+
         self.compute.rescue_instance(self.context, instance=instance)
         self.assertTrue(called['rescued'])
-        self.compute.unrescue_instance(self.context, instance_uuid)
+        self.compute.unrescue_instance(self.context, instance=instance)
         self.assertTrue(called['unrescued'])
+
+        self.compute.rescue_instance(self.context, instance_uuid=instance_uuid)
+        self.assertTrue(called['rescued'])
+        self.compute.unrescue_instance(self.context,
+                                       instance_uuid=instance_uuid)
+        self.assertTrue(called['unrescued'])
+
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_power_on(self):
