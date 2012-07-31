@@ -69,7 +69,7 @@ def update_instance_cache_with_nw_info(api, context, instance,
                                        **kwargs):
 
     try:
-        nw_info = nw_info or api.get_instance_nw_info(context, instance)
+        nw_info = nw_info or api._get_instance_nw_info(context, instance)
 
         # update cache
         cache = {'network_info': nw_info.json()}

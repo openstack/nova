@@ -53,7 +53,7 @@ class ApiTestCase(test.TestCase):
                     pass
             return FakeNWInfo()
 
-        self.stubs.Set(self.network_api, 'get_instance_nw_info',
+        self.stubs.Set(self.network_api, '_get_instance_nw_info',
                        fake_get_nw_info)
 
         if orig_instance_uuid:

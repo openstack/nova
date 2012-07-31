@@ -124,6 +124,9 @@ class API(base.Base):
 
     @refresh_cache
     def get_instance_nw_info(self, context, instance, networks=None):
+        return self._get_instance_nw_info(context, instance, networks)
+
+    def _get_instance_nw_info(self, context, instance, networks=None):
         LOG.debug(_('get_instance_nw_info() for %s'),
                   instance['display_name'])
         nw_info = self._build_network_info_model(context, instance, networks)
