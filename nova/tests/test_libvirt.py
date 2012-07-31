@@ -1422,6 +1422,15 @@ class LibvirtConnTestCase(test.TestCase):
                 check = (lambda t: t.find('./os/kernel'), None)
             check_list.append(check)
 
+            # Hypervisors that only support vm_mode.HVM should
+            # not produce configuration that results in kernel
+            # arguments
+            if not expect_kernel and hypervisor_type in ['qemu', 'kvm']:
+                check = (lambda t: t.find('./os/root'), None)
+                check_list.append(check)
+                check = (lambda t: t.find('./os/cmdline'), None)
+                check_list.append(check)
+
             if expect_ramdisk:
                 check = (lambda t: t.find('./os/initrd').text.split(
                     '/')[1], 'ramdisk' + suffix)

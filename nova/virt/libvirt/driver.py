@@ -1740,7 +1740,7 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.os_kernel = "/usr/bin/linux"
             guest.os_root = root_device_name or "/dev/ubda"
         else:
-            if FLAGS.libvirt_type == "xen":
+            if FLAGS.libvirt_type == "xen" and guest.os_type == vm_mode.XEN:
                 guest.os_root = root_device_name or "/dev/xvda"
             else:
                 guest.os_type = vm_mode.HVM
