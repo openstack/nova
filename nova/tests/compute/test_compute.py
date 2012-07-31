@@ -1612,11 +1612,13 @@ class ComputeTestCase(BaseTestCase):
                                 'args': {'instance_id': inst_id,
                                          'host': self.compute.host,
                                          'teardown': False}})
+        rpcinst = jsonutils.to_primitive(
+                db.instance_get_by_uuid(self.context, instance['uuid']))
         rpc.call(c, topic,
                 {"method": "remove_volume_connection",
-                 "args": {'instance_id': inst_id,
+                 "args": {'instance': rpcinst,
                           'volume_id': volume_id},
-                 "version": "1.0"}, None)
+                 "version": "1.26"}, None)
         rpc.cast(c, topic,
                 {"method": "rollback_live_migration_at_destination",
                  "args": {'instance_id': inst_id},
