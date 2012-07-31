@@ -189,6 +189,10 @@ filterlist = [
     # nova/virt/libvirt/utils.py: 'qemu-img'
     filters.CommandFilter("/usr/bin/qemu-img", "root"),
 
+    # nova/virt/disk/api.py: 'readlink', '-e'
+    filters.CommandFilter("/usr/bin/readlink", "root"),
+    filters.CommandFilter("/bin/readlink", "root"),
+
     # nova/virt/disk/api.py: 'touch', target
     filters.CommandFilter("/usr/bin/touch", "root"),
 

@@ -314,7 +314,9 @@ def _join_and_check_path_within_fs(fs, *args):
     mounted guest fs.  Trying to be clever and specifying a
     path with '..' in it will hit this safeguard.
     '''
-    absolute_path = os.path.realpath(os.path.join(fs, *args))
+    absolute_path, _err = utils.execute('readlink', '-nm',
+                                        os.path.join(fs, *args),
+                                        run_as_root=True)
     if not absolute_path.startswith(os.path.realpath(fs) + '/'):
         raise exception.Invalid(_('injected file path not valid'))
     return absolute_path

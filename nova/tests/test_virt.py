@@ -18,6 +18,7 @@
 from nova import exception
 from nova import flags
 from nova import test
+from nova import utils
 from nova.virt.disk import api as disk_api
 from nova.virt import driver
 
@@ -86,6 +87,17 @@ class TestVirtDriver(test.TestCase):
 
 
 class TestVirtDisk(test.TestCase):
+    def setUp(self):
+        super(TestVirtDisk, self).setUp()
+
+        real_execute = utils.execute
+
+        def nonroot_execute(*cmd_parts, **kwargs):
+            kwargs.pop('run_as_root', None)
+            return real_execute(*cmd_parts, **kwargs)
+
+        self.stubs.Set(utils, 'execute', nonroot_execute)
+
     def test_check_safe_path(self):
         ret = disk_api._join_and_check_path_within_fs('/foo', 'etc',
                                                       'something.conf')
