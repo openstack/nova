@@ -41,7 +41,7 @@ LOG = logging.getLogger(__name__)
 
 imagecache_opts = [
     cfg.BoolOpt('remove_unused_base_images',
-                default=False,
+                default=True,
                 help='Should unused base images be removed?'),
     cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
                default=3600,
