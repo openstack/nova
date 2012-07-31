@@ -115,7 +115,7 @@ class TgtAdm(TargetAdmin):
                 f.write(volume_conf)
                 f.close()
 
-            self._execute('tgt-admin', '--conf %s' % volume_path,
+            self._execute('tgt-admin', '--execute', '--conf %s' % volume_path,
                         '--update %s' % vol_id, run_as_root=True)
 
         except Exception as ex:
