@@ -33,6 +33,7 @@ rm -rf $RPM_BUILD_ROOT
 /etc/xapi.d/plugins/kernel
 /etc/xapi.d/plugins/migration
 /etc/xapi.d/plugins/pluginlib_nova.py
+/etc/xapi.d/plugins/workarounds
 /etc/xapi.d/plugins/xenhost
 /etc/xapi.d/plugins/xenstore.py
 /etc/xapi.d/plugins/utils.py

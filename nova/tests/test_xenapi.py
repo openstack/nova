@@ -288,6 +288,15 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.stubs.Set(vmops.VMOps, 'inject_instance_metadata',
                        fake_inject_instance_metadata)
 
+        def fake_safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
+            name_label = "fakenamelabel"
+            disk_type = "fakedisktype"
+            virtual_size = 777
+            return vm_utils.create_vdi(
+                    session, sr_ref, instance, name_label, disk_type,
+                    virtual_size)
+        self.stubs.Set(vm_utils, '_safe_copy_vdi', fake_safe_copy_vdi)
+
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
         fake_image.FakeImageService_reset()

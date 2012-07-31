@@ -428,11 +428,63 @@ def get_vdis_for_instance(context, session, instance, name_label, image,
                         image_type)
 
 
-def _copy_vdi(session, sr_ref, vdi_to_copy_ref):
-    """Copy a VDI and return the new VDIs reference."""
-    vdi_ref = session.call_xenapi('VDI.copy', vdi_to_copy_ref, sr_ref)
-    LOG.debug(_('Copied VDI %(vdi_ref)s from VDI '
-                '%(vdi_to_copy_ref)s on %(sr_ref)s.') % locals())
+@contextlib.contextmanager
+def _dummy_vm(session, instance, vdi_ref):
+    """This creates a temporary VM so that we can snapshot a VDI.
+
+    VDI's can't be snapshotted directly since the API expects a `vm_ref`. To
+    work around this, we need to create a temporary VM and then map the VDI to
+    the VM using a temporary VBD.
+    """
+    name_label = "dummy"
+    vm_ref = create_vm(session, instance, name_label, None, None)
+    try:
+        vbd_ref = create_vbd(session, vm_ref, vdi_ref, 'autodetect',
+                             read_only=True)
+        try:
+            yield vm_ref
+        finally:
+            try:
+                destroy_vbd(session, vbd_ref)
+            except volume_utils.StorageError:
+                # destroy_vbd() will log error
+                pass
+    finally:
+        destroy_vm(session, instance, vm_ref)
+
+
+def _safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
+    """Copy a VDI and return the new VDIs reference.
+
+    This function differs from the XenAPI `VDI.copy` call in that the copy is
+    atomic and isolated, meaning we don't see half-downloaded images. It
+    accomplishes this by copying the VDI's into a temporary directory and then
+    atomically renaming them into the SR when the copy is completed.
+
+    The correct long term solution is to fix `VDI.copy` so that it is atomic
+    and isolated.
+    """
+    with _dummy_vm(session, instance, vdi_to_copy_ref) as vm_ref:
+        label = "snapshot"
+
+        with snapshot_attached_here(
+                session, instance, vm_ref, label) as vdi_uuids:
+            params = {'sr_path': get_sr_path(session),
+                      'vdi_uuids': vdi_uuids,
+                      'uuid_stack': _make_uuid_stack()}
+
+            kwargs = {'params': pickle.dumps(params)}
+            result = session.call_plugin(
+                    'workarounds', 'safe_copy_vdis', kwargs)
+            imported_vhds = jsonutils.loads(result)
+
+    root_uuid = imported_vhds['root']['uuid']
+
+    # TODO(sirp): for safety, we should probably re-scan the SR after every
+    # call to a dom0 plugin, since there is a possibility that the underlying
+    # VHDs changed
+    scan_default_sr(session)
+    vdi_ref = session.call_xenapi('VDI.get_by_uuid', root_uuid)
     return vdi_ref
 
 
@@ -526,22 +578,7 @@ def find_cached_image(session, image_id, sr_ref):
     """Returns the vdi-ref of the cached image."""
     for vdi_ref, vdi_rec in _get_all_vdis_in_sr(session, sr_ref):
         other_config = vdi_rec['other_config']
-
-        try:
-            image_id_match = other_config['image-id'] == image_id
-        except KeyError:
-            image_id_match = False
-
-        # NOTE(sirp): `VDI.copy` stores the partially-completed file in the SR.
-        # In order to avoid these half-baked files, we compare its current size
-        # to the expected size pulled from the original cache file.
-        try:
-            size_match = (other_config['expected_physical_utilisation'] ==
-                          vdi_rec['physical_utilisation'])
-        except KeyError:
-            size_match = False
-
-        if image_id_match and size_match:
+        if image_id == other_config.get('image-id'):
             return vdi_ref
 
     return None
@@ -764,24 +801,16 @@ def _create_cached_image(context, session, instance, name_label,
         session.call_xenapi('VDI.add_to_other_config',
                             root_vdi_ref, 'image-id', str(image_id))
 
-        for vdi_type, vdi in vdis.iteritems():
-            vdi_ref = session.call_xenapi('VDI.get_by_uuid',
-                                          vdi['uuid'])
-
-            vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
-            session.call_xenapi('VDI.add_to_other_config',
-                                vdi_ref, 'expected_physical_utilisation',
-                                vdi_rec['physical_utilisation'])
-
-            if vdi_type == 'swap':
-                session.call_xenapi('VDI.add_to_other_config',
-                                    root_vdi_ref, 'swap-disk',
-                                    str(vdi['uuid']))
+        swap_vdi = vdis.get('swap')
+        if swap_vdi:
+            session.call_xenapi(
+                    'VDI.add_to_other_config', root_vdi_ref, 'swap-disk',
+                    str(swap_vdi['uuid']))
 
     if FLAGS.use_cow_images and sr_type == 'ext':
         new_vdi_ref = _clone_vdi(session, root_vdi_ref)
     else:
-        new_vdi_ref = _copy_vdi(session, sr_ref, root_vdi_ref)
+        new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance, root_vdi_ref)
 
     # Set the name label for the image we just created and remove image id
     # field from other-config.
@@ -799,7 +828,8 @@ def _create_cached_image(context, session, instance, name_label,
         swap_disk_uuid = vdi_rec['other_config']['swap-disk']
         swap_vdi_ref = session.call_xenapi('VDI.get_by_uuid',
                                            swap_disk_uuid)
-        new_swap_vdi_ref = _copy_vdi(session, sr_ref, swap_vdi_ref)
+        new_swap_vdi_ref = _safe_copy_vdi(
+                session, sr_ref, instance, swap_vdi_ref)
         new_swap_vdi_uuid = session.call_xenapi('VDI.get_uuid',
                                                 new_swap_vdi_ref)
         vdis['swap'] = dict(uuid=new_swap_vdi_uuid, file=None)
