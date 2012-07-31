@@ -159,6 +159,7 @@ class TestQuantumv2(test.TestCase):
 
         self.port_data1 = [{'network_id': 'my_netid1',
                            'device_id': 'device_id1',
+                           'device_owner': 'compute:nova',
                            'id': 'my_portid1',
                            'fixed_ips': [{'ip_address': '10.0.1.2',
                                           'subnet_id': 'my_subid1'}],
@@ -167,6 +168,7 @@ class TestQuantumv2(test.TestCase):
         self.port_data2.append(self.port_data1[0])
         self.port_data2.append({'network_id': 'my_netid2',
                                 'device_id': 'device_id2',
+                                'device_owner': 'compute:nova',
                                 'id': 'my_portid2',
                                 'fixed_ips': [{'ip_address': '10.0.2.2',
                                                'subnet_id': 'my_subid2'}],
@@ -262,8 +264,22 @@ class TestQuantumv2(test.TestCase):
                                  networks=nets).AndReturn(None)
 
         mox_list_network_params = dict(tenant_id=self.instance['project_id'])
+        ports = {}
+        fixed_ips = {}
         if 'requested_networks' in kwargs:
-            req_net_ids = [id for (id, _i) in kwargs['requested_networks']]
+            req_net_ids = []
+            for id, fixed_ip, port_id in kwargs['requested_networks']:
+                if port_id:
+                    self.moxed_client.show_port(port_id).AndReturn(
+                        {'port': {'id': 'my_portid1',
+                         'network_id': 'my_netid1'}})
+                    req_net_ids.append('my_netid1')
+                    ports['my_netid1'] = self.port_data1[0]
+                    id = 'my_netid1'
+                else:
+                    fixed_ips[id] = fixed_ip
+                req_net_ids.append(id)
+
             mox_list_network_params['id'] = [net['id'] for net in nets
                                              if net['id'] in req_net_ids]
         self.moxed_client.list_networks(
@@ -272,15 +288,28 @@ class TestQuantumv2(test.TestCase):
         for network in nets:
             port_req_body = {
                 'port': {
-                    'network_id': network['id'],
-                    'admin_state_up': True,
                     'device_id': self.instance['uuid'],
-                    'tenant_id': self.instance['project_id'],
+                    'device_owner': 'compute:nova',
                 },
             }
-            port = {'id': 'portid_' + network['id']}
-            self.moxed_client.create_port(
-                MyComparator(port_req_body)).AndReturn({'port': port})
+            port = ports.get(network['id'], None)
+            if port:
+                port_id = port['id']
+                self.moxed_client.update_port(port_id,
+                                              MyComparator(port_req_body)
+                                              ).AndReturn(
+                                                  {'port': port})
+            else:
+                fixed_ip = fixed_ips.get(network['id'])
+                if fixed_ip:
+                    port_req_body['port']['fixed_ip'] = fixed_ip
+                port_req_body['port']['network_id'] = network['id']
+                port_req_body['port']['admin_state_up'] = True
+                port_req_body['port']['tenant_id'] = \
+                    self.instance['project_id']
+                res_port = {'port': {'id': 'fake'}}
+                self.moxed_client.create_port(
+                    MyComparator(port_req_body)).AndReturn(res_port)
         self.mox.ReplayAll()
         api.allocate_for_instance(self.context, self.instance, **kwargs)
 
@@ -294,10 +323,21 @@ class TestQuantumv2(test.TestCase):
 
     def test_allocate_for_instance_with_requested_networks(self):
         # specify only first and last network
-        requested_networks = [(net['id'], object())
+        requested_networks = [(net['id'], None, None)
                               for net in (self.nets3[0], self.nets3[-1])]
-
         self._allocate_for_instance(net_idx=3,
+                                    requested_networks=requested_networks)
+
+    def test_allocate_for_instance_with_requested_networks_with_fixedip(self):
+        # specify only first and last network
+        requested_networks = [(self.nets1[0]['id'], '10.0.1.0/24', None)]
+        self._allocate_for_instance(net_idx=1,
+                                    requested_networks=requested_networks)
+
+    def test_allocate_for_instance_with_requested_networks_with_port(self):
+        # specify only first and last network
+        requested_networks = [(None, None, 'myportid1')]
+        self._allocate_for_instance(net_idx=1,
                                     requested_networks=requested_networks)
 
     def test_allocate_for_instance_ex1(self):
@@ -318,6 +358,7 @@ class TestQuantumv2(test.TestCase):
                     'network_id': network['id'],
                     'admin_state_up': True,
                     'device_id': self.instance['uuid'],
+                    'device_owner': 'compute:nova',
                     'tenant_id': self.instance['project_id'],
                 },
             }
@@ -381,7 +422,8 @@ class TestQuantumv2(test.TestCase):
         self._deallocate_for_instance(2)
 
     def test_validate_networks(self):
-        requested_networks = [('my_netid1', 'test'), ('my_netid2', 'test2')]
+        requested_networks = [('my_netid1', 'test', None),
+                              ('my_netid2', 'test2', None)]
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
             tenant_id=self.context.project_id).AndReturn(
@@ -391,7 +433,8 @@ class TestQuantumv2(test.TestCase):
         api.validate_networks(self.context, requested_networks)
 
     def test_validate_networks_ex_1(self):
-        requested_networks = [('my_netid1', 'test'), ('my_netid2', 'test2')]
+        requested_networks = [('my_netid1', 'test', None),
+                              ('my_netid2', 'test2', None)]
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
             tenant_id=self.context.project_id).AndReturn(
@@ -404,9 +447,9 @@ class TestQuantumv2(test.TestCase):
             self.assertTrue("my_netid2" in str(ex))
 
     def test_validate_networks_ex_2(self):
-        requested_networks = [('my_netid1', 'test'),
-                              ('my_netid2', 'test2'),
-                              ('my_netid3', 'test3')]
+        requested_networks = [('my_netid1', 'test', None),
+                              ('my_netid2', 'test2', None),
+                              ('my_netid3', 'test3', None)]
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(['my_netid1', 'my_netid2', 'my_netid3']),
             tenant_id=self.context.project_id).AndReturn(

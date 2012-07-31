@@ -62,6 +62,7 @@ class API(base.Base):
 
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate all network resources for the instance."""
+        quantum = quantumv2.get_client(context)
         LOG.debug(_('allocate_for_instance() for %s'),
                   instance['display_name'])
         search_opts = {}
@@ -76,28 +77,55 @@ class API(base.Base):
         # networks, add them to **search_opts
         # Tenant-only network only allowed so far
         requested_networks = kwargs.get('requested_networks')
+        ports = {}
+        fixed_ips = {}
         if requested_networks:
-            net_ids = [net_id for (net_id, _i) in requested_networks]
+            net_ids = []
+            for network_id, fixed_ip, port_id in requested_networks:
+                if port_id:
+                    port = quantum.show_port(port_id).get('port')
+                    network_id = port['network_id']
+                    ports[network_id] = port
+                elif fixed_ip:
+                    fixed_ips[network_id] = fixed_ip
+                net_ids.append(network_id)
             search_opts['id'] = net_ids
 
-        data = quantumv2.get_client(context).list_networks(**search_opts)
+        data = quantum.list_networks(**search_opts)
         nets = data.get('networks', [])
+
+        touched_port_ids = []
         created_port_ids = []
         for network in nets:
-            port_req_body = {'port': {'network_id': network['id'],
-                                      'admin_state_up': True,
-                                      'device_id': instance['uuid'],
-                                      'tenant_id': instance['project_id']},
-            }
+            network_id = network['id']
+            zone = 'compute:%s' % FLAGS.node_availability_zone
+            port_req_body = {'port': {'device_id': instance['uuid'],
+                                      'device_owner': zone}}
             try:
-                created_port_ids.append(
-                    quantumv2.get_client(context).create_port(
-                        port_req_body)['port']['id'])
+                port = ports.get(network_id)
+                if port:
+                    quantum.update_port(port['id'], port_req_body)
+                    touched_port_ids.append(port['id'])
+                else:
+                    if fixed_ips.get(network_id):
+                        port_req_body['port']['fixed_ip'] = fixed_ip
+                    port_req_body['port']['network_id'] = network_id
+                    port_req_body['port']['admin_state_up'] = True
+                    port_req_body['port']['tenant_id'] = instance['project_id']
+                    created_port_ids.append(
+                        quantum.create_port(port_req_body)['port']['id'])
             except Exception:
                 with excutils.save_and_reraise_exception():
+                    for port_id in touched_port_ids:
+                        port_in_server = quantum.show_port(port_id).get('port')
+                        if not port_in_server:
+                            raise Exception('Port have already lost')
+                        port_req_body = {'port': {'device_id': None}}
+                        quantum.update_port(port_id, port_req_body)
+
                     for port_id in created_port_ids:
                         try:
-                            quantumv2.get_client(context).delete_port(port_id)
+                            quantum.delete_port(port_id)
                         except Exception as ex:
                             msg = _("Fail to delete port %(portid)s with"
                                     " failure: %(exception)s")
@@ -147,7 +175,22 @@ class API(base.Base):
         if not requested_networks:
             return
         search_opts = {"tenant_id": context.project_id}
-        net_ids = [net_id for (net_id, _i) in requested_networks]
+        net_ids = []
+
+        for (net_id, _i, port_id) in requested_networks:
+            if not port_id:
+                net_ids.append(net_id)
+                continue
+            port = quantumv2.get_client(context).show_port(port_id).get('port')
+            if not port:
+                raise exception.PortNotFound(port_id=port_id)
+            if port.get('device_id', None):
+                raise exception.PortInUse(port_id=port_id)
+            net_id = port['network_id']
+            if net_id in net_ids:
+                raise exception.NetworkDuplicated(network_id=net_id)
+            net_ids.append(net_id)
+
         search_opts['id'] = net_ids
         data = quantumv2.get_client(context).list_networks(**search_opts)
         nets = data.get('networks', [])
