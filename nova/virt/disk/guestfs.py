@@ -17,6 +17,7 @@
 
 import os
 
+from nova import exception
 from nova import utils
 from nova.virt.disk import mount
 
@@ -88,9 +89,18 @@ class Mount(mount.Mount):
     def unmnt_dev(self):
         if not self.mounted:
             return
-        # root users don't need a specific unmnt_dev()
-        # but ordinary users do
-        utils.execute('fusermount', '-u', self.mount_dir, run_as_root=True)
+        umount_cmd = ['fusermount', '-u', self.mount_dir]
+        try:
+            # We make a few attempts to work around other
+            # processes temporarily scanning the mount_dir etc.
+            utils.execute(*umount_cmd, attempts=5, run_as_root=True)
+        except exception.ProcessExecutionError:
+            # If we still can't umount, then do a lazy umount
+            # (in the background), so that mounts might eventually
+            # be cleaned up. Note we'll wait 10s below for the umount to
+            # complete, after which we'll raise an exception.
+            umount_cmd.insert(1, '-z')
+            utils.execute(*umount_cmd, run_as_root=True)
 
         # Unfortunately FUSE has an issue where it doesn't wait
         # for processes associated with the mount to terminate.
