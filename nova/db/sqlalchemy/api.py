@@ -4134,6 +4134,85 @@ def instance_type_extra_specs_update_or_create(context, flavor_id,
 ####################
 
 
+@require_context
+def vol_get_usage_by_time(context, begin):
+    """Return volumes usage that have been updated after a specified time"""
+    return model_query(context, models.VolumeUsage, read_deleted="yes").\
+                   filter(or_(models.VolumeUsage.tot_last_refreshed == None,
+                              models.VolumeUsage.tot_last_refreshed > begin,
+                              models.VolumeUsage.curr_last_refreshed == None,
+                              models.VolumeUsage.curr_last_refreshed > begin,
+                              )).\
+                              all()
+
+
+@require_context
+def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
+                     instance_id, last_refreshed=None, update_totals=False,
+                     session=None):
+    if not session:
+        session = get_session()
+
+    if last_refreshed is None:
+        last_refreshed = timeutils.utcnow()
+
+    with session.begin():
+        values = {}
+        # NOTE(dricco): We will be mostly updating current usage records vs
+        # updating total or creating records. Optimize accordingly.
+        if not update_totals:
+            values = {'curr_last_refreshed': last_refreshed,
+                      'curr_reads': rd_req,
+                      'curr_read_bytes': rd_bytes,
+                      'curr_writes': wr_req,
+                      'curr_write_bytes': wr_bytes,
+                      'instance_id': instance_id}
+        else:
+            values = {'tot_last_refreshed': last_refreshed,
+                      'tot_reads': models.VolumeUsage.tot_reads + rd_req,
+                      'tot_read_bytes': models.VolumeUsage.tot_read_bytes +
+                                        rd_bytes,
+                      'tot_writes': models.VolumeUsage.tot_writes + wr_req,
+                      'tot_write_bytes': models.VolumeUsage.tot_write_bytes +
+                                         wr_bytes,
+                      'curr_reads': 0,
+                      'curr_read_bytes': 0,
+                      'curr_writes': 0,
+                      'curr_write_bytes': 0,
+                      'instance_id': instance_id}
+
+        rows = model_query(context, models.VolumeUsage,
+                           session=session, read_deleted="yes").\
+                           filter_by(volume_id=id).\
+                           update(values, synchronize_session=False)
+
+        if rows:
+            return
+
+        vol_usage = models.VolumeUsage()
+        vol_usage.tot_last_refreshed = timeutils.utcnow()
+        vol_usage.curr_last_refreshed = timeutils.utcnow()
+        vol_usage.volume_id = id
+
+        if not update_totals:
+            vol_usage.curr_reads = rd_req
+            vol_usage.curr_read_bytes = rd_bytes
+            vol_usage.curr_writes = wr_req
+            vol_usage.curr_write_bytes = wr_bytes
+        else:
+            vol_usage.tot_reads = rd_req
+            vol_usage.tot_read_bytes = rd_bytes
+            vol_usage.tot_writes = wr_req
+            vol_usage.tot_write_bytes = wr_bytes
+
+        vol_usage.save(session=session)
+
+    return
+
+
+####################
+
+
 def s3_image_get(context, image_id):
     """Find local s3 image represented by the provided id"""
     result = model_query(context, models.S3Image, read_deleted="yes").\

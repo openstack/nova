@@ -4213,6 +4213,56 @@ class LibvirtDriverTestCase(test.TestCase):
                                             _fake_network_info(self.stubs, 1))
 
 
+class LibvirtVolumeUsageTestCase(test.TestCase):
+    """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver
+       .get_all_volume_usage"""
+
+    def setUp(self):
+        super(LibvirtVolumeUsageTestCase, self).setUp()
+        self.conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.c = context.get_admin_context()
+
+        # creating instance
+        inst = {}
+        inst['uuid'] = '875a8070-d0b9-4949-8b31-104d125c9a64'
+        self.ins_ref = db.instance_create(self.c, inst)
+
+        # verify bootable volume device path also
+        self.bdms = [{'volume_id': 1,
+                      'device_name': '/dev/vde'},
+                     {'volume_id': 2,
+                      'device_name': 'vda'}]
+
+    def test_get_all_volume_usage(self):
+        def fake_block_stats(instance_name, disk):
+            return (169L, 688640L, 0L, 0L, -1L)
+
+        self.stubs.Set(self.conn, 'block_stats', fake_block_stats)
+        vol_usage = self.conn.get_all_volume_usage(self.c,
+              [dict(instance=self.ins_ref, instance_bdms=self.bdms)])
+
+        expected_usage = [{'volume': 1,
+                           'instance_id': 1,
+                           'rd_bytes': 688640L, 'wr_req': 0L,
+                           'flush_operations': -1L, 'rd_req': 169L,
+                           'wr_bytes': 0L},
+                           {'volume': 2,
+                            'instance_id': 1,
+                            'rd_bytes': 688640L, 'wr_req': 0L,
+                            'flush_operations': -1L, 'rd_req': 169L,
+                            'wr_bytes': 0L}]
+        self.assertEqual(vol_usage, expected_usage)
+
+    def test_get_all_volume_usage_device_not_found(self):
+        def fake_lookup(instance_name):
+            raise libvirt.libvirtError('invalid path')
+
+        self.stubs.Set(self.conn, '_lookup_by_name', fake_lookup)
+        vol_usage = self.conn.get_all_volume_usage(self.c,
+              [dict(instance=self.ins_ref, instance_bdms=self.bdms)])
+        self.assertEqual(vol_usage, [])
+
+
 class LibvirtNonblockingTestCase(test.TestCase):
     """Test libvirt_nonblocking option"""
 

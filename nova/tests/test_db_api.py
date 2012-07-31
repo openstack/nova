@@ -1315,3 +1315,89 @@ class InstanceDestroyConstraints(test.TestCase):
                           ctx, instance['uuid'], constraint)
         instance = db.instance_get_by_uuid(ctx, instance['uuid'])
         self.assertFalse(instance['deleted'])
+
+
+class VolumeUsageDBApiTestCase(test.TestCase):
+    def setUp(self):
+        super(VolumeUsageDBApiTestCase, self).setUp()
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id, self.project_id)
+
+    def test_vol_usage_update_no_totals_update(self):
+        ctxt = context.get_admin_context()
+        now = timeutils.utcnow()
+        timeutils.set_time_override(now)
+        start_time = now - datetime.timedelta(seconds=10)
+        refreshed_time = now - datetime.timedelta(seconds=5)
+
+        expected_vol_usages = [{'volume_id': u'1',
+                                'curr_reads': 1000,
+                                'curr_read_bytes': 2000,
+                                'curr_writes': 3000,
+                                'curr_write_bytes': 4000},
+                               {'volume_id': u'2',
+                                'curr_reads': 100,
+                                'curr_read_bytes': 200,
+                                'curr_writes': 300,
+                                'curr_write_bytes': 400}]
+
+        def _compare(vol_usage, expected):
+            for key, value in expected.items():
+                self.assertEqual(vol_usage[key], value)
+
+        vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
+        self.assertEqual(len(vol_usages), 0)
+
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=10, rd_bytes=20,
+                                        wr_req=30, wr_bytes=40, instance_id=1)
+        vol_usage = db.vol_usage_update(ctxt, 2, rd_req=100, rd_bytes=200,
+                                        wr_req=300, wr_bytes=400,
+                                        instance_id=1)
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=1000, rd_bytes=2000,
+                                        wr_req=3000, wr_bytes=4000,
+                                        instance_id=1,
+                                        last_refreshed=refreshed_time)
+
+        vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
+        self.assertEqual(len(vol_usages), 2)
+        _compare(vol_usages[0], expected_vol_usages[0])
+        _compare(vol_usages[1], expected_vol_usages[1])
+        timeutils.clear_time_override()
+
+    def test_vol_usage_update_totals_update(self):
+        ctxt = context.get_admin_context()
+        now = timeutils.utcnow()
+        timeutils.set_time_override(now)
+        start_time = now - datetime.timedelta(seconds=10)
+        expected_vol_usages = {'volume_id': u'1',
+                               'tot_reads': 600,
+                               'tot_read_bytes': 800,
+                               'tot_writes': 1000,
+                               'tot_write_bytes': 1200,
+                               'curr_reads': 0,
+                               'curr_read_bytes': 0,
+                               'curr_writes': 0,
+                               'curr_write_bytes': 0}
+
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=100, rd_bytes=200,
+                                        wr_req=300, wr_bytes=400,
+                                        instance_id=1)
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=200, rd_bytes=300,
+                                        wr_req=400, wr_bytes=500,
+                                        instance_id=1,
+                                        update_totals=True)
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=300, rd_bytes=400,
+                                        wr_req=500, wr_bytes=600,
+                                        instance_id=1)
+        vol_usage = db.vol_usage_update(ctxt, 1, rd_req=400, rd_bytes=500,
+                                        wr_req=600, wr_bytes=700,
+                                        instance_id=1,
+                                        update_totals=True)
+
+        vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
+
+        self.assertEquals(1, len(vol_usages))
+        for key, value in expected_vol_usages.items():
+            self.assertEqual(vol_usages[0][key], value)
+        timeutils.clear_time_override()
