@@ -114,17 +114,17 @@ vifs = [{'id': 0,
          'address': 'DE:AD:BE:EF:00:00',
          'uuid': '00000000-0000-0000-0000-0000000000000000',
          'network_id': 0,
-         'instance_id': 0},
+         'instance_uuid': 0},
         {'id': 1,
          'address': 'DE:AD:BE:EF:00:01',
          'uuid': '00000000-0000-0000-0000-0000000000000001',
          'network_id': 1,
-         'instance_id': 0},
+         'instance_uuid': 0},
         {'id': 2,
          'address': 'DE:AD:BE:EF:00:02',
          'uuid': '00000000-0000-0000-0000-0000000000000002',
          'network_id': 2,
-         'instance_id': 0}]
+         'instance_uuid': 0}]
 
 
 class FlatNetworkTestCase(test.TestCase):
@@ -417,11 +417,14 @@ class VlanNetworkTestCase(test.TestCase):
                                               is_admin=False)
 
     def test_vpn_allocate_fixed_ip(self):
+        self.mox.StubOutWithMock(db, 'instance_get')
         self.mox.StubOutWithMock(db, 'fixed_ip_associate')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
 
+        db.instance_get(mox.IgnoreArg(),
+                        mox.IgnoreArg()).AndReturn({'uuid': '42'})
         db.fixed_ip_associate(mox.IgnoreArg(),
                               mox.IgnoreArg(),
                               mox.IgnoreArg(),
@@ -448,7 +451,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertRaises(exception.FixedIpNotFoundForNetwork,
                 self.network.allocate_fixed_ip,
                 context_admin,
-                instance['uuid'],
+                instance['id'],
                 network,
                 vpn=True)
 
@@ -1264,30 +1267,30 @@ class CommonNetworkTestCase(test.TestCase):
                                                       {'ip': '172.16.0.2'})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
 
         # Get instance 2
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip': '173.16.0.2'})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[2]['instance_uuid'])
 
         # Get instance 0 and 1
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip': '172.16.0.*'})
         self.assertTrue(res)
         self.assertEqual(len(res), 2)
-        self.assertEqual(res[0]['instance_id'], _vifs[0]['instance_id'])
-        self.assertEqual(res[1]['instance_id'], _vifs[1]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[0]['instance_uuid'])
+        self.assertEqual(res[1]['instance_uuid'], _vifs[1]['instance_uuid'])
 
         # Get instance 1 and 2
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip': '17..16.0.2'})
         self.assertTrue(res)
         self.assertEqual(len(res), 2)
-        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
-        self.assertEqual(res[1]['instance_id'], _vifs[2]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
+        self.assertEqual(res[1]['instance_uuid'], _vifs[2]['instance_uuid'])
 
     def test_get_instance_uuids_by_ipv6_regex(self):
         manager = fake_network.FakeNetworkManager()
@@ -1309,7 +1312,7 @@ class CommonNetworkTestCase(test.TestCase):
                                                       {'ip6': '2001:.*2'})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
 
         # Get instance 2
         ip6 = '2001:db8:69:1f:dead:beff:feff:ef03'
@@ -1317,15 +1320,15 @@ class CommonNetworkTestCase(test.TestCase):
                                                       {'ip6': ip6})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[2]['instance_uuid'])
 
         # Get instance 0 and 1
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
                                                       {'ip6': '.*ef0[1,2]'})
         self.assertTrue(res)
         self.assertEqual(len(res), 2)
-        self.assertEqual(res[0]['instance_id'], _vifs[0]['instance_id'])
-        self.assertEqual(res[1]['instance_id'], _vifs[1]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[0]['instance_uuid'])
+        self.assertEqual(res[1]['instance_uuid'], _vifs[1]['instance_uuid'])
 
         # Get instance 1 and 2
         ip6 = '2001:db8:69:1.:dead:beff:feff:ef0.'
@@ -1333,8 +1336,8 @@ class CommonNetworkTestCase(test.TestCase):
                                                       {'ip6': ip6})
         self.assertTrue(res)
         self.assertEqual(len(res), 2)
-        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
-        self.assertEqual(res[1]['instance_id'], _vifs[2]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
+        self.assertEqual(res[1]['instance_uuid'], _vifs[2]['instance_uuid'])
 
     def test_get_instance_uuids_by_ip(self):
         manager = fake_network.FakeNetworkManager()
@@ -1358,7 +1361,7 @@ class CommonNetworkTestCase(test.TestCase):
                                                       {'fixed_ip': ip})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_id'], _vifs[1]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
 
         # Get instance 2
         ip = '173.16.0.2'
@@ -1366,7 +1369,7 @@ class CommonNetworkTestCase(test.TestCase):
                                                       {'fixed_ip': ip})
         self.assertTrue(res)
         self.assertEqual(len(res), 1)
-        self.assertEqual(res[0]['instance_id'], _vifs[2]['instance_id'])
+        self.assertEqual(res[0]['instance_uuid'], _vifs[2]['instance_uuid'])
 
     def test_get_network(self):
         manager = fake_network.FakeNetworkManager()
@@ -1489,12 +1492,9 @@ class AllocateTestCase(test.TestCase):
                               {'host': self.network.host})
         project_id = self.context.project_id
         nw_info = self.network.allocate_for_instance(self.context,
-                                                     instance_id=inst['id'],
-                                                     instance_uuid='',
-                                                     host=inst['host'],
-                                                     vpn=None,
-                                                     rxtx_factor=3,
-                                                     project_id=project_id)
+            instance_id=inst['id'], instance_uuid=inst['uuid'],
+            host=inst['host'], vpn=None, rxtx_factor=3,
+            project_id=project_id)
         self.assertEquals(1, len(nw_info))
         fixed_ip = nw_info.fixed_ips()[0]['address']
         self.assertTrue(utils.is_valid_ipv4(fixed_ip))

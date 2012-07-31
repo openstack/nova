@@ -1288,24 +1288,24 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
 
 
 @require_context
-@require_instance_exists
-def virtual_interface_get_by_instance(context, instance_id):
+@require_instance_exists_using_uuid
+def virtual_interface_get_by_instance(context, instance_uuid):
     """Gets all virtual interfaces for instance.
 
-    :param instance_id: = id of the instance to retrieve vifs for
+    :param instance_uuid: = uuid of the instance to retrieve vifs for
     """
     vif_refs = _virtual_interface_query(context).\
-                       filter_by(instance_id=instance_id).\
+                       filter_by(instance_uuid=instance_uuid).\
                        all()
     return vif_refs
 
 
 @require_context
-def virtual_interface_get_by_instance_and_network(context, instance_id,
-                                                           network_id):
+def virtual_interface_get_by_instance_and_network(context, instance_uuid,
+                                                  network_id):
     """Gets virtual interface for instance that's associated with network."""
     vif_ref = _virtual_interface_query(context).\
-                      filter_by(instance_id=instance_id).\
+                      filter_by(instance_uuid=instance_uuid).\
                       filter_by(network_id=network_id).\
                       first()
     return vif_ref
@@ -1324,13 +1324,13 @@ def virtual_interface_delete(context, vif_id):
 
 
 @require_context
-def virtual_interface_delete_by_instance(context, instance_id):
+def virtual_interface_delete_by_instance(context, instance_uuid):
     """Delete virtual interface records that are associated
     with the instance given by instance_id.
 
-    :param instance_id: = id of instance
+    :param instance_uuid: = uuid of instance
     """
-    vif_refs = virtual_interface_get_by_instance(context, instance_id)
+    vif_refs = virtual_interface_get_by_instance(context, instance_uuid)
     for vif_ref in vif_refs:
         virtual_interface_delete(context, vif_ref['id'])
 
@@ -1566,7 +1566,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir):
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
-            'vm_state', 'instance_type_id', 'uuid']
+                                'vm_state', 'instance_type_id', 'uuid']
 
     # Filter the query
     query_prefix = exact_filter(query_prefix, models.Instance,

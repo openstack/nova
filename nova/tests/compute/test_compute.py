@@ -3148,14 +3148,18 @@ class ComputeAPITestCase(BaseTestCase):
                        'instance_get_id_to_uuid_mapping',
                        db.instance_get_id_to_uuid_mapping)
 
-        instance1 = self._create_fake_instance({'display_name': 'woot',
-                                                'id': 0})
+        instance1 = self._create_fake_instance({
+                'display_name': 'woot',
+                'id': 0,
+                'uuid': '00000000-0000-0000-0000-000000000010'})
         instance2 = self._create_fake_instance({
                 'display_name': 'woo',
-                'id': 20})
+                'id': 20,
+                'uuid': '00000000-0000-0000-0000-000000000020'})
         instance3 = self._create_fake_instance({
                 'display_name': 'not-woot',
-                'id': 30})
+                'id': 30,
+                'uuid': '00000000-0000-0000-0000-000000000030'})
 
         # ip ends up matching 2nd octet here.. so all 3 match ip
         # but 'name' only matches one

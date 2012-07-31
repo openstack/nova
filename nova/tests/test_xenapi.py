@@ -741,7 +741,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         self.network.allocate_for_instance(ctxt,
                           instance_id=2,
-                          instance_uuid="00000000-0000-0000-0000-000000000000",
+                          instance_uuid='00000000-0000-0000-0000-000000000002',
                           host=FLAGS.host,
                           vpn=None,
                           rxtx_factor=3,
@@ -851,6 +851,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         """Creates and spawns a test instance."""
         instance_values = {
             'id': instance_id,
+            'uuid': '00000000-0000-0000-0000-00000000000%d' % instance_id,
             'project_id': self.project_id,
             'user_id': self.user_id,
             'image_ref': 1,

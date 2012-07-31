@@ -628,19 +628,19 @@ def get_dhcp_opts(context, network_ref):
                                                host=host)
 
     if data:
-        #set of instance ids
-        instance_set = set([datum['instance_id'] for datum in data])
+        instance_set = set([datum['instance_uuid'] for datum in data])
         default_gw_vif = {}
-        for instance_id in instance_set:
-            vifs = db.virtual_interface_get_by_instance(context, instance_id)
+        for instance_uuid in instance_set:
+            vifs = db.virtual_interface_get_by_instance(context,
+                                                        instance_uuid)
             if vifs:
                 #offer a default gateway to the first virtual interface
-                default_gw_vif[instance_id] = vifs[0]['id']
+                default_gw_vif[instance_uuid] = vifs[0]['id']
 
         for datum in data:
-            if instance_id in default_gw_vif:
+            if instance_uuid in default_gw_vif:
                 # we don't want default gateway for this fixed ip
-                if default_gw_vif[instance_id] != datum['vif_id']:
+                if default_gw_vif[instance_uuid] != datum['vif_id']:
                     hosts.append(_host_dhcp_opts(datum))
     return '\n'.join(hosts)
 

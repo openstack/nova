@@ -36,16 +36,20 @@ LOG = logging.getLogger(__name__)
 
 HOST = "testhost"
 
-instances = [{'id': 0,
-              'host': 'fake_instance00',
-              'created_at': 'fakedate',
-              'updated_at': 'fakedate',
-              'hostname': 'fake_instance00'},
-             {'id': 1,
-              'host': 'fake_instance01',
-              'created_at': 'fakedate',
-              'updated_at': 'fakedate',
-              'hostname': 'fake_instance01'}]
+instances = {'00000000-0000-0000-0000-0000000000000000':
+                 {'id': 0,
+                  'uuid': '00000000-0000-0000-0000-0000000000000000',
+                  'host': 'fake_instance00',
+                  'created_at': 'fakedate',
+                  'updated_at': 'fakedate',
+                  'hostname': 'fake_instance00'},
+             '00000000-0000-0000-0000-0000000000000001':
+                 {'id': 1,
+                  'uuid': '00000000-0000-0000-0000-0000000000000001',
+                  'host': 'fake_instance01',
+                  'created_at': 'fakedate',
+                  'updated_at': 'fakedate',
+                  'hostname': 'fake_instance01'}}
 
 
 addresses = [{"address": "10.0.0.1"},
@@ -108,7 +112,7 @@ fixed_ips = [{'id': 0,
               'instance_id': 0,
               'allocated': True,
               'virtual_interface_id': 0,
-              'instance_id': 0,
+              'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
               'floating_ips': []},
              {'id': 1,
               'network_id': 1,
@@ -116,7 +120,7 @@ fixed_ips = [{'id': 0,
               'instance_id': 0,
               'allocated': True,
               'virtual_interface_id': 1,
-              'instance_id': 0,
+              'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
               'floating_ips': []},
              {'id': 2,
               'network_id': 1,
@@ -124,7 +128,7 @@ fixed_ips = [{'id': 0,
               'instance_id': 1,
               'allocated': True,
               'virtual_interface_id': 2,
-              'instance_id': 1,
+              'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []},
              {'id': 3,
               'network_id': 0,
@@ -132,7 +136,7 @@ fixed_ips = [{'id': 0,
               'instance_id': 1,
               'allocated': True,
               'virtual_interface_id': 3,
-              'instance_id': 1,
+              'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []},
              {'id': 4,
               'network_id': 0,
@@ -140,7 +144,7 @@ fixed_ips = [{'id': 0,
               'instance_id': 0,
               'allocated': True,
               'virtual_interface_id': 4,
-              'instance_id': 0,
+              'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
               'floating_ips': []},
              {'id': 5,
               'network_id': 1,
@@ -148,7 +152,7 @@ fixed_ips = [{'id': 0,
               'instance_id': 1,
               'allocated': True,
               'virtual_interface_id': 5,
-              'instance_id': 1,
+              'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []}]
 
 
@@ -156,46 +160,46 @@ vifs = [{'id': 0,
          'address': 'DE:AD:BE:EF:00:00',
          'uuid': '00000000-0000-0000-0000-0000000000000000',
          'network_id': 0,
-         'instance_id': 0},
+         'instance_uuid': '00000000-0000-0000-0000-0000000000000000'},
         {'id': 1,
          'address': 'DE:AD:BE:EF:00:01',
          'uuid': '00000000-0000-0000-0000-0000000000000001',
          'network_id': 1,
-         'instance_id': 0},
+         'instance_uuid': '00000000-0000-0000-0000-0000000000000000'},
         {'id': 2,
          'address': 'DE:AD:BE:EF:00:02',
          'uuid': '00000000-0000-0000-0000-0000000000000002',
          'network_id': 1,
-         'instance_id': 1},
+         'instance_uuid': '00000000-0000-0000-0000-0000000000000001'},
         {'id': 3,
          'address': 'DE:AD:BE:EF:00:03',
          'uuid': '00000000-0000-0000-0000-0000000000000003',
          'network_id': 0,
-         'instance_id': 1},
+         'instance_uuid': '00000000-0000-0000-0000-0000000000000001'},
         {'id': 4,
          'address': 'DE:AD:BE:EF:00:04',
          'uuid': '00000000-0000-0000-0000-0000000000000004',
          'network_id': 0,
-         'instance_id': 0},
+         'instance_uuid': '00000000-0000-0000-0000-0000000000000000'},
         {'id': 5,
          'address': 'DE:AD:BE:EF:00:05',
          'uuid': '00000000-0000-0000-0000-0000000000000005',
          'network_id': 1,
-         'instance_id': 1}]
+         'instance_uuid': '00000000-0000-0000-0000-0000000000000001'}]
 
 
 def get_associated(context, network_id, host=None):
     result = []
     for datum in fixed_ips:
         if (datum['network_id'] == network_id and datum['allocated']
-            and datum['instance_id'] is not None
+            and datum['instance_uuid'] is not None
             and datum['virtual_interface_id'] is not None):
-            instance = instances[datum['instance_id']]
+            instance = instances[datum['instance_uuid']]
             if host and host != instance['host']:
                 continue
             cleaned = {}
             cleaned['address'] = datum['address']
-            cleaned['instance_id'] = datum['instance_id']
+            cleaned['instance_uuid'] = datum['instance_uuid']
             cleaned['network_id'] = datum['network_id']
             cleaned['vif_id'] = datum['virtual_interface_id']
             vif = vifs[datum['virtual_interface_id']]
@@ -217,8 +221,9 @@ class LinuxNetworkTestCase(test.TestCase):
         self.context = context.RequestContext('testuser', 'testproject',
                                               is_admin=True)
 
-        def get_vifs(_context, instance_id):
-            return [vif for vif in vifs if vif['instance_id'] == instance_id]
+        def get_vifs(_context, instance_uuid):
+            return [vif for vif in vifs if vif['instance_uuid'] == \
+                        instance_uuid]
 
         def get_instance(_context, instance_id):
             return instances[instance_id]

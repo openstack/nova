@@ -74,15 +74,15 @@ class FakeNetworkManager(network_manager.NetworkManager):
 
     class FakeDB:
         vifs = [{'id': 0,
-                 'instance_id': 0,
+                 'instance_uuid': '00000000-0000-0000-0000-000000000010',
                  'network_id': 1,
                  'address': 'DC:AD:BE:FF:EF:01'},
                 {'id': 1,
-                 'instance_id': 20,
+                 'instance_uuid': '00000000-0000-0000-0000-000000000020',
                  'network_id': 21,
                  'address': 'DC:AD:BE:FF:EF:02'},
                 {'id': 2,
-                 'instance_id': 30,
+                 'instance_uuid': '00000000-0000-0000-0000-000000000030',
                  'network_id': 31,
                  'address': 'DC:AD:BE:FF:EF:03'}]
 
@@ -103,7 +103,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
                           address='173.16.0.2',
                           virtual_interface_id=2)]
 
-        def fixed_ip_get_by_instance(self, context, instance_id):
+        def fixed_ip_get_by_instance(self, context, instance_uuid):
             return [dict(address='10.0.0.0'), dict(address='10.0.0.1'),
                     dict(address='10.0.0.2')]
 
@@ -220,7 +220,7 @@ def next_fixed_ip(network_id, num_floating_ips=0):
     return {'id': next_id,
             'network_id': network_id,
             'address': '192.168.%d.%03d' % (network_id, (next_id + 99)),
-            'instance_id': 1,
+            'instance_uuid': 1,
             'allocated': False,
             # and since network_id and vif_id happen to be equivalent
             'virtual_interface_id': network_id,
@@ -292,7 +292,7 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
                'uuid': uuid,
                'network_id': 1,
                'network': None,
-               'instance_id': 0}
+               'instance_uuid': 0}
 
     def network_get_fake(context, network_id):
         nets = [n for n in networks if n['id'] == network_id]

@@ -31,27 +31,6 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 
-def _setup_networking(instance_id, ip='1.2.3.4', flo_addr='1.2.1.2'):
-    ctxt = context.get_admin_context()
-    network_ref = db.project_get_networks(ctxt,
-                                           'fake',
-                                           associate=True)[0]
-    vif = {'address': '56:12:12:12:12:12',
-           'network_id': network_ref['id'],
-           'instance_id': instance_id}
-    vif_ref = db.virtual_interface_create(ctxt, vif)
-
-    fixed_ip = {'address': ip,
-                'network_id': network_ref['id'],
-                'virtual_interface_id': vif_ref['id'],
-                'allocated': True,
-                'instance_id': instance_id}
-    db.fixed_ip_create(ctxt, fixed_ip)
-    fix_ref = db.fixed_ip_get_by_address(ctxt, ip)
-    db.floating_ip_create(ctxt, {'address': flo_addr,
-                                 'fixed_ip_id': fix_ref['id']})
-
-
 class DbApiTestCase(test.TestCase):
     def setUp(self):
         super(DbApiTestCase, self).setUp()
@@ -345,7 +324,7 @@ class DbApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         values = {'host': 'foo', 'hostname': 'myname'}
         instance = db.instance_create(ctxt, values)
-        values = {'address': 'bar', 'instance_id': instance['id']}
+        values = {'address': 'bar', 'instance_uuid': instance['uuid']}
         vif = db.virtual_interface_create(ctxt, values)
         values = {'address': 'baz',
                   'network_id': 1,
