@@ -677,9 +677,13 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             self._tee_executed = True
             return '', ''
 
+        def _readlink_handler(cmd_parts, **kwargs):
+            return os.path.realpath(cmd_parts[2]), ''
+
         fake_utils.fake_execute_set_repliers([
             # Capture the tee .../etc/network/interfaces command
             (r'tee.*interfaces', _tee_handler),
+            (r'readlink -nm.*', _readlink_handler),
         ])
         self._test_spawn(IMAGE_MACHINE,
                          IMAGE_KERNEL,

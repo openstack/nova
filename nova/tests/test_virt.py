@@ -99,22 +99,6 @@ class TestVirtDisk(test.TestCase):
 
         self.stubs.Set(utils, 'execute', fake_execute)
 
-    def test_check_safe_path(self):
-        ret = disk_api._join_and_check_path_within_fs('/foo', 'etc',
-                                                      'something.conf')
-        self.assertEquals(ret, '/foo/etc/something.conf')
-
-    def test_check_unsafe_path(self):
-        self.assertRaises(exception.Invalid,
-                          disk_api._join_and_check_path_within_fs,
-                          '/foo', 'etc/../../../something.conf')
-
-    def test_inject_files_with_bad_path(self):
-        self.assertRaises(exception.Invalid,
-                          disk_api._inject_file_into_fs,
-                          '/tmp', '/etc/../../../../etc/passwd',
-                          'hax')
-
     def test_lxc_destroy_container(self):
 
         def proc_mounts(self, mount_point):
@@ -165,3 +149,32 @@ class TestVirtDisk(test.TestCase):
         self.executes.pop()
 
         self.assertEqual(self.executes, expected_commands)
+
+
+class TestVirtDiskPaths(test.TestCase):
+    def setUp(self):
+        super(TestVirtDiskPaths, self).setUp()
+
+        real_execute = utils.execute
+
+        def nonroot_execute(*cmd_parts, **kwargs):
+            kwargs.pop('run_as_root', None)
+            return real_execute(*cmd_parts, **kwargs)
+
+        self.stubs.Set(utils, 'execute', nonroot_execute)
+
+    def test_check_safe_path(self):
+        ret = disk_api._join_and_check_path_within_fs('/foo', 'etc',
+                                                      'something.conf')
+        self.assertEquals(ret, '/foo/etc/something.conf')
+
+    def test_check_unsafe_path(self):
+        self.assertRaises(exception.Invalid,
+                          disk_api._join_and_check_path_within_fs,
+                          '/foo', 'etc/../../../something.conf')
+
+    def test_inject_files_with_bad_path(self):
+        self.assertRaises(exception.Invalid,
+                          disk_api._inject_file_into_fs,
+                          '/tmp', '/etc/../../../../etc/passwd',
+                          'hax')
