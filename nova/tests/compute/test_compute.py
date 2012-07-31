@@ -1150,9 +1150,10 @@ class ComputeTestCase(BaseTestCase):
 
         instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
 
-        self.compute._rebuild_instance(self.context.elevated(),
-                jsonutils.to_primitive(instance),
-                image_ref, new_image_ref, dict(new_pass=password))
+        self.compute.rebuild_instance(self.context.elevated(),
+                image_ref, new_image_ref,
+                instance=jsonutils.to_primitive(instance),
+                new_pass=password)
 
         instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
 

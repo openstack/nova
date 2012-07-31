@@ -994,79 +994,68 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not instance:
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        try:
-            self._rebuild_instance(context, instance, orig_image_ref,
-                    image_ref, kwargs)
-        except exception.ImageNotFound:
-            LOG.error(_('Cannot rebuild instance because the given image does '
-                        'not exist.'),
-                      context=context, instance=instance)
-            self._set_instance_error_state(context, instance['uuid'])
-        except Exception as exc:
-            LOG.error(_('Cannot rebuild instance: %(exc)s'), locals(),
-                      context=context, instance=instance)
-            self._set_instance_error_state(context, instance['uuid'])
+        with self.error_out_instance_on_exception(context, instance['uuid']):
+            LOG.audit(_("Rebuilding instance"), context=context,
+                      instance=instance)
 
-    def _rebuild_instance(self, context, instance, orig_image_ref,
-            image_ref, kwargs):
-        LOG.audit(_("Rebuilding instance"), context=context, instance=instance)
+            image_meta = _get_image_meta(context, image_ref)
 
-        image_meta = _get_image_meta(context, image_ref)
+            # This instance.exists message should contain the original
+            # image_ref, not the new one.  Since the DB has been updated
+            # to point to the new one... we have to override it.
+            orig_image_ref_url = utils.generate_image_url(orig_image_ref)
+            extra_usage_info = {'image_ref_url': orig_image_ref_url}
+            compute_utils.notify_usage_exists(context, instance,
+                    current_period=True, extra_usage_info=extra_usage_info)
 
-        # This instance.exists message should contain the original
-        # image_ref, not the new one.  Since the DB has been updated
-        # to point to the new one... we have to override it.
-        orig_image_ref_url = utils.generate_image_url(orig_image_ref)
-        extra_usage_info = {'image_ref_url': orig_image_ref_url}
-        compute_utils.notify_usage_exists(context, instance,
-                current_period=True, extra_usage_info=extra_usage_info)
+            # This message should contain the new image_ref
+            extra_usage_info = {'image_name': image_meta['name']}
+            self._notify_about_instance_usage(context, instance,
+                    "rebuild.start", extra_usage_info=extra_usage_info)
 
-        # This message should contain the new image_ref
-        extra_usage_info = {'image_name': image_meta['name']}
-        self._notify_about_instance_usage(context, instance,
-                "rebuild.start", extra_usage_info=extra_usage_info)
+            current_power_state = self._get_power_state(context, instance)
+            self._instance_update(context,
+                                  instance['uuid'],
+                                  power_state=current_power_state,
+                                  task_state=task_states.REBUILDING)
 
-        current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context,
-                              instance['uuid'],
-                              power_state=current_power_state,
-                              task_state=task_states.REBUILDING)
+            network_info = self._get_instance_nw_info(context, instance)
+            self.driver.destroy(instance, self._legacy_nw_info(network_info))
 
-        network_info = self._get_instance_nw_info(context, instance)
-        self.driver.destroy(instance, self._legacy_nw_info(network_info))
+            instance = self._instance_update(context,
+                                  instance['uuid'],
+                                  task_state=task_states.\
+                                  REBUILD_BLOCK_DEVICE_MAPPING)
 
-        instance = self._instance_update(context,
-                              instance['uuid'],
-                              task_state=task_states.\
-                              REBUILD_BLOCK_DEVICE_MAPPING)
+            instance.injected_files = kwargs.get('injected_files', [])
+            network_info = self.network_api.get_instance_nw_info(context,
+                                                                 instance)
+            device_info = self._setup_block_device_mapping(context, instance)
 
-        instance.injected_files = kwargs.get('injected_files', [])
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance)
-        device_info = self._setup_block_device_mapping(context, instance)
+            instance = self._instance_update(context,
+                                             instance['uuid'],
+                                             task_state=task_states.\
+                                             REBUILD_SPAWNING)
+            # pull in new password here since the original password isn't in
+            # the db
+            instance.admin_pass = kwargs.get('new_pass',
+                    utils.generate_password(FLAGS.password_length))
 
-        instance = self._instance_update(context,
-                                         instance['uuid'],
-                                         task_state=task_states.\
-                                         REBUILD_SPAWNING)
-        # pull in new password here since the original password isn't in the db
-        instance.admin_pass = kwargs.get('new_pass',
-                utils.generate_password(FLAGS.password_length))
+            self.driver.spawn(context, instance, image_meta,
+                              self._legacy_nw_info(network_info), device_info)
 
-        self.driver.spawn(context, instance, image_meta,
-                          self._legacy_nw_info(network_info), device_info)
+            current_power_state = self._get_power_state(context, instance)
+            instance = self._instance_update(context,
+                                             instance['uuid'],
+                                             power_state=current_power_state,
+                                             vm_state=vm_states.ACTIVE,
+                                             task_state=None,
+                                             launched_at=timeutils.utcnow())
 
-        current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context,
-                                         instance['uuid'],
-                                         power_state=current_power_state,
-                                         vm_state=vm_states.ACTIVE,
-                                         task_state=None,
-                                         launched_at=timeutils.utcnow())
-
-        self._notify_about_instance_usage(context, instance, "rebuild.end",
-                                          network_info=network_info,
-                                          extra_usage_info=extra_usage_info)
+            self._notify_about_instance_usage(
+                    context, instance, "rebuild.end",
+                    network_info=network_info,
+                    extra_usage_info=extra_usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1430,14 +1419,15 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.db.instance_get_by_uuid(context,
                     migration_ref.instance_uuid)
 
-        # NOTE(tr3buchet): tear down networks on destination host
-        self.network_api.setup_networks_on_host(context, instance,
-                                                teardown=True)
+        with self.error_out_instance_on_exception(context, instance['uuid']):
+            # NOTE(tr3buchet): tear down networks on destination host
+            self.network_api.setup_networks_on_host(context, instance,
+                                                    teardown=True)
 
-        network_info = self._get_instance_nw_info(context, instance)
-        self.driver.destroy(instance, self._legacy_nw_info(network_info))
-        self.compute_rpcapi.finish_revert_resize(context, instance,
-                migration_ref['id'], migration_ref['source_compute'])
+            network_info = self._get_instance_nw_info(context, instance)
+            self.driver.destroy(instance, self._legacy_nw_info(network_info))
+            self.compute_rpcapi.finish_revert_resize(context, instance,
+                    migration_ref['id'], migration_ref['source_compute'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1454,36 +1444,38 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not instance:
             instance = self.db.instance_get_by_uuid(context,
                     migration_ref.instance_uuid)
-        network_info = self._get_instance_nw_info(context, instance)
 
-        self._notify_about_instance_usage(
-                context, instance, "resize.revert.start")
+        with self.error_out_instance_on_exception(context, instance['uuid']):
+            network_info = self._get_instance_nw_info(context, instance)
 
-        old_instance_type = migration_ref['old_instance_type_id']
-        instance_type = instance_types.get_instance_type(old_instance_type)
+            self._notify_about_instance_usage(
+                    context, instance, "resize.revert.start")
 
-        self.driver.finish_revert_migration(instance,
-                                   self._legacy_nw_info(network_info))
+            old_instance_type = migration_ref['old_instance_type_id']
+            instance_type = instance_types.get_instance_type(old_instance_type)
 
-        # Just roll back the record. There's no need to resize down since
-        # the 'old' VM already has the preferred attributes
-        self._instance_update(context,
-                              instance['uuid'],
-                              memory_mb=instance_type['memory_mb'],
-                              host=migration_ref['source_compute'],
-                              vcpus=instance_type['vcpus'],
-                              root_gb=instance_type['root_gb'],
-                              ephemeral_gb=instance_type['ephemeral_gb'],
-                              instance_type_id=instance_type['id'],
-                              launched_at=timeutils.utcnow(),
-                              vm_state=vm_states.ACTIVE,
-                              task_state=None)
+            self.driver.finish_revert_migration(instance,
+                                       self._legacy_nw_info(network_info))
 
-        self.db.migration_update(context, migration_id,
-                {'status': 'reverted'})
+            # Just roll back the record. There's no need to resize down since
+            # the 'old' VM already has the preferred attributes
+            self._instance_update(context,
+                                  instance['uuid'],
+                                  memory_mb=instance_type['memory_mb'],
+                                  host=migration_ref['source_compute'],
+                                  vcpus=instance_type['vcpus'],
+                                  root_gb=instance_type['root_gb'],
+                                  ephemeral_gb=instance_type['ephemeral_gb'],
+                                  instance_type_id=instance_type['id'],
+                                  launched_at=timeutils.utcnow(),
+                                  vm_state=vm_states.ACTIVE,
+                                  task_state=None)
 
-        self._notify_about_instance_usage(
-                context, instance, "resize.revert.end")
+            self.db.migration_update(context, migration_id,
+                    {'status': 'reverted'})
+
+            self._notify_about_instance_usage(
+                    context, instance, "resize.revert.end")
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1498,42 +1490,44 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
 
         instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        with self.error_out_instance_on_exception(context, instance_uuid):
+            compute_utils.notify_usage_exists(
+                    context, instance_ref, current_period=True)
+            self._notify_about_instance_usage(
+                    context, instance_ref, "resize.prep.start")
 
-        compute_utils.notify_usage_exists(
-                context, instance_ref, current_period=True)
-        self._notify_about_instance_usage(
-                context, instance_ref, "resize.prep.start")
+            same_host = instance_ref['host'] == FLAGS.host
+            if same_host and not FLAGS.allow_resize_to_same_host:
+                self._set_instance_error_state(context, instance_uuid)
+                msg = _('destination same as source!')
+                raise exception.MigrationError(msg)
 
-        same_host = instance_ref['host'] == FLAGS.host
-        if same_host and not FLAGS.allow_resize_to_same_host:
-            self._set_instance_error_state(context, instance_uuid)
-            msg = _('destination same as source!')
-            raise exception.MigrationError(msg)
+            old_instance_type_id = instance_ref['instance_type_id']
+            old_instance_type = instance_types.get_instance_type(
+                    old_instance_type_id)
+            new_instance_type = instance_types.get_instance_type(
+                    instance_type_id)
 
-        old_instance_type_id = instance_ref['instance_type_id']
-        old_instance_type = instance_types.get_instance_type(
-                old_instance_type_id)
-        new_instance_type = instance_types.get_instance_type(instance_type_id)
+            migration_ref = self.db.migration_create(context,
+                    {'instance_uuid': instance_ref['uuid'],
+                     'source_compute': instance_ref['host'],
+                     'dest_compute': FLAGS.host,
+                     'dest_host': self.driver.get_host_ip_addr(),
+                     'old_instance_type_id': old_instance_type['id'],
+                     'new_instance_type_id': instance_type_id,
+                     'status': 'pre-migrating'})
 
-        migration_ref = self.db.migration_create(context,
-                {'instance_uuid': instance_ref['uuid'],
-                 'source_compute': instance_ref['host'],
-                 'dest_compute': FLAGS.host,
-                 'dest_host': self.driver.get_host_ip_addr(),
-                 'old_instance_type_id': old_instance_type['id'],
-                 'new_instance_type_id': instance_type_id,
-                 'status': 'pre-migrating'})
+            LOG.audit(_('Migrating'), context=context, instance=instance_ref)
+            self.compute_rpcapi.resize_instance(context, instance_ref,
+                    migration_ref['id'], image)
 
-        LOG.audit(_('Migrating'), context=context, instance=instance_ref)
-        self.compute_rpcapi.resize_instance(context, instance_ref,
-                migration_ref['id'], image)
+            extra_usage_info = dict(
+                    new_instance_type=new_instance_type['name'],
+                    new_instance_type_id=new_instance_type['id'])
 
-        extra_usage_info = dict(new_instance_type=new_instance_type['name'],
-                                new_instance_type_id=new_instance_type['id'])
-
-        self._notify_about_instance_usage(
-            context, instance_ref, "resize.prep.end",
-            extra_usage_info=extra_usage_info)
+            self._notify_about_instance_usage(
+                context, instance_ref, "resize.prep.end",
+                extra_usage_info=extra_usage_info)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
@@ -1545,49 +1539,39 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not instance:
             instance = self.db.instance_get_by_uuid(context,
                     migration_ref.instance_uuid)
-        instance_type_ref = self.db.instance_type_get(context,
-                migration_ref.new_instance_type_id)
 
-        try:
+        with self.error_out_instance_on_exception(context, instance['uuid']):
+            instance_type_ref = self.db.instance_type_get(context,
+                    migration_ref.new_instance_type_id)
+
             network_info = self._get_instance_nw_info(context, instance)
-        except Exception, error:
-            with excutils.save_and_reraise_exception():
-                msg = _('%s. Setting instance vm_state to ERROR')
-                LOG.error(msg % error)
-                self._set_instance_error_state(context, instance['uuid'])
 
-        self.db.migration_update(context,
-                                 migration_id,
-                                 {'status': 'migrating'})
+            self.db.migration_update(context,
+                                     migration_id,
+                                     {'status': 'migrating'})
 
-        self._instance_update(context, instance['uuid'],
-                              task_state=task_states.RESIZE_MIGRATING)
+            self._instance_update(context, instance['uuid'],
+                                  task_state=task_states.RESIZE_MIGRATING)
 
-        self._notify_about_instance_usage(
-            context, instance, "resize.start", network_info=network_info)
+            self._notify_about_instance_usage(
+                context, instance, "resize.start", network_info=network_info)
 
-        try:
             disk_info = self.driver.migrate_disk_and_power_off(
                     context, instance, migration_ref['dest_host'],
                     instance_type_ref, self._legacy_nw_info(network_info))
-        except Exception, error:
-            with excutils.save_and_reraise_exception():
-                LOG.error(_('%s. Setting instance vm_state to ERROR') % error,
-                          instance=instance)
-                self._set_instance_error_state(context, instance['uuid'])
 
-        self.db.migration_update(context,
-                                 migration_id,
-                                 {'status': 'post-migrating'})
+            self.db.migration_update(context,
+                                     migration_id,
+                                     {'status': 'post-migrating'})
 
-        self._instance_update(context, instance['uuid'],
-                              task_state=task_states.RESIZE_MIGRATED)
+            self._instance_update(context, instance['uuid'],
+                                  task_state=task_states.RESIZE_MIGRATED)
 
-        self.compute_rpcapi.finish_resize(context, instance, migration_id,
-                image, disk_info, migration_ref['dest_compute'])
+            self.compute_rpcapi.finish_resize(context, instance, migration_id,
+                    image, disk_info, migration_ref['dest_compute'])
 
-        self._notify_about_instance_usage(context, instance, "resize.end",
-                                          network_info=network_info)
+            self._notify_about_instance_usage(context, instance, "resize.end",
+                                              network_info=network_info)
 
     def _finish_resize(self, context, instance, migration_ref, disk_info,
                        image):
