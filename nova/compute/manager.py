@@ -2432,7 +2432,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(vish): The mapping is passed in so the driver can disconnect
         #             from remote volumes if necessary
         block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance['id'])
+                            context, instance['uuid'])
         self.driver.destroy(instance, self._legacy_nw_info(network_info),
                             block_device_info)
 
