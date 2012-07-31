@@ -60,8 +60,9 @@ class ComputeRpcAPITestCase(test.TestCase):
             'rebuild_instance', 'remove_fixed_ip_from_instance',
             'remove_volume_connection', 'rescue_instance', 'reset_network',
             'resize_instance', 'resume_instance', 'revert_resize',
-            'start_instance', 'stop_instance', 'suspend_instance',
-            'unpause_instance'
+            'rollback_live_migration_at_destination', 'set_admin_password',
+            'snapshot_instance', 'start_instance', 'stop_instance',
+            'suspend_instance', 'unpause_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -86,10 +87,7 @@ class ComputeRpcAPITestCase(test.TestCase):
                                                    methods_with_instance):
             instance = expected_msg['args']['instance']
             del expected_msg['args']['instance']
-            if method in ['rollback_live_migration_at_destination']:
-                expected_msg['args']['instance_id'] = instance['id']
-            else:
-                expected_msg['args']['instance_uuid'] = instance['uuid']
+            expected_msg['args']['instance_uuid'] = instance['uuid']
         expected_msg['version'] = expected_version
 
         cast_and_call = ['confirm_resize', 'stop_instance']
@@ -291,11 +289,12 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_rollback_live_migration_at_destination(self):
         self._test_compute_api('rollback_live_migration_at_destination',
-                'cast', instance=self.fake_instance, host='host')
+                'cast', instance=self.fake_instance, host='host',
+                version='1.32')
 
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'cast',
-                instance=self.fake_instance, new_pass='pw')
+                instance=self.fake_instance, new_pass='pw', version='1.33')
 
     def test_set_host_enabled(self):
         self._test_compute_api('set_host_enabled', 'call',
@@ -308,7 +307,8 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_snapshot_instance(self):
         self._test_compute_api('snapshot_instance', 'cast',
                 instance=self.fake_instance, image_id='id', image_type='type',
-                backup_type='type', rotation='rotation')
+                backup_type='type', rotation='rotation',
+                version='1.34')
 
     def test_start_instance(self):
         self._test_compute_api('start_instance', 'cast',

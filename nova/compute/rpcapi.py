@@ -102,6 +102,12 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.29 - Remove instance_uuid, add instance argument to resize_instance()
         1.30 - Remove instance_uuid, add instance argument to resume_instance()
         1.31 - Remove instance_uuid, add instance argument to revert_resize()
+        1.32 - Remove instance_id, add instance argument to
+               rollback_live_migration_at_destination()
+        1.33 - Remove instance_uuid, add instance argument to
+               set_admin_password()
+        1.34 - Remove instance_uuid, add instance argument to
+               snapshot_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -386,14 +392,18 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.31')
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('rollback_live_migration_at_destination',
-            instance_id=instance['id']),
-            topic=_compute_topic(self.topic, ctxt, host, None))
+            instance=instance_p),
+            topic=_compute_topic(self.topic, ctxt, host, None),
+            version='1.32')
 
     def set_admin_password(self, ctxt, instance, new_pass):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('set_admin_password',
-                instance_uuid=instance['uuid'], new_pass=new_pass),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p, new_pass=new_pass),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.33')
 
     def set_host_enabled(self, ctxt, enabled, host):
         topic = _compute_topic(self.topic, ctxt, host, None)
@@ -407,11 +417,13 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def snapshot_instance(self, ctxt, instance, image_id, image_type,
             backup_type, rotation):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('snapshot_instance',
-                instance_uuid=instance['uuid'], image_id=image_id,
+                instance=instance_p, image_id=image_id,
                 image_type=image_type, backup_type=backup_type,
                 rotation=rotation),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.34')
 
     def start_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)

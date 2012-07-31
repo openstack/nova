@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.31'
+    RPC_API_VERSION = '1.34'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1116,13 +1116,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def snapshot_instance(self, context, instance_uuid, image_id,
+    def snapshot_instance(self, context, image_id,
                           image_type='snapshot', backup_type=None,
-                          rotation=None):
+                          rotation=None, instance=None, instance_uuid=None):
         """Snapshot an instance on this host.
 
         :param context: security context
-        :param instance_uuid: nova.db.sqlalchemy.models.Instance.Uuid
+        :param instance_uuid: (deprecated) db.sqlalchemy.models.Instance.Uuid
+        :param instance: an Instance dict
         :param image_id: glance.db.sqlalchemy.models.Image.Id
         :param image_type: snapshot | backup
         :param backup_type: daily | weekly
@@ -1130,18 +1131,20 @@ class ComputeManager(manager.SchedulerDependentManager):
             None if rotation shouldn't be used (as in the case of snapshots)
         """
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_ref['uuid'],
+                              instance['uuid'],
                               power_state=current_power_state)
 
         LOG.audit(_('instance snapshotting'), context=context,
                   instance_uuid=instance_uuid)
 
-        if instance_ref['power_state'] != power_state.RUNNING:
-            state = instance_ref['power_state']
+        if instance['power_state'] != power_state.RUNNING:
+            state = instance['power_state']
             running = power_state.RUNNING
             LOG.warn(_('trying to snapshot a non-running '
                        'instance: (state: %(state)s '
@@ -1149,12 +1152,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                      instance_uuid=instance_uuid)
 
         self._notify_about_instance_usage(
-                context, instance_ref, "snapshot.start")
+                context, instance, "snapshot.start")
 
         try:
-            self.driver.snapshot(context, instance_ref, image_id)
+            self.driver.snapshot(context, instance, image_id)
         finally:
-            self._instance_update(context, instance_ref['uuid'],
+            self._instance_update(context, instance['uuid'],
                                   task_state=None)
 
         if image_type == 'snapshot' and rotation:
@@ -1167,7 +1170,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.RotationRequiredForBackup()
 
         self._notify_about_instance_usage(
-                context, instance_ref, "snapshot.end")
+                context, instance, "snapshot.end")
 
     @wrap_instance_fault
     def rotate_backups(self, context, instance_uuid, backup_type, rotation):
@@ -1221,7 +1224,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def set_admin_password(self, context, instance_uuid, new_pass=None):
+    def set_admin_password(self, context, instance=None, instance_uuid=None,
+                           new_pass=None):
         """Set the root/admin password for an instance on this host.
 
         This is generally only called by API password resets after an
@@ -1234,43 +1238,44 @@ class ComputeManager(manager.SchedulerDependentManager):
             # Generate a random password
             new_pass = utils.generate_password(FLAGS.password_length)
 
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
+
         max_tries = 10
 
         for i in xrange(max_tries):
-            instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-
-            current_power_state = self._get_power_state(context, instance_ref)
+            current_power_state = self._get_power_state(context, instance)
             expected_state = power_state.RUNNING
 
             if current_power_state != expected_state:
-                self._instance_update(context, instance_ref['uuid'],
+                self._instance_update(context, instance['uuid'],
                                       task_state=None)
                 _msg = _('Failed to set admin password. Instance %s is not'
-                         ' running') % instance_ref["uuid"]
+                         ' running') % instance["uuid"]
                 raise exception.Invalid(_msg)
             else:
                 try:
-                    self.driver.set_admin_password(instance_ref, new_pass)
-                    LOG.audit(_("Root password set"), instance=instance_ref)
+                    self.driver.set_admin_password(instance, new_pass)
+                    LOG.audit(_("Root password set"), instance=instance)
                     self._instance_update(context,
-                                          instance_ref['uuid'],
+                                          instance['uuid'],
                                           task_state=None)
                     break
                 except NotImplementedError:
                     # NOTE(dprince): if the driver doesn't implement
                     # set_admin_password we break to avoid a loop
                     LOG.warn(_('set_admin_password is not implemented '
-                             'by this driver.'), instance=instance_ref)
+                             'by this driver.'), instance=instance)
                     self._instance_update(context,
-                                          instance_ref['uuid'],
+                                          instance['uuid'],
                                           task_state=None)
                     break
                 except Exception, e:
                     # Catch all here because this could be anything.
-                    LOG.exception(e, instance=instance_ref)
+                    LOG.exception(e, instance=instance)
                     if i == max_tries - 1:
                         self._set_instance_error_state(context,
-                                                       instance_ref['uuid'])
+                                                       instance['uuid'])
                         # We create a new exception here so that we won't
                         # potentially reveal password information to the
                         # API caller.  The real exception is logged above
@@ -2407,24 +2412,28 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.compute_rpcapi.rollback_live_migration_at_destination(context,
                     instance_ref, dest)
 
-    def rollback_live_migration_at_destination(self, context, instance_id):
+    def rollback_live_migration_at_destination(self, context, instance=None,
+                                               instance_id=None):
         """ Cleaning up image directory that is created pre_live_migration.
 
         :param context: security context
-        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param instance_id: (deprecated) nova.db.sqlalchemy.models.Instance.Id
+        :param instance: an Instance dict sent over rpc
         """
-        instance_ref = self.db.instance_get(context, instance_id)
-        network_info = self._get_instance_nw_info(context, instance_ref)
+        if not instance:
+            instance = self.db.instance_get(context, instance_id)
+
+        network_info = self._get_instance_nw_info(context, instance)
 
         # NOTE(tr3buchet): tear down networks on destination host
-        self.network_api.setup_networks_on_host(context, instance_ref,
+        self.network_api.setup_networks_on_host(context, instance,
                                                 self.host, teardown=True)
 
         # NOTE(vish): The mapping is passed in so the driver can disconnect
         #             from remote volumes if necessary
         block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance_id)
-        self.driver.destroy(instance_ref, self._legacy_nw_info(network_info),
+                            context, instance['uuid'])
+        self.driver.destroy(instance, self._legacy_nw_info(network_info),
                             block_device_info)
 
     @manager.periodic_task
