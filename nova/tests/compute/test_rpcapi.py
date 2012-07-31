@@ -48,23 +48,6 @@ class ComputeRpcAPITestCase(test.TestCase):
     def _test_compute_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
 
-        methods_with_instance = [
-            'add_fixed_ip_to_instance', 'attach_volume',
-            'change_instance_metadata', 'check_can_live_migrate_destination',
-            'check_can_live_migrate_source', 'confirm_resize',
-            'detach_volume', 'finish_resize', 'finish_revert_resize',
-            'get_console_output', 'get_diagnostics', 'get_vnc_console',
-            'inject_file', 'inject_network_info', 'pause_instance',
-            'post_live_migration_at_destination', 'power_off_instance',
-            'power_on_instance', 'pre_live_migration', 'reboot_instance',
-            'rebuild_instance', 'remove_fixed_ip_from_instance',
-            'remove_volume_connection', 'rescue_instance', 'reset_network',
-            'resize_instance', 'resume_instance', 'revert_resize',
-            'rollback_live_migration_at_destination', 'set_admin_password',
-            'snapshot_instance', 'start_instance', 'stop_instance',
-            'suspend_instance', 'unpause_instance', 'unrescue_instance'
-        ]
-
         if 'rpcapi_class' in kwargs:
             rpcapi_class = kwargs['rpcapi_class']
             del kwargs['rpcapi_class']
@@ -83,11 +66,6 @@ class ComputeRpcAPITestCase(test.TestCase):
             del expected_msg['args']['host']
         if 'destination' in expected_msg['args']:
             del expected_msg['args']['destination']
-        if 'instance' in expected_msg['args'] and (method not in
-                                                   methods_with_instance):
-            instance = expected_msg['args']['instance']
-            del expected_msg['args']['instance']
-            expected_msg['args']['instance_uuid'] = instance['uuid']
         expected_msg['version'] = expected_version
 
         cast_and_call = ['confirm_resize', 'stop_instance']
@@ -333,7 +311,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_terminate_instance(self):
         self._test_compute_api('terminate_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.37')
 
     def test_unpause_instance(self):
         self._test_compute_api('unpause_instance', 'cast',

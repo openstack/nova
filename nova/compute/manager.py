@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.36'
+    RPC_API_VERSION = '1.37'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -900,21 +900,23 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def terminate_instance(self, context, instance_uuid):
+    def terminate_instance(self, context, instance=None, instance_uuid=None):
         """Terminate an instance on this host."""
         @utils.synchronized(instance_uuid)
-        def do_terminate_instance():
+        def do_terminate_instance(instance, instance_uuid):
             elevated = context.elevated()
-            instance = self.db.instance_get_by_uuid(elevated, instance_uuid)
+            if not instance:
+                instance = self.db.instance_get_by_uuid(elevated,
+                                                        instance_uuid)
             try:
                 self._delete_instance(context, instance)
             except exception.InstanceTerminationFailure as error:
                 msg = _('%s. Setting instance vm_state to ERROR')
-                LOG.error(msg % error, instance_uuid=instance_uuid)
-                self._set_instance_error_state(context, instance_uuid)
+                LOG.error(msg % error, instance=instance)
+                self._set_instance_error_state(context, instance['uuid'])
             except exception.InstanceNotFound as e:
-                LOG.warn(e, instance_uuid=instance_uuid)
-        do_terminate_instance()
+                LOG.warn(e, instance=instance)
+        do_terminate_instance(instance, instance_uuid)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock

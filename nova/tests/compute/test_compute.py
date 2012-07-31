@@ -370,13 +370,15 @@ class ComputeTestCase(BaseTestCase):
         #check failed to schedule --> terminate
         instance_uuid = self._create_instance(params={'vm_state':
                                                 vm_states.ERROR})
-        self.compute.terminate_instance(self.context, instance_uuid)
+        inst_ref = db.instance_get_by_uuid(elevated, instance_uuid)
+        instance = jsonutils.to_primitive(inst_ref)
+        self.compute.terminate_instance(self.context, instance=instance)
         self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
                           elevated, instance_uuid)
 
     def test_run_terminate(self):
         """Make sure it is possible to  run and terminate instance"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
 
         self.compute.run_instance(self.context, instance['uuid'])
 
@@ -384,7 +386,7 @@ class ComputeTestCase(BaseTestCase):
         LOG.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
 
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("After terminating instances: %s"), instances)
@@ -392,7 +394,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_run_terminate_timestamps(self):
         """Make sure timestamps are set for launched and destroyed"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.assertEqual(instance['launched_at'], None)
         self.assertEqual(instance['deleted_at'], None)
         launch = timeutils.utcnow()
@@ -401,7 +403,7 @@ class ComputeTestCase(BaseTestCase):
         self.assert_(instance['launched_at'] > launch)
         self.assertEqual(instance['deleted_at'], None)
         terminate = timeutils.utcnow()
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
         context = self.context.elevated(read_deleted="only")
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assert_(instance['launched_at'] < terminate)
@@ -413,7 +415,7 @@ class ComputeTestCase(BaseTestCase):
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.stop_instance(self.context, instance=instance)
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_start(self):
         """Ensure instance can be started"""
@@ -422,7 +424,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.stop_instance(self.context, instance=instance)
         self.compute.start_instance(self.context, instance=instance)
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_rescue(self):
         """Ensure instance can be rescued and unrescued"""
@@ -458,7 +460,7 @@ class ComputeTestCase(BaseTestCase):
                                        instance_uuid=instance_uuid)
         self.assertTrue(called['unrescued'])
 
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_power_on(self):
         """Ensure instance can be powered on"""
@@ -476,7 +478,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.power_on_instance(self.context, instance=instance)
         self.assertTrue(called['power_on'])
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_power_off(self):
         """Ensure instance can be powered off"""
@@ -494,7 +496,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.power_off_instance(self.context, instance=instance)
         self.assertTrue(called['power_off'])
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_pause(self):
         """Ensure instance can be paused and unpaused"""
@@ -505,7 +507,7 @@ class ComputeTestCase(BaseTestCase):
                 instance=jsonutils.to_primitive(instance))
         self.compute.unpause_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_suspend(self):
         """ensure instance can be suspended and resumed"""
@@ -514,7 +516,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.suspend_instance(self.context, instance=instance)
         self.compute.resume_instance(self.context, instance=instance)
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_suspend_error(self):
         """Ensure vm_state is ERROR when suspend error occurs"""
@@ -531,7 +533,7 @@ class ComputeTestCase(BaseTestCase):
                           instance=jsonutils.to_primitive(instance))
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_rebuild(self):
         """Ensure instance can be rebuilt"""
@@ -542,7 +544,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.rebuild_instance(self.context, image_ref, image_ref,
                 instance=instance)
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_rebuild_launch_time(self):
         """Ensure instance can be rebuilt"""
@@ -559,7 +561,8 @@ class ComputeTestCase(BaseTestCase):
                 instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEquals(cur_time, instance['launched_at'])
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_reboot_soft(self):
         """Ensure instance can be soft rebooted"""
@@ -577,7 +580,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
         self.assertEqual(inst_ref['task_state'], None)
 
-        self.compute.terminate_instance(self.context, inst_ref['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(inst_ref))
 
     def test_reboot_hard(self):
         """Ensure instance can be hard rebooted"""
@@ -595,7 +599,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['power_state'], power_state.RUNNING)
         self.assertEqual(inst_ref['task_state'], None)
 
-        self.compute.terminate_instance(self.context, inst_ref['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(inst_ref))
 
     def test_set_admin_password(self):
         """Ensure instance can have its admin password set"""
@@ -614,7 +619,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
         self.assertEqual(inst_ref['task_state'], None)
 
-        self.compute.terminate_instance(self.context, inst_ref['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(inst_ref))
 
     def test_set_admin_password_bad_state(self):
         """Test setting password while instance is rebuilding."""
@@ -642,7 +648,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.set_admin_password,
                           self.context,
                           instance=instance)
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def _do_test_set_admin_password_driver_error(self, exc, expected_vm_state,
                                                  expected_task_state):
@@ -679,7 +685,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], expected_vm_state)
         self.assertEqual(inst_ref['task_state'], expected_task_state)
 
-        self.compute.terminate_instance(self.context, inst_ref['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(inst_ref))
 
     def test_set_admin_password_driver_not_authorized(self):
         """
@@ -718,7 +725,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.inject_file(self.context, "/tmp/test",
                 "File Contents", instance=instance)
         self.assertTrue(called['inject'])
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_inject_network_info(self):
         """Ensure we can inject network info"""
@@ -735,7 +742,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.inject_network_info(self.context, instance=instance)
         self.assertTrue(called['inject'])
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_reset_network(self):
         """Ensure we can reset networking on an instance"""
@@ -757,7 +764,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertEqual(called['count'], 2)
 
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_agent_update(self):
         """Ensure instance can have its agent updated"""
@@ -776,7 +783,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.agent_update(self.context, instance['uuid'],
                                   'http://fake/url/', 'fakehash')
         self.assertTrue(called['agent_update'])
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
@@ -785,7 +793,7 @@ class ComputeTestCase(BaseTestCase):
         name = "myfakesnapshot"
         self.compute.run_instance(self.context, instance_uuid)
         self.compute.snapshot_instance(self.context, name, instance=instance)
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_snapshot_fails(self):
         """Ensure task_state is set to None if snapshot fails"""
@@ -800,7 +808,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.snapshot_instance,
                           self.context, "failing_snapshot", instance=instance)
         self._assert_state({'task_state': None})
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def _assert_state(self, state_dict):
         """Assert state of VM is equal to state passed as parameter"""
@@ -818,23 +826,23 @@ class ComputeTestCase(BaseTestCase):
 
     def test_console_output(self):
         """Make sure we can get console output from instance"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
 
         output = self.compute.get_console_output(self.context,
-                instance=jsonutils.to_primitive(instance))
+                instance=instance)
         self.assertEqual(output, 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_console_output_tail(self):
         """Make sure we can get console output from instance"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
 
         output = self.compute.get_console_output(self.context,
-                instance=jsonutils.to_primitive(instance), tail_length=2)
+                instance=instance, tail_length=2)
         self.assertEqual(output, 'ANOTHER\nLAST LINE')
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_novnc_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
@@ -851,7 +859,7 @@ class ComputeTestCase(BaseTestCase):
                                                instance_uuid=instance['uuid'])
         self.assert_(console)
 
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_xvpvnc_vnc_console(self):
         """Make sure we can a vnc console for an instance."""
@@ -861,7 +869,7 @@ class ComputeTestCase(BaseTestCase):
         console = self.compute.get_vnc_console(self.context, 'xvpvnc',
                                                instance=instance)
         self.assert_(console)
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_invalid_vnc_console_type(self):
         """Raise useful error if console type is an unrecognised string"""
@@ -871,7 +879,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
                           self.context, 'invalid', instance=instance)
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_missing_vnc_console_type(self):
         """Raise useful error is console type is None"""
@@ -881,11 +889,11 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
                           self.context, None, instance=instance)
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_diagnostics(self):
         """Make sure we can get diagnostics for an instance."""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
 
         diagnostics = self.compute.get_diagnostics(self.context,
@@ -895,7 +903,7 @@ class ComputeTestCase(BaseTestCase):
         diagnostics = self.compute.get_diagnostics(self.context,
                 instance=instance)
         self.assertEqual(diagnostics, 'FAKE_DIAGNOSTICS')
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_add_fixed_ip_usage_notification(self):
         def dummy(*args, **kwargs):
@@ -916,7 +924,7 @@ class ComputeTestCase(BaseTestCase):
                 instance=instance)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_remove_fixed_ip_usage_notification(self):
         def dummy(*args, **kwargs):
@@ -937,7 +945,7 @@ class ComputeTestCase(BaseTestCase):
                                                    instance=instance)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_run_instance_usage_notification(self):
         """Ensure run instance generates appropriate usage notification"""
@@ -968,7 +976,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(payload['launched_at'])
         image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(inst_ref))
 
     def test_terminate_usage_notification(self):
         """Ensure terminate_instance generates correct usage notification"""
@@ -980,7 +989,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, inst_ref['uuid'])
         test_notifier.NOTIFICATIONS = []
         timeutils.set_time_override(cur_time)
-        self.compute.terminate_instance(self.context, inst_ref['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(inst_ref))
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 4)
 
@@ -1011,13 +1021,13 @@ class ComputeTestCase(BaseTestCase):
 
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance['uuid'])
         self.assertRaises(exception.Invalid,
                           self.compute.run_instance,
                           self.context,
                           instance['uuid'])
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_instance_set_to_error_on_uncaught_exception(self):
         """Test that instance is set to error state when exception is raised"""
@@ -1045,7 +1055,8 @@ class ComputeTestCase(BaseTestCase):
                                            instance_uuid)
         self.assertEqual(vm_states.ERROR, instance['vm_state'])
 
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_instance_termination_exception_sets_error(self):
         """Test that we handle InstanceTerminationFailure
@@ -1059,7 +1070,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_delete_instance',
                        fake_delete_instance)
 
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
@@ -1079,7 +1091,8 @@ class ComputeTestCase(BaseTestCase):
                           self.context,
                           instance['uuid'])
 
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_get_lock(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -1117,7 +1130,8 @@ class ComputeTestCase(BaseTestCase):
                 instance=jsonutils.to_primitive(instance))
         check_task_state(None)
 
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_finish_resize(self):
         """Contrived test to ensure finish_resize doesn't raise anything"""
@@ -1136,7 +1150,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.finish_resize(context,
                 migration_id=int(migration_ref['id']),
                 disk_info={}, image={}, instance=instance)
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_finish_resize_handles_error(self):
         """Make sure we don't leave the instance in RESIZE on error"""
@@ -1162,7 +1176,8 @@ class ComputeTestCase(BaseTestCase):
 
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_rebuild_instance_notification(self):
         """Ensure notifications on instance migrate/resize"""
@@ -1222,7 +1237,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('launched_at' in payload)
         self.assertEqual(payload['launched_at'], str(cur_time))
         self.assertEquals(payload['image_ref_url'], new_image_ref_url)
-        self.compute.terminate_instance(self.context, inst_ref['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(inst_ref))
 
     def test_finish_resize_instance_notification(self):
         """Ensure notifications on instance migrate/resize"""
@@ -1272,7 +1288,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(payload['launched_at'], str(cur_time))
         image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+            instance=jsonutils.to_primitive(instance))
 
     def test_resize_instance_notification(self):
         """Ensure notifications on instance migrate/resize"""
@@ -1316,7 +1333,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue('launched_at' in payload)
         image_ref_url = utils.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+            instance=jsonutils.to_primitive(instance))
 
     def test_prep_resize_instance_migration_error(self):
         """Ensure prep_resize raise a migration error"""
@@ -1330,7 +1348,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
                           context, instance['uuid'], 1, {})
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+            instance=jsonutils.to_primitive(instance))
 
     def test_resize_instance_driver_error(self):
         """Ensure instance status set to Error on resize error"""
@@ -1357,7 +1376,8 @@ class ComputeTestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+            instance=jsonutils.to_primitive(instance))
 
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
@@ -1373,7 +1393,8 @@ class ComputeTestCase(BaseTestCase):
                 instance['uuid'], 'pre-migrating')
         self.compute.resize_instance(context, migration_ref['id'], {},
                                      instance=instance)
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+            instance=jsonutils.to_primitive(instance))
 
     def test_finish_revert_resize(self):
         """Ensure that the flavor is reverted to the original on revert"""
@@ -1434,7 +1455,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance_type_ref['flavorid'], '1')
         self.assertEqual(inst_ref['host'], migration_ref['source_compute'])
 
-        self.compute.terminate_instance(context, inst_ref['uuid'])
+        self.compute.terminate_instance(context,
+            instance=jsonutils.to_primitive(inst_ref))
 
     def test_get_by_flavor_id(self):
         type = instance_types.get_instance_type_by_flavor_id(1)
@@ -1448,7 +1470,8 @@ class ComputeTestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
                 self.context, instance['uuid'], 1, {})
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_resize_instance_handles_migration_error(self):
         """Ensure vm_state is ERROR when error occurs"""
@@ -1471,7 +1494,8 @@ class ComputeTestCase(BaseTestCase):
                           context, migration_ref['id'], {}, instance=inst_ref)
         inst_ref = db.instance_get_by_uuid(context, inst_ref['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
-        self.compute.terminate_instance(context, inst_ref['uuid'])
+        self.compute.terminate_instance(context,
+            instance=jsonutils.to_primitive(inst_ref))
 
     def test_check_can_live_migrate_source_works_correctly(self):
         """Confirm check_can_live_migrate_source works on positive path"""
@@ -2747,7 +2771,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(inst_ref['task_state'],
                          task_states.UPDATING_PASSWORD)
 
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(inst_ref))
 
     def test_rescue_unrescue(self):
         instance = self._create_fake_instance()
@@ -2774,7 +2799,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(instance['vm_state'], vm_states.RESCUED)
         self.assertEqual(instance['task_state'], task_states.UNRESCUING)
 
-        self.compute.terminate_instance(self.context, instance_uuid)
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_snapshot(self):
         """Ensure a snapshot of an instance can be created"""
@@ -2979,7 +3005,8 @@ class ComputeAPITestCase(BaseTestCase):
                                        'vm_state': vm_states.RESIZED})
 
         self.compute_api.confirm_resize(context, instance)
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+            instance=jsonutils.to_primitive(instance))
 
     def test_resize_revert_through_api(self):
         instance = self._create_fake_instance()
@@ -3004,7 +3031,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(instance['vm_state'], vm_states.RESIZED)
         self.assertEqual(instance['task_state'], task_states.RESIZE_REVERTING)
 
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+            instance=jsonutils.to_primitive(instance))
 
     def test_resize_invalid_flavor_fails(self):
         """Ensure invalid flavors raise"""
@@ -3016,7 +3044,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.NotFound, self.compute_api.resize,
                 context, instance, 200)
 
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_resize_same_size_fails(self):
         """Ensure invalid flavors raise"""
@@ -3029,7 +3058,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.CannotResizeToSameSize,
                           self.compute_api.resize, context, instance, 1)
 
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_migrate(self):
         context = self.context.elevated()
@@ -3038,7 +3068,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
         # Migrate simply calls resize() without a flavor_id.
         self.compute_api.resize(context, instance, None)
-        self.compute.terminate_instance(context, instance['uuid'])
+        self.compute.terminate_instance(context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_resize_request_spec(self):
         def _fake_cast(context, topic, msg):
@@ -3057,7 +3088,8 @@ class ComputeAPITestCase(BaseTestCase):
         try:
             self.compute_api.resize(context, instance, None)
         finally:
-            self.compute.terminate_instance(context, instance['uuid'])
+            self.compute.terminate_instance(context,
+                    instance=jsonutils.to_primitive(instance))
 
     def test_resize_request_spec_noavoid(self):
         def _fake_cast(context, topic, msg):
@@ -3077,7 +3109,8 @@ class ComputeAPITestCase(BaseTestCase):
         try:
             self.compute_api.resize(context, instance, None)
         finally:
-            self.compute.terminate_instance(context, instance['uuid'])
+            self.compute.terminate_instance(context,
+                    instance=jsonutils.to_primitive(instance))
 
     def test_get(self):
         """Test get instance"""
@@ -3599,7 +3632,8 @@ class ComputeAPITestCase(BaseTestCase):
             self.context, instance['uuid']):
             db.block_device_mapping_destroy(self.context, bdm['id'])
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.compute.terminate_instance(self.context, instance['uuid'])
+        self.compute.terminate_instance(self.context,
+                                        instance_uuid=instance['uuid'])
 
     def test_volume_size(self):
         ephemeral_size = 2
