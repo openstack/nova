@@ -4193,17 +4193,23 @@ def bw_usage_update(context,
 ####################
 
 
-def _instance_type_extra_specs_get_query(context, instance_type_id,
+def _instance_type_extra_specs_get_query(context, flavor_id,
                                          session=None):
+    # Two queries necessary because join with update doesn't work.
+    t = model_query(context, models.InstanceTypes.id,
+                    session=session, read_deleted="no").\
+              filter(models.InstanceTypes.flavorid == flavor_id).\
+              subquery()
     return model_query(context, models.InstanceTypeExtraSpecs,
                        session=session, read_deleted="no").\
-                    filter_by(instance_type_id=instance_type_id)
+                       filter(models.InstanceTypeExtraSpecs.\
+                              instance_type_id.in_(t))
 
 
 @require_context
-def instance_type_extra_specs_get(context, instance_type_id):
+def instance_type_extra_specs_get(context, flavor_id):
     rows = _instance_type_extra_specs_get_query(
-                            context, instance_type_id).\
+                            context, flavor_id).\
                     all()
 
     result = {}
@@ -4214,43 +4220,45 @@ def instance_type_extra_specs_get(context, instance_type_id):
 
 
 @require_context
-def instance_type_extra_specs_delete(context, instance_type_id, key):
+def instance_type_extra_specs_delete(context, flavor_id, key):
+    # Don't need synchronize the session since we will not use the query result
     _instance_type_extra_specs_get_query(
-                            context, instance_type_id).\
-        filter_by(key=key).\
+                            context, flavor_id).\
+        filter(models.InstanceTypeExtraSpecs.key == key).\
         update({'deleted': True,
                 'deleted_at': timeutils.utcnow(),
-                'updated_at': literal_column('updated_at')})
+                'updated_at': literal_column('updated_at')},
+                synchronize_session=False)
 
 
 @require_context
-def instance_type_extra_specs_get_item(context, instance_type_id, key,
+def instance_type_extra_specs_get_item(context, flavor_id, key,
                                        session=None):
     result = _instance_type_extra_specs_get_query(
-                            context, instance_type_id, session=session).\
-                    filter_by(key=key).\
+                            context, flavor_id, session=session).\
+                    filter(models.InstanceTypeExtraSpecs.key == key).\
                     first()
-
     if not result:
         raise exception.InstanceTypeExtraSpecsNotFound(
-                extra_specs_key=key, instance_type_id=instance_type_id)
+                extra_specs_key=key, instance_type_id=flavor_id)
 
     return result
 
 
 @require_context
-def instance_type_extra_specs_update_or_create(context, instance_type_id,
+def instance_type_extra_specs_update_or_create(context, flavor_id,
                                                specs):
     session = get_session()
     spec_ref = None
+    instance_type = instance_type_get_by_flavor_id(context, flavor_id)
     for key, value in specs.iteritems():
         try:
             spec_ref = instance_type_extra_specs_get_item(
-                context, instance_type_id, key, session)
+                context, flavor_id, key, session)
         except exception.InstanceTypeExtraSpecsNotFound, e:
             spec_ref = models.InstanceTypeExtraSpecs()
         spec_ref.update({"key": key, "value": value,
-                         "instance_type_id": instance_type_id,
+                         "instance_type_id": instance_type["id"],
                          "deleted": 0})
         spec_ref.save(session=session)
     return specs

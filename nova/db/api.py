@@ -1542,21 +1542,21 @@ def bw_usage_update(context,
 ####################
 
 
-def instance_type_extra_specs_get(context, instance_type_id):
+def instance_type_extra_specs_get(context, flavor_id):
     """Get all extra specs for an instance type."""
-    return IMPL.instance_type_extra_specs_get(context, instance_type_id)
+    return IMPL.instance_type_extra_specs_get(context, flavor_id)
 
 
-def instance_type_extra_specs_delete(context, instance_type_id, key):
+def instance_type_extra_specs_delete(context, flavor_id, key):
     """Delete the given extra specs item."""
-    IMPL.instance_type_extra_specs_delete(context, instance_type_id, key)
+    IMPL.instance_type_extra_specs_delete(context, flavor_id, key)
 
 
-def instance_type_extra_specs_update_or_create(context, instance_type_id,
+def instance_type_extra_specs_update_or_create(context, flavor_id,
                                                extra_specs):
     """Create or update instance type extra specs. This adds or modifies the
     key/value pairs specified in the extra specs dict argument"""
-    IMPL.instance_type_extra_specs_update_or_create(context, instance_type_id,
+    IMPL.instance_type_extra_specs_update_or_create(context, flavor_id,
                                                     extra_specs)
 
 
