@@ -52,24 +52,32 @@ def refresh_cache(f):
             msg = _('instance is a required argument to use @refresh_cache')
             raise Exception(msg)
 
-        try:
-            # get nw_info from return if possible, otherwise call for it
-            nw_info = res
-            if not isinstance(nw_info, network_model.NetworkInfo):
-                nw_info = self._get_instance_nw_info(context, instance)
+        # get nw_info from return if possible, otherwise call for it
+        nw_info = res if isinstance(res, network_model.NetworkInfo) else None
 
-            # update cache
-            cache = {'network_info': nw_info.json()}
-            self.db.instance_info_cache_update(context, instance['uuid'],
-                                               cache)
-        except Exception:
-            LOG.exception('Failed storing info cache', instance=instance)
-            LOG.debug(_('args: %s') % args)
-            LOG.debug(_('kwargs: %s') % kwargs)
+        update_instance_cache_with_nw_info(self, context, instance, nw_info,
+                                           *args, **kwargs)
 
         # return the original function's return value
         return res
     return wrapper
+
+
+def update_instance_cache_with_nw_info(api, context, instance,
+                                       nw_info=None,
+                                       *args,
+                                       **kwargs):
+
+    try:
+        nw_info = nw_info or api.get_instance_nw_info(context, instance)
+
+        # update cache
+        cache = {'network_info': nw_info.json()}
+        api.db.instance_info_cache_update(context, instance['uuid'], cache)
+    except Exception as e:
+        LOG.exception('Failed storing info cache', instance=instance)
+        LOG.debug(_('args: %s') % (args or {}))
+        LOG.debug(_('kwargs: %s') % (kwargs or {}))
 
 
 class API(base.Base):
@@ -195,12 +203,23 @@ class API(base.Base):
 
         ensures floating ip is allocated to the project in context
         """
-        rpc.call(context,
+        orig_instance_uuid = rpc.call(context,
                  FLAGS.network_topic,
                  {'method': 'associate_floating_ip',
                   'args': {'floating_address': floating_address,
                            'fixed_address': fixed_address,
                            'affect_auto_assigned': affect_auto_assigned}})
+
+        if orig_instance_uuid:
+            msg_dict = dict(address=floating_address,
+                            instance_id=orig_instance_uuid)
+            LOG.info(_('re-assign floating IP %(address)s from '
+                       'instance %(instance_id)s') % msg_dict)
+            orig_instance = self.db.instance_get_by_uuid(context,
+                                                         orig_instance_uuid)
+
+            # purge cached nw info for the original instance
+            update_instance_cache_with_nw_info(self, context, orig_instance)
 
     @refresh_cache
     def disassociate_floating_ip(self, context, instance, address,
