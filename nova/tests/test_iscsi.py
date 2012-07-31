@@ -85,7 +85,7 @@ class TgtAdmTestCase(test.TestCase, TargetAdminTestCase):
         self.flags(iscsi_helper='tgtadm')
         self.flags(volumes_dir="./")
         self.script_template = "\n".join([
-        "tgt-admin --conf ./blaa --update blaa",
+        "tgt-admin --execute --conf ./blaa --update blaa",
         "tgtadm --op show --lld=iscsi --mode=target --tid=1",
         "tgt-admin --conf ./blaa --delete blaa"])
 
