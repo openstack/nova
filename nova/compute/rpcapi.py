@@ -98,6 +98,10 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                remove_volume_connection()
         1.27 - Remove instance_uuid, add instance argument to
                rescue_instance()
+        1.28 - Remove instance_uuid, add instance argument to reset_network()
+        1.29 - Remove instance_uuid, add instance argument to resize_instance()
+        1.30 - Remove instance_uuid, add instance argument to resume_instance()
+        1.31 - Remove instance_uuid, add instance argument to revert_resize()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -354,25 +358,32 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.27')
 
     def reset_network(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('reset_network',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.28')
 
     def resize_instance(self, ctxt, instance, migration_id, image):
         topic = _compute_topic(self.topic, ctxt, None, instance)
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('resize_instance',
-                instance_uuid=instance['uuid'], migration_id=migration_id,
-                image=image), topic)
+                instance=instance_p, migration_id=migration_id,
+                image=image), topic, version='1.29')
 
     def resume_instance(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('resume_instance',
-                instance_uuid=instance['uuid']),
-                topic=_compute_topic(self.topic, ctxt, None, instance))
+                instance=instance_p),
+                topic=_compute_topic(self.topic, ctxt, None, instance),
+                version='1.30')
 
     def revert_resize(self, ctxt, instance, migration_id, host):
+        instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('revert_resize',
-                instance_uuid=instance['uuid'], migration_id=migration_id),
-                topic=_compute_topic(self.topic, ctxt, host, instance))
+                instance=instance_p, migration_id=migration_id),
+                topic=_compute_topic(self.topic, ctxt, host, instance),
+                version='1.31')
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
         self.cast(ctxt, self.make_msg('rollback_live_migration_at_destination',

@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.27'
+    RPC_API_VERSION = '1.31'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1413,7 +1413,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def revert_resize(self, context, instance_uuid, migration_id):
+    def revert_resize(self, context, migration_id, instance=None,
+                      instance_uuid=None):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
@@ -1421,16 +1422,17 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get_by_uuid(context,
-                migration_ref.instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context,
+                    migration_ref.instance_uuid)
 
         # NOTE(tr3buchet): tear down networks on destination host
-        self.network_api.setup_networks_on_host(context, instance_ref,
-                                                         teardown=True)
+        self.network_api.setup_networks_on_host(context, instance,
+                                                teardown=True)
 
-        network_info = self._get_instance_nw_info(context, instance_ref)
-        self.driver.destroy(instance_ref, self._legacy_nw_info(network_info))
-        self.compute_rpcapi.finish_revert_resize(context, instance_ref,
+        network_info = self._get_instance_nw_info(context, instance)
+        self.driver.destroy(instance, self._legacy_nw_info(network_info))
+        self.compute_rpcapi.finish_revert_resize(context, instance,
                 migration_ref['id'], migration_ref['source_compute'])
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
@@ -1532,53 +1534,55 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def resize_instance(self, context, instance_uuid, migration_id, image):
+    def resize_instance(self, context, migration_id, image, instance=None,
+                        instance_uuid=None):
         """Starts the migration of a running instance to another host."""
         migration_ref = self.db.migration_get(context, migration_id)
-        instance_ref = self.db.instance_get_by_uuid(context,
-                migration_ref.instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context,
+                    migration_ref.instance_uuid)
         instance_type_ref = self.db.instance_type_get(context,
                 migration_ref.new_instance_type_id)
 
         try:
-            network_info = self._get_instance_nw_info(context, instance_ref)
+            network_info = self._get_instance_nw_info(context, instance)
         except Exception, error:
             with excutils.save_and_reraise_exception():
                 msg = _('%s. Setting instance vm_state to ERROR')
                 LOG.error(msg % error)
-                self._set_instance_error_state(context, instance_uuid)
+                self._set_instance_error_state(context, instance['uuid'])
 
         self.db.migration_update(context,
                                  migration_id,
                                  {'status': 'migrating'})
 
-        self._instance_update(context, instance_uuid,
+        self._instance_update(context, instance['uuid'],
                               task_state=task_states.RESIZE_MIGRATING)
 
         self._notify_about_instance_usage(
-            context, instance_ref, "resize.start", network_info=network_info)
+            context, instance, "resize.start", network_info=network_info)
 
         try:
             disk_info = self.driver.migrate_disk_and_power_off(
-                    context, instance_ref, migration_ref['dest_host'],
+                    context, instance, migration_ref['dest_host'],
                     instance_type_ref, self._legacy_nw_info(network_info))
         except Exception, error:
             with excutils.save_and_reraise_exception():
                 LOG.error(_('%s. Setting instance vm_state to ERROR') % error,
-                          instance=instance_ref)
-                self._set_instance_error_state(context, instance_uuid)
+                          instance=instance)
+                self._set_instance_error_state(context, instance['uuid'])
 
         self.db.migration_update(context,
                                  migration_id,
                                  {'status': 'post-migrating'})
 
-        self._instance_update(context, instance_uuid,
+        self._instance_update(context, instance['uuid'],
                               task_state=task_states.RESIZE_MIGRATED)
 
-        self.compute_rpcapi.finish_resize(context, instance_ref, migration_id,
+        self.compute_rpcapi.finish_resize(context, instance, migration_id,
                 image, disk_info, migration_ref['dest_compute'])
 
-        self._notify_about_instance_usage(context, instance_ref, "resize.end",
+        self._notify_about_instance_usage(context, instance, "resize.end",
                                           network_info=network_info)
 
     def _finish_resize(self, context, instance, migration_ref, disk_info,
@@ -1676,7 +1680,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                   network_id)
 
         network_info = self._inject_network_info(context, instance=instance)
-        self.reset_network(context, instance['uuid'])
+        self.reset_network(context, instance)
 
         self._notify_about_instance_usage(
             context, instance, "create_ip.end", network_info=network_info)
@@ -1701,7 +1705,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._inject_network_info(context,
                                                  instance=instance)
-        self.reset_network(context, instance['uuid'])
+        self.reset_network(context, instance)
 
         self._notify_about_instance_usage(
             context, instance, "delete_ip.end", network_info=network_info)
@@ -1802,22 +1806,23 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def resume_instance(self, context, instance_uuid):
+    def resume_instance(self, context, instance=None, instance_uuid=None):
         """Resume the given suspended instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        LOG.audit(_('Resuming'), context=context, instance=instance_ref)
-        self.driver.resume(instance_ref)
+        LOG.audit(_('Resuming'), context=context, instance=instance)
+        self.driver.resume(instance)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_ref['uuid'],
+                              instance['uuid'],
                               power_state=current_power_state,
                               vm_state=vm_states.ACTIVE,
                               task_state=None)
 
-        self._notify_about_instance_usage(context, instance_ref, 'resume')
+        self._notify_about_instance_usage(context, instance, 'resume')
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
@@ -1860,9 +1865,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @checks_instance_lock
     @wrap_instance_fault
-    def reset_network(self, context, instance_uuid):
+    def reset_network(self, context, instance=None, instance_uuid=None):
         """Reset networking on the given instance."""
-        instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
         LOG.debug(_('Reset network'), context=context, instance=instance)
         self.driver.reset_network(instance)
 

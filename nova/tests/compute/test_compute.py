@@ -499,12 +499,11 @@ class ComputeTestCase(BaseTestCase):
 
     def test_suspend(self):
         """ensure instance can be suspended and resumed"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.suspend_instance(self.context,
-                instance=jsonutils.to_primitive(instance))
-        self.compute.resume_instance(self.context, instance_uuid)
+        self.compute.suspend_instance(self.context, instance=instance)
+        self.compute.resume_instance(self.context, instance=instance)
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_suspend_error(self):
@@ -707,19 +706,24 @@ class ComputeTestCase(BaseTestCase):
 
     def test_reset_network(self):
         """Ensure we can reset networking on an instance"""
-        called = {'reset': False}
+        called = {'count': 0}
 
         def fake_driver_reset_network(self, instance):
-            called['reset'] = True
+            called['count'] += 1
 
         self.stubs.Set(nova.virt.fake.FakeDriver, 'reset_network',
                        fake_driver_reset_network)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance_uuid)
-        self.compute.reset_network(self.context, instance_uuid)
-        self.assertTrue(called['reset'])
+
+        # Make sure it works with both an instance and instance_uuid
+        self.compute.reset_network(self.context, instance=instance)
+        self.compute.reset_network(self.context, instance_uuid=instance_uuid)
+
+        self.assertEqual(called['count'], 2)
+
         self.compute.terminate_instance(self.context, instance_uuid)
 
     def test_agent_update(self):
@@ -1201,8 +1205,8 @@ class ComputeTestCase(BaseTestCase):
         migration_ref = db.migration_get_by_instance_and_status(context,
                                                 instance['uuid'],
                                                 'pre-migrating')
-        self.compute.resize_instance(context, instance['uuid'],
-                                     migration_ref['id'], {})
+        self.compute.resize_instance(context, migration_ref['id'], {},
+                                     instance=instance)
         timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
@@ -1299,7 +1303,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'migrate_disk_and_power_off',
                        throw_up)
 
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
         self.compute.run_instance(self.context, instance['uuid'])
@@ -1311,7 +1315,7 @@ class ComputeTestCase(BaseTestCase):
 
         #verify
         self.assertRaises(test.TestingException, self.compute.resize_instance,
-                          context, instance['uuid'], migration_ref['id'], {})
+                          context, migration_ref['id'], {}, instance=instance)
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
@@ -1319,7 +1323,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
-        instance = self._create_fake_instance()
+        instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
         self.compute.run_instance(self.context, instance['uuid'])
@@ -1329,8 +1333,8 @@ class ComputeTestCase(BaseTestCase):
                                  filter_properties={})
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
-        self.compute.resize_instance(context, instance['uuid'],
-                migration_ref['id'], {})
+        self.compute.resize_instance(context, migration_ref['id'], {},
+                                     instance=instance)
         self.compute.terminate_instance(context, instance['uuid'])
 
     def test_finish_revert_resize(self):
@@ -1363,8 +1367,8 @@ class ComputeTestCase(BaseTestCase):
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
 
-        self.compute.resize_instance(context, inst_ref['uuid'],
-                migration_ref['id'], {})
+        self.compute.resize_instance(context, migration_ref['id'], {},
+                instance=jsonutils.to_primitive(inst_ref))
         self.compute.finish_resize(context,
                     migration_id=int(migration_ref['id']), disk_info={},
                     image={}, instance=jsonutils.to_primitive(inst_ref))
@@ -1376,11 +1380,11 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance_type_ref['flavorid'], '3')
 
         # Finally, revert and confirm the old flavor has been applied
-        self.compute.revert_resize(context, inst_ref['uuid'],
-                migration_ref['id'])
+        rpcinst = jsonutils.to_primitive(inst_ref)
+        self.compute.revert_resize(context,
+                migration_id=migration_ref['id'], instance=rpcinst)
         self.compute.finish_revert_resize(context,
-                migration_id=migration_ref['id'],
-                instance=jsonutils.to_primitive(inst_ref))
+                migration_id=migration_ref['id'], instance=rpcinst)
 
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
@@ -1416,7 +1420,7 @@ class ComputeTestCase(BaseTestCase):
                 'migrate_disk_and_power_off',
                 raise_migration_failure)
 
-        inst_ref = self._create_fake_instance()
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
         self.compute.run_instance(self.context, inst_ref['uuid'])
@@ -1426,7 +1430,7 @@ class ComputeTestCase(BaseTestCase):
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
         self.assertRaises(test.TestingException, self.compute.resize_instance,
-                          context, inst_ref['uuid'], migration_ref['id'], {})
+                          context, migration_ref['id'], {}, instance=inst_ref)
         inst_ref = db.instance_get_by_uuid(context, inst_ref['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(context, inst_ref['uuid'])
