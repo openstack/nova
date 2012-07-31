@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.34'
+    RPC_API_VERSION = '1.35'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1347,22 +1347,23 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def unrescue_instance(self, context, instance_uuid):
+    def unrescue_instance(self, context, instance=None, instance_uuid=None):
         """Rescue an instance on this host."""
-        LOG.audit(_('Unrescuing'), context=context,
-                  instance_uuid=instance_uuid)
         context = context.elevated()
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        network_info = self._get_instance_nw_info(context, instance_ref)
+        LOG.audit(_('Unrescuing'), context=context, instance=instance)
 
-        with self.error_out_instance_on_exception(context, instance_uuid):
-            self.driver.unrescue(instance_ref,
+        network_info = self._get_instance_nw_info(context, instance)
+
+        with self.error_out_instance_on_exception(context, instance['uuid']):
+            self.driver.unrescue(instance,
                                  self._legacy_nw_info(network_info))
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_uuid,
+                              instance['uuid'],
                               vm_state=vm_states.ACTIVE,
                               task_state=None,
                               power_state=current_power_state)

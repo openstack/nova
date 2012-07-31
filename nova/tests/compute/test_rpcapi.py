@@ -62,7 +62,7 @@ class ComputeRpcAPITestCase(test.TestCase):
             'resize_instance', 'resume_instance', 'revert_resize',
             'rollback_live_migration_at_destination', 'set_admin_password',
             'snapshot_instance', 'start_instance', 'stop_instance',
-            'suspend_instance', 'unpause_instance'
+            'suspend_instance', 'unpause_instance', 'unrescue_instance'
         ]
 
         if 'rpcapi_class' in kwargs:
@@ -336,7 +336,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_unrescue_instance(self):
         self._test_compute_api('unrescue_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='1.35')
 
     def test_change_instance_metadata(self):
         self._test_compute_api('change_instance_metadata', 'cast',
