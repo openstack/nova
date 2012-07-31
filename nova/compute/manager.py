@@ -1074,11 +1074,10 @@ class ComputeManager(manager.SchedulerDependentManager):
     def reboot_instance(self, context, instance=None, instance_uuid=None,
                         reboot_type="SOFT"):
         """Reboot an instance on this host."""
-        LOG.audit(_("Rebooting instance"), context=context,
-                  instance_uuid=instance_uuid)
         context = context.elevated()
         if not instance:
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
+        LOG.audit(_("Rebooting instance"), context=context, instance=instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
 
@@ -1093,17 +1092,17 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.warn(_('trying to reboot a non-running '
                      'instance: (state: %(state)s '
                      'expected: %(running)s)') % locals(),
-                     context=context, instance_uuid=instance_uuid)
+                     context=context, instance=instance)
 
         network_info = self._get_instance_nw_info(context, instance)
         try:
             self.driver.reboot(instance, self._legacy_nw_info(network_info),
-                    reboot_type)
+                               reboot_type)
         except Exception, exc:
             LOG.error(_('Cannot reboot instance: %(exc)s'), locals(),
-                    context=context, instance_uuid=instance_uuid)
-            self.add_instance_fault_from_exc(context, instance_uuid, exc,
-                    sys.exc_info())
+                      context=context, instance=instance)
+            self.add_instance_fault_from_exc(context, instance['uuid'], exc,
+                                             sys.exc_info())
             # Fall through and reset task_state to None
 
         current_power_state = self._get_power_state(context, instance)
