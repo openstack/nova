@@ -51,16 +51,12 @@ def get_session(autocommit=True, expire_on_commit=False):
     return session
 
 
-class SynchronousSwitchListener(sqlalchemy.interfaces.PoolListener):
-
+def synchronous_switch_listener(dbapi_conn, connection_rec):
     """Switch sqlite connections to non-synchronous mode"""
-
-    def connect(self, dbapi_con, con_record):
-        dbapi_con.execute("PRAGMA synchronous = OFF")
+    dbapi_conn.execute("PRAGMA synchronous = OFF")
 
 
-class MySQLPingListener(object):
-
+def ping_listener(dbapi_conn, connection_rec, connection_proxy):
     """
     Ensures that MySQL connections checked out of the
     pool are alive.
@@ -68,16 +64,14 @@ class MySQLPingListener(object):
     Borrowed from:
     http://groups.google.com/group/sqlalchemy/msg/a4ce563d802c929f
     """
-
-    def checkout(self, dbapi_con, con_record, con_proxy):
-        try:
-            dbapi_con.cursor().execute('select 1')
-        except dbapi_con.OperationalError, ex:
-            if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
-                LOG.warn('Got mysql server has gone away: %s', ex)
-                raise DisconnectionError("Database server went away")
-            else:
-                raise
+    try:
+        dbapi_conn.cursor().execute('select 1')
+    except dbapi_conn.OperationalError, ex:
+        if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
+            LOG.warn('Got mysql server has gone away: %s', ex)
+            raise DisconnectionError("Database server went away")
+        else:
+            raise
 
 
 def is_db_connection_error(args):
@@ -116,13 +110,14 @@ def get_engine():
                 engine_args["poolclass"] = StaticPool
                 engine_args["connect_args"] = {'check_same_thread': False}
 
-            if not FLAGS.sqlite_synchronous:
-                engine_args["listeners"] = [SynchronousSwitchListener()]
+        _ENGINE = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
 
         if 'mysql' in connection_dict.drivername:
-            engine_args['listeners'] = [MySQLPingListener()]
-
-        _ENGINE = sqlalchemy.create_engine(FLAGS.sql_connection, **engine_args)
+            sqlalchemy.event.listen(_ENGINE, 'checkout', ping_listener)
+        elif "sqlite" in connection_dict.drivername:
+            if not FLAGS.sqlite_synchronous:
+                sqlalchemy.event.listen(_ENGINE, 'connect',
+                                        synchronous_switch_listener)
 
         if (FLAGS.sql_connection_trace and
                 _ENGINE.dialect.dbapi.__name__ == 'MySQLdb'):
