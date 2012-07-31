@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.26'
+    RPC_API_VERSION = '1.27'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1320,28 +1320,33 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def rescue_instance(self, context, instance_uuid, **kwargs):
+    def rescue_instance(self, context, instance=None, instance_uuid=None,
+                        rescue_password=None):
         """
         Rescue an instance on this host.
         :param rescue_password: password to set on rescue instance
         """
-
-        LOG.audit(_('Rescuing'), context=context, instance_uuid=instance_uuid)
         context = context.elevated()
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance_uuid)
 
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
-        instance_ref.admin_pass = kwargs.get('rescue_password',
-                utils.generate_password(FLAGS.password_length))
-        network_info = self._get_instance_nw_info(context, instance_ref)
-        image_meta = _get_image_meta(context, instance_ref['image_ref'])
+        LOG.audit(_('Rescuing'), context=context, instance=instance)
 
-        with self.error_out_instance_on_exception(context, instance_uuid):
-            self.driver.rescue(context, instance_ref,
+        admin_pass = (rescue_password if rescue_password else
+                      utils.generate_password(FLAGS.password_length))
+        self.db.instance_update(context, instance['uuid'],
+                                dict(admin_pass=admin_pass))
+
+        network_info = self._get_instance_nw_info(context, instance)
+        image_meta = _get_image_meta(context, instance['image_ref'])
+
+        with self.error_out_instance_on_exception(context, instance['uuid']):
+            self.driver.rescue(context, instance,
                                self._legacy_nw_info(network_info), image_meta)
 
-        current_power_state = self._get_power_state(context, instance_ref)
+        current_power_state = self._get_power_state(context, instance)
         self._instance_update(context,
-                              instance_uuid,
+                              instance['uuid'],
                               vm_state=vm_states.RESCUED,
                               task_state=None,
                               power_state=current_power_state)
