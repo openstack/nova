@@ -272,7 +272,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.35'
+    RPC_API_VERSION = '1.36'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1371,12 +1371,14 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def change_instance_metadata(self, context, instance_uuid, diff):
+    def change_instance_metadata(self, context, diff, instance=None,
+                                 instance_uuid=None):
         """Update the metadata published to the instance."""
-        instance_ref = self.db.instance_get_by_uuid(context, instance_uuid)
+        if not instance:
+            instance = self.db.instance_get_by_uuid(context, instance)
         LOG.debug(_("Changing instance metadata according to %(diff)r") %
-                  locals(), instance=instance_ref)
-        self.driver.change_instance_metadata(context, instance_ref, diff)
+                  locals(), instance=instance)
+        self.driver.change_instance_metadata(context, instance, diff)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock

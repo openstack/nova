@@ -3382,7 +3382,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_instance_metadata(self):
         meta_changes = [None]
 
-        def fake_change_instance_metadata(inst, ctxt, instance, diff):
+        def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
+                                          instance_uuid=None):
             meta_changes[0] = diff
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
                        fake_change_instance_metadata)
