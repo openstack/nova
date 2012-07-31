@@ -38,7 +38,7 @@ ALL = [HVM, XEN, UML, EXE]
 
 
 def get_from_instance(instance):
-    mode = instance.vm_mode
+    mode = instance['vm_mode']
 
     if mode is None:
         return None

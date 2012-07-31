@@ -22,33 +22,28 @@ from nova.compute import vm_mode
 
 class ComputeVMModeTest(test.TestCase):
 
-    class testinstance(object):
-        def __init__(self, mode):
-            self.vm_mode = mode
-
     def test_case(self):
-        inst = ComputeVMModeTest.testinstance("HVM")
+        inst = dict(vm_mode="HVM")
         mode = vm_mode.get_from_instance(inst)
         self.assertEqual(mode, "hvm")
 
     def test_legacy_pv(self):
-        inst = ComputeVMModeTest.testinstance("pv")
+        inst = dict(vm_mode="pv")
         mode = vm_mode.get_from_instance(inst)
         self.assertEqual(mode, "xen")
 
     def test_legacy_hv(self):
-        inst = ComputeVMModeTest.testinstance("hv")
+        inst = dict(vm_mode="hv")
         mode = vm_mode.get_from_instance(inst)
         self.assertEqual(mode, "hvm")
 
     def test_bogus(self):
-        inst = ComputeVMModeTest.testinstance("wibble")
-
+        inst = dict(vm_mode="wibble")
         self.assertRaises(exception.Invalid,
                           vm_mode.get_from_instance,
                           inst)
 
     def test_good(self):
-        inst = ComputeVMModeTest.testinstance("hvm")
+        inst = dict(vm_mode="hvm")
         mode = vm_mode.get_from_instance(inst)
         self.assertEqual(mode, "hvm")
