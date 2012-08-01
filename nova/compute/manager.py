@@ -221,7 +221,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.40'
+    RPC_API_VERSION = '1.41'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -354,6 +354,16 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         return self.driver.refresh_security_group_members(security_group_id)
+
+    @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
+    def refresh_instance_security_rules(self, context, instance):
+        """Tell the virtualization driver to refresh security rules for
+        an instance.
+
+        Passes straight through to the virtualization driver.
+
+        """
+        return self.driver.refresh_instance_security_rules(instance)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     def refresh_provider_fw_rules(self, context, **kwargs):

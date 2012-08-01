@@ -2164,20 +2164,16 @@ class SecurityGroupAPI(base.Base):
 
         security_group = self.db.security_group_get(context, id)
 
-        hosts = set()
         for instance in security_group['instances']:
             if instance['host'] is not None:
-                hosts.add(instance['host'])
-
-        for host in hosts:
-            self.security_group_rpcapi.refresh_security_group_rules(context,
-                    security_group.id, host=host)
+                self.security_group_rpcapi.refresh_instance_security_rules(
+                        context, instance['host'], instance)
 
     def trigger_members_refresh(self, context, group_ids):
         """Called when a security group gains a new or loses a member.
 
-        Sends an update request to each compute node for whom this is
-        relevant.
+        Sends an update request to each compute node for each instance for
+        which this is relevant.
         """
         # First, we get the security group rules that reference these groups as
         # the grantee..
@@ -2188,7 +2184,7 @@ class SecurityGroupAPI(base.Base):
                                                                      context,
                                                                      group_id))
 
-        # ..then we distill the security groups to which they belong..
+        # ..then we distill the rules into the groups to which they belong..
         security_groups = set()
         for rule in security_group_rules:
             security_group = self.db.security_group_get(
@@ -2202,17 +2198,11 @@ class SecurityGroupAPI(base.Base):
             for instance in security_group['instances']:
                 instances.add(instance)
 
-        # ...then we find the hosts where they live...
-        hosts = set()
+        # ..then we send a request to refresh the rules for each instance.
         for instance in instances:
             if instance['host']:
-                hosts.add(instance['host'])
-
-        # ...and finally we tell these nodes to refresh their view of this
-        # particular security group.
-        for host in hosts:
-            self.security_group_rpcapi.refresh_security_group_members(context,
-                    group_id, host=host)
+                self.security_group_rpcapi.refresh_instance_security_rules(
+                        context, instance['host'], instance)
 
     def parse_cidr(self, cidr):
         if cidr:

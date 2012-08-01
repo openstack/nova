@@ -2173,6 +2173,9 @@ class LibvirtDriver(driver.ComputeDriver):
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
+    def refresh_instance_security_rules(self, instance):
+        self.firewall_driver.refresh_instance_security_rules(instance)
+
     def refresh_provider_fw_rules(self):
         self.firewall_driver.refresh_provider_fw_rules()
 

@@ -52,6 +52,7 @@ import nova.policy
 from nova import quota
 from nova.scheduler import driver as scheduler_driver
 from nova import test
+from nova.tests.db.fakes import FakeModel
 from nova.tests import fake_network
 from nova.tests.image import fake as fake_image
 from nova import utils
@@ -3917,6 +3918,134 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.inject_file(self.context, instance,
                                      "/tmp/test", "File Contents")
         db.instance_destroy(self.context, instance['uuid'])
+
+    def test_secgroup_refresh(self):
+        instance = self._create_fake_instance()
+
+        def rule_get(*args, **kwargs):
+            mock_rule = FakeModel({'parent_group_id': 1})
+            return [mock_rule]
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': [instance]})
+            return mock_group
+
+        self.stubs.Set(
+                   self.compute_api.db,
+                   'security_group_rule_get_by_security_group_grantee',
+                   rule_get)
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+                                  instance['host'])
+        rpc.cast(self.context, topic,
+                {"method": "refresh_instance_security_rules",
+                 "args": {'instance': jsonutils.to_primitive(instance)},
+                 "version": '1.41'})
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_members_refresh(self.context, [1])
+
+    def test_secgroup_refresh_once(self):
+        instance = self._create_fake_instance()
+
+        def rule_get(*args, **kwargs):
+            mock_rule = FakeModel({'parent_group_id': 1})
+            return [mock_rule]
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': [instance]})
+            return mock_group
+
+        self.stubs.Set(
+                   self.compute_api.db,
+                   'security_group_rule_get_by_security_group_grantee',
+                   rule_get)
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+                                  instance['host'])
+        rpc.cast(self.context, topic,
+                {"method": "refresh_instance_security_rules",
+                 "args": {'instance': jsonutils.to_primitive(instance)},
+                 "version": '1.41'})
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_members_refresh(self.context, [1, 2])
+
+    def test_secgroup_refresh_none(self):
+        def rule_get(*args, **kwargs):
+            mock_rule = FakeModel({'parent_group_id': 1})
+            return [mock_rule]
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': []})
+            return mock_group
+
+        self.stubs.Set(
+                   self.compute_api.db,
+                   'security_group_rule_get_by_security_group_grantee',
+                   rule_get)
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_members_refresh(self.context, [1])
+
+    def test_secrule_refresh(self):
+        instance = self._create_fake_instance()
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': [instance]})
+            return mock_group
+
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+                                  instance['host'])
+        rpc.cast(self.context, topic,
+                {"method": "refresh_instance_security_rules",
+                 "args": {'instance': jsonutils.to_primitive(instance)},
+                 "version": '1.41'})
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_rules_refresh(self.context, [1])
+
+    def test_secrule_refresh_once(self):
+        instance = self._create_fake_instance()
+
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': [instance]})
+            return mock_group
+
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        topic = rpc.queue_get_for(self.context, FLAGS.compute_topic,
+                                  instance['host'])
+        rpc.cast(self.context, topic,
+                {"method": "refresh_instance_security_rules",
+                 "args": {'instance': jsonutils.to_primitive(instance)},
+                 "version": '1.41'})
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
+
+    def test_secrule_refresh_none(self):
+        def group_get(*args, **kwargs):
+            mock_group = FakeModel({'instances': []})
+            return mock_group
+
+        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.mox.StubOutWithMock(rpc, 'cast')
+        self.mox.ReplayAll()
+
+        self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
 
 
 def fake_rpc_method(context, topic, msg, do_cast=True):

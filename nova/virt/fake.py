@@ -213,6 +213,9 @@ class FakeDriver(driver.ComputeDriver):
     def refresh_security_group_members(self, security_group_id):
         return True
 
+    def refresh_instance_security_rules(self, instance):
+        return True
+
     def refresh_provider_fw_rules(self):
         pass
 

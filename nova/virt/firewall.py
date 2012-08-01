@@ -75,6 +75,14 @@ class FirewallDriver(object):
         the security group."""
         raise NotImplementedError()
 
+    def refresh_instance_security_rules(self, instance):
+        """Refresh security group rules from data store
+
+        Gets called when an instance gets added to or removed from
+        the security group the instance is a member of or if the
+        group gains or looses a rule."""
+        raise NotImplementedError()
+
     def refresh_provider_fw_rules(self):
         """Refresh common rules for all hosts/instances from data store.
 
@@ -391,11 +399,20 @@ class IptablesFirewallDriver(FirewallDriver):
         self.do_refresh_security_group_rules(security_group)
         self.iptables.apply()
 
+    def refresh_instance_security_rules(self, instance):
+        self.do_refresh_instance_rules(instance)
+        self.iptables.apply()
+
     @utils.synchronized('iptables', external=True)
     def do_refresh_security_group_rules(self, security_group):
         for instance in self.instances.values():
             self.remove_filters_for_instance(instance)
             self.add_filters_for_instance(instance)
+
+    @utils.synchronized('iptables', external=True)
+    def do_refresh_instance_rules(self, instance):
+        self.remove_filters_for_instance(instance)
+        self.add_filters_for_instance(instance)
 
     def refresh_provider_fw_rules(self):
         """See :class:`FirewallDriver` docs."""

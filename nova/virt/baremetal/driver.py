@@ -655,6 +655,10 @@ class BareMetalDriver(driver.ComputeDriver):
         # Bare metal doesn't currently support security groups
         pass
 
+    def refresh_instance_security_rules(self, instance):
+        # Bare metal doesn't currently support security groups
+        pass
+
     def update_available_resource(self, ctxt, host):
         """Updates compute manager resource info on ComputeNode table.
 
