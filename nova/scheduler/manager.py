@@ -53,7 +53,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    RPC_API_VERSION = '1.0'
+    RPC_API_VERSION = '1.1'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -138,24 +138,42 @@ class SchedulerManager(manager.Manager):
                 if reservations:
                     QUOTAS.rollback(context, reservations)
 
-    def prep_resize(self, context, topic, *args, **kwargs):
+    def prep_resize(self, context, image, update_db, request_spec,
+                    filter_properties, instance=None, instance_uuid=None,
+                    instance_type=None, instance_type_id=None, topic=None):
         """Tries to call schedule_prep_resize on the driver.
         Sets instance vm_state to ACTIVE on NoHostFound
         Sets vm_state to ERROR on other exceptions
         """
-        args = (context,) + args
+        if not instance:
+            instance = db.instance_get_by_uuid(context, instance_uuid)
+
+        if not instance_type:
+            instance_type = db.instance_type_get(context, instance_type_id)
+
         try:
-            return self.driver.schedule_prep_resize(*args, **kwargs)
+            kwargs = {
+                'context': context,
+                'image': image,
+                'update_db': update_db,
+                'request_spec': request_spec,
+                'filter_properties': filter_properties,
+                'instance': instance,
+                'instance_type': instance_type,
+            }
+            return self.driver.schedule_prep_resize(**kwargs)
         except exception.NoValidHost as ex:
             self._set_vm_state_and_notify('prep_resize',
                                          {'vm_state': vm_states.ACTIVE,
                                           'task_state': None},
-                                         context, ex, *args, **kwargs)
+                                         context, ex,
+                                         request_spec=request_spec)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('prep_resize',
                                              {'vm_state': vm_states.ERROR},
-                                             context, ex, *args, **kwargs)
+                                             context, ex,
+                                             request_spec=request_spec)
 
     def _set_vm_state_and_notify(self, method, updates, context, ex,
                                 *args, **kwargs):

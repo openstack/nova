@@ -70,7 +70,7 @@ class FilterScheduler(driver.Scheduler):
 
         filter_properties = kwargs.pop('filter_properties', {})
         weighted_hosts = self._schedule(context, "compute", request_spec,
-                filter_properties, *args, **kwargs)
+                                        filter_properties)
 
         if not weighted_hosts:
             raise exception.NoValidHost(reason="")
@@ -103,7 +103,8 @@ class FilterScheduler(driver.Scheduler):
 
         return instances
 
-    def schedule_prep_resize(self, context, request_spec, *args, **kwargs):
+    def schedule_prep_resize(self, context, image, update_db, request_spec,
+                             filter_properties, instance, instance_type):
         """Select a target for resize.
 
         Selects a target host for the instance, post-resize, and casts
@@ -111,18 +112,15 @@ class FilterScheduler(driver.Scheduler):
         """
 
         hosts = self._schedule(context, 'compute', request_spec,
-                               *args, **kwargs)
+                               filter_properties)
         if not hosts:
             raise exception.NoValidHost(reason="")
         host = hosts.pop(0)
 
-        # NOTE(comstud): Make sure we do not pass this through.  It
-        # contains an instance of RpcContext that cannot be serialized.
-        kwargs.pop('filter_properties', None)
-
         # Forward off to the host
         driver.cast_to_compute_host(context, host.host_state.host,
-                'prep_resize', **kwargs)
+                'prep_resize', instance_uuid=instance['uuid'],
+                instance_type_id=instance_type['id'], image=image)
 
     def _provision_resource(self, context, weighted_host, request_spec,
             reservations, filter_properties, kwargs):
@@ -207,8 +205,7 @@ class FilterScheduler(driver.Scheduler):
             msg = _("Exceeded max scheduling attempts %d ") % max_attempts
             raise exception.NoValidHost(msg, instance_uuid=uuid)
 
-    def _schedule(self, context, topic, request_spec, filter_properties, *args,
-            **kwargs):
+    def _schedule(self, context, topic, request_spec, filter_properties):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """

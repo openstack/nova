@@ -149,7 +149,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
         self.mox.StubOutWithMock(driver, 'encode_instance')
         # instance 1
-        self.driver._schedule(ctxt, 'compute', request_spec).AndReturn('host')
+        self.driver._schedule(ctxt, 'compute', request_spec,
+                              {}).AndReturn('host')
         self.driver.create_instance_db_entry(
             ctxt, mox.Func(_has_launch_index(0)), None
             ).WithSideEffects(_add_uuid(1)).AndReturn(instance1)
@@ -157,7 +158,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                     instance_uuid=instance1['uuid'])
         driver.encode_instance(instance1).AndReturn(instance1)
         # instance 2
-        self.driver._schedule(ctxt, 'compute', request_spec).AndReturn('host')
+        self.driver._schedule(ctxt, 'compute', request_spec,
+                              {}).AndReturn('host')
         self.driver.create_instance_db_entry(
             ctxt, mox.Func(_has_launch_index(1)), None
             ).WithSideEffects(_add_uuid(2)).AndReturn(instance2)

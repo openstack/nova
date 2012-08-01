@@ -179,7 +179,8 @@ class Scheduler(object):
         """Must override schedule method for scheduler to work."""
         raise NotImplementedError(_("Must implement a fallback schedule"))
 
-    def schedule_prep_resize(self, context, request_spec, *_args, **_kwargs):
+    def schedule_prep_resize(self, context, image, update_db, request_spec,
+                             filter_properties, instance, instance_type):
         """Must override schedule_prep_resize method for scheduler to work."""
         msg = _("Driver must implement schedule_prep_resize")
         raise NotImplementedError(msg)

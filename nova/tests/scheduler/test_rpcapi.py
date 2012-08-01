@@ -40,8 +40,9 @@ class SchedulerRpcAPITestCase(test.TestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = scheduler_rpcapi.SchedulerAPI()
         expected_retval = 'foo' if method == 'call' else None
+        expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
         expected_msg = rpcapi.make_msg(method, **kwargs)
-        expected_msg['version'] = rpcapi.BASE_RPC_API_VERSION
+        expected_msg['version'] = expected_version
         if rpc_method == 'cast' and method == 'run_instance':
             kwargs['call'] = False
 
@@ -81,10 +82,10 @@ class SchedulerRpcAPITestCase(test.TestCase):
 
     def test_prep_resize(self):
         self._test_scheduler_api('prep_resize', rpc_method='cast',
-                topic='fake_topic', instance_uuid='fake_uuid',
-                instance_type_id='fake_type_id', image='fake_image',
+                instance='fake_instance',
+                instance_type='fake_type', image='fake_image',
                 update_db='fake_update_db', request_spec='fake_request_spec',
-                filter_properties='fake_props')
+                filter_properties='fake_props', version='1.1')
 
     def test_show_host_resources(self):
         self._test_scheduler_api('show_host_resources', rpc_method='call',

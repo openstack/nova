@@ -245,18 +245,23 @@ class SchedulerManagerTestCase(test.TestCase):
 
         request_spec = {'instance_properties':
                 {'uuid': fake_instance_uuid}}
-        self.fake_kwargs['request_spec'] = request_spec
-
-        self.manager.driver.schedule_prep_resize(self.context,
-                *self.fake_args, **self.fake_kwargs).AndRaise(
-                        exception.NoValidHost(reason=""))
+        kwargs = {
+                'context': self.context,
+                'image': 'fake_image',
+                'update_db': True,
+                'request_spec': request_spec,
+                'filter_properties': 'fake_props',
+                'instance': 'fake_instance',
+                'instance_type': 'fake_type',
+        }
+        self.manager.driver.schedule_prep_resize(**kwargs).AndRaise(
+                exception.NoValidHost(reason=""))
         db.instance_update_and_get_original(self.context, fake_instance_uuid,
                 {"vm_state": vm_states.ACTIVE, "task_state": None}).AndReturn(
                         (inst, inst))
 
         self.mox.ReplayAll()
-        self.manager.prep_resize(self.context, self.topic,
-                *self.fake_args, **self.fake_kwargs)
+        self.manager.prep_resize(**kwargs)
 
     def test_prep_resize_exception_host_in_error_state_and_raise(self):
         """Test that a NoValidHost exception for prep_resize puts
@@ -270,10 +275,17 @@ class SchedulerManagerTestCase(test.TestCase):
 
         request_spec = {'instance_properties':
                 {'uuid': fake_instance_uuid}}
-        self.fake_kwargs['request_spec'] = request_spec
+        kwargs = {
+                'context': self.context,
+                'image': 'fake_image',
+                'update_db': True,
+                'request_spec': request_spec,
+                'filter_properties': 'fake_props',
+                'instance': 'fake_instance',
+                'instance_type': 'fake_type',
+        }
 
-        self.manager.driver.schedule_prep_resize(self.context,
-                *self.fake_args, **self.fake_kwargs).AndRaise(
+        self.manager.driver.schedule_prep_resize(**kwargs).AndRaise(
                 self.AnException('something happened'))
 
         inst = {
@@ -286,8 +298,7 @@ class SchedulerManagerTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.assertRaises(self.AnException, self.manager.prep_resize,
-                         self.context, self.topic,
-                         *self.fake_args, **self.fake_kwargs)
+                          **kwargs)
 
 
 class SchedulerTestCase(test.TestCase):
@@ -772,8 +783,8 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
 
         self.assertRaises(NotImplementedError,
                          self.driver.schedule_prep_resize,
-                         self.context, fake_request_spec,
-                         *fake_args, **fake_kwargs)
+                         self.context, {}, False,
+                         fake_request_spec, {}, {}, {})
 
 
 class SchedulerDriverModuleTestCase(test.TestCase):

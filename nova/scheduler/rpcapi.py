@@ -19,6 +19,7 @@ Client side of the scheduler manager RPC API.
 """
 
 from nova import flags
+from nova.openstack.common import jsonutils
 import nova.openstack.common.rpc.proxy
 
 
@@ -31,6 +32,10 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     API version history:
 
         1.0 - Initial version.
+        1.1 - Changes to prep_resize():
+                - remove instance_uuid, add instance
+                - remove instance_type_id, add instance_type
+                - remove topic, it was unused
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -51,12 +56,14 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 filter_properties=filter_properties,
                 reservations=reservations))
 
-    def prep_resize(self, ctxt, topic, instance_uuid, instance_type_id, image,
+    def prep_resize(self, ctxt, instance, instance_type, image,
             update_db, request_spec, filter_properties):
-        self.cast(ctxt, self.make_msg('prep_resize', topic=topic,
-                instance_uuid=instance_uuid, instance_type_id=instance_type_id,
+        instance_p = jsonutils.to_primitive(instance)
+        instance_type_p = jsonutils.to_primitive(instance_type)
+        self.cast(ctxt, self.make_msg('prep_resize',
+                instance=instance_p, instance_type=instance_type_p,
                 image=image, update_db=update_db, request_spec=request_spec,
-                filter_properties=filter_properties))
+                filter_properties=filter_properties), version='1.1')
 
     def show_host_resources(self, ctxt, host):
         return self.call(ctxt, self.make_msg('show_host_resources', host=host))

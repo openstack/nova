@@ -30,15 +30,14 @@ from nova.scheduler import driver
 class ChanceScheduler(driver.Scheduler):
     """Implements Scheduler as a random node selector."""
 
-    def _filter_hosts(self, request_spec, hosts, **kwargs):
+    def _filter_hosts(self, request_spec, hosts, filter_properties):
         """Filter a list of hosts based on request_spec."""
 
-        filter_properties = kwargs.get('filter_properties', {})
         ignore_hosts = filter_properties.get('ignore_hosts', [])
         hosts = [host for host in hosts if host not in ignore_hosts]
         return hosts
 
-    def _schedule(self, context, topic, request_spec, **kwargs):
+    def _schedule(self, context, topic, request_spec, filter_properties):
         """Picks a host that is up at random."""
 
         elevated = context.elevated()
@@ -47,7 +46,7 @@ class ChanceScheduler(driver.Scheduler):
             msg = _("Is the appropriate service running?")
             raise exception.NoValidHost(reason=msg)
 
-        hosts = self._filter_hosts(request_spec, hosts, **kwargs)
+        hosts = self._filter_hosts(request_spec, hosts, filter_properties)
         if not hosts:
             msg = _("Could not find another compute")
             raise exception.NoValidHost(reason=msg)
@@ -57,16 +56,19 @@ class ChanceScheduler(driver.Scheduler):
     def schedule(self, context, topic, method, *_args, **kwargs):
         """Picks a host that is up at random."""
 
-        host = self._schedule(context, topic, None, **kwargs)
+        filter_properties = kwargs.get('filter_properties', {})
+        host = self._schedule(context, topic, None, filter_properties)
         driver.cast_to_host(context, topic, host, method, **kwargs)
 
     def schedule_run_instance(self, context, request_spec, reservations,
                               *_args, **kwargs):
         """Create and run an instance or instances"""
         num_instances = request_spec.get('num_instances', 1)
+        filter_properties = kwargs.get('filter_properties', {})
         instances = []
         for num in xrange(num_instances):
-            host = self._schedule(context, 'compute', request_spec, **kwargs)
+            host = self._schedule(context, 'compute', request_spec,
+                                  filter_properties)
             request_spec['instance_properties']['launch_index'] = num
             instance = self.create_instance_db_entry(context, request_spec,
                                                      reservations)
@@ -79,7 +81,11 @@ class ChanceScheduler(driver.Scheduler):
             del request_spec['instance_properties']['uuid']
         return instances
 
-    def schedule_prep_resize(self, context, request_spec, *args, **kwargs):
+    def schedule_prep_resize(self, context, image, update_db, request_spec,
+                             filter_properties, instance, instance_type):
         """Select a target for resize."""
-        host = self._schedule(context, 'compute', request_spec, **kwargs)
-        driver.cast_to_compute_host(context, host, 'prep_resize', **kwargs)
+        host = self._schedule(context, 'compute', request_spec,
+                              filter_properties)
+        driver.cast_to_compute_host(context, host, 'prep_resize',
+                instance_uuid=instance['uuid'],
+                instance_type_id=instance_type['id'], image=image)
