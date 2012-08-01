@@ -42,8 +42,8 @@ class DbApiTestCase(test.TestCase):
         args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
         db.instance_create(self.context, args)
         db.instance_create(self.context, args)
-        result = db.instance_get_all_by_filters(self.context, {})
-        self.assertTrue(2, len(result))
+        result = db.instance_get_all_by_filters(self.context.elevated(), {})
+        self.assertEqual(2, len(result))
 
     def test_instance_get_all_by_filters_deleted(self):
         args1 = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
