@@ -1509,8 +1509,9 @@ class API(base.Base):
                     instance,
                     task_state=task_states.UPDATING_PASSWORD)
 
-        self.compute_rpcapi.set_admin_password(context, instance=instance,
-                new_pass=password)
+        self.compute_rpcapi.set_admin_password(context,
+                                               instance=instance,
+                                               new_pass=password)
 
     @wrap_check_policy
     def inject_file(self, context, instance, path, file_contents):

@@ -638,14 +638,15 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.virt.fake.FakeDriver, 'get_info',
                        fake_driver_get_info)
 
-        self.assertRaises(exception.Invalid,
+        self.assertRaises(exception.InstancePasswordSetFailed,
                           self.compute.set_admin_password,
                           self.context,
                           instance=instance)
         self.compute.terminate_instance(self.context, instance['uuid'])
 
-    def test_set_admin_password_driver_error(self):
-        """Ensure error is raised admin password set"""
+    def _do_test_set_admin_password_driver_error(self, exc, expected_vm_state,
+                                                 expected_task_state):
+        """Ensure expected exception is raised if set_admin_password fails"""
 
         def fake_sleep(_time):
             pass
@@ -653,7 +654,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(time, 'sleep', fake_sleep)
 
         def fake_driver_set_pass(self2, _instance, _pwd):
-            raise exception.NotAuthorized(_('Internal error'))
+            raise exc
 
         self.stubs.Set(nova.virt.fake.FakeDriver, 'set_admin_password',
                        fake_driver_set_pass)
@@ -669,16 +670,36 @@ class ComputeTestCase(BaseTestCase):
 
         #error raised from the driver should not reveal internal information
         #so a new error is raised
-        self.assertRaises(exception.NovaException,
+        self.assertRaises(exception.InstancePasswordSetFailed,
                           self.compute.set_admin_password,
                           self.context,
                           instance=jsonutils.to_primitive(inst_ref))
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
-        self.assertEqual(inst_ref['task_state'], task_states.UPDATING_PASSWORD)
+        self.assertEqual(inst_ref['vm_state'], expected_vm_state)
+        self.assertEqual(inst_ref['task_state'], expected_task_state)
 
         self.compute.terminate_instance(self.context, inst_ref['uuid'])
+
+    def test_set_admin_password_driver_not_authorized(self):
+        """
+        Ensure expected exception is raised if set_admin_password not
+        authorized.
+        """
+        exc = exception.NotAuthorized(_('Internal error'))
+        self._do_test_set_admin_password_driver_error(exc,
+                                                vm_states.ERROR,
+                                                task_states.UPDATING_PASSWORD)
+
+    def test_set_admin_password_driver_not_implemented(self):
+        """
+        Ensure expected exception is raised if set_admin_password not
+        implemented by driver.
+        """
+        exc = NotImplementedError()
+        self._do_test_set_admin_password_driver_error(exc,
+                                                      vm_states.ACTIVE,
+                                                      None)
 
     def test_inject_file(self):
         """Ensure we can write a file to an instance"""
@@ -2710,11 +2731,17 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
         self.assertEqual(inst_ref['task_state'], None)
 
+        def fake_rpc_method(context, topic, msg, do_cast=True):
+            self.assertFalse(do_cast)
+
+        self.stubs.Set(rpc, 'call', fake_rpc_method)
+
         self.compute_api.set_admin_password(self.context, inst_ref)
 
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
-        self.assertEqual(inst_ref['task_state'], task_states.UPDATING_PASSWORD)
+        self.assertEqual(inst_ref['task_state'],
+                         task_states.UPDATING_PASSWORD)
 
         self.compute.terminate_instance(self.context, instance_uuid)
 

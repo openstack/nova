@@ -1085,6 +1085,12 @@ class InstanceTypeCreateFailed(NovaException):
     message = _("Unable to create instance type")
 
 
+class InstancePasswordSetFailed(NovaException):
+    message = _("Failed to set admin password on %(instance)s "
+                "because %(reason)s")
+    safe = True
+
+
 class SolidFireAPIException(NovaException):
     message = _("Bad response from SolidFire API")
 

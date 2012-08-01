@@ -411,7 +411,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
 
     def set_admin_password(self, ctxt, instance, new_pass):
         instance_p = jsonutils.to_primitive(instance)
-        self.cast(ctxt, self.make_msg('set_admin_password',
+        return self.call(ctxt, self.make_msg('set_admin_password',
                 instance=instance_p, new_pass=new_pass),
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='1.33')

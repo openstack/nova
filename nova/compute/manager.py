@@ -1240,7 +1240,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       task_state=None)
                 _msg = _('Failed to set admin password. Instance %s is not'
                          ' running') % instance["uuid"]
-                raise exception.Invalid(_msg)
+                raise exception.InstancePasswordSetFailed(
+                                                       instance=instance_uuid,
+                                                       reason=_msg)
             else:
                 try:
                     self.driver.set_admin_password(instance, new_pass)
@@ -1252,23 +1254,29 @@ class ComputeManager(manager.SchedulerDependentManager):
                 except NotImplementedError:
                     # NOTE(dprince): if the driver doesn't implement
                     # set_admin_password we break to avoid a loop
-                    LOG.warn(_('set_admin_password is not implemented '
-                             'by this driver.'), instance=instance)
+                    _msg = _('set_admin_password is not implemented '
+                             'by this driver.')
+                    LOG.warn(_msg, instance=instance)
                     self._instance_update(context,
                                           instance['uuid'],
                                           task_state=None)
-                    break
+                    raise exception.InstancePasswordSetFailed(
+                                                       instance=instance_uuid,
+                                                       reason=_msg)
                 except Exception, e:
                     # Catch all here because this could be anything.
-                    LOG.exception(e, instance=instance)
+                    LOG.exception(_('set_admin_password failed: %s') % e,
+                                  instance=instance)
                     if i == max_tries - 1:
                         self._set_instance_error_state(context,
                                                        instance['uuid'])
                         # We create a new exception here so that we won't
                         # potentially reveal password information to the
                         # API caller.  The real exception is logged above
-                        _msg = _('Error setting admin password')
-                        raise exception.NovaException(_msg)
+                        _msg = _('error setting admin password')
+                        raise exception.InstancePasswordSetFailed(
+                                                       instance=instance_uuid,
+                                                       reason=_msg)
                     time.sleep(1)
                     continue
 

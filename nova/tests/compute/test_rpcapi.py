@@ -298,7 +298,7 @@ class ComputeRpcAPITestCase(test.TestCase):
                 version='1.32')
 
     def test_set_admin_password(self):
-        self._test_compute_api('set_admin_password', 'cast',
+        self._test_compute_api('set_admin_password', 'call',
                 instance=self.fake_instance, new_pass='pw', version='1.33')
 
     def test_set_host_enabled(self):
