@@ -1132,7 +1132,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               power_state=current_power_state)
 
         LOG.audit(_('instance snapshotting'), context=context,
-                  instance_uuid=instance_uuid)
+                  instance=instance)
 
         if instance['power_state'] != power_state.RUNNING:
             state = instance['power_state']
@@ -1140,7 +1140,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.warn(_('trying to snapshot a non-running '
                        'instance: (state: %(state)s '
                        'expected: %(running)s)') % locals(),
-                     instance_uuid=instance_uuid)
+                     instance=instance)
 
         self._notify_about_instance_usage(
                 context, instance, "snapshot.start")
@@ -1155,7 +1155,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.ImageRotationNotAllowed()
 
         elif image_type == 'backup' and rotation:
-            self.rotate_backups(context, instance_uuid, backup_type, rotation)
+            self._rotate_backups(context, instance, backup_type, rotation)
 
         elif image_type == 'backup':
             raise exception.RotationRequiredForBackup()
@@ -1164,7 +1164,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance, "snapshot.end")
 
     @wrap_instance_fault
-    def rotate_backups(self, context, instance_uuid, backup_type, rotation):
+    def _rotate_backups(self, context, instance, backup_type, rotation):
         """Delete excess backups associated to an instance.
 
         Instances are allowed a fixed number of backups (the rotation number);
@@ -1172,7 +1172,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         threshold.
 
         :param context: security context
-        :param instance_uuid: string representing uuid of instance
+        :param instance: Instance dict
         :param backup_type: daily | weekly
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
@@ -1193,23 +1193,23 @@ class ComputeManager(manager.SchedulerDependentManager):
         image_service = glance.get_default_image_service()
         filters = {'property-image_type': 'backup',
                    'property-backup_type': backup_type,
-                   'property-instance_uuid': instance_uuid}
+                   'property-instance_uuid': instance['uuid']}
 
         images = fetch_images()
         num_images = len(images)
         LOG.debug(_("Found %(num_images)d images (rotation: %(rotation)d)")
-                  % locals(), instance_uuid=instance_uuid)
+                  % locals(), instance=instance)
         if num_images > rotation:
             # NOTE(sirp): this deletes all backups that exceed the rotation
             # limit
             excess = len(images) - rotation
             LOG.debug(_("Rotating out %d backups") % excess,
-                      instance_uuid=instance_uuid)
+                      instance=instance)
             for i in xrange(excess):
                 image = images.pop()
                 image_id = image['id']
                 LOG.debug(_("Deleting image %s") % image_id,
-                          instance_uuid=instance_uuid)
+                          instance=instance)
                 image_service.delete(context, image_id)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
