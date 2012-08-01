@@ -1239,7 +1239,7 @@ class CloudTestCase(test.TestCase):
                 if 'snapshot_id' in bdm:
                     snap = db.snapshot_create(self.context,
                                               {'id': bdm['snapshot_id'],
-                                               'volume_id': 76543210,
+                                               'volume_id': 01234567,
                                                'status': "available",
                                                'volume_size': 1})
                     snapshots.append(snap['id'])
