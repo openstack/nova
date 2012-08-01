@@ -1889,8 +1889,11 @@ def instance_info_cache_update(context, instance_uuid, values,
     session = session or get_session()
     info_cache = instance_info_cache_get(context, instance_uuid,
                                          session=session)
-
     if info_cache:
+        # NOTE(tr3buchet): let's leave it alone if it's already deleted
+        if info_cache['deleted']:
+            return info_cache
+
         info_cache.update(values)
         info_cache.save(session=session)
     else:
