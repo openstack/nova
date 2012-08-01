@@ -1549,7 +1549,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         else:
             call_func = self._setup_network_on_host
 
-        instance = self.db.instance_by(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         vifs = self.db.virtual_interface_get_by_instance(context,
                                                          instance['uuid'])
         for vif in vifs:
