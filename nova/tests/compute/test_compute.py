@@ -766,26 +766,6 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance=instance)
 
-    def test_agent_update(self):
-        """Ensure instance can have its agent updated"""
-        called = {'agent_update': False}
-
-        def fake_driver_agent_update(self2, instance, url, md5hash):
-            called['agent_update'] = True
-            self.assertEqual(url, 'http://fake/url/')
-            self.assertEqual(md5hash, 'fakehash')
-
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'agent_update',
-                       fake_driver_agent_update)
-
-        instance = self._create_fake_instance()
-        self.compute.run_instance(self.context, instance['uuid'])
-        self.compute.agent_update(self.context, instance['uuid'],
-                                  'http://fake/url/', 'fakehash')
-        self.assertTrue(called['agent_update'])
-        self.compute.terminate_instance(self.context,
-                instance=jsonutils.to_primitive(instance))
-
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
         instance = jsonutils.to_primitive(self._create_fake_instance())

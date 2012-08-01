@@ -259,12 +259,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                     base64.b64encode('testcontents'))
 
     @catch_notimplementederror
-    def test_agent_update(self):
-        instance_ref, network_info = self._get_running_instance()
-        self.connection.agent_update(instance_ref, 'http://www.openstack.org/',
-                                     'd41d8cd98f00b204e9800998ecf8427e')
-
-    @catch_notimplementederror
     def test_resume_state_on_host_boot(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.resume_state_on_host_boot(self.ctxt, instance_ref,

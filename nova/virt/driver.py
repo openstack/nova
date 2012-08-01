@@ -539,19 +539,6 @@ class ComputeDriver(object):
         """
         pass
 
-    def agent_update(self, instance, url, md5hash):
-        """
-        Update agent on the specified instance.
-
-        The first parameter is an instance of nova.compute.service.Instance,
-        and so the instance is being specified as instance.name. The second
-        parameter is the URL of the agent to be fetched and updated on the
-        instance; the third is the md5 hash of the file for verification
-        purposes.
-        """
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
-
     def inject_network_info(self, instance, nw_info):
         """inject network info for specified instance"""
         # TODO(Vek): Need to pass context in for access to auth_token
