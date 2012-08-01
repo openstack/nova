@@ -1770,7 +1770,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def get_diagnostics(self, context, instance_uuid=None, instance=None):
+    def get_diagnostics(self, context, instance=None, instance_uuid=None):
         """Retrieve diagnostics for an instance on this host."""
         if not instance:
             instance = self.db.instance_get_by_uuid(context, instance_uuid)
