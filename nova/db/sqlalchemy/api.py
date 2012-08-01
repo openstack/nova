@@ -1521,7 +1521,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir):
             v = getattr(instance, filter_name)
         except AttributeError:
             return True
-        if v and filter_re.match(str(v)):
+        if v and filter_re.match(unicode(v)):
             return True
         return False
 
