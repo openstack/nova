@@ -989,16 +989,20 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             LOG.debug(_('Starting VLAN inteface %s'), interface)
             _execute('ip', 'link', 'add', 'link', bridge_interface,
                      'name', interface, 'type', 'vlan',
-                     'id', vlan_num, run_as_root=True)
+                     'id', vlan_num, run_as_root=True,
+                     check_exit_code=[0, 2, 254])
             # (danwent) the bridge will inherit this address, so we want to
             # make sure it is the value set from the NetworkManager
             if mac_address:
                 _execute('ip', 'link', 'set', interface, 'address',
-                         mac_address, run_as_root=True)
-            _execute('ip', 'link', 'set', interface, 'up', run_as_root=True)
+                         mac_address, run_as_root=True,
+                         check_exit_code=[0, 2, 254])
+            _execute('ip', 'link', 'set', interface, 'up', run_as_root=True,
+                     check_exit_code=[0, 2, 254])
             if FLAGS.network_device_mtu:
                 _execute('ip', 'link', 'set', interface, 'mtu',
-                         FLAGS.network_device_mtu, run_as_root=True)
+                         FLAGS.network_device_mtu, run_as_root=True,
+                         check_exit_code=[0, 2, 254])
         return interface
 
     @classmethod
