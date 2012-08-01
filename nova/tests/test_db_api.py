@@ -1,4 +1,5 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+# encoding=UTF8
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -44,6 +45,14 @@ class DbApiTestCase(test.TestCase):
         db.instance_create(self.context, args)
         result = db.instance_get_all_by_filters(self.context, {})
         self.assertTrue(2, len(result))
+
+    def test_instance_get_all_by_filters_unicode_value(self):
+        args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1',
+                'display_name': u'test♥'}
+        db.instance_create(self.context, args)
+        result = db.instance_get_all_by_filters(self.context.elevated(),
+                                                {'display_name': u'test'})
+        self.assertEqual(1, len(result))
 
     def test_instance_get_all_by_filters_deleted(self):
         args1 = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
