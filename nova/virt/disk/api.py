@@ -173,6 +173,8 @@ def unbind(target):
 class _DiskImage(object):
     """Provide operations on a disk image file."""
 
+    tmp_prefix = 'openstack-disk-mount-tmp'
+
     def __init__(self, image, partition=None, use_cow=False, mount_dir=None):
         # These passed to each mounter
         self.image = image
@@ -194,18 +196,50 @@ class _DiskImage(object):
             msg = _('no capable image handler configured')
             raise exception.NovaException(msg)
 
+        if mount_dir:
+            # Note the os.path.ismount() shortcut doesn't
+            # work with libguestfs due to permissions issues.
+            device = self._device_for_path(mount_dir)
+            if device:
+                self._reset(device)
+
+    @staticmethod
+    def _device_for_path(path):
+        device = None
+        with open("/proc/mounts", 'r') as ifp:
+            for line in ifp:
+                fields = line.split()
+                if fields[1] == path:
+                    device = fields[0]
+                    break
+        return device
+
+    def _reset(self, device):
+        """Reset internal state for a previously mounted directory."""
+        mounter_cls = self._handler_class(device=device)
+        mounter = mounter_cls(image=self.image,
+                              partition=self.partition,
+                              mount_dir=self.mount_dir,
+                              device=device)
+        self._mounter = mounter
+
+        mount_name = os.path.basename(self.mount_dir or '')
+        self._mkdir = mount_name.startswith(self.tmp_prefix)
+
     @property
     def errors(self):
         """Return the collated errors from all operations."""
         return '\n--\n'.join([''] + self._errors)
 
     @staticmethod
-    def _handler_class(mode):
-        """Look up the appropriate class to use based on MODE."""
+    def _handler_class(mode=None, device=None):
+        """Look up the appropriate class to use based on MODE or DEVICE."""
         for cls in (loop.Mount, nbd.Mount, guestfs.Mount):
-            if cls.mode == mode:
+            if mode and cls.mode == mode:
                 return cls
-        msg = _("unknown disk image handler: %s") % mode
+            elif device and cls.device_id_string in device:
+                return cls
+        msg = _("no disk image handler for: %s") % mode or device
         raise exception.NovaException(msg)
 
     def mount(self):
@@ -220,7 +254,7 @@ class _DiskImage(object):
             raise exception.NovaException(_('image already mounted'))
 
         if not self.mount_dir:
-            self.mount_dir = tempfile.mkdtemp()
+            self.mount_dir = tempfile.mkdtemp(prefix=self.tmp_prefix)
             self._mkdir = True
 
         try:
@@ -275,18 +309,14 @@ def inject_data(image,
         raise exception.NovaException(img.errors)
 
 
-def setup_container(image, container_dir=None, use_cow=False):
+def setup_container(image, container_dir, use_cow=False):
     """Setup the LXC container.
 
     It will mount the loopback image to the container directory in order
     to create the root filesystem for the container.
-
-    LXC does not support qcow2 images yet.
     """
     img = _DiskImage(image=image, use_cow=use_cow, mount_dir=container_dir)
-    if img.mount():
-        return img
-    else:
+    if not img.mount():
         LOG.error(_("Failed to mount container filesystem '%(image)s' "
                     "on '%(target)s': %(errors)s") %
                   {"image": img, "target": container_dir,
@@ -294,17 +324,15 @@ def setup_container(image, container_dir=None, use_cow=False):
         raise exception.NovaException(img.errors)
 
 
-def destroy_container(img):
+def destroy_container(container_dir):
     """Destroy the container once it terminates.
 
     It will umount the container that is mounted,
     and delete any  linked devices.
-
-    LXC does not support qcow2 images yet.
     """
     try:
-        if img:
-            img.umount()
+        img = _DiskImage(image=None, mount_dir=container_dir)
+        img.umount()
     except Exception, exn:
         LOG.exception(_('Failed to unmount container filesystem: %s'), exn)
 

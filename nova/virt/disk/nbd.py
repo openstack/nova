@@ -40,6 +40,7 @@ FLAGS.register_opts(nbd_opts)
 class Mount(mount.Mount):
     """qemu-nbd support disk images."""
     mode = 'nbd'
+    device_id_string = mode
 
     # NOTE(padraig): There are three issues with this nbd device handling
     #  1. max_nbd_devices should be inferred (#861504)
@@ -69,7 +70,11 @@ class Mount(mount.Mount):
         return device
 
     def _free_nbd(self, device):
-        self._DEVICES.append(device)
+        # The device could already be present if unget_dev
+        # is called right after a nova restart
+        # (when destroying an LXC container for example).
+        if not device in self._DEVICES:
+            self._DEVICES.append(device)
 
     def get_dev(self):
         device = self._allocate_nbd()

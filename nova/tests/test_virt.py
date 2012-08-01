@@ -15,9 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
 from nova import exception
 from nova import flags
 from nova import test
+from nova import utils
 from nova.virt.disk import api as disk_api
 from nova.virt import driver
 
@@ -86,6 +89,16 @@ class TestVirtDriver(test.TestCase):
 
 
 class TestVirtDisk(test.TestCase):
+    def setUp(self):
+        super(TestVirtDisk, self).setUp()
+        self.executes = []
+
+        def fake_execute(*cmd, **kwargs):
+            self.executes.append(cmd)
+            return None, None
+
+        self.stubs.Set(utils, 'execute', fake_execute)
+
     def test_check_safe_path(self):
         ret = disk_api._join_and_check_path_within_fs('/foo', 'etc',
                                                       'something.conf')
@@ -101,3 +114,54 @@ class TestVirtDisk(test.TestCase):
                           disk_api._inject_file_into_fs,
                           '/tmp', '/etc/../../../../etc/passwd',
                           'hax')
+
+    def test_lxc_destroy_container(self):
+
+        def proc_mounts(self, mount_point):
+            mount_points = {
+                '/mnt/loop/nopart': '/dev/loop0',
+                '/mnt/loop/part': '/dev/mapper/loop0p1',
+                '/mnt/nbd/nopart': '/dev/nbd15',
+                '/mnt/nbd/part': '/dev/mapper/nbd15p1',
+                '/mnt/guestfs': 'guestmount',
+            }
+            return mount_points[mount_point]
+
+        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)
+        expected_commands = []
+
+        disk_api.destroy_container('/mnt/loop/nopart')
+        expected_commands += [
+                              ('umount', '/dev/loop0'),
+                              ('losetup', '--detach', '/dev/loop0'),
+                             ]
+
+        disk_api.destroy_container('/mnt/loop/part')
+        expected_commands += [
+                              ('umount', '/dev/mapper/loop0p1'),
+                              ('kpartx', '-d', '/dev/loop0'),
+                              ('losetup', '--detach', '/dev/loop0'),
+                             ]
+
+        disk_api.destroy_container('/mnt/nbd/nopart')
+        expected_commands += [
+                              ('umount', '/dev/nbd15'),
+                              ('qemu-nbd', '-d', '/dev/nbd15'),
+                             ]
+
+        disk_api.destroy_container('/mnt/nbd/part')
+        expected_commands += [
+                              ('umount', '/dev/mapper/nbd15p1'),
+                              ('kpartx', '-d', '/dev/nbd15'),
+                              ('qemu-nbd', '-d', '/dev/nbd15'),
+                             ]
+
+        disk_api.destroy_container('/mnt/guestfs')
+        expected_commands += [
+                              ('fusermount', '-u', '/mnt/guestfs'),
+                             ]
+        # It's not worth trying to match the last timeout command
+        self.executes.pop()
+
+        self.assertEqual(self.executes, expected_commands)
