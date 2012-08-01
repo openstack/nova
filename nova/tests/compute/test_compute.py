@@ -868,7 +868,11 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance['uuid'])
 
         diagnostics = self.compute.get_diagnostics(self.context,
-                                                   instance['uuid'])
+                instance_uuid=instance['uuid'])
+        self.assertEqual(diagnostics, 'FAKE_DIAGNOSTICS')
+
+        diagnostics = self.compute.get_diagnostics(self.context,
+                instance=instance)
         self.assertEqual(diagnostics, 'FAKE_DIAGNOSTICS')
         self.compute.terminate_instance(self.context, instance['uuid'])
 
