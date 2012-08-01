@@ -85,7 +85,8 @@ class SchedulerRpcAPITestCase(test.TestCase):
                 instance='fake_instance',
                 instance_type='fake_type', image='fake_image',
                 request_spec='fake_request_spec',
-                filter_properties='fake_props', version='1.4')
+                filter_properties='fake_props', reservations=list('fake_res'),
+                version='1.5')
 
     def test_show_host_resources(self):
         self._test_scheduler_api('show_host_resources', rpc_method='call',

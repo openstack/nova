@@ -251,6 +251,7 @@ class SchedulerManagerTestCase(test.TestCase):
                 'filter_properties': 'fake_props',
                 'instance': 'fake_instance',
                 'instance_type': 'fake_type',
+                'reservations': list('fake_res'),
         }
         self.manager.driver.schedule_prep_resize(**kwargs).AndRaise(
                 exception.NoValidHost(reason=""))
@@ -281,6 +282,7 @@ class SchedulerManagerTestCase(test.TestCase):
                 'filter_properties': 'fake_props',
                 'instance': 'fake_instance',
                 'instance_type': 'fake_type',
+                'reservations': list('fake_res'),
         }
 
         self.manager.driver.schedule_prep_resize(**kwargs).AndRaise(

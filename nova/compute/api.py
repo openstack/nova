@@ -923,10 +923,23 @@ class API(base.Base):
                         context, instance['uuid'], 'finished')
                 if migration_ref:
                     src_host = migration_ref['source_compute']
-                    # Call since this can race with the terminate_instance
+                    # Call since this can race with the terminate_instance.
+                    # The resize is done but awaiting confirmation/reversion,
+                    # so there are two cases:
+                    # 1. up-resize: here -instance['vcpus'/'memory_mb'] match
+                    #    the quota usages accounted for this instance,
+                    #    so no further quota adjustment is needed
+                    # 2. down-resize: here -instance['vcpus'/'memory_mb'] are
+                    #    shy by delta(old, new) from the quota usages accounted
+                    #    for this instance, so we must adjust
+                    deltas = self._downsize_quota_delta(context,
+                                                        migration_ref)
+                    downsize_reservations = self._reserve_quota_delta(context,
+                                                                      deltas)
                     self.compute_rpcapi.confirm_resize(context,
                             instance, migration_ref['id'],
-                            host=src_host, cast=False)
+                            host=src_host, cast=False,
+                            reservations=downsize_reservations)
 
             self.compute_rpcapi.terminate_instance(context, instance)
 
@@ -1343,12 +1356,16 @@ class API(base.Base):
             raise exception.MigrationNotFoundByStatus(
                     instance_id=instance['uuid'], status='finished')
 
+        # reverse quota reservation for increased resource usage
+        deltas = self._reverse_upsize_quota_delta(context, migration_ref)
+        reservations = self._reserve_quota_delta(context, deltas)
+
         instance = self.update(context, instance,
                                task_state=task_states.RESIZE_REVERTING)
 
         self.compute_rpcapi.revert_resize(context,
                 instance=instance, migration_id=migration_ref['id'],
-                host=migration_ref['dest_compute'])
+                host=migration_ref['dest_compute'], reservations=reservations)
 
         self.db.migration_update(context, migration_ref['id'],
                                  {'status': 'reverted'})
@@ -1365,15 +1382,88 @@ class API(base.Base):
             raise exception.MigrationNotFoundByStatus(
                     instance_id=instance['uuid'], status='finished')
 
+        # reserve quota only for any decrease in resource usage
+        deltas = self._downsize_quota_delta(context, migration_ref)
+        reservations = self._reserve_quota_delta(context, deltas)
+
         instance = self.update(context, instance, vm_state=vm_states.ACTIVE,
                                task_state=None)
 
         self.compute_rpcapi.confirm_resize(context,
                 instance=instance, migration_id=migration_ref['id'],
-                host=migration_ref['source_compute'])
+                host=migration_ref['source_compute'],
+                reservations=reservations)
 
         self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
+
+    @staticmethod
+    def _resize_quota_delta(context, new_instance_type,
+                            old_instance_type, sense, compare):
+        """
+        Calculate any quota adjustment required at a particular point
+        in the resize cycle.
+
+        :param context: the request context
+        :param new_instance_type: the target instance type
+        :param old_instance_type: the original instance type
+        :param sense: the sense of the adjustment, 1 indicates a
+                      forward adjustment, whereas -1 indicates a
+                      reversal of a prior adjustment
+        :param compare: the direction of the comparison, 1 indicates
+                        we're checking for positive deltas, whereas
+                        -1 indicates negative deltas
+        """
+        def _quota_delta(resource):
+            return sense * (new_instance_type[resource] -
+                            old_instance_type[resource])
+
+        deltas = {}
+        if compare * _quota_delta('vcpus') > 0:
+            deltas['cores'] = _quota_delta('vcpus')
+        if compare * _quota_delta('memory_mb') > 0:
+            deltas['ram'] = _quota_delta('memory_mb')
+
+        return deltas
+
+    @staticmethod
+    def _upsize_quota_delta(context, new_instance_type, old_instance_type):
+        """
+        Calculate deltas required to adjust quota for an instance upsize.
+        """
+        return API._resize_quota_delta(context, new_instance_type,
+                                       old_instance_type, 1, 1)
+
+    @staticmethod
+    def _reverse_upsize_quota_delta(context, migration_ref):
+        """
+        Calculate deltas required to reverse a prior upsizing
+        quota adjustment.
+        """
+        old_instance_type = instance_types.get_instance_type(
+            migration_ref['old_instance_type_id'])
+        new_instance_type = instance_types.get_instance_type(
+            migration_ref['new_instance_type_id'])
+
+        return API._resize_quota_delta(context, new_instance_type,
+                                       old_instance_type, -1, -1)
+
+    @staticmethod
+    def _downsize_quota_delta(context, migration_ref):
+        """
+        Calculate deltas required to adjust quota for an instance downsize.
+        """
+        old_instance_type = instance_types.get_instance_type(
+            migration_ref['old_instance_type_id'])
+        new_instance_type = instance_types.get_instance_type(
+            migration_ref['new_instance_type_id'])
+
+        return API._resize_quota_delta(context, new_instance_type,
+                                       old_instance_type, 1, -1)
+
+    @staticmethod
+    def _reserve_quota_delta(context, deltas):
+        return QUOTAS.reserve(context, **deltas) if deltas else None
 
     @wrap_check_policy
     @check_instance_lock
@@ -1424,6 +1514,33 @@ class API(base.Base):
         if (current_memory_mb == new_memory_mb) and flavor_id:
             raise exception.CannotResizeToSameSize()
 
+        # ensure there is sufficient headroom for upsizes
+        deltas = self._upsize_quota_delta(context, new_instance_type,
+                                          current_instance_type)
+        try:
+            reservations = self._reserve_quota_delta(context, deltas)
+        except exception.OverQuota as exc:
+            quotas = exc.kwargs['quotas']
+            usages = exc.kwargs['usages']
+            overs = exc.kwargs['overs']
+
+            headroom = dict((res, quotas[res] -
+                             (usages[res]['in_use'] + usages[res]['reserved']))
+                            for res in quotas.keys())
+
+            resource = overs[0]
+            used = quotas[resource] - headroom[resource]
+            total_allowed = used + headroom[resource]
+            overs = ','.join(overs)
+
+            pid = context.project_id
+            LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
+                       " tried to resize instance. %(msg)s"), locals())
+            raise exception.TooManyInstances(overs=overs,
+                                             req=deltas[resource],
+                                             used=used, allowed=total_allowed,
+                                             resource=resource)
+
         instance = self.update(context, instance,
                 task_state=task_states.RESIZE_PREP, progress=0, **kwargs)
 
@@ -1443,6 +1560,7 @@ class API(base.Base):
             "image": image,
             "request_spec": jsonutils.to_primitive(request_spec),
             "filter_properties": filter_properties,
+            "reservations": reservations,
         }
         self.scheduler_rpcapi.prep_resize(context, **args)
 

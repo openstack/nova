@@ -68,6 +68,7 @@ from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
+from nova import quota
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import driver
@@ -146,6 +147,8 @@ compute_opts = [
 FLAGS = flags.FLAGS
 FLAGS.register_opts(compute_opts)
 
+QUOTAS = quota.QUOTAS
+
 LOG = logging.getLogger(__name__)
 
 
@@ -220,7 +223,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.41'
+    RPC_API_VERSION = '1.42'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1370,7 +1373,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @checks_instance_lock
     @wrap_instance_fault
     def confirm_resize(self, context, migration_id, instance_uuid=None,
-                       instance=None):
+                       instance=None, reservations=None):
         """Destroys the source instance."""
         migration_ref = self.db.migration_get(context, migration_id)
         if not instance:
@@ -1380,23 +1383,27 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
 
-        # NOTE(tr3buchet): tear down networks on source host
-        self.network_api.setup_networks_on_host(context, instance,
-                             migration_ref['source_compute'], teardown=True)
+        with self._error_out_instance_on_exception(context, instance['uuid'],
+                                                   reservations):
+            # NOTE(tr3buchet): tear down networks on source host
+            self.network_api.setup_networks_on_host(context, instance,
+                               migration_ref['source_compute'], teardown=True)
 
-        network_info = self._get_instance_nw_info(context, instance)
-        self.driver.confirm_migration(migration_ref, instance,
-                                      self._legacy_nw_info(network_info))
+            network_info = self._get_instance_nw_info(context, instance)
+            self.driver.confirm_migration(migration_ref, instance,
+                                          self._legacy_nw_info(network_info))
 
-        self._notify_about_instance_usage(
-            context, instance, "resize.confirm.end",
-            network_info=network_info)
+            self._notify_about_instance_usage(
+                context, instance, "resize.confirm.end",
+                network_info=network_info)
+
+            self._quota_commit(context, reservations)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
     def revert_resize(self, context, migration_id, instance=None,
-                      instance_uuid=None):
+                      instance_uuid=None, reservations=None):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
@@ -1408,7 +1415,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.db.instance_get_by_uuid(context,
                     migration_ref.instance_uuid)
 
-        with self._error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid'],
+                                                   reservations):
             # NOTE(tr3buchet): tear down networks on destination host
             self.network_api.setup_networks_on_host(context, instance,
                                                     teardown=True)
@@ -1416,13 +1424,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             network_info = self._get_instance_nw_info(context, instance)
             self.driver.destroy(instance, self._legacy_nw_info(network_info))
             self.compute_rpcapi.finish_revert_resize(context, instance,
-                    migration_ref['id'], migration_ref['source_compute'])
+                    migration_ref['id'], migration_ref['source_compute'],
+                    reservations)
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
     def finish_revert_resize(self, context, migration_id, instance_uuid=None,
-                             instance=None):
+                             instance=None, reservations=None):
         """Finishes the second half of reverting a resize.
 
         Power back on the source instance and revert the resized attributes
@@ -1434,7 +1443,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance = self.db.instance_get_by_uuid(context,
                     migration_ref.instance_uuid)
 
-        with self._error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid'],
+                                                   reservations):
             network_info = self._get_instance_nw_info(context, instance)
 
             self._notify_about_instance_usage(
@@ -1466,11 +1476,24 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.end")
 
+            self._quota_commit(context, reservations)
+
+    @staticmethod
+    def _quota_commit(context, reservations):
+        if reservations:
+            QUOTAS.commit(context, reservations)
+
+    @staticmethod
+    def _quota_rollback(context, reservations):
+        if reservations:
+            QUOTAS.rollback(context, reservations)
+
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
     def prep_resize(self, context, image, instance=None, instance_uuid=None,
-                    instance_type=None, instance_type_id=None):
+                    instance_type=None, instance_type_id=None,
+                    reservations=None):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
@@ -1484,7 +1507,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not instance_type:
             instance_type = instance_types.get_instance_type(instance_type_id)
 
-        with self._error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid'],
+                                                   reservations):
             compute_utils.notify_usage_exists(
                     context, instance, current_period=True)
             self._notify_about_instance_usage(
@@ -1513,7 +1537,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             LOG.audit(_('Migrating'), context=context, instance=instance)
             self.compute_rpcapi.resize_instance(context, instance,
-                    migration_ref['id'], image)
+                    migration_ref['id'], image, reservations)
 
             extra_usage_info = dict(
                     new_instance_type=instance_type['name'],
@@ -1527,14 +1551,15 @@ class ComputeManager(manager.SchedulerDependentManager):
     @checks_instance_lock
     @wrap_instance_fault
     def resize_instance(self, context, migration_id, image, instance=None,
-                        instance_uuid=None):
+                        instance_uuid=None, reservations=None):
         """Starts the migration of a running instance to another host."""
         migration_ref = self.db.migration_get(context, migration_id)
         if not instance:
             instance = self.db.instance_get_by_uuid(context,
                     migration_ref.instance_uuid)
 
-        with self._error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance['uuid'],
+                                                   reservations):
             instance_type_ref = self.db.instance_type_get(context,
                     migration_ref.new_instance_type_id)
 
@@ -1562,7 +1587,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                   task_state=task_states.RESIZE_MIGRATED)
 
             self.compute_rpcapi.finish_resize(context, instance, migration_id,
-                    image, disk_info, migration_ref['dest_compute'])
+                image, disk_info, migration_ref['dest_compute'], reservations)
 
             self._notify_about_instance_usage(context, instance, "resize.end",
                                               network_info=network_info)
@@ -1621,7 +1646,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @checks_instance_lock
     @wrap_instance_fault
     def finish_resize(self, context, migration_id, disk_info, image,
-                      instance_uuid=None, instance=None):
+                      instance_uuid=None, instance=None, reservations=None):
         """Completes the migration process.
 
         Sets up the newly transferred disk and turns on the instance at its
@@ -1636,7 +1661,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self._finish_resize(context, instance, migration_ref,
                                 disk_info, image)
+            self._quota_commit(context, reservations)
         except Exception, error:
+            self._quota_rollback(context, reservations)
             with excutils.save_and_reraise_exception():
                 LOG.error(_('%s. Setting instance vm_state to ERROR') % error,
                           instance=instance)
@@ -2882,10 +2909,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         return [i for i in instances if deleted_instance(i)]
 
     @contextlib.contextmanager
-    def _error_out_instance_on_exception(self, context, instance_uuid):
+    def _error_out_instance_on_exception(self, context, instance_uuid,
+                                        reservations=None):
         try:
             yield
         except Exception, error:
+            self._quota_rollback(context, reservations)
             with excutils.save_and_reraise_exception():
                 msg = _('%s. Setting instance vm_state to ERROR')
                 LOG.error(msg % error, instance_uuid=instance_uuid)

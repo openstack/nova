@@ -120,6 +120,9 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         1.39 - Remove instance_uuid, add instance argument to run_instance()
         1.40 - Remove instance_id, add instance argument to live_migration()
         1.41 - Adds refresh_instance_security_rules()
+        1.42 - Add reservations arg to prep_resize(), resize_instance(),
+               finish_resize(), confirm_resize(), revert_resize() and
+               finish_revert_resize()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -183,13 +186,14 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                   version='1.11')
 
     def confirm_resize(self, ctxt, instance, migration_id, host,
-            cast=True):
+            reservations=None, cast=True):
         rpc_method = self.cast if cast else self.call
         instance_p = jsonutils.to_primitive(instance)
         return rpc_method(ctxt, self.make_msg('confirm_resize',
-                instance=instance_p, migration_id=migration_id),
+                instance=instance_p, migration_id=migration_id,
+                reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, host, instance),
-                version='1.12')
+                version='1.42')
 
     def detach_volume(self, ctxt, instance, volume_id):
         instance_p = jsonutils.to_primitive(instance)
@@ -199,20 +203,22 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 version='1.13')
 
     def finish_resize(self, ctxt, instance, migration_id, image, disk_info,
-            host):
+            host, reservations=None):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('finish_resize',
                 instance=instance_p, migration_id=migration_id,
-                image=image, disk_info=disk_info),
+                image=image, disk_info=disk_info, reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, host, None),
-                version='1.14')
+                version='1.42')
 
-    def finish_revert_resize(self, ctxt, instance, migration_id, host):
+    def finish_revert_resize(self, ctxt, instance, migration_id, host,
+                             reservations=None):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('finish_revert_resize',
-                instance=instance_p, migration_id=migration_id),
+                instance=instance_p, migration_id=migration_id,
+                reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, host, None),
-                version='1.15')
+                version='1.42')
 
     def get_console_output(self, ctxt, instance, tail_length):
         instance_p = jsonutils.to_primitive(instance)
@@ -322,13 +328,15 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 disk=disk), _compute_topic(self.topic, ctxt, host, None),
                 version='1.23')
 
-    def prep_resize(self, ctxt, image, instance, instance_type, host):
+    def prep_resize(self, ctxt, image, instance, instance_type, host,
+                    reservations=None):
         instance_p = jsonutils.to_primitive(instance)
         instance_type_p = jsonutils.to_primitive(instance_type)
         self.cast(ctxt, self.make_msg('prep_resize',
                 instance=instance_p, instance_type=instance_type_p,
-                image=image), _compute_topic(self.topic, ctxt, host, None),
-                version='1.38')
+                image=image, reservations=reservations),
+                _compute_topic(self.topic, ctxt, host, None),
+                version='1.42')
 
     def reboot_instance(self, ctxt, instance, reboot_type):
         instance_p = jsonutils.to_primitive(instance)
@@ -404,12 +412,14 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='1.28')
 
-    def resize_instance(self, ctxt, instance, migration_id, image):
+    def resize_instance(self, ctxt, instance, migration_id, image,
+                        reservations=None):
         topic = _compute_topic(self.topic, ctxt, None, instance)
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('resize_instance',
                 instance=instance_p, migration_id=migration_id,
-                image=image), topic, version='1.29')
+                image=image, reservations=reservations), topic,
+                version='1.42')
 
     def resume_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
@@ -418,12 +428,14 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=_compute_topic(self.topic, ctxt, None, instance),
                 version='1.30')
 
-    def revert_resize(self, ctxt, instance, migration_id, host):
+    def revert_resize(self, ctxt, instance, migration_id, host,
+                      reservations=None):
         instance_p = jsonutils.to_primitive(instance)
         self.cast(ctxt, self.make_msg('revert_resize',
-                instance=instance_p, migration_id=migration_id),
+                instance=instance_p, migration_id=migration_id,
+                reservations=reservations),
                 topic=_compute_topic(self.topic, ctxt, host, instance),
-                version='1.31')
+                version='1.42')
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
         instance_p = jsonutils.to_primitive(instance)

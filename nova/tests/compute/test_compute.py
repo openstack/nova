@@ -1127,6 +1127,22 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
+    def _ensure_quota_reservations_committed(self):
+        """Mock up commit of quota reservations"""
+        reservations = list('fake_res')
+        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
+        nova.quota.QUOTAS.commit(mox.IgnoreArg(), reservations)
+        self.mox.ReplayAll()
+        return reservations
+
+    def _ensure_quota_reservations_rolledback(self):
+        """Mock up rollback of quota reservations"""
+        reservations = list('fake_res')
+        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'rollback')
+        nova.quota.QUOTAS.rollback(mox.IgnoreArg(), reservations)
+        self.mox.ReplayAll()
+        return reservations
+
     def test_finish_resize(self):
         """Contrived test to ensure finish_resize doesn't raise anything"""
 
@@ -1134,6 +1150,8 @@ class ComputeTestCase(BaseTestCase):
             pass
 
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
+
+        reservations = self._ensure_quota_reservations_committed()
 
         context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -1143,7 +1161,8 @@ class ComputeTestCase(BaseTestCase):
                 instance['uuid'], 'pre-migrating')
         self.compute.finish_resize(context,
                 migration_id=int(migration_ref['id']),
-                disk_info={}, image={}, instance=instance)
+                disk_info={}, image={}, instance=instance,
+                reservations=reservations)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_finish_resize_handles_error(self):
@@ -1157,16 +1176,19 @@ class ComputeTestCase(BaseTestCase):
 
         self.stubs.Set(self.compute.driver, 'finish_migration', throw_up)
 
+        reservations = self._ensure_quota_reservations_rolledback()
+
         context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.prep_resize(context, instance=instance, instance_type={},
-                                 image={})
+                                 image={}, reservations=reservations)
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
 
         self.assertRaises(test.TestingException, self.compute.finish_resize,
                           context, migration_id=int(migration_ref['id']),
-                          disk_info={}, image={}, instance=instance)
+                          disk_info={}, image={}, instance=instance,
+                          reservations=reservations)
 
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
@@ -1337,6 +1359,8 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
+        reservations = self._ensure_quota_reservations_rolledback()
+
         self.compute.run_instance(self.context, instance=instance)
         new_instance = db.instance_update(self.context, instance['uuid'],
                                           {'host': 'foo'})
@@ -1344,7 +1368,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
                           context, instance=new_instance,
-                          instance_type={}, image={})
+                          instance_type={}, image={},
+                          reservations=reservations)
         self.compute.terminate_instance(context, instance=new_instance)
 
     def test_resize_instance_driver_error(self):
@@ -1359,16 +1384,20 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
+        reservations = self._ensure_quota_reservations_rolledback()
+
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'], {'host': 'foo'})
         self.compute.prep_resize(context, instance=instance,
-                                 instance_type={}, image={})
+                                 instance_type={}, image={},
+                                 reservations=reservations)
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance['uuid'], 'pre-migrating')
 
         #verify
         self.assertRaises(test.TestingException, self.compute.resize_instance,
-                          context, migration_ref['id'], {}, instance=instance)
+                          context, migration_ref['id'], {}, instance=instance,
+                          reservations=reservations)
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
@@ -1400,6 +1429,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'finish_migration', fake)
         self.stubs.Set(self.compute.driver, 'finish_revert_migration', fake)
 
+        reservations = self._ensure_quota_reservations_committed()
+
         context = self.context.elevated()
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
@@ -1419,7 +1450,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.prep_resize(context,
                 instance=jsonutils.to_primitive(new_inst_ref),
                 instance_type=jsonutils.to_primitive(new_instance_type_ref),
-                image={})
+                image={}, reservations=reservations)
 
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
@@ -1439,9 +1470,11 @@ class ComputeTestCase(BaseTestCase):
         # Finally, revert and confirm the old flavor has been applied
         rpcinst = jsonutils.to_primitive(inst_ref)
         self.compute.revert_resize(context,
-                migration_id=migration_ref['id'], instance=rpcinst)
+                migration_id=migration_ref['id'], instance=rpcinst,
+                reservations=reservations)
         self.compute.finish_revert_resize(context,
-                migration_id=migration_ref['id'], instance=rpcinst)
+                migration_id=migration_ref['id'], instance=rpcinst,
+                reservations=reservations)
 
         instance = db.instance_get_by_uuid(context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
@@ -1463,12 +1496,13 @@ class ComputeTestCase(BaseTestCase):
     def test_resize_same_source_fails(self):
         """Ensure instance fails to migrate when source and destination are
         the same host"""
+        reservations = self._ensure_quota_reservations_rolledback()
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertRaises(exception.MigrationError, self.compute.prep_resize,
                 self.context, instance=instance,
-                instance_type={}, image={})
+                instance_type={}, image={}, reservations=reservations)
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
@@ -1480,17 +1514,20 @@ class ComputeTestCase(BaseTestCase):
                 'migrate_disk_and_power_off',
                 raise_migration_failure)
 
+        reservations = self._ensure_quota_reservations_rolledback()
+
         inst_ref = jsonutils.to_primitive(self._create_fake_instance())
         context = self.context.elevated()
 
         self.compute.run_instance(self.context, instance=inst_ref)
         db.instance_update(self.context, inst_ref['uuid'], {'host': 'foo'})
         self.compute.prep_resize(context, instance=inst_ref, instance_type={},
-                                 image={})
+                                 image={}, reservations=reservations)
         migration_ref = db.migration_get_by_instance_and_status(context,
                 inst_ref['uuid'], 'pre-migrating')
         self.assertRaises(test.TestingException, self.compute.resize_instance,
-                          context, migration_ref['id'], {}, instance=inst_ref)
+                          context, migration_ref['id'], {}, instance=inst_ref,
+                          reservations=reservations)
         inst_ref = db.instance_get_by_uuid(context, inst_ref['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ERROR)
         self.compute.terminate_instance(context,

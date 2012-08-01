@@ -108,7 +108,8 @@ class FilterScheduler(driver.Scheduler):
         return instances
 
     def schedule_prep_resize(self, context, image, request_spec,
-                             filter_properties, instance, instance_type):
+                             filter_properties, instance, instance_type,
+                             reservations=None):
         """Select a target for resize.
 
         Selects a target host for the instance, post-resize, and casts
@@ -123,7 +124,7 @@ class FilterScheduler(driver.Scheduler):
 
         # Forward off to the host
         self.compute_rpcapi.prep_resize(context, image, instance,
-                instance_type, host.host_state.host)
+                instance_type, host.host_state.host, reservations)
 
     def _provision_resource(self, context, weighted_host, request_spec,
             reservations, filter_properties, requested_networks,
