@@ -227,7 +227,10 @@ def iptables_config(session, args):
     # either execute iptable-save or iptables-restore
     # command must be only one of these two
     # process_input must be used only with iptables-restore
-    if len(cmd) > 0 and cmd[0] in ('iptables-save', 'iptables-restore'):
+    if len(cmd) > 0 and cmd[0] in ('iptables-save',
+                                   'iptables-restore',
+                                   'ip6tables-save',
+                                   'ip6tables-restore'):
         result = _run_command_with_input(cmd, process_input)
         ret_str = json.dumps(dict(out=result,
                                   err=''))
