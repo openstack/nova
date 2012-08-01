@@ -96,7 +96,7 @@ IMAGE_FIXTURES = {
 
 def set_image_fixtures():
     image_service = fake_image.FakeImageService()
-    image_service.delete_all()
+    image_service.images.clear()
     for image_id, image_meta in IMAGE_FIXTURES.items():
         image_meta = image_meta['image_meta']
         image_meta['id'] = image_id

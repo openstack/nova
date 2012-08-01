@@ -73,7 +73,6 @@ class ServerActionsControllerTest(test.TestCase):
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = importutils.import_object(service_class)
-        self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
         self.flags(allow_instance_snapshots=True,
