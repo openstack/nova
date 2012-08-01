@@ -343,7 +343,7 @@ def load_file(path):
 
     :param path: File to read
     """
-    with open(path, 'r+') as fp:
+    with open(path, 'r') as fp:
         return fp.read()
 
 

@@ -104,7 +104,7 @@ def file_open(path, mode=None):
 
 def load_file(path):
     if os.path.exists(path):
-        with open(path, 'r+') as fp:
+        with open(path, 'r') as fp:
             return fp.read()
     else:
         return ''

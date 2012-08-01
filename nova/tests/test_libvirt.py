@@ -1989,7 +1989,7 @@ class LibvirtConnTestCase(test.TestCase):
                 return FakeVirtDomain(fake_dom_xml)
 
             def _fake_flush(self, fake_pty):
-                with open(fake_pty, 'r+') as fp:
+                with open(fake_pty, 'r') as fp:
                     return fp.read()
 
             self.create_fake_libvirt_mock()

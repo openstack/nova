@@ -73,7 +73,7 @@ exit 1
                               tmpfilename, tmpfilename2, attempts=10,
                               process_input='foo',
                               delay_on_retry=False)
-            fp = open(tmpfilename2, 'r+')
+            fp = open(tmpfilename2, 'r')
             runs = fp.read()
             fp.close()
             self.assertNotEquals(runs.strip(), 'failure', 'stdin did not '
