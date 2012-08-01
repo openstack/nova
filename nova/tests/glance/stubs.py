@@ -69,7 +69,7 @@ class StubGlanceClient(object):
 
         return self.images[-1]
 
-    def update_image(self, image_id, metadata, data):
+    def update_image(self, image_id, metadata, data, features):
         for i, image in enumerate(self.images):
             if image['id'] == str(image_id):
                 if 'id' in metadata:
