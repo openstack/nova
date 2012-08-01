@@ -115,8 +115,9 @@ class TgtAdm(TargetAdmin):
                 f.write(volume_conf)
                 f.close()
 
-            self._execute('tgt-admin', '--execute', '--conf %s' % volume_path,
-                        '--update %s' % vol_id, run_as_root=True)
+            self._execute('tgt-admin', '--execute',
+                          '--conf %s' % volume_path,
+                          '--update %s' % vol_id, run_as_root=True)
 
         except Exception as ex:
             LOG.exception(ex)
@@ -126,10 +127,15 @@ class TgtAdm(TargetAdmin):
     def remove_iscsi_target(self, tid, lun, vol_id, **kwargs):
         try:
             LOG.info(_('Removing volume: %s') % vol_id)
-            volume_path = os.path.join(FLAGS.volumes_dir, vol_id)
+            vol_uuid_file = 'volume-%s' % vol_id
+            volume_path = os.path.join(FLAGS.volumes_dir, vol_uuid_file)
             if os.path.isfile(volume_path):
-                self._execute('tgt-admin', '--conf %s' % volume_path,
-                    '--delete %s' % vol_id, run_as_root_root=True)
+                delete_file = '%s%s' % (FLAGS.iscsi_target_prefix,
+                                        vol_uuid_file)
+                self._execute('tgt-admin',
+                              '--delete',
+                              delete_file,
+                              run_as_root=True)
                 os.unlink(volume_path)
         except Exception as ex:
             LOG.exception(ex)
