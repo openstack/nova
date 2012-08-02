@@ -1171,14 +1171,15 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             utils.execute('brctl', 'setfd', bridge, str(0), run_as_root=True)
             utils.execute('brctl', 'stp', bridge, 'off', run_as_root=True)
             utils.execute('ip', 'link', 'set', bridge, 'address', mac_address,
-                          run_as_root=True)
-            utils.execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
+                          run_as_root=True, check_exit_code=[0, 2, 254])
+            utils.execute('ip', 'link', 'set', bridge, 'up', run_as_root=True,
+                          check_exit_code=[0, 2, 254])
             LOG.debug(_("Done starting bridge %s"), bridge)
 
             full_ip = '%s/%s' % (network['dhcp_server'],
                                  network['cidr'].rpartition('/')[2])
             utils.execute('ip', 'address', 'add', full_ip, 'dev', bridge,
-                          run_as_root=True)
+                          run_as_root=True, check_exit_code=[0, 2, 254])
 
         return dev
 
@@ -1189,7 +1190,8 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             return None
         else:
             try:
-                utils.execute('ip', 'link', 'delete', dev, run_as_root=True)
+                utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
+                              check_exit_code=[0, 2, 254])
             except exception.ProcessExecutionError:
                 LOG.error(_("Failed unplugging gateway interface '%s'"), dev)
                 raise
@@ -1202,14 +1204,15 @@ class QuantumLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             try:
                 # First, try with 'ip'
                 utils.execute('ip', 'tuntap', 'add', dev, 'mode', 'tap',
-                              run_as_root=True)
+                              run_as_root=True, check_exit_code=[0, 2, 254])
             except exception.ProcessExecutionError:
                 # Second option: tunctl
                 utils.execute('tunctl', '-b', '-t', dev, run_as_root=True)
             if mac_address:
                 utils.execute('ip', 'link', 'set', dev, 'address', mac_address,
-                              run_as_root=True)
-            utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
+                              run_as_root=True, check_exit_code=[0, 2, 254])
+            utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
+                          check_exit_code=[0, 2, 254])
 
     def get_dev(self, network):
         dev = self.GATEWAY_INTERFACE_PREFIX + str(network['uuid'][0:11])
