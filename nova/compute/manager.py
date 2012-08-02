@@ -164,7 +164,10 @@ def checks_instance_lock(function):
     # and the function may get either an instance_uuid or an instance.
     def _checks_instance_lock_core(self, cb, context, *args, **kwargs):
         instance_uuid = kwargs['instance_uuid']
-        locked = self._get_lock(context, instance_uuid)
+        if context.instance_lock_checked:
+            locked = False  # Implied, since we wouldn't be here otherwise
+        else:
+            locked = self._get_lock(context, instance_uuid)
         admin = context.is_admin
 
         LOG.info(_("check_instance_lock: locked: |%s|"), locked,

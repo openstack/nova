@@ -1127,6 +1127,10 @@ class TaskNotRunning(NovaException):
     message = _("Task %(task_name) is not running on host %(host)")
 
 
+class InstanceIsLocked(InstanceInvalidState):
+    message = _("Instance %(instance_uuid)s is locked")
+
+
 def get_context_from_function_and_args(function, args, kwargs):
     """Find an arg of type RequestContext and return it.
 

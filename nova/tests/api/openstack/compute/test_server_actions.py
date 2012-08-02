@@ -708,6 +708,18 @@ class ServerActionsControllerTest(test.TestCase):
                           self.controller._action_create_image,
                           req, FAKE_UUID, body)
 
+    def test_locked(self):
+        def fake_locked(context, instance_uuid):
+            return {"name": "foo",
+                    "uuid": FAKE_UUID,
+                    "locked": True}
+        self.stubs.Set(nova.db, 'instance_get_by_uuid', fake_locked)
+        body = dict(reboot=dict(type="HARD"))
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_reboot,
+                          req, FAKE_UUID, body)
+
 
 class TestServerActionXMLDeserializer(test.TestCase):
 

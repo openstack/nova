@@ -73,13 +73,15 @@ def stub_max_server_metadata():
 def return_server(context, server_id):
     return {'id': server_id,
             'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-            'name': 'fake'}
+            'name': 'fake',
+            'locked': False}
 
 
 def return_server_by_uuid(context, server_uuid):
     return {'id': 1,
             'uuid': '0cc3346e-9fef-4445-abe6-5d2b2690ec64',
-            'name': 'fake'}
+            'name': 'fake',
+            'locked': False}
 
 
 def return_server_nonexistant(context, server_id):
