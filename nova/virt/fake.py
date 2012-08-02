@@ -114,9 +114,6 @@ class FakeDriver(driver.ComputeDriver):
     def inject_file(self, instance, b64_path, b64_contents):
         pass
 
-    def agent_update(self, instance, url, md5hash):
-        pass
-
     def resume_state_on_host_boot(self, context, instance, network_info):
         pass
 
