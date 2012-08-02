@@ -23,14 +23,10 @@ import os
 
 from nova.api.ec2 import ec2utils
 from nova import block_device
-from nova import compute
 from nova import context
 from nova import db
-from nova import exception
 from nova import flags
 from nova import network
-from nova.openstack.common import log as logging
-from nova import volume
 
 FLAGS = flags.FLAGS
 flags.DECLARE('dhcp_domain', 'nova.network.manager')

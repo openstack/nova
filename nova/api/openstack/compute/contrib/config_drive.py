@@ -17,18 +17,11 @@
 
 """Config Drive extension"""
 
-import webob
-import webob.exc
-
 from nova.api.openstack.compute import servers
-from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.compute import api as compute_api
-from nova import exception
 from nova import flags
-from nova.openstack.common import log as logging
 
 
 FLAGS = flags.FLAGS

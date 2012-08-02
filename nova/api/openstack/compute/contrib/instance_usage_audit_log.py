@@ -17,12 +17,9 @@
 
 
 import datetime
-from webob import exc
 
 from nova.api.openstack import extensions
-from nova import context as nova_context
 from nova import db
-from nova import exception
 from nova import flags
 from nova import utils
 

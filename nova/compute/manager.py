@@ -37,10 +37,8 @@ terminating it.
 import contextlib
 import functools
 import inspect
-import os
 import socket
 import sys
-import tempfile
 import time
 import traceback
 

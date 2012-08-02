@@ -22,7 +22,6 @@ import base64
 from copy import copy
 import re
 
-import stubout
 import webob
 
 from nova.api.metadata import base
@@ -33,7 +32,6 @@ from nova import exception
 from nova import flags
 from nova import network
 from nova import test
-from nova.tests import fake_network
 
 FLAGS = flags.FLAGS
 

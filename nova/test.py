@@ -38,7 +38,6 @@ from nova.openstack.common import timeutils
 from nova import service
 from nova import tests
 from nova.tests import fake_flags
-from nova.virt import fake
 
 
 test_opts = [

@@ -22,7 +22,6 @@ from nova import exception
 from nova import flags
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
-from nova.openstack.common.rpc import common as rpc_common
 import nova.openstack.common.rpc.proxy
 
 

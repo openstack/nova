@@ -17,7 +17,6 @@
 Manage hosts in the current zone.
 """
 
-import datetime
 import UserDict
 
 from nova import db

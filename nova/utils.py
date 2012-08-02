@@ -37,7 +37,6 @@ import sys
 import tempfile
 import threading
 import time
-import types
 import uuid
 from xml.sax import saxutils
 
