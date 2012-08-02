@@ -86,6 +86,7 @@ class ChanceScheduler(driver.Scheduler):
         """Select a target for resize."""
         host = self._schedule(context, 'compute', request_spec,
                               filter_properties)
-        driver.cast_to_compute_host(context, host, 'prep_resize',
-                instance_uuid=instance['uuid'],
-                instance_type_id=instance_type['id'], image=image)
+        updated_instance = driver.instance_update_db(context, instance['uuid'],
+                                                     host.host_state.host)
+        self.compute_rpcapi.prep_resize(context, image, updated_instance,
+                instance_type, host)

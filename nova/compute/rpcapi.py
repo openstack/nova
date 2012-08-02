@@ -113,6 +113,10 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                change_instance_metadata()
         1.37 - Remove instance_uuid, add instance argument to
                terminate_instance()
+        1.38 - Changes to prep_resize():
+                - remove instance_uuid, add instance
+                - remove instance_type_id, add instance_type
+                - remove topic, it was unused
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -307,6 +311,14 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 instance=instance_p, block_migration=block_migration,
                 disk=disk), _compute_topic(self.topic, ctxt, host, None),
                 version='1.23')
+
+    def prep_resize(self, ctxt, image, instance, instance_type, host):
+        instance_p = jsonutils.to_primitive(instance)
+        instance_type_p = jsonutils.to_primitive(instance_type)
+        self.cast(ctxt, self.make_msg('prep_resize',
+                instance=instance_p, instance_type=instance_type_p,
+                image=image), _compute_topic(self.topic, ctxt, host, None),
+                version='1.38')
 
     def reboot_instance(self, ctxt, instance, reboot_type):
         instance_p = jsonutils.to_primitive(instance)
