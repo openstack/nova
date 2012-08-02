@@ -39,28 +39,29 @@ class DbApiTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
 
+    def create_instances_with_args(self, **kwargs):
+        args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1',
+                'project_id': self.project_id}
+        args.update(kwargs)
+        return db.instance_create(self.context, args)
+
     def test_instance_get_all_by_filters(self):
-        args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
-        db.instance_create(self.context, args)
-        db.instance_create(self.context, args)
-        result = db.instance_get_all_by_filters(self.context.elevated(), {})
+        self.create_instances_with_args()
+        self.create_instances_with_args()
+        result = db.instance_get_all_by_filters(self.context, {})
         self.assertEqual(2, len(result))
 
     def test_instance_get_all_by_filters_unicode_value(self):
-        args = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1',
-                'display_name': u'test♥'}
-        db.instance_create(self.context, args)
-        result = db.instance_get_all_by_filters(self.context.elevated(),
+        self.create_instances_with_args(display_name=u'test♥')
+        result = db.instance_get_all_by_filters(self.context,
                                                 {'display_name': u'test'})
         self.assertEqual(1, len(result))
 
     def test_instance_get_all_by_filters_deleted(self):
-        args1 = {'reservation_id': 'a', 'image_ref': 1, 'host': 'host1'}
-        inst1 = db.instance_create(self.context, args1)
-        args2 = {'reservation_id': 'b', 'image_ref': 1, 'host': 'host1'}
-        inst2 = db.instance_create(self.context, args2)
-        db.instance_destroy(self.context.elevated(), inst1['uuid'])
-        result = db.instance_get_all_by_filters(self.context.elevated(), {})
+        inst1 = self.create_instances_with_args()
+        inst2 = self.create_instances_with_args(reservation_id='b')
+        db.instance_destroy(self.context, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.context, {})
         self.assertEqual(2, len(result))
         self.assertIn(inst1.id, [result[0].id, result[1].id])
         self.assertIn(inst2.id, [result[0].id, result[1].id])
