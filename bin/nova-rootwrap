@@ -21,7 +21,7 @@
    Filters which commands nova is allowed to run as another user.
 
    To use this, you should set the following in nova.conf:
-   root_helper=sudo nova-rootwrap /etc/nova/rootwrap.conf
+   rootwrap_config=/etc/nova/rootwrap.conf
 
    You also need to let the nova user run nova-rootwrap as root in sudoers:
    nova ALL = (root) NOPASSWD: /usr/bin/nova-rootwrap /etc/nova/rootwrap.conf *

@@ -339,7 +339,11 @@ global_opts = [
                     'formatted with on creation.'),
     cfg.StrOpt('root_helper',
                default='sudo',
-               help='Command prefix to use for running commands as root'),
+               help='Deprecated: command to use for running commands as root'),
+    cfg.StrOpt('rootwrap_config',
+               default=None,
+               help='Path to the rootwrap configuration file to use for '
+                    'running commands as root'),
     cfg.StrOpt('network_driver',
                default='nova.network.linux_net',
                help='Driver to use for network creation'),
