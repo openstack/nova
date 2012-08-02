@@ -1442,7 +1442,7 @@ def instance_type_get_by_name(context, name):
 
 
 def instance_type_get_by_flavor_id(context, id):
-    """Get instance type by name."""
+    """Get instance type by flavor id."""
     return IMPL.instance_type_get_by_flavor_id(context, id)
 
 
