@@ -1477,8 +1477,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @checks_instance_lock
     @wrap_instance_fault
-    def prep_resize(self, context, instance_uuid, instance_type_id, image,
-                    **kwargs):
+    def prep_resize(self, context, instance_uuid, instance_type_id, image):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
