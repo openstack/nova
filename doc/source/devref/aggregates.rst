@@ -1,6 +1,7 @@
 ..
       Copyright 2012 OpenStack, LLC
       Copyright 2012 Citrix Systems, Inc.
+      Copyright 2012, The Cloudscaling Group, Inc.
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,17 +16,21 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Host Aggregates
+General Host Aggregates
 ===============
 
-This extension introduces the concept of aggregate into Nova. Host aggregates are different from zones and availability zones: while the former allows the partition of Nova deployments into logical groups for load balancing and instance distribution, the latter are for providing some form of physical isolation and redundancy from other availability zones (e.g. by using separate power supply and network gears). Availability zones do not necessarily mean geographic distribution whereas zones usually do. Host aggregates can be regarded as a mechanism to further partitioning an availability zone, i.e. into multiple groups of hosts that share common resources like storage and network. This enables a finer level of granularity in which to structure an entire OpenStack deployment. Aggregates allows higher availability of a single guest instance within an availability zone, it enables advanced VM placement strategies, and more importantly it enables hosts' zero-downtime upgrades (for example, via VM live migration across members of the aggregate, thus causing no disruption to guest instances).
+Host aggregates can be regarded as a mechanism to further partition an availability zone; while availability zones are visible to users, host aggregates are only visible to administrators.  Host aggregates started out as a way to use Xen hypervisor resource pools, but has been generalized to provide a mechanism to allow administrators to assign key-value pairs to groups of machines.  Each node can have multiple aggregates, each aggregate can have multiple key-value pairs, and the same key-value pair can be assigned to multiple aggregate.  This information can be used in the scheduler to enable advanced scheduling, to set up xen hypervisor resources pools or to define logical groups for migration.
 
-You can use this extension when you have multiple Compute nodes installed (only XenServer/XCP via xenapi driver is currently supported), and you want to leverage the capabilities of the underlying hypervisor resource pools. For example, you want to enable VM live migration (i.e. VM migration within the pool) or enable host maintenance with zero-downtime for guest instances. Please, note that VM migration across pools (i.e. storage migration) is not yet supported in XenServer/XCP, but will be added when available. Bear in mind that the two migration techniques are not mutually exclusive and can be used in combination for a higher level of flexibility in your cloud management.
+Xen Pool Host Aggregates
+===============
+Originally all aggregates were Xen resource pools, now a aggregate can be set up as a resource pool by giving the aggregate the correct key-value pair.
+
+You can use aggregates for XenServer resource pools when you have multiple compute nodes installed (only XenServer/XCP via xenapi driver is currently supported), and you want to leverage the capabilities of the underlying hypervisor resource pools. For example, you want to enable VM live migration (i.e. VM migration within the pool) or enable host maintenance with zero-downtime for guest instances. Please, note that VM migration across pools (i.e. storage migration) is not yet supported in XenServer/XCP, but will be added when available. Bear in mind that the two migration techniques are not mutually exclusive and can be used in combination for a higher level of flexibility in your cloud management.
 
 Design
 =======
 
-The OSAPI Admin API will be extended to support the following operations:
+The OSAPI Admin API is extended to support the following operations:
 
     * Aggregates
 
@@ -36,7 +41,7 @@ The OSAPI Admin API will be extended to support the following operations:
       * set metadata: sets the metadata on an aggregate to the values supplied
       * delete aggregate: deletes an aggregate, it fails if the aggregate is not empty
       * add host: adds a host to the aggregate
-      * remove host: removes a host from the aggregate, it fails if the host is not disabled or
+      * remove host: removes a host from the aggregate
 
     * Hosts
 
@@ -62,4 +67,5 @@ Usage
   * aggregate-set-metadata   <id> <key=value> [<key=value> ...]       Update the metadata associated with the aggregate.
   * aggregate-update         <id> <name> [<availability_zone>]        Update the aggregate's name and optionally availablity zone.
 
+  * host-list                                                         List all hosts by service
   * host-update              --maintenance [enable | disable]         Put/resume host into/from maintenance.
