@@ -194,8 +194,8 @@ class API(base.Base):
                              (usages[res]['in_use'] + usages[res]['reserved']))
                             for res in quotas.keys())
 
-            # Reduce 'allowed' to the minimum supported
             allowed = headroom['instances']
+            # Reduce 'allowed' instances in line with the cores & ram headroom
             if instance_type['vcpus']:
                 allowed = min(allowed,
                               headroom['cores'] // instance_type['vcpus'])
@@ -204,7 +204,6 @@ class API(base.Base):
                               headroom['ram'] // instance_type['memory_mb'])
 
             # Convert to the appropriate exception message
-            pid = context.project_id
             if allowed <= 0:
                 msg = _("Cannot run any more instances of this type.")
                 allowed = 0
@@ -216,14 +215,19 @@ class API(base.Base):
                 msg = (_("Can only run %s more instances of this type.") %
                        allowed)
 
-            used = quotas['instances'] - headroom['instances']
-            total_allowed = used + allowed
+            resource = overs[0]
+            used = quotas[resource] - headroom[resource]
+            total_allowed = used + headroom[resource]
             overs = ','.join(overs)
 
+            pid = context.project_id
             LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
                   " tried to run %(min_count)s instances. %(msg)s"), locals())
-            raise exception.TooManyInstances(overs=overs, req=min_count,
-                                             used=used, allowed=total_allowed)
+            requested = dict(instances=min_count, cores=req_cores, ram=req_ram)
+            raise exception.TooManyInstances(overs=overs,
+                                             req=requested[resource],
+                                             used=used, allowed=total_allowed,
+                                             resource=resource)
 
         return max_count, reservations
 

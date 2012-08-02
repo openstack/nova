@@ -1344,7 +1344,7 @@ class ServersControllerTest(test.TestCase):
             self.assertEqual(s['name'], 'server%d' % (i + 1))
 
     def test_delete_server_instance(self):
-        fakes.stub_out_instance_quota(self.stubs, 0)
+        fakes.stub_out_instance_quota(self.stubs, 0, 10)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'DELETE'
 
@@ -1362,7 +1362,7 @@ class ServersControllerTest(test.TestCase):
         self.assertEqual(self.server_delete_called, True)
 
     def test_delete_server_instance_while_building(self):
-        fakes.stub_out_instance_quota(self.stubs, 0)
+        fakes.stub_out_instance_quota(self.stubs, 0, 10)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s' % FAKE_UUID)
         req.method = 'DELETE'
 
@@ -2393,11 +2393,12 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.assertEqual(robj['Location'], selfhref)
 
-    def test_create_instance_above_quota(self):
-        fakes.stub_out_instance_quota(self.stubs, 0)
+    def _do_test_create_instance_above_quota(self, resource, allowed, quota,
+                                             expected_msg):
+        fakes.stub_out_instance_quota(self.stubs, allowed, quota, resource)
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         body = dict(server=dict(
-            name='server_test', imageRef=image_uuid, flavorRef=2,
+            name='server_test', imageRef=image_uuid, flavorRef=3,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
         req = fakes.HTTPRequest.blank('/v2/fake/servers')
@@ -2408,9 +2409,22 @@ class ServersControllerCreateTest(test.TestCase):
             server = self.controller.create(req, body).obj['server']
             self.fail('expected quota to be exceeded')
         except webob.exc.HTTPRequestEntityTooLarge as e:
-            self.assertEquals(e.explanation,
-                      _('Quota exceeded for instances: Requested 1, but'
-                        ' already used 0 of 0 instances'))
+            self.assertEquals(e.explanation, expected_msg)
+
+    def test_create_instance_above_quota_instances(self):
+        msg = _('Quota exceeded for instances: Requested 1, but'
+                ' already used 10 of 10 instances')
+        self._do_test_create_instance_above_quota('instances', 0, 10, msg)
+
+    def test_create_instance_above_quota_ram(self):
+        msg = _('Quota exceeded for ram: Requested 4096, but'
+                ' already used 8192 of 10240 ram')
+        self._do_test_create_instance_above_quota('ram', 2048, 10 * 1024, msg)
+
+    def test_create_instance_above_quota_cores(self):
+        msg = _('Quota exceeded for cores: Requested 2, but'
+                ' already used 9 of 10 cores')
+        self._do_test_create_instance_above_quota('cores', 1, 10, msg)
 
 
 class TestServerCreateRequestXMLDeserializer(test.TestCase):

@@ -129,19 +129,20 @@ def stub_out_rate_limiting(stubs):
         '__call__', fake_wsgi)
 
 
-def stub_out_instance_quota(stubs, allowed):
+def stub_out_instance_quota(stubs, allowed, quota, resource='instances'):
     def fake_reserve(context, **deltas):
-        instances = deltas.pop('instances', 0)
-        if instances > allowed:
-            raise exc.OverQuota(overs=['instances'], quotas=dict(
-                    instances=allowed,
-                    cores=10000,
-                    ram=10000 * 1024,
-                    ), usages=dict(
-                    instances=dict(in_use=0, reserved=0),
-                    cores=dict(in_use=0, reserved=0),
-                    ram=dict(in_use=0, reserved=0),
-                    ))
+        requested = deltas.pop(resource, 0)
+        if requested > allowed:
+            quotas = dict(instances=1, cores=1, ram=1)
+            quotas[resource] = quota
+            usages = dict(instances=dict(in_use=0, reserved=0),
+                          cores=dict(in_use=0, reserved=0),
+                          ram=dict(in_use=0, reserved=0))
+            usages[resource]['in_use'] = (quotas[resource] * 0.9 -
+                                          allowed)
+            usages[resource]['reserved'] = quotas[resource] * 0.1
+            raise exc.OverQuota(overs=[resource], quotas=quotas,
+                                usages=usages)
     stubs.Set(QUOTAS, 'reserve', fake_reserve)
 
 

@@ -1007,7 +1007,7 @@ class QuotaError(NovaException):
 
 class TooManyInstances(QuotaError):
     message = _("Quota exceeded for %(overs)s: Requested %(req)s,"
-                " but already used %(used)d of %(allowed)d instances")
+                " but already used %(used)d of %(allowed)d %(resource)s")
 
 
 class VolumeSizeTooLarge(QuotaError):
