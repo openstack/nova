@@ -74,9 +74,7 @@ def cast_to_compute_host(context, host, method, update_db=True, **kwargs):
     """Cast request to a compute host queue"""
 
     if update_db:
-        # fall back on the id if the uuid is not present
-        instance_id = kwargs.get('instance_id', None)
-        instance_uuid = kwargs.get('instance_uuid', instance_id)
+        instance_uuid = kwargs.get('instance_uuid', None)
         if instance_uuid is not None:
             now = timeutils.utcnow()
             db.instance_update(context, instance_uuid,

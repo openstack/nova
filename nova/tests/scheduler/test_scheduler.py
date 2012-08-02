@@ -854,10 +854,10 @@ class SchedulerDriverModuleTestCase(test.TestCase):
         driver.cast_to_volume_host(self.context, host, method,
                 update_db=False, **fake_kwargs)
 
-    def test_cast_to_compute_host_update_db_with_instance_id(self):
+    def test_cast_to_compute_host_update_db_with_instance_uuid(self):
         host = 'fake_host1'
         method = 'fake_method'
-        fake_kwargs = {'instance_id': 31337,
+        fake_kwargs = {'instance_uuid': 'fake_uuid',
                        'extra_arg': 'meow'}
         queue = 'fake_queue'
 
@@ -867,7 +867,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
         self.mox.StubOutWithMock(rpc, 'cast')
 
         timeutils.utcnow().AndReturn('fake-now')
-        db.instance_update(self.context, 31337,
+        db.instance_update(self.context, 'fake_uuid',
                 {'host': host, 'scheduled_at': 'fake-now'})
         rpc.queue_get_for(self.context, 'compute', host).AndReturn(queue)
         rpc.cast(self.context, queue,
@@ -878,7 +878,7 @@ class SchedulerDriverModuleTestCase(test.TestCase):
         driver.cast_to_compute_host(self.context, host, method,
                 update_db=True, **fake_kwargs)
 
-    def test_cast_to_compute_host_update_db_without_instance_id(self):
+    def test_cast_to_compute_host_update_db_without_instance_uuid(self):
         host = 'fake_host1'
         method = 'fake_method'
         fake_kwargs = {'extra_arg': 'meow'}
