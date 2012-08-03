@@ -538,7 +538,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         extra_usage_info=extra_usage_info)
         except exception.InstanceNotFound:
             LOG.warn(_("Instance not found."), instance_uuid=instance_uuid)
-        except Exception as e:
+        except Exception:
             with excutils.save_and_reraise_exception():
                 self._set_instance_error_state(context, instance_uuid)
 
@@ -1659,7 +1659,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                 context, instance, "create_ip.start")
 
-        instance_id = instance['id']
         self.network_api.add_fixed_ip_to_instance(context,
                                                   instance,
                                                   network_id)
