@@ -257,16 +257,18 @@ class PublishErrorsHandler(logging.Handler):
                             dict(error=record.msg))
 
 
-def handle_exception(type, value, tb):
-    extra = {}
-    if CONF.verbose:
-        extra['exc_info'] = (type, value, tb)
-    getLogger().critical(str(value), **extra)
+def _create_logging_excepthook(product_name):
+    def logging_excepthook(type, value, tb):
+        extra = {}
+        if CONF.verbose:
+            extra['exc_info'] = (type, value, tb)
+        getLogger(product_name).critical(str(value), **extra)
+    return logging_excepthook
 
 
 def setup(product_name):
     """Setup logging."""
-    sys.excepthook = handle_exception
+    sys.excepthook = _create_logging_excepthook(product_name)
 
     if CONF.log_config:
         try:
