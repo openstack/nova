@@ -748,8 +748,11 @@ class HostFiltersTestCase(test.TestCase):
     def _create_aggregate_with_host(self, name='fake_aggregate',
                           metadata=None,
                           hosts=['host1']):
-        values = {'name': name,
-                    'availability_zone': 'fake_avail_zone', }
+        values = {'name': name}
+        if metadata:
+            metadata['availability_zone'] = 'fake_avail_zone'
+        else:
+            metadata = {'availability_zone': 'fake_avail_zone'}
         result = db.aggregate_create(self.context.elevated(), values, metadata)
         for host in hosts:
             db.aggregate_host_add(self.context.elevated(), result['id'], host)

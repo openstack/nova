@@ -7,6 +7,7 @@
         "hosts": [],
         "id": 1,
         "metadata": {
+            "availability_zone": "nova",
             "key": "value"
         },
         "name": "name",

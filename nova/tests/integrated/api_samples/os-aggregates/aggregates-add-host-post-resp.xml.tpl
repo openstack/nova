@@ -10,5 +10,7 @@
   </hosts>
   <deleted_at>None</deleted_at>
   <id>1</id>
-  <metadata/>
+  <metadata>
+    <availability_zone>nova</availability_zone>
+  </metadata>
 </aggregate>

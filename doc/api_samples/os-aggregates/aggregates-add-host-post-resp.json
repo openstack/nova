@@ -1,14 +1,16 @@
 {
     "aggregate": {
         "availability_zone": "nova",
-        "created_at": "2012-10-01T18:50:27.511586",
+        "created_at": "2012-12-04T12:04:24.399784",
         "deleted": false,
         "deleted_at": null,
         "hosts": [
-            "581d29b9e3504d8a895caddb13839b15"
+            "0438c6a4e8d841ad823b801d681f4680"
         ],
         "id": 1,
-        "metadata": {},
+        "metadata": {
+            "availability_zone": "nova"
+        },
         "name": "name",
         "updated_at": null
     }

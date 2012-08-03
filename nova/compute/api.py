@@ -2186,22 +2186,15 @@ class AggregateAPI(base.Base):
 
     def create_aggregate(self, context, aggregate_name, availability_zone):
         """Creates the model for the aggregate."""
-        zones = [s['availability_zone'] for s in
-                 self.db.service_get_all_by_topic(context,
-                                                  CONF.compute_topic)]
-        if availability_zone in zones:
-            values = {"name": aggregate_name,
-                      "availability_zone": availability_zone}
-            aggregate = self.db.aggregate_create(context, values)
-            aggregate = self._get_aggregate_info(context, aggregate)
-            # To maintain the same API result as before.
-            del aggregate['hosts']
-            del aggregate['metadata']
-            return aggregate
-        else:
-            raise exception.InvalidAggregateAction(action='create_aggregate',
-                                                   aggregate_id="'N/A'",
-                                                   reason='invalid zone')
+
+        values = {"name": aggregate_name}
+        aggregate = self.db.aggregate_create(context, values,
+                metadata={'availability_zone': availability_zone})
+        aggregate = self._get_aggregate_info(context, aggregate)
+        # To maintain the same API result as before.
+        del aggregate['hosts']
+        del aggregate['metadata']
+        return aggregate
 
     def get_aggregate(self, context, aggregate_id):
         """Get an aggregate by id."""

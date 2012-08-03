@@ -129,7 +129,7 @@ class _BaseTestCase(object):
 
     def _setup_aggregate_with_host(self):
         aggregate_ref = db.aggregate_create(self.context.elevated(),
-                {'name': 'foo', 'availability_zone': 'foo'})
+                {'name': 'foo'}, metadata={'availability_zone': 'foo'})
 
         self.conductor.aggregate_host_add(self.context, aggregate_ref, 'bar')
 

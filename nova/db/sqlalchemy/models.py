@@ -866,7 +866,6 @@ class Aggregate(BASE, NovaBase):
     __tablename__ = 'aggregates'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255))
-    availability_zone = Column(String(255), nullable=False)
     _hosts = relationship(AggregateHost,
                           lazy="joined",
                           secondary="aggregate_hosts",
@@ -893,7 +892,7 @@ class Aggregate(BASE, NovaBase):
                          backref='aggregates')
 
     def _extra_keys(self):
-        return ['hosts', 'metadetails']
+        return ['hosts', 'metadetails', 'availability_zone']
 
     @property
     def hosts(self):
@@ -902,6 +901,12 @@ class Aggregate(BASE, NovaBase):
     @property
     def metadetails(self):
         return dict([(m.key, m.value) for m in self._metadata])
+
+    @property
+    def availability_zone(self):
+        if 'availability_zone' not in self.metadetails:
+            return None
+        return self.metadetails['availability_zone']
 
 
 class AgentBuild(BASE, NovaBase):

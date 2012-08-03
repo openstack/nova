@@ -5399,15 +5399,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.stubs.Set(rpc, 'call', fake_rpc_method)
         self.stubs.Set(rpc, 'cast', fake_rpc_method)
 
-    def test_create_invalid_availability_zone(self):
-        """Ensure InvalidAggregateAction is raised with wrong avail_zone."""
-        self.assertRaises(exception.InvalidAggregateAction,
-                          self.api.create_aggregate,
-                          self.context, 'fake_aggr', 'fake_avail_zone')
-
     def test_update_aggregate_metadata(self):
         """Ensure metadata can be updated"""
-        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         metadata = {'foo_key1': 'foo_value1',
@@ -5418,11 +5411,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         expected = self.api.update_aggregate_metadata(self.context,
                                              aggr['id'], metadata)
         self.assertThat(expected['metadata'],
-                        matchers.DictMatches({'foo_key2': 'foo_value2'}))
+                        matchers.DictMatches({'availability_zone': 'fake_zone',
+                        'foo_key2': 'foo_value2'}))
 
     def test_delete_aggregate(self):
         """Ensure we can delete an aggregate."""
-        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         self.api.delete_aggregate(self.context, aggr['id'])
@@ -5463,19 +5456,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                                   aggr['id'], host)
         self.assertEqual(len(aggr['hosts']), len(values[fake_zone]))
 
-    def test_add_host_to_aggregate_zones_mismatch(self):
-        """Ensure InvalidAggregateAction is raised when zones don't match."""
-        _create_service_entries(self.context, {'fake_zoneX': ['fake_host1'],
-                                               'fake_zoneY': ['fake_host2']})
-        aggr = self.api.create_aggregate(self.context,
-                                         'fake_aggregate', 'fake_zoneY')
-        self.assertRaises(exception.InvalidAggregateAction,
-                          self.api.add_host_to_aggregate,
-                          self.context, aggr['id'], 'fake_host1')
-
     def test_add_host_to_aggregate_raise_not_found(self):
         """Ensure ComputeHostNotFound is raised when adding invalid host."""
-        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         self.assertRaises(exception.ComputeHostNotFound,
@@ -5526,9 +5508,9 @@ class ComputeAggrTestCase(BaseTestCase):
     def setUp(self):
         super(ComputeAggrTestCase, self).setUp()
         self.context = context.get_admin_context()
-        values = {'name': 'test_aggr',
-                  'availability_zone': 'test_zone'}
-        self.aggr = db.aggregate_create(self.context, values)
+        values = {'name': 'test_aggr'}
+        az = {'availability_zone': 'test_zone'}
+        self.aggr = db.aggregate_create(self.context, values, metadata=az)
 
     def test_add_aggregate_host(self):
         def fake_driver_add_to_aggregate(context, aggregate, host, **_ignore):

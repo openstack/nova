@@ -2222,11 +2222,12 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         self.compute = importutils.import_object(CONF.compute_manager)
         self.api = compute_api.AggregateAPI()
         values = {'name': 'test_aggr',
-                  'availability_zone': 'test_zone',
-                  'metadata': {pool_states.POOL_FLAG: 'XenAPI'}}
+                  'metadata': {'availability_zone': 'test_zone',
+                  pool_states.POOL_FLAG: 'XenAPI'}}
         self.aggr = db.aggregate_create(self.context, values)
         self.fake_metadata = {pool_states.POOL_FLAG: 'XenAPI',
                               'master_compute': 'host',
+                              'availability_zone': 'fake_zone',
                               pool_states.KEY: pool_states.ACTIVE,
                               'host': xenapi_fake.get_record('host',
                                                              host_ref)['uuid']}
@@ -2306,9 +2307,10 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         self.conn._session.call_xenapi("pool.create", {"name": "asdf"})
 
         values = {"name": 'fake_aggregate',
-                  "availability_zone": 'fake_zone'}
+                  'metadata': {'availability_zone': 'fake_zone'}}
         result = db.aggregate_create(self.context, values)
-        metadata = {pool_states.POOL_FLAG: "XenAPI",
+        metadata = {'availability_zone': 'fake_zone',
+                    pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.CREATED}
         db.aggregate_metadata_add(self.context, result['id'], metadata)
 
@@ -2358,7 +2360,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         self.conn._pool.remove_from_aggregate(self.context, aggregate, "host")
         result = db.aggregate_get(self.context, aggregate['id'])
         self.assertTrue(fake_clear_pool.called)
-        self.assertThat({pool_states.POOL_FLAG: 'XenAPI',
+        self.assertThat({'availability_zone': 'fake_zone',
+                pool_states.POOL_FLAG: 'XenAPI',
                 pool_states.KEY: pool_states.ACTIVE},
                 matchers.DictMatches(result['metadetails']))
 
@@ -2375,9 +2378,9 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                          aggr_zone='fake_zone',
                          aggr_state=pool_states.CREATED,
                          hosts=['host'], metadata=None):
-        values = {"name": aggr_name,
-                  "availability_zone": aggr_zone}
-        result = db.aggregate_create(self.context, values)
+        values = {"name": aggr_name}
+        result = db.aggregate_create(self.context, values,
+                metadata={'availability_zone': aggr_zone})
         pool_flag = {pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: aggr_state}
         db.aggregate_metadata_add(self.context, result['id'], pool_flag)
