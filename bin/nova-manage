@@ -411,7 +411,7 @@ class FloatingIpCommands(object):
             print _("No floating IP addresses have been defined.")
             return
         for floating_ip in floating_ips:
-            instance_id = None
+            instance_uuid = None
             if floating_ip['fixed_ip_id']:
                 fixed_ip = db.fixed_ip_get(ctxt, floating_ip['fixed_ip_id'])
                 instance_uuid = fixed_ip['instance_uuid']
