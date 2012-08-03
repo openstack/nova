@@ -61,6 +61,8 @@ def reset_db():
         conn = engine.connect()
         if _DB:
             conn.connection.executescript(_DB)
+        else:
+            setup()
     else:
         shutil.copyfile(os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db),
                         os.path.join(FLAGS.state_path, FLAGS.sqlite_db))
