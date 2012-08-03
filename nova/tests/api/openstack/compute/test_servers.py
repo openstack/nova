@@ -27,6 +27,7 @@ import nova.api.openstack.compute
 from nova.api.openstack.compute import ips
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
+from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
 import nova.compute.api
 from nova.compute import instance_types
@@ -94,6 +95,7 @@ class MockSetAdminPassword(object):
 
 
 class ServersControllerTest(test.TestCase):
+
     def setUp(self):
         super(ServersControllerTest, self).setUp()
         self.flags(verbose=True, use_ipv6=False)
@@ -113,11 +115,17 @@ class ServersControllerTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_update_and_get_original',
                 instance_update)
 
-        self.controller = servers.Controller()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.controller = servers.Controller(self.ext_mgr)
         self.ips_controller = ips.Controller()
 
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs,
                                                           spectacular=True)
+
+    def test_can_check_loaded_extensions(self):
+        self.ext_mgr.extensions = {'os-fake': None}
+        self.assertTrue(self.controller.ext_mgr.is_loaded('os-fake'))
+        self.assertFalse(self.controller.ext_mgr.is_loaded('os-not-loaded'))
 
     def test_requested_networks_prefix(self):
         uuid = 'br-00000000-0000-0000-0000-000000000000'

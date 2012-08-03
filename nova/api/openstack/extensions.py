@@ -63,6 +63,7 @@ class ExtensionDescriptor(object):
         """Register extension with the extension manager."""
 
         ext_mgr.register(self)
+        self.ext_mgr = ext_mgr
 
     def get_resources(self):
         """List of extensions.ResourceExtension extension objects.
@@ -178,6 +179,9 @@ class ExtensionManager(object):
     example extension implementation.
 
     """
+
+    def is_loaded(self, alias):
+        return alias in self.extensions
 
     def register(self, ext):
         # Do nothing if the extension doesn't check out

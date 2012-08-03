@@ -360,9 +360,10 @@ class Controller(wsgi.Controller):
         # Convenience return
         return robj
 
-    def __init__(self, **kwargs):
+    def __init__(self, ext_mgr=None, **kwargs):
         super(Controller, self).__init__(**kwargs)
         self.compute_api = compute.API()
+        self.ext_mgr = ext_mgr
 
     @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
@@ -1160,8 +1161,8 @@ class Controller(wsgi.Controller):
                 'changes-since')
 
 
-def create_resource():
-    return wsgi.Resource(Controller())
+def create_resource(ext_mgr):
+    return wsgi.Resource(Controller(ext_mgr))
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):

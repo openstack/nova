@@ -190,6 +190,6 @@ class Keypairs(extensions.ExtensionDescriptor):
         return resources
 
     def get_controller_extensions(self):
-        controller = Controller()
+        controller = Controller(self.ext_mgr)
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]

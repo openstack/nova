@@ -122,7 +122,7 @@ class APIRouter(base_wsgi.Router):
 
         mapper = ProjectMapper()
         self.resources = {}
-        self._setup_routes(mapper)
+        self._setup_routes(mapper, ext_mgr)
         self._setup_ext_routes(mapper, ext_mgr)
         self._setup_extensions(ext_mgr)
         super(APIRouter, self).__init__(mapper)
@@ -166,5 +166,5 @@ class APIRouter(base_wsgi.Router):
             resource.register_actions(controller)
             resource.register_extensions(controller)
 
-    def _setup_routes(self, mapper):
+    def _setup_routes(self, mapper, ext_mgr):
         raise NotImplementedError
