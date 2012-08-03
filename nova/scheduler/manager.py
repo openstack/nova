@@ -110,9 +110,10 @@ class SchedulerManager(manager.Manager):
             return driver_method(*args, **kwargs)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
+                request_spec = kwargs.get('request_spec', {})
                 self._set_vm_state_and_notify(method,
                                              {'vm_state': vm_states.ERROR},
-                                             context, ex, *args, **kwargs)
+                                             context, ex, request_spec)
 
     def run_instance(self, context, topic, *args, **kwargs):
         """Tries to call schedule_run_instance on the driver.
@@ -120,6 +121,9 @@ class SchedulerManager(manager.Manager):
         """
         args = (context,) + args
         reservations = kwargs.get('reservations', None)
+        # NOTE(russellb): We know request_spec will be specified as it is a
+        # required argument in scheduler/rpcapi.py.
+        request_spec = kwargs['request_spec']
         try:
             result = self.driver.schedule_run_instance(*args, **kwargs)
             return result
@@ -127,14 +131,14 @@ class SchedulerManager(manager.Manager):
             # don't reraise
             self._set_vm_state_and_notify('run_instance',
                                          {'vm_state': vm_states.ERROR},
-                                          context, ex, *args, **kwargs)
+                                          context, ex, request_spec)
             if reservations:
                 QUOTAS.rollback(context, reservations)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('run_instance',
                                              {'vm_state': vm_states.ERROR},
-                                             context, ex, *args, **kwargs)
+                                             context, ex, request_spec)
                 if reservations:
                     QUOTAS.rollback(context, reservations)
 
@@ -166,17 +170,15 @@ class SchedulerManager(manager.Manager):
             self._set_vm_state_and_notify('prep_resize',
                                          {'vm_state': vm_states.ACTIVE,
                                           'task_state': None},
-                                         context, ex,
-                                         request_spec=request_spec)
+                                         context, ex, request_spec)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify('prep_resize',
                                              {'vm_state': vm_states.ERROR},
-                                             context, ex,
-                                             request_spec=request_spec)
+                                             context, ex, request_spec)
 
     def _set_vm_state_and_notify(self, method, updates, context, ex,
-                                *args, **kwargs):
+                                 request_spec):
         """changes VM state and notifies"""
         # FIXME(comstud): Re-factor this somehow. Not sure this belongs in the
         # scheduler manager like this. We should make this easier.
@@ -192,7 +194,6 @@ class SchedulerManager(manager.Manager):
         LOG.warning(_("Failed to schedule_%(method)s: %(ex)s") % locals())
 
         vm_state = updates['vm_state']
-        request_spec = kwargs.get('request_spec', {})
         properties = request_spec.get('instance_properties', {})
         instance_uuid = properties.get('uuid', {})
 
