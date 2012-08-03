@@ -97,7 +97,10 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 reservations).WithSideEffects(_add_uuid1).AndReturn(
                 instance1)
         driver.cast_to_compute_host(ctxt, 'host3', 'run_instance',
-                instance_uuid=instance1['uuid'], **fake_kwargs)
+                instance_uuid=instance1['uuid'], requested_networks=None,
+                injected_files=None, admin_password=None, is_first_time=None,
+                request_spec=request_spec, filter_properties={})
+
         driver.encode_instance(instance1).AndReturn(instance1_encoded)
         # instance 2
         ctxt.elevated().AndReturn(ctxt_elevated)
@@ -108,12 +111,15 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 reservations).WithSideEffects(_add_uuid2).AndReturn(
                 instance2)
         driver.cast_to_compute_host(ctxt, 'host1', 'run_instance',
-                instance_uuid=instance2['uuid'], **fake_kwargs)
+                instance_uuid=instance2['uuid'], requested_networks=None,
+                injected_files=None, admin_password=None, is_first_time=None,
+                request_spec=request_spec, filter_properties={})
+
         driver.encode_instance(instance2).AndReturn(instance2_encoded)
 
         self.mox.ReplayAll()
-        result = self.driver.schedule_run_instance(ctxt, request_spec,
-                reservations, *fake_args, **fake_kwargs)
+        result = self.driver.schedule_run_instance(ctxt, None, request_spec,
+                None, None, None, None, {}, reservations)
         expected = [instance1_encoded, instance2_encoded]
         self.assertEqual(result, expected)
 
@@ -155,7 +161,9 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
             ctxt, mox.Func(_has_launch_index(0)), None
             ).WithSideEffects(_add_uuid(1)).AndReturn(instance1)
         driver.cast_to_compute_host(ctxt, 'host', 'run_instance',
-                                    instance_uuid=instance1['uuid'])
+                instance_uuid=instance1['uuid'], requested_networks=None,
+                injected_files=None, admin_password=None, is_first_time=None,
+                request_spec=request_spec, filter_properties={})
         driver.encode_instance(instance1).AndReturn(instance1)
         # instance 2
         self.driver._schedule(ctxt, 'compute', request_spec,
@@ -164,11 +172,14 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
             ctxt, mox.Func(_has_launch_index(1)), None
             ).WithSideEffects(_add_uuid(2)).AndReturn(instance2)
         driver.cast_to_compute_host(ctxt, 'host', 'run_instance',
-                                    instance_uuid=instance2['uuid'])
+                instance_uuid=instance2['uuid'], requested_networks=None,
+                injected_files=None, admin_password=None, is_first_time=None,
+                request_spec=request_spec, filter_properties={})
         driver.encode_instance(instance2).AndReturn(instance2)
         self.mox.ReplayAll()
 
-        self.driver.schedule_run_instance(ctxt, request_spec, None)
+        self.driver.schedule_run_instance(ctxt, '', request_spec, None, None,
+                None, None, {}, None)
 
     def test_basic_schedule_run_instance_no_hosts(self):
         ctxt = context.RequestContext('fake', 'fake', False)
@@ -189,8 +200,8 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.mox.ReplayAll()
         self.assertRaises(exception.NoValidHost,
-                self.driver.schedule_run_instance, ctxt, request_spec,
-                *fake_args, **fake_kwargs)
+                self.driver.schedule_run_instance, ctxt, '', request_spec,
+                None, None, None, None, {}, None)
 
     def test_basic_schedule_fallback(self):
         ctxt = context.RequestContext('fake', 'fake', False)

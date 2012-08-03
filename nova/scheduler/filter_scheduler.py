@@ -51,8 +51,10 @@ class FilterScheduler(driver.Scheduler):
         msg = _("No host selection for %s defined.") % topic
         raise exception.NoValidHost(reason=msg)
 
-    def schedule_run_instance(self, context, request_spec, reservations,
-                              *args, **kwargs):
+    def schedule_run_instance(self, context, topic, request_spec,
+                              admin_password, injected_files,
+                              requested_networks, is_first_time,
+                              filter_properties, reservations):
         """This method is called from nova.compute.api to provision
         an instance.  We first create a build plan (a list of WeightedHosts)
         and then provision.
@@ -68,7 +70,6 @@ class FilterScheduler(driver.Scheduler):
         notifier.notify(context, notifier.publisher_id("scheduler"),
                         'scheduler.run_instance.start', notifier.INFO, payload)
 
-        filter_properties = kwargs.pop('filter_properties', {})
         weighted_hosts = self._schedule(context, "compute", request_spec,
                                         filter_properties)
 
@@ -89,7 +90,10 @@ class FilterScheduler(driver.Scheduler):
 
             instance = self._provision_resource(elevated, weighted_host,
                                                 request_spec, reservations,
-                                                filter_properties, kwargs)
+                                                filter_properties,
+                                                requested_networks,
+                                                injected_files, admin_password,
+                                                is_first_time)
             # scrub retry host list in case we're scheduling multiple
             # instances:
             retry = filter_properties.get('retry', {})
@@ -124,7 +128,8 @@ class FilterScheduler(driver.Scheduler):
                 instance_type, host.host_state.host)
 
     def _provision_resource(self, context, weighted_host, request_spec,
-            reservations, filter_properties, kwargs):
+            reservations, filter_properties, requested_networks,
+            injected_files, admin_password, is_first_time):
         """Create the requested resource in this Zone."""
         instance = self.create_instance_db_entry(context, request_spec,
                                                  reservations)
@@ -142,7 +147,10 @@ class FilterScheduler(driver.Scheduler):
         driver.cast_to_compute_host(context, weighted_host.host_state.host,
                 'run_instance', instance_uuid=instance['uuid'],
                 request_spec=request_spec, filter_properties=filter_properties,
-                **kwargs)
+                requested_networks=requested_networks,
+                injected_files=injected_files,
+                admin_password=admin_password, is_first_time=is_first_time)
+
         inst = driver.encode_instance(instance, local=True)
 
         # So if another instance is created, create_instance_db_entry will
