@@ -77,7 +77,7 @@ class Config_drive(extensions.ExtensionDescriptor):
     """Config Drive Extension"""
 
     name = "ConfigDrive"
-    alias = "os-config_drive"
+    alias = "os-config-drive"
     namespace = "http://docs.openstack.org/compute/ext/config_drive/api/v1.1"
     updated = "2012-07-16T00:00:00+00:00"
 
