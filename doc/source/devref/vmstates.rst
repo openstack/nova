@@ -81,6 +81,7 @@ task states for various commands issued by the user:
     stop -> stopped
     stop -> error
     active -> stop
+    error -> stop
 
     rescue [shape="rectangle"]
     rescue -> rescued
