@@ -18,6 +18,8 @@
 #    under the License.
 
 import copy
+import shutil
+import tempfile
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -80,8 +82,10 @@ def get_instances_with_cached_ips(orig_func, *args, **kwargs):
 class CinderCloudTestCase(test.TestCase):
     def setUp(self):
         super(CinderCloudTestCase, self).setUp()
+        vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volume_api_class='nova.tests.fake_volume.API',
+                   volumes_dir=vol_tmpdir,
                    stub_network=True)
 
         def fake_show(meh, context, id):
@@ -136,6 +140,10 @@ class CinderCloudTestCase(test.TestCase):
                                '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
 
     def tearDown(self):
+        try:
+            shutil.rmtree(FLAGS.volumes_dir)
+        except OSError, e:
+            pass
         self.volume_api.reset_fake_api(self.context)
         super(CinderCloudTestCase, self).tearDown()
         fake.FakeImageService_reset()

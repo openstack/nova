@@ -22,6 +22,7 @@ import copy
 import datetime
 import functools
 import os
+import shutil
 import string
 import tempfile
 
@@ -92,7 +93,9 @@ def get_instances_with_cached_ips(orig_func, *args, **kwargs):
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
+        vol_tmpdir = tempfile.mkdtemp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
+                   volumes_dir=vol_tmpdir,
                    stub_network=True)
 
         def fake_show(meh, context, id):
@@ -146,6 +149,10 @@ class CloudTestCase(test.TestCase):
                                '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
 
     def tearDown(self):
+        try:
+            shutil.rmtree(FLAGS.volumes_dir)
+        except OSError, e:
+            pass
         super(CloudTestCase, self).tearDown()
         fake.FakeImageService_reset()
 
