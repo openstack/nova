@@ -117,6 +117,7 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 - remove instance_uuid, add instance
                 - remove instance_type_id, add instance_type
                 - remove topic, it was unused
+        1.39 - Remove instance_uuid, add instance argument to run_instance()
     '''
 
     BASE_RPC_API_VERSION = '1.0'
@@ -421,6 +422,19 @@ class ComputeAPI(nova.openstack.common.rpc.proxy.RpcProxy):
             instance=instance_p),
             topic=_compute_topic(self.topic, ctxt, host, None),
             version='1.32')
+
+    def run_instance(self, ctxt, instance, host, request_spec,
+                     filter_properties, requested_networks,
+                     injected_files, admin_password,
+                     is_first_time):
+        instance_p = jsonutils.to_primitive(instance)
+        self.cast(ctxt, self.make_msg('run_instance', instance=instance_p,
+                request_spec=request_spec, filter_properties=filter_properties,
+                requested_networks=requested_networks,
+                injected_files=injected_files, admin_password=admin_password,
+                is_first_time=is_first_time),
+                topic=_compute_topic(self.topic, ctxt, host, None),
+                version='1.39')
 
     def set_admin_password(self, ctxt, instance, new_pass):
         instance_p = jsonutils.to_primitive(instance)

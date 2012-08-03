@@ -273,7 +273,7 @@ def _get_image_meta(context, image_ref):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '1.38'
+    RPC_API_VERSION = '1.39'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -496,13 +496,20 @@ class ComputeManager(manager.SchedulerDependentManager):
             'block_device_mapping': block_device_mapping
         }
 
-    def _run_instance(self, context, instance_uuid, request_spec,
+    def _run_instance(self, context, request_spec,
                       filter_properties, requested_networks, injected_files,
-                      admin_password, is_first_time):
+                      admin_password, is_first_time, instance, instance_uuid):
         """Launch a new instance with specified options."""
         context = context.elevated()
+
+        if not instance:
+            try:
+                instance = self.db.instance_get_by_uuid(context, instance_uuid)
+            except exception.InstanceNotFound:
+                LOG.warn(_("Instance not found."), instance_uuid=instance_uuid)
+                return
+
         try:
-            instance = self.db.instance_get_by_uuid(context, instance_uuid)
             self._check_instance_not_already_created(context, instance)
             image_meta = self._check_image_size(context, instance)
             extra_usage_info = {"image_name": image_meta['name']}
@@ -533,11 +540,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._notify_about_instance_usage(context, instance,
                         "create.end", network_info=network_info,
                         extra_usage_info=extra_usage_info)
-        except exception.InstanceNotFound:
-            LOG.warn(_("Instance not found."), instance_uuid=instance_uuid)
         except Exception:
             with excutils.save_and_reraise_exception():
-                self._set_instance_error_state(context, instance_uuid)
+                self._set_instance_error_state(context, instance['uuid'])
 
     def _reschedule_or_reraise(self, context, instance, requested_networks,
                                admin_password, injected_files, is_first_time,
@@ -824,15 +829,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception(notifier=notifier, publisher_id=publisher_id())
     @wrap_instance_fault
-    def run_instance(self, context, instance_uuid, request_spec=None,
+    def run_instance(self, context, request_spec=None,
                      filter_properties={}, requested_networks=None,
                      injected_files=[], admin_password=None,
-                     is_first_time=False):
+                     is_first_time=False, instance=None, instance_uuid=None):
         @utils.synchronized(instance_uuid)
         def do_run_instance():
-            self._run_instance(context, instance_uuid, request_spec,
+            self._run_instance(context, request_spec,
                     filter_properties, requested_networks, injected_files,
-                    admin_password, is_first_time)
+                    admin_password, is_first_time, instance, instance_uuid)
         do_run_instance()
 
     def _shutdown_instance(self, context, instance):

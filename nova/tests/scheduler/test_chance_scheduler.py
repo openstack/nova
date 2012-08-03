@@ -22,6 +22,7 @@ import random
 
 import mox
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import exception
 from nova.scheduler import chance
@@ -62,8 +63,6 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
         fake_args = (1, 2, 3)
-        fake_kwargs = {'fake_kwarg1': 'fake_value1',
-                       'fake_kwarg2': 'fake_value2'}
         instance_opts = {'fake_opt1': 'meow'}
         request_spec = {'num_instances': 2,
                         'instance_properties': instance_opts}
@@ -85,8 +84,9 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(self.driver, 'hosts_up')
         self.mox.StubOutWithMock(random, 'random')
         self.mox.StubOutWithMock(self.driver, 'create_instance_db_entry')
-        self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
         self.mox.StubOutWithMock(driver, 'encode_instance')
+        self.mox.StubOutWithMock(driver, 'instance_update_db')
+        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'run_instance')
 
         ctxt.elevated().AndReturn(ctxt_elevated)
         # instance 1
@@ -96,8 +96,10 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.create_instance_db_entry(ctxt, request_spec,
                 reservations).WithSideEffects(_add_uuid1).AndReturn(
                 instance1)
-        driver.cast_to_compute_host(ctxt, 'host3', 'run_instance',
-                instance_uuid=instance1['uuid'], requested_networks=None,
+        driver.instance_update_db(ctxt, instance1['uuid'],
+                'host3').AndReturn(instance1)
+        compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host3',
+                instance=instance1, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec, filter_properties={})
 
@@ -110,8 +112,10 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.create_instance_db_entry(ctxt, request_spec,
                 reservations).WithSideEffects(_add_uuid2).AndReturn(
                 instance2)
-        driver.cast_to_compute_host(ctxt, 'host1', 'run_instance',
-                instance_uuid=instance2['uuid'], requested_networks=None,
+        driver.instance_update_db(ctxt, instance2['uuid'],
+                'host1').AndReturn(instance2)
+        compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host1',
+                instance=instance2, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec, filter_properties={})
 
@@ -124,7 +128,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(result, expected)
 
     def test_scheduler_includes_launch_index(self):
-        ctxt = "fake-context"
+        ctxt = context.RequestContext('fake', 'fake', False)
         instance_opts = {'fake_opt1': 'meow'}
         request_spec = {'num_instances': 2,
                         'instance_properties': instance_opts}
@@ -152,16 +156,20 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.mox.StubOutWithMock(self.driver, '_schedule')
         self.mox.StubOutWithMock(self.driver, 'create_instance_db_entry')
-        self.mox.StubOutWithMock(driver, 'cast_to_compute_host')
         self.mox.StubOutWithMock(driver, 'encode_instance')
+        self.mox.StubOutWithMock(driver, 'instance_update_db')
+        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI, 'run_instance')
+
         # instance 1
         self.driver._schedule(ctxt, 'compute', request_spec,
                               {}).AndReturn('host')
         self.driver.create_instance_db_entry(
             ctxt, mox.Func(_has_launch_index(0)), None
             ).WithSideEffects(_add_uuid(1)).AndReturn(instance1)
-        driver.cast_to_compute_host(ctxt, 'host', 'run_instance',
-                instance_uuid=instance1['uuid'], requested_networks=None,
+        driver.instance_update_db(ctxt, instance1['uuid'],
+                'host').AndReturn(instance1)
+        compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host',
+                instance=instance1, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec, filter_properties={})
         driver.encode_instance(instance1).AndReturn(instance1)
@@ -171,8 +179,10 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.create_instance_db_entry(
             ctxt, mox.Func(_has_launch_index(1)), None
             ).WithSideEffects(_add_uuid(2)).AndReturn(instance2)
-        driver.cast_to_compute_host(ctxt, 'host', 'run_instance',
-                instance_uuid=instance2['uuid'], requested_networks=None,
+        driver.instance_update_db(ctxt, instance2['uuid'],
+                'host').AndReturn(instance2)
+        compute_rpcapi.ComputeAPI.run_instance(ctxt, host='host',
+                instance=instance2, requested_networks=None,
                 injected_files=None, admin_password=None, is_first_time=None,
                 request_spec=request_spec, filter_properties={})
         driver.encode_instance(instance2).AndReturn(instance2)
@@ -185,8 +195,6 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
         fake_args = (1, 2, 3)
-        fake_kwargs = {'fake_kwarg1': 'fake_value1',
-                       'fake_kwarg2': 'fake_value2'}
         instance_opts = 'fake_instance_opts'
         request_spec = {'num_instances': 2,
                         'instance_properties': instance_opts}

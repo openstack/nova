@@ -144,14 +144,17 @@ class FilterScheduler(driver.Scheduler):
                         'scheduler.run_instance.scheduled', notifier.INFO,
                         payload)
 
-        driver.cast_to_compute_host(context, weighted_host.host_state.host,
-                'run_instance', instance_uuid=instance['uuid'],
+        updated_instance = driver.instance_update_db(context, instance['uuid'],
+                weighted_host.host_state.host)
+
+        self.compute_rpcapi.run_instance(context, instance=updated_instance,
+                host=weighted_host.host_state.host,
                 request_spec=request_spec, filter_properties=filter_properties,
                 requested_networks=requested_networks,
                 injected_files=injected_files,
                 admin_password=admin_password, is_first_time=is_first_time)
 
-        inst = driver.encode_instance(instance, local=True)
+        inst = driver.encode_instance(updated_instance, local=True)
 
         # So if another instance is created, create_instance_db_entry will
         # actually create a new entry, instead of assume it's been created
