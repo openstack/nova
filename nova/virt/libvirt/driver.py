@@ -409,9 +409,17 @@ class LibvirtDriver(driver.ComputeDriver):
         return self._conn.listDomainsID()
 
     def list_instances(self):
-        return [self._conn.lookupByID(x).name()
-                for x in self.list_instance_ids()
-                if x != 0]  # We skip domains with ID 0 (hypervisors).
+        names = []
+        for domain_id in self.list_instance_ids():
+            try:
+                # We skip domains with ID 0 (hypervisors).
+                if domain_id != 0:
+                    domain = self._conn.lookupByID(domain_id)
+                    names.append(domain.name())
+            except exception.InstanceNotFound:
+                # Instance was deleted while listing... ignore it
+                pass
+        return names
 
     @staticmethod
     def _map_to_instance_info(domain):

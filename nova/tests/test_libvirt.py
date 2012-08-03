@@ -912,6 +912,22 @@ class LibvirtConnTestCase(test.TestCase):
         # Only one should be listed, since domain with ID 0 must be skiped
         self.assertEquals(len(instances), 1)
 
+    def test_list_instances_when_not_found(self):
+
+        def fake_lookup(instance_name):
+            raise exception.InstanceNotFound()
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 1
+        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(False)
+        instances = conn.list_instances()
+        # None should be listed, since we fake deleted the last one
+        self.assertEquals(len(instances), 0)
+
     def test_get_all_block_devices(self):
         xml = [
             # NOTE(vish): id 0 is skipped
