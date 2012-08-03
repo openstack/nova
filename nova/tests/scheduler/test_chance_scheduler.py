@@ -118,7 +118,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         driver.encode_instance(instance2).AndReturn(instance2_encoded)
 
         self.mox.ReplayAll()
-        result = self.driver.schedule_run_instance(ctxt, None, request_spec,
+        result = self.driver.schedule_run_instance(ctxt, request_spec,
                 None, None, None, None, {}, reservations)
         expected = [instance1_encoded, instance2_encoded]
         self.assertEqual(result, expected)
@@ -178,7 +178,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         driver.encode_instance(instance2).AndReturn(instance2)
         self.mox.ReplayAll()
 
-        self.driver.schedule_run_instance(ctxt, '', request_spec, None, None,
+        self.driver.schedule_run_instance(ctxt, request_spec, None, None,
                 None, None, {}, None)
 
     def test_basic_schedule_run_instance_no_hosts(self):
@@ -200,7 +200,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.mox.ReplayAll()
         self.assertRaises(exception.NoValidHost,
-                self.driver.schedule_run_instance, ctxt, '', request_spec,
+                self.driver.schedule_run_instance, ctxt, request_spec,
                 None, None, None, None, {}, None)
 
     def test_basic_schedule_fallback(self):

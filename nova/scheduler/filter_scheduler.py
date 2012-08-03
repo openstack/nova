@@ -51,7 +51,7 @@ class FilterScheduler(driver.Scheduler):
         msg = _("No host selection for %s defined.") % topic
         raise exception.NoValidHost(reason=msg)
 
-    def schedule_run_instance(self, context, topic, request_spec,
+    def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
                               filter_properties, reservations):

@@ -60,7 +60,7 @@ class ChanceScheduler(driver.Scheduler):
         host = self._schedule(context, topic, None, filter_properties)
         driver.cast_to_host(context, topic, host, method, **kwargs)
 
-    def schedule_run_instance(self, context, topic, request_spec,
+    def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,
                               filter_properties, reservations):
