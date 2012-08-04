@@ -1406,7 +1406,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 img_id = 'config-drive'
             else:
                 injection_path = image('disk').path
-                img_id = instance.image_ref
+                img_id = instance['image_ref']
 
             for injection in ('metadata', 'key', 'net', 'admin_pass', 'files'):
                 if locals()[injection]:
